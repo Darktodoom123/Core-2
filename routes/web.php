@@ -67,3 +67,14 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/users/{user}/credentials', [PersonnelController::class, 'storeCredential']);
     });
 });
+
+if (app()->environment('local')) {
+    Route::get('/dev/users', function () {
+        return response()->json(\App\Models\User::query()->select('id', 'name', 'email')->get());
+    });
+
+    Route::post('/dev/login/{user}', function (\App\Models\User $user) {
+        \Illuminate\Support\Facades\Auth::login($user);
+        return redirect()->route('home');
+    });
+}

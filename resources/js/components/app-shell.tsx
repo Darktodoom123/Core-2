@@ -23,6 +23,7 @@ import { useState } from 'react';
 import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import type {
     AppSection,
     ConnectivityState,
@@ -442,6 +443,7 @@ export function AppShell({
                 <main id="main-content" className="min-w-0">
                     {children}
                 </main>
+                <DevUserSwitcher />
             </div>
         </div>
     );
