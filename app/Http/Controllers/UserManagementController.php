@@ -27,10 +27,10 @@ final class UserManagementController extends Controller
     public function store(Request $request, RecordAuditEvent $audit): JsonResponse
     {
         Gate::authorize(PermissionName::UsersManage->value);
-        $validated = $request->validate(['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'max:255', 'unique:users,email'], 'role' => ['required', Rule::enum(RoleName::class)]]);
+        $validated = $request->validate(['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'max:255', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:32'], 'role' => ['required', Rule::enum(RoleName::class)]]);
 
         $user = DB::transaction(function () use ($request, $validated, $audit): User {
-            $user = User::query()->create(['name' => $validated['name'], 'email' => Str::lower($validated['email']), 'password' => Hash::make(Str::password(40)), 'is_active' => true]);
+            $user = User::query()->create(['name' => $validated['name'], 'email' => Str::lower($validated['email']), 'phone' => $validated['phone'] ?? null, 'password' => Hash::make(Str::password(40)), 'is_active' => true]);
             $user->syncRoles([$validated['role']]);
             $audit->handle($request->user(), $user, 'user.invited', null, ['email' => $user->email, 'role' => $validated['role']]);
 

@@ -24,7 +24,7 @@ class DispatchJob extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'version'];
+    protected $fillable = ['service_request_id', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'version'];
 
     protected function casts(): array
     {
@@ -35,6 +35,12 @@ class DispatchJob extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return BelongsTo<ServiceRequest, $this> */
+    public function serviceRequest(): BelongsTo
+    {
+        return $this->belongsTo(ServiceRequest::class);
     }
 
     /** @return HasMany<DispatchPersonnelAssignment, $this> */
@@ -53,6 +59,18 @@ class DispatchJob extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(ApprovalRequest::class, 'subject_id')->where('subject_type', self::class);
+    }
+
+    /** @return HasMany<JobReport, $this> */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(JobReport::class);
+    }
+
+    /** @return HasMany<LocationUpdate, $this> */
+    public function locationUpdates(): HasMany
+    {
+        return $this->hasMany(LocationUpdate::class);
     }
 
     /**

@@ -28,6 +28,7 @@ function operationsUser(RoleName $role): User
 it('lets a dispatcher create and assign a routine dispatch while preserving assigned-only scope', function () {
     $dispatcher = operationsUser(RoleName::Dispatcher);
     $driver = operationsUser(RoleName::Driver);
+    $driver->personnelCredentials()->create(['kind' => 'driver_license', 'credential_number' => 'DL-1001', 'credential_type' => 'professional', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear(), 'status' => 'active']);
     $other = operationsUser(RoleName::Driver);
     $asset = OperationalAsset::query()->create(['code' => 'TR-01', 'name' => 'Truck 01', 'kind' => 'truck', 'status' => AssetStatus::Available]);
     $response = $this->actingAs($dispatcher)->postJson('/operations/dispatch-jobs', ['reference' => 'CON-1001', 'client' => 'Arcwell', 'title' => 'HVAC lift', 'site' => 'Quezon City', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(4), 'priority' => DispatchPriority::Routine->value, 'requirements' => []])->assertCreated();

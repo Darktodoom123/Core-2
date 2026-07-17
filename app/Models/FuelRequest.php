@@ -7,6 +7,7 @@ use App\Enums\PermissionName;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -38,6 +39,12 @@ class FuelRequest extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(OperationalAsset::class, 'operational_asset_id');
+    }
+
+    /** @return HasMany<FuelLog, $this> */
+    public function logs(): HasMany
+    {
+        return $this->hasMany(FuelLog::class);
     }
 
     /**

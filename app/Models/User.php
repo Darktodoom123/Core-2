@@ -8,6 +8,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -23,7 +25,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'is_active', 'suspended_at'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'is_active', 'suspended_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -52,5 +54,17 @@ class User extends Authenticatable implements MustVerifyEmail
         $name = $this->getRoleNames()->first();
 
         return is_string($name) ? RoleName::tryFrom($name) : null;
+    }
+
+    /** @return HasOne<PersonnelProfile, $this> */
+    public function personnelProfile(): HasOne
+    {
+        return $this->hasOne(PersonnelProfile::class);
+    }
+
+    /** @return HasMany<PersonnelCredential, $this> */
+    public function personnelCredentials(): HasMany
+    {
+        return $this->hasMany(PersonnelCredential::class);
     }
 }

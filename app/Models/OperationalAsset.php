@@ -19,11 +19,11 @@ class OperationalAsset extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['code', 'name', 'kind', 'subtype', 'status', 'location', 'specifications'];
+    protected $fillable = ['code', 'name', 'kind', 'subtype', 'status', 'location', 'specifications', 'registration_number', 'manufacturer', 'model', 'rated_capacity', 'capacity_unit', 'meter_type', 'meter_value'];
 
     protected function casts(): array
     {
-        return ['status' => AssetStatus::class, 'specifications' => 'array'];
+        return ['status' => AssetStatus::class, 'specifications' => 'array', 'rated_capacity' => 'decimal:2', 'meter_value' => 'decimal:2'];
     }
 
     /** @return HasMany<DispatchAssetAssignment, $this> */

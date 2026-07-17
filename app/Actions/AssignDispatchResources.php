@@ -37,6 +37,22 @@ final class AssignDispatchResources
             }
 
             foreach ($personnel as $assignment) {
+                $user = User::query()->lockForUpdate()->findOrFail($assignment['user_id']);
+
+                if (! $user->is_active || $user->suspended_at !== null || in_array($user->personnelProfile?->availability_status, ['unavailable', 'on_leave'], true)) {
+                    throw ValidationException::withMessages(['personnel' => "{$user->name} is not available for assignment."]);
+                }
+
+                $credentialKind = match ($assignment['assignment_type']) {
+                    'driver' => 'driver_license',
+                    'crane_operator' => 'operator_certification',
+                    default => null,
+                };
+
+                if ($credentialKind !== null && ! $user->personnelCredentials()->where('kind', $credentialKind)->validAt($job->scheduled_start ?? now())->exists()) {
+                    throw ValidationException::withMessages(['personnel' => "{$user->name} does not have a valid {$credentialKind} credential."]);
+                }
+
                 $job->personnelAssignments()->create([...$assignment, 'assigned_by' => $actor->id, 'active_from' => $job->scheduled_start]);
             }
 
