@@ -143,14 +143,14 @@ export function AppShell({
             
             <aside
                 className={cn(
-                    'fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-line bg-surface text-ink transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0',
+                    'fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-white/10 bg-ink text-white transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0',
                     mobileOpen ? 'translate-x-0' : '-translate-x-full',
                     collapsed ? 'md:w-[4.75rem]' : 'w-[15.5rem]',
                 )}
             >
                 <div
                     className={cn(
-                        'flex h-[4.5rem] items-center border-b border-line px-4',
+                        'flex h-[4.5rem] items-center border-b border-white/10 px-4',
                         collapsed ? 'justify-center' : 'gap-3',
                     )}
                 >
@@ -162,7 +162,7 @@ export function AppShell({
                             <p className="truncate text-sm font-semibold">
                                 Core Transaction 2
                             </p>
-                            <p className="mt-0.5 text-xs text-muted">
+                            <p className="mt-0.5 text-xs text-white/60">
                                 Operations platform
                             </p>
                         </div>
@@ -187,8 +187,8 @@ export function AppShell({
                                     'nav-btn relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
                                     collapsed ? 'justify-center' : 'gap-3 pl-4 pr-2',
                                     active
-                                        ? 'bg-surface-subtle text-ink before:absolute before:left-0 before:top-1/2 before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-[\'\']'
-                                        : 'text-muted hover:bg-surface-subtle hover:text-ink',
+                                        ? 'bg-white/10 text-white before:absolute before:left-0 before:top-1/2 before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-[\'\']'
+                                        : 'text-white/60 hover:bg-white/5 hover:text-white',
                                 )}
                                 aria-current={active ? 'page' : undefined}
                               >
@@ -212,12 +212,12 @@ export function AppShell({
                       </ul>
                     </nav>
 
-                <div className="border-t border-line px-4 py-3">
+                <div className="border-t border-white/10 px-4 py-3">
                     <button
                         type="button"
                         onClick={() => onSectionChange('administration')}
                         className={cn(
-                            'flex min-h-11 w-full items-center rounded-lg text-sm text-muted transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
+                            'flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
                             collapsed ? 'justify-center' : 'gap-3 px-3',
                         )}
                         title={collapsed ? 'Settings' : undefined}
@@ -232,7 +232,7 @@ export function AppShell({
                         type="button"
                         onClick={onToggleSidebar}
                         className={cn(
-                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-muted transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
+                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
                             collapsed ? 'justify-center' : 'gap-3 px-3',
                         )}
                         aria-label={
