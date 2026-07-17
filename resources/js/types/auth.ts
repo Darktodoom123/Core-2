@@ -10,5 +10,9 @@ export type User = {
 };
 
 export type Auth = {
-    user: User;
+    user: User | null;
+    role: string | null;
+    role_label: string | null;
+    prototype_role: string | null;
+    permissions: string[];
 };

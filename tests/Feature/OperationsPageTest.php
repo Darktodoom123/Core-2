@@ -1,12 +1,18 @@
 <?php
 
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 
-it('serves the Core Transaction 2 operations prototype', function () {
-    $this->get('/')
+uses(RefreshDatabase::class);
+
+it('serves the authenticated operations workspace', function () {
+    $this->actingAs(User::factory()->create())->get('/')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('operations')
+            ->component('workspace')
+            ->has('jobs')
+            ->has('assets')
+            ->has('fuelRequests')
         );
 });
-

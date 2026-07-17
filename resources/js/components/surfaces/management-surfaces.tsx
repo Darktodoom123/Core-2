@@ -403,8 +403,11 @@ export function ManagerOverview({
 
     return (
         <div className="relative isolate min-h-full">
-            <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu overflow-hidden opacity-30" aria-hidden="true">
-                <div className="ml-[calc(50%-20rem)] aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-brand to-brand-soft blur-[100px] opacity-40"></div>
+            <div
+                className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu overflow-hidden opacity-30"
+                aria-hidden="true"
+            >
+                <div className="ml-[calc(50%-20rem)] aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-brand to-brand-soft opacity-40 blur-[100px]"></div>
             </div>
 
             <PageHeading
@@ -424,45 +427,68 @@ export function ManagerOverview({
             <div className="grid gap-6 p-4 md:p-6 xl:grid-cols-[1.5fr_1fr]">
                 <div className="space-y-6">
                     <div className="relative overflow-hidden rounded-lg bg-surface p-6 shadow-sm ring-1 ring-line">
-                        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-8 border-b border-line">
+                        <div className="flex flex-col justify-between gap-6 border-b border-line pb-8 sm:flex-row sm:items-end">
                             <div>
-                                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">Active Operations</h2>
+                                <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
+                                    Active Operations
+                                </h2>
                                 <div className="mt-2 flex items-baseline gap-2">
-                                    <span className="text-6xl font-light tracking-tighter text-ink">{activeJobs.length}</span>
-                                    <span className="text-lg font-medium text-ink-soft">/ {jobs.length} total</span>
+                                    <span className="text-6xl font-light tracking-tighter text-ink">
+                                        {activeJobs.length}
+                                    </span>
+                                    <span className="text-lg font-medium text-ink-soft">
+                                        / {jobs.length} total
+                                    </span>
                                 </div>
                             </div>
-                            <Button size="sm" variant="secondary" onClick={() => onNavigate('board')} className="shrink-0 rounded-full">
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => onNavigate('board')}
+                                className="shrink-0 rounded-full"
+                            >
                                 View full schedule
                             </Button>
                         </div>
-                        
-                        <div className="pt-6 space-y-3">
+
+                        <div className="space-y-3 pt-6">
                             {jobs.map((job) => (
                                 <button
                                     key={job.id}
                                     type="button"
                                     onClick={() => onNavigate('board')}
-                                    className="group relative flex w-full flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg p-4 transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+                                    className="group relative flex w-full flex-col justify-between gap-4 rounded-lg p-4 text-left transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none sm:flex-row sm:items-center"
                                 >
-                                    {['In progress', 'Dispatched', 'En route'].includes(job.status) && (
-                                        <div className="hidden sm:block absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-brand opacity-0 transition-opacity group-hover:opacity-100" />
+                                    {[
+                                        'In progress',
+                                        'Dispatched',
+                                        'En route',
+                                    ].includes(job.status) && (
+                                        <div className="absolute top-3 bottom-3 left-0 hidden w-1 rounded-r-full bg-brand opacity-0 transition-opacity group-hover:opacity-100 sm:block" />
                                     )}
-                                    <div className="flex gap-4 sm:gap-6 items-center flex-1 min-w-0">
-                                        <div className="text-left sm:text-right w-24 shrink-0">
-                                            <p className="text-sm font-semibold text-ink group-hover:text-brand transition-colors">{job.reference}</p>
-                                            <p className="text-xs text-muted mt-1">{job.startTime}–{job.endTime}</p>
+                                    <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
+                                        <div className="w-24 shrink-0 text-left sm:text-right">
+                                            <p className="text-sm font-semibold text-ink transition-colors group-hover:text-brand">
+                                                {job.reference}
+                                            </p>
+                                            <p className="mt-1 text-xs text-muted">
+                                                {job.startTime}–{job.endTime}
+                                            </p>
                                         </div>
-                                        <div className="hidden sm:block h-10 w-px bg-line shrink-0" />
+                                        <div className="hidden h-10 w-px shrink-0 bg-line sm:block" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="truncate text-base font-medium text-ink">{job.title}</p>
-                                            <p className="mt-1 truncate text-xs text-muted flex items-center gap-1">
+                                            <p className="truncate text-base font-medium text-ink">
+                                                {job.title}
+                                            </p>
+                                            <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted">
                                                 <MapPin className="h-3 w-3 shrink-0" />
-                                                <span className="truncate">{job.site}</span>
+                                                <span className="truncate">
+                                                    {job.site}
+                                                </span>
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0">
+                                    <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end">
                                         <StatusBadge status={job.priority} />
                                         <StatusBadge status={job.status} />
                                     </div>
@@ -474,9 +500,13 @@ export function ManagerOverview({
 
                 <div className="space-y-6">
                     <div className="rounded-lg bg-surface p-6 shadow-sm ring-1 ring-line">
-                        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">Resource Pressure</h2>
-                        <p className="mt-1 text-xs text-muted">Rolling 30-day utilization</p>
-                        
+                        <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
+                            Resource Pressure
+                        </h2>
+                        <p className="mt-1 text-xs text-muted">
+                            Rolling 30-day utilization
+                        </p>
+
                         <div className="mt-6 grid gap-5">
                             {[
                                 { label: 'Cranes & equipment', value: 78 },
@@ -484,13 +514,17 @@ export function ManagerOverview({
                                 { label: 'Field workforce', value: 82 },
                             ].map((stat) => (
                                 <div key={stat.label}>
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="font-medium text-ink">{stat.label}</span>
-                                        <span className="text-muted">{stat.value}%</span>
+                                    <div className="mb-2 flex justify-between text-sm">
+                                        <span className="font-medium text-ink">
+                                            {stat.label}
+                                        </span>
+                                        <span className="text-muted">
+                                            {stat.value}%
+                                        </span>
                                     </div>
-                                    <div className="h-2 w-full rounded-full bg-line overflow-hidden">
-                                        <div 
-                                            className="h-full rounded-full bg-brand transition-all duration-1000 ease-out" 
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-line">
+                                        <div
+                                            className="h-full rounded-full bg-brand transition-all duration-1000 ease-out"
                                             style={{ width: `${stat.value}%` }}
                                         />
                                     </div>
@@ -500,50 +534,58 @@ export function ManagerOverview({
                     </div>
 
                     <div className="rounded-lg bg-surface p-6 shadow-sm ring-1 ring-line">
-                        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted mb-6">Action Required</h2>
-                        
+                        <h2 className="mb-6 text-sm font-semibold tracking-widest text-muted uppercase">
+                            Action Required
+                        </h2>
+
                         <div className="space-y-4">
                             <button
                                 type="button"
                                 onClick={() => onNavigate('fuel')}
-                                className="group flex w-full items-start gap-4 rounded-lg border border-line p-4 transition-all hover:border-warning hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/50 text-left"
+                                className="group flex w-full items-start gap-4 rounded-lg border border-line p-4 text-left transition-all hover:border-warning hover:shadow-sm focus-visible:ring-2 focus-visible:ring-warning/50 focus-visible:outline-none"
                             >
-                                <div className="rounded-full bg-warning-soft p-2 text-warning group-hover:scale-110 transition-transform">
+                                <div className="rounded-full bg-warning-soft p-2 text-warning transition-transform group-hover:scale-110">
                                     <Fuel className="h-5 w-5" />
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-semibold text-ink transition-colors">
-                                        {pendingFuel.length} fuel request awaiting approval
+                                        {pendingFuel.length} fuel request
+                                        awaiting approval
                                     </p>
-                                    <p className="mt-1 text-xs text-muted">Earliest request: Today, 09:18</p>
+                                    <p className="mt-1 text-xs text-muted">
+                                        Earliest request: Today, 09:18
+                                    </p>
                                 </div>
                             </button>
-                            
+
                             <button
                                 type="button"
                                 onClick={() => onNavigate('dispatch')}
-                                className="group flex w-full items-start gap-4 rounded-lg border border-line p-4 transition-all hover:border-danger hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/50 text-left"
+                                className="group flex w-full items-start gap-4 rounded-lg border border-line p-4 text-left transition-all hover:border-danger hover:shadow-sm focus-visible:ring-2 focus-visible:ring-danger/50 focus-visible:outline-none"
                             >
-                                <div className="rounded-full bg-danger-soft p-2 text-danger group-hover:scale-110 transition-transform">
+                                <div className="rounded-full bg-danger-soft p-2 text-danger transition-transform group-hover:scale-110">
                                     <AlertTriangle className="h-5 w-5" />
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-semibold text-ink transition-colors">
                                         Emergency dispatch override
                                     </p>
-                                    <p className="mt-1 text-xs text-muted">CON-1256 · Traffic support added</p>
+                                    <p className="mt-1 text-xs text-muted">
+                                        CON-1256 · Traffic support added
+                                    </p>
                                 </div>
                             </button>
                         </div>
                     </div>
 
-                    <button 
+                    <button
                         type="button"
                         onClick={() => onNavigate('board')}
-                        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/50 rounded-lg group"
+                        className="group w-full rounded-lg text-left focus-visible:ring-2 focus-visible:ring-warning/50 focus-visible:outline-none"
                     >
-                        <InlineNotice tone="warning" title="Maintenance risk" className="rounded-lg border border-warning/20 shadow-sm transition-all group-hover:bg-warning-soft/50 group-hover:border-warning/40">
-                            TR-03 is overdue for preventive service and remains active on CON-1248. Confirm its return-to-yard time.
+                        <InlineNotice tone="warning" title="Maintenance risk">
+                            TR-03 is overdue for preventive service and remains
+                            active on CON-1248. Confirm its return-to-yard time.
                         </InlineNotice>
                     </button>
                 </div>

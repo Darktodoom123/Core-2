@@ -1,13 +1,13 @@
+import { router, usePage } from '@inertiajs/react';
 import {
-    Activity,
     Bell,
     Bot,
-    ChevronLeft,
     ChevronRight,
     ClipboardList,
     Fuel,
     Gauge,
     LayoutDashboard,
+    LogOut,
     Map,
     Menu,
     PanelLeftClose,
@@ -19,10 +19,10 @@ import {
     Users,
     Wrench,
 } from 'lucide-react';
-import { type ComponentType, type PropsWithChildren, type SVGProps, useState } from 'react';
+import { useState } from 'react';
+import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { defaultSectionForRole } from '@/state/operations-reducer';
 import type {
     AppSection,
     ConnectivityState,
@@ -36,42 +36,54 @@ interface NavItem {
     section: AppSection;
     label: string;
     icon: IconType;
+    module?: number;
+    detail?: string;
+    anyPermission?: string[];
 }
 
+const coreModuleNavigation: NavItem[] = [
+    {
+        section: 'board',
+        label: 'Dispatch Job and Scheduling',
+        icon: Gauge,
+        module: 1,
+        detail: 'Real-time activation',
+        anyPermission: ['dispatch.view_all', 'dispatch.view_assigned'],
+    },
+    {
+        section: 'dispatch',
+        label: 'Assign Driver/Operator and Equipment',
+        icon: Users,
+        module: 2,
+        anyPermission: ['assignments.view_all', 'assignments.view_own'],
+    },
+    {
+        section: 'fleet',
+        label: 'Fleet Management',
+        icon: Truck,
+        module: 3,
+        anyPermission: ['fleet.view_all', 'fleet.view_assigned'],
+    },
+    {
+        section: 'equipment',
+        label: 'Crane and Equipment Management',
+        icon: Wrench,
+        module: 4,
+        anyPermission: ['equipment.view_all', 'equipment.view_assigned'],
+    },
+    {
+        section: 'fuel',
+        label: 'Fuel Management',
+        icon: Fuel,
+        module: 5,
+        anyPermission: ['fuel.view_all', 'fuel.view_own', 'fuel.request'],
+    },
+];
+
 const navigationByRole: Record<UserRole, NavItem[]> = {
-    administrator: [
-        {
-            section: 'overview',
-            label: 'System overview',
-            icon: LayoutDashboard,
-        },
-        { section: 'administration', label: 'Users & access', icon: Users },
-        { section: 'fleet', label: 'Fleet registry', icon: Truck },
-        { section: 'equipment', label: 'Equipment registry', icon: Wrench },
-        { section: 'fuel', label: 'Fuel settings', icon: Fuel },
-        { section: 'reports', label: 'Audit & backups', icon: ShieldCheck },
-    ],
-    dispatcher: [
-        { section: 'dispatch', label: 'Dispatch', icon: ClipboardList },
-        { section: 'board', label: 'Dispatch board', icon: Gauge },
-        { section: 'live', label: 'Live operations', icon: Map },
-        { section: 'fleet', label: 'Fleet', icon: Truck },
-        { section: 'equipment', label: 'Cranes & equipment', icon: Wrench },
-        { section: 'fuel', label: 'Fuel', icon: Fuel },
-        { section: 'reports', label: 'Reports', icon: Activity },
-    ],
-    manager: [
-        {
-            section: 'overview',
-            label: 'Operations overview',
-            icon: LayoutDashboard,
-        },
-        { section: 'live', label: 'Live operations', icon: Map },
-        { section: 'board', label: 'Schedule', icon: Gauge },
-        { section: 'fleet', label: 'Resources', icon: Truck },
-        { section: 'fuel', label: 'Fuel approvals', icon: Fuel },
-        { section: 'reports', label: 'Performance', icon: Activity },
-    ],
+    administrator: coreModuleNavigation,
+    dispatcher: coreModuleNavigation,
+    manager: coreModuleNavigation,
     driver: [
         { section: 'today', label: 'Today', icon: LayoutDashboard },
         { section: 'job', label: 'Job', icon: ClipboardList },
@@ -92,8 +104,17 @@ const navigationByRole: Record<UserRole, NavItem[]> = {
     ],
 };
 
-export function getNavigationForRole(role: UserRole) {
-    return navigationByRole[role];
+export function getNavigationForRole(
+    role: UserRole,
+    permissions: string[] = [],
+) {
+    return navigationByRole[role].filter(
+        (item) =>
+            !item.anyPermission ||
+            item.anyPermission.some((permission) =>
+                permissions.includes(permission),
+            ),
+    );
 }
 
 export function AppShell({
@@ -104,7 +125,6 @@ export function AppShell({
     queuedActions,
     query,
     onQueryChange,
-    onRoleChange,
     onSectionChange,
     onToggleSidebar,
     children,
@@ -116,11 +136,11 @@ export function AppShell({
     queuedActions: number;
     query: string;
     onQueryChange: (value: string) => void;
-    onRoleChange: (role: UserRole, section: AppSection) => void;
     onSectionChange: (section: AppSection) => void;
     onToggleSidebar: () => void;
 }>) {
-    const navigation = navigationByRole[role];
+    const { auth } = usePage().props;
+    const navigation = getNavigationForRole(role, auth.permissions);
     const [mobileOpen, setMobileOpen] = useState(false);
 
     return (
@@ -131,16 +151,16 @@ export function AppShell({
             >
                 Skip to main content
             </a>
-            
+
             {/* Mobile Overlay */}
             {mobileOpen && (
-                <div 
+                <div
                     className="fixed inset-0 z-40 bg-ink/20 backdrop-blur-sm md:hidden"
                     onClick={() => setMobileOpen(false)}
                     aria-hidden="true"
                 />
             )}
-            
+
             <aside
                 className={cn(
                     'fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-white/10 bg-ink text-white transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0',
@@ -169,70 +189,123 @@ export function AppShell({
                     )}
                 </div>
 
-                    <nav className="flex-1 scrollbar-thin overflow-y-auto p-4" aria-label={`${roleLabels[role]} navigation`}>
-                      <ul className="space-y-4">
+                <nav
+                    className="flex-1 scrollbar-thin overflow-y-auto p-3"
+                    aria-label={`${roleLabels[role]} navigation`}
+                >
+                    {!collapsed && navigation.some((item) => item.module) && (
+                        <p className="px-3 pb-2 text-xs font-medium text-white/50">
+                            Core modules
+                        </p>
+                    )}
+                    <ul className="space-y-1">
                         {navigation.map((item) => {
-                          const Icon = item.icon;
-                          const active = item.section === section;
-                          return (
-                            <li key={item.section}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                    onSectionChange(item.section);
-                                    setMobileOpen(false);
-                                }}
-                                title={collapsed ? item.label : undefined}
-                                className={cn(
-                                    'nav-btn relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
-                                    collapsed ? 'justify-center' : 'gap-3 pl-4 pr-2',
-                                    active
-                                        ? 'bg-white/10 text-white before:absolute before:left-0 before:top-1/2 before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-[\'\']'
-                                        : 'text-white/60 hover:bg-white/5 hover:text-white',
-                                )}
-                                aria-current={active ? 'page' : undefined}
-                              >
-                                <Icon
-                                    className={cn(
-                                        'shrink-0 transition-transform duration-200 ease-out motion-reduce:transform-none motion-reduce:transition-none',
-                                        active && !collapsed ? 'translate-x-1' : '',
-                                        collapsed ? 'h-[1.375rem] w-[1.375rem]' : 'h-5 w-5',
-                                    )}
-                                    aria-hidden="true"
-                                />
-                                {!collapsed && (
-                                    <span className={active ? 'font-semibold' : 'font-normal'}>
-                                        {item.label}
-                                    </span>
-                                )}
-                              </button>
-                            </li>
-                          );
+                            const Icon = item.icon;
+                            const active = item.section === section;
+
+                            const accessibleLabel = item.module
+                                ? `Module ${item.module}: ${item.label}${item.detail ? ` (${item.detail})` : ''}`
+                                : item.label;
+
+                            return (
+                                <li key={item.section}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onSectionChange(item.section);
+                                            setMobileOpen(false);
+                                        }}
+                                        title={
+                                            collapsed
+                                                ? accessibleLabel
+                                                : undefined
+                                        }
+                                        aria-label={accessibleLabel}
+                                        className={cn(
+                                            'nav-btn relative flex min-h-11 w-full items-center rounded-lg py-2 text-sm transition-colors duration-200 ease-out focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                            collapsed
+                                                ? 'justify-center'
+                                                : 'gap-3 pr-2 pl-4',
+                                            active
+                                                ? "bg-white/10 text-white before:absolute before:top-1/2 before:left-0 before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']"
+                                                : 'text-white/60 hover:bg-white/5 hover:text-white',
+                                        )}
+                                        aria-current={
+                                            active ? 'page' : undefined
+                                        }
+                                    >
+                                        <Icon
+                                            className={cn(
+                                                'shrink-0 transition-transform duration-200 ease-out motion-reduce:transform-none motion-reduce:transition-none',
+                                                active && !collapsed
+                                                    ? 'translate-x-1'
+                                                    : '',
+                                                collapsed
+                                                    ? 'h-[1.375rem] w-[1.375rem]'
+                                                    : 'h-5 w-5',
+                                            )}
+                                            aria-hidden="true"
+                                        />
+                                        {!collapsed && (
+                                            <span className="min-w-0 text-left">
+                                                {item.module && (
+                                                    <span className="block text-[0.6875rem] leading-4 font-medium text-white/50">
+                                                        Module {item.module}
+                                                    </span>
+                                                )}
+                                                <span
+                                                    className={cn(
+                                                        'block leading-5',
+                                                        active
+                                                            ? 'font-semibold'
+                                                            : 'font-normal',
+                                                    )}
+                                                >
+                                                    {item.label}
+                                                </span>
+                                                {item.detail && (
+                                                    <span className="block text-[0.6875rem] leading-4 text-white/50">
+                                                        {item.detail}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        )}
+                                    </button>
+                                </li>
+                            );
                         })}
-                      </ul>
-                    </nav>
+                    </ul>
+                </nav>
 
                 <div className="border-t border-white/10 px-4 py-3">
-                    <button
-                        type="button"
-                        onClick={() => onSectionChange('administration')}
-                        className={cn(
-                            'flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
-                            collapsed ? 'justify-center' : 'gap-3 px-3',
-                        )}
-                        title={collapsed ? 'Settings' : undefined}
-                    >
-                        <Settings
-                            className="h-[1.125rem] w-[1.125rem]"
-                            aria-hidden="true"
-                        />
-                        {!collapsed && <span>Settings</span>}
-                    </button>
+                    {auth.permissions.some((permission) =>
+                        [
+                            'users.manage',
+                            'roles.manage',
+                            'system.configure',
+                        ].includes(permission),
+                    ) && (
+                        <button
+                            type="button"
+                            onClick={() => onSectionChange('administration')}
+                            className={cn(
+                                'flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                collapsed ? 'justify-center' : 'gap-3 px-3',
+                            )}
+                            title={collapsed ? 'Settings' : undefined}
+                        >
+                            <Settings
+                                className="h-[1.125rem] w-[1.125rem]"
+                                aria-hidden="true"
+                            />
+                            {!collapsed && <span>Settings</span>}
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={onToggleSidebar}
                         className={cn(
-                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
+                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
                             collapsed ? 'justify-center' : 'gap-3 px-3',
                         )}
                         aria-label={
@@ -261,7 +334,7 @@ export function AppShell({
                         <button
                             type="button"
                             onClick={() => setMobileOpen(true)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle text-ink hover:bg-line transition-colors"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle text-ink transition-colors hover:bg-line"
                             aria-label="Open navigation menu"
                         >
                             <Menu className="h-5 w-5" />
@@ -346,34 +419,23 @@ export function AppShell({
                             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" />
                         </Button>
 
-                        <label className="relative">
-                            <span className="sr-only">Switch perspective</span>
-                            <select
-                                value={role}
-                                onChange={(event) => {
-                                    const nextRole = event.target
-                                        .value as UserRole;
-                                    onRoleChange(
-                                        nextRole,
-                                        defaultSectionForRole[nextRole],
-                                    );
-                                }}
-                                className="h-11 max-w-[10rem] appearance-none rounded-lg border border-line bg-surface pr-8 pl-3 text-sm font-medium text-ink sm:max-w-none"
-                                title="Switch perspective"
-                            >
-                                {Object.entries(roleLabels).map(
-                                    ([value, label]) => (
-                                        <option key={value} value={value}>
-                                            {label}
-                                        </option>
-                                    ),
-                                )}
-                            </select>
-                            <ChevronLeft
-                                className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 -rotate-90 text-muted"
-                                aria-hidden="true"
-                            />
-                        </label>
+                        <div className="hidden min-w-0 text-right sm:block">
+                            <p className="max-w-40 truncate text-sm font-medium text-ink">
+                                {auth.user?.name}
+                            </p>
+                            <p className="max-w-40 truncate text-xs text-ink-soft">
+                                {auth.role_label}
+                            </p>
+                        </div>
+                        <Button
+                            size="icon"
+                            variant="quiet"
+                            onClick={() => router.post('/logout')}
+                            aria-label="Sign out"
+                            title="Sign out"
+                        >
+                            <LogOut className="h-5 w-5" aria-hidden="true" />
+                        </Button>
                     </div>
                 </header>
 

@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useEffect, useReducer, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
 import {
@@ -25,15 +25,6 @@ import {
 } from '@/state/operations-reducer';
 import type { AppSection, FieldTask, UserRole } from '@/types/operations';
 
-const roles: UserRole[] = [
-    'administrator',
-    'dispatcher',
-    'manager',
-    'driver',
-    'operator',
-    'technician',
-];
-
 const sections: AppSection[] = [
     'overview',
     'dispatch',
@@ -50,21 +41,16 @@ const sections: AppSection[] = [
     'issues',
 ];
 
-function initialRouteState() {
+function initialRouteState(role: UserRole) {
     if (typeof window === 'undefined') {
         return {
-            role: 'dispatcher' as UserRole,
-            section: 'dispatch' as AppSection,
+            role,
+            section: defaultSectionForRole[role],
         };
     }
 
     const params = new URLSearchParams(window.location.search);
-    const persistedRole = window.localStorage.getItem('ctms-role');
     const persistedSection = window.localStorage.getItem('ctms-section');
-    const roleParam = params.get('role') ?? persistedRole;
-    const role = roles.includes(roleParam as UserRole)
-        ? (roleParam as UserRole)
-        : 'dispatcher';
     const sectionParam = params.get('view') ?? persistedSection;
     const section = sections.includes(sectionParam as AppSection)
         ? (sectionParam as AppSection)
@@ -74,7 +60,9 @@ function initialRouteState() {
 }
 
 export default function Operations() {
-    const initial = initialRouteState();
+    const { auth } = usePage().props;
+    const authenticatedRole = (auth.prototype_role ?? 'dispatcher') as UserRole;
+    const initial = initialRouteState(authenticatedRole);
     const [state, dispatch] = useReducer(
         operationsReducer,
         createInitialState(initial.role, initial.section),
@@ -83,16 +71,14 @@ export default function Operations() {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        params.set('role', state.role);
         params.set('view', state.section);
         window.history.replaceState(
             {},
             '',
             `${window.location.pathname}?${params.toString()}`,
         );
-        window.localStorage.setItem('ctms-role', state.role);
         window.localStorage.setItem('ctms-section', state.section);
-    }, [state.role, state.section]);
+    }, [state.section]);
 
     useEffect(() => {
         const timer = window.setInterval(
@@ -111,6 +97,40 @@ export default function Operations() {
     const renderWebSurface = () => {
         if (state.role === 'administrator') {
             switch (state.section) {
+                case 'board':
+                    return (
+                        <DispatchBoard
+                            jobs={state.jobs}
+                            resources={state.resources}
+                            selectedJobId={state.selectedJobId}
+                            query={query}
+                            onSelectJob={(jobId) =>
+                                dispatch({ type: 'select-job', jobId })
+                            }
+                        />
+                    );
+                case 'dispatch':
+                    return (
+                        <GuidedDispatch
+                            jobs={state.jobs}
+                            resources={state.resources}
+                            proposal={state.proposal}
+                            selectedJobId={state.selectedJobId}
+                            query={query}
+                            onSelectJob={(jobId) =>
+                                dispatch({ type: 'select-job', jobId })
+                            }
+                            onResolveConflict={(conflictId) =>
+                                dispatch({
+                                    type: 'resolve-conflict',
+                                    conflictId,
+                                })
+                            }
+                            onConfirmDispatch={(jobId) =>
+                                dispatch({ type: 'confirm-dispatch', jobId })
+                            }
+                        />
+                    );
                 case 'administration':
                     return <AdministrationSurface />;
                 case 'fleet':
@@ -371,9 +391,6 @@ export default function Operations() {
                 queuedActions={state.queuedActions}
                 query={query}
                 onQueryChange={setQuery}
-                onRoleChange={(role, section) =>
-                    dispatch({ type: 'set-role', role, section })
-                }
                 onSectionChange={selectSection}
                 onToggleSidebar={() => dispatch({ type: 'toggle-sidebar' })}
             >

@@ -16,9 +16,9 @@ import type {
 } from '@/types/operations';
 
 export const defaultSectionForRole: Record<UserRole, AppSection> = {
-    administrator: 'overview',
-    dispatcher: 'dispatch',
-    manager: 'overview',
+    administrator: 'board',
+    dispatcher: 'board',
+    manager: 'board',
     driver: 'today',
     operator: 'today',
     technician: 'tasks',
