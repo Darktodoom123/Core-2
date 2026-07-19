@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { EmptyState } from '@/components/ui';
 
 type Job = {
     id: number;
@@ -397,7 +398,12 @@ export default function Workspace({
                                             ),
                                         ].join(', ') || 'Unassigned',
                                     ])}
-                                    empty="No dispatch jobs are visible for your account."
+                                    empty={{
+                                        title: 'No dispatch jobs available',
+                                        message: can('dispatch.create')
+                                            ? 'Create a dispatch above to add it to this workspace.'
+                                            : 'Jobs assigned to you or your organization will appear here.',
+                                    }}
                                 />
                             </WorkspaceSection>
                         )}
@@ -425,7 +431,11 @@ export default function Workspace({
                                             asset.blocking_work_orders_count,
                                         ),
                                     ])}
-                                    empty="No assigned or organization-wide assets are visible."
+                                    empty={{
+                                        title: 'No fleet or equipment available',
+                                        message:
+                                            'Assigned and organization-wide assets will appear here when they become available to your account.',
+                                    }}
                                 />
                             </WorkspaceSection>
                         )}
@@ -472,7 +482,16 @@ export default function Workspace({
                                 )}
                                 <div className="space-y-2">
                                     {fuelRequests.length === 0 ? (
-                                        <EmptyState text="No fuel requests are visible." />
+                                        <EmptyState
+                                            compact
+                                            icon={Fuel}
+                                            title="No fuel requests available"
+                                            message={
+                                                can('fuel.request')
+                                                    ? 'Submit the form above to create a fuel request.'
+                                                    : 'Requests available to your role will appear here.'
+                                            }
+                                        />
                                     ) : (
                                         fuelRequests.map((fuel) => (
                                             <div
@@ -545,7 +564,12 @@ export default function Workspace({
                             >
                                 <div className="space-y-2">
                                     {approvals.length === 0 ? (
-                                        <EmptyState text="There are no pending approvals." />
+                                        <EmptyState
+                                            compact
+                                            icon={ShieldCheck}
+                                            title="No approvals need attention"
+                                            message="Exceptional changes awaiting an independent decision will appear here."
+                                        />
                                     ) : (
                                         approvals.map((approval) => (
                                             <div
@@ -606,7 +630,11 @@ export default function Workspace({
                                         user.roles[0]?.name ?? 'Unassigned',
                                         user.is_active ? 'Active' : 'Suspended',
                                     ])}
-                                    empty="No users found."
+                                    empty={{
+                                        title: 'No users available',
+                                        message:
+                                            'Operational users will appear here after an administrator adds them.',
+                                    }}
                                 />
                             </WorkspaceSection>
                         )}
@@ -630,7 +658,11 @@ export default function Workspace({
                                         event.action,
                                         event.reason ?? '—',
                                     ])}
-                                    empty="No audit events have been recorded."
+                                    empty={{
+                                        title: 'No audit events recorded',
+                                        message:
+                                            'Approvals, overrides, status changes, and access changes will appear here.',
+                                    }}
                                 />
                             </WorkspaceSection>
                         )}
@@ -706,13 +738,6 @@ function ActionButton({
         </button>
     );
 }
-function EmptyState({ text }: { text: string }) {
-    return (
-        <p className="rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink-soft">
-            {text}
-        </p>
-    );
-}
 function DataTable({
     headers,
     rows,
@@ -720,10 +745,20 @@ function DataTable({
 }: {
     headers: string[];
     rows: string[][];
-    empty: string;
+    empty: {
+        title: string;
+        message: string;
+    };
 }) {
     if (rows.length === 0) {
-        return <EmptyState text={empty} />;
+        return (
+            <EmptyState
+                compact
+                className="rounded-xl border border-line"
+                title={empty.title}
+                message={empty.message}
+            />
+        );
     }
 
     return (

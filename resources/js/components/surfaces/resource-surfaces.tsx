@@ -6,6 +6,7 @@ import {
     MapPin,
     Plus,
     Search,
+    SearchX,
     SlidersHorizontal,
     Truck,
     Wrench,
@@ -67,6 +68,7 @@ export function ResourceDirectory({
     selectedAssetId,
     query,
     role,
+    onClearQuery,
     onSelectAsset,
 }: {
     mode: 'fleet' | 'equipment';
@@ -74,6 +76,7 @@ export function ResourceDirectory({
     selectedAssetId: string;
     query: string;
     role: UserRole;
+    onClearQuery: () => void;
     onSelectAsset: (assetId: string) => void;
 }) {
     const [statusFilter, setStatusFilter] = useState('All statuses');
@@ -81,8 +84,10 @@ export function ResourceDirectory({
         mode === 'fleet'
             ? ['truck', 'driver']
             : ['crane', 'equipment', 'operator', 'technician'];
-    const filtered = resources.filter((resource) => {
-        const matchesMode = allowedKinds.includes(resource.kind);
+    const modeResources = resources.filter((resource) =>
+        allowedKinds.includes(resource.kind),
+    );
+    const filtered = modeResources.filter((resource) => {
         const matchesQuery =
             `${resource.code} ${resource.name} ${resource.location}`
                 .toLowerCase()
@@ -90,10 +95,15 @@ export function ResourceDirectory({
         const matchesStatus =
             statusFilter === 'All statuses' || resource.status === statusFilter;
 
-        return matchesMode && matchesQuery && matchesStatus;
+        return matchesQuery && matchesStatus;
     });
+    const hasActiveFilters = Boolean(query) || statusFilter !== 'All statuses';
+    const clearFilters = () => {
+        setStatusFilter('All statuses');
+        onClearQuery();
+    };
     const selected =
-        resources.find((resource) => resource.id === selectedAssetId) ??
+        filtered.find((resource) => resource.id === selectedAssetId) ??
         filtered[0];
 
     return (
@@ -164,8 +174,28 @@ export function ResourceDirectory({
 
                     {filtered.length === 0 ? (
                         <EmptyState
-                            title="No resources match these filters"
-                            message="Clear the workspace search or choose another status to restore the register."
+                            announce={hasActiveFilters}
+                            icon={hasActiveFilters ? SearchX : Truck}
+                            title={
+                                hasActiveFilters
+                                    ? 'No resources match these filters'
+                                    : `No ${mode === 'fleet' ? 'fleet resources' : 'equipment'} registered`
+                            }
+                            message={
+                                hasActiveFilters
+                                    ? 'Clear the workspace search and status filter to restore the register.'
+                                    : 'Registered resources will appear here with their readiness and assignment status.'
+                            }
+                            primaryAction={
+                                hasActiveFilters ? (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={clearFilters}
+                                    >
+                                        Clear resource filters
+                                    </Button>
+                                ) : undefined
+                            }
                         />
                     ) : (
                         <div className="overflow-x-auto">
@@ -304,6 +334,8 @@ export function ResourceDirectory({
                 ) : (
                     <Panel className="self-start">
                         <EmptyState
+                            compact
+                            icon={ClipboardCheck}
                             title="Select a resource"
                             message="Choose a row to inspect readiness, utilization, and maintenance."
                         />
@@ -318,11 +350,13 @@ export function FuelManagement({
     requests,
     role,
     query,
+    onClearQuery,
     onDecide,
 }: {
     requests: FuelRequest[];
     role: UserRole;
     query: string;
+    onClearQuery: () => void;
     onDecide: (requestId: string, status: 'Approved' | 'Rejected') => void;
 }) {
     const [view, setView] = useState<'requests' | 'logs'>('requests');
@@ -459,8 +493,28 @@ export function FuelManagement({
 
                     {filtered.length === 0 ? (
                         <EmptyState
-                            title="No fuel records found"
-                            message="Try another request, job, asset, or requester name."
+                            announce={Boolean(query)}
+                            icon={query ? SearchX : Fuel}
+                            title={
+                                query
+                                    ? 'No fuel records match the search'
+                                    : 'No fuel records available'
+                            }
+                            message={
+                                query
+                                    ? 'Try another request, job, asset, or requester name.'
+                                    : 'Fuel requests and dispensing records will appear here when they are submitted.'
+                            }
+                            primaryAction={
+                                query ? (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={onClearQuery}
+                                    >
+                                        Clear workspace search
+                                    </Button>
+                                ) : undefined
+                            }
                         />
                     ) : (
                         <div className="overflow-x-auto">

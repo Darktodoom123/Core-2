@@ -6,9 +6,11 @@ import {
     Check,
     CheckCircle2,
     ChevronDown,
+    ClipboardList,
     Filter,
     MessageSquareText,
     Route,
+    SearchX,
     ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,6 +38,7 @@ export function GuidedDispatch({
     proposal,
     selectedJobId,
     query,
+    onClearQuery,
     onSelectJob,
     onResolveConflict,
     onConfirmDispatch,
@@ -45,6 +48,7 @@ export function GuidedDispatch({
     proposal: GptProposal;
     selectedJobId: string;
     query: string;
+    onClearQuery: () => void;
     onSelectJob: (jobId: string) => void;
     onResolveConflict: (conflictId: string) => void;
     onConfirmDispatch: (jobId: string) => void;
@@ -65,8 +69,35 @@ export function GuidedDispatch({
         (conflict) => !conflict.resolved,
     ).length;
 
+    const pageActions = (
+        <>
+            <Button variant="secondary">
+                <MessageSquareText className="h-4 w-4" aria-hidden="true" />
+                Contact field team
+            </Button>
+            <Button variant="primary">Create service request</Button>
+        </>
+    );
+
     if (!selectedJob) {
-        return null;
+        return (
+            <div>
+                <PageHeading
+                    title="Dispatch workspace"
+                    description="Review the request, resolve operational conflicts, and confirm the prepared resource plan."
+                    actions={pageActions}
+                />
+                <div className="p-4 md:p-6">
+                    <Panel>
+                        <EmptyState
+                            icon={ClipboardList}
+                            title="No dispatch requests available"
+                            message="New service requests and jobs will appear here when they are ready for dispatch review."
+                        />
+                    </Panel>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -74,20 +105,7 @@ export function GuidedDispatch({
             <PageHeading
                 title="Dispatch workspace"
                 description="Review the request, resolve operational conflicts, and confirm the prepared resource plan."
-                actions={
-                    <>
-                        <Button variant="secondary">
-                            <MessageSquareText
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                            />
-                            Contact field team
-                        </Button>
-                        <Button variant="primary">
-                            Create service request
-                        </Button>
-                    </>
-                }
+                actions={pageActions}
             />
 
             <div className="grid min-h-[calc(100vh-9rem)] grid-cols-1 min-[1400px]:grid-cols-[18rem_minmax(0,1fr)_22rem] lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -111,8 +129,19 @@ export function GuidedDispatch({
                     </div>
                     {filteredJobs.length === 0 ? (
                         <EmptyState
+                            compact
+                            announce
+                            icon={SearchX}
                             title="No matching requests"
                             message="Try a job reference, client, or site name."
+                            primaryAction={
+                                <Button
+                                    variant="secondary"
+                                    onClick={onClearQuery}
+                                >
+                                    Clear workspace search
+                                </Button>
+                            }
                         />
                     ) : (
                         <ul className="divide-y divide-line">
@@ -520,12 +549,14 @@ export function DispatchBoard({
     resources,
     selectedJobId,
     query,
+    onClearQuery,
     onSelectJob,
 }: {
     jobs: DispatchJob[];
     resources: Resource[];
     selectedJobId: string;
     query: string;
+    onClearQuery: () => void;
     onSelectJob: (jobId: string) => void;
 }) {
     const [conflictsOnly, setConflictsOnly] = useState(false);
@@ -537,6 +568,22 @@ export function DispatchBoard({
     const categories = Array.from(
         new Set(boardRows.map((row) => row.category)),
     );
+    const boardResourceIds = new Set(boardRows.map((row) => row.resourceId));
+    const hasVisibleJobs = filteredJobs.some(
+        (job) =>
+            (!conflictsOnly || job.reference === 'CON-1256') &&
+            Object.values(job.assignment).some((value) =>
+                Array.isArray(value)
+                    ? value.some((resourceId) =>
+                          boardResourceIds.has(resourceId),
+                      )
+                    : boardResourceIds.has(value),
+            ),
+    );
+    const clearBoardFilters = () => {
+        setConflictsOnly(false);
+        onClearQuery();
+    };
 
     return (
         <div>
@@ -569,6 +616,24 @@ export function DispatchBoard({
 
             <div className="overflow-x-auto p-4 md:p-6">
                 <Panel className="min-w-[68rem] overflow-hidden">
+                    {(query || conflictsOnly) && !hasVisibleJobs && (
+                        <EmptyState
+                            compact
+                            announce
+                            icon={SearchX}
+                            className="border-b border-line"
+                            title="No jobs match the board filters"
+                            message="Clear the workspace search and conflict filter to restore scheduled work."
+                            primaryAction={
+                                <Button
+                                    variant="secondary"
+                                    onClick={clearBoardFilters}
+                                >
+                                    Clear board filters
+                                </Button>
+                            }
+                        />
+                    )}
                     <div className="grid grid-cols-[15rem_minmax(52rem,1fr)] border-b border-line bg-surface-subtle">
                         <div className="border-r border-line px-4 py-3 text-sm font-semibold text-ink">
                             Resources
@@ -739,22 +804,32 @@ export function LiveOperations({
             />
             <div className="p-4 md:p-6">
                 <Panel className="overflow-hidden">
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                        <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-success" />
-                            <span className="text-sm font-semibold text-ink">
-                                Prototype telemetry is updating
-                            </span>
-                        </div>
-                        <p className="text-xs text-ink-soft">
-                            Last simulation tick · 10:14:32
-                        </p>
-                    </div>
-                    <LocalOperationsMap
-                        points={telemetry}
-                        selectedId={selectedAssetId}
-                        onSelect={onSelectAsset}
-                    />
+                    {telemetry.length === 0 ? (
+                        <EmptyState
+                            icon={Route}
+                            title="No live telemetry available"
+                            message="Asset positions and signal freshness will appear after telemetry is received."
+                        />
+                    ) : (
+                        <>
+                            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-success" />
+                                    <span className="text-sm font-semibold text-ink">
+                                        Prototype telemetry is updating
+                                    </span>
+                                </div>
+                                <p className="text-xs text-ink-soft">
+                                    Last simulation tick · 10:14:32
+                                </p>
+                            </div>
+                            <LocalOperationsMap
+                                points={telemetry}
+                                selectedId={selectedAssetId}
+                                onSelect={onSelectAsset}
+                            />
+                        </>
+                    )}
                 </Panel>
             </div>
         </div>

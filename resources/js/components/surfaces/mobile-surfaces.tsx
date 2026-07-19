@@ -29,6 +29,7 @@ import { useState } from 'react';
 import {
     Button,
     DataPair,
+    EmptyState,
     InlineNotice,
     Panel,
     ProgressBar,
@@ -778,6 +779,27 @@ function TechnicianSurface({
         );
     }
 
+    if (!selected) {
+        return (
+            <div>
+                <MobileSectionTitle
+                    title="Assigned tasks"
+                    subtitle="Prioritized maintenance and breakdown work for today."
+                />
+                <div className="px-4 pb-6">
+                    <Panel>
+                        <EmptyState
+                            compact
+                            icon={Wrench}
+                            title="No service tasks assigned"
+                            message="New maintenance and breakdown work will appear here when it is assigned to you."
+                        />
+                    </Panel>
+                </div>
+            </div>
+        );
+    }
+
     if (section === 'issues') {
         return (
             <div>
@@ -979,10 +1001,6 @@ export function FieldMobileApp({
     const assignedJob =
         jobs.find((job) => job.reference === 'CON-1251') ?? jobs[0];
 
-    if (!assignedJob) {
-        return null;
-    }
-
     return (
         <MobileFrame
             role={role}
@@ -993,7 +1011,30 @@ export function FieldMobileApp({
             onConnectivityChange={onConnectivityChange}
             onSync={onSync}
         >
-            {role === 'driver' ? (
+            {role === 'technician' ? (
+                <TechnicianSurface
+                    section={section}
+                    tasks={fieldTasks}
+                    onAdvanceTask={onAdvanceTask}
+                />
+            ) : !assignedJob ? (
+                <div>
+                    <MobileSectionTitle
+                        title="Assigned work"
+                        subtitle="Today’s dispatch assignments and field status."
+                    />
+                    <div className="px-4 pb-6">
+                        <Panel>
+                            <EmptyState
+                                compact
+                                icon={ClipboardList}
+                                title="No job assigned"
+                                message="Your next field assignment will appear here after dispatch confirms it."
+                            />
+                        </Panel>
+                    </div>
+                </div>
+            ) : role === 'driver' ? (
                 <DriverSurface
                     section={section}
                     job={assignedJob}
@@ -1010,13 +1051,7 @@ export function FieldMobileApp({
                         onAdvanceJob(assignedJob.id, status)
                     }
                 />
-            ) : (
-                <TechnicianSurface
-                    section={section}
-                    tasks={fieldTasks}
-                    onAdvanceTask={onAdvanceTask}
-                />
-            )}
+            ) : null}
         </MobileFrame>
     );
 }

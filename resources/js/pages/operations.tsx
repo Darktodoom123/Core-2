@@ -104,6 +104,7 @@ export default function Operations() {
                             resources={state.resources}
                             selectedJobId={state.selectedJobId}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onSelectJob={(jobId) =>
                                 dispatch({ type: 'select-job', jobId })
                             }
@@ -117,6 +118,7 @@ export default function Operations() {
                             proposal={state.proposal}
                             selectedJobId={state.selectedJobId}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onSelectJob={(jobId) =>
                                 dispatch({ type: 'select-job', jobId })
                             }
@@ -141,6 +143,7 @@ export default function Operations() {
                             selectedAssetId={state.selectedAssetId}
                             query={query}
                             role={state.role}
+                            onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
                             }
@@ -154,6 +157,7 @@ export default function Operations() {
                             selectedAssetId={state.selectedAssetId}
                             query={query}
                             role={state.role}
+                            onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
                             }
@@ -165,6 +169,7 @@ export default function Operations() {
                             requests={state.fuelRequests}
                             role={state.role}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onDecide={(requestId, status) =>
                                 dispatch({
                                     type: 'decide-fuel-request',
@@ -212,6 +217,7 @@ export default function Operations() {
                             resources={state.resources}
                             selectedJobId={state.selectedJobId}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onSelectJob={(jobId) =>
                                 dispatch({ type: 'select-job', jobId })
                             }
@@ -230,6 +236,7 @@ export default function Operations() {
                             selectedAssetId={state.selectedAssetId}
                             query={query}
                             role={state.role}
+                            onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
                             }
@@ -241,6 +248,7 @@ export default function Operations() {
                             requests={state.fuelRequests}
                             role={state.role}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onDecide={(requestId, status) =>
                                 dispatch({
                                     type: 'decide-fuel-request',
@@ -265,6 +273,7 @@ export default function Operations() {
                             proposal={state.proposal}
                             selectedJobId={state.selectedJobId}
                             query={query}
+                            onClearQuery={() => setQuery('')}
                             onSelectJob={(jobId) =>
                                 dispatch({ type: 'select-job', jobId })
                             }
@@ -298,6 +307,7 @@ export default function Operations() {
                         resources={state.resources}
                         selectedJobId={state.selectedJobId}
                         query={query}
+                        onClearQuery={() => setQuery('')}
                         onSelectJob={(jobId) =>
                             dispatch({ type: 'select-job', jobId })
                         }
@@ -326,6 +336,7 @@ export default function Operations() {
                         selectedAssetId={state.selectedAssetId}
                         query={query}
                         role={state.role}
+                        onClearQuery={() => setQuery('')}
                         onSelectAsset={(assetId) =>
                             dispatch({ type: 'select-asset', assetId })
                         }
@@ -337,6 +348,7 @@ export default function Operations() {
                         requests={state.fuelRequests}
                         role={state.role}
                         query={query}
+                        onClearQuery={() => setQuery('')}
                         onDecide={(requestId, status) =>
                             dispatch({
                                 type: 'decide-fuel-request',
@@ -361,6 +373,7 @@ export default function Operations() {
                         proposal={state.proposal}
                         selectedJobId={state.selectedJobId}
                         query={query}
+                        onClearQuery={() => setQuery('')}
                         onSelectJob={(jobId) =>
                             dispatch({ type: 'select-job', jobId })
                         }

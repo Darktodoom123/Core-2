@@ -14,6 +14,7 @@ import { useState } from 'react';
 import {
     Button,
     DataPair,
+    EmptyState,
     InlineNotice,
     PageHeading,
     Panel,
@@ -180,31 +181,41 @@ export function AdministratorOverview({
                             Auditable changes across the platform
                         </p>
                     </div>
-                    <ol className="divide-y divide-line">
-                        {auditEvents.slice(0, 5).map((event) => (
-                            <li key={event.id} className="px-4 py-3">
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
-                                        <Activity
-                                            className="h-4 w-4"
-                                            aria-hidden="true"
-                                        />
+                    {auditEvents.length === 0 ? (
+                        <EmptyState
+                            compact
+                            icon={Activity}
+                            title="No administrative activity recorded"
+                            message="Auditable platform and access changes will appear here."
+                        />
+                    ) : (
+                        <ol className="divide-y divide-line">
+                            {auditEvents.slice(0, 5).map((event) => (
+                                <li key={event.id} className="px-4 py-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
+                                            <Activity
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-ink">
+                                                {event.action}
+                                            </p>
+                                            <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                                {event.detail}
+                                            </p>
+                                            <p className="mt-1 text-xs text-muted">
+                                                {event.actor} ·{' '}
+                                                {event.timestamp}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-medium text-ink">
-                                            {event.action}
-                                        </p>
-                                        <p className="mt-1 text-xs leading-5 text-ink-soft">
-                                            {event.detail}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted">
-                                            {event.actor} · {event.timestamp}
-                                        </p>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ol>
+                                </li>
+                            ))}
+                        </ol>
+                    )}
                 </Panel>
             </div>
         </div>
@@ -452,48 +463,60 @@ export function ManagerOverview({
                         </div>
 
                         <div className="space-y-3 pt-6">
-                            {jobs.map((job) => (
-                                <button
-                                    key={job.id}
-                                    type="button"
-                                    onClick={() => onNavigate('board')}
-                                    className="group relative flex w-full flex-col justify-between gap-4 rounded-lg p-4 text-left transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none sm:flex-row sm:items-center"
-                                >
-                                    {[
-                                        'In progress',
-                                        'Dispatched',
-                                        'En route',
-                                    ].includes(job.status) && (
-                                        <div className="absolute top-3 bottom-3 left-0 hidden w-1 rounded-r-full bg-brand opacity-0 transition-opacity group-hover:opacity-100 sm:block" />
-                                    )}
-                                    <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
-                                        <div className="w-24 shrink-0 text-left sm:text-right">
-                                            <p className="text-sm font-semibold text-ink transition-colors group-hover:text-brand">
-                                                {job.reference}
-                                            </p>
-                                            <p className="mt-1 text-xs text-muted">
-                                                {job.startTime}–{job.endTime}
-                                            </p>
+                            {jobs.length === 0 ? (
+                                <EmptyState
+                                    compact
+                                    icon={Activity}
+                                    title="No scheduled operations"
+                                    message="Scheduled jobs will appear here when work is ready for coordination."
+                                />
+                            ) : (
+                                jobs.map((job) => (
+                                    <button
+                                        key={job.id}
+                                        type="button"
+                                        onClick={() => onNavigate('board')}
+                                        className="group relative flex w-full flex-col justify-between gap-4 rounded-lg p-4 text-left transition-all duration-300 hover:bg-surface-subtle hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none sm:flex-row sm:items-center"
+                                    >
+                                        {[
+                                            'In progress',
+                                            'Dispatched',
+                                            'En route',
+                                        ].includes(job.status) && (
+                                            <div className="absolute top-3 bottom-3 left-0 hidden w-1 rounded-r-full bg-brand opacity-0 transition-opacity group-hover:opacity-100 sm:block" />
+                                        )}
+                                        <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
+                                            <div className="w-24 shrink-0 text-left sm:text-right">
+                                                <p className="text-sm font-semibold text-ink transition-colors group-hover:text-brand">
+                                                    {job.reference}
+                                                </p>
+                                                <p className="mt-1 text-xs text-muted">
+                                                    {job.startTime}–
+                                                    {job.endTime}
+                                                </p>
+                                            </div>
+                                            <div className="hidden h-10 w-px shrink-0 bg-line sm:block" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-base font-medium text-ink">
+                                                    {job.title}
+                                                </p>
+                                                <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted">
+                                                    <MapPin className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">
+                                                        {job.site}
+                                                    </span>
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="hidden h-10 w-px shrink-0 bg-line sm:block" />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-base font-medium text-ink">
-                                                {job.title}
-                                            </p>
-                                            <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted">
-                                                <MapPin className="h-3 w-3 shrink-0" />
-                                                <span className="truncate">
-                                                    {job.site}
-                                                </span>
-                                            </p>
+                                        <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end">
+                                            <StatusBadge
+                                                status={job.priority}
+                                            />
+                                            <StatusBadge status={job.status} />
                                         </div>
-                                    </div>
-                                    <div className="flex shrink-0 flex-row items-center gap-2 sm:flex-col sm:items-end">
-                                        <StatusBadge status={job.priority} />
-                                        <StatusBadge status={job.status} />
-                                    </div>
-                                </button>
-                            ))}
+                                    </button>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -680,32 +703,41 @@ export function ReportsSurface({
                             </h2>
                         </div>
                         {administrator ? (
-                            <div className="divide-y divide-line">
-                                {auditEvents.map((event) => (
-                                    <div
-                                        key={event.id}
-                                        className="grid gap-2 px-4 py-3 sm:grid-cols-[10rem_1fr_8rem]"
-                                    >
-                                        <div>
-                                            <p className="text-sm font-medium text-ink">
-                                                {event.actor}
-                                            </p>
-                                            <p className="mt-0.5 text-xs text-ink-soft">
-                                                {event.timestamp}
-                                            </p>
+                            auditEvents.length === 0 ? (
+                                <EmptyState
+                                    compact
+                                    icon={Activity}
+                                    title="No audit activity recorded"
+                                    message="Sensitive changes and recovery events will appear here."
+                                />
+                            ) : (
+                                <div className="divide-y divide-line">
+                                    {auditEvents.map((event) => (
+                                        <div
+                                            key={event.id}
+                                            className="grid gap-2 px-4 py-3 sm:grid-cols-[10rem_1fr_8rem]"
+                                        >
+                                            <div>
+                                                <p className="text-sm font-medium text-ink">
+                                                    {event.actor}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-ink-soft">
+                                                    {event.timestamp}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-ink">
+                                                    {event.action}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-ink-soft">
+                                                    {event.detail}
+                                                </p>
+                                            </div>
+                                            <StatusBadge status="Recorded" />
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-ink">
-                                                {event.action}
-                                            </p>
-                                            <p className="mt-0.5 text-xs text-ink-soft">
-                                                {event.detail}
-                                            </p>
-                                        </div>
-                                        <StatusBadge status="Recorded" />
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )
                         ) : (
                             <div className="divide-y divide-line">
                                 {[

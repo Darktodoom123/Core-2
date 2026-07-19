@@ -1,4 +1,5 @@
-import { AlertTriangle, Check, Info, X } from 'lucide-react';
+import { AlertTriangle, Check, Inbox, Info, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type {
     ButtonHTMLAttributes,
     HTMLAttributes,
@@ -207,19 +208,46 @@ export function InlineNotice({
 export function EmptyState({
     title,
     message,
+    icon: Icon = Inbox,
+    primaryAction,
+    secondaryAction,
+    compact = false,
+    announce = false,
+    className,
 }: {
     title: string;
     message: string;
+    icon?: LucideIcon;
+    primaryAction?: ReactNode;
+    secondaryAction?: ReactNode;
+    compact?: boolean;
+    announce?: boolean;
+    className?: string;
 }) {
     return (
-        <div className="flex min-h-56 flex-col items-center justify-center px-5 text-center">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-subtle text-muted">
-                <Info className="h-5 w-5" aria-hidden="true" />
+        <div
+            className={cn(
+                'flex flex-col items-center justify-center text-center',
+                compact ? 'px-4 py-8' : 'min-h-56 px-5 py-10',
+                className,
+            )}
+            role={announce ? 'status' : undefined}
+            aria-live={announce ? 'polite' : undefined}
+            aria-atomic={announce ? 'true' : undefined}
+        >
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-subtle text-ink-soft">
+                <Icon className="h-5 w-5" aria-hidden="true" />
             </div>
-            <h3 className="font-semibold text-ink">{title}</h3>
+            <p className="font-semibold text-ink">{title}</p>
             <p className="mt-1 max-w-sm text-sm leading-6 text-ink-soft">
                 {message}
             </p>
+            {(primaryAction || secondaryAction) && (
+                <div className="mt-5 flex w-full max-w-sm flex-col items-stretch justify-center gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    {primaryAction}
+                    {secondaryAction}
+                </div>
+            )}
         </div>
     );
 }
