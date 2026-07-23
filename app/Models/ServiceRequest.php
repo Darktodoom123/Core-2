@@ -3,11 +3,19 @@
 namespace App\Models;
 
 use App\Enums\DispatchPriority;
+use App\Enums\ServiceRequestStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property DispatchPriority $priority
+ * @property ServiceRequestStatus $status
+ * @property Carbon|null $scheduled_date
+ * @property array<int, string>|null $requirements
+ */
 class ServiceRequest extends Model
 {
     use SoftDeletes;
@@ -19,6 +27,7 @@ class ServiceRequest extends Model
         return [
             'scheduled_date' => 'datetime',
             'priority' => DispatchPriority::class,
+            'status' => ServiceRequestStatus::class,
             'requirements' => 'array',
         ];
     }

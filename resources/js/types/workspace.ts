@@ -12,6 +12,8 @@ export type DispatchStatusValue =
 
 export type DispatchPriorityValue = 'routine' | 'priority' | 'emergency';
 
+export type ServiceRequestStatusValue = 'submitted' | 'dispatching';
+
 export type FuelRequestStatusValue =
     'submitted' | 'forwarded' | 'approved' | 'rejected' | 'verified' | 'logged';
 
@@ -30,6 +32,7 @@ export type ApprovalStatusValue = 'pending' | 'approved' | 'rejected';
 export type CanonicalStatusValue =
     | DispatchStatusValue
     | DispatchPriorityValue
+    | ServiceRequestStatusValue
     | FuelRequestStatusValue
     | AssetStatusValue
     | ApprovalStatusValue;
@@ -67,6 +70,32 @@ export interface DispatchJobViewModel {
     updated_at: string | null;
     personnel_assignments: DispatchAssignmentViewModel[];
     asset_assignments: DispatchAssetAssignmentViewModel[];
+}
+
+export interface ClientViewModel {
+    id: number;
+    code: string;
+    company_name: string;
+    address: string | null;
+}
+
+export interface ServiceRequestViewModel {
+    id: number;
+    reference: string;
+    client: {
+        id: number;
+        code: string;
+        company_name: string;
+    };
+    project_name: string;
+    service_type: string;
+    location: string;
+    site_notes: string | null;
+    scheduled_date: string | null;
+    priority: StatusViewModel<DispatchPriorityValue>;
+    status: StatusViewModel<ServiceRequestStatusValue>;
+    requirements: string[];
+    dispatch_jobs_count: number;
 }
 
 export interface AssetViewModel {
@@ -137,6 +166,9 @@ export interface WorkspaceNavigationItem {
 
 export interface WorkspaceCapabilities {
     create_dispatch: boolean;
+    create_client: boolean;
+    create_service_request: boolean;
+    convert_service_request: boolean;
     share_location: boolean;
     request_fuel: boolean;
     forward_fuel: boolean;
@@ -157,6 +189,8 @@ export interface WorkspaceFlash {
 
 export interface WorkspacePageProps {
     jobs: DispatchJobViewModel[];
+    clients: ClientViewModel[];
+    serviceRequests: ServiceRequestViewModel[];
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
     approvals: ApprovalViewModel[];

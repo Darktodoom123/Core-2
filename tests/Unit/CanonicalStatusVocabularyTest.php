@@ -5,6 +5,7 @@ use App\Enums\AssetStatus;
 use App\Enums\DispatchPriority;
 use App\Enums\DispatchStatus;
 use App\Enums\FuelRequestStatus;
+use App\Enums\ServiceRequestStatus;
 
 it('publishes the canonical operational status vocabulary and labels', function () {
     expect(enumVocabulary(DispatchStatus::cases()))->toBe([
@@ -42,17 +43,20 @@ it('publishes the canonical operational status vocabulary and labels', function 
         'routine' => 'Routine',
         'priority' => 'Priority',
         'emergency' => 'Emergency',
+    ])->and(enumVocabulary(ServiceRequestStatus::cases()))->toBe([
+        'submitted' => 'Submitted',
+        'dispatching' => 'Dispatching',
     ]);
 });
 
 /**
- * @param  array<int, ApprovalStatus|AssetStatus|DispatchPriority|DispatchStatus|FuelRequestStatus>  $cases
+ * @param  array<int, ApprovalStatus|AssetStatus|DispatchPriority|DispatchStatus|FuelRequestStatus|ServiceRequestStatus>  $cases
  * @return array<string, string>
  */
 function enumVocabulary(array $cases): array
 {
     return collect($cases)->mapWithKeys(
-        static fn (ApprovalStatus|AssetStatus|DispatchPriority|DispatchStatus|FuelRequestStatus $case): array => [
+        static fn (ApprovalStatus|AssetStatus|DispatchPriority|DispatchStatus|FuelRequestStatus|ServiceRequestStatus $case): array => [
             $case->value => $case->label(),
         ],
     )->all();

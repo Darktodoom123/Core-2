@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\PermissionName;
 use App\Models\ApprovalRequest;
 use App\Models\AuditEvent;
+use App\Models\Client;
 use App\Models\DispatchJob;
 use App\Models\FuelRequest;
 use App\Models\OperationalAsset;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use App\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ final class OperationsWorkspaceController extends Controller
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
+        $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
 
         $jobs = Gate::forUser($user)->allows('viewAny', DispatchJob::class)
             ? DispatchJob::query()->visibleTo($user)->with(['personnelAssignments.user:id,name', 'assetAssignments.asset:id,code,name'])->orderBy('scheduled_start')->limit(100)->get()
@@ -39,9 +42,25 @@ final class OperationsWorkspaceController extends Controller
         $auditEvents = $user->can(PermissionName::AuditView->value)
             ? AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get()
             : collect();
+        $clients = $canCreateDispatch
+            ? Client::query()->where('status', 'active')->orderBy('company_name')->limit(200)->get()
+            : collect();
+        $serviceRequests = $canCreateDispatch
+            ? ServiceRequest::query()
+                ->with('client:id,code,company_name')
+                ->withCount('dispatchJobs')
+                ->whereIn('status', ['submitted', 'dispatching'])
+                ->orderByRaw('scheduled_date is null')
+                ->orderBy('scheduled_date')
+                ->latest('created_at')
+                ->limit(100)
+                ->get()
+            : collect();
 
         return Inertia::render('workspace', [
             'jobs' => OperationsWorkspaceViewModel::jobs($jobs),
+            'clients' => OperationsWorkspaceViewModel::clients($clients),
+            'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($serviceRequests),
             'assets' => OperationsWorkspaceViewModel::assets($assets),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelRequests),
             'approvals' => OperationsWorkspaceViewModel::approvals($approvals),

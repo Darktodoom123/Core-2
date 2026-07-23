@@ -19,15 +19,27 @@ import {
     Panel,
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { cn } from '@/lib/utils';
-import type { DispatchJobViewModel } from '@/types/workspace';
+import type {
+    ClientViewModel,
+    DispatchJobViewModel,
+    ServiceRequestViewModel,
+    WorkspaceCapabilities,
+} from '@/types/workspace';
 
 export function LiveDispatchWorkspace({
     jobs,
+    clients,
+    serviceRequests,
+    capabilities,
     canCreate,
     refreshing,
 }: {
     jobs: DispatchJobViewModel[];
+    clients: ClientViewModel[];
+    serviceRequests: ServiceRequestViewModel[];
+    capabilities: WorkspaceCapabilities;
     canCreate: boolean;
     refreshing: boolean;
 }) {
@@ -102,6 +114,16 @@ export function LiveDispatchWorkspace({
                     ) : undefined
                 }
             />
+
+            {(capabilities.create_client ||
+                capabilities.create_service_request ||
+                capabilities.convert_service_request) && (
+                <LiveDispatchIntake
+                    clients={clients}
+                    serviceRequests={serviceRequests}
+                    capabilities={capabilities}
+                />
+            )}
 
             {showCreate && canCreate && (
                 <section

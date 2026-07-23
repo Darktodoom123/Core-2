@@ -6,14 +6,62 @@ use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\ApprovalRequest;
 use App\Models\AuditEvent;
+use App\Models\Client;
 use App\Models\DispatchJob;
 use App\Models\FuelRequest;
 use App\Models\OperationalAsset;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 final class OperationsWorkspaceViewModel
 {
+    /**
+     * @param  Collection<int, Client>  $clients
+     * @return array<int, array<string, mixed>>
+     */
+    public static function clients(Collection $clients): array
+    {
+        return $clients->map(static fn (Client $client): array => [
+            'id' => (int) $client->getKey(),
+            'code' => $client->code,
+            'company_name' => $client->company_name,
+            'address' => $client->address,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, ServiceRequest>  $requests
+     * @return array<int, array<string, mixed>>
+     */
+    public static function serviceRequests(Collection $requests): array
+    {
+        return $requests->map(static fn (ServiceRequest $request): array => [
+            'id' => (int) $request->getKey(),
+            'reference' => $request->reference,
+            'client' => [
+                'id' => (int) $request->client->getKey(),
+                'code' => $request->client->code,
+                'company_name' => $request->client->company_name,
+            ],
+            'project_name' => $request->project_name,
+            'service_type' => $request->service_type,
+            'location' => $request->location,
+            'site_notes' => $request->site_notes,
+            'scheduled_date' => $request->scheduled_date?->toIso8601String(),
+            'priority' => [
+                'value' => $request->priority->value,
+                'label' => $request->priority->label(),
+            ],
+            'status' => [
+                'value' => $request->status->value,
+                'label' => $request->status->label(),
+            ],
+            'requirements' => $request->requirements ?? [],
+            'dispatch_jobs_count' => (int) $request->getAttribute('dispatch_jobs_count'),
+        ])->values()->all();
+    }
+
     /**
      * @param  Collection<int, DispatchJob>  $jobs
      * @return array<int, array<string, mixed>>
@@ -234,6 +282,9 @@ final class OperationsWorkspaceViewModel
     {
         return [
             'create_dispatch' => $user->can(PermissionName::DispatchCreate->value),
+            'create_client' => $user->can(PermissionName::DispatchCreate->value),
+            'create_service_request' => $user->can(PermissionName::DispatchCreate->value),
+            'convert_service_request' => $user->can(PermissionName::DispatchCreate->value),
             'share_location' => $user->can(PermissionName::TrackingShareOwn->value),
             'request_fuel' => $user->can(PermissionName::FuelRequest->value),
             'forward_fuel' => $user->can(PermissionName::FuelForward->value),

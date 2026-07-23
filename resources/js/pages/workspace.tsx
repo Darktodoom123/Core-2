@@ -168,6 +168,9 @@ export default function Workspace(props: WorkspacePageProps) {
                 ) : availableSection === 'dispatch' ? (
                     <LiveDispatchWorkspace
                         jobs={props.jobs}
+                        clients={props.clients}
+                        serviceRequests={props.serviceRequests}
+                        capabilities={props.capabilities}
                         canCreate={props.capabilities.create_dispatch}
                         refreshing={refreshing}
                     />

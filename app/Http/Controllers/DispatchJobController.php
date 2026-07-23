@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ConvertServiceRequestToDispatch;
 use App\Actions\RecordAuditEvent;
 use App\Enums\DispatchStatus;
 use App\Http\Requests\StoreDispatchJobRequest;
 use App\Models\DispatchJob;
-use App\Models\ServiceRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -20,29 +20,31 @@ final class DispatchJobController extends Controller
         return response()->json(['data' => DispatchJob::query()->visibleTo(request()->user())->with(['personnelAssignments', 'assetAssignments.asset'])->latest('scheduled_start')->paginate(25)]);
     }
 
-    public function store(StoreDispatchJobRequest $request, RecordAuditEvent $audit): RedirectResponse
-    {
+    public function store(
+        StoreDispatchJobRequest $request,
+        ConvertServiceRequestToDispatch $convert,
+        RecordAuditEvent $audit,
+    ): RedirectResponse {
         $validated = $request->validated();
 
         if (isset($validated['service_request_id'])) {
-            $serviceRequest = ServiceRequest::query()->findOrFail($request->integer('service_request_id'));
-            $serviceRequest->load('client');
-            $validated = [
-                ...[
-                    'client' => $serviceRequest->client->company_name,
-                    'title' => $serviceRequest->project_name,
-                    'site' => $serviceRequest->location,
-                    'site_notes' => $serviceRequest->site_notes,
-                    'scheduled_start' => $serviceRequest->scheduled_date,
-                    'priority' => $serviceRequest->priority,
-                    'requirements' => $serviceRequest->requirements,
+            $job = $convert->handle(
+                (int) $validated['service_request_id'],
+                $request->user(),
+                [
+                    'reference' => $validated['reference'],
+                    'scheduled_start' => $validated['scheduled_start'],
+                    'scheduled_end' => $validated['scheduled_end'],
                 ],
+            );
+        } else {
+            $job = DispatchJob::query()->create([
                 ...$validated,
-            ];
+                'status' => DispatchStatus::Draft,
+                'created_by' => $request->user()->id,
+            ]);
+            $audit->handle($request->user(), $job, 'dispatch.created', null, $job->toArray());
         }
-
-        $job = DispatchJob::query()->create([...$validated, 'status' => DispatchStatus::Draft, 'created_by' => $request->user()->id]);
-        $audit->handle($request->user(), $job, 'dispatch.created', null, $job->toArray());
 
         return to_route('home')->with('flash', [
             'tone' => 'success',

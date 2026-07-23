@@ -20,6 +20,7 @@ const statusTones: Record<CanonicalStatusValue, StatusTone> = {
     priority: 'warning',
     emergency: 'danger',
     submitted: 'neutral',
+    dispatching: 'brand',
     forwarded: 'brand',
     approved: 'success',
     rejected: 'danger',
