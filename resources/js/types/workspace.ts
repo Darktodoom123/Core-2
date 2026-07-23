@@ -46,6 +46,7 @@ export interface DispatchAssignmentViewModel {
     id: number;
     name: string;
     type: string;
+    response_status: StatusViewModel<'pending' | 'accepted' | 'rejected'>;
 }
 
 export interface DispatchAssetAssignmentViewModel {
@@ -199,4 +200,62 @@ export interface WorkspacePageProps {
     navigation: WorkspaceNavigationItem[];
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
+}
+
+export interface AssignmentScheduleConflictViewModel {
+    id: number;
+    reference: string;
+    scheduled_start: string | null;
+    scheduled_end: string | null;
+}
+
+export interface PersonnelCandidateViewModel {
+    id: number;
+    name: string;
+    assignment_type: 'driver' | 'crane_operator' | 'field_technician';
+    assignment_label: string;
+    eligible: boolean;
+    reasons: string[];
+    availability: StatusViewModel<
+        'available' | 'assigned' | 'unavailable' | 'on_leave' | 'not_recorded'
+    >;
+    account_status: StatusViewModel<'active' | 'inactive' | 'suspended'>;
+    credential: {
+        kind: 'driver_license' | 'operator_certification' | null;
+        label: string;
+        status:
+            | 'valid'
+            | 'missing'
+            | 'expired'
+            | 'inactive'
+            | 'not_yet_valid'
+            | 'not_required';
+        expires_at: string | null;
+    };
+    schedule_conflicts: AssignmentScheduleConflictViewModel[];
+    already_assigned: boolean;
+}
+
+export interface AssetCandidateViewModel {
+    id: number;
+    code: string;
+    name: string;
+    assignment_type: 'truck' | 'crane' | 'equipment';
+    assignment_label: string;
+    eligible: boolean;
+    reasons: string[];
+    readiness: StatusViewModel<AssetStatusValue>;
+    blocking_maintenance_count: number;
+    schedule_conflicts: AssignmentScheduleConflictViewModel[];
+    already_assigned: boolean;
+}
+
+export interface DispatchDetailPageProps {
+    job: DispatchJobViewModel;
+    personnel_candidates: PersonnelCandidateViewModel[];
+    asset_candidates: AssetCandidateViewModel[];
+    capabilities: {
+        assign_resources: boolean;
+        view_assignment_candidates: boolean;
+    };
 }

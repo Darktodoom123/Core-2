@@ -17,6 +17,8 @@ use App\Http\Controllers\OperationsWorkspaceController;
 use App\Http\Controllers\PersonnelController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\UserManagementController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -44,7 +46,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/service-requests', [ServiceRequestController::class, 'store']);
         Route::get('/dispatch-jobs', [DispatchJobController::class, 'index']);
         Route::post('/dispatch-jobs', [DispatchJobController::class, 'store']);
-        Route::get('/dispatch-jobs/{dispatchJob}', [DispatchJobController::class, 'show']);
+        Route::get('/dispatch-jobs/{dispatchJob}', [DispatchJobController::class, 'show'])->name('dispatch-jobs.show');
         Route::post('/dispatch-jobs/{dispatchJob}/assignments', [DispatchWorkflowController::class, 'assign']);
         Route::post('/dispatch-jobs/{dispatchJob}/activate', [DispatchWorkflowController::class, 'activate']);
         Route::post('/dispatch-jobs/{dispatchJob}/status', [DispatchWorkflowController::class, 'transition']);
@@ -70,11 +72,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
 if (app()->environment('local')) {
     Route::get('/dev/users', function () {
-        return response()->json(\App\Models\User::query()->select('id', 'name', 'email')->get());
+        return response()->json(User::query()->select('id', 'name', 'email')->get());
     });
 
-    Route::post('/dev/login/{user}', function (\App\Models\User $user) {
-        \Illuminate\Support\Facades\Auth::login($user);
+    Route::post('/dev/login/{user}', function (User $user) {
+        Auth::login($user);
+
         return redirect()->route('home');
     });
 }

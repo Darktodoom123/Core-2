@@ -3,23 +3,32 @@
 namespace App\Http\Requests;
 
 use App\Enums\PermissionName;
+use App\Models\DispatchJob;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 final class AssignDispatchResourcesRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can(PermissionName::AssignmentsCreate->value) ?? false;
+        $job = $this->route('dispatchJob');
+
+        return $job instanceof DispatchJob
+            && $this->user()?->can(PermissionName::AssignmentsCreate->value)
+            && Gate::forUser($this->user())->allows('assignResources', $job);
     }
 
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'personnel' => ['sometimes', 'array'], 'personnel.*.user_id' => ['required', 'integer', 'exists:users,id'],
-            'personnel.*.assignment_type' => ['required', 'string', 'in:driver,crane_operator,field_technician'],
-            'assets' => ['sometimes', 'array'], 'assets.*.operational_asset_id' => ['required', 'integer', 'exists:operational_assets,id'],
-            'assets.*.assignment_type' => ['required', 'string', 'in:truck,crane,equipment'],
+            'personnel' => ['required_without:assets', 'array'],
+            'personnel.*.user_id' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'personnel.*.assignment_type' => ['required', 'string', Rule::in(['driver', 'crane_operator', 'field_technician'])],
+            'assets' => ['required_without:personnel', 'array'],
+            'assets.*.operational_asset_id' => ['required', 'integer', 'distinct', 'exists:operational_assets,id'],
+            'assets.*.assignment_type' => ['required', 'string', Rule::in(['truck', 'crane', 'equipment'])],
         ];
     }
 }

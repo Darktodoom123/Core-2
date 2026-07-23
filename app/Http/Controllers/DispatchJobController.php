@@ -5,11 +5,20 @@ namespace App\Http\Controllers;
 use App\Actions\ConvertServiceRequestToDispatch;
 use App\Actions\RecordAuditEvent;
 use App\Enums\DispatchStatus;
+use App\Enums\PermissionName;
+use App\Enums\RoleName;
 use App\Http\Requests\StoreDispatchJobRequest;
 use App\Models\DispatchJob;
+use App\Models\OperationalAsset;
+use App\Models\User;
+use App\Services\DispatchResourceEligibility;
+use App\ViewModels\DispatchAssignmentWorkspaceViewModel;
+use App\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
+use Inertia\Response;
 
 final class DispatchJobController extends Controller
 {
@@ -52,11 +61,68 @@ final class DispatchJobController extends Controller
         ]);
     }
 
-    public function show(int $dispatchJob): JsonResponse
+    public function show(int $dispatchJob, DispatchResourceEligibility $eligibility): Response
     {
-        $job = DispatchJob::query()->visibleTo(request()->user())->with(['personnelAssignments.user', 'assetAssignments.asset', 'approvals'])->findOrFail($dispatchJob);
+        $user = request()->user();
+        $job = DispatchJob::query()
+            ->visibleTo($user)
+            ->with(['personnelAssignments.user', 'assetAssignments.asset', 'approvals'])
+            ->findOrFail($dispatchJob);
         Gate::authorize('view', $job);
 
-        return response()->json(['data' => $job]);
+        $canViewCandidates = $user->can(PermissionName::AssignmentsViewAll->value);
+        $canAssignResources = Gate::forUser($user)->allows('assignResources', $job)
+            && $job->scheduled_start !== null
+            && $job->scheduled_end !== null
+            && in_array($job->status, [
+                DispatchStatus::Draft,
+                DispatchStatus::PendingApproval,
+                DispatchStatus::Scheduled,
+            ], true);
+
+        $personnel = $canViewCandidates
+            ? User::query()
+                ->whereHas('roles', fn ($query) => $query->whereIn('name', [
+                    RoleName::Driver->value,
+                    RoleName::CraneOperator->value,
+                    RoleName::FieldTechnician->value,
+                ]))
+                ->with([
+                    'roles:id,name',
+                    'personnelProfile',
+                    'personnelCredentials',
+                    'dispatchAssignments' => fn ($query) => $query
+                        ->whereNull('active_until')
+                        ->with('job'),
+                ])
+                ->orderBy('name')
+                ->limit(200)
+                ->get()
+            : collect();
+        $assets = $canViewCandidates
+            ? OperationalAsset::query()
+                ->whereIn('kind', ['truck', 'crane', 'equipment'])
+                ->with([
+                    'maintenanceWorkOrders' => fn ($query) => $query
+                        ->where('dispatch_blocking', true)
+                        ->whereNull('released_at'),
+                    'assignments' => fn ($query) => $query
+                        ->whereNull('active_until')
+                        ->with('job'),
+                ])
+                ->orderBy('code')
+                ->limit(200)
+                ->get()
+            : collect();
+
+        return Inertia::render('dispatch-detail', [
+            'job' => OperationsWorkspaceViewModel::job($job),
+            'personnel_candidates' => DispatchAssignmentWorkspaceViewModel::personnelCandidates($personnel, $job, $eligibility),
+            'asset_candidates' => DispatchAssignmentWorkspaceViewModel::assetCandidates($assets, $job, $eligibility),
+            'capabilities' => [
+                'assign_resources' => $canAssignResources,
+                'view_assignment_candidates' => $canViewCandidates,
+            ],
+        ]);
     }
 }

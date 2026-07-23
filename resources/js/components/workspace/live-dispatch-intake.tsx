@@ -248,7 +248,8 @@ function ServiceRequestIntakeForm({
         form.transform((data) => ({
             ...data,
             requirements: linesFromText(requirementsText),
-        })).post('/operations/service-requests', {
+        }));
+        form.post('/operations/service-requests', {
             preserveScroll: true,
             onSuccess: () => {
                 form.reset();

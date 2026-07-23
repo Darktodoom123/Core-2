@@ -7,7 +7,9 @@ use App\Enums\RoleName;
 use App\Models\ApprovalRequest;
 use App\Models\AuditEvent;
 use App\Models\Client;
+use App\Models\DispatchAssetAssignment;
 use App\Models\DispatchJob;
+use App\Models\DispatchPersonnelAssignment;
 use App\Models\FuelRequest;
 use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
@@ -68,7 +70,13 @@ final class OperationsWorkspaceViewModel
      */
     public static function jobs(Collection $jobs): array
     {
-        return $jobs->map(static fn (DispatchJob $job): array => [
+        return $jobs->map(static fn (DispatchJob $job): array => self::job($job))->values()->all();
+    }
+
+    /** @return array<string, mixed> */
+    public static function job(DispatchJob $job): array
+    {
+        return [
             'id' => (int) $job->getKey(),
             'reference' => $job->reference,
             'client' => $job->client,
@@ -88,19 +96,23 @@ final class OperationsWorkspaceViewModel
             'version' => $job->version,
             'updated_at' => $job->updated_at?->toIso8601String(),
             'personnel_assignments' => $job->personnelAssignments
-                ->map(static fn ($assignment): array => [
+                ->map(static fn (DispatchPersonnelAssignment $assignment): array => [
                     'id' => (int) $assignment->getKey(),
                     'name' => $assignment->user->name,
                     'type' => $assignment->assignment_type,
+                    'response_status' => [
+                        'value' => $assignment->response_status->value,
+                        'label' => $assignment->response_status->label(),
+                    ],
                 ])->values()->all(),
             'asset_assignments' => $job->assetAssignments
-                ->map(static fn ($assignment): array => [
+                ->map(static fn (DispatchAssetAssignment $assignment): array => [
                     'id' => (int) $assignment->getKey(),
                     'code' => $assignment->asset->code,
                     'name' => $assignment->asset->name,
                     'type' => $assignment->assignment_type,
                 ])->values()->all(),
-        ])->values()->all();
+        ];
     }
 
     /**

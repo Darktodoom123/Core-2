@@ -6,7 +6,14 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $kind
+ * @property string $status
+ * @property Carbon|null $issued_at
+ * @property Carbon|null $expires_at
+ */
 class PersonnelCredential extends Model
 {
     protected $fillable = ['user_id', 'kind', 'credential_number', 'credential_type', 'issued_at', 'expires_at', 'status', 'verified_by', 'verified_at'];

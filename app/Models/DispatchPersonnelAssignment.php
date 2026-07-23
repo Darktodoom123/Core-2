@@ -5,7 +5,13 @@ namespace App\Models;
 use App\Enums\AssignmentResponse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property AssignmentResponse $response_status
+ * @property Carbon|null $active_until
+ * @property DispatchJob $job
+ */
 class DispatchPersonnelAssignment extends Model
 {
     protected $fillable = ['dispatch_job_id', 'user_id', 'assignment_type', 'response_status', 'assigned_by', 'approved_by', 'active_from', 'active_until'];

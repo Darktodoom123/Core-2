@@ -4,8 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
-/** @property OperationalAsset $asset */
+/**
+ * @property Carbon|null $active_until
+ * @property DispatchJob $job
+ * @property OperationalAsset $asset
+ */
 class DispatchAssetAssignment extends Model
 {
     protected $fillable = ['dispatch_job_id', 'operational_asset_id', 'assignment_type', 'assigned_by', 'approved_by', 'active_from', 'active_until'];

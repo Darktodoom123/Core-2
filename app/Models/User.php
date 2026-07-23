@@ -67,4 +67,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(PersonnelCredential::class);
     }
+
+    /** @return HasMany<DispatchPersonnelAssignment, $this> */
+    public function dispatchAssignments(): HasMany
+    {
+        return $this->hasMany(DispatchPersonnelAssignment::class);
+    }
 }

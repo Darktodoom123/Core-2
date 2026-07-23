@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import {
     CalendarDays,
     ChevronRight,
@@ -409,6 +409,13 @@ function DispatchDetails({ job }: { job: DispatchJobViewModel }) {
                     <span className="inline-flex min-h-6 items-center rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
                         Version {job.version}
                     </span>
+                    <Link
+                        href={`/operations/dispatch-jobs/${job.id}`}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-subtle"
+                    >
+                        Open assignment workspace
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
                 </div>
             </div>
 
@@ -498,10 +505,9 @@ function DispatchDetails({ job }: { job: DispatchJobViewModel }) {
                     aria-hidden="true"
                 />
                 <p className="leading-6 text-ink-soft">
-                    This Phase 1 slice is read-only beyond draft creation.
-                    Assignment, conflict review, and activation stay in their
-                    existing authorized backend workflows until their live UI
-                    replacements are verified.
+                    Open the assignment workspace to review server-authoritative
+                    availability, credentials, maintenance blocks, readiness,
+                    and schedule conflicts before confirming resources.
                 </p>
             </div>
         </div>
