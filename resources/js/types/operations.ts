@@ -21,7 +21,11 @@ export type AppSection =
     | 'tasks'
     | 'issues';
 
-export type DispatchStatus =
+/**
+ * Presentation-only labels used by the unrouted fixture prototype.
+ * Live and persisted status contracts belong to workspace.ts.
+ */
+export type PrototypeDispatchStatusLabel =
     | 'Draft'
     | 'Scheduled'
     | 'Dispatched'
@@ -31,6 +35,12 @@ export type DispatchStatus =
     | 'On hold'
     | 'Completed'
     | 'Cancelled';
+
+export type PrototypeAssetStatusLabel =
+    'Available' | 'Assigned' | 'Working' | 'Maintenance' | 'Offline';
+
+export type PrototypeFuelStatusLabel =
+    'Pending' | 'Approved' | 'Rejected' | 'Dispensed';
 
 export type TelemetryFreshness = 'Live' | 'Delayed' | 'Stale' | 'Offline';
 export type ConnectivityState = 'online' | 'offline' | 'syncing';
@@ -55,7 +65,7 @@ export interface DispatchJob {
     startTime: string;
     endTime: string;
     priority: 'Routine' | 'Priority' | 'Emergency';
-    status: DispatchStatus;
+    status: PrototypeDispatchStatusLabel;
     workType: string;
     requirements: string[];
     assignment: Assignment;
@@ -65,7 +75,7 @@ interface ResourceBase {
     id: string;
     code: string;
     name: string;
-    status: 'Available' | 'Assigned' | 'Working' | 'Maintenance' | 'Offline';
+    status: PrototypeAssetStatusLabel;
     location: string;
     utilization: number;
 }
@@ -156,7 +166,7 @@ export interface FuelRequest {
     fuelType: 'Diesel' | 'Gasoline';
     cost: number;
     meterReading: string;
-    status: 'Pending' | 'Approved' | 'Rejected' | 'Dispensed';
+    status: PrototypeFuelStatusLabel;
     requestedAt: string;
 }
 
@@ -220,7 +230,11 @@ export type OperationsAction =
     | { type: 'select-asset'; assetId: string }
     | { type: 'resolve-conflict'; conflictId: string }
     | { type: 'confirm-dispatch'; jobId: string }
-    | { type: 'advance-job'; jobId: string; status: DispatchStatus }
+    | {
+          type: 'advance-job';
+          jobId: string;
+          status: PrototypeDispatchStatusLabel;
+      }
     | {
           type: 'decide-fuel-request';
           requestId: string;

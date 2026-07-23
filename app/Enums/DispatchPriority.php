@@ -12,4 +12,13 @@ enum DispatchPriority: string
     {
         return $this !== self::Routine;
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Routine => 'Routine',
+            self::Priority => 'Priority',
+            self::Emergency => 'Emergency',
+        };
+    }
 }

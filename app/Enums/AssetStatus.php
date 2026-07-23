@@ -17,4 +17,18 @@ enum AssetStatus: string
     {
         return in_array($this, [self::Available, self::ReadyForService], true);
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Available => 'Available',
+            self::Assigned => 'Assigned',
+            self::Working => 'Working',
+            self::UnderInspection => 'Under inspection',
+            self::UnderMaintenance => 'Under maintenance',
+            self::AwaitingParts => 'Awaiting parts',
+            self::ReadyForService => 'Ready for service',
+            self::Unavailable => 'Unavailable',
+        };
+    }
 }

@@ -31,8 +31,8 @@ it('lets a dispatcher create and assign a routine dispatch while preserving assi
     $driver->personnelCredentials()->create(['kind' => 'driver_license', 'credential_number' => 'DL-1001', 'credential_type' => 'professional', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear(), 'status' => 'active']);
     $other = operationsUser(RoleName::Driver);
     $asset = OperationalAsset::query()->create(['code' => 'TR-01', 'name' => 'Truck 01', 'kind' => 'truck', 'status' => AssetStatus::Available]);
-    $response = $this->actingAs($dispatcher)->postJson('/operations/dispatch-jobs', ['reference' => 'CON-1001', 'client' => 'Arcwell', 'title' => 'HVAC lift', 'site' => 'Quezon City', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(4), 'priority' => DispatchPriority::Routine->value, 'requirements' => []])->assertCreated();
-    $jobId = $response->json('data.id');
+    $this->actingAs($dispatcher)->post('/operations/dispatch-jobs', ['reference' => 'CON-1001', 'client' => 'Arcwell', 'title' => 'HVAC lift', 'site' => 'Quezon City', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(4), 'priority' => DispatchPriority::Routine->value, 'requirements' => []])->assertRedirect('/');
+    $jobId = DispatchJob::query()->where('reference', 'CON-1001')->sole()->id;
     $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$jobId}/assignments", ['personnel' => [['user_id' => $driver->id, 'assignment_type' => 'driver']], 'assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'truck']]])->assertOk();
     $this->actingAs($driver)->getJson("/operations/dispatch-jobs/{$jobId}")->assertOk();
     $this->actingAs($other)->getJson("/operations/dispatch-jobs/{$jobId}")->assertNotFound();
@@ -44,7 +44,7 @@ it('requires independent manager approval before a priority dispatch activates',
     $job = DispatchJob::query()->create(['reference' => 'CON-2001', 'client' => 'Northline', 'title' => 'Priority lift', 'site' => 'Marikina', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(2), 'priority' => DispatchPriority::Priority, 'status' => DispatchStatus::Draft, 'created_by' => $dispatcher->id]);
     $approval = ApprovalRequest::query()->create(['subject_type' => DispatchJob::class, 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);
     $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertUnprocessable();
-    $this->actingAs($manager)->postJson("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertOk();
+    $this->actingAs($manager)->post("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertRedirect('/');
     $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertOk()->assertJsonPath('data.status', DispatchStatus::Dispatched->value);
 });
 

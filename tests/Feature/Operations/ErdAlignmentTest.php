@@ -52,19 +52,20 @@ it('creates a client request and linked dispatch without duplicating ERD identit
         'requirements' => ['25t crane', 'flatbed truck'],
     ])->assertCreated()->json('data.id');
 
-    $jobId = $this->actingAs($dispatcher)->postJson('/operations/dispatch-jobs', [
+    $this->actingAs($dispatcher)->post('/operations/dispatch-jobs', [
         'service_request_id' => $requestId,
         'reference' => 'DSP-1001',
         'scheduled_start' => now()->addDay()->toIso8601String(),
         'scheduled_end' => now()->addDay()->addHours(4)->toIso8601String(),
-    ])->assertCreated()
-        ->assertJsonPath('data.client', 'Arcwell Construction')
-        ->assertJsonPath('data.title', 'Plant lift')
-        ->json('data.id');
+    ])->assertRedirect('/');
+
+    $job = DispatchJob::query()->where('reference', 'DSP-1001')->sole();
 
     expect(Client::findOrFail($clientId)->serviceRequests)->toHaveCount(1)
         ->and(ServiceRequest::findOrFail($requestId)->dispatchJobs)->toHaveCount(1)
-        ->and(DispatchJob::findOrFail($jobId)->serviceRequest?->id)->toBe($requestId);
+        ->and($job->client)->toBe('Arcwell Construction')
+        ->and($job->title)->toBe('Plant lift')
+        ->and($job->serviceRequest?->id)->toBe($requestId);
 });
 
 it('stores personnel availability and verified credentials through administration', function () {

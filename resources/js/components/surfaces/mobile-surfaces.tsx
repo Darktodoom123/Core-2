@@ -40,8 +40,8 @@ import type {
     AppSection,
     ConnectivityState,
     DispatchJob,
-    DispatchStatus,
     FieldTask,
+    PrototypeDispatchStatusLabel,
     UserRole,
 } from '@/types/operations';
 import { roleLabels } from '@/types/operations';
@@ -276,9 +276,11 @@ function DriverSurface({
     section: AppSection;
     job: DispatchJob;
     connectivity: ConnectivityState;
-    onAdvanceJob: (status: DispatchStatus) => void;
+    onAdvanceJob: (status: PrototypeDispatchStatusLabel) => void;
 }) {
-    const nextStatus: Partial<Record<DispatchStatus, DispatchStatus>> = {
+    const nextStatus: Partial<
+        Record<PrototypeDispatchStatusLabel, PrototypeDispatchStatusLabel>
+    > = {
         Scheduled: 'Dispatched',
         Dispatched: 'En route',
         'En route': 'Arrived',
@@ -518,7 +520,7 @@ function OperatorSurface({
 }: {
     section: AppSection;
     job: DispatchJob;
-    onAdvanceJob: (status: DispatchStatus) => void;
+    onAdvanceJob: (status: PrototypeDispatchStatusLabel) => void;
 }) {
     const [checks, setChecks] = useState<boolean[]>(
         Array.from({ length: 6 }, () => false),
@@ -995,7 +997,7 @@ export function FieldMobileApp({
     onSectionChange: (section: AppSection) => void;
     onConnectivityChange: (state: ConnectivityState) => void;
     onSync: () => void;
-    onAdvanceJob: (jobId: string, status: DispatchStatus) => void;
+    onAdvanceJob: (jobId: string, status: PrototypeDispatchStatusLabel) => void;
     onAdvanceTask: (taskId: string, status: FieldTask['status']) => void;
 }) {
     const assignedJob =

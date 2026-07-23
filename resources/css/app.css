@@ -9,23 +9,29 @@
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
-    --color-canvas: oklch(0.960 0.005 255);
+    --color-canvas: oklch(0.965 0.006 255);
     --color-surface: oklch(1 0 0);
-    --color-surface-subtle: oklch(0.940 0.008 255);
+    --color-surface-subtle: oklch(0.945 0.009 255);
     --color-ink: oklch(0.18 0.03 255);
-    --color-ink-soft: oklch(0.40 0.03 255);
-    --color-muted: oklch(0.55 0.02 255);
+    --color-ink-soft: oklch(0.4 0.03 255);
+    --color-muted: oklch(0.42 0.025 255);
     --color-line: oklch(0.88 0.01 255);
     --color-line-strong: oklch(0.78 0.01 255);
-    --color-brand: oklch(0.78 0.16 80);
-    --color-brand-strong: oklch(0.68 0.16 80);
-    --color-brand-soft: oklch(0.95 0.06 80);
+    --color-brand: oklch(0.55 0.13 72);
+    --color-brand-strong: oklch(0.43 0.11 68);
+    --color-brand-soft: oklch(0.95 0.055 82);
+    --color-brand-contrast: oklch(0.99 0.005 80);
     --color-success: oklch(0.55 0.145 151);
+    --color-success-strong: oklch(0.36 0.105 151);
     --color-success-soft: oklch(0.96 0.035 151);
-    --color-warning: oklch(0.68 0.145 68);
-    --color-warning-soft: oklch(0.97 0.045 77);
+    --color-warning: oklch(0.56 0.17 42);
+    --color-warning-strong: oklch(0.38 0.12 38);
+    --color-warning-soft: oklch(0.95 0.045 42);
     --color-danger: oklch(0.57 0.2 27);
     --color-danger-soft: oklch(0.96 0.035 27);
+    --color-info: oklch(0.55 0.14 250);
+    --color-info-strong: oklch(0.38 0.105 250);
+    --color-info-soft: oklch(0.95 0.035 250);
 }
 
 :root {

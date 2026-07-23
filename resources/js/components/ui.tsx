@@ -7,7 +7,10 @@ import type {
     ReactNode,
 } from 'react';
 import { cn } from '@/lib/utils';
-import type { DispatchStatus, TelemetryFreshness } from '@/types/operations';
+import type {
+    PrototypeDispatchStatusLabel,
+    TelemetryFreshness,
+} from '@/types/operations';
 
 export function Button({
     className,
@@ -25,7 +28,7 @@ export function Button({
             className={cn(
                 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50',
                 variant === 'primary' &&
-                    'bg-brand text-white hover:bg-brand-strong active:bg-brand-strong',
+                    'bg-brand text-brand-contrast hover:bg-brand-strong active:bg-brand-strong',
                 variant === 'secondary' &&
                     'border border-line-strong bg-surface text-ink hover:bg-surface-subtle',
                 variant === 'quiet' &&
@@ -88,22 +91,22 @@ const statusClasses: Record<string, string> = {
     'En route': 'bg-brand-soft text-brand-strong',
     Arrived: 'bg-success-soft text-green-800',
     'In progress': 'bg-success-soft text-green-800',
-    'On hold': 'bg-warning-soft text-amber-900',
+    'On hold': 'bg-warning-soft text-warning-strong',
     Completed: 'bg-success-soft text-green-800',
     Cancelled: 'bg-danger-soft text-danger',
     Live: 'bg-success-soft text-green-800',
-    Delayed: 'bg-warning-soft text-amber-900',
-    Stale: 'bg-warning-soft text-amber-900',
+    Delayed: 'bg-warning-soft text-warning-strong',
+    Stale: 'bg-warning-soft text-warning-strong',
     Offline: 'bg-surface-subtle text-ink-soft',
     Available: 'bg-success-soft text-green-800',
     Assigned: 'bg-brand-soft text-brand-strong',
     Working: 'bg-success-soft text-green-800',
-    Maintenance: 'bg-warning-soft text-amber-900',
-    Pending: 'bg-warning-soft text-amber-900',
+    Maintenance: 'bg-warning-soft text-warning-strong',
+    Pending: 'bg-warning-soft text-warning-strong',
     Approved: 'bg-success-soft text-green-800',
     Rejected: 'bg-danger-soft text-danger',
     Dispensed: 'bg-brand-soft text-brand-strong',
-    Priority: 'bg-warning-soft text-amber-900',
+    Priority: 'bg-warning-soft text-warning-strong',
     Emergency: 'bg-danger-soft text-danger',
     Routine: 'bg-surface-subtle text-ink-soft',
 };
@@ -112,7 +115,7 @@ export function StatusBadge({
     status,
     className,
 }: {
-    status: DispatchStatus | TelemetryFreshness | string;
+    status: PrototypeDispatchStatusLabel | TelemetryFreshness | string;
     className?: string;
 }) {
     return (
@@ -191,7 +194,7 @@ export function InlineNotice({
             className={cn(
                 'flex items-start gap-3 rounded-lg p-3 text-sm',
                 tone === 'info' && 'bg-brand-soft text-brand-strong',
-                tone === 'warning' && 'bg-warning-soft text-amber-950',
+                tone === 'warning' && 'bg-warning-soft text-warning-strong',
                 tone === 'success' && 'bg-success-soft text-green-900',
             )}
         >

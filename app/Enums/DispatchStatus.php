@@ -14,4 +14,20 @@ enum DispatchStatus: string
     case Working = 'working';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Draft => 'Draft',
+            self::PendingApproval => 'Pending approval',
+            self::Scheduled => 'Scheduled',
+            self::Dispatched => 'Dispatched',
+            self::Accepted => 'Accepted',
+            self::EnRoute => 'En route',
+            self::Arrived => 'Arrived',
+            self::Working => 'Working',
+            self::Completed => 'Completed',
+            self::Cancelled => 'Cancelled',
+        };
+    }
 }

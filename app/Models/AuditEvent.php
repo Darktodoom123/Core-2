@@ -4,7 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $action
+ * @property string|null $reason
+ * @property Carbon|null $occurred_at
+ */
 class AuditEvent extends Model
 {
     protected $fillable = ['actor_id', 'subject_type', 'subject_id', 'action', 'before', 'after', 'reason', 'request_id', 'ip_address', 'occurred_at'];

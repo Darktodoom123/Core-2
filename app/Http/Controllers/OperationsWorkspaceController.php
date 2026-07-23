@@ -9,6 +9,7 @@ use App\Models\DispatchJob;
 use App\Models\FuelRequest;
 use App\Models\OperationalAsset;
 use App\Models\User;
+use App\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -29,17 +30,29 @@ final class OperationsWorkspaceController extends Controller
         $fuelRequests = Gate::forUser($user)->allows('viewAny', FuelRequest::class)
             ? FuelRequest::query()->visibleTo($user)->with(['requester:id,name', 'asset:id,code'])->latest()->limit(100)->get()
             : collect();
+        $approvals = $user->can(PermissionName::AssignmentsApprove->value) || $user->can(PermissionName::DispatchApprovePriority->value)
+            ? ApprovalRequest::query()->with('subject')->where('status', 'pending')->latest()->limit(100)->get()
+            : collect();
+        $users = $user->can(PermissionName::UsersManage->value)
+            ? User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get()
+            : collect();
+        $auditEvents = $user->can(PermissionName::AuditView->value)
+            ? AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get()
+            : collect();
 
         return Inertia::render('workspace', [
-            'jobs' => $jobs,
-            'assets' => $assets,
-            'fuelRequests' => $fuelRequests,
-            'approvals' => $user->can(PermissionName::AssignmentsApprove->value) || $user->can(PermissionName::DispatchApprovePriority->value)
-                ? ApprovalRequest::query()->with('subject')->where('status', 'pending')->latest()->limit(100)->get() : [],
-            'users' => $user->can(PermissionName::UsersManage->value)
-                ? User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get() : [],
-            'auditEvents' => $user->can(PermissionName::AuditView->value)
-                ? AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get() : [],
+            'jobs' => OperationsWorkspaceViewModel::jobs($jobs),
+            'assets' => OperationsWorkspaceViewModel::assets($assets),
+            'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelRequests),
+            'approvals' => OperationsWorkspaceViewModel::approvals($approvals),
+            'users' => OperationsWorkspaceViewModel::users($users),
+            'auditEvents' => OperationsWorkspaceViewModel::auditEvents($auditEvents),
+            'navigation' => OperationsWorkspaceViewModel::navigation($user),
+            'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
+            'workspace' => [
+                'refreshed_at' => now()->toIso8601String(),
+                'stale_after_seconds' => 120,
+            ],
         ]);
     }
 }

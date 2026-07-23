@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { WorkspaceFlash } from '@/types/workspace';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -12,6 +13,7 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
+            flash: WorkspaceFlash | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

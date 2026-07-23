@@ -8,6 +8,7 @@ use App\Http\Requests\StoreDispatchJobRequest;
 use App\Models\DispatchJob;
 use App\Models\ServiceRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
 final class DispatchJobController extends Controller
@@ -19,7 +20,7 @@ final class DispatchJobController extends Controller
         return response()->json(['data' => DispatchJob::query()->visibleTo(request()->user())->with(['personnelAssignments', 'assetAssignments.asset'])->latest('scheduled_start')->paginate(25)]);
     }
 
-    public function store(StoreDispatchJobRequest $request, RecordAuditEvent $audit): JsonResponse
+    public function store(StoreDispatchJobRequest $request, RecordAuditEvent $audit): RedirectResponse
     {
         $validated = $request->validated();
 
@@ -43,7 +44,10 @@ final class DispatchJobController extends Controller
         $job = DispatchJob::query()->create([...$validated, 'status' => DispatchStatus::Draft, 'created_by' => $request->user()->id]);
         $audit->handle($request->user(), $job, 'dispatch.created', null, $job->toArray());
 
-        return response()->json(['data' => $job], 201);
+        return to_route('home')->with('flash', [
+            'tone' => 'success',
+            'message' => "Dispatch {$job->reference} was created.",
+        ]);
     }
 
     public function show(int $dispatchJob): JsonResponse
