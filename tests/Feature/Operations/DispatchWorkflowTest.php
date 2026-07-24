@@ -392,11 +392,16 @@ it('revalidates a stale eligible resource snapshot and rolls back the whole assi
 it('requires independent manager approval before a priority dispatch activates', function () {
     $dispatcher = operationsUser(RoleName::Dispatcher);
     $manager = operationsUser(RoleName::OperationsManager);
+    $driver = operationsUser(RoleName::Driver);
     $job = DispatchJob::query()->create(['reference' => 'CON-2001', 'client' => 'Northline', 'title' => 'Priority lift', 'site' => 'Marikina', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(2), 'priority' => DispatchPriority::Priority, 'status' => DispatchStatus::Draft, 'created_by' => $dispatcher->id]);
+    $asset = OperationalAsset::query()->create(['code' => 'TR-2001', 'name' => 'Truck 2001', 'kind' => 'truck', 'status' => AssetStatus::Available]);
+    $job->personnelAssignments()->create(['user_id' => $driver->id, 'assignment_type' => 'driver', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
+    $job->assetAssignments()->create(['operational_asset_id' => $asset->id, 'assignment_type' => 'truck', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
     $approval = ApprovalRequest::query()->create(['subject_type' => DispatchJob::class, 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);
-    $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertUnprocessable();
+    $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertSessionHasErrors('approval');
     $this->actingAs($manager)->post("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertRedirect('/');
-    $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertOk()->assertJsonPath('data.status', DispatchStatus::Dispatched->value);
+    $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertRedirect("/operations/dispatch-jobs/{$job->id}");
+    expect($job->refresh()->status)->toBe(DispatchStatus::Dispatched);
 });
 
 it('blocks unsafe assets from assignment', function () {

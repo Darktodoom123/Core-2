@@ -24,7 +24,7 @@ class DispatchJob extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['service_request_id', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'version'];
+    protected $fillable = ['service_request_id', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
 
     protected function casts(): array
     {

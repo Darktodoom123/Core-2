@@ -300,102 +300,278 @@ function ApprovalsSurface({
     approvals: ApprovalViewModel[];
     canDecide: boolean;
 }) {
-    const [pendingAction, setPendingAction] = useState<string | null>(null);
-    const decide = (approvalId: number, status: 'approved' | 'rejected') => {
-        const actionId = `${approvalId}:${status}`;
-        router.post(
-            `/operations/approval-requests/${approvalId}/decision`,
-            { status },
-            {
-                preserveScroll: true,
-                onStart: () => setPendingAction(actionId),
-                onFinish: () => setPendingAction(null),
-            },
-        );
-    };
-
     return (
         <div>
             <PageHeading
                 title="Pending approvals"
-                description="Exceptional dispatch and assignment decisions remain independent, attributable, and server-authorized."
+                description="Review the requester, job plan, schedule, and proposed resources before recording an independent decision."
             />
             <div className="p-4 md:p-6">
-                <Panel className="overflow-hidden">
-                    {approvals.length === 0 ? (
+                {approvals.length === 0 ? (
+                    <Panel>
                         <EmptyState
                             icon={ShieldCheck}
                             title="No approvals need attention"
                             message="Exceptional changes awaiting an independent decision will appear here."
                         />
+                    </Panel>
+                ) : (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                        {approvals.map((approval) => (
+                            <ApprovalReviewCard
+                                key={approval.id}
+                                approval={approval}
+                                canDecide={canDecide && approval.can_decide}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ApprovalReviewCard({
+    approval,
+    canDecide,
+}: {
+    approval: ApprovalViewModel;
+    canDecide: boolean;
+}) {
+    const form = useForm<{
+        status: 'approved' | 'rejected';
+        reason: string;
+    }>({
+        status: 'approved',
+        reason: '',
+    });
+    const [pendingDecision, setPendingDecision] = useState<
+        'approved' | 'rejected' | null
+    >(null);
+    const reasonId = `approval-${approval.id}-reason`;
+    const errorId = `${reasonId}-error`;
+    const personnel = approval.requested_changes.personnel;
+    const assets = approval.requested_changes.assets;
+
+    const decide = (status: 'approved' | 'rejected') => {
+        form.transform((data) => ({ ...data, status }));
+        form.post(`/operations/approval-requests/${approval.id}/decision`, {
+            preserveScroll: true,
+            onStart: () => setPendingDecision(status),
+            onFinish: () => setPendingDecision(null),
+        });
+    };
+
+    return (
+        <Panel className="overflow-hidden">
+            <div className="border-b border-line px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {approval.subject.priority && (
+                                <CanonicalStatusBadge
+                                    status={approval.subject.priority}
+                                />
+                            )}
+                            <CanonicalStatusBadge status={approval.status} />
+                        </div>
+                        <h2 className="mt-2 font-semibold">
+                            {approval.subject.title ??
+                                approval.subject.reference}
+                        </h2>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            {approval.subject.reference} · Requested by{' '}
+                            {approval.requester.name}
+                        </p>
+                    </div>
+                    <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft">
+                        {humanize(approval.kind)}
+                    </span>
+                </div>
+            </div>
+
+            <div className="space-y-4 px-4 py-4">
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt className="text-xs font-medium text-ink-soft">
+                            Schedule
+                        </dt>
+                        <dd className="mt-1 font-medium">
+                            {formatDateTime(approval.subject.scheduled_start)} –{' '}
+                            {formatDateTime(approval.subject.scheduled_end)}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs font-medium text-ink-soft">
+                            Site
+                        </dt>
+                        <dd className="mt-1 font-medium">
+                            {approval.subject.site ?? 'Not recorded'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs font-medium text-ink-soft">
+                            Dispatch state
+                        </dt>
+                        <dd className="mt-1 flex flex-wrap items-center gap-2">
+                            {approval.subject.status && (
+                                <CanonicalStatusBadge
+                                    status={approval.subject.status}
+                                />
+                            )}
+                            {approval.subject.version !== null && (
+                                <span className="text-xs text-ink-soft">
+                                    Version {approval.subject.version}
+                                </span>
+                            )}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs font-medium text-ink-soft">
+                            Requested
+                        </dt>
+                        <dd className="mt-1 font-medium">
+                            {formatDateTime(approval.created_at)}
+                        </dd>
+                    </div>
+                </dl>
+
+                {approval.subject.site_notes?.trim() && (
+                    <div className="rounded-lg bg-surface-subtle p-3">
+                        <p className="text-xs font-semibold">Site note</p>
+                        <p className="mt-1 text-sm leading-6 text-ink-soft">
+                            {approval.subject.site_notes}
+                        </p>
+                    </div>
+                )}
+
+                <div>
+                    <h3 className="text-sm font-semibold">
+                        Proposed resource changes
+                    </h3>
+                    {personnel.length === 0 && assets.length === 0 ? (
+                        <p className="mt-2 text-sm text-ink-soft">
+                            This request covers dispatch activation without a
+                            new resource batch.
+                        </p>
                     ) : (
-                        <ul className="divide-y divide-line">
-                            {approvals.map((approval) => (
+                        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                            {personnel.map((person) => (
                                 <li
-                                    key={approval.id}
-                                    className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center"
+                                    key={`personnel-${person.id}`}
+                                    className="rounded-lg border border-line px-3 py-2 text-sm"
                                 >
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="font-semibold">
-                                                {humanize(approval.kind)}
-                                            </p>
-                                            <CanonicalStatusBadge
-                                                status={approval.status}
-                                            />
-                                        </div>
-                                        <p className="mt-1 text-sm text-ink-soft">
-                                            {approval.subject.reference} ·{' '}
-                                            {formatDateTime(
-                                                approval.created_at,
-                                            )}
-                                        </p>
-                                    </div>
-                                    {canDecide && (
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    decide(
-                                                        approval.id,
-                                                        'rejected',
-                                                    )
-                                                }
-                                                disabled={
-                                                    pendingAction !== null
-                                                }
-                                            >
-                                                {pendingAction ===
-                                                `${approval.id}:rejected`
-                                                    ? 'Rejecting…'
-                                                    : 'Reject request'}
-                                            </Button>
-                                            <Button
-                                                variant="primary"
-                                                onClick={() =>
-                                                    decide(
-                                                        approval.id,
-                                                        'approved',
-                                                    )
-                                                }
-                                                disabled={
-                                                    pendingAction !== null
-                                                }
-                                            >
-                                                {pendingAction ===
-                                                `${approval.id}:approved`
-                                                    ? 'Approving…'
-                                                    : 'Approve request'}
-                                            </Button>
-                                        </div>
-                                    )}
+                                    <p className="font-medium">{person.name}</p>
+                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                        {humanize(person.assignment_type)}
+                                    </p>
+                                </li>
+                            ))}
+                            {assets.map((asset) => (
+                                <li
+                                    key={`asset-${asset.id}`}
+                                    className="rounded-lg border border-line px-3 py-2 text-sm"
+                                >
+                                    <p className="font-medium">
+                                        {asset.code} · {asset.name}
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                        {humanize(asset.assignment_type)}
+                                    </p>
                                 </li>
                             ))}
                         </ul>
                     )}
-                </Panel>
+                </div>
+
+                {canDecide ? (
+                    <div className="border-t border-line pt-4">
+                        <label
+                            htmlFor={reasonId}
+                            className="text-sm font-medium"
+                        >
+                            Decision reason
+                        </label>
+                        <p className="mt-1 text-xs text-ink-soft">
+                            Required for both approval and rejection. This
+                            reason becomes part of the audit history.
+                        </p>
+                        <textarea
+                            id={reasonId}
+                            value={form.data.reason}
+                            onChange={(event) =>
+                                form.setData('reason', event.target.value)
+                            }
+                            rows={3}
+                            required
+                            maxLength={2000}
+                            aria-invalid={
+                                form.errors.reason ? 'true' : undefined
+                            }
+                            aria-describedby={
+                                form.errors.reason ? errorId : undefined
+                            }
+                            className={cn(
+                                'mt-2 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm',
+                                form.errors.reason
+                                    ? 'border-danger'
+                                    : 'border-line-strong',
+                            )}
+                        />
+                        {form.errors.reason && (
+                            <p
+                                id={errorId}
+                                className="mt-1 text-xs text-danger"
+                                role="alert"
+                            >
+                                {form.errors.reason}
+                            </p>
+                        )}
+                        <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <Button
+                                variant="danger"
+                                onClick={() => decide('rejected')}
+                                disabled={
+                                    form.processing ||
+                                    form.data.reason.trim().length === 0
+                                }
+                            >
+                                {form.processing &&
+                                pendingDecision === 'rejected'
+                                    ? 'Rejecting…'
+                                    : 'Reject request'}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => decide('approved')}
+                                disabled={
+                                    form.processing ||
+                                    form.data.reason.trim().length === 0
+                                }
+                            >
+                                {form.processing &&
+                                pendingDecision === 'approved'
+                                    ? 'Approving…'
+                                    : 'Approve request'}
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div
+                        className="rounded-lg border border-warning bg-warning-soft px-3 py-3 text-sm text-warning-strong"
+                        role="status"
+                    >
+                        <p className="font-semibold">
+                            Independent review needed
+                        </p>
+                        <p className="mt-1">
+                            {approval.decision_blocker ??
+                                'Another authorized manager must decide this request.'}
+                        </p>
+                    </div>
+                )}
             </div>
-        </div>
+        </Panel>
     );
 }
 

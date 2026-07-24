@@ -4,13 +4,19 @@ namespace App\Models;
 
 use App\Enums\ApprovalStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property string $kind
  * @property int $requested_by
+ * @property int|null $decided_by
+ * @property array<string, mixed>|null $requested_changes
  * @property ApprovalStatus $status
+ * @property string|null $reason
+ * @property Carbon|null $decided_at
  */
 class ApprovalRequest extends Model
 {
@@ -25,5 +31,17 @@ class ApprovalRequest extends Model
     public function subject(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function decider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'decided_by');
     }
 }

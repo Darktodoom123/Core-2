@@ -38,7 +38,12 @@ final class DispatchJobPolicy
 
     public function activate(User $user, DispatchJob $job): bool
     {
-        return $user->can(PermissionName::DispatchActivate->value) && ! in_array($job->status, [DispatchStatus::Completed, DispatchStatus::Cancelled], true);
+        return $user->can(PermissionName::DispatchActivate->value)
+            && in_array($job->status, [
+                DispatchStatus::Draft,
+                DispatchStatus::PendingApproval,
+                DispatchStatus::Scheduled,
+            ], true);
     }
 
     public function cancel(User $user, DispatchJob $job): bool

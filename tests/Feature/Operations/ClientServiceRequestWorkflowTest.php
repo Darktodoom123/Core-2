@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\RecordAuditEvent;
 use App\Enums\DispatchPriority;
 use App\Enums\RoleName;
 use App\Models\AuditEvent;
@@ -9,6 +8,7 @@ use App\Models\DispatchJob;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 
@@ -208,9 +208,14 @@ it('rolls back the dispatch, request state, and audit history when conversion au
         'priority' => DispatchPriority::Routine,
         'status' => 'submitted',
     ]);
-    $audit = Mockery::mock(RecordAuditEvent::class);
-    $audit->shouldReceive('handle')->once()->andThrow(new RuntimeException('Audit storage unavailable.'));
-    $this->app->instance(RecordAuditEvent::class, $audit);
+    DB::unprepared(<<<'SQL'
+        CREATE TRIGGER fail_conversion_audit
+        BEFORE INSERT ON audit_events
+        WHEN NEW.action = 'dispatch.created'
+        BEGIN
+            SELECT RAISE(ABORT, 'forced conversion audit failure');
+        END
+        SQL);
 
     expect(fn () => $this->actingAs($dispatcher)
         ->withoutExceptionHandling()
@@ -219,7 +224,7 @@ it('rolls back the dispatch, request state, and audit history when conversion au
             'reference' => 'DSP-4004',
             'scheduled_start' => now()->addDay()->toIso8601String(),
             'scheduled_end' => now()->addDay()->addHours(2)->toIso8601String(),
-        ]))->toThrow(RuntimeException::class, 'Audit storage unavailable.');
+        ]))->toThrow(QueryException::class);
 
     expect(DispatchJob::query()->where('reference', 'DSP-4004')->exists())->toBeFalse()
         ->and($serviceRequest->refresh()->status->value)->toBe('submitted')

@@ -67,6 +67,7 @@ export interface DispatchJobViewModel {
     status: StatusViewModel<DispatchStatusValue>;
     scheduled_start: string | null;
     scheduled_end: string | null;
+    requirements: string[];
     version: number;
     updated_at: string | null;
     personnel_assignments: DispatchAssignmentViewModel[];
@@ -133,7 +134,34 @@ export interface ApprovalViewModel {
     subject: {
         id: number;
         reference: string;
+        title: string | null;
+        site: string | null;
+        site_notes: string | null;
+        scheduled_start: string | null;
+        scheduled_end: string | null;
+        priority: StatusViewModel<DispatchPriorityValue> | null;
+        status: StatusViewModel<DispatchStatusValue> | null;
+        version: number | null;
     };
+    requester: {
+        id: number;
+        name: string;
+    };
+    requested_changes: {
+        personnel: Array<{
+            id: number;
+            name: string;
+            assignment_type: string;
+        }>;
+        assets: Array<{
+            id: number;
+            code: string;
+            name: string;
+            assignment_type: string;
+        }>;
+    };
+    can_decide: boolean;
+    decision_blocker: string | null;
     created_at: string | null;
 }
 
@@ -176,6 +204,7 @@ export interface WorkspaceCapabilities {
     approve_fuel: boolean;
     verify_fuel: boolean;
     decide_approval: boolean;
+    update_assigned_dispatch_status: boolean;
 }
 
 export interface WorkspaceFreshness {
@@ -254,8 +283,30 @@ export interface DispatchDetailPageProps {
     job: DispatchJobViewModel;
     personnel_candidates: PersonnelCandidateViewModel[];
     asset_candidates: AssetCandidateViewModel[];
+    activation: {
+        ready: boolean;
+        blockers: string[];
+        approval_required: boolean;
+        approval_status: ApprovalStatusValue | null;
+    };
+    progression: {
+        current: StatusViewModel<DispatchStatusValue>;
+        steps: Array<{
+            status: StatusViewModel<DispatchStatusValue>;
+            state: 'complete' | 'current' | 'upcoming';
+        }>;
+        next: {
+            status: StatusViewModel<DispatchStatusValue>;
+            action_label: string;
+            confirmation_title: string;
+            confirmation_message: string;
+        } | null;
+        message: string;
+    } | null;
     capabilities: {
         assign_resources: boolean;
         view_assignment_candidates: boolean;
+        activate: boolean;
+        update_own_status: boolean;
     };
 }

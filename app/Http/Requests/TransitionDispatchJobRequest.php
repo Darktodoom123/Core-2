@@ -12,8 +12,17 @@ final class TransitionDispatchJobRequest extends FormRequest
     public function authorize(): bool
     {
         $job = $this->route('dispatchJob');
+        $user = $this->user();
 
-        return $job instanceof DispatchJob && ($this->user()?->can('updateOwnStatus', $job) ?? false);
+        if (! $job instanceof DispatchJob || $user === null) {
+            return false;
+        }
+
+        if (! $user->can('view', $job)) {
+            abort(404);
+        }
+
+        return $user->can('updateOwnStatus', $job);
     }
 
     /** @return array<string, mixed> */
