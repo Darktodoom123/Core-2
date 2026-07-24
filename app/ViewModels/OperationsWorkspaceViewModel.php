@@ -123,18 +123,56 @@ final class OperationsWorkspaceViewModel
      */
     public static function assets(Collection $assets): array
     {
-        return $assets->map(static fn (OperationalAsset $asset): array => [
-            'id' => (int) $asset->getKey(),
-            'code' => $asset->code,
-            'name' => $asset->name,
-            'kind' => $asset->kind,
-            'location' => $asset->location,
-            'status' => [
-                'value' => $asset->status->value,
-                'label' => $asset->status->label(),
-            ],
-            'blocking_work_orders_count' => (int) $asset->getAttribute('blocking_work_orders_count'),
-        ])->values()->all();
+        return $assets->map(static function (OperationalAsset $asset): array {
+            $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
+            $inspections = $asset->relationLoaded('inspections') ? $asset->inspections : collect();
+            $maintenanceOrders = $asset->relationLoaded('maintenanceWorkOrders') ? $asset->maintenanceWorkOrders : collect();
+            $hasPassingInspection = $inspections->contains(static fn ($i): bool => $i->result === 'passed' && $i->completed_at !== null);
+            $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && $hasPassingInspection;
+
+            return [
+                'id' => (int) $asset->getKey(),
+                'code' => $asset->code,
+                'name' => $asset->name,
+                'kind' => $asset->kind,
+                'subtype' => $asset->subtype,
+                'registration_number' => $asset->registration_number,
+                'manufacturer' => $asset->manufacturer,
+                'model' => $asset->model,
+                'rated_capacity' => $asset->rated_capacity,
+                'capacity_unit' => $asset->capacity_unit,
+                'meter_type' => $asset->meter_type,
+                'meter_value' => $asset->meter_value,
+                'location' => $asset->location,
+                'specifications' => $asset->specifications ?? [],
+                'status' => [
+                    'value' => $asset->status->value,
+                    'label' => $asset->status->label(),
+                ],
+                'blocking_work_orders_count' => $blockingCount,
+                'is_dispatchable' => $isDispatchable,
+                'inspections' => $inspections->map(static fn ($inspection): array => [
+                    'id' => (int) $inspection->getKey(),
+                    'type' => $inspection->type,
+                    'result' => $inspection->result,
+                    'checklist' => $inspection->checklist ?? [],
+                    'findings' => $inspection->findings,
+                    'completed_at' => $inspection->completed_at?->toIso8601String(),
+                ])->values()->all(),
+                'maintenance_work_orders' => $maintenanceOrders->map(static fn ($order): array => [
+                    'id' => (int) $order->getKey(),
+                    'defect' => $order->defect,
+                    'status' => $order->status,
+                    'dispatch_blocking' => (bool) $order->dispatch_blocking,
+                    'scheduled_at' => $order->scheduled_at?->toIso8601String(),
+                    'next_due_at' => $order->next_due_at?->toIso8601String(),
+                    'work_performed' => $order->work_performed ?? [],
+                    'parts' => $order->parts ?? [],
+                    'released_at' => $order->released_at?->toIso8601String(),
+                    'remarks' => $order->remarks,
+                ])->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**
@@ -343,6 +381,10 @@ final class OperationsWorkspaceViewModel
             'decide_approval' => $user->can(PermissionName::AssignmentsApprove->value)
                 || $user->can(PermissionName::DispatchApprovePriority->value),
             'update_assigned_dispatch_status' => $user->can(PermissionName::DispatchUpdateOwnStatus->value),
+            'register_asset' => $user->can(PermissionName::FleetRegister->value) || $user->can(PermissionName::EquipmentRegister->value),
+            'update_asset_status' => $user->can(PermissionName::FleetUpdateStatus->value) || $user->can(PermissionName::EquipmentUpdateStatus->value),
+            'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
+            'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
         ];
     }
 

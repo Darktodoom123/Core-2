@@ -45,7 +45,16 @@ final class OperationsWorkspaceController extends Controller
                 ->get()
             : collect();
         $assets = Gate::forUser($user)->allows('viewAny', OperationalAsset::class)
-            ? OperationalAsset::query()->visibleTo($user)->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])->orderBy('code')->limit(100)->get()
+            ? OperationalAsset::query()
+                ->visibleTo($user)
+                ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])
+                ->with([
+                    'inspections' => fn ($query) => $query->latest('completed_at')->limit(10),
+                    'maintenanceWorkOrders' => fn ($query) => $query->latest('created_at')->limit(10),
+                ])
+                ->orderBy('code')
+                ->limit(100)
+                ->get()
             : collect();
         $fuelRequests = Gate::forUser($user)->allows('viewAny', FuelRequest::class)
             ? FuelRequest::query()->visibleTo($user)->with(['requester:id,name', 'asset:id,code'])->latest()->limit(100)->get()

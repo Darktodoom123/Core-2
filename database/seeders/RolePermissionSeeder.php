@@ -38,15 +38,15 @@ final class RolePermissionSeeder extends Seeder
             RoleName::Dispatcher->value => self::values([
                 PermissionName::DispatchViewAll, PermissionName::DispatchCreate, PermissionName::DispatchUpdate,
                 PermissionName::DispatchActivate, PermissionName::DispatchCancel, PermissionName::AssignmentsViewAll, PermissionName::AssignmentsCreate,
-                PermissionName::AssignmentsReassign, PermissionName::FleetViewAll, PermissionName::FleetUpdateStatus,
-                PermissionName::EquipmentViewAll, PermissionName::EquipmentUpdateStatus, PermissionName::FuelViewAll,
+                PermissionName::AssignmentsReassign, PermissionName::FleetViewAll, PermissionName::FleetRegister, PermissionName::FleetUpdateStatus,
+                PermissionName::EquipmentViewAll, PermissionName::EquipmentRegister, PermissionName::EquipmentUpdateStatus, PermissionName::FuelViewAll,
                 PermissionName::FuelForward, PermissionName::FuelMonitor, PermissionName::TrackingViewAll,
                 PermissionName::GptUseDispatch, PermissionName::ReportsViewDispatch,
             ]),
             RoleName::OperationsManager->value => self::values([
                 PermissionName::DispatchViewAll, PermissionName::DispatchApprovePriority, PermissionName::DispatchApproveChange,
                 PermissionName::DispatchApproveCancel, PermissionName::AssignmentsViewAll, PermissionName::AssignmentsApprove,
-                PermissionName::AssignmentsOverride, PermissionName::FleetViewAll, PermissionName::EquipmentViewAll,
+                PermissionName::AssignmentsOverride, PermissionName::FleetViewAll, PermissionName::FleetRegister, PermissionName::FleetUpdateStatus, PermissionName::EquipmentViewAll, PermissionName::EquipmentRegister, PermissionName::EquipmentUpdateStatus,
                 PermissionName::FuelViewAll, PermissionName::FuelApprove, PermissionName::FuelMonitor,
                 PermissionName::FuelReport, PermissionName::TrackingViewAll, PermissionName::GptUseOperations,
                 PermissionName::ReportsViewAll, PermissionName::ReportsExport,

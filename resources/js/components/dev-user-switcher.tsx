@@ -26,21 +26,27 @@ export function DevUserSwitcher() {
     // if (!is_local_env) return null;
 
     return (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed right-4 bottom-4 z-50">
             {isOpen && (
                 <div className="mb-2 w-64 rounded-xl border border-line bg-surface p-2 shadow-xl">
-                    <div className="mb-2 px-2 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-ink-soft border-b border-line">
+                    <div className="mb-2 border-b border-line px-2 pt-1 pb-2 text-xs font-semibold tracking-wider text-ink-soft uppercase">
                         Quick Login
                     </div>
                     <div className="max-h-64 overflow-y-auto">
                         {users.map((user) => (
                             <button
                                 key={user.id}
-                                onClick={() => router.post(`/dev/login/${user.id}`)}
+                                onClick={() =>
+                                    router.post(`/dev/login/${user.id}`)
+                                }
                                 className="block w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-subtle focus:bg-surface-subtle focus:outline-none"
                             >
-                                <div className="font-medium text-ink">{user.name}</div>
-                                <div className="text-xs text-ink-soft">{user.email}</div>
+                                <div className="font-medium text-ink">
+                                    {user.name}
+                                </div>
+                                <div className="text-xs text-ink-soft">
+                                    {user.email}
+                                </div>
                             </button>
                         ))}
                         {users.length === 0 && (

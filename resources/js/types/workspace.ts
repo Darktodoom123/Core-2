@@ -100,14 +100,48 @@ export interface ServiceRequestViewModel {
     dispatch_jobs_count: number;
 }
 
+export interface InspectionViewModel {
+    id: number;
+    type: 'pre_operation' | 'post_operation' | 'maintenance' | 'safety';
+    result: 'passed' | 'failed' | 'conditional';
+    checklist: Record<string, boolean>;
+    findings: string | null;
+    completed_at: string | null;
+}
+
+export interface MaintenanceWorkOrderViewModel {
+    id: number;
+    defect: string;
+    status: string;
+    dispatch_blocking: boolean;
+    scheduled_at: string | null;
+    next_due_at: string | null;
+    work_performed: string[];
+    parts: string[];
+    released_at: string | null;
+    remarks: string | null;
+}
+
 export interface AssetViewModel {
     id: number;
     code: string;
     name: string;
     kind: string;
+    subtype: string | null;
+    registration_number: string | null;
+    manufacturer: string | null;
+    model: string | null;
+    rated_capacity: string | number | null;
+    capacity_unit: string | null;
+    meter_type: string | null;
+    meter_value: string | number | null;
     location: string | null;
+    specifications: Record<string, unknown>;
     status: StatusViewModel<AssetStatusValue>;
     blocking_work_orders_count: number;
+    is_dispatchable: boolean;
+    inspections: InspectionViewModel[];
+    maintenance_work_orders: MaintenanceWorkOrderViewModel[];
 }
 
 export interface FuelRequestViewModel {
@@ -205,6 +239,10 @@ export interface WorkspaceCapabilities {
     verify_fuel: boolean;
     decide_approval: boolean;
     update_assigned_dispatch_status: boolean;
+    register_asset: boolean;
+    update_asset_status: boolean;
+    inspect_asset: boolean;
+    maintain_asset: boolean;
 }
 
 export interface WorkspaceFreshness {
