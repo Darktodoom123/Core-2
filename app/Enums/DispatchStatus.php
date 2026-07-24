@@ -30,4 +30,28 @@ enum DispatchStatus: string
             self::Cancelled => 'Cancelled',
         };
     }
+
+    public function nextFieldStatus(): ?self
+    {
+        return match ($this) {
+            self::Dispatched => self::Accepted,
+            self::Accepted => self::EnRoute,
+            self::EnRoute => self::Arrived,
+            self::Arrived => self::Working,
+            self::Working => self::Completed,
+            default => null,
+        };
+    }
+
+    public function fieldActionLabel(): ?string
+    {
+        return match ($this) {
+            self::Dispatched => 'Accept job',
+            self::Accepted => 'Start route',
+            self::EnRoute => 'Mark arrived',
+            self::Arrived => 'Start work',
+            self::Working => 'Complete job',
+            default => null,
+        };
+    }
 }

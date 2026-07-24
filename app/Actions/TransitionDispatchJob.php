@@ -15,18 +15,27 @@ final class TransitionDispatchJob
 
     public function handle(User $actor, DispatchJob $job, DispatchStatus $next, int $version): DispatchJob
     {
-        Gate::forUser($actor)->authorize('updateOwnStatus', $job);
-        $allowed = [
-            DispatchStatus::Dispatched->value => [DispatchStatus::Accepted], DispatchStatus::Accepted->value => [DispatchStatus::EnRoute],
-            DispatchStatus::EnRoute->value => [DispatchStatus::Arrived], DispatchStatus::Arrived->value => [DispatchStatus::Working],
-            DispatchStatus::Working->value => [DispatchStatus::Completed],
-        ];
-
-        return DB::transaction(function () use ($actor, $job, $next, $version, $allowed): DispatchJob {
+        return DB::transaction(function () use ($actor, $job, $next, $version): DispatchJob {
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
-            if ($job->version !== $version || ! in_array($next, $allowed[$job->status->value] ?? [], true)) {
-                throw ValidationException::withMessages(['status' => 'The requested status transition is no longer valid.']);
+
+            $job->personnelAssignments()
+                ->where('user_id', $actor->id)
+                ->lockForUpdate()
+                ->get();
+            Gate::forUser($actor)->authorize('updateOwnStatus', $job);
+
+            if ($job->version !== $version) {
+                throw ValidationException::withMessages([
+                    'version' => 'This dispatch changed after you opened it. Refresh and review the current status before trying again.',
+                ]);
             }
+
+            if ($job->status->nextFieldStatus() !== $next) {
+                throw ValidationException::withMessages([
+                    'status' => 'That step is not available from the current dispatch status. Refresh and use the next action shown.',
+                ]);
+            }
+
             $before = $job->only(['status', 'version']);
             $job->update(['status' => $next, 'version' => $job->version + 1]);
             $this->audit->handle($actor, $job, 'dispatch.status_updated', $before, $job->only(['status', 'version']));

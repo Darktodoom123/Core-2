@@ -12,7 +12,9 @@ use App\Models\DispatchJob;
 use App\Models\OperationalAsset;
 use App\Models\User;
 use App\Services\DispatchResourceEligibility;
+use App\ViewModels\DispatchActivationWorkspaceViewModel;
 use App\ViewModels\DispatchAssignmentWorkspaceViewModel;
+use App\ViewModels\DispatchFieldProgressionViewModel;
 use App\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,8 +27,27 @@ final class DispatchJobController extends Controller
     public function index(): JsonResponse
     {
         Gate::authorize('viewAny', DispatchJob::class);
+        $user = request()->user();
+        $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
+        $jobs = DispatchJob::query()
+            ->visibleTo($user)
+            ->with([
+                'personnelAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->when(
+                        ! $canViewAllAssignments,
+                        fn ($assignment) => $assignment->where('user_id', $user->id),
+                    )
+                    ->with('user:id,name'),
+                'assetAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->with('asset:id,code,name'),
+            ])
+            ->latest('scheduled_start')
+            ->paginate(25)
+            ->through(static fn (DispatchJob $job): array => OperationsWorkspaceViewModel::job($job));
 
-        return response()->json(['data' => DispatchJob::query()->visibleTo(request()->user())->with(['personnelAssignments', 'assetAssignments.asset'])->latest('scheduled_start')->paginate(25)]);
+        return response()->json(['data' => $jobs]);
     }
 
     public function store(
@@ -64,13 +85,25 @@ final class DispatchJobController extends Controller
     public function show(int $dispatchJob, DispatchResourceEligibility $eligibility): Response
     {
         $user = request()->user();
+        $canViewCandidates = $user->can(PermissionName::AssignmentsViewAll->value);
         $job = DispatchJob::query()
             ->visibleTo($user)
-            ->with(['personnelAssignments.user', 'assetAssignments.asset', 'approvals'])
+            ->with([
+                'personnelAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->when(
+                        ! $canViewCandidates,
+                        fn ($assignment) => $assignment->where('user_id', $user->id),
+                    )
+                    ->with('user'),
+                'assetAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->with('asset.maintenanceWorkOrders'),
+                'approvals',
+            ])
             ->findOrFail($dispatchJob);
         Gate::authorize('view', $job);
 
-        $canViewCandidates = $user->can(PermissionName::AssignmentsViewAll->value);
         $canAssignResources = Gate::forUser($user)->allows('assignResources', $job)
             && $job->scheduled_start !== null
             && $job->scheduled_end !== null
@@ -79,6 +112,7 @@ final class DispatchJobController extends Controller
                 DispatchStatus::PendingApproval,
                 DispatchStatus::Scheduled,
             ], true);
+        $canUpdateOwnStatus = Gate::forUser($user)->allows('updateOwnStatus', $job);
 
         $personnel = $canViewCandidates
             ? User::query()
@@ -119,9 +153,15 @@ final class DispatchJobController extends Controller
             'job' => OperationsWorkspaceViewModel::job($job),
             'personnel_candidates' => DispatchAssignmentWorkspaceViewModel::personnelCandidates($personnel, $job, $eligibility),
             'asset_candidates' => DispatchAssignmentWorkspaceViewModel::assetCandidates($assets, $job, $eligibility),
+            'activation' => DispatchActivationWorkspaceViewModel::make($job),
+            'progression' => $canUpdateOwnStatus
+                ? DispatchFieldProgressionViewModel::make($job)
+                : null,
             'capabilities' => [
                 'assign_resources' => $canAssignResources,
                 'view_assignment_candidates' => $canViewCandidates,
+                'activate' => Gate::forUser($user)->allows('activate', $job),
+                'update_own_status' => $canUpdateOwnStatus,
             ],
         ]);
     }

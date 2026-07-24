@@ -15,6 +15,7 @@ use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 
 final class OperationsWorkspaceViewModel
 {
@@ -93,6 +94,7 @@ final class OperationsWorkspaceViewModel
             ],
             'scheduled_start' => $job->scheduled_start?->toIso8601String(),
             'scheduled_end' => $job->scheduled_end?->toIso8601String(),
+            'requirements' => $job->requirements ?? [],
             'version' => $job->version,
             'updated_at' => $job->updated_at?->toIso8601String(),
             'personnel_assignments' => $job->personnelAssignments
@@ -166,10 +168,18 @@ final class OperationsWorkspaceViewModel
      * @param  Collection<int, ApprovalRequest>  $approvals
      * @return array<int, array<string, mixed>>
      */
-    public static function approvals(Collection $approvals): array
+    public static function approvals(Collection $approvals, User $user): array
     {
-        return $approvals->map(static function (ApprovalRequest $approval): array {
+        return $approvals->map(static function (ApprovalRequest $approval) use ($user): array {
             $subject = $approval->subject;
+            $requestedChanges = $approval->requested_changes ?? [];
+            $personnelAssignments = $subject instanceof DispatchJob
+                ? $subject->personnelAssignments->keyBy('user_id')
+                : collect();
+            $assetAssignments = $subject instanceof DispatchJob
+                ? $subject->assetAssignments->keyBy('operational_asset_id')
+                : collect();
+            $canDecide = Gate::forUser($user)->allows('decide', $approval);
 
             return [
                 'id' => (int) $approval->getKey(),
@@ -183,7 +193,35 @@ final class OperationsWorkspaceViewModel
                     'reference' => $subject instanceof DispatchJob
                         ? $subject->reference
                         : class_basename($approval->subject_type).' #'.$approval->subject_id,
+                    'title' => $subject instanceof DispatchJob ? $subject->title : null,
+                    'site' => $subject instanceof DispatchJob ? $subject->site : null,
+                    'site_notes' => $subject instanceof DispatchJob ? $subject->site_notes : null,
+                    'scheduled_start' => $subject instanceof DispatchJob ? $subject->scheduled_start?->toIso8601String() : null,
+                    'scheduled_end' => $subject instanceof DispatchJob ? $subject->scheduled_end?->toIso8601String() : null,
+                    'priority' => $subject instanceof DispatchJob ? [
+                        'value' => $subject->priority->value,
+                        'label' => $subject->priority->label(),
+                    ] : null,
+                    'status' => $subject instanceof DispatchJob ? [
+                        'value' => $subject->status->value,
+                        'label' => $subject->status->label(),
+                    ] : null,
+                    'version' => $subject instanceof DispatchJob ? $subject->version : null,
                 ],
+                'requester' => [
+                    'id' => $approval->requested_by,
+                    'name' => $approval->requester->name,
+                ],
+                'requested_changes' => [
+                    'personnel' => self::approvalPersonnelChanges($requestedChanges, $personnelAssignments),
+                    'assets' => self::approvalAssetChanges($requestedChanges, $assetAssignments),
+                ],
+                'can_decide' => $canDecide,
+                'decision_blocker' => $canDecide
+                    ? null
+                    : ($approval->requested_by === $user->id
+                        ? 'You requested this exceptional work. Another authorized manager must decide it.'
+                        : 'Your role cannot decide this approval request.'),
                 'created_at' => $approval->created_at?->toIso8601String(),
             ];
         })->values()->all();
@@ -304,6 +342,7 @@ final class OperationsWorkspaceViewModel
             'verify_fuel' => $user->can(PermissionName::FuelVerify->value),
             'decide_approval' => $user->can(PermissionName::AssignmentsApprove->value)
                 || $user->can(PermissionName::DispatchApprovePriority->value),
+            'update_assigned_dispatch_status' => $user->can(PermissionName::DispatchUpdateOwnStatus->value),
         ];
     }
 
@@ -314,5 +353,70 @@ final class OperationsWorkspaceViewModel
             RoleName::FieldTechnician => 'Service assets',
             default => 'Assigned vehicle',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestedChanges
+     * @param  Collection<int, DispatchPersonnelAssignment>  $assignments
+     * @return list<array{id: int, name: string, assignment_type: string}>
+     */
+    private static function approvalPersonnelChanges(array $requestedChanges, Collection $assignments): array
+    {
+        $changes = $requestedChanges['personnel'] ?? [];
+        if (! is_array($changes)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($changes as $change) {
+            if (! is_array($change)
+                || ! is_int($change['user_id'] ?? null)
+                || ! is_string($change['assignment_type'] ?? null)) {
+                continue;
+            }
+
+            $userId = $change['user_id'];
+            $assignment = $assignments->get($userId);
+            $result[] = [
+                'id' => $userId,
+                'name' => $assignment === null ? "User #{$userId}" : $assignment->user->name,
+                'assignment_type' => $change['assignment_type'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestedChanges
+     * @param  Collection<int, DispatchAssetAssignment>  $assignments
+     * @return list<array{id: int, code: string, name: string, assignment_type: string}>
+     */
+    private static function approvalAssetChanges(array $requestedChanges, Collection $assignments): array
+    {
+        $changes = $requestedChanges['assets'] ?? [];
+        if (! is_array($changes)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($changes as $change) {
+            if (! is_array($change)
+                || ! is_int($change['operational_asset_id'] ?? null)
+                || ! is_string($change['assignment_type'] ?? null)) {
+                continue;
+            }
+
+            $assetId = $change['operational_asset_id'];
+            $assignment = $assignments->get($assetId);
+            $result[] = [
+                'id' => $assetId,
+                'code' => $assignment === null ? "Asset #{$assetId}" : $assignment->asset->code,
+                'name' => $assignment === null ? 'Unavailable asset' : $assignment->asset->name,
+                'assignment_type' => $change['assignment_type'],
+            ];
+        }
+
+        return $result;
     }
 }

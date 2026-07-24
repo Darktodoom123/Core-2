@@ -6,12 +6,11 @@ use App\Actions\ActivateDispatchJob;
 use App\Actions\AssignDispatchResources;
 use App\Actions\TransitionDispatchJob;
 use App\Enums\DispatchStatus;
+use App\Http\Requests\ActivateDispatchJobRequest;
 use App\Http\Requests\AssignDispatchResourcesRequest;
 use App\Http\Requests\TransitionDispatchJobRequest;
 use App\Models\DispatchJob;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 final class DispatchWorkflowController extends Controller
 {
@@ -30,15 +29,34 @@ final class DispatchWorkflowController extends Controller
         ]);
     }
 
-    public function activate(Request $request, DispatchJob $dispatchJob, ActivateDispatchJob $action): JsonResponse
-    {
-        $validated = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+    public function activate(
+        ActivateDispatchJobRequest $request,
+        DispatchJob $dispatchJob,
+        ActivateDispatchJob $action,
+    ): RedirectResponse {
+        $action->handle($request->user(), $dispatchJob, (int) $request->validated('version'));
 
-        return response()->json(['data' => $action->handle($request->user(), $dispatchJob, $validated['version'])]);
+        return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [
+            'tone' => 'success',
+            'message' => "Dispatch {$dispatchJob->reference} was activated.",
+        ]);
     }
 
-    public function transition(TransitionDispatchJobRequest $request, DispatchJob $dispatchJob, TransitionDispatchJob $action): JsonResponse
-    {
-        return response()->json(['data' => $action->handle($request->user(), $dispatchJob, DispatchStatus::from($request->validated('status')), $request->integer('version'))]);
+    public function transition(
+        TransitionDispatchJobRequest $request,
+        DispatchJob $dispatchJob,
+        TransitionDispatchJob $action,
+    ): RedirectResponse {
+        $job = $action->handle(
+            $request->user(),
+            $dispatchJob,
+            DispatchStatus::from($request->validated('status')),
+            $request->integer('version'),
+        );
+
+        return to_route('dispatch-jobs.show', $job)->with('flash', [
+            'tone' => 'success',
+            'message' => "{$job->reference} is now {$job->status->label()}.",
+        ]);
     }
 }

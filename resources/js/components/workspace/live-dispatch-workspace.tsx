@@ -48,6 +48,7 @@ export function LiveDispatchWorkspace({
         jobs[0]?.id ?? null,
     );
     const [showCreate, setShowCreate] = useState(false);
+    const fieldMode = capabilities.update_assigned_dispatch_status;
     const form = useForm({
         reference: '',
         client: '',
@@ -98,8 +99,14 @@ export function LiveDispatchWorkspace({
     return (
         <div>
             <PageHeading
-                title="Dispatch workspace"
-                description="Review live jobs, schedules, and assigned resources. Laravel remains authoritative for every visible record and write."
+                title={
+                    fieldMode ? "Today's assigned work" : 'Dispatch workspace'
+                }
+                description={
+                    fieldMode
+                        ? 'Review the jobs actively assigned to you, then open one to record only its next valid field milestone.'
+                        : 'Review live jobs, schedules, and assigned resources. Laravel remains authoritative for every visible record and write.'
+                }
                 actions={
                     canCreate ? (
                         <Button
@@ -240,12 +247,26 @@ export function LiveDispatchWorkspace({
                 </section>
             )}
 
-            <div className="grid min-h-[calc(100vh-9rem)] lg:grid-cols-[19rem_minmax(0,1fr)]">
-                <aside className="border-b border-line bg-surface lg:border-r lg:border-b-0">
+            <div
+                className={cn(
+                    'min-h-[calc(100vh-9rem)]',
+                    !fieldMode && 'grid lg:grid-cols-[19rem_minmax(0,1fr)]',
+                )}
+            >
+                <aside
+                    className={cn(
+                        'border-b border-line bg-surface',
+                        fieldMode
+                            ? 'mx-auto w-full max-w-5xl'
+                            : 'lg:border-r lg:border-b-0',
+                    )}
+                >
                     <div className="border-b border-line p-4">
                         <label className="relative block">
                             <span className="sr-only">
-                                Search live dispatches
+                                {fieldMode
+                                    ? 'Search assigned jobs'
+                                    : 'Search live dispatches'}
                             </span>
                             <Search
                                 className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
@@ -257,7 +278,11 @@ export function LiveDispatchWorkspace({
                                 onChange={(event) =>
                                     setQuery(event.target.value)
                                 }
-                                placeholder="Search jobs, clients, sites"
+                                placeholder={
+                                    fieldMode
+                                        ? 'Search assigned jobs'
+                                        : 'Search jobs, clients, sites'
+                                }
                                 className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm placeholder:text-ink-soft"
                             />
                         </label>
@@ -275,7 +300,11 @@ export function LiveDispatchWorkspace({
                             <EmptyState
                                 compact
                                 icon={ClipboardList}
-                                title="No dispatch jobs available"
+                                title={
+                                    fieldMode
+                                        ? 'No assigned jobs today'
+                                        : 'No dispatch jobs available'
+                                }
                                 message={
                                     canCreate
                                         ? 'Create a live draft to begin the dispatch workflow.'
@@ -312,63 +341,99 @@ export function LiveDispatchWorkspace({
                         <ul className="divide-y divide-line">
                             {filteredJobs.map((job) => (
                                 <li key={job.id}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedJobId(job.id)}
-                                        className={cn(
-                                            'flex min-h-24 w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
-                                            job.id === selectedJob?.id &&
-                                                'bg-brand-soft',
-                                        )}
-                                        aria-current={
-                                            job.id === selectedJob?.id
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                    >
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <p className="font-semibold">
-                                                    {job.reference}
+                                    {fieldMode && (
+                                        <Link
+                                            href={`/operations/dispatch-jobs/${job.id}`}
+                                            className="flex min-h-24 w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle"
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className="font-semibold">
+                                                        {job.reference}
+                                                    </p>
+                                                    <CanonicalStatusBadge
+                                                        status={job.priority}
+                                                    />
+                                                </div>
+                                                <p className="mt-1 truncate text-sm">
+                                                    {job.title}
                                                 </p>
-                                                <CanonicalStatusBadge
-                                                    status={job.priority}
-                                                />
+                                                <p className="mt-1 truncate text-xs text-ink-soft">
+                                                    {job.client} —{' '}
+                                                    {formatDateTime(
+                                                        job.scheduled_start,
+                                                    )}
+                                                </p>
                                             </div>
-                                            <p className="mt-1 truncate text-sm">
-                                                {job.title}
-                                            </p>
-                                            <p className="mt-1 truncate text-xs text-ink-soft">
-                                                {job.client} ·{' '}
-                                                {formatDateTime(
-                                                    job.scheduled_start,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <ChevronRight
-                                            className="mt-1 h-4 w-4 shrink-0 text-ink-soft"
-                                            aria-hidden="true"
-                                        />
-                                    </button>
+                                            <ChevronRight
+                                                className="mt-1 h-4 w-4 shrink-0 text-ink-soft"
+                                                aria-hidden="true"
+                                            />
+                                        </Link>
+                                    )}
+                                    {!fieldMode && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedJobId(job.id)
+                                            }
+                                            className={cn(
+                                                'flex min-h-24 w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
+                                                job.id === selectedJob?.id &&
+                                                    'bg-brand-soft',
+                                            )}
+                                            aria-current={
+                                                job.id === selectedJob?.id
+                                                    ? 'true'
+                                                    : undefined
+                                            }
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className="font-semibold">
+                                                        {job.reference}
+                                                    </p>
+                                                    <CanonicalStatusBadge
+                                                        status={job.priority}
+                                                    />
+                                                </div>
+                                                <p className="mt-1 truncate text-sm">
+                                                    {job.title}
+                                                </p>
+                                                <p className="mt-1 truncate text-xs text-ink-soft">
+                                                    {job.client} ·{' '}
+                                                    {formatDateTime(
+                                                        job.scheduled_start,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <ChevronRight
+                                                className="mt-1 h-4 w-4 shrink-0 text-ink-soft"
+                                                aria-hidden="true"
+                                            />
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>
                     )}
                 </aside>
 
-                <section className="min-w-0 bg-canvas p-4 md:p-6">
-                    {selectedJob ? (
-                        <DispatchDetails job={selectedJob} />
-                    ) : (
-                        <Panel>
-                            <EmptyState
-                                icon={ClipboardList}
-                                title="Select a dispatch"
-                                message="Choose a live job from the list to review its schedule, site, and assignments."
-                            />
-                        </Panel>
-                    )}
-                </section>
+                {!fieldMode && (
+                    <section className="min-w-0 bg-canvas p-4 md:p-6">
+                        {selectedJob ? (
+                            <DispatchDetails job={selectedJob} />
+                        ) : (
+                            <Panel>
+                                <EmptyState
+                                    icon={ClipboardList}
+                                    title="Select a dispatch"
+                                    message="Choose a live job from the list to review its schedule, site, and assignments."
+                                />
+                            </Panel>
+                        )}
+                    </section>
+                )}
             </div>
         </div>
     );

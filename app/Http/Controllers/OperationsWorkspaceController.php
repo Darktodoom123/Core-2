@@ -23,9 +23,26 @@ final class OperationsWorkspaceController extends Controller
     {
         $user = $request->user();
         $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
+        $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
 
         $jobs = Gate::forUser($user)->allows('viewAny', DispatchJob::class)
-            ? DispatchJob::query()->visibleTo($user)->with(['personnelAssignments.user:id,name', 'assetAssignments.asset:id,code,name'])->orderBy('scheduled_start')->limit(100)->get()
+            ? DispatchJob::query()
+                ->visibleTo($user)
+                ->with([
+                    'personnelAssignments' => fn ($query) => $query
+                        ->whereNull('active_until')
+                        ->when(
+                            ! $canViewAllAssignments,
+                            fn ($assignment) => $assignment->where('user_id', $user->id),
+                        )
+                        ->with('user:id,name'),
+                    'assetAssignments' => fn ($query) => $query
+                        ->whereNull('active_until')
+                        ->with('asset:id,code,name'),
+                ])
+                ->orderBy('scheduled_start')
+                ->limit(100)
+                ->get()
             : collect();
         $assets = Gate::forUser($user)->allows('viewAny', OperationalAsset::class)
             ? OperationalAsset::query()->visibleTo($user)->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])->orderBy('code')->limit(100)->get()
@@ -33,8 +50,27 @@ final class OperationsWorkspaceController extends Controller
         $fuelRequests = Gate::forUser($user)->allows('viewAny', FuelRequest::class)
             ? FuelRequest::query()->visibleTo($user)->with(['requester:id,name', 'asset:id,code'])->latest()->limit(100)->get()
             : collect();
-        $approvals = $user->can(PermissionName::AssignmentsApprove->value) || $user->can(PermissionName::DispatchApprovePriority->value)
-            ? ApprovalRequest::query()->with('subject')->where('status', 'pending')->latest()->limit(100)->get()
+        $approvalKinds = array_values(array_filter([
+            $user->can(PermissionName::AssignmentsApprove->value) ? 'assignment_override' : null,
+            $user->can(PermissionName::DispatchApprovePriority->value) ? 'dispatch_activation' : null,
+        ]));
+        $approvals = $approvalKinds !== []
+            ? ApprovalRequest::query()
+                ->with([
+                    'requester:id,name',
+                    'subject',
+                ])
+                ->whereIn('kind', $approvalKinds)
+                ->where('status', 'pending')
+                ->latest()
+                ->limit(100)
+                ->get()
+                ->loadMorph('subject', [
+                    DispatchJob::class => [
+                        'personnelAssignments.user:id,name',
+                        'assetAssignments.asset:id,code,name',
+                    ],
+                ])
             : collect();
         $users = $user->can(PermissionName::UsersManage->value)
             ? User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get()
@@ -63,7 +99,7 @@ final class OperationsWorkspaceController extends Controller
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($serviceRequests),
             'assets' => OperationsWorkspaceViewModel::assets($assets),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelRequests),
-            'approvals' => OperationsWorkspaceViewModel::approvals($approvals),
+            'approvals' => OperationsWorkspaceViewModel::approvals($approvals, $user),
             'users' => OperationsWorkspaceViewModel::users($users),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($auditEvents),
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
