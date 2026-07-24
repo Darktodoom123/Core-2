@@ -13,6 +13,7 @@ use App\Models\ServiceRequest;
 use App\Models\User;
 use App\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,92 +26,15 @@ final class OperationsWorkspaceController extends Controller
         $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
 
-        $jobs = Gate::forUser($user)->allows('viewAny', DispatchJob::class)
-            ? DispatchJob::query()
-                ->visibleTo($user)
-                ->with([
-                    'personnelAssignments' => fn ($query) => $query
-                        ->whereNull('active_until')
-                        ->when(
-                            ! $canViewAllAssignments,
-                            fn ($assignment) => $assignment->where('user_id', $user->id),
-                        )
-                        ->with('user:id,name'),
-                    'assetAssignments' => fn ($query) => $query
-                        ->whereNull('active_until')
-                        ->with('asset:id,code,name'),
-                ])
-                ->orderBy('scheduled_start')
-                ->limit(100)
-                ->get()
-            : collect();
-        $assets = Gate::forUser($user)->allows('viewAny', OperationalAsset::class)
-            ? OperationalAsset::query()
-                ->visibleTo($user)
-                ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])
-                ->with([
-                    'inspections' => fn ($query) => $query->latest('completed_at')->limit(10),
-                    'maintenanceWorkOrders' => fn ($query) => $query->latest('created_at')->limit(10),
-                ])
-                ->orderBy('code')
-                ->limit(100)
-                ->get()
-            : collect();
-        $fuelRequests = Gate::forUser($user)->allows('viewAny', FuelRequest::class)
-            ? FuelRequest::query()->visibleTo($user)->with(['requester:id,name', 'asset:id,code'])->latest()->limit(100)->get()
-            : collect();
-        $approvalKinds = array_values(array_filter([
-            $user->can(PermissionName::AssignmentsApprove->value) ? 'assignment_override' : null,
-            $user->can(PermissionName::DispatchApprovePriority->value) ? 'dispatch_activation' : null,
-        ]));
-        $approvals = $approvalKinds !== []
-            ? ApprovalRequest::query()
-                ->with([
-                    'requester:id,name',
-                    'subject',
-                ])
-                ->whereIn('kind', $approvalKinds)
-                ->where('status', 'pending')
-                ->latest()
-                ->limit(100)
-                ->get()
-                ->loadMorph('subject', [
-                    DispatchJob::class => [
-                        'personnelAssignments.user:id,name',
-                        'assetAssignments.asset:id,code,name',
-                    ],
-                ])
-            : collect();
-        $users = $user->can(PermissionName::UsersManage->value)
-            ? User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get()
-            : collect();
-        $auditEvents = $user->can(PermissionName::AuditView->value)
-            ? AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get()
-            : collect();
-        $clients = $canCreateDispatch
-            ? Client::query()->where('status', 'active')->orderBy('company_name')->limit(200)->get()
-            : collect();
-        $serviceRequests = $canCreateDispatch
-            ? ServiceRequest::query()
-                ->with('client:id,code,company_name')
-                ->withCount('dispatchJobs')
-                ->whereIn('status', ['submitted', 'dispatching'])
-                ->orderByRaw('scheduled_date is null')
-                ->orderBy('scheduled_date')
-                ->latest('created_at')
-                ->limit(100)
-                ->get()
-            : collect();
-
         return Inertia::render('workspace', [
-            'jobs' => OperationsWorkspaceViewModel::jobs($jobs),
-            'clients' => OperationsWorkspaceViewModel::clients($clients),
-            'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($serviceRequests),
-            'assets' => OperationsWorkspaceViewModel::assets($assets),
-            'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelRequests),
-            'approvals' => OperationsWorkspaceViewModel::approvals($approvals, $user),
-            'users' => OperationsWorkspaceViewModel::users($users),
-            'auditEvents' => OperationsWorkspaceViewModel::auditEvents($auditEvents),
+            'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+            'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
+            'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+            'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+            'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+            'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+            'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
+            'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
@@ -118,5 +42,148 @@ final class OperationsWorkspaceController extends Controller
                 'stale_after_seconds' => 120,
             ],
         ]);
+    }
+
+    /** @return Collection<int, DispatchJob> */
+    private function fetchJobs(User $user, bool $canViewAllAssignments): Collection
+    {
+        if (! Gate::forUser($user)->allows('viewAny', DispatchJob::class)) {
+            return collect();
+        }
+
+        return DispatchJob::query()
+            ->visibleTo($user)
+            ->with([
+                'personnelAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->when(
+                        ! $canViewAllAssignments,
+                        fn ($assignment) => $assignment->where('user_id', $user->id),
+                    )
+                    ->with('user:id,name'),
+                'assetAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->with('asset:id,code,name'),
+            ])
+            ->orderBy('scheduled_start')
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, OperationalAsset> */
+    private function fetchAssets(User $user): Collection
+    {
+        if (! Gate::forUser($user)->allows('viewAny', OperationalAsset::class)) {
+            return collect();
+        }
+
+        return OperationalAsset::query()
+            ->visibleTo($user)
+            ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])
+            ->with([
+                'inspections' => fn ($query) => $query->latest('completed_at')->limit(10),
+                'maintenanceWorkOrders' => fn ($query) => $query->latest('created_at')->limit(10),
+            ])
+            ->orderBy('code')
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, FuelRequest> */
+    private function fetchFuelRequests(User $user): Collection
+    {
+        if (! Gate::forUser($user)->allows('viewAny', FuelRequest::class)) {
+            return collect();
+        }
+
+        return FuelRequest::query()
+            ->visibleTo($user)
+            ->with([
+                'requester:id,name',
+                'job:id,reference,title',
+                'asset:id,code,name',
+                'logs.recorder:id,name',
+            ])
+            ->latest()
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, ApprovalRequest> */
+    private function fetchApprovals(User $user): Collection
+    {
+        $approvalKinds = array_values(array_filter([
+            $user->can(PermissionName::AssignmentsApprove->value) ? 'assignment_override' : null,
+            $user->can(PermissionName::DispatchApprovePriority->value) ? 'dispatch_activation' : null,
+        ]));
+
+        if ($approvalKinds === []) {
+            return collect();
+        }
+
+        return ApprovalRequest::query()
+            ->with([
+                'requester:id,name',
+                'subject',
+            ])
+            ->whereIn('kind', $approvalKinds)
+            ->where('status', 'pending')
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->loadMorph('subject', [
+                DispatchJob::class => [
+                    'personnelAssignments.user:id,name',
+                    'assetAssignments.asset:id,code,name',
+                ],
+            ]);
+    }
+
+    /** @return Collection<int, User> */
+    private function fetchUsers(User $user): Collection
+    {
+        if (! $user->can(PermissionName::UsersManage->value)) {
+            return collect();
+        }
+
+        return User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get();
+    }
+
+    /** @return Collection<int, AuditEvent> */
+    private function fetchAuditEvents(User $user): Collection
+    {
+        if (! $user->can(PermissionName::AuditView->value)) {
+            return collect();
+        }
+
+        return AuditEvent::query()->with('actor:id,name')->latest('occurred_at')->limit(100)->get();
+    }
+
+    /** @return Collection<int, Client> */
+    private function fetchClients(bool $canCreateDispatch): Collection
+    {
+        if (! $canCreateDispatch) {
+            return collect();
+        }
+
+        return Client::query()->where('status', 'active')->orderBy('company_name')->limit(200)->get();
+    }
+
+    /** @return Collection<int, ServiceRequest> */
+    private function fetchServiceRequests(bool $canCreateDispatch): Collection
+    {
+        if (! $canCreateDispatch) {
+            return collect();
+        }
+
+        return ServiceRequest::query()
+            ->with('client:id,code,company_name')
+            ->withCount('dispatchJobs')
+            ->whereIn('status', ['submitted', 'dispatching'])
+            ->orderByRaw('scheduled_date is null')
+            ->orderBy('scheduled_date')
+            ->latest('created_at')
+            ->limit(100)
+            ->get();
     }
 }

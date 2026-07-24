@@ -144,6 +144,23 @@ export interface AssetViewModel {
     maintenance_work_orders: MaintenanceWorkOrderViewModel[];
 }
 
+export interface FuelLogViewModel {
+    id: number;
+    quantity_litres: string;
+    odometer_km: number | null;
+    hour_meter: string | null;
+    price_per_litre: string | null;
+    total_cost: string | null;
+    fuel_station: string | null;
+    remarks: string | null;
+    receipt_path: string | null;
+    recorded_by: {
+        id: number;
+        name: string;
+    } | null;
+    recorded_at: string | null;
+}
+
 export interface FuelRequestViewModel {
     id: number;
     reference: string;
@@ -151,14 +168,25 @@ export interface FuelRequestViewModel {
         id: number;
         name: string;
     };
+    job: {
+        id: number;
+        reference: string;
+        title: string;
+    } | null;
     asset: {
         id: number;
         code: string;
+        name?: string;
     } | null;
     quantity_litres: string;
     fuel_type: string;
     purpose: string;
     status: StatusViewModel<FuelRequestStatusValue>;
+    decision_reason?: string | null;
+    reviewed_at?: string | null;
+    approved_at?: string | null;
+    verified_at?: string | null;
+    logs?: FuelLogViewModel[];
 }
 
 export interface ApprovalViewModel {
@@ -237,6 +265,7 @@ export interface WorkspaceCapabilities {
     forward_fuel: boolean;
     approve_fuel: boolean;
     verify_fuel: boolean;
+    record_fuel: boolean;
     decide_approval: boolean;
     update_assigned_dispatch_status: boolean;
     register_asset: boolean;

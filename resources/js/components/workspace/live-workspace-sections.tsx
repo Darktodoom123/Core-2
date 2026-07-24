@@ -1104,6 +1104,11 @@ function FuelSurface({
     capabilities: WorkspaceCapabilities;
 }) {
     const [pendingAction, setPendingAction] = useState<string | null>(null);
+    const [activeLogId, setActiveLogId] = useState<number | null>(null);
+    const [decisionReason, setDecisionReason] = useState<
+        Record<number, string>
+    >({});
+
     const form = useForm({
         quantity_litres: '',
         fuel_type: 'diesel',
@@ -1113,6 +1118,16 @@ function FuelSurface({
         form.data.quantity_litres.trim() !== '' &&
         form.data.purpose.trim() !== '';
 
+    const logForm = useForm({
+        quantity_litres: '',
+        odometer_km: '',
+        hour_meter: '',
+        price_per_litre: '',
+        total_cost: '',
+        fuel_station: '',
+        remarks: '',
+    });
+
     const submit = (event: FormEvent) => {
         event.preventDefault();
         form.post('/operations/fuel-requests', {
@@ -1120,17 +1135,37 @@ function FuelSurface({
             onSuccess: () => form.reset(),
         });
     };
-    const transition = (requestId: number, status: string) => {
+
+    const transition = (requestId: number, status: string, reason?: string) => {
         const actionId = `${requestId}:${status}`;
         router.post(
             `/operations/fuel-requests/${requestId}/status`,
-            { status },
+            { status, reason },
             {
                 preserveScroll: true,
                 onStart: () => setPendingAction(actionId),
                 onFinish: () => setPendingAction(null),
             },
         );
+    };
+
+    const submitLog = (event: FormEvent, request: FuelRequestViewModel) => {
+        event.preventDefault();
+        const actionId = `${request.id}:logged`;
+        logForm.transform((data) => ({
+            ...data,
+            status: 'logged',
+            quantity_litres: data.quantity_litres || request.quantity_litres,
+        }));
+        logForm.post(`/operations/fuel-requests/${request.id}/status`, {
+            preserveScroll: true,
+            onStart: () => setPendingAction(actionId),
+            onFinish: () => {
+                setPendingAction(null);
+                setActiveLogId(null);
+                logForm.reset();
+            },
+        });
     };
 
     return (
@@ -1221,52 +1256,376 @@ function FuelSurface({
                                 const actionId = nextAction
                                     ? `${request.id}:${nextAction.status}`
                                     : null;
+                                const isLoggingThis =
+                                    activeLogId === request.id;
 
                                 return (
                                     <li
                                         key={request.id}
-                                        className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center"
+                                        className="flex flex-col gap-4 px-4 py-4"
                                     >
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="font-semibold">
-                                                    {request.reference}
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="font-semibold">
+                                                        {request.reference}
+                                                    </p>
+                                                    <CanonicalStatusBadge
+                                                        status={request.status}
+                                                    />
+                                                </div>
+                                                <p className="mt-1 text-sm text-ink-soft">
+                                                    {request.quantity_litres} L
+                                                    ·{' '}
+                                                    {humanize(
+                                                        request.fuel_type,
+                                                    )}{' '}
+                                                    · {request.purpose}
                                                 </p>
-                                                <CanonicalStatusBadge
-                                                    status={request.status}
-                                                />
+                                                <p className="mt-1 text-xs text-ink-soft">
+                                                    Requested by{' '}
+                                                    {request.requester.name}
+                                                    {request.asset
+                                                        ? ` · Asset: ${request.asset.code}`
+                                                        : ''}
+                                                    {request.job
+                                                        ? ` · Job: ${request.job.reference}`
+                                                        : ''}
+                                                </p>
+                                                {request.decision_reason && (
+                                                    <p className="mt-1 text-xs text-ink-soft italic">
+                                                        Reason:{' '}
+                                                        {
+                                                            request.decision_reason
+                                                        }
+                                                    </p>
+                                                )}
                                             </div>
-                                            <p className="mt-1 text-sm text-ink-soft">
-                                                {request.quantity_litres} L ·{' '}
-                                                {humanize(request.fuel_type)} ·{' '}
-                                                {request.purpose}
-                                            </p>
-                                            <p className="mt-1 text-xs text-ink-soft">
-                                                Requested by{' '}
-                                                {request.requester.name}
-                                                {request.asset
-                                                    ? ` · ${request.asset.code}`
-                                                    : ''}
-                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {nextAction &&
+                                                    nextAction.status ===
+                                                        'approved' &&
+                                                    capabilities.approve_fuel && (
+                                                        <>
+                                                            <Button
+                                                                variant="secondary"
+                                                                onClick={() =>
+                                                                    transition(
+                                                                        request.id,
+                                                                        'approved',
+                                                                        decisionReason[
+                                                                            request
+                                                                                .id
+                                                                        ],
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    pendingAction !==
+                                                                    null
+                                                                }
+                                                            >
+                                                                {pendingAction ===
+                                                                `${request.id}:approved`
+                                                                    ? 'Approving…'
+                                                                    : 'Approve'}
+                                                            </Button>
+                                                            <Button
+                                                                variant="danger"
+                                                                onClick={() =>
+                                                                    transition(
+                                                                        request.id,
+                                                                        'rejected',
+                                                                        decisionReason[
+                                                                            request
+                                                                                .id
+                                                                        ],
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    pendingAction !==
+                                                                    null
+                                                                }
+                                                            >
+                                                                {pendingAction ===
+                                                                `${request.id}:rejected`
+                                                                    ? 'Rejecting…'
+                                                                    : 'Reject'}
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                {nextAction &&
+                                                    nextAction.status ===
+                                                        'logged' &&
+                                                    capabilities.record_fuel &&
+                                                    !isLoggingThis && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setActiveLogId(
+                                                                    request.id,
+                                                                );
+                                                                logForm.setData(
+                                                                    'quantity_litres',
+                                                                    request.quantity_litres,
+                                                                );
+                                                            }}
+                                                        >
+                                                            Record fuel log
+                                                        </Button>
+                                                    )}
+                                                {nextAction &&
+                                                    nextAction.status !==
+                                                        'approved' &&
+                                                    nextAction.status !==
+                                                        'logged' &&
+                                                    actionId && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() =>
+                                                                transition(
+                                                                    request.id,
+                                                                    nextAction.status,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                pendingAction !==
+                                                                null
+                                                            }
+                                                        >
+                                                            {pendingAction ===
+                                                            actionId
+                                                                ? `${nextAction.label}…`
+                                                                : nextAction.label}
+                                                        </Button>
+                                                    )}
+                                            </div>
                                         </div>
-                                        {nextAction && actionId && (
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    transition(
-                                                        request.id,
-                                                        nextAction.status,
-                                                    )
-                                                }
-                                                disabled={
-                                                    pendingAction !== null
-                                                }
-                                            >
-                                                {pendingAction === actionId
-                                                    ? `${nextAction.label}…`
-                                                    : nextAction.label}
-                                            </Button>
+
+                                        {nextAction &&
+                                            nextAction.status === 'approved' &&
+                                            capabilities.approve_fuel && (
+                                                <div className="mt-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Decision reason (optional for approval, recommended for rejection)"
+                                                        value={
+                                                            decisionReason[
+                                                                request.id
+                                                            ] || ''
+                                                        }
+                                                        onChange={(e) =>
+                                                            setDecisionReason({
+                                                                ...decisionReason,
+                                                                [request.id]:
+                                                                    e.target
+                                                                        .value,
+                                                            })
+                                                        }
+                                                        className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-xs"
+                                                    />
+                                                </div>
+                                            )}
+
+                                        {isLoggingThis && (
+                                            <Panel className="mt-3 bg-surface-subtle p-4">
+                                                <h3 className="text-sm font-semibold">
+                                                    Record final fuel log
+                                                </h3>
+                                                <form
+                                                    onSubmit={(e) =>
+                                                        submitLog(e, request)
+                                                    }
+                                                    className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3"
+                                                >
+                                                    <FuelInput
+                                                        label="Litres"
+                                                        type="number"
+                                                        value={
+                                                            logForm.data
+                                                                .quantity_litres
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'quantity_litres',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <FuelInput
+                                                        label="Odometer (km)"
+                                                        type="number"
+                                                        value={
+                                                            logForm.data
+                                                                .odometer_km
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'odometer_km',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <FuelInput
+                                                        label="Hour meter"
+                                                        type="number"
+                                                        value={
+                                                            logForm.data
+                                                                .hour_meter
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'hour_meter',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <FuelInput
+                                                        label="Price / Litre"
+                                                        type="number"
+                                                        value={
+                                                            logForm.data
+                                                                .price_per_litre
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'price_per_litre',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <FuelInput
+                                                        label="Fuel Station"
+                                                        value={
+                                                            logForm.data
+                                                                .fuel_station
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'fuel_station',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <FuelInput
+                                                        label="Remarks"
+                                                        value={
+                                                            logForm.data.remarks
+                                                        }
+                                                        onChange={(val) =>
+                                                            logForm.setData(
+                                                                'remarks',
+                                                                val,
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="col-span-full flex items-center justify-end gap-2 pt-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="quiet"
+                                                            onClick={() =>
+                                                                setActiveLogId(
+                                                                    null,
+                                                                )
+                                                            }
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            type="submit"
+                                                            variant="primary"
+                                                            disabled={
+                                                                logForm.processing
+                                                            }
+                                                        >
+                                                            {logForm.processing
+                                                                ? 'Saving log…'
+                                                                : 'Submit fuel log'}
+                                                        </Button>
+                                                    </div>
+                                                </form>
+                                            </Panel>
                                         )}
+
+                                        {request.logs &&
+                                            request.logs.length > 0 && (
+                                                <div className="mt-2 space-y-1 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                                                    <p className="font-semibold text-ink">
+                                                        Fuel Log Details:
+                                                    </p>
+                                                    {request.logs.map((log) => (
+                                                        <div
+                                                            key={log.id}
+                                                            className="grid grid-cols-2 gap-2 text-ink-soft sm:grid-cols-4"
+                                                        >
+                                                            <span>
+                                                                <strong>
+                                                                    Quantity:
+                                                                </strong>{' '}
+                                                                {
+                                                                    log.quantity_litres
+                                                                }{' '}
+                                                                L
+                                                            </span>
+                                                            <span>
+                                                                <strong>
+                                                                    Station:
+                                                                </strong>{' '}
+                                                                {log.fuel_station ||
+                                                                    'N/A'}
+                                                            </span>
+                                                            <span>
+                                                                <strong>
+                                                                    Cost:
+                                                                </strong>{' '}
+                                                                {log.total_cost
+                                                                    ? `$${log.total_cost}`
+                                                                    : 'N/A'}
+                                                            </span>
+                                                            <span>
+                                                                <strong>
+                                                                    Recorded by:
+                                                                </strong>{' '}
+                                                                {log.recorded_by
+                                                                    ?.name ||
+                                                                    'N/A'}
+                                                            </span>
+                                                            {log.odometer_km !==
+                                                                null && (
+                                                                <span>
+                                                                    <strong>
+                                                                        Odometer:
+                                                                    </strong>{' '}
+                                                                    {
+                                                                        log.odometer_km
+                                                                    }{' '}
+                                                                    km
+                                                                </span>
+                                                            )}
+                                                            {log.hour_meter !==
+                                                                null && (
+                                                                <span>
+                                                                    <strong>
+                                                                        Hours:
+                                                                    </strong>{' '}
+                                                                    {
+                                                                        log.hour_meter
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                            {log.remarks && (
+                                                                <span className="col-span-2">
+                                                                    <strong>
+                                                                        Remarks:
+                                                                    </strong>{' '}
+                                                                    {
+                                                                        log.remarks
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                     </li>
                                 );
                             })}
@@ -1722,6 +2081,10 @@ function getFuelAction(
 
     if (capabilities.verify_fuel && request.status.value === 'approved') {
         return { status: 'verified', label: 'Verify request' };
+    }
+
+    if (capabilities.record_fuel && request.status.value === 'verified') {
+        return { status: 'logged', label: 'Record fuel log' };
     }
 
     return null;

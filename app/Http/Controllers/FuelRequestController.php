@@ -35,9 +35,21 @@ final class FuelRequestController extends Controller
 
     public function transition(Request $request, FuelRequest $fuelRequest, TransitionFuelRequest $action): RedirectResponse
     {
-        $validated = $request->validate(['status' => ['required', Rule::enum(FuelRequestStatus::class)], 'reason' => ['nullable', 'string', 'max:2000']]);
+        $validated = $request->validate([
+            'status' => ['required', Rule::enum(FuelRequestStatus::class)],
+            'reason' => ['nullable', 'string', 'max:2000'],
+            'quantity_litres' => ['nullable', 'numeric', 'gt:0', 'max:100000'],
+            'odometer_km' => ['nullable', 'integer', 'min:0'],
+            'hour_meter' => ['nullable', 'numeric', 'min:0'],
+            'price_per_litre' => ['nullable', 'numeric', 'min:0'],
+            'total_cost' => ['nullable', 'numeric', 'min:0'],
+            'fuel_station' => ['nullable', 'string', 'max:255'],
+            'remarks' => ['nullable', 'string', 'max:2000'],
+            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,webp', 'max:10240'],
+        ]);
+
         $status = FuelRequestStatus::from($validated['status']);
-        $action->handle($request->user(), $fuelRequest, $status, $validated['reason'] ?? null);
+        $action->handle($request->user(), $fuelRequest, $status, $validated['reason'] ?? null, $validated);
 
         return to_route('home')->with('flash', [
             'tone' => 'success',

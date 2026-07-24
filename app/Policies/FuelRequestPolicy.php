@@ -37,4 +37,9 @@ final class FuelRequestPolicy
     {
         return $user->can(PermissionName::FuelVerify->value);
     }
+
+    public function record(User $user, FuelRequest $fuelRequest): bool
+    {
+        return $user->can(PermissionName::FuelRecord->value);
+    }
 }

@@ -5,14 +5,33 @@ namespace App\Models;
 use App\Enums\FuelRequestStatus;
 use App\Enums\PermissionName;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $reference
  * @property int $requester_id
+ * @property int|null $dispatch_job_id
+ * @property int|null $operational_asset_id
+ * @property string $quantity_litres
+ * @property string $fuel_type
+ * @property string $purpose
  * @property FuelRequestStatus $status
+ * @property int|null $reviewed_by
+ * @property int|null $approved_by
+ * @property int|null $verified_by
+ * @property Carbon|null $reviewed_at
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $verified_at
+ * @property string|null $decision_reason
+ * @property User $requester
+ * @property DispatchJob|null $job
+ * @property OperationalAsset|null $asset
+ * @property Collection<int, FuelLog> $logs
  */
 class FuelRequest extends Model
 {
