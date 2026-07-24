@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApprovalRequestController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -10,9 +11,12 @@ use App\Http\Controllers\DispatchJobController;
 use App\Http\Controllers\DispatchWorkflowController;
 use App\Http\Controllers\FuelRequestController;
 use App\Http\Controllers\InspectionController;
+use App\Http\Controllers\JobReportController;
 use App\Http\Controllers\LocationUpdateController;
 use App\Http\Controllers\MaintenanceWorkOrderController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OperationalAssetController;
+use App\Http\Controllers\OperationsSummaryController;
 use App\Http\Controllers\OperationsWorkspaceController;
 use App\Http\Controllers\PersonnelController;
 use App\Http\Controllers\ServiceRequestController;
@@ -51,6 +55,15 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/dispatch-jobs/{dispatchJob}/activate', [DispatchWorkflowController::class, 'activate']);
         Route::post('/dispatch-jobs/{dispatchJob}/status', [DispatchWorkflowController::class, 'transition']);
         Route::post('/approval-requests/{approvalRequest}/decision', [ApprovalRequestController::class, 'decide']);
+        Route::get('/job-reports', [JobReportController::class, 'index']);
+        Route::post('/job-reports', [JobReportController::class, 'store']);
+        Route::get('/job-reports/{jobReport}', [JobReportController::class, 'show']);
+        Route::post('/job-reports/{jobReport}/review', [JobReportController::class, 'review']);
+        Route::post('/attachments', [AttachmentController::class, 'store']);
+        Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download']);
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::get('/reports/daily-summary', [OperationsSummaryController::class, 'dailySummary']);
         Route::get('/fuel-requests', [FuelRequestController::class, 'index']);
         Route::post('/fuel-requests', [FuelRequestController::class, 'store']);
         Route::post('/fuel-requests/{fuelRequest}/status', [FuelRequestController::class, 'transition']);
