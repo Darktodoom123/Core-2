@@ -1,0 +1,582 @@
+import { router } from '@inertiajs/react';
+import {
+    Activity,
+    AlertTriangle,
+    Compass,
+    Navigation,
+    PauseCircle,
+    RefreshCw,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { getOutboxQueue, removeOutboxItem } from '@/lib/outbox';
+import type { OutboxItem } from '@/lib/outbox';
+import { cn } from '@/lib/utils';
+import type {
+    LocationUpdateViewModel,
+    WorkspaceCapabilities,
+} from '@/types/workspace';
+
+export function TrackingSurface({
+    locations,
+    capabilities,
+}: {
+    locations: LocationUpdateViewModel[];
+    capabilities: WorkspaceCapabilities;
+}) {
+    const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'fresh' | 'delayed' | 'stale' | 'offline'
+    >('all');
+    const [lastPolledAt, setLastPolledAt] = useState<Date>(new Date());
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [outboxQueue, setOutboxQueue] = useState<OutboxItem[]>(() =>
+        getOutboxQueue(),
+    );
+    const [sharingPending, setSharingPending] = useState(false);
+
+    const refreshData = useCallback(() => {
+        setIsRefreshing(true);
+        router.reload({
+            only: ['locations'],
+            onFinish: () => {
+                setIsRefreshing(false);
+                setLastPolledAt(new Date());
+                setOutboxQueue(getOutboxQueue());
+            },
+        });
+    }, []);
+
+    // Measured Polling — 15 seconds
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            refreshData();
+        }, 15_000);
+
+        return () => window.clearInterval(interval);
+    }, [refreshData]);
+
+    const toggleSharing = (enable: boolean) => {
+        setSharingPending(true);
+
+        if (!enable) {
+            router.post(
+                '/operations/locations',
+                {
+                    sharing_enabled: false,
+                    captured_at: new Date().toISOString(),
+                },
+                {
+                    preserveScroll: true,
+                    onFinish: () => setSharingPending(false),
+                },
+            );
+
+            return;
+        }
+
+        if (!('geolocation' in navigator)) {
+            setSharingPending(false);
+
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                router.post(
+                    '/operations/locations',
+                    {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy_metres: pos.coords.accuracy,
+                        captured_at: new Date(pos.timestamp).toISOString(),
+                        sharing_enabled: true,
+                    },
+                    {
+                        preserveScroll: true,
+                        onFinish: () => setSharingPending(false),
+                    },
+                );
+            },
+            () => setSharingPending(false),
+            { enableHighAccuracy: true, timeout: 10_000 },
+        );
+    };
+
+    const filteredLocations = locations.filter((loc) => {
+        if (statusFilter === 'all') {
+            return true;
+        }
+
+        return loc.freshness_status === statusFilter;
+    });
+
+    return (
+        <div>
+            <PageHeading
+                title="Live Field Tracking & Resilience"
+                description="Monitor worker and asset locations, verify freshness, retention limits, and manage offline outbox state."
+            />
+
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Header Controls & Measured Polling Status */}
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface p-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                            <Activity className="h-5 w-5" aria-hidden="true" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-ink">
+                                    Measured Polling (15s)
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success-strong">
+                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong" />
+                                    Live
+                                </span>
+                            </div>
+                            <p className="text-xs text-ink-soft">
+                                Last updated:{' '}
+                                {lastPolledAt.toLocaleTimeString()} · Retention:
+                                30-day precise coordinates
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        {capabilities.share_location && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={sharingPending}
+                                onClick={() =>
+                                    toggleSharing(
+                                        !locations.some(
+                                            (l) => l.sharing_enabled,
+                                        ),
+                                    )
+                                }
+                            >
+                                {locations.some((l) => l.sharing_enabled) ? (
+                                    <>
+                                        <PauseCircle className="mr-1.5 h-4 w-4 text-warning-strong" />
+                                        Pause Location Sharing
+                                    </>
+                                ) : (
+                                    <>
+                                        <Navigation className="mr-1.5 h-4 w-4 text-brand-strong" />
+                                        Enable Location Sharing
+                                    </>
+                                )}
+                            </Button>
+                        )}
+
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={refreshData}
+                            disabled={isRefreshing}
+                        >
+                            <RefreshCw
+                                className={cn(
+                                    'mr-1.5 h-4 w-4',
+                                    isRefreshing && 'animate-spin',
+                                )}
+                            />
+                            {isRefreshing ? 'Polling…' : 'Refresh now'}
+                        </Button>
+
+                        <div className="inline-flex rounded-lg border border-line bg-surface-subtle p-1">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('visual')}
+                                className={cn(
+                                    'rounded px-3 py-1 text-xs font-medium transition-colors',
+                                    viewMode === 'visual'
+                                        ? 'bg-surface font-semibold text-ink shadow-sm'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
+                                aria-label="Switch to visual grid view"
+                            >
+                                Grid View
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('list')}
+                                className={cn(
+                                    'rounded px-3 py-1 text-xs font-medium transition-colors',
+                                    viewMode === 'list'
+                                        ? 'bg-surface font-semibold text-ink shadow-sm'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
+                                aria-label="Switch to accessible synchronized list view"
+                            >
+                                Synchronized List
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Outbox Command Replay & Conflict Section */}
+                {outboxQueue.length > 0 && (
+                    <OutboxQueuePanel
+                        queue={outboxQueue}
+                        onResolved={() => setOutboxQueue(getOutboxQueue())}
+                    />
+                )}
+
+                {/* Filter Tabs */}
+                <div className="flex border-b border-line">
+                    {(
+                        ['all', 'fresh', 'delayed', 'stale', 'offline'] as const
+                    ).map((status) => {
+                        const count = locations.filter((l) => {
+                            if (status === 'all') {
+                                return true;
+                            }
+
+                            return l.freshness_status === status;
+                        }).length;
+
+                        return (
+                            <button
+                                key={status}
+                                type="button"
+                                onClick={() => setStatusFilter(status)}
+                                className={cn(
+                                    'border-b-2 px-4 py-2.5 text-sm font-medium capitalize transition-colors',
+                                    statusFilter === status
+                                        ? 'border-brand-strong font-semibold text-brand-strong'
+                                        : 'border-transparent text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                {status} ({count})
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Main Content Pane */}
+                {filteredLocations.length === 0 ? (
+                    <Panel>
+                        <EmptyState
+                            icon={Compass}
+                            title="No location updates found"
+                            message="No field worker or asset updates match the selected freshness filter."
+                        />
+                    </Panel>
+                ) : viewMode === 'visual' ? (
+                    <VisualTrackingGrid locations={filteredLocations} />
+                ) : (
+                    <SynchronizedLocationList locations={filteredLocations} />
+                )}
+            </div>
+        </div>
+    );
+}
+
+function VisualTrackingGrid({
+    locations,
+}: {
+    locations: LocationUpdateViewModel[];
+}) {
+    return (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {locations.map((loc) => (
+                <Panel key={loc.id} className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
+                        <div>
+                            <span className="font-semibold text-ink">
+                                {loc.user.name}
+                            </span>
+                            {loc.asset && (
+                                <p className="text-xs font-medium text-ink-soft">
+                                    Asset: {loc.asset.code} — {loc.asset.name}
+                                </p>
+                            )}
+                            {loc.job && (
+                                <p className="text-xs text-ink-soft">
+                                    Job: {loc.job.reference} ({loc.job.title})
+                                </p>
+                            )}
+                        </div>
+                        <FreshnessBadge status={loc.freshness_status} />
+                    </div>
+
+                    <div className="space-y-2 text-xs text-ink-soft">
+                        <div className="flex justify-between">
+                            <span className="font-medium text-ink">
+                                Coordinates:
+                            </span>
+                            <span>
+                                {loc.latitude !== null && loc.longitude !== null
+                                    ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
+                                    : 'Coordinates pruned / Unavailable'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-medium text-ink">
+                                Accuracy:
+                            </span>
+                            <span>
+                                {loc.accuracy_metres
+                                    ? `±${loc.accuracy_metres}m`
+                                    : 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-medium text-ink">
+                                Sharing state:
+                            </span>
+                            <span
+                                className={cn(
+                                    'font-semibold',
+                                    loc.sharing_enabled
+                                        ? 'text-success-strong'
+                                        : 'text-warning-strong',
+                                )}
+                            >
+                                {loc.sharing_enabled
+                                    ? 'Enabled'
+                                    : 'Off / Paused'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-medium text-ink">
+                                Captured:
+                            </span>
+                            <span>
+                                {loc.captured_at
+                                    ? new Date(loc.captured_at).toLocaleString()
+                                    : 'Unknown'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-medium text-ink">
+                                Received:
+                            </span>
+                            <span>
+                                {loc.received_at
+                                    ? new Date(loc.received_at).toLocaleString()
+                                    : 'Unknown'}
+                            </span>
+                        </div>
+                    </div>
+                </Panel>
+            ))}
+        </div>
+    );
+}
+
+function SynchronizedLocationList({
+    locations,
+}: {
+    locations: LocationUpdateViewModel[];
+}) {
+    return (
+        <Panel className="overflow-hidden">
+            <table
+                className="w-full text-left text-sm"
+                aria-label="Synchronized field location updates"
+            >
+                <caption className="sr-only">
+                    List of current location updates showing worker name,
+                    coordinates, accuracy, capture time, receive time, sharing
+                    state, and freshness.
+                </caption>
+                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
+                    <tr>
+                        <th scope="col" className="px-4 py-3">
+                            Worker / Asset
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Freshness Status
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Coordinates
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Accuracy
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Sharing
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Captured Time
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Received Time
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                    {locations.map((loc) => (
+                        <tr
+                            key={loc.id}
+                            className="transition-colors hover:bg-surface-subtle"
+                        >
+                            <td className="px-4 py-3 font-semibold text-ink">
+                                {loc.user.name}
+                                {loc.asset && (
+                                    <div className="text-xs font-normal text-ink-soft">
+                                        {loc.asset.code}
+                                    </div>
+                                )}
+                            </td>
+                            <td className="px-4 py-3">
+                                <FreshnessBadge status={loc.freshness_status} />
+                            </td>
+                            <td className="px-4 py-3 font-mono text-xs">
+                                {loc.latitude !== null && loc.longitude !== null
+                                    ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
+                                    : 'Pruned / Off'}
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                                {loc.accuracy_metres
+                                    ? `±${loc.accuracy_metres}m`
+                                    : 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-xs font-medium">
+                                {loc.sharing_enabled ? (
+                                    <span className="text-success-strong">
+                                        On
+                                    </span>
+                                ) : (
+                                    <span className="text-warning-strong">
+                                        Off
+                                    </span>
+                                )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-ink-soft">
+                                {loc.captured_at
+                                    ? new Date(
+                                          loc.captured_at,
+                                      ).toLocaleTimeString()
+                                    : 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-ink-soft">
+                                {loc.received_at
+                                    ? new Date(
+                                          loc.received_at,
+                                      ).toLocaleTimeString()
+                                    : 'N/A'}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </Panel>
+    );
+}
+
+function FreshnessBadge({
+    status,
+}: {
+    status: LocationUpdateViewModel['freshness_status'];
+}) {
+    const config =
+        status === 'fresh'
+            ? {
+                  label: 'Fresh (≤2m)',
+                  cls: 'bg-success-soft text-success-strong',
+              }
+            : status === 'delayed'
+              ? {
+                    label: 'Delayed (2–10m)',
+                    cls: 'bg-info-soft text-info-strong',
+                }
+              : status === 'stale'
+                ? {
+                      label: 'Stale (10–30m)',
+                      cls: 'bg-warning-soft text-warning-strong',
+                  }
+                : { label: 'Offline / Off', cls: 'bg-danger-soft text-danger' };
+
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                config.cls,
+            )}
+        >
+            {config.label}
+        </span>
+    );
+}
+
+function OutboxQueuePanel({
+    queue,
+    onResolved,
+}: {
+    queue: OutboxItem[];
+    onResolved: () => void;
+}) {
+    const resolveConflict = (id: string) => {
+        removeOutboxItem(id);
+        onResolved();
+    };
+
+    return (
+        <Panel className="border-warning-strong bg-warning-soft/20 p-4">
+            <div className="flex items-center justify-between border-b border-warning-strong/30 pb-3">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-warning-strong" />
+                    <h3 className="font-semibold text-ink">
+                        Durable Outbox Queue ({queue.length} items)
+                    </h3>
+                </div>
+                <span className="text-xs font-medium text-ink-soft">
+                    Version-Aware Replay & Retry Active
+                </span>
+            </div>
+
+            <ul className="mt-3 divide-y divide-line">
+                {queue.map((item) => (
+                    <li
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-3 py-2 text-xs"
+                    >
+                        <div>
+                            <span className="font-semibold text-ink capitalize">
+                                {item.action}
+                            </span>{' '}
+                            ·{' '}
+                            <span className="font-mono">{item.commandId}</span>
+                            <div className="text-ink-soft">
+                                Status:{' '}
+                                <span className="font-semibold capitalize">
+                                    {item.status}
+                                </span>{' '}
+                                · Created:{' '}
+                                {new Date(item.createdAt).toLocaleTimeString()}
+                            </div>
+                        </div>
+
+                        {item.status === 'conflict' ? (
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-danger">
+                                    409 Version Conflict
+                                </span>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => resolveConflict(item.id)}
+                                >
+                                    Acknowledge Server Version
+                                </Button>
+                            </div>
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => resolveConflict(item.id)}
+                            >
+                                Clear from outbox
+                            </Button>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        </Panel>
+    );
+}

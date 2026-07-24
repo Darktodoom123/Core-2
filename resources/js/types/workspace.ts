@@ -247,8 +247,42 @@ export interface AuditEventViewModel {
     reason: string | null;
 }
 
+export interface LocationUpdateViewModel {
+    id: number;
+    user: {
+        id: number;
+        name: string;
+    };
+    asset: {
+        id: number;
+        code: string;
+        name: string;
+    } | null;
+    job: {
+        id: number;
+        reference: string;
+        title: string;
+    } | null;
+    latitude: number | null;
+    longitude: number | null;
+    accuracy_metres: number | null;
+    speed: number | null;
+    remarks: string | null;
+    source: string;
+    sharing_enabled: boolean;
+    captured_at: string | null;
+    received_at: string | null;
+    freshness_status: 'fresh' | 'delayed' | 'stale' | 'offline';
+}
+
 export type WorkspaceSection =
-    'dispatch' | 'assets' | 'fuel' | 'approvals' | 'users' | 'audit';
+    | 'dispatch'
+    | 'assets'
+    | 'fuel'
+    | 'tracking'
+    | 'approvals'
+    | 'users'
+    | 'audit';
 
 export interface WorkspaceNavigationItem {
     id: WorkspaceSection;
@@ -261,6 +295,7 @@ export interface WorkspaceCapabilities {
     create_service_request: boolean;
     convert_service_request: boolean;
     share_location: boolean;
+    view_tracking: boolean;
     request_fuel: boolean;
     forward_fuel: boolean;
     approve_fuel: boolean;
@@ -290,6 +325,7 @@ export interface WorkspacePageProps {
     serviceRequests: ServiceRequestViewModel[];
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
+    locations: LocationUpdateViewModel[];
     approvals: ApprovalViewModel[];
     users: WorkspaceUserViewModel[];
     auditEvents: AuditEventViewModel[];

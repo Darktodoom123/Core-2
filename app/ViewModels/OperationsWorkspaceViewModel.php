@@ -12,6 +12,7 @@ use App\Models\DispatchJob;
 use App\Models\DispatchPersonnelAssignment;
 use App\Models\FuelLog;
 use App\Models\FuelRequest;
+use App\Models\LocationUpdate;
 use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
 use App\Models\User;
@@ -328,6 +329,41 @@ final class OperationsWorkspaceViewModel
         ])->values()->all();
     }
 
+    /**
+     * @param  Collection<int, LocationUpdate>  $locations
+     * @return array<int, array<string, mixed>>
+     */
+    public static function locations(Collection $locations): array
+    {
+        return $locations->map(static fn (LocationUpdate $location): array => [
+            'id' => (int) $location->getKey(),
+            'user' => [
+                'id' => (int) $location->user->getKey(),
+                'name' => $location->user->name,
+            ],
+            'asset' => $location->asset === null ? null : [
+                'id' => (int) $location->asset->getKey(),
+                'code' => $location->asset->code,
+                'name' => $location->asset->name,
+            ],
+            'job' => $location->job === null ? null : [
+                'id' => (int) $location->job->getKey(),
+                'reference' => $location->job->reference,
+                'title' => $location->job->title,
+            ],
+            'latitude' => $location->latitude !== null ? (float) $location->latitude : null,
+            'longitude' => $location->longitude !== null ? (float) $location->longitude : null,
+            'accuracy_metres' => $location->accuracy_metres !== null ? (float) $location->accuracy_metres : null,
+            'speed' => $location->speed !== null ? (float) $location->speed : null,
+            'remarks' => $location->remarks,
+            'source' => $location->source,
+            'sharing_enabled' => (bool) $location->sharing_enabled,
+            'captured_at' => $location->captured_at?->toIso8601String(),
+            'received_at' => $location->received_at?->toIso8601String(),
+            'freshness_status' => $location->freshness_status,
+        ])->values()->all();
+    }
+
     /** @return array<int, array{id: string, label: string}> */
     public static function navigation(User $user): array
     {
@@ -363,6 +399,14 @@ final class OperationsWorkspaceViewModel
                     PermissionName::FuelViewAll,
                     PermissionName::FuelViewOwn,
                     PermissionName::FuelRequest,
+                ],
+            ],
+            [
+                'id' => 'tracking',
+                'label' => 'Live tracking',
+                'permissions' => [
+                    PermissionName::TrackingViewAll,
+                    PermissionName::TrackingShareOwn,
                 ],
             ],
             [
@@ -403,6 +447,7 @@ final class OperationsWorkspaceViewModel
             'create_service_request' => $user->can(PermissionName::DispatchCreate->value),
             'convert_service_request' => $user->can(PermissionName::DispatchCreate->value),
             'share_location' => $user->can(PermissionName::TrackingShareOwn->value),
+            'view_tracking' => $user->can(PermissionName::TrackingViewAll->value) || $user->can(PermissionName::TrackingShareOwn->value),
             'request_fuel' => $user->can(PermissionName::FuelRequest->value),
             'forward_fuel' => $user->can(PermissionName::FuelForward->value),
             'approve_fuel' => $user->can(PermissionName::FuelApprove->value),

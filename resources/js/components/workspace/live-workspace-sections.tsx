@@ -2,6 +2,7 @@ import { router, useForm } from '@inertiajs/react';
 import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { TrackingSurface } from '@/components/surfaces/tracking-surfaces';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
@@ -10,6 +11,7 @@ import type {
     AssetViewModel,
     AuditEventViewModel,
     FuelRequestViewModel,
+    LocationUpdateViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -19,6 +21,7 @@ export function LiveWorkspaceSection({
     section,
     assets,
     fuelRequests,
+    locations,
     approvals,
     users,
     auditEvents,
@@ -27,6 +30,7 @@ export function LiveWorkspaceSection({
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
+    locations: LocationUpdateViewModel[];
     approvals: ApprovalViewModel[];
     users: WorkspaceUserViewModel[];
     auditEvents: AuditEventViewModel[];
@@ -41,6 +45,13 @@ export function LiveWorkspaceSection({
             return (
                 <FuelSurface
                     requests={fuelRequests}
+                    capabilities={capabilities}
+                />
+            );
+        case 'tracking':
+            return (
+                <TrackingSurface
+                    locations={locations}
                     capabilities={capabilities}
                 />
             );

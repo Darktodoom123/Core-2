@@ -8,6 +8,7 @@ use App\Models\AuditEvent;
 use App\Models\Client;
 use App\Models\DispatchJob;
 use App\Models\FuelRequest;
+use App\Models\LocationUpdate;
 use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
 use App\Models\User;
@@ -32,6 +33,7 @@ final class OperationsWorkspaceController extends Controller
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+            'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
@@ -42,6 +44,21 @@ final class OperationsWorkspaceController extends Controller
                 'stale_after_seconds' => 120,
             ],
         ]);
+    }
+
+    /** @return Collection<int, LocationUpdate> */
+    private function fetchLocations(User $user): Collection
+    {
+        if (! $user->can(PermissionName::TrackingViewAll->value) && ! $user->can(PermissionName::TrackingShareOwn->value)) {
+            return collect();
+        }
+
+        return LocationUpdate::query()
+            ->visibleTo($user)
+            ->with(['user:id,name', 'asset:id,code,name', 'job:id,reference,title'])
+            ->latest('captured_at')
+            ->limit(100)
+            ->get();
     }
 
     /** @return Collection<int, DispatchJob> */

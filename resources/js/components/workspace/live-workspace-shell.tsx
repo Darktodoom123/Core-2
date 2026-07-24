@@ -28,6 +28,7 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     dispatch: ClipboardList,
     assets: Truck,
     fuel: Fuel,
+    tracking: MapPin,
     approvals: ShieldCheck,
     users: Users,
     audit: Bot,

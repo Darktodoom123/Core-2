@@ -1,0 +1,129 @@
+<?php
+
+use App\Enums\RoleName;
+use App\Models\LocationUpdate;
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function (): void {
+    $this->seed(RolePermissionSeeder::class);
+});
+
+function createFieldUser(RoleName $role): User
+{
+    $user = User::factory()->create();
+    $user->syncRoles([$role->value]);
+
+    return $user;
+}
+
+it('enforces role-scoped location access control and cross-worker isolation', function () {
+    $driver1 = createFieldUser(RoleName::Driver);
+    $driver2 = createFieldUser(RoleName::Driver);
+    $dispatcher = createFieldUser(RoleName::Dispatcher);
+
+    // Driver 1 creates location update
+    LocationUpdate::query()->create([
+        'user_id' => $driver1->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 5,
+        'sharing_enabled' => true,
+        'captured_at' => now(),
+        'received_at' => now(),
+    ]);
+
+    // Driver 2 creates location update
+    LocationUpdate::query()->create([
+        'user_id' => $driver2->id,
+        'latitude' => 14.6010,
+        'longitude' => 120.9850,
+        'accuracy_metres' => 10,
+        'sharing_enabled' => true,
+        'captured_at' => now(),
+        'received_at' => now(),
+    ]);
+
+    // Office role with tracking.view_all sees both updates
+    $this->actingAs($dispatcher)->getJson('/operations/locations')
+        ->assertOk()
+        ->assertJsonCount(2, 'data.data');
+
+    // Field worker without tracking.view_all is denied access to operations-wide feed
+    $this->actingAs($driver1)->getJson('/operations/locations')
+        ->assertForbidden();
+
+    // Query scoping visibleTo ensures driver1 only gets own updates
+    $driver1Locations = LocationUpdate::query()->visibleTo($driver1)->get();
+    expect($driver1Locations)->toHaveCount(1)
+        ->and($driver1Locations->first()->user_id)->toBe($driver1->id);
+
+    // Driver 2 cannot see Driver 1 updates via visibleTo query
+    $driver2Locations = LocationUpdate::query()->visibleTo($driver2)->get();
+    expect($driver2Locations)->toHaveCount(1)
+        ->and($driver2Locations->first()->user_id)->toBe($driver2->id);
+});
+
+it('handles sharing-off and consent state updates', function () {
+    $driver = createFieldUser(RoleName::Driver);
+
+    // Post location update with sharing disabled
+    $this->actingAs($driver)->post('/operations/locations', [
+        'sharing_enabled' => false,
+        'captured_at' => now()->toIso8601String(),
+    ])->assertRedirect('/');
+
+    $update = LocationUpdate::query()->where('user_id', $driver->id)->sole();
+    expect($update->sharing_enabled)->toBeFalse()
+        ->and($update->latitude)->toBeNull()
+        ->and($update->longitude)->toBeNull()
+        ->and($update->freshness_status)->toBe('offline');
+});
+
+it('correctly calculates location freshness status categories', function () {
+    $driver = createFieldUser(RoleName::Driver);
+
+    $fresh = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinute(),
+        'received_at' => now(),
+    ]);
+
+    $delayed = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(5),
+        'received_at' => now(),
+    ]);
+
+    $stale = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(15),
+        'received_at' => now(),
+    ]);
+
+    $offline = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(45),
+        'received_at' => now(),
+    ]);
+
+    expect($fresh->freshness_status)->toBe('fresh')
+        ->and($delayed->freshness_status)->toBe('delayed')
+        ->and($stale->freshness_status)->toBe('stale')
+        ->and($offline->freshness_status)->toBe('offline');
+});

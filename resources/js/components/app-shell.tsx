@@ -21,9 +21,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import type {
     AppSection,
     ConnectivityState,

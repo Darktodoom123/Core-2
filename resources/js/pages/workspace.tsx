@@ -179,6 +179,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         section={availableSection}
                         assets={props.assets}
                         fuelRequests={props.fuelRequests}
+                        locations={props.locations ?? []}
                         approvals={props.approvals}
                         users={props.users}
                         auditEvents={props.auditEvents}
