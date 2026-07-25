@@ -10,6 +10,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DispatchJobController;
 use App\Http\Controllers\DispatchWorkflowController;
 use App\Http\Controllers\FuelRequestController;
+use App\Http\Controllers\GptRecommendationController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\JobReportController;
 use App\Http\Controllers\LocationUpdateController;
@@ -80,6 +81,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::patch('/users/{user}', [UserManagementController::class, 'update']);
         Route::patch('/users/{user}/personnel-profile', [PersonnelController::class, 'updateProfile']);
         Route::post('/users/{user}/credentials', [PersonnelController::class, 'storeCredential']);
+        Route::post('/gpt-recommendations', [GptRecommendationController::class, 'store']);
+        Route::post('/gpt-recommendations/{recommendation}/accept', [GptRecommendationController::class, 'accept']);
+        Route::post('/gpt-recommendations/{recommendation}/reject', [GptRecommendationController::class, 'reject']);
     });
 });
 

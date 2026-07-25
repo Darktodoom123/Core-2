@@ -12,10 +12,12 @@ use App\Models\DispatchJob;
 use App\Models\DispatchPersonnelAssignment;
 use App\Models\FuelLog;
 use App\Models\FuelRequest;
+use App\Models\GptRecommendation;
 use App\Models\LocationUpdate;
 use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -460,7 +462,45 @@ final class OperationsWorkspaceViewModel
             'update_asset_status' => $user->can(PermissionName::FleetUpdateStatus->value) || $user->can(PermissionName::EquipmentUpdateStatus->value),
             'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
+            'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
+            'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
         ];
+    }
+
+    /**
+     * @param  Collection<int, GptRecommendation>  $recommendations
+     * @return array<int, array<string, mixed>>
+     */
+    public static function gptRecommendations(Collection $recommendations): array
+    {
+        return $recommendations->map(static fn (GptRecommendation $rec): array => [
+            'id' => (int) $rec->getKey(),
+            'subject_type' => $rec->subject_type,
+            'subject_id' => $rec->subject_id,
+            'purpose' => $rec->purpose,
+            'context_hash' => $rec->context_hash,
+            'status' => $rec->status,
+            'prompt_summary' => $rec->prompt_summary,
+            'response_summary' => $rec->response_summary,
+            'recommendation' => $rec->recommendation ?? [],
+            'conflicts' => $rec->conflicts ?? [],
+            'model' => $rec->model,
+            'cost_usd' => $rec->cost_usd !== null ? (float) $rec->cost_usd : null,
+            'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
+            'is_expired' => $rec->isExpired(),
+            'error_message' => $rec->error_message,
+            'requested_by' => [
+                'id' => (int) $rec->requestedBy->getKey(),
+                'name' => $rec->requestedBy->name,
+            ],
+            'decided_by' => $rec->decidedBy === null ? null : [
+                'id' => (int) $rec->decidedBy->getKey(),
+                'name' => $rec->decidedBy->name,
+            ],
+            'decided_at' => $rec->decided_at instanceof Carbon ? $rec->decided_at->toIso8601String() : null,
+            'created_at' => $rec->created_at instanceof Carbon ? $rec->created_at->toIso8601String() : null,
+            'is_advisory' => true,
+        ])->values()->all();
     }
 
     private static function fieldAssetLabel(User $user): string

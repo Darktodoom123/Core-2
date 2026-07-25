@@ -8,6 +8,7 @@ use App\Models\AuditEvent;
 use App\Models\Client;
 use App\Models\DispatchJob;
 use App\Models\FuelRequest;
+use App\Models\GptRecommendation;
 use App\Models\LocationUpdate;
 use App\Models\OperationalAsset;
 use App\Models\ServiceRequest;
@@ -37,6 +38,7 @@ final class OperationsWorkspaceController extends Controller
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
+            'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
@@ -201,6 +203,20 @@ final class OperationsWorkspaceController extends Controller
             ->orderBy('scheduled_date')
             ->latest('created_at')
             ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, GptRecommendation> */
+    private function fetchGptRecommendations(User $user): Collection
+    {
+        if (! Gate::forUser($user)->allows('viewAny', GptRecommendation::class)) {
+            return collect();
+        }
+
+        return GptRecommendation::query()
+            ->with(['requestedBy:id,name', 'decidedBy:id,name'])
+            ->latest()
+            ->limit(50)
             ->get();
     }
 }
