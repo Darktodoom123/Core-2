@@ -147,6 +147,8 @@ final class OperationsWorkspaceController extends Controller
                 'subject',
             ])
             ->whereIn('kind', $approvalKinds)
+            ->where('subject_type', DispatchJob::class)
+            ->whereIn('subject_id', DispatchJob::query()->visibleTo($user)->select('id'))
             ->where('status', 'pending')
             ->latest()
             ->limit(100)

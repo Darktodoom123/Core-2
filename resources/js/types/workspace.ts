@@ -54,6 +54,7 @@ export interface DispatchAssignmentViewModel {
 
 export interface DispatchAssetAssignmentViewModel {
     id: number;
+    operational_asset_id: number;
     code: string;
     name: string;
     type: string;
@@ -333,6 +334,35 @@ export interface WorkspaceFlash {
     message: string;
 }
 
+export interface GptRecommendationViewModel {
+    id: number;
+    subject_type: string;
+    subject_id: number;
+    purpose: string;
+    context_hash: string;
+    status: string;
+    prompt_summary: string | null;
+    response_summary: string | null;
+    recommendation: Record<string, unknown>;
+    conflicts: Array<Record<string, unknown>>;
+    model: string;
+    cost_usd: number | null;
+    expires_at: string | null;
+    is_expired: boolean;
+    error_message: string | null;
+    requested_by: {
+        id: number;
+        name: string;
+    };
+    decided_by: {
+        id: number;
+        name: string;
+    } | null;
+    decided_at: string | null;
+    created_at: string | null;
+    is_advisory: boolean;
+}
+
 export interface WorkspacePageProps {
     jobs: DispatchJobViewModel[];
     clients: ClientViewModel[];
@@ -343,6 +373,7 @@ export interface WorkspacePageProps {
     approvals: ApprovalViewModel[];
     users: WorkspaceUserViewModel[];
     auditEvents: AuditEventViewModel[];
+    gptRecommendations: GptRecommendationViewModel[];
     navigation: WorkspaceNavigationItem[];
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;

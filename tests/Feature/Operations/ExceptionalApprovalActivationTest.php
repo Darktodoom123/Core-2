@@ -445,6 +445,20 @@ it('limits the pending approval feed to kinds the reviewer is authorized to deci
         );
 });
 
+it('does not expose pending approvals for dispatches outside the reviewer visibility scope', function () {
+    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Scoped Approval Requester');
+    $reviewer = User::factory()->create(['name' => 'Assignment Reviewer Without Dispatch Visibility']);
+    $reviewer->givePermissionTo(PermissionName::AssignmentsApprove->value);
+    $job = exceptionalWorkflowJob($dispatcher, 'CON-6804', DispatchPriority::Priority);
+    $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6804');
+    requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
+
+    $this->actingAs($reviewer)
+        ->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('approvals', 0));
+});
+
 it('exposes dispatcher activation readiness without treating UI visibility as authorization', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Readiness Dispatcher');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6901');
