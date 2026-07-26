@@ -169,6 +169,10 @@ final class DispatchJobController extends Controller
                 'activate' => Gate::forUser($user)->allows('activate', $job),
                 'update_own_status' => $canUpdateOwnStatus,
                 'respond_assignment' => $canRespondAssignment,
+                'cancel' => Gate::forUser($user)->allows('cancel', $job),
+                'reopen' => Gate::forUser($user)->allows('reopen', $job),
+                'archive' => Gate::forUser($user)->allows('archive', $job),
+                'restore' => Gate::forUser($user)->allows('restore', $job),
             ],
         ]);
     }

@@ -55,7 +55,22 @@ final class DispatchJobPolicy
 
     public function cancel(User $user, DispatchJob $job): bool
     {
-        return $user->can(PermissionName::DispatchCancel->value) && ! in_array($job->status, [DispatchStatus::Completed, DispatchStatus::Cancelled], true);
+        return $user->can(PermissionName::DispatchCancel->value) || $user->can(PermissionName::DispatchApproveCancel->value);
+    }
+
+    public function reopen(User $user, DispatchJob $job): bool
+    {
+        return $user->can(PermissionName::DispatchApproveCancel->value) || $user->can(PermissionName::ArchiveManage->value);
+    }
+
+    public function archive(User $user, DispatchJob $job): bool
+    {
+        return $user->can(PermissionName::ArchiveManage->value);
+    }
+
+    public function restore(User $user, DispatchJob $job): bool
+    {
+        return $user->can(PermissionName::ArchiveManage->value) && $job->trashed();
     }
 
     public function updateOwnStatus(User $user, DispatchJob $job): bool

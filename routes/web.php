@@ -56,6 +56,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/dispatch-jobs/{dispatchJob}/reassign', [DispatchWorkflowController::class, 'reassign']);
         Route::post('/dispatch-jobs/{dispatchJob}/assignments/{assignment}/response', [DispatchWorkflowController::class, 'respondAssignment']);
         Route::post('/dispatch-jobs/{dispatchJob}/activate', [DispatchWorkflowController::class, 'activate']);
+        Route::post('/dispatch-jobs/{dispatchJob}/cancel', [DispatchWorkflowController::class, 'cancel']);
+        Route::post('/dispatch-jobs/{dispatchJob}/reopen', [DispatchWorkflowController::class, 'reopen']);
+        Route::post('/dispatch-jobs/{dispatchJob}/archive', [DispatchWorkflowController::class, 'archive']);
+        Route::post('/dispatch-jobs/{dispatchJob}/restore', [DispatchWorkflowController::class, 'restore']);
         Route::post('/dispatch-jobs/{dispatchJob}/status', [DispatchWorkflowController::class, 'transition']);
         Route::post('/approval-requests/{approvalRequest}/decision', [ApprovalRequestController::class, 'decide']);
         Route::get('/job-reports', [JobReportController::class, 'index']);

@@ -427,5 +427,9 @@ export interface DispatchDetailPageProps {
         activate: boolean;
         update_own_status: boolean;
         respond_assignment: boolean;
+        cancel: boolean;
+        reopen: boolean;
+        archive: boolean;
+        restore: boolean;
     };
 }
