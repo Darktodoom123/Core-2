@@ -152,3 +152,8 @@ textarea:focus-visible,
         border: 1px solid ButtonText;
     }
 }
+
+.leaflet-container {
+    z-index: 0;
+    font-family: var(--font-sans);
+}

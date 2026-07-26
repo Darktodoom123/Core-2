@@ -8,6 +8,7 @@ import {
     RefreshCw,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { OpenStreetMapTrackingMap } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import {
     getOutboxQueue,
@@ -274,104 +275,11 @@ export function TrackingSurface({
                         />
                     </Panel>
                 ) : viewMode === 'visual' ? (
-                    <VisualTrackingGrid locations={filteredLocations} />
+                    <OpenStreetMapTrackingMap locations={filteredLocations} />
                 ) : (
                     <SynchronizedLocationList locations={filteredLocations} />
                 )}
             </div>
-        </div>
-    );
-}
-
-function VisualTrackingGrid({
-    locations,
-}: {
-    locations: LocationUpdateViewModel[];
-}) {
-    return (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {locations.map((loc) => (
-                <Panel key={loc.id} className="space-y-4 p-4">
-                    <div className="flex items-start justify-between gap-2 border-b border-line pb-3">
-                        <div>
-                            <span className="font-semibold text-ink">
-                                {loc.user.name}
-                            </span>
-                            {loc.asset && (
-                                <p className="text-xs font-medium text-ink-soft">
-                                    Asset: {loc.asset.code} — {loc.asset.name}
-                                </p>
-                            )}
-                            {loc.job && (
-                                <p className="text-xs text-ink-soft">
-                                    Job: {loc.job.reference} ({loc.job.title})
-                                </p>
-                            )}
-                        </div>
-                        <FreshnessBadge status={loc.freshness_status} />
-                    </div>
-
-                    <div className="space-y-2 text-xs text-ink-soft">
-                        <div className="flex justify-between">
-                            <span className="font-medium text-ink">
-                                Coordinates:
-                            </span>
-                            <span>
-                                {loc.latitude !== null && loc.longitude !== null
-                                    ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
-                                    : 'Coordinates pruned / Unavailable'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-medium text-ink">
-                                Accuracy:
-                            </span>
-                            <span>
-                                {loc.accuracy_metres
-                                    ? `±${loc.accuracy_metres}m`
-                                    : 'N/A'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-medium text-ink">
-                                Sharing state:
-                            </span>
-                            <span
-                                className={cn(
-                                    'font-semibold',
-                                    loc.sharing_enabled
-                                        ? 'text-success-strong'
-                                        : 'text-warning-strong',
-                                )}
-                            >
-                                {loc.sharing_enabled
-                                    ? 'Enabled'
-                                    : 'Off / Paused'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-medium text-ink">
-                                Captured:
-                            </span>
-                            <span>
-                                {loc.captured_at
-                                    ? new Date(loc.captured_at).toLocaleString()
-                                    : 'Unknown'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-medium text-ink">
-                                Received:
-                            </span>
-                            <span>
-                                {loc.received_at
-                                    ? new Date(loc.received_at).toLocaleString()
-                                    : 'Unknown'}
-                            </span>
-                        </div>
-                    </div>
-                </Panel>
-            ))}
         </div>
     );
 }
