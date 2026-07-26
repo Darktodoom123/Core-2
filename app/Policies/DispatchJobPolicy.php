@@ -36,6 +36,13 @@ final class DispatchJobPolicy
             && $this->view($user, $job);
     }
 
+    public function reassignResources(User $user, DispatchJob $job): bool
+    {
+        return $user->can(PermissionName::AssignmentsReassign->value)
+            && $this->view($user, $job)
+            && ! in_array($job->status, [DispatchStatus::Completed, DispatchStatus::Cancelled], true);
+    }
+
     public function activate(User $user, DispatchJob $job): bool
     {
         return $user->can(PermissionName::DispatchActivate->value)

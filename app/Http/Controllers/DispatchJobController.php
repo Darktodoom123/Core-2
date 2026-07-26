@@ -164,6 +164,7 @@ final class DispatchJobController extends Controller
                 : null,
             'capabilities' => [
                 'assign_resources' => $canAssignResources,
+                'reassign_resources' => Gate::forUser($user)->allows('reassignResources', $job),
                 'view_assignment_candidates' => $canViewCandidates,
                 'activate' => Gate::forUser($user)->allows('activate', $job),
                 'update_own_status' => $canUpdateOwnStatus,

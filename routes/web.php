@@ -53,6 +53,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/dispatch-jobs', [DispatchJobController::class, 'store']);
         Route::get('/dispatch-jobs/{dispatchJob}', [DispatchJobController::class, 'show'])->name('dispatch-jobs.show');
         Route::post('/dispatch-jobs/{dispatchJob}/assignments', [DispatchWorkflowController::class, 'assign']);
+        Route::post('/dispatch-jobs/{dispatchJob}/reassign', [DispatchWorkflowController::class, 'reassign']);
         Route::post('/dispatch-jobs/{dispatchJob}/assignments/{assignment}/response', [DispatchWorkflowController::class, 'respondAssignment']);
         Route::post('/dispatch-jobs/{dispatchJob}/activate', [DispatchWorkflowController::class, 'activate']);
         Route::post('/dispatch-jobs/{dispatchJob}/status', [DispatchWorkflowController::class, 'transition']);
