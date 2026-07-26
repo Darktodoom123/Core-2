@@ -104,12 +104,15 @@ final class OperationsWorkspaceViewModel
             'personnel_assignments' => $job->personnelAssignments
                 ->map(static fn (DispatchPersonnelAssignment $assignment): array => [
                     'id' => (int) $assignment->getKey(),
+                    'user_id' => (int) $assignment->user_id,
                     'name' => $assignment->user->name,
                     'type' => $assignment->assignment_type,
                     'response_status' => [
                         'value' => $assignment->response_status->value,
                         'label' => $assignment->response_status->label(),
                     ],
+                    'responded_at' => $assignment->responded_at?->toIso8601String(),
+                    'response_reason' => $assignment->response_reason,
                 ])->values()->all(),
             'asset_assignments' => $job->assetAssignments
                 ->map(static fn (DispatchAssetAssignment $assignment): array => [

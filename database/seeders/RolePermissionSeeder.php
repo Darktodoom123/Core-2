@@ -64,7 +64,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::TrackingShareOwn, PermissionName::ReportsViewOwn,
             ]),
             RoleName::FieldTechnician->value => self::values([
-                PermissionName::DispatchViewAssigned, PermissionName::DispatchUpdateOwnStatus, PermissionName::AssignmentsViewOwn,
+                PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::AssignmentsViewOwn,
                 PermissionName::FleetViewAssigned, PermissionName::FleetUpdateStatus, PermissionName::FleetInspect,
                 PermissionName::FleetMaintain, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
                 PermissionName::EquipmentInspect, PermissionName::EquipmentMaintain, PermissionName::FuelViewOwn,
