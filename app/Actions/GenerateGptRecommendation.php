@@ -11,6 +11,7 @@ use App\Services\Gpt\BoundedContextBuilder;
 use App\Services\Gpt\OpenAiClientWrapper;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class GenerateGptRecommendation
@@ -24,7 +25,7 @@ final class GenerateGptRecommendation
     {
         $this->authorize($actor, $subject, $purpose);
 
-        $rateLimitCheck = $this->openAi->checkRateLimits($actor);
+        $rateLimitCheck = $this->openAi->reserveRateLimit($actor);
         if (! $rateLimitCheck['allowed']) {
             throw ValidationException::withMessages([
                 'gpt' => $rateLimitCheck['reason'] ?? 'Rate limit exceeded.',
@@ -66,8 +67,16 @@ final class GenerateGptRecommendation
             'dispatch_assignment' => PermissionName::GptUseDispatch,
             'operations_review' => PermissionName::GptUseOperations,
             'maintenance_advice' => PermissionName::GptUseMaintenance,
-            default => PermissionName::GptUseDispatch,
+            default => null,
         };
+
+        if ($permission === null) {
+            throw ValidationException::withMessages([
+                'purpose' => 'Unsupported GPT recommendation purpose.',
+            ]);
+        }
+
+        Gate::forUser($actor)->authorize('view', $subject);
 
         if (! $actor->can($permission->value)) {
             throw new AuthorizationException("You do not have permission to generate AI assistance ({$permission->value}).");

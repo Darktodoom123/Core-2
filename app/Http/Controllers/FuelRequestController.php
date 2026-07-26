@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 final class FuelRequestController extends Controller
@@ -24,7 +25,7 @@ final class FuelRequestController extends Controller
 
     public function store(StoreFuelRequest $request, RecordAuditEvent $audit): RedirectResponse
     {
-        $fuel = FuelRequest::query()->create([...$request->validated(), 'reference' => 'FUEL-'.now()->format('YmdHis').'-'.$request->user()->id, 'requester_id' => $request->user()->id, 'status' => FuelRequestStatus::Submitted]);
+        $fuel = FuelRequest::query()->create([...$request->validated(), 'reference' => 'FUEL-'.now()->format('YmdHis').'-'.Str::lower(Str::random(8)), 'requester_id' => $request->user()->id, 'status' => FuelRequestStatus::Submitted]);
         $audit->handle($request->user(), $fuel, 'fuel.requested', null, $fuel->toArray());
 
         return to_route('home')->with('flash', [

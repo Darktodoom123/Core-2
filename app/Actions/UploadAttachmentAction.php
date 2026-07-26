@@ -47,17 +47,17 @@ class UploadAttachmentAction
             throw new InvalidArgumentException('Unsupported file MIME type. Only JPEG, PNG, HEIC/HEIF, and PDF are allowed.');
         }
 
-        // Check owner attachment count limit (max 10)
-        $existingCount = Attachment::query()
-            ->where('owner_type', $owner->getMorphClass())
-            ->where('owner_id', $owner->getKey())
-            ->count();
-
-        if ($existingCount >= 10) {
-            throw new InvalidArgumentException('Maximum attachment limit of 10 files per record has been reached.');
-        }
-
         return DB::transaction(function () use ($uploader, $owner, $file, $kind, $mimeType, $retentionUntil): Attachment {
+            $existingCount = Attachment::query()
+                ->where('owner_type', $owner->getMorphClass())
+                ->where('owner_id', $owner->getKey())
+                ->lockForUpdate()
+                ->count();
+
+            if ($existingCount >= 10) {
+                throw new InvalidArgumentException('Maximum attachment limit of 10 files per record has been reached.');
+            }
+
             $checksum = hash_file('sha256', $file->getRealPath());
             $uuid = (string) Str::uuid();
             $extension = $file->getClientOriginalExtension() ?: 'bin';

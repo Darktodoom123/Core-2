@@ -9,7 +9,12 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
-import { getOutboxQueue, removeOutboxItem } from '@/lib/outbox';
+import {
+    getOutboxQueue,
+    queueCommand,
+    removeOutboxItem,
+    syncOutbox,
+} from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
@@ -56,21 +61,23 @@ export function TrackingSurface({
         return () => window.clearInterval(interval);
     }, [refreshData]);
 
-    const toggleSharing = (enable: boolean) => {
+    const toggleSharing = async (enable: boolean) => {
         setSharingPending(true);
 
+        const submit = async (payload: Record<string, unknown>) => {
+            queueCommand('location.store', '/operations/locations', payload);
+            setOutboxQueue(getOutboxQueue());
+            await syncOutbox();
+            setOutboxQueue(getOutboxQueue());
+            setSharingPending(false);
+            refreshData();
+        };
+
         if (!enable) {
-            router.post(
-                '/operations/locations',
-                {
-                    sharing_enabled: false,
-                    captured_at: new Date().toISOString(),
-                },
-                {
-                    preserveScroll: true,
-                    onFinish: () => setSharingPending(false),
-                },
-            );
+            await submit({
+                sharing_enabled: false,
+                captured_at: new Date().toISOString(),
+            });
 
             return;
         }
@@ -82,26 +89,27 @@ export function TrackingSurface({
         }
 
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                router.post(
-                    '/operations/locations',
-                    {
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude,
-                        accuracy_metres: pos.coords.accuracy,
-                        captured_at: new Date(pos.timestamp).toISOString(),
-                        sharing_enabled: true,
-                    },
-                    {
-                        preserveScroll: true,
-                        onFinish: () => setSharingPending(false),
-                    },
-                );
-            },
+            (pos) =>
+                void submit({
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    accuracy_metres: pos.coords.accuracy,
+                    captured_at: new Date(pos.timestamp).toISOString(),
+                    sharing_enabled: true,
+                }),
             () => setSharingPending(false),
             { enableHighAccuracy: true, timeout: 10_000 },
         );
     };
+
+    useEffect(() => {
+        const flush = () =>
+            void syncOutbox().then(() => setOutboxQueue(getOutboxQueue()));
+        window.addEventListener('online', flush);
+        flush();
+
+        return () => window.removeEventListener('online', flush);
+    }, []);
 
     const filteredLocations = locations.filter((loc) => {
         if (statusFilter === 'all') {

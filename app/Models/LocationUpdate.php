@@ -72,11 +72,6 @@ class LocationUpdate extends Model
             return $query;
         }
 
-        return $query->where(function ($sub) use ($user) {
-            $sub->where('user_id', $user->id)
-                ->orWhereHas('job.personnelAssignments', function ($p) use ($user) {
-                    $p->where('user_id', $user->id)->whereNull('active_until');
-                });
-        });
+        return $query->where('user_id', $user->id);
     }
 }

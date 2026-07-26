@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\DispatchCompletionNotification;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ReviewJobReport
 {
@@ -20,6 +21,11 @@ class ReviewJobReport
         }
 
         return DB::transaction(function () use ($reviewer, $report, $status, $reason): JobReport {
+            $report->refresh();
+            if ($report->status !== JobReportStatus::Submitted) {
+                throw ValidationException::withMessages(['status' => 'Only submitted job reports can be reviewed.']);
+            }
+
             $newStatus = match ($status) {
                 'approved' => JobReportStatus::Approved,
                 'rejected' => JobReportStatus::Rejected,

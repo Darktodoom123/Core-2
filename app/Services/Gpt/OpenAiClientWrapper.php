@@ -84,6 +84,23 @@ final class OpenAiClientWrapper
         return ['allowed' => true, 'reason' => null];
     }
 
+    /**
+     * Reserve a user/system quota slot atomically before dispatching work.
+     *
+     * @return array{allowed: bool, reason: string|null}
+     */
+    public function reserveRateLimit(User $user): array
+    {
+        return Cache::lock("gpt_rate_limit_lock:{$user->id}", 5)->block(3, function () use ($user): array {
+            $result = $this->checkRateLimits($user);
+            if ($result['allowed']) {
+                $this->incrementRateLimits($user);
+            }
+
+            return $result;
+        });
+    }
+
     public function incrementRateLimits(User $user): void
     {
         $userKey = "gpt_rate_limit:user:{$user->id}:".now()->format('Y-m-d-H');
@@ -111,6 +128,23 @@ final class OpenAiClientWrapper
      */
     public function generateRecommendation(array $boundedContext): array
     {
+        $contextJson = json_encode($boundedContext, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+        $estimatedInputTokens = (int) ceil((strlen($this->getSystemPrompt()) + strlen($contextJson)) / 4);
+        $maxInputTokens = (int) config('services.openai.max_input_tokens', 32000);
+
+        if ($estimatedInputTokens > $maxInputTokens) {
+            return [
+                'success' => false,
+                'recommendation' => null,
+                'usage' => null,
+                'cost_usd' => null,
+                'error_message' => 'The GPT context exceeds the maximum input size.',
+                'response_summary' => null,
+                'is_refusal' => false,
+                'is_timeout' => false,
+            ];
+        }
+
         if (self::$fakeInstance !== null) {
             return self::$fakeInstance->handleFakeCall($boundedContext);
         }
@@ -129,7 +163,7 @@ final class OpenAiClientWrapper
         }
 
         $systemPrompt = $this->getSystemPrompt();
-        $userMessage = json_encode($boundedContext, JSON_PRETTY_PRINT);
+        $userMessage = $contextJson;
 
         $payload = [
             'model' => $this->model,
@@ -217,6 +251,23 @@ final class OpenAiClientWrapper
 
             // Estimate cost based on standard gpt-5-mini rates ($0.15/1M input, $0.60/1M output)
             $costUsd = round(($promptTokens * 0.00000015) + ($completionTokens * 0.00000060), 4);
+
+            if ($costUsd > (float) config('services.openai.max_cost_usd', 0.05)) {
+                return [
+                    'success' => false,
+                    'recommendation' => null,
+                    'usage' => [
+                        'prompt_tokens' => $promptTokens,
+                        'completion_tokens' => $completionTokens,
+                        'total_tokens' => $totalTokens,
+                    ],
+                    'cost_usd' => $costUsd,
+                    'error_message' => 'The estimated GPT cost exceeds the configured ceiling.',
+                    'response_summary' => null,
+                    'is_refusal' => false,
+                    'is_timeout' => false,
+                ];
+            }
 
             return [
                 'success' => true,

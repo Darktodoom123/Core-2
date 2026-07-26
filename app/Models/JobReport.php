@@ -65,10 +65,6 @@ class JobReport extends Model
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($user): void {
-            $q->where('author_id', $user->id)
-                ->orWhereHas('job.personnelAssignments', fn (Builder $assignment): Builder => $assignment
-                    ->where('user_id', $user->id));
-        });
+        return $query->where('author_id', $user->id);
     }
 }

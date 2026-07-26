@@ -6,11 +6,7 @@ use App\Actions\UploadAttachmentAction;
 use App\Http\Requests\UploadAttachmentRequest;
 use App\Models\Attachment;
 use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\FuelRequest;
-use App\Models\JobReport;
-use App\Models\OperationalAsset;
-use Illuminate\Database\Eloquent\Model;
+use App\Services\AttachmentOwnerResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,21 +17,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    public function store(UploadAttachmentRequest $request, UploadAttachmentAction $action): RedirectResponse|JsonResponse
+    public function store(UploadAttachmentRequest $request, UploadAttachmentAction $action, AttachmentOwnerResolver $owners): RedirectResponse|JsonResponse
     {
         $ownerType = $request->input('owner_type');
         $ownerId = (int) $request->input('owner_id');
 
-        $morphClass = match ($ownerType) {
-            'job_report', 'JobReport', 'job_reports' => JobReport::class,
-            'dispatch_job', 'DispatchJob', 'dispatch_jobs' => DispatchJob::class,
-            'operational_asset', 'OperationalAsset', 'operational_assets' => OperationalAsset::class,
-            'fuel_request', 'FuelRequest', 'fuel_requests' => FuelRequest::class,
-            default => $ownerType,
-        };
-
-        /** @var Model $owner */
-        $owner = $morphClass::query()->findOrFail($ownerId);
+        $owner = $owners->resolve((string) $ownerType, $ownerId);
+        Gate::forUser($request->user())->authorize('view', $owner);
 
         $retentionUntil = $request->input('retention_until')
             ? Carbon::parse($request->input('retention_until'))

@@ -3,11 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\Attachment;
-use App\Models\DispatchJob;
-use App\Models\FuelRequest;
-use App\Models\JobReport;
-use App\Models\OperationalAsset;
+use App\Services\AttachmentOwnerResolver;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UploadAttachmentRequest extends FormRequest
@@ -32,8 +30,8 @@ class UploadAttachmentRequest extends FormRequest
     {
         return [
             'file' => ['required', 'file', 'max:15360'], // 15MB max
-            'owner_type' => ['required', 'string'],
-            'owner_id' => ['required', 'integer'],
+            'owner_type' => ['required', 'string', Rule::in(AttachmentOwnerResolver::acceptedTypes())],
+            'owner_id' => ['required', 'integer', 'min:1'],
             'kind' => ['nullable', 'string', 'max:32'],
             'retention_until' => ['nullable', 'date'],
         ];
@@ -59,14 +57,17 @@ class UploadAttachmentRequest extends FormRequest
             $ownerId = $this->input('owner_id');
 
             if ($ownerType && $ownerId) {
-                // Normalize ownerType class name
-                $morphClass = match ($ownerType) {
-                    'job_report', 'JobReport', 'job_reports' => JobReport::class,
-                    'dispatch_job', 'DispatchJob', 'dispatch_jobs' => DispatchJob::class,
-                    'operational_asset', 'OperationalAsset', 'operational_assets' => OperationalAsset::class,
-                    'fuel_request', 'FuelRequest', 'fuel_requests' => FuelRequest::class,
-                    default => $ownerType,
-                };
+                $morphClass = AttachmentOwnerResolver::classFor((string) $ownerType);
+
+                if ($morphClass === null) {
+                    return;
+                }
+
+                if (! $morphClass::query()->whereKey($ownerId)->exists()) {
+                    $validator->errors()->add('owner_id', 'The selected attachment owner does not exist.');
+
+                    return;
+                }
 
                 $existingCount = Attachment::query()
                     ->where('owner_type', $morphClass)

@@ -52,7 +52,8 @@ final class LocationUpdateController extends Controller
                 (string) $commandId,
                 'location.store',
                 null,
-                $execute
+                $execute,
+                collect($request->validated())->except('command_id')->all()
             );
         }
 

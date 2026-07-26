@@ -213,7 +213,16 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
+        $purposes = array_values(array_filter([
+            $user->can(PermissionName::GptUseDispatch->value) ? 'dispatch_assignment' : null,
+            $user->can(PermissionName::GptUseOperations->value) ? 'operations_review' : null,
+            $user->can(PermissionName::GptUseMaintenance->value) ? 'maintenance_advice' : null,
+        ]));
+
         return GptRecommendation::query()
+            ->whereIn('purpose', $purposes)
+            ->where('subject_type', DispatchJob::class)
+            ->whereIn('subject_id', DispatchJob::query()->visibleTo($user)->select('id'))
             ->with(['requestedBy:id,name', 'decidedBy:id,name'])
             ->latest()
             ->limit(50)

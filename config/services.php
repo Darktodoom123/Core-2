@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-5-mini'),
+        'max_input_tokens' => (int) env('OPENAI_MAX_INPUT_TOKENS', 32000),
+        'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),
+    ],
+
 ];

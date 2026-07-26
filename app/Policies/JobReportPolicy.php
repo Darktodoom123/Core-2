@@ -26,13 +26,7 @@ class JobReportPolicy
             return true;
         }
 
-        if ($user->can(PermissionName::ReportsViewOwn->value) || $user->can(PermissionName::DispatchViewAssigned->value)) {
-            return $report->job->personnelAssignments()
-                ->where('user_id', $user->id)
-                ->exists();
-        }
-
-        return false;
+        return $user->can(PermissionName::ReportsViewOwn->value) && $user->id === $report->author_id;
     }
 
     public function create(User $user, DispatchJob $job): bool

@@ -70,7 +70,7 @@ class GenerateDailyOperationsSummary
         if ($user->can(PermissionName::FleetViewAll->value) || $user->can(PermissionName::EquipmentViewAll->value) || $user->can(PermissionName::ReportsViewMaintenance->value)) {
             $maintenanceSummary = [
                 'open_orders' => MaintenanceWorkOrder::query()->whereNull('released_at')->count(),
-                'blocking_orders' => MaintenanceWorkOrder::query()->whereNull('released_at')->where('is_dispatch_blocking', true)->count(),
+                'blocking_orders' => MaintenanceWorkOrder::query()->whereNull('released_at')->where('dispatch_blocking', true)->count(),
             ];
         }
 

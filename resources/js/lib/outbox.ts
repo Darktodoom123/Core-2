@@ -55,7 +55,7 @@ export function queueCommand(
         commandId,
         action,
         url,
-        payload,
+        payload: { ...payload, command_id: commandId },
         expectedVersion,
         status: 'queued',
         createdAt: new Date().toISOString(),
@@ -66,6 +66,60 @@ export function queueCommand(
     saveOutboxQueue(queue);
 
     return item;
+}
+
+export async function syncOutbox(): Promise<void> {
+    const queue = getOutboxQueue();
+
+    for (const item of queue) {
+        if (!['queued', 'failed'].includes(item.status)) {
+            continue;
+        }
+
+        updateOutboxItemStatus(item.id, 'syncing');
+
+        try {
+            const csrf = document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content');
+            const response = await fetch(item.url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                    'Idempotency-Key': item.commandId,
+                },
+                body: JSON.stringify(item.payload),
+            });
+
+            if (response.status === 409) {
+                updateOutboxItemStatus(
+                    item.id,
+                    'conflict',
+                    'The server rejected this command because the record changed.',
+                    {
+                        status: response.status,
+                    },
+                );
+            } else if (!response.ok) {
+                updateOutboxItemStatus(
+                    item.id,
+                    'failed',
+                    `Server returned HTTP ${response.status}.`,
+                );
+            } else {
+                updateOutboxItemStatus(item.id, 'synchronized');
+            }
+        } catch {
+            updateOutboxItemStatus(
+                item.id,
+                'failed',
+                'Network unavailable; retry when connectivity returns.',
+            );
+        }
+    }
 }
 
 export function updateOutboxItemStatus(

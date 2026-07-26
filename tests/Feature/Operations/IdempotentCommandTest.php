@@ -1,7 +1,11 @@
 <?php
 
+use App\Enums\DispatchPriority;
+use App\Enums\DispatchStatus;
 use App\Enums\RoleName;
 use App\Models\CommandLog;
+use App\Models\DispatchJob;
+use App\Models\DispatchPersonnelAssignment;
 use App\Models\LocationUpdate;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -14,9 +18,35 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
+function assignLocationJob(User $driver): DispatchJob
+{
+    $job = DispatchJob::query()->create([
+        'reference' => 'LOC-'.Str::upper(Str::random(8)),
+        'client' => 'Location Client',
+        'title' => 'Location Test Job',
+        'site' => 'Test Site',
+        'status' => DispatchStatus::Working,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->subHour(),
+        'scheduled_end' => now()->addHours(2),
+        'created_by' => $driver->id,
+    ]);
+
+    DispatchPersonnelAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'user_id' => $driver->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $driver->id,
+        'active_from' => now()->subHour(),
+    ]);
+
+    return $job;
+}
+
 it('replays cached responses for duplicate command submissions with identical command_id', function () {
     $driver = User::factory()->create();
     $driver->syncRoles([RoleName::Driver->value]);
+    $job = assignLocationJob($driver);
 
     $commandId = (string) Str::uuid();
 
@@ -28,6 +58,7 @@ it('replays cached responses for duplicate command submissions with identical co
             'longitude' => 120.9842,
             'accuracy_metres' => 5,
             'sharing_enabled' => true,
+            'dispatch_job_id' => $job->id,
             'captured_at' => now()->toIso8601String(),
         ]);
 
@@ -44,6 +75,7 @@ it('replays cached responses for duplicate command submissions with identical co
             'longitude' => 120.9842,
             'accuracy_metres' => 5,
             'sharing_enabled' => true,
+            'dispatch_job_id' => $job->id,
             'captured_at' => now()->toIso8601String(),
         ]);
 
@@ -55,6 +87,7 @@ it('replays cached responses for duplicate command submissions with identical co
 it('logs command details in command_logs table', function () {
     $driver = User::factory()->create();
     $driver->syncRoles([RoleName::Driver->value]);
+    $job = assignLocationJob($driver);
 
     $commandId = (string) Str::uuid();
 
@@ -63,6 +96,7 @@ it('logs command details in command_logs table', function () {
         'latitude' => 14.5995,
         'longitude' => 120.9842,
         'sharing_enabled' => true,
+        'dispatch_job_id' => $job->id,
         'captured_at' => now()->toIso8601String(),
     ]);
 

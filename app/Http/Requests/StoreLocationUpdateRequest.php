@@ -3,10 +3,29 @@
 namespace App\Http\Requests;
 
 use App\Enums\PermissionName;
+use App\Models\DispatchJob;
+use App\Models\OperationalAsset;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 final class StoreLocationUpdateRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->boolean('sharing_enabled') && ! $this->filled('dispatch_job_id')) {
+            $jobId = DispatchJob::query()
+                ->whereHas('personnelAssignments', fn ($query) => $query
+                    ->where('user_id', $this->user()?->id)
+                    ->whereNull('active_until'))
+                ->latest('scheduled_start')
+                ->value('id');
+
+            if ($jobId !== null) {
+                $this->merge(['dispatch_job_id' => $jobId]);
+            }
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->can(PermissionName::TrackingShareOwn->value) ?? false;
@@ -26,5 +45,38 @@ final class StoreLocationUpdateRequest extends FormRequest
             'remarks' => ['nullable', 'string', 'max:1000'],
             'command_id' => ['nullable', 'uuid'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if (! $this->boolean('sharing_enabled')) {
+                return;
+            }
+
+            $jobId = $this->input('dispatch_job_id');
+            $job = $jobId === null ? null : DispatchJob::query()->find($jobId);
+
+            if (! $job instanceof DispatchJob || ! $job->personnelAssignments()
+                ->where('user_id', $this->user()?->id)
+                ->whereNull('active_until')
+                ->exists()) {
+                $validator->errors()->add('dispatch_job_id', 'Location sharing requires an active assignment to the selected dispatch job.');
+
+                return;
+            }
+
+            $assetId = $this->input('operational_asset_id');
+            if ($assetId !== null && ! $job->assetAssignments()
+                ->where('operational_asset_id', $assetId)
+                ->whereNull('active_until')
+                ->exists()) {
+                $validator->errors()->add('operational_asset_id', 'The selected asset is not actively assigned to this dispatch job.');
+            }
+
+            if ($assetId !== null && ! OperationalAsset::query()->whereKey($assetId)->exists()) {
+                $validator->errors()->add('operational_asset_id', 'The selected asset does not exist.');
+            }
+        });
     }
 }

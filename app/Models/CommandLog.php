@@ -11,6 +11,7 @@ class CommandLog extends Model
         'user_id',
         'command_id',
         'action_name',
+        'payload_hash',
         'expected_version',
         'status',
         'response_code',

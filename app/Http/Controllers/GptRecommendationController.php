@@ -9,6 +9,8 @@ use App\Models\DispatchJob;
 use App\Models\GptRecommendation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 final class GptRecommendationController extends Controller
@@ -18,7 +20,7 @@ final class GptRecommendationController extends Controller
         $validated = $request->validate([
             'subject_type' => ['required', 'string'],
             'subject_id' => ['required', 'integer'],
-            'purpose' => ['nullable', 'string', 'max:48'],
+            'purpose' => ['nullable', 'string', 'max:48', Rule::in(['dispatch_assignment', 'operations_review', 'maintenance_advice'])],
         ]);
 
         $subjectType = $validated['subject_type'];
@@ -29,11 +31,13 @@ final class GptRecommendationController extends Controller
         }
 
         $subject = match ($subjectType) {
-            DispatchJob::class => DispatchJob::query()->where('id', $validated['subject_id'])->firstOrFail(),
+            DispatchJob::class => DispatchJob::query()->whereKey($validated['subject_id'])->firstOrFail(),
             default => throw ValidationException::withMessages([
                 'subject_type' => 'Unsupported subject model.',
             ]),
         };
+
+        Gate::forUser($request->user())->authorize('view', $subject);
 
         $purpose = $validated['purpose'] ?? 'dispatch_assignment';
         $generateAction->handle($request->user(), $subject, $purpose);

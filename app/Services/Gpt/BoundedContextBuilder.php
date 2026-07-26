@@ -52,7 +52,7 @@ final class BoundedContextBuilder
             $userIds[] = (int) $user->id;
             $personnelCandidates[] = [
                 'user_id' => (int) $user->id,
-                'name' => $user->name,
+                'name' => $this->sanitizeText($user->name),
                 'role' => $user->operationalRole()?->value,
                 'assignment_type' => $assignmentType,
                 'eligible' => $assessment['eligible'],
@@ -70,7 +70,7 @@ final class BoundedContextBuilder
             $assetCandidates[] = [
                 'asset_id' => (int) $asset->id,
                 'code' => $asset->code,
-                'name' => $asset->name,
+                'name' => $this->sanitizeText($asset->name),
                 'kind' => $asset->kind,
                 'rated_capacity' => $asset->rated_capacity,
                 'capacity_unit' => $asset->capacity_unit,
@@ -85,11 +85,11 @@ final class BoundedContextBuilder
                 'id' => (int) $job->id,
                 'reference' => $job->reference,
                 'title' => $this->sanitizeText($job->title),
-                'client' => $job->client !== '' ? $job->client : ($job->serviceRequest->client->company_name ?? ''),
+                'client' => $this->sanitizeText($job->client !== '' ? $job->client : ($job->serviceRequest->client->company_name ?? '')),
                 'priority' => $job->priority->value,
                 'scheduled_start' => $job->scheduled_start?->toIso8601String(),
                 'scheduled_end' => $job->scheduled_end?->toIso8601String(),
-                'requirements' => $job->requirements ?? [],
+                'requirements' => $this->sanitizeValue($job->requirements ?? []),
                 'site_name' => $this->sanitizeText($job->site),
             ],
             'personnel_candidates' => $personnelCandidates,
@@ -130,5 +130,18 @@ final class BoundedContextBuilder
         $text = (string) preg_replace('/-?\d{1,3}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}/', '[REDACTED_GPS]', $text);
 
         return trim($text);
+    }
+
+    private function sanitizeValue(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            return $this->sanitizeText($value);
+        }
+
+        if (is_array($value)) {
+            return array_map(fn (mixed $item): mixed => $this->sanitizeValue($item), $value);
+        }
+
+        return $value;
     }
 }

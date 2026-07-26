@@ -337,7 +337,25 @@ it('handles receipt file uploads securely during fuel logging', function () {
 it('accepts own location sharing but reserves the all-operations feed for office roles', function () {
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);
-    $this->actingAs($driver)->post('/operations/locations', ['latitude' => 14.5995, 'longitude' => 120.9842, 'accuracy_metres' => 8, 'captured_at' => now()->subMinute()->toIso8601String(), 'sharing_enabled' => true])->assertRedirect('/');
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-LOC-001',
+        'client' => 'Location Client',
+        'title' => 'Location Job',
+        'site' => 'Site L',
+        'status' => DispatchStatus::Working,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->subHour(),
+        'scheduled_end' => now()->addHours(2),
+        'created_by' => $dispatcher->id,
+    ]);
+    $job->personnelAssignments()->create([
+        'user_id' => $driver->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $dispatcher->id,
+        'active_from' => now()->subHour(),
+    ]);
+
+    $this->actingAs($driver)->post('/operations/locations', ['latitude' => 14.5995, 'longitude' => 120.9842, 'accuracy_metres' => 8, 'captured_at' => now()->subMinute()->toIso8601String(), 'sharing_enabled' => true, 'dispatch_job_id' => $job->id])->assertRedirect('/');
     expect(LocationUpdate::query()->where('user_id', $driver->id)->where('source', 'browser')->exists())->toBeTrue();
     $this->actingAs($driver)->getJson('/operations/locations')->assertForbidden();
     $this->actingAs($dispatcher)->getJson('/operations/locations')->assertOk();
