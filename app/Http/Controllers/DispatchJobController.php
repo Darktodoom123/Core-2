@@ -9,6 +9,7 @@ use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Http\Requests\StoreDispatchJobRequest;
 use App\Models\DispatchJob;
+use App\Models\DispatchPersonnelAssignment;
 use App\Models\OperationalAsset;
 use App\Models\User;
 use App\Services\DispatchResourceEligibility;
@@ -149,6 +150,10 @@ final class DispatchJobController extends Controller
                 ->get()
             : collect();
 
+        $canRespondAssignment = $job->personnelAssignments->contains(
+            fn (DispatchPersonnelAssignment $assignment): bool => Gate::forUser($user)->allows('respond', $assignment),
+        );
+
         return Inertia::render('dispatch-detail', [
             'job' => OperationsWorkspaceViewModel::job($job),
             'personnel_candidates' => DispatchAssignmentWorkspaceViewModel::personnelCandidates($personnel, $job, $eligibility),
@@ -162,6 +167,7 @@ final class DispatchJobController extends Controller
                 'view_assignment_candidates' => $canViewCandidates,
                 'activate' => Gate::forUser($user)->allows('activate', $job),
                 'update_own_status' => $canUpdateOwnStatus,
+                'respond_assignment' => $canRespondAssignment,
             ],
         ]);
     }

@@ -44,9 +44,12 @@ export interface StatusViewModel<TValue extends string> {
 
 export interface DispatchAssignmentViewModel {
     id: number;
+    user_id: number;
     name: string;
     type: string;
     response_status: StatusViewModel<'pending' | 'accepted' | 'rejected'>;
+    responded_at: string | null;
+    response_reason: string | null;
 }
 
 export interface DispatchAssetAssignmentViewModel {
@@ -411,5 +414,6 @@ export interface DispatchDetailPageProps {
         view_assignment_candidates: boolean;
         activate: boolean;
         update_own_status: boolean;
+        respond_assignment: boolean;
     };
 }

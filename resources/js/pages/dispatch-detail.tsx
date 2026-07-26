@@ -17,6 +17,7 @@ import {
     Truck,
     UserRound,
     Wrench,
+    X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -196,12 +197,16 @@ export default function DispatchDetail({
                         <FieldJobWorkspace
                             job={job}
                             progression={progression}
+                            capabilities={capabilities}
                         />
                     ) : (
                         <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
                             <div className="space-y-5">
                                 <DispatchContext job={job} />
-                                <CurrentAssignments job={job} />
+                                <CurrentAssignments
+                                    job={job}
+                                    capabilities={capabilities}
+                                />
                                 {capabilities.activate && (
                                     <ActivationPanel
                                         key={job.version}
@@ -299,9 +304,11 @@ export default function DispatchDetail({
 function FieldJobWorkspace({
     job,
     progression,
+    capabilities,
 }: {
     job: DispatchDetailPageProps['job'];
     progression: NonNullable<DispatchDetailPageProps['progression']>;
+    capabilities?: DispatchDetailPageProps['capabilities'];
 }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]">
@@ -311,7 +318,7 @@ function FieldJobWorkspace({
             </div>
             <div className="space-y-5">
                 <DispatchContext job={job} />
-                <CurrentAssignments job={job} />
+                <CurrentAssignments job={job} capabilities={capabilities} />
             </div>
         </div>
     );
@@ -854,9 +861,71 @@ function DispatchContext({ job }: { job: DispatchDetailPageProps['job'] }) {
     );
 }
 
-function CurrentAssignments({ job }: { job: DispatchDetailPageProps['job'] }) {
+function CurrentAssignments({
+    job,
+    capabilities,
+}: {
+    job: DispatchDetailPageProps['job'];
+    capabilities?: DispatchDetailPageProps['capabilities'];
+}) {
+    const { auth, errors } = usePage().props;
+    const authUser = auth?.user;
+    const responseError = errors.response ?? errors.version;
     const assignmentCount =
         job.personnel_assignments.length + job.asset_assignments.length;
+
+    const [rejectingId, setRejectingId] = useState<number | null>(null);
+    const [reason, setReason] = useState('');
+    const [reasonError, setReasonError] = useState<string | null>(null);
+    const [submittingId, setSubmittingId] = useState<number | null>(null);
+
+    const handleAccept = (assignmentId: number) => {
+        setSubmittingId(assignmentId);
+        router.post(
+            `/operations/dispatch-jobs/${job.id}/assignments/${assignmentId}/response`,
+            { response: 'accepted', version: job.version },
+            {
+                preserveScroll: true,
+                onFinish: () => setSubmittingId(null),
+            },
+        );
+    };
+
+    const handleRejectSubmit = (e: FormEvent, assignmentId: number) => {
+        e.preventDefault();
+
+        if (!reason.trim()) {
+            setReasonError(
+                'A reason is required when rejecting an assignment.',
+            );
+
+            return;
+        }
+
+        setReasonError(null);
+        setSubmittingId(assignmentId);
+        router.post(
+            `/operations/dispatch-jobs/${job.id}/assignments/${assignmentId}/response`,
+            {
+                response: 'rejected',
+                reason: reason.trim(),
+                version: job.version,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setRejectingId(null);
+                    setReason('');
+                },
+                onError: (errs) => {
+                    if (errs.reason) {
+                        setReasonError(errs.reason);
+                    }
+                },
+                onFinish: () => setSubmittingId(null),
+            },
+        );
+    };
 
     return (
         <Panel className="overflow-hidden">
@@ -876,23 +945,200 @@ function CurrentAssignments({ job }: { job: DispatchDetailPageProps['job'] }) {
                 />
             ) : (
                 <ul className="divide-y divide-line">
-                    {job.personnel_assignments.map((assignment) => (
-                        <li
-                            key={`personnel-${assignment.id}`}
-                            className="flex items-start gap-3 px-4 py-3"
-                        >
-                            <ResourceIcon icon="personnel" />
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">
-                                    {assignment.name}
-                                </p>
-                                <p className="mt-0.5 text-xs text-ink-soft">
-                                    {humanize(assignment.type)} ·{' '}
-                                    {assignment.response_status.label}
-                                </p>
-                            </div>
-                        </li>
-                    ))}
+                    {job.personnel_assignments.map((assignment) => {
+                        const isUserAssignment =
+                            authUser?.id === assignment.user_id;
+                        const isPending =
+                            assignment.response_status.value === 'pending';
+                        const canRespond =
+                            isPending &&
+                            isUserAssignment &&
+                            capabilities?.respond_assignment === true;
+                        const isRejectingThis = rejectingId === assignment.id;
+                        const isSubmittingThis = submittingId === assignment.id;
+
+                        return (
+                            <li
+                                key={`personnel-${assignment.id}`}
+                                className="space-y-3 px-4 py-3"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <ResourceIcon icon="personnel" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium">
+                                            {assignment.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {humanize(assignment.type)} ·{' '}
+                                            <span
+                                                className={cn(
+                                                    assignment.response_status
+                                                        .value === 'accepted' &&
+                                                        'font-medium text-success-strong',
+                                                    assignment.response_status
+                                                        .value === 'rejected' &&
+                                                        'font-medium text-danger',
+                                                    assignment.response_status
+                                                        .value === 'pending' &&
+                                                        'text-ink-soft',
+                                                )}
+                                            >
+                                                {
+                                                    assignment.response_status
+                                                        .label
+                                                }
+                                            </span>
+                                        </p>
+                                        {assignment.response_reason && (
+                                            <p className="mt-1 text-xs text-ink-soft italic">
+                                                Reason:{' '}
+                                                {assignment.response_reason}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {canRespond && !isRejectingThis && (
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <Button
+                                                size="md"
+                                                variant="secondary"
+                                                disabled={isSubmittingThis}
+                                                aria-busy={isSubmittingThis}
+                                                onClick={() =>
+                                                    handleAccept(assignment.id)
+                                                }
+                                            >
+                                                <Check className="h-3.5 w-3.5 text-success-strong" />
+                                                {isSubmittingThis
+                                                    ? 'Accepting…'
+                                                    : 'Accept'}
+                                            </Button>
+                                            <Button
+                                                size="md"
+                                                variant="quiet"
+                                                disabled={isSubmittingThis}
+                                                onClick={() => {
+                                                    setRejectingId(
+                                                        assignment.id,
+                                                    );
+                                                    setReason('');
+                                                    setReasonError(null);
+                                                }}
+                                            >
+                                                <X className="h-3.5 w-3.5 text-danger" />
+                                                Reject
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {responseError &&
+                                    isUserAssignment &&
+                                    !isRejectingThis && (
+                                        <p
+                                            className="mt-2 text-xs text-danger"
+                                            role="alert"
+                                        >
+                                            {responseError}
+                                        </p>
+                                    )}
+
+                                {isRejectingThis && (
+                                    <form
+                                        onSubmit={(e) =>
+                                            handleRejectSubmit(e, assignment.id)
+                                        }
+                                        className="space-y-3 rounded-lg border border-line bg-surface-subtle p-3"
+                                    >
+                                        <div>
+                                            <label
+                                                htmlFor={`rejection-reason-${assignment.id}`}
+                                                className="block text-xs font-semibold text-ink"
+                                            >
+                                                Rejection reason (required)
+                                            </label>
+                                            <p
+                                                id={`rejection-reason-${assignment.id}-description`}
+                                                className="mt-0.5 text-xs text-ink-soft"
+                                            >
+                                                Explain why you are rejecting
+                                                this assignment. Rejection will
+                                                close your active interval.
+                                            </p>
+                                            <textarea
+                                                id={`rejection-reason-${assignment.id}`}
+                                                rows={2}
+                                                value={reason}
+                                                onChange={(e) => {
+                                                    setReason(e.target.value);
+                                                    setReasonError(null);
+                                                }}
+                                                className="mt-2 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                                placeholder="Provide reason for rejection..."
+                                                aria-describedby={`rejection-reason-${assignment.id}-description${reasonError || errors.reason ? ` rejection-reason-${assignment.id}-error` : ''}${responseError ? ` assignment-response-${assignment.id}-error` : ''}`}
+                                                aria-invalid={
+                                                    reasonError ||
+                                                    errors.reason ||
+                                                    responseError
+                                                        ? 'true'
+                                                        : 'false'
+                                                }
+                                                required
+                                            />
+                                            {(reasonError || errors.reason) && (
+                                                <p
+                                                    id={`rejection-reason-${assignment.id}-error`}
+                                                    className="mt-1 text-xs text-danger"
+                                                    role="alert"
+                                                >
+                                                    {reasonError ||
+                                                        errors.reason}
+                                                </p>
+                                            )}
+                                            {responseError &&
+                                                isUserAssignment && (
+                                                    <p
+                                                        id={`assignment-response-${assignment.id}-error`}
+                                                        className="mt-1 text-xs text-danger"
+                                                        role="alert"
+                                                    >
+                                                        {responseError}
+                                                    </p>
+                                                )}
+                                        </div>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Button
+                                                type="button"
+                                                size="md"
+                                                variant="quiet"
+                                                disabled={isSubmittingThis}
+                                                onClick={() => {
+                                                    setRejectingId(null);
+                                                    setReason('');
+                                                    setReasonError(null);
+                                                }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                size="md"
+                                                variant="danger"
+                                                disabled={
+                                                    isSubmittingThis ||
+                                                    !reason.trim()
+                                                }
+                                                aria-busy={isSubmittingThis}
+                                            >
+                                                {isSubmittingThis
+                                                    ? 'Rejecting…'
+                                                    : 'Confirm rejection'}
+                                            </Button>
+                                        </div>
+                                    </form>
+                                )}
+                            </li>
+                        );
+                    })}
                     {job.asset_assignments.map((assignment) => (
                         <li
                             key={`asset-${assignment.id}`}
