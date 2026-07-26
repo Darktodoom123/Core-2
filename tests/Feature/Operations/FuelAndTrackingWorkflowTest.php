@@ -357,6 +357,7 @@ it('accepts own location sharing but reserves the all-operations feed for office
 
     $this->actingAs($driver)->post('/operations/locations', ['latitude' => 14.5995, 'longitude' => 120.9842, 'accuracy_metres' => 8, 'captured_at' => now()->subMinute()->toIso8601String(), 'sharing_enabled' => true, 'dispatch_job_id' => $job->id])->assertRedirect('/');
     expect(LocationUpdate::query()->where('user_id', $driver->id)->where('source', 'browser')->exists())->toBeTrue();
+    expect(AuditEvent::query()->where('action', 'tracking.location_shared')->where('actor_id', $driver->id)->exists())->toBeTrue();
     $this->actingAs($driver)->getJson('/operations/locations')->assertForbidden();
     $this->actingAs($dispatcher)->getJson('/operations/locations')->assertOk();
 });

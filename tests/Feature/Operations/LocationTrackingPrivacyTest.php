@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\DispatchPriority;
+use App\Enums\DispatchStatus;
 use App\Enums\RoleName;
+use App\Models\AuditEvent;
+use App\Models\DispatchJob;
 use App\Models\LocationUpdate;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -72,6 +76,9 @@ it('handles sharing-off and consent state updates', function () {
 
     // Post location update with sharing disabled
     $this->actingAs($driver)->post('/operations/locations', [
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 5,
         'sharing_enabled' => false,
         'captured_at' => now()->toIso8601String(),
     ])->assertRedirect('/');
@@ -81,6 +88,42 @@ it('handles sharing-off and consent state updates', function () {
         ->and($update->latitude)->toBeNull()
         ->and($update->longitude)->toBeNull()
         ->and($update->freshness_status)->toBe('offline');
+    expect(AuditEvent::query()
+        ->where('action', 'tracking.location_sharing_paused')
+        ->where('actor_id', $driver->id)
+        ->exists())->toBeTrue();
+});
+
+it('requires a currently active assignment window for precise location sharing', function () {
+    $driver = createFieldUser(RoleName::Driver);
+    $job = DispatchJob::query()->create([
+        'reference' => 'LOC-FUTURE-001',
+        'client' => 'Location Client',
+        'title' => 'Future Location Job',
+        'site' => 'Site A',
+        'status' => DispatchStatus::Working,
+        'priority' => DispatchPriority::Routine,
+        'created_by' => $driver->id,
+    ]);
+
+    $job->personnelAssignments()->create([
+        'user_id' => $driver->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $driver->id,
+        'active_from' => now()->addMinute(),
+    ]);
+
+    $this->actingAs($driver)
+        ->post('/operations/locations', [
+            'latitude' => 14.5995,
+            'longitude' => 120.9842,
+            'captured_at' => now()->toIso8601String(),
+            'sharing_enabled' => true,
+            'dispatch_job_id' => $job->id,
+        ])
+        ->assertSessionHasErrors('dispatch_job_id');
+
+    expect(LocationUpdate::query()->where('user_id', $driver->id)->exists())->toBeFalse();
 });
 
 it('correctly calculates location freshness status categories', function () {

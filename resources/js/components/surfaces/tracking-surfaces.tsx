@@ -36,15 +36,22 @@ export function TrackingSurface({
     >('all');
     const [lastPolledAt, setLastPolledAt] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [pollError, setPollError] = useState(false);
+    const [isOnline, setIsOnline] = useState(
+        () => typeof navigator === 'undefined' || navigator.onLine,
+    );
     const [outboxQueue, setOutboxQueue] = useState<OutboxItem[]>(() =>
         getOutboxQueue(),
     );
     const [sharingPending, setSharingPending] = useState(false);
+    const sharingEnabled = locations[0]?.sharing_enabled ?? false;
 
     const refreshData = useCallback(() => {
         setIsRefreshing(true);
         router.reload({
-            only: ['locations'],
+            only: ['locations', 'workspace'],
+            onSuccess: () => setPollError(false),
+            onError: () => setPollError(true),
             onFinish: () => {
                 setIsRefreshing(false);
                 setLastPolledAt(new Date());
@@ -61,6 +68,19 @@ export function TrackingSurface({
 
         return () => window.clearInterval(interval);
     }, [refreshData]);
+
+    useEffect(() => {
+        const markOnline = () => setIsOnline(true);
+        const markOffline = () => setIsOnline(false);
+
+        window.addEventListener('online', markOnline);
+        window.addEventListener('offline', markOffline);
+
+        return () => {
+            window.removeEventListener('online', markOnline);
+            window.removeEventListener('offline', markOffline);
+        };
+    }, []);
 
     const toggleSharing = async (enable: boolean) => {
         setSharingPending(true);
@@ -139,13 +159,32 @@ export function TrackingSurface({
                                 <span className="font-semibold text-ink">
                                     Measured Polling (15s)
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success-strong">
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong" />
-                                    Live
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                                        !isOnline || pollError
+                                            ? 'bg-danger-soft text-danger'
+                                            : 'bg-success-soft text-success-strong',
+                                    )}
+                                    role="status"
+                                >
+                                    <span
+                                        className={cn(
+                                            'h-1.5 w-1.5 rounded-full',
+                                            !isOnline || pollError
+                                                ? 'bg-danger'
+                                                : 'animate-pulse bg-success-strong',
+                                        )}
+                                    />
+                                    {!isOnline
+                                        ? 'Offline'
+                                        : pollError
+                                          ? 'Sync issue'
+                                          : 'Live'}
                                 </span>
                             </div>
                             <p className="text-xs text-ink-soft">
-                                Last updated:{' '}
+                                Last poll attempt:{' '}
                                 {lastPolledAt.toLocaleTimeString()} · Retention:
                                 30-day precise coordinates
                             </p>
@@ -158,15 +197,9 @@ export function TrackingSurface({
                                 variant="secondary"
                                 size="sm"
                                 disabled={sharingPending}
-                                onClick={() =>
-                                    toggleSharing(
-                                        !locations.some(
-                                            (l) => l.sharing_enabled,
-                                        ),
-                                    )
-                                }
+                                onClick={() => toggleSharing(!sharingEnabled)}
                             >
-                                {locations.some((l) => l.sharing_enabled) ? (
+                                {sharingEnabled ? (
                                     <>
                                         <PauseCircle className="mr-1.5 h-4 w-4 text-warning-strong" />
                                         Pause Location Sharing
@@ -205,9 +238,10 @@ export function TrackingSurface({
                                         ? 'bg-surface font-semibold text-ink shadow-sm'
                                         : 'text-ink-soft hover:text-ink',
                                 )}
-                                aria-label="Switch to visual grid view"
+                                aria-label="Switch to map view"
+                                aria-pressed={viewMode === 'visual'}
                             >
-                                Grid View
+                                Map View
                             </button>
                             <button
                                 type="button"
@@ -219,6 +253,7 @@ export function TrackingSurface({
                                         : 'text-ink-soft hover:text-ink',
                                 )}
                                 aria-label="Switch to accessible synchronized list view"
+                                aria-pressed={viewMode === 'list'}
                             >
                                 Synchronized List
                             </button>
@@ -258,6 +293,7 @@ export function TrackingSurface({
                                         ? 'border-brand-strong font-semibold text-brand-strong'
                                         : 'border-transparent text-ink-soft hover:text-ink',
                                 )}
+                                aria-pressed={statusFilter === status}
                             >
                                 {status} ({count})
                             </button>

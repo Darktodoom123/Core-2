@@ -67,6 +67,10 @@ export default function Workspace(props: WorkspacePageProps) {
         }
 
         setLocationPending(true);
+        const commandId =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         navigator.geolocation.getCurrentPosition(
             (position) =>
                 router.post(
@@ -77,6 +81,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         accuracy_metres: position.coords.accuracy,
                         captured_at: new Date(position.timestamp).toISOString(),
                         sharing_enabled: true,
+                        command_id: commandId,
                     },
                     {
                         preserveScroll: true,

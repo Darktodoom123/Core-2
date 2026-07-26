@@ -12,11 +12,28 @@ final class StoreLocationUpdateRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if ($this->boolean('sharing_enabled') && ! $this->filled('dispatch_job_id')) {
+        if (! $this->boolean('sharing_enabled')) {
+            $this->merge([
+                'latitude' => null,
+                'longitude' => null,
+                'accuracy_metres' => null,
+                'operational_asset_id' => null,
+                'dispatch_job_id' => null,
+            ]);
+
+            return;
+        }
+
+        if (! $this->filled('dispatch_job_id')) {
             $jobId = DispatchJob::query()
                 ->whereHas('personnelAssignments', fn ($query) => $query
                     ->where('user_id', $this->user()?->id)
-                    ->whereNull('active_until'))
+                    ->where(function ($query): void {
+                        $query->whereNull('active_from')->orWhere('active_from', '<=', now());
+                    })
+                    ->where(function ($query): void {
+                        $query->whereNull('active_until')->orWhere('active_until', '>', now());
+                    }))
                 ->latest('scheduled_start')
                 ->value('id');
 
@@ -55,12 +72,19 @@ final class StoreLocationUpdateRequest extends FormRequest
             }
 
             $jobId = $this->input('dispatch_job_id');
-            $job = $jobId === null ? null : DispatchJob::query()->find($jobId);
+            $job = $jobId === null ? null : DispatchJob::query()
+                ->whereKey($jobId)
+                ->whereHas('personnelAssignments', fn ($query) => $query
+                    ->where('user_id', $this->user()?->id)
+                    ->where(function ($query): void {
+                        $query->whereNull('active_from')->orWhere('active_from', '<=', now());
+                    })
+                    ->where(function ($query): void {
+                        $query->whereNull('active_until')->orWhere('active_until', '>', now());
+                    }))
+                ->first();
 
-            if (! $job instanceof DispatchJob || ! $job->personnelAssignments()
-                ->where('user_id', $this->user()?->id)
-                ->whereNull('active_until')
-                ->exists()) {
+            if (! $job instanceof DispatchJob) {
                 $validator->errors()->add('dispatch_job_id', 'Location sharing requires an active assignment to the selected dispatch job.');
 
                 return;
@@ -69,7 +93,12 @@ final class StoreLocationUpdateRequest extends FormRequest
             $assetId = $this->input('operational_asset_id');
             if ($assetId !== null && ! $job->assetAssignments()
                 ->where('operational_asset_id', $assetId)
-                ->whereNull('active_until')
+                ->where(function ($query): void {
+                    $query->whereNull('active_from')->orWhere('active_from', '<=', now());
+                })
+                ->where(function ($query): void {
+                    $query->whereNull('active_until')->orWhere('active_until', '>', now());
+                })
                 ->exists()) {
                 $validator->errors()->add('operational_asset_id', 'The selected asset is not actively assigned to this dispatch job.');
             }

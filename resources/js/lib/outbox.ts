@@ -12,6 +12,7 @@ export interface OutboxItem {
 }
 
 const STORAGE_KEY = 'field_ops_outbox_queue_v1';
+let activeSyncPromise: Promise<void> | null = null;
 
 export function getOutboxQueue(): OutboxItem[] {
     if (typeof window === 'undefined') {
@@ -68,11 +69,23 @@ export function queueCommand(
     return item;
 }
 
-export async function syncOutbox(): Promise<void> {
+export function syncOutbox(): Promise<void> {
+    if (activeSyncPromise !== null) {
+        return activeSyncPromise;
+    }
+
+    activeSyncPromise = syncOutboxQueue().finally(() => {
+        activeSyncPromise = null;
+    });
+
+    return activeSyncPromise;
+}
+
+async function syncOutboxQueue(): Promise<void> {
     const queue = getOutboxQueue();
 
     for (const item of queue) {
-        if (!['queued', 'failed'].includes(item.status)) {
+        if (!['queued', 'failed', 'syncing'].includes(item.status)) {
             continue;
         }
 
