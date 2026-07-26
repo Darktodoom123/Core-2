@@ -175,6 +175,10 @@ export default function Workspace(props: WorkspacePageProps) {
                         jobs={props.jobs}
                         clients={props.clients}
                         serviceRequests={props.serviceRequests}
+                        assets={props.assets}
+                        approvals={props.approvals}
+                        users={props.users}
+                        gptRecommendations={props.gptRecommendations}
                         capabilities={props.capabilities}
                         canCreate={props.capabilities.create_dispatch}
                         refreshing={refreshing}

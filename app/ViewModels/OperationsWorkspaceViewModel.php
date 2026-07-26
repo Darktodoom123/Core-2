@@ -117,6 +117,7 @@ final class OperationsWorkspaceViewModel
             'asset_assignments' => $job->assetAssignments
                 ->map(static fn (DispatchAssetAssignment $assignment): array => [
                     'id' => (int) $assignment->getKey(),
+                    'operational_asset_id' => (int) $assignment->operational_asset_id,
                     'code' => $assignment->asset->code,
                     'name' => $assignment->asset->name,
                     'type' => $assignment->assignment_type,
