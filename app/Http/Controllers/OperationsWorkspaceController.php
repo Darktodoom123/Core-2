@@ -133,6 +133,7 @@ final class OperationsWorkspaceController extends Controller
     {
         $approvalKinds = array_values(array_filter([
             $user->can(PermissionName::AssignmentsApprove->value) ? 'assignment_override' : null,
+            $user->can(PermissionName::AssignmentsApprove->value) ? 'reassignment_override' : null,
             $user->can(PermissionName::DispatchApprovePriority->value) ? 'dispatch_activation' : null,
         ]));
 

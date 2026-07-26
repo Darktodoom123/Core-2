@@ -1696,6 +1696,10 @@ function ApprovalReviewCard({
     const form = useForm<{
         status: 'approved' | 'rejected';
         reason: string;
+        approval?: string;
+        version?: string;
+        personnel?: string;
+        assets?: string;
     }>({
         status: 'approved',
         reason: '',
@@ -1707,6 +1711,14 @@ function ApprovalReviewCard({
     const errorId = `${reasonId}-error`;
     const personnel = approval.requested_changes.personnel;
     const assets = approval.requested_changes.assets;
+    const endedPersonnel = approval.requested_changes.ended_personnel;
+    const endedAssets = approval.requested_changes.ended_assets;
+    const approvalError =
+        form.errors.approval ??
+        form.errors.version ??
+        form.errors.personnel ??
+        form.errors.assets ??
+        null;
 
     const decide = (status: 'approved' | 'rejected') => {
         form.transform((data) => ({ ...data, status }));
@@ -1804,43 +1816,103 @@ function ApprovalReviewCard({
                     <h3 className="text-sm font-semibold">
                         Proposed resource changes
                     </h3>
-                    {personnel.length === 0 && assets.length === 0 ? (
+                    {endedPersonnel.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-xs font-medium text-ink-soft">
+                                Ending active personnel assignments
+                            </p>
+                            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                                {endedPersonnel.map((person) => (
+                                    <li
+                                        key={`ended-personnel-${person.id}`}
+                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                    >
+                                        <p className="font-medium">
+                                            {person.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {humanize(person.assignment_type)}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {endedAssets.length > 0 && (
+                        <div className="mt-3">
+                            <p className="text-xs font-medium text-ink-soft">
+                                Ending active asset assignments
+                            </p>
+                            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                                {endedAssets.map((asset) => (
+                                    <li
+                                        key={`ended-asset-${asset.id}`}
+                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                    >
+                                        <p className="font-medium">
+                                            {asset.code} · {asset.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {humanize(asset.assignment_type)}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    {personnel.length > 0 || assets.length > 0 ? (
+                        <div className="mt-3">
+                            <p className="text-xs font-medium text-ink-soft">
+                                Adding replacement resources
+                            </p>
+                            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                                {personnel.map((person) => (
+                                    <li
+                                        key={`personnel-${person.id}`}
+                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                    >
+                                        <p className="font-medium">
+                                            {person.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {humanize(person.assignment_type)}
+                                        </p>
+                                    </li>
+                                ))}
+                                {assets.map((asset) => (
+                                    <li
+                                        key={`asset-${asset.id}`}
+                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                    >
+                                        <p className="font-medium">
+                                            {asset.code} · {asset.name}
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {humanize(asset.assignment_type)}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : endedPersonnel.length === 0 &&
+                      endedAssets.length === 0 ? (
                         <p className="mt-2 text-sm text-ink-soft">
                             This request covers dispatch activation without a
                             new resource batch.
                         </p>
-                    ) : (
-                        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                            {personnel.map((person) => (
-                                <li
-                                    key={`personnel-${person.id}`}
-                                    className="rounded-lg border border-line px-3 py-2 text-sm"
-                                >
-                                    <p className="font-medium">{person.name}</p>
-                                    <p className="mt-0.5 text-xs text-ink-soft">
-                                        {humanize(person.assignment_type)}
-                                    </p>
-                                </li>
-                            ))}
-                            {assets.map((asset) => (
-                                <li
-                                    key={`asset-${asset.id}`}
-                                    className="rounded-lg border border-line px-3 py-2 text-sm"
-                                >
-                                    <p className="font-medium">
-                                        {asset.code} · {asset.name}
-                                    </p>
-                                    <p className="mt-0.5 text-xs text-ink-soft">
-                                        {humanize(asset.assignment_type)}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    ) : null}
                 </div>
 
                 {canDecide ? (
                     <div className="border-t border-line pt-4">
+                        {approvalError && (
+                            <div
+                                className="mb-3 rounded-lg border border-danger bg-danger-soft px-3 py-3 text-sm text-danger"
+                                role="alert"
+                            >
+                                {approvalError}
+                            </div>
+                        )}
                         <label
                             htmlFor={reasonId}
                             className="text-sm font-medium"

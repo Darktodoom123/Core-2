@@ -246,11 +246,17 @@ final class OperationsWorkspaceViewModel
         return $approvals->map(static function (ApprovalRequest $approval) use ($user): array {
             $subject = $approval->subject;
             $requestedChanges = $approval->requested_changes ?? [];
-            $personnelAssignments = $subject instanceof DispatchJob
+            $personnelByUserId = $subject instanceof DispatchJob
                 ? $subject->personnelAssignments->keyBy('user_id')
                 : collect();
-            $assetAssignments = $subject instanceof DispatchJob
+            $personnelById = $subject instanceof DispatchJob
+                ? $subject->personnelAssignments->keyBy('id')
+                : collect();
+            $assetByOperationalAssetId = $subject instanceof DispatchJob
                 ? $subject->assetAssignments->keyBy('operational_asset_id')
+                : collect();
+            $assetById = $subject instanceof DispatchJob
+                ? $subject->assetAssignments->keyBy('id')
                 : collect();
             $canDecide = Gate::forUser($user)->allows('decide', $approval);
 
@@ -286,8 +292,10 @@ final class OperationsWorkspaceViewModel
                     'name' => $approval->requester->name,
                 ],
                 'requested_changes' => [
-                    'personnel' => self::approvalPersonnelChanges($requestedChanges, $personnelAssignments),
-                    'assets' => self::approvalAssetChanges($requestedChanges, $assetAssignments),
+                    'personnel' => self::approvalPersonnelChanges($requestedChanges, $personnelByUserId),
+                    'assets' => self::approvalAssetChanges($requestedChanges, $assetByOperationalAssetId),
+                    'ended_personnel' => self::approvalEndedPersonnelChanges($requestedChanges, $personnelById),
+                    'ended_assets' => self::approvalEndedAssetChanges($requestedChanges, $assetById),
                 ],
                 'can_decide' => $canDecide,
                 'decision_blocker' => $canDecide
@@ -523,6 +531,9 @@ final class OperationsWorkspaceViewModel
     private static function approvalPersonnelChanges(array $requestedChanges, Collection $assignments): array
     {
         $changes = $requestedChanges['personnel'] ?? [];
+        if ($changes === []) {
+            $changes = $requestedChanges['new_personnel'] ?? [];
+        }
         if (! is_array($changes)) {
             return [];
         }
@@ -555,6 +566,9 @@ final class OperationsWorkspaceViewModel
     private static function approvalAssetChanges(array $requestedChanges, Collection $assignments): array
     {
         $changes = $requestedChanges['assets'] ?? [];
+        if ($changes === []) {
+            $changes = $requestedChanges['new_assets'] ?? [];
+        }
         if (! is_array($changes)) {
             return [];
         }
@@ -578,5 +592,56 @@ final class OperationsWorkspaceViewModel
         }
 
         return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestedChanges
+     * @param  Collection<int, DispatchPersonnelAssignment>  $assignments
+     * @return list<array{id: int, name: string, assignment_type: string}>
+     */
+    private static function approvalEndedPersonnelChanges(array $requestedChanges, Collection $assignments): array
+    {
+        $ids = $requestedChanges['end_personnel_ids'] ?? [];
+        if (! is_array($ids)) {
+            return [];
+        }
+
+        return array_values(collect($ids)
+            ->filter(static fn (mixed $id): bool => is_int($id))
+            ->map(static function (int $id) use ($assignments): array {
+                $assignment = $assignments->get($id);
+
+                return [
+                    'id' => $id,
+                    'name' => $assignment === null ? "Assignment #{$id}" : $assignment->user->name,
+                    'assignment_type' => $assignment === null ? 'personnel' : $assignment->assignment_type,
+                ];
+            })->all());
+    }
+
+    /**
+     * @param  array<string, mixed>  $requestedChanges
+     * @param  Collection<int, DispatchAssetAssignment>  $assignments
+     * @return list<array{id: int, code: string, name: string, assignment_type: string}>
+     */
+    private static function approvalEndedAssetChanges(array $requestedChanges, Collection $assignments): array
+    {
+        $ids = $requestedChanges['end_asset_ids'] ?? [];
+        if (! is_array($ids)) {
+            return [];
+        }
+
+        return array_values(collect($ids)
+            ->filter(static fn (mixed $id): bool => is_int($id))
+            ->map(static function (int $id) use ($assignments): array {
+                $assignment = $assignments->get($id);
+
+                return [
+                    'id' => $id,
+                    'code' => $assignment === null ? "Assignment #{$id}" : $assignment->asset->code,
+                    'name' => $assignment === null ? 'Unavailable asset' : $assignment->asset->name,
+                    'assignment_type' => $assignment === null ? 'asset' : $assignment->assignment_type,
+                ];
+            })->all());
     }
 }

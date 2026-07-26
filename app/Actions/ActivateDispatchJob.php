@@ -65,7 +65,7 @@ final class ActivateDispatchJob
 
             if ($job->priority->requiresApproval()) {
                 $latestApproval = $job->approvals()
-                    ->whereIn('kind', ['dispatch_activation', 'assignment_override'])
+                    ->whereIn('kind', ['dispatch_activation', 'assignment_override', 'reassignment_override'])
                     ->latest('id')
                     ->lockForUpdate()
                     ->first();

@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Actions\ActivateDispatchJob;
 use App\Actions\AssignDispatchResources;
+use App\Actions\ReassignDispatchResources;
 use App\Actions\RespondToDispatchAssignment;
 use App\Actions\TransitionDispatchJob;
 use App\Enums\AssignmentResponse;
 use App\Enums\DispatchStatus;
 use App\Http\Requests\ActivateDispatchJobRequest;
 use App\Http\Requests\AssignDispatchResourcesRequest;
+use App\Http\Requests\ReassignDispatchResourcesRequest;
 use App\Http\Requests\RespondToDispatchAssignmentRequest;
 use App\Http\Requests\TransitionDispatchJobRequest;
 use App\Models\DispatchJob;
@@ -30,6 +32,30 @@ final class DispatchWorkflowController extends Controller
         return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [
             'tone' => 'success',
             'message' => "Resources were assigned to {$dispatchJob->reference}.",
+        ]);
+    }
+
+    public function reassign(
+        ReassignDispatchResourcesRequest $request,
+        DispatchJob $dispatchJob,
+        ReassignDispatchResources $action,
+    ): RedirectResponse {
+        $result = $action->handle(
+            $request->user(),
+            $dispatchJob,
+            $request->validated('end_personnel_assignment_ids', []),
+            $request->validated('end_asset_assignment_ids', []),
+            $request->validated('personnel', []),
+            $request->validated('assets', []),
+            $request->validated('reason'),
+            (int) $request->validated('version'),
+        );
+
+        return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [
+            'tone' => 'success',
+            'message' => $result->approvalRequested()
+                ? "The reassignment for {$dispatchJob->reference} was sent for independent approval."
+                : "Assignments were updated for {$dispatchJob->reference}.",
         ]);
     }
 

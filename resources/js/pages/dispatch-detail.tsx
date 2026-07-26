@@ -56,7 +56,13 @@ export default function DispatchDetail({
     });
     const selectedCount = form.data.personnel.length + form.data.assets.length;
     const conflictMessage =
-        errors.resources ?? form.errors.personnel ?? form.errors.assets ?? null;
+        errors.resources ??
+        errors.reassignment ??
+        errors.approval ??
+        errors.version ??
+        form.errors.personnel ??
+        form.errors.assets ??
+        null;
 
     const togglePersonnel = (candidate: PersonnelCandidateViewModel) => {
         const selected = form.data.personnel.some(
@@ -308,7 +314,7 @@ function FieldJobWorkspace({
 }: {
     job: DispatchDetailPageProps['job'];
     progression: NonNullable<DispatchDetailPageProps['progression']>;
-    capabilities?: DispatchDetailPageProps['capabilities'];
+    capabilities: DispatchDetailPageProps['capabilities'];
 }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]">
@@ -866,7 +872,7 @@ function CurrentAssignments({
     capabilities,
 }: {
     job: DispatchDetailPageProps['job'];
-    capabilities?: DispatchDetailPageProps['capabilities'];
+    capabilities: DispatchDetailPageProps['capabilities'];
 }) {
     const { auth, errors } = usePage().props;
     const authUser = auth?.user;
@@ -922,6 +928,52 @@ function CurrentAssignments({
                         setReasonError(errs.reason);
                     }
                 },
+                onFinish: () => setSubmittingId(null),
+            },
+        );
+    };
+
+    const handleEndPersonnel = (assignmentId: number) => {
+        if (
+            !window.confirm(
+                'End this active personnel assignment? The assignment history will be preserved.',
+            )
+        ) {
+            return;
+        }
+
+        setSubmittingId(assignmentId);
+        router.post(
+            `/operations/dispatch-jobs/${job.id}/reassign`,
+            {
+                end_personnel_assignment_ids: [assignmentId],
+                version: job.version,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setSubmittingId(null),
+            },
+        );
+    };
+
+    const handleEndAsset = (assignmentId: number) => {
+        if (
+            !window.confirm(
+                'End this active asset assignment? The assignment history will be preserved.',
+            )
+        ) {
+            return;
+        }
+
+        setSubmittingId(assignmentId);
+        router.post(
+            `/operations/dispatch-jobs/${job.id}/reassign`,
+            {
+                end_asset_assignment_ids: [assignmentId],
+                version: job.version,
+            },
+            {
+                preserveScroll: true,
                 onFinish: () => setSubmittingId(null),
             },
         );
@@ -996,39 +1048,62 @@ function CurrentAssignments({
                                             </p>
                                         )}
                                     </div>
-                                    {canRespond && !isRejectingThis && (
-                                        <div className="flex shrink-0 items-center gap-2">
-                                            <Button
-                                                size="md"
-                                                variant="secondary"
-                                                disabled={isSubmittingThis}
-                                                aria-busy={isSubmittingThis}
-                                                onClick={() =>
-                                                    handleAccept(assignment.id)
-                                                }
-                                            >
-                                                <Check className="h-3.5 w-3.5 text-success-strong" />
-                                                {isSubmittingThis
-                                                    ? 'Accepting…'
-                                                    : 'Accept'}
-                                            </Button>
-                                            <Button
-                                                size="md"
-                                                variant="quiet"
-                                                disabled={isSubmittingThis}
-                                                onClick={() => {
-                                                    setRejectingId(
-                                                        assignment.id,
-                                                    );
-                                                    setReason('');
-                                                    setReasonError(null);
-                                                }}
-                                            >
-                                                <X className="h-3.5 w-3.5 text-danger" />
-                                                Reject
-                                            </Button>
-                                        </div>
-                                    )}
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        {canRespond && !isRejectingThis && (
+                                            <>
+                                                <Button
+                                                    size="md"
+                                                    variant="secondary"
+                                                    disabled={isSubmittingThis}
+                                                    aria-busy={isSubmittingThis}
+                                                    onClick={() =>
+                                                        handleAccept(
+                                                            assignment.id,
+                                                        )
+                                                    }
+                                                >
+                                                    <Check className="h-3.5 w-3.5 text-success-strong" />
+                                                    {isSubmittingThis
+                                                        ? 'Accepting…'
+                                                        : 'Accept'}
+                                                </Button>
+                                                <Button
+                                                    size="md"
+                                                    variant="quiet"
+                                                    disabled={isSubmittingThis}
+                                                    onClick={() => {
+                                                        setRejectingId(
+                                                            assignment.id,
+                                                        );
+                                                        setReason('');
+                                                        setReasonError(null);
+                                                    }}
+                                                >
+                                                    <X className="h-3.5 w-3.5 text-danger" />
+                                                    Reject
+                                                </Button>
+                                            </>
+                                        )}
+                                        {capabilities?.reassign_resources &&
+                                            !isRejectingThis && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="quiet"
+                                                    disabled={isSubmittingThis}
+                                                    aria-busy={isSubmittingThis}
+                                                    onClick={() =>
+                                                        handleEndPersonnel(
+                                                            assignment.id,
+                                                        )
+                                                    }
+                                                >
+                                                    <X className="h-3.5 w-3.5 text-danger" />
+                                                    {isSubmittingThis
+                                                        ? 'Ending…'
+                                                        : 'End assignment'}
+                                                </Button>
+                                            )}
+                                    </div>
                                 </div>
 
                                 {responseError &&
@@ -1153,6 +1228,22 @@ function CurrentAssignments({
                                     {humanize(assignment.type)}
                                 </p>
                             </div>
+                            {capabilities?.reassign_resources && (
+                                <Button
+                                    size="sm"
+                                    variant="quiet"
+                                    disabled={submittingId === assignment.id}
+                                    aria-busy={submittingId === assignment.id}
+                                    onClick={() =>
+                                        handleEndAsset(assignment.id)
+                                    }
+                                >
+                                    <X className="h-3.5 w-3.5 text-danger" />
+                                    {submittingId === assignment.id
+                                        ? 'Ending…'
+                                        : 'End assignment'}
+                                </Button>
+                            )}
                         </li>
                     ))}
                 </ul>

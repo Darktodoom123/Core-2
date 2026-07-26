@@ -17,6 +17,7 @@ final class ApprovalRequestPolicy
 
         $permission = match ($approval->kind) {
             'assignment_override' => PermissionName::AssignmentsApprove,
+            'reassignment_override' => PermissionName::AssignmentsApprove,
             'dispatch_activation' => PermissionName::DispatchApprovePriority,
             default => null,
         };

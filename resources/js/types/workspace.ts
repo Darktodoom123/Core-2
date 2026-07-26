@@ -224,6 +224,17 @@ export interface ApprovalViewModel {
             name: string;
             assignment_type: string;
         }>;
+        ended_personnel: Array<{
+            id: number;
+            name: string;
+            assignment_type: string;
+        }>;
+        ended_assets: Array<{
+            id: number;
+            code: string;
+            name: string;
+            assignment_type: string;
+        }>;
     };
     can_decide: boolean;
     decision_blocker: string | null;
@@ -411,6 +422,7 @@ export interface DispatchDetailPageProps {
     } | null;
     capabilities: {
         assign_resources: boolean;
+        reassign_resources: boolean;
         view_assignment_candidates: boolean;
         activate: boolean;
         update_own_status: boolean;
