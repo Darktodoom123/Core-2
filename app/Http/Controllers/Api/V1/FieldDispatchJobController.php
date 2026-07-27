@@ -6,6 +6,7 @@ use App\Actions\RespondToDispatchAssignment;
 use App\Actions\TransitionDispatchJob;
 use App\Enums\AssignmentResponse;
 use App\Enums\DispatchStatus;
+use App\Enums\PermissionName;
 use App\Exceptions\VersionConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RespondToDispatchAssignmentRequest;
@@ -13,6 +14,7 @@ use App\Http\Requests\TransitionDispatchJobRequest;
 use App\Http\Resources\V1\DispatchJobResource;
 use App\Models\DispatchJob;
 use App\Models\DispatchPersonnelAssignment;
+use App\Models\User;
 use App\Services\IdempotentCommandService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,14 +33,7 @@ final class FieldDispatchJobController extends Controller
                 ->open()
                 ->where('user_id', $user->id)
                 ->select('dispatch_job_id'))
-            ->with([
-                'personnelAssignments' => fn ($query) => $query
-                    ->open()
-                    ->with('user:id,name'),
-                'assetAssignments' => fn ($query) => $query
-                    ->open()
-                    ->with('asset:id,code,name,kind'),
-            ])
+            ->with($this->assignmentRelations($user))
             ->latest('scheduled_start')
             ->paginate(25);
 
@@ -49,14 +44,7 @@ final class FieldDispatchJobController extends Controller
     {
         abort_unless(Gate::forUser($request->user())->allows('viewAssigned', $dispatchJob), 404);
 
-        $dispatchJob->load([
-            'personnelAssignments' => fn ($query) => $query
-                ->open()
-                ->with('user:id,name'),
-            'assetAssignments' => fn ($query) => $query
-                ->open()
-                ->with('asset:id,code,name,kind'),
-        ]);
+        $this->loadAssignmentRelations($dispatchJob, $request->user());
 
         return response()->json(['data' => new DispatchJobResource($dispatchJob)]);
     }
@@ -96,16 +84,11 @@ final class FieldDispatchJobController extends Controller
                 return response()->json(['data' => new DispatchJobResource($freshJob)]);
             } catch (ValidationException $e) {
                 if (isset($e->errors()['version'])) {
-                    $freshJob = DispatchJob::query()
-                        ->with([
-                            'personnelAssignments' => fn ($query) => $query
-                                ->open()
-                                ->with('user:id,name'),
-                            'assetAssignments' => fn ($query) => $query
-                                ->open()
-                                ->with('asset:id,code,name,kind'),
-                        ])
-                        ->find($dispatchJob->id);
+                    $freshJob = DispatchJob::query()->find($dispatchJob->id);
+
+                    if ($freshJob !== null) {
+                        $this->loadAssignmentRelations($freshJob, $request->user());
+                    }
 
                     throw new VersionConflictException(
                         $e->getMessage(),
@@ -125,7 +108,11 @@ final class FieldDispatchJobController extends Controller
             'dispatch.assignment_response',
             (int) $request->validated('version'),
             $execute,
-            $request->validated(),
+            [
+                'dispatch_job_id' => $dispatchJob->id,
+                'assignment_id' => $assignment->id,
+                ...$request->validated(),
+            ],
         );
     }
 
@@ -146,28 +133,16 @@ final class FieldDispatchJobController extends Controller
                     (int) $request->validated('version'),
                 );
 
-                $updatedJob->load([
-                    'personnelAssignments' => fn ($query) => $query
-                        ->open()
-                        ->with('user:id,name'),
-                    'assetAssignments' => fn ($query) => $query
-                        ->open()
-                        ->with('asset:id,code,name,kind'),
-                ]);
+                $this->loadAssignmentRelations($updatedJob, $request->user());
 
                 return response()->json(['data' => new DispatchJobResource($updatedJob)]);
             } catch (ValidationException $e) {
                 if (isset($e->errors()['version'])) {
-                    $freshJob = DispatchJob::query()
-                        ->with([
-                            'personnelAssignments' => fn ($query) => $query
-                                ->open()
-                                ->with('user:id,name'),
-                            'assetAssignments' => fn ($query) => $query
-                                ->open()
-                                ->with('asset:id,code,name,kind'),
-                        ])
-                        ->find($dispatchJob->id);
+                    $freshJob = DispatchJob::query()->find($dispatchJob->id);
+
+                    if ($freshJob !== null) {
+                        $this->loadAssignmentRelations($freshJob, $request->user());
+                    }
 
                     throw new VersionConflictException(
                         $e->getMessage(),
@@ -187,7 +162,34 @@ final class FieldDispatchJobController extends Controller
             'dispatch.status_transition',
             (int) $request->validated('version'),
             $execute,
-            $request->validated(),
+            [
+                'dispatch_job_id' => $dispatchJob->id,
+                ...$request->validated(),
+            ],
         );
+    }
+
+    /**
+     * @return array<string, \Closure>
+     */
+    private function assignmentRelations(User $user): array
+    {
+        $canViewAll = $user->can(PermissionName::DispatchViewAll->value);
+
+        return [
+            'personnelAssignments' => function ($query) use ($user, $canViewAll): void {
+                $query->open()
+                    ->when(! $canViewAll, fn ($query) => $query->where('user_id', $user->id))
+                    ->with('user:id,name');
+            },
+            'assetAssignments' => fn ($query) => $query
+                ->open()
+                ->with('asset:id,code,name,kind'),
+        ];
+    }
+
+    private function loadAssignmentRelations(DispatchJob $job, User $user): void
+    {
+        $job->load($this->assignmentRelations($user));
     }
 }

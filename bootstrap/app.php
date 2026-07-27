@@ -38,7 +38,16 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $exceptions->render(function (ValidationException $e, Request $request) {
-            if (($request->is('api/*') || $request->expectsJson()) && isset($e->errors()['version'])) {
+            $version = $request->input('version');
+            $hasValidVersion = is_int($version)
+                || (is_string($version) && filter_var($version, FILTER_VALIDATE_INT) !== false);
+
+            if (
+                ($request->is('api/*') || $request->expectsJson())
+                && isset($e->errors()['version'])
+                && $hasValidVersion
+                && (int) $version >= 1
+            ) {
                 return response()->json([
                     'message' => $e->errors()['version'][0] ?? 'Version conflict detected.',
                     'error' => 'stale_version',

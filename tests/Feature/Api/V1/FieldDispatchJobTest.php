@@ -133,6 +133,54 @@ it('returns detailed dispatch job information for active assigned worker', funct
         ->assertJsonPath('data.capabilities.can_update_status', true);
 });
 
+it('does not expose co-worker personnel assignments through the mobile boundary', function (): void {
+    /** @var User $worker */
+    $worker = User::factory()->create(['is_active' => true]);
+    $worker->syncRoles([RoleName::Driver->value]);
+    $token = $worker->createToken('Mobile Token')->plainTextToken;
+
+    /** @var User $coWorker */
+    $coWorker = User::factory()->create(['is_active' => true]);
+    $coWorker->syncRoles([RoleName::Driver->value]);
+
+    /** @var DispatchJob $job */
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-MOBILE-ISOLATED',
+        'client' => 'Scoped Corp',
+        'title' => 'Scoped Assignment',
+        'site' => 'Site Scoped',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Dispatched,
+        'version' => 1,
+        'created_by' => $worker->id,
+    ]);
+
+    foreach ([$worker, $coWorker] as $assignedUser) {
+        DispatchPersonnelAssignment::query()->create([
+            'dispatch_job_id' => $job->id,
+            'user_id' => $assignedUser->id,
+            'assignment_type' => 'driver',
+            'assigned_by' => $worker->id,
+            'response_status' => AssignmentResponse::Pending,
+            'created_at' => now(),
+        ]);
+    }
+
+    $this->withToken($token)
+        ->getJson('/api/v1/dispatch-jobs')
+        ->assertOk()
+        ->assertJsonCount(1, 'data.0.personnel_assignments')
+        ->assertJsonPath('data.0.personnel_assignments.0.user_id', $worker->id)
+        ->assertJsonMissing(['user_id' => $coWorker->id, 'user_name' => $coWorker->name]);
+
+    $this->withToken($token)
+        ->getJson("/api/v1/dispatch-jobs/{$job->id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data.personnel_assignments')
+        ->assertJsonPath('data.personnel_assignments.0.user_id', $worker->id)
+        ->assertJsonMissing(['user_id' => $coWorker->id, 'user_name' => $coWorker->name]);
+});
+
 it('handles assignment accept and reject with version control and idempotency', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
@@ -196,6 +244,39 @@ it('handles assignment accept and reject with version control and idempotency', 
     $replayResponse->assertOk()
         ->assertJsonPath('data.my_assignment.response_status', 'accepted')
         ->assertJsonPath('data.version', 2);
+
+    /** @var DispatchJob $otherJob */
+    $otherJob = DispatchJob::query()->create([
+        'reference' => 'DISP-MOBILE-200B',
+        'client' => 'Omega Heavy',
+        'title' => 'Second Crane Move',
+        'site' => 'Port North',
+        'priority' => DispatchPriority::Priority,
+        'status' => DispatchStatus::Dispatched,
+        'version' => 1,
+        'created_by' => $worker->id,
+    ]);
+
+    $otherAssignment = DispatchPersonnelAssignment::query()->create([
+        'dispatch_job_id' => $otherJob->id,
+        'user_id' => $worker->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $worker->id,
+        'response_status' => AssignmentResponse::Pending,
+        'created_at' => now(),
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson("/api/v1/dispatch-jobs/{$otherJob->id}/assignments/{$otherAssignment->id}/response", [
+            'response' => 'accepted',
+            'version' => 1,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['command_id']);
+
+    expect($otherJob->refresh()->version)->toBe(1)
+        ->and($otherAssignment->refresh()->response_status)->toBe(AssignmentResponse::Pending);
 });
 
 it('returns 409 conflict when responding with an outdated version', function (): void {
@@ -418,4 +499,40 @@ it('requires an idempotency key for mobile commands', function (): void {
         ->assertJsonValidationErrors(['command_id']);
 
     expect($job->refresh()->version)->toBe(1);
+});
+
+it('keeps malformed mobile versions as validation errors instead of conflicts', function (): void {
+    /** @var User $worker */
+    $worker = User::factory()->create(['is_active' => true]);
+    $worker->syncRoles([RoleName::Driver->value]);
+    $token = $worker->createToken('Mobile Token')->plainTextToken;
+
+    /** @var DispatchJob $job */
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-MOBILE-VERSION',
+        'client' => 'Version Corp',
+        'title' => 'Version Contract',
+        'site' => 'Site Version',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Dispatched,
+        'version' => 1,
+        'created_by' => $worker->id,
+    ]);
+
+    DispatchPersonnelAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'user_id' => $worker->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $worker->id,
+        'response_status' => AssignmentResponse::Accepted,
+    ]);
+
+    $this->withToken($token)
+        ->withHeader('Idempotency-Key', (string) Str::uuid())
+        ->postJson("/api/v1/dispatch-jobs/{$job->id}/status", [
+            'status' => 'accepted',
+            'version' => 0,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['version']);
 });

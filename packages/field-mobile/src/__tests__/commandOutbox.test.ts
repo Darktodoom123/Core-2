@@ -16,6 +16,15 @@ describe('CommandOutboxManager', () => {
     assert.equal(cmd.expectedVersion, 1);
   });
 
+  test('reuses an existing pending command for duplicate submissions', () => {
+    const outbox = new CommandOutboxManager();
+    const first = outbox.enqueueTransitionStatus(10, 'accepted', 1);
+    const duplicate = outbox.enqueueTransitionStatus(10, 'accepted', 1);
+
+    assert.equal(duplicate.id, first.id);
+    assert.equal(outbox.getCommands().length, 1);
+  });
+
   test('retries failed commands using identical command UUID idempotency key', async () => {
     const outbox = new CommandOutboxManager();
     const cmd = outbox.enqueueTransitionStatus(10, 'accepted', 1);

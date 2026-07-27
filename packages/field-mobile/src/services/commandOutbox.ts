@@ -61,6 +61,24 @@ export class CommandOutboxManager {
     return this.getCommands().filter((cmd) => cmd.jobId === jobId);
   }
 
+  private findExistingCommand(
+    type: OutboxCommand['type'],
+    jobId: number | null | undefined,
+    assignmentId: number | null | undefined,
+    payload: Record<string, unknown>,
+    expectedVersion?: number | null
+  ): OutboxCommand | undefined {
+    return this.getCommands().find(
+      (command) =>
+        command.type === type &&
+        command.jobId === jobId &&
+        command.assignmentId === assignmentId &&
+        command.expectedVersion === expectedVersion &&
+        command.state !== 'completed' &&
+        JSON.stringify(command.payload) === JSON.stringify(payload)
+    );
+  }
+
   public enqueueRespondAssignment(
     jobId: number,
     assignmentId: number,
@@ -68,16 +86,29 @@ export class CommandOutboxManager {
     reason: string | undefined,
     expectedVersion: number
   ): OutboxCommand {
+    const payload = {
+      response: responseStatus,
+      reason,
+    };
+    const existing = this.findExistingCommand(
+      'respond_assignment',
+      jobId,
+      assignmentId,
+      payload,
+      expectedVersion
+    );
+
+    if (existing) {
+      return existing;
+    }
+
     const now = new Date().toISOString();
     const command: OutboxCommand = {
       id: generateUUID(),
       type: 'respond_assignment',
       jobId,
       assignmentId,
-      payload: {
-        response: responseStatus,
-        reason,
-      },
+      payload,
       expectedVersion,
       state: 'queued',
       createdAt: now,
@@ -96,14 +127,25 @@ export class CommandOutboxManager {
     status: string,
     expectedVersion: number
   ): OutboxCommand {
+    const payload = { status };
+    const existing = this.findExistingCommand(
+      'transition_status',
+      jobId,
+      undefined,
+      payload,
+      expectedVersion
+    );
+
+    if (existing) {
+      return existing;
+    }
+
     const now = new Date().toISOString();
     const command: OutboxCommand = {
       id: generateUUID(),
       type: 'transition_status',
       jobId,
-      payload: {
-        status,
-      },
+      payload,
       expectedVersion,
       state: 'queued',
       createdAt: now,

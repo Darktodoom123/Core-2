@@ -29,6 +29,16 @@ final class DispatchJobResource extends JsonResource
         $canRespondAssignment = $myAssignment !== null && Gate::forUser($user)->allows('respond', $myAssignment);
         $canShareLocation = $user !== null && $user->can(PermissionName::TrackingShareOwn->value);
 
+        $personnelAssignments = $this->whenLoaded('personnelAssignments', function () use ($user) {
+            $assignments = $this->personnelAssignments;
+
+            if ($user === null || ! $user->can(PermissionName::DispatchViewAll->value)) {
+                $assignments = $assignments->where('user_id', $user?->id)->values();
+            }
+
+            return DispatchPersonnelAssignmentResource::collection($assignments);
+        });
+
         return [
             'id' => $this->id,
             'reference' => $this->reference,
@@ -56,7 +66,7 @@ final class DispatchJobResource extends JsonResource
                 'response_reason' => $myAssignment->response_reason,
                 'assigned_at' => $myAssignment->created_at?->toIso8601String(),
             ] : null,
-            'personnel_assignments' => DispatchPersonnelAssignmentResource::collection($this->whenLoaded('personnelAssignments')),
+            'personnel_assignments' => $personnelAssignments,
             'asset_assignments' => DispatchAssetAssignmentResource::collection($this->whenLoaded('assetAssignments')),
             'progression' => $canUpdateOwnStatus ? DispatchFieldProgressionViewModel::make($this->resource) : null,
             'capabilities' => [
