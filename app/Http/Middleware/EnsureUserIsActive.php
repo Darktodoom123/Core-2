@@ -14,6 +14,13 @@ final class EnsureUserIsActive
         $user = $request->user();
 
         if ($user !== null && (! $user->is_active || $user->suspended_at !== null)) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'This account is suspended. Contact a system administrator.',
+                    'error' => 'account_suspended',
+                ], Response::HTTP_FORBIDDEN);
+            }
+
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

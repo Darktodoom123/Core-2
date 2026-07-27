@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsurePersonalAccessToken;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;
@@ -8,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,7 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('location:prune')->dailyAt('02:15');
     })
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['active' => EnsureUserIsActive::class]);
+        $middleware->alias([
+            'active' => EnsureUserIsActive::class,
+            'api-token' => EnsurePersonalAccessToken::class,
+        ]);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,
@@ -31,4 +36,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            if (($request->is('api/*') || $request->expectsJson()) && isset($e->errors()['version'])) {
+                return response()->json([
+                    'message' => $e->errors()['version'][0] ?? 'Version conflict detected.',
+                    'error' => 'stale_version',
+                    'errors' => $e->errors(),
+                ], 409);
+            }
+        });
     })->create();
