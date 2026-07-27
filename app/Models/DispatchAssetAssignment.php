@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -30,5 +31,30 @@ class DispatchAssetAssignment extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(OperationalAsset::class, 'operational_asset_id');
+    }
+
+    /**
+     * @param  Builder<DispatchAssetAssignment>  $query
+     * @return Builder<DispatchAssetAssignment>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->open()
+            ->where(function (Builder $query) use ($now): void {
+                $query->whereNull('active_from')->orWhere('active_from', '<=', $now);
+            });
+    }
+
+    /**
+     * @param  Builder<DispatchAssetAssignment>  $query
+     * @return Builder<DispatchAssetAssignment>
+     */
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->whereNull('active_until')->orWhere('active_until', '>', now());
+        });
     }
 }

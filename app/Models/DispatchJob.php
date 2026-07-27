@@ -83,7 +83,9 @@ class DispatchJob extends Model
             return $query;
         }
 
-        return $query->whereHas('personnelAssignments', fn (Builder $assignment): Builder => $assignment
-            ->where('user_id', $user->id)->whereNull('active_until'));
+        return $query->whereIn('id', DispatchPersonnelAssignment::query()
+            ->open()
+            ->where('user_id', $user->id)
+            ->select('dispatch_job_id'));
     }
 }

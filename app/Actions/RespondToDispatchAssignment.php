@@ -22,8 +22,6 @@ final class RespondToDispatchAssignment
         ?string $reason,
         int $version,
     ): DispatchPersonnelAssignment {
-        Gate::forUser($actor)->authorize('respond', $assignment);
-
         return DB::transaction(function () use ($actor, $job, $assignment, $response, $reason, $version): DispatchPersonnelAssignment {
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
 
@@ -38,6 +36,8 @@ final class RespondToDispatchAssignment
                 ->where('id', $assignment->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            Gate::forUser($actor)->authorize('respond', $assignment);
 
             if ($assignment->user_id !== $actor->id) {
                 throw ValidationException::withMessages([

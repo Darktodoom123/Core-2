@@ -17,7 +17,13 @@ final class DispatchJobPolicy
     public function view(User $user, DispatchJob $job): bool
     {
         return $user->can(PermissionName::DispatchViewAll->value)
-            || ($user->can(PermissionName::DispatchViewAssigned->value) && $job->personnelAssignments()->where('user_id', $user->id)->whereNull('active_until')->exists());
+            || $this->viewAssigned($user, $job);
+    }
+
+    public function viewAssigned(User $user, DispatchJob $job): bool
+    {
+        return $user->can(PermissionName::DispatchViewAssigned->value)
+            && $job->personnelAssignments()->open()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user): bool
@@ -76,6 +82,6 @@ final class DispatchJobPolicy
     public function updateOwnStatus(User $user, DispatchJob $job): bool
     {
         return $user->can(PermissionName::DispatchUpdateOwnStatus->value)
-            && $job->personnelAssignments()->where('user_id', $user->id)->whereNull('active_until')->exists();
+            && $job->personnelAssignments()->open()->where('user_id', $user->id)->exists();
     }
 }

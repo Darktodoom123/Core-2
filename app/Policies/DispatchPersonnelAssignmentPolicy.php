@@ -13,7 +13,7 @@ final class DispatchPersonnelAssignmentPolicy
     {
         return $user->can(PermissionName::DispatchRespondOwn->value)
             && $user->id === $assignment->user_id
-            && $assignment->active_until === null
+            && ($assignment->active_until === null || $assignment->active_until->gt(now()))
             && $assignment->response_status === AssignmentResponse::Pending;
     }
 }

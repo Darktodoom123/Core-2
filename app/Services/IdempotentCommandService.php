@@ -6,13 +6,49 @@ use App\Models\CommandLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class IdempotentCommandService
 {
+    public function resolveCommandId(Request $request, bool $required = false): ?string
+    {
+        $headerId = $request->header('Idempotency-Key');
+        $bodyId = $request->input('command_id');
+
+        if ($bodyId !== null && ! is_string($bodyId)) {
+            throw ValidationException::withMessages([
+                'command_id' => ['The command id must be a valid UUID.'],
+            ]);
+        }
+
+        if ($headerId !== null && $bodyId !== null && ! hash_equals($headerId, $bodyId)) {
+            throw ValidationException::withMessages([
+                'command_id' => ['The Idempotency-Key header and command_id body field must match.'],
+            ]);
+        }
+
+        $commandId = $headerId ?: $bodyId;
+
+        if ($required && ($commandId === null || $commandId === '')) {
+            throw ValidationException::withMessages([
+                'command_id' => ['An idempotency key is required for this command.'],
+            ]);
+        }
+
+        if ($commandId !== null && ! Str::isUuid($commandId)) {
+            throw ValidationException::withMessages([
+                'command_id' => ['The idempotency key must be a valid UUID.'],
+            ]);
+        }
+
+        return $commandId;
+    }
+
     /**
      * Process a command idempotently for a user.
      *
@@ -26,6 +62,12 @@ class IdempotentCommandService
         callable $execution,
         array $requestPayload = []
     ): Response {
+        if (! Str::isUuid($commandId)) {
+            throw ValidationException::withMessages([
+                'command_id' => ['The idempotency key must be a valid UUID.'],
+            ]);
+        }
+
         return Cache::lock("idempotent_command:{$user->id}:{$commandId}", 10)->block(5, function () use ($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload): Response {
             return $this->processLocked($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload);
         });
@@ -38,16 +80,32 @@ class IdempotentCommandService
         $existing = CommandLog::query()->where('user_id', $user->id)->where('command_id', $commandId)->first();
 
         if ($existing) {
-            if ($existing->action_name !== $actionName || ($existing->payload_hash !== null && ! hash_equals($existing->payload_hash, $payloadHash))) {
+            if ($existing->payload_hash === null) {
+                throw ValidationException::withMessages([
+                    'command_id' => ['This idempotency key cannot be safely replayed. Submit a new UUID.'],
+                ]);
+            }
+
+            if (
+                $existing->action_name !== $actionName
+                || $existing->expected_version !== $expectedVersion
+                || ! hash_equals($existing->payload_hash, $payloadHash)
+            ) {
                 throw ValidationException::withMessages(['command_id' => 'This idempotency key was already used for a different command payload.']);
             }
 
-            $rawPayload = $existing->getRawOriginal('response_payload');
-            $decodedPayload = is_string($rawPayload) ? json_decode($rawPayload, true) : [];
+            $decodedPayload = $existing->response_payload;
+            if ($decodedPayload === null && is_string($rawPayload = $existing->getRawOriginal('response_payload'))) {
+                $decodedPayload = json_decode($rawPayload, true);
+            }
             /** @var array<string, mixed> $payload */
             $payload = is_array($decodedPayload) ? $decodedPayload : [];
 
             if (($payload['type'] ?? null) === 'redirect') {
+                if (array_key_exists('flash', $payload) && request()->hasSession()) {
+                    request()->session()->flash('flash', $payload['flash']);
+                }
+
                 return new RedirectResponse((string) $payload['url'], $existing->response_code);
             }
 
@@ -64,6 +122,10 @@ class IdempotentCommandService
                 $responseContent = json_decode($response->getContent() ?: '{}', true);
             } elseif ($response instanceof RedirectResponse) {
                 $responseContent = ['type' => 'redirect', 'url' => $response->getTargetUrl()];
+
+                if (request()->hasSession() && request()->session()->has('flash')) {
+                    $responseContent['flash'] = request()->session()->get('flash');
+                }
             }
 
             CommandLog::query()->create([

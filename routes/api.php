@@ -16,7 +16,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:5,1')
         ->name('auth.login');
 
-    Route::middleware(['auth:sanctum', 'active', 'api-token'])->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::get('/auth/user', [AuthController::class, 'me'])->name('auth.user');

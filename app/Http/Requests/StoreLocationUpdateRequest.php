@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\PermissionName;
 use App\Models\DispatchJob;
+use App\Models\DispatchPersonnelAssignment;
 use App\Models\OperationalAsset;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -26,14 +27,10 @@ final class StoreLocationUpdateRequest extends FormRequest
 
         if (! $this->filled('dispatch_job_id')) {
             $jobId = DispatchJob::query()
-                ->whereHas('personnelAssignments', fn ($query) => $query
+                ->whereIn('id', DispatchPersonnelAssignment::query()
+                    ->active()
                     ->where('user_id', $this->user()?->id)
-                    ->where(function ($query): void {
-                        $query->whereNull('active_from')->orWhere('active_from', '<=', now());
-                    })
-                    ->where(function ($query): void {
-                        $query->whereNull('active_until')->orWhere('active_until', '>', now());
-                    }))
+                    ->select('dispatch_job_id'))
                 ->latest('scheduled_start')
                 ->value('id');
 
@@ -74,14 +71,10 @@ final class StoreLocationUpdateRequest extends FormRequest
             $jobId = $this->input('dispatch_job_id');
             $job = $jobId === null ? null : DispatchJob::query()
                 ->whereKey($jobId)
-                ->whereHas('personnelAssignments', fn ($query) => $query
+                ->whereIn('id', DispatchPersonnelAssignment::query()
+                    ->active()
                     ->where('user_id', $this->user()?->id)
-                    ->where(function ($query): void {
-                        $query->whereNull('active_from')->orWhere('active_from', '<=', now());
-                    })
-                    ->where(function ($query): void {
-                        $query->whereNull('active_until')->orWhere('active_until', '>', now());
-                    }))
+                    ->select('dispatch_job_id'))
                 ->first();
 
             if (! $job instanceof DispatchJob) {
@@ -91,15 +84,7 @@ final class StoreLocationUpdateRequest extends FormRequest
             }
 
             $assetId = $this->input('operational_asset_id');
-            if ($assetId !== null && ! $job->assetAssignments()
-                ->where('operational_asset_id', $assetId)
-                ->where(function ($query): void {
-                    $query->whereNull('active_from')->orWhere('active_from', '<=', now());
-                })
-                ->where(function ($query): void {
-                    $query->whereNull('active_until')->orWhere('active_until', '>', now());
-                })
-                ->exists()) {
+            if ($assetId !== null && ! $job->assetAssignments()->active()->where('operational_asset_id', $assetId)->exists()) {
                 $validator->errors()->add('operational_asset_id', 'The selected asset is not actively assigned to this dispatch job.');
             }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AssignmentResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -50,5 +51,32 @@ class DispatchPersonnelAssignment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @param  Builder<DispatchPersonnelAssignment>  $query
+     * @return Builder<DispatchPersonnelAssignment>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->open()
+            ->where(function (Builder $query) use ($now): void {
+                $query->whereNull('active_from')->orWhere('active_from', '<=', $now);
+            });
+    }
+
+    /**
+     * Scope assignments that have not been ended.
+     *
+     * @param  Builder<DispatchPersonnelAssignment>  $query
+     * @return Builder<DispatchPersonnelAssignment>
+     */
+    public function scopeOpen(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->whereNull('active_until')->orWhere('active_until', '>', now());
+        });
     }
 }

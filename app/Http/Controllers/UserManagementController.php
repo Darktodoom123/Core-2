@@ -44,30 +44,46 @@ final class UserManagementController extends Controller
     {
         Gate::authorize(PermissionName::UsersManage->value);
         $validated = $request->validate(['role' => ['sometimes', Rule::enum(RoleName::class)], 'is_active' => ['sometimes', 'boolean']]);
-        $currentRole = $user->operationalRole();
-        $removesAdministrator = $currentRole === RoleName::SystemAdministrator
-            && (($validated['role'] ?? $currentRole->value) !== RoleName::SystemAdministrator->value || ($validated['is_active'] ?? true) === false);
+        $updatedUser = DB::transaction(function () use ($request, $user, $validated, $audit): User {
+            /** @var User $user */
+            $user = User::query()->lockForUpdate()->findOrFail($user->id);
+            $requestedActive = array_key_exists('is_active', $validated) ? (bool) $validated['is_active'] : $user->is_active;
+            $currentRole = $user->operationalRole();
+            $nextRole = $validated['role'] ?? $currentRole?->value;
+            $removesAdministrator = $currentRole === RoleName::SystemAdministrator
+                && ($nextRole !== RoleName::SystemAdministrator->value || ! $requestedActive);
+            $activeAdministrators = User::query()
+                ->role(RoleName::SystemAdministrator->value)
+                ->where('is_active', true)
+                ->whereNull('suspended_at')
+                ->lockForUpdate()
+                ->get(['users.id']);
 
-        if (($user->is($request->user()) && ($validated['is_active'] ?? true) === false) || ($removesAdministrator && $this->activeAdministratorCount() <= 1)) {
-            throw ValidationException::withMessages(['user' => 'The last active System Administrator cannot be suspended or demoted.']);
-        }
+            if (($user->is($request->user()) && ! $requestedActive) || ($removesAdministrator && $activeAdministrators->count() <= 1)) {
+                throw ValidationException::withMessages(['user' => 'The last active System Administrator cannot be suspended or demoted.']);
+            }
 
-        DB::transaction(function () use ($request, $user, $validated, $audit, $currentRole): void {
+            $roleChanged = array_key_exists('role', $validated) && $nextRole !== $currentRole?->value;
+
             if (array_key_exists('role', $validated)) {
                 $user->syncRoles([$validated['role']]);
             }
             if (array_key_exists('is_active', $validated)) {
-                $user->update(['is_active' => $validated['is_active'], 'suspended_at' => $validated['is_active'] ? null : now()]);
+                $isActive = (bool) $validated['is_active'];
+                $user->update(['is_active' => $isActive, 'suspended_at' => $isActive ? null : now()]);
+
+                if (! $isActive || $roleChanged) {
+                    $user->tokens()->delete();
+                }
+            } elseif ($roleChanged) {
+                $user->tokens()->delete();
             }
             DB::table('sessions')->where('user_id', $user->id)->delete();
             $audit->handle($request->user(), $user, 'user.access_updated', ['role' => $currentRole?->value, 'is_active' => ! $user->suspended_at], ['role' => $user->operationalRole()?->value, 'is_active' => $user->is_active]);
+
+            return $user->refresh()->load('roles:id,name');
         });
 
-        return response()->json(['data' => $user->refresh()->load('roles:id,name')]);
-    }
-
-    private function activeAdministratorCount(): int
-    {
-        return User::role(RoleName::SystemAdministrator->value)->where('is_active', true)->whereNull('suspended_at')->count();
+        return response()->json(['data' => $updatedUser]);
     }
 }
