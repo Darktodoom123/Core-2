@@ -2,6 +2,7 @@ import type {
   ApiErrorResponse,
   DispatchJob,
   LocationSharePayload,
+  User,
 } from '../types/index.js';
 
 export class ApiClientError extends Error {
@@ -98,6 +99,48 @@ export class FieldApiClient {
     }
 
     return body as T;
+  }
+
+  public async login(
+    email: string,
+    password: string,
+    deviceName?: string
+  ): Promise<{ token: string; user: User }> {
+    const url = `${this.baseUrl}/api/v1/auth/login`;
+    const response = await this.fetchFn(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        device_name: deviceName ?? 'React Native Field Mobile',
+      }),
+    });
+
+    return this.handleResponse<{ token: string; user: User }>(response);
+  }
+
+  public async fetchMe(): Promise<User> {
+    const url = `${this.baseUrl}/api/v1/auth/me`;
+    const response = await this.fetchFn(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<User>(response);
+  }
+
+  public async logout(): Promise<{ message: string }> {
+    const url = `${this.baseUrl}/api/v1/auth/logout`;
+    const response = await this.fetchFn(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<{ message: string }>(response);
   }
 
   public async fetchAssignedJobs(): Promise<DispatchJob[]> {

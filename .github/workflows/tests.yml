@@ -43,7 +43,7 @@ jobs:
           node-version: '22'
 
       - name: Install Node Dependencies
-        run: npm i
+        run: npm ci
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -56,6 +56,12 @@ jobs:
 
       - name: Build Assets
         run: npm run build
+
+      - name: Mobile Package Typecheck
+        run: npm run types:check:mobile
+
+      - name: Mobile Package Tests
+        run: npm run test:mobile
 
       - name: Run Type Analysis
         run: composer types:check

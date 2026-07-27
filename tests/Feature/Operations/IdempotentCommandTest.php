@@ -50,6 +50,8 @@ it('replays cached responses for duplicate command submissions with identical co
 
     $commandId = (string) Str::uuid();
 
+    $capturedAt = now()->toIso8601String();
+
     // First command submission
     $response1 = $this->actingAs($driver)
         ->withHeader('Idempotency-Key', $commandId)
@@ -59,7 +61,7 @@ it('replays cached responses for duplicate command submissions with identical co
             'accuracy_metres' => 5,
             'sharing_enabled' => true,
             'dispatch_job_id' => $job->id,
-            'captured_at' => now()->toIso8601String(),
+            'captured_at' => $capturedAt,
         ]);
 
     $response1->assertRedirect('/');
@@ -76,7 +78,7 @@ it('replays cached responses for duplicate command submissions with identical co
             'accuracy_metres' => 5,
             'sharing_enabled' => true,
             'dispatch_job_id' => $job->id,
-            'captured_at' => now()->toIso8601String(),
+            'captured_at' => $capturedAt,
         ]);
 
     // Replayed response returns cached result without creating a duplicate LocationUpdate row

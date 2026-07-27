@@ -8,7 +8,7 @@ import { ApiClientError } from './apiClient.js';
 
 export type OutboxListener = (commands: OutboxCommand[]) => void;
 
-function generateUUID(): string {
+export function createCommandId(): string {
   if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
     return globalThis.crypto.randomUUID();
   }
@@ -104,7 +104,7 @@ export class CommandOutboxManager {
 
     const now = new Date().toISOString();
     const command: OutboxCommand = {
-      id: generateUUID(),
+      id: createCommandId(),
       type: 'respond_assignment',
       jobId,
       assignmentId,
@@ -142,7 +142,7 @@ export class CommandOutboxManager {
 
     const now = new Date().toISOString();
     const command: OutboxCommand = {
-      id: generateUUID(),
+      id: createCommandId(),
       type: 'transition_status',
       jobId,
       payload,
@@ -162,7 +162,7 @@ export class CommandOutboxManager {
   public enqueueShareLocation(payload: LocationSharePayload): OutboxCommand {
     const now = new Date().toISOString();
     const command: OutboxCommand = {
-      id: generateUUID(),
+      id: createCommandId(),
       type: 'share_location',
       jobId: payload.dispatch_job_id ?? null,
       payload: payload as unknown as Record<string, unknown>,

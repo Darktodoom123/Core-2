@@ -2,6 +2,9 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "workspaces": [
+        "packages/*"
+    ],
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
@@ -10,7 +13,9 @@
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
-        "types:check": "tsc --noEmit"
+        "types:check": "tsc --noEmit",
+        "types:check:mobile": "npm --prefix packages/field-mobile run types:check",
+        "test:mobile": "npm --prefix packages/field-mobile run test"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",

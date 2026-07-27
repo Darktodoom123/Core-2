@@ -10,7 +10,10 @@ describe('CommandOutboxManager', () => {
     const outbox = new CommandOutboxManager();
     const cmd = outbox.enqueueTransitionStatus(10, 'accepted', 1);
 
-    assert.ok(cmd.id.length > 20);
+    assert.match(
+      cmd.id,
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     assert.equal(cmd.state, 'queued');
     assert.equal(cmd.jobId, 10);
     assert.equal(cmd.expectedVersion, 1);
