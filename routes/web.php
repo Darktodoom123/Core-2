@@ -93,14 +93,36 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     });
 });
 
-if (app()->environment('local')) {
+if (app()->environment(['local', 'testing'])) {
     Route::get('/dev/users', function () {
-        return response()->json(User::query()->select('id', 'name', 'email')->get());
+        return response()->json(
+            User::query()
+                ->with('roles')
+                ->select('id', 'name', 'email')
+                ->where('is_active', true)
+                ->whereNull('suspended_at')
+                ->whereNotNull('email_verified_at')
+                ->orderBy('name')
+                ->get()
+                ->map(static fn (User $user): array => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role_label' => $user->operationalRole()?->label(),
+                ])
+                ->values(),
+        );
     });
 
     Route::post('/dev/login/{user}', function (User $user) {
+        abort_unless(
+            $user->is_active && $user->suspended_at === null && $user->hasVerifiedEmail(),
+            404,
+        );
+
         Auth::login($user);
+        request()->session()->regenerate();
 
         return redirect()->route('home');
-    });
+    })->whereNumber('user');
 }
