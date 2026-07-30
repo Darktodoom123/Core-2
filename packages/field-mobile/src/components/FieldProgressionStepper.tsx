@@ -1,130 +1,204 @@
-import React from 'react';
-import type { DispatchJob, DispatchStatus } from '../types/index.js';
+﻿import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { DispatchJob, DispatchStatus } from '../types/index';
+import { colors, sharedStyles } from './nativeStyles';
 
 export interface FieldProgressionStepperProps {
-  job: DispatchJob;
-  onTransitionStatus: (jobId: number, nextStatus: DispatchStatus, version: number) => void;
+    job: DispatchJob;
+    onTransitionStatus: (
+        jobId: number,
+        nextStatus: DispatchStatus,
+        version: number,
+    ) => void;
 }
 
-export const FieldProgressionStepper: React.FC<FieldProgressionStepperProps> = ({
-  job,
-  onTransitionStatus,
-}) => {
-  const progression = job.progression;
+export const FieldProgressionStepper: React.FC<
+    FieldProgressionStepperProps
+> = ({ job, onTransitionStatus }) => {
+    const progression = job.progression;
 
-  if (!progression || !job.capabilities.can_update_status) {
+    if (!progression || !job.capabilities.can_update_status) {
+        return (
+            <View style={styles.inactiveCard}>
+                <Text style={styles.inactiveText}>
+                    Status progression is not active for this dispatch.
+                </Text>
+            </View>
+        );
+    }
+
+    const nextStep = progression.next;
+
     return (
-      <div
-        style={{
-          padding: '12px',
-          backgroundColor: '#fafafa',
-          border: '1px solid #d9d9d9',
-          borderRadius: '8px',
-          marginBottom: '16px',
-        }}
-      >
-        <span style={{ fontSize: '14px', color: '#8c8c8c' }}>
-          Status progression is not active for this dispatch.
-        </span>
-      </div>
-    );
-  }
+        <View style={styles.card} testID="field-progression-stepper">
+            <Text accessibilityRole="header" style={styles.heading}>
+                Forward-only field progression
+            </Text>
 
-  const nextStep = progression.next;
-
-  return (
-    <div
-      style={{
-        padding: '16px',
-        backgroundColor: '#ffffff',
-        border: '1px solid #e8e8e8',
-        borderRadius: '8px',
-        marginBottom: '16px',
-      }}
-      data-testid="field-progression-stepper"
-    >
-      <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#262626' }}>
-        🚀 Forward-Only Field Progression
-      </h3>
-
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto' }}>
-        {progression.steps.map((step) => {
-          let bgColor = '#f0f0f0';
-          let textColor = '#595959';
-          let borderColor = '#d9d9d9';
-
-          if (step.state === 'complete') {
-            bgColor = '#f6ffed';
-            textColor = '#389e0d';
-            borderColor = '#b7eb8f';
-          } else if (step.state === 'current') {
-            bgColor = '#e6f7ff';
-            textColor = '#096dd9';
-            borderColor = '#91d5ff';
-          }
-
-          return (
-            <div
-              key={step.status.value}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: bgColor,
-                color: textColor,
-                border: `1px solid ${borderColor}`,
-                borderRadius: '16px',
-                fontSize: '12px',
-                fontWeight: step.state === 'current' ? 'bold' : 'normal',
-                whiteSpace: 'nowrap',
-              }}
-              data-testid={`step-pill-${step.status.value}`}
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.steps}
             >
-              {step.state === 'complete' ? '✓ ' : ''}
-              {step.status.label}
-            </div>
-          );
-        })}
-      </div>
+                {progression.steps.map((step) => {
+                    const isComplete = step.state === 'complete';
+                    const isCurrent = step.state === 'current';
 
-      {nextStep ? (
-        <div
-          style={{
-            padding: '12px',
-            backgroundColor: '#f9f9f9',
-            borderLeft: '4px solid #1890ff',
-            borderRadius: '4px',
-          }}
-          data-testid="next-step-card"
-        >
-          <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '4px', color: '#1890ff' }}>
-            Next Milestone: {nextStep.confirmation_title}
-          </div>
-          <div style={{ fontSize: '13px', color: '#595959', marginBottom: '12px' }}>
-            {nextStep.confirmation_message}
-          </div>
+                    return (
+                        <View
+                            key={step.status.value}
+                            accessibilityLabel={`${step.status.label}: ${step.state}`}
+                            style={[
+                                styles.stepPill,
+                                isComplete && styles.completePill,
+                                isCurrent && styles.currentPill,
+                            ]}
+                            testID={`step-pill-${step.status.value}`}
+                        >
+                            <Text
+                                style={[
+                                    styles.stepText,
+                                    isComplete && styles.completeText,
+                                    isCurrent && styles.currentText,
+                                ]}
+                            >
+                                {isComplete ? '✓ ' : ''}
+                                {step.status.label}
+                            </Text>
+                        </View>
+                    );
+                })}
+            </ScrollView>
 
-          <button
-            type="button"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#1890ff',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              cursor: 'pointer',
-            }}
-            onClick={() => onTransitionStatus(job.id, nextStep.status.value, job.version)}
-            data-testid="advance-status-btn"
-          >
-            {nextStep.action_label} (v{job.version})
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontSize: '14px', color: '#52c41a', fontWeight: 'bold' }}>
-          ✓ {progression.message}
-        </div>
-      )}
-    </div>
-  );
+            {nextStep ? (
+                <View style={styles.nextCard} testID="next-step-card">
+                    <Text style={styles.nextTitle}>
+                        Next milestone: {nextStep.confirmation_title}
+                    </Text>
+                    <Text style={styles.nextMessage}>
+                        {nextStep.confirmation_message}
+                    </Text>
+                    <Pressable
+                        accessibilityLabel={`${nextStep.action_label}, version ${job.version}`}
+                        accessibilityRole="button"
+                        onPress={() =>
+                            onTransitionStatus(
+                                job.id,
+                                nextStep.status.value,
+                                job.version,
+                            )
+                        }
+                        style={({ pressed }) => [
+                            sharedStyles.button,
+                            styles.advanceButton,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="advance-status-btn"
+                    >
+                        <Text style={sharedStyles.buttonText}>
+                            {nextStep.action_label} (v{job.version})
+                        </Text>
+                    </Pressable>
+                </View>
+            ) : (
+                <Text style={styles.completeMessage}>
+                    ✓ {progression.message}
+                </Text>
+            )}
+        </View>
+    );
 };
+
+const styles = StyleSheet.create({
+    inactiveCard: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginBottom: 16,
+        padding: 14,
+    },
+    inactiveText: {
+        color: colors.secondary,
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    card: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginBottom: 16,
+        padding: 16,
+    },
+    heading: {
+        color: colors.text,
+        fontSize: 17,
+        fontWeight: '800',
+        marginBottom: 14,
+    },
+    steps: {
+        gap: 8,
+        paddingBottom: 4,
+    },
+    stepPill: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 18,
+        borderWidth: 1,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    completePill: {
+        backgroundColor: colors.greenSoft,
+        borderColor: colors.greenBorder,
+    },
+    currentPill: {
+        backgroundColor: colors.blueSoft,
+        borderColor: colors.blueBorder,
+    },
+    stepText: {
+        color: colors.secondary,
+        fontSize: 12,
+    },
+    completeText: {
+        color: colors.green,
+        fontWeight: '700',
+    },
+    currentText: {
+        color: colors.blue,
+        fontWeight: '800',
+    },
+    nextCard: {
+        backgroundColor: colors.surfaceMuted,
+        borderLeftColor: colors.blue,
+        borderLeftWidth: 4,
+        borderRadius: 6,
+        marginTop: 16,
+        padding: 14,
+    },
+    nextTitle: {
+        color: colors.blue,
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    nextMessage: {
+        color: colors.secondary,
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 12,
+        marginTop: 6,
+    },
+    advanceButton: {
+        backgroundColor: colors.blue,
+    },
+    completeMessage: {
+        color: colors.green,
+        fontSize: 14,
+        fontWeight: '800',
+        marginTop: 16,
+    },
+    pressed: {
+        opacity: 0.78,
+    },
+});

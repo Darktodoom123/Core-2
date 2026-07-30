@@ -1,74 +1,64 @@
 export interface TokenStorageProvider {
-  getToken(): Promise<string | null>;
-  setToken(token: string): Promise<void>;
-  clearToken(): Promise<void>;
+    getToken(): Promise<string | null>;
+    setToken(token: string): Promise<void>;
+    clearToken(): Promise<void>;
 }
 
-export class MemoryTokenStorage implements TokenStorageProvider {
-  private token: string | null = null;
-
-  async getToken(): Promise<string | null> {
-    return this.token;
-  }
-
-  async setToken(token: string): Promise<void> {
-    this.token = token;
-  }
-
-  async clearToken(): Promise<void> {
-    this.token = null;
-  }
+export interface SecureStoreProvider {
+    getItemAsync(key: string): Promise<string | null>;
+    setItemAsync(key: string, value: string): Promise<void>;
+    deleteItemAsync(key: string): Promise<void>;
 }
+
+const expoSecureStore: SecureStoreProvider = {
+    getItemAsync: async (key) => {
+        const secureStore = await import('expo-secure-store');
+
+        return secureStore.getItemAsync(key, {
+            keychainService: 'com.core2.fieldmobile.authentication',
+        });
+    },
+    setItemAsync: async (key, value) => {
+        const secureStore = await import('expo-secure-store');
+
+        await secureStore.setItemAsync(key, value, {
+            keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+            keychainService: 'com.core2.fieldmobile.authentication',
+        });
+    },
+    deleteItemAsync: async (key) => {
+        const secureStore = await import('expo-secure-store');
+
+        await secureStore.deleteItemAsync(key, {
+            keychainService: 'com.core2.fieldmobile.authentication',
+        });
+    },
+};
 
 export class SecureTokenStorage implements TokenStorageProvider {
-  private readonly storageKey: string;
-  private memoryFallback: MemoryTokenStorage;
+    private readonly storageKey: string;
+    private readonly secureStore: SecureStoreProvider;
 
-  constructor(storageKey = 'core2_field_bearer_token') {
-    this.storageKey = storageKey;
-    this.memoryFallback = new MemoryTokenStorage();
-  }
-
-  async getToken(): Promise<string | null> {
-    try {
-      if (typeof globalThis !== 'undefined' && (globalThis as any).ExpoSecureStore) {
-        return await (globalThis as any).ExpoSecureStore.getItemAsync(this.storageKey);
-      }
-    } catch {
-      // Fallback on native storage error or missing module
+    constructor(
+        storageKey = 'core2_field_bearer_token',
+        secureStore: SecureStoreProvider = expoSecureStore,
+    ) {
+        this.storageKey = storageKey;
+        this.secureStore = secureStore;
     }
 
-    return this.memoryFallback.getToken();
-  }
-
-  async setToken(token: string): Promise<void> {
-    try {
-      if (typeof globalThis !== 'undefined' && (globalThis as any).ExpoSecureStore) {
-        await (globalThis as any).ExpoSecureStore.setItemAsync(this.storageKey, token);
-
-        return;
-      }
-    } catch {
-      // Fallback on native storage error or missing module
+    async getToken(): Promise<string | null> {
+        return this.secureStore.getItemAsync(this.storageKey);
     }
 
-    await this.memoryFallback.setToken(token);
-  }
-
-  async clearToken(): Promise<void> {
-    try {
-      if (typeof globalThis !== 'undefined' && (globalThis as any).ExpoSecureStore) {
-        await (globalThis as any).ExpoSecureStore.deleteItemAsync(this.storageKey);
-
-        return;
-      }
-    } catch {
-      // Fallback on native storage error or missing module
+    async setToken(token: string): Promise<void> {
+        await this.secureStore.setItemAsync(this.storageKey, token);
     }
 
-    await this.memoryFallback.clearToken();
-  }
+    async clearToken(): Promise<void> {
+        await this.secureStore.deleteItemAsync(this.storageKey);
+    }
 }
 
-export const defaultTokenStorage: TokenStorageProvider = new SecureTokenStorage();
-
+export const defaultTokenStorage: TokenStorageProvider =
+    new SecureTokenStorage();

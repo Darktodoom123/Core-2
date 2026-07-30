@@ -1,103 +1,173 @@
-import React, { useState } from 'react';
-import type { LocationCoordinates, LocationSharingService } from '../services/locationService.js';
-import type { DispatchJob, User } from '../types/index.js';
+﻿import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import type {
+    LocationCoordinates,
+    LocationSharingService,
+} from '../services/locationService';
+import type { DispatchJob, User } from '../types/index';
+import { colors, sharedStyles } from './nativeStyles';
 
 export interface LocationSharingCardProps {
-  user: User;
-  job?: DispatchJob | null;
-  locationService: LocationSharingService;
-  getCurrentLocation?: () => Promise<LocationCoordinates>;
-  onLocationQueued?: (commandId: string) => void;
+    user: User;
+    job?: DispatchJob | null;
+    locationService: LocationSharingService;
+    getCurrentLocation?: () => Promise<LocationCoordinates>;
+    onLocationQueued?: (commandId: string) => void;
 }
 
 export const LocationSharingCard: React.FC<LocationSharingCardProps> = ({
-  user,
-  job,
-  locationService,
-  getCurrentLocation,
-  onLocationQueued,
+    user,
+    job,
+    locationService,
+    getCurrentLocation,
+    onLocationQueued,
 }) => {
-  const canShare = locationService.canShareLocation(user, job);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+    const canShare = locationService.canShareLocation(user, job);
+    const [statusMsg, setStatusMsg] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-  if (!canShare) {
-    return null;
-  }
-
-  const handleShareNow = async () => {
-    if (!getCurrentLocation) {
-      setStatusMsg('Location provider is not available on this device.');
-
-      return;
+    if (!canShare) {
+        return null;
     }
 
-    setIsLoading(true);
+    const handleShareNow = async () => {
+        if (!getCurrentLocation) {
+            setStatusMsg('Location provider is not available on this device.');
 
-    try {
-      const coords = await getCurrentLocation();
-      const res = locationService.shareLocation(user, job ?? null, null, coords, 'Manual field check-in');
-
-      if (res.success && res.commandId) {
-        setStatusMsg(`Location queued for sync (ID: ${res.commandId.slice(0, 8)})`);
-
-        if (onLocationQueued) {
-          onLocationQueued(res.commandId);
+            return;
         }
-      } else {
-        setStatusMsg(`Failed: ${res.reason}`);
-      }
-    } catch (error: unknown) {
-      setStatusMsg(error instanceof Error ? error.message : 'Unable to read the device location.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  return (
-    <div
-      style={{
-        padding: '16px',
-        backgroundColor: '#f6ffed',
-        border: '1px solid #b7eb8f',
-        borderRadius: '8px',
-        marginBottom: '16px',
-      }}
-      data-testid="location-sharing-card"
-    >
-      <h3 style={{ margin: '0 0 8px 0', color: '#274e13', fontSize: '16px' }}>
-        📍 Own Location Sharing Active
-      </h3>
-      <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#595959' }}>
-        Location tracking is authorized for your active assignment under server policy rules.
-      </p>
+        setIsLoading(true);
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          type="button"
-          style={{
-            padding: '8px 14px',
-            backgroundColor: '#52c41a',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            fontSize: '13px',
-          }}
-          disabled={isLoading || !getCurrentLocation}
-          onClick={handleShareNow}
-          data-testid="share-location-btn"
-        >
-          {isLoading ? 'Reading Device Location...' : getCurrentLocation ? 'Share Current Location Now' : 'Location Unavailable'}
-        </button>
+        try {
+            const coords = await getCurrentLocation();
+            const result = locationService.shareLocation(
+                user,
+                job ?? null,
+                null,
+                coords,
+                'Manual field check-in',
+            );
 
-        {statusMsg ? (
-          <span role="status" aria-live="polite" style={{ fontSize: '12px', color: '#389e0d' }} data-testid="location-status-msg">
-            {statusMsg}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
+            if (result.success && result.commandId) {
+                setStatusMsg(
+                    `Location queued for sync (${result.commandId.slice(0, 8)})`,
+                );
+                onLocationQueued?.(result.commandId);
+            } else {
+                setStatusMsg(`Failed: ${result.reason}`);
+            }
+        } catch (error: unknown) {
+            setStatusMsg(
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to read the device location.',
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <View style={styles.card} testID="location-sharing-card">
+            <Text accessibilityRole="header" style={styles.heading}>
+                Own location sharing active
+            </Text>
+            <Text style={styles.description}>
+                Location sharing is authorized for this active assignment under
+                server policy rules.
+            </Text>
+            <View style={styles.row}>
+                <Pressable
+                    accessibilityLabel={
+                        isLoading
+                            ? 'Reading device location'
+                            : getCurrentLocation
+                              ? 'Share current location now'
+                              : 'Location unavailable'
+                    }
+                    accessibilityRole="button"
+                    accessibilityState={{
+                        busy: isLoading,
+                        disabled: isLoading || !getCurrentLocation,
+                    }}
+                    disabled={isLoading || !getCurrentLocation}
+                    onPress={() => void handleShareNow()}
+                    style={({ pressed }) => [
+                        sharedStyles.button,
+                        styles.shareButton,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="share-location-btn"
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                    ) : (
+                        <Text style={sharedStyles.buttonText}>
+                            {getCurrentLocation
+                                ? 'Share current location'
+                                : 'Location unavailable'}
+                        </Text>
+                    )}
+                </Pressable>
+                {statusMsg ? (
+                    <Text
+                        accessibilityLiveRegion="polite"
+                        style={styles.status}
+                        testID="location-status-msg"
+                    >
+                        {statusMsg}
+                    </Text>
+                ) : null}
+            </View>
+        </View>
+    );
 };
+
+const styles = StyleSheet.create({
+    card: {
+        backgroundColor: colors.greenSoft,
+        borderColor: colors.greenBorder,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginBottom: 16,
+        padding: 16,
+    },
+    heading: {
+        color: colors.greenDark,
+        fontSize: 17,
+        fontWeight: '800',
+    },
+    description: {
+        color: colors.secondary,
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 12,
+        marginTop: 8,
+    },
+    row: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    shareButton: {
+        backgroundColor: colors.green,
+        flexGrow: 1,
+    },
+    status: {
+        color: colors.greenDark,
+        flexShrink: 1,
+        fontSize: 13,
+        lineHeight: 19,
+    },
+    pressed: {
+        opacity: 0.78,
+    },
+});
