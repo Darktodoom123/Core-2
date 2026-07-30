@@ -98,7 +98,11 @@ export default [
             '@stylistic': stylistic,
         },
         rules: {
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
             '@stylistic/padding-line-between-statements': [
                 'error',
                 ...paddingAroundControl,
@@ -111,6 +115,11 @@ export default [
             'node_modules',
             'public',
             'bootstrap/ssr',
+            '.android-sdk/**',
+            'android-sdk-runtime/**',
+            'packages/field-mobile/.expo/**',
+            'packages/field-mobile/.expo-export/**',
+            'packages/field-mobile/dist/**',
             'tailwind.config.js',
             'vite.config.ts',
             '.agents/**',
@@ -120,6 +129,34 @@ export default [
             'resources/js/wayfinder/**',
         ],
     },
+    {
+        files: [
+            'packages/field-mobile/**/*.cjs',
+            'packages/field-mobile/plugins/**/*.cjs',
+            'packages/field-mobile/scripts/**/*.cjs',
+        ],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off',
+        },
+    },
+    {
+        files: ['packages/field-mobile/e2e/**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.jest,
+                ...globals.node,
+                by: 'readonly',
+                device: 'readonly',
+                element: 'readonly',
+                waitFor: 'readonly',
+            },
+        },
+    },
     prettier, // Turn off all rules that might conflict with Prettier
     {
         plugins: {
@@ -127,7 +164,11 @@ export default [
         },
         rules: {
             curly: ['error', 'all'],
-            '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+            '@stylistic/brace-style': [
+                'error',
+                '1tbs',
+                { allowSingleLine: false },
+            ],
         },
     },
 ];

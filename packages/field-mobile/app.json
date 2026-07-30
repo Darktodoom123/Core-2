@@ -1,16 +1,33 @@
 {
-  "expo": {
-    "name": "Core 2 Field App",
-    "slug": "core-2-field-mobile",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.core2.fieldmobile"
-    },
-    "android": {
-      "package": "com.core2.fieldmobile"
+    "expo": {
+        "name": "Core 2 Field App",
+        "slug": "core-2-field-mobile",
+        "version": "1.0.0",
+        "orientation": "default",
+        "userInterfaceStyle": "automatic",
+        "plugins": [
+            [
+                "expo-dev-client",
+                {
+                    "skipOnboarding": true,
+                    "showMenuAtLaunch": false,
+                    "toolsButton": false
+                }
+            ],
+            "expo-secure-store",
+            "./plugins/with-gradle-problems-report.cjs",
+            "./plugins/with-detox-android.cjs",
+            "expo-splash-screen"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.core2.fieldmobile",
+            "infoPlist": {
+                "ITSAppUsesNonExemptEncryption": false
+            }
+        },
+        "android": {
+            "package": "com.core2.fieldmobile"
+        }
     }
-  }
 }
