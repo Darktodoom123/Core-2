@@ -20,19 +20,15 @@ if (process.env.DETOX_TEST_PATH) {
     detoxArguments.push(process.env.DETOX_TEST_PATH);
 }
 
-const result = spawnSync(
-    process.execPath,
-    detoxArguments,
-    {
-        cwd: path.resolve(__dirname, '..'),
-        env: {
-            ...process.env,
-            LOCALAPPDATA: path.join(detoxRuntime, 'local'),
-            APPDATA: path.join(detoxRuntime, 'roaming'),
-        },
-        stdio: 'inherit',
+const result = spawnSync(process.execPath, detoxArguments, {
+    cwd: path.resolve(__dirname, '..'),
+    env: {
+        ...process.env,
+        LOCALAPPDATA: path.join(detoxRuntime, 'local'),
+        APPDATA: path.join(detoxRuntime, 'roaming'),
     },
-);
+    stdio: 'inherit',
+});
 
 if (result.error) {
     throw result.error;
