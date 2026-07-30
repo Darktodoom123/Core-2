@@ -144,8 +144,9 @@ function AssetsSurface({
                                                     className={cn(
                                                         'w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
                                                         isSelected &&
-                                                            'border-l-4 border-brand-strong bg-brand-soft/30',
+                                                            'bg-brand-soft/60',
                                                     )}
+                                                    aria-pressed={isSelected}
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
                                                         <span className="font-semibold text-ink">
@@ -1416,7 +1417,15 @@ function FuelSurface({
                                             nextAction.status === 'approved' &&
                                             capabilities.approve_fuel && (
                                                 <div className="mt-2">
+                                                    <label
+                                                        htmlFor={`fuel-decision-reason-${request.id}`}
+                                                        className="sr-only"
+                                                    >
+                                                        Decision reason for{' '}
+                                                        {request.reference}
+                                                    </label>
                                                     <input
+                                                        id={`fuel-decision-reason-${request.id}`}
                                                         type="text"
                                                         placeholder="Decision reason (optional for approval, recommended for rejection)"
                                                         value={
@@ -1432,7 +1441,7 @@ function FuelSurface({
                                                                         .value,
                                                             })
                                                         }
-                                                        className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-xs"
+                                                        className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-xs"
                                                     />
                                                 </div>
                                             )}
@@ -2090,29 +2099,57 @@ function ResponsiveTable({
     rows: Array<{ key: number; cells: ReactNode[] }>;
 }) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-            <table className="w-full min-w-[48rem] text-left text-sm">
-                <thead className="bg-surface-subtle text-ink-soft">
-                    <tr>
-                        {headers.map((header) => (
-                            <th key={header} className="px-4 py-3 font-medium">
-                                {header}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.map((row) => (
-                        <tr key={row.key} className="border-t border-line">
-                            {row.cells.map((cell, index) => (
-                                <td key={headers[index]} className="px-4 py-3">
+        <div className="overflow-hidden rounded-xl border border-line bg-surface">
+            <div className="divide-y divide-line md:hidden">
+                {rows.map((row) => (
+                    <dl key={row.key} className="space-y-2 px-4 py-3">
+                        {row.cells.map((cell, index) => (
+                            <div
+                                key={headers[index]}
+                                className="grid grid-cols-[minmax(7rem,0.7fr)_minmax(0,1fr)] gap-3 text-sm"
+                            >
+                                <dt className="text-ink-soft">
+                                    {headers[index]}
+                                </dt>
+                                <dd className="min-w-0 text-right text-ink">
                                     {cell}
-                                </td>
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                ))}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-subtle text-ink-soft">
+                        <tr>
+                            {headers.map((header) => (
+                                <th
+                                    key={header}
+                                    scope="col"
+                                    className="px-4 py-3 font-medium"
+                                >
+                                    {header}
+                                </th>
                             ))}
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {rows.map((row) => (
+                            <tr key={row.key} className="border-t border-line">
+                                {row.cells.map((cell, index) => (
+                                    <td
+                                        key={headers[index]}
+                                        className="px-4 py-3"
+                                    >
+                                        {cell}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

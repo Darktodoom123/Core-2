@@ -4,6 +4,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ClipboardList,
+    LayoutDashboard,
     Fuel,
     LogOut,
     MapPin,
@@ -25,6 +26,7 @@ import type {
 } from '@/types/workspace';
 
 const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
+    overview: LayoutDashboard,
     dispatch: ClipboardList,
     assets: Truck,
     fuel: Fuel,
@@ -79,6 +81,7 @@ export function LiveWorkspaceShell({
             )}
 
             <aside
+                id="workspace-navigation"
                 className={cn(
                     'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-white/10 bg-ink text-white transition-transform duration-200 ease-out md:sticky md:top-0 md:translate-x-0',
                     mobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -190,6 +193,7 @@ export function LiveWorkspaceShell({
                                 ? 'Expand navigation'
                                 : 'Collapse navigation'
                         }
+                        aria-expanded={!collapsed}
                     >
                         {collapsed ? (
                             <ChevronRight
@@ -216,6 +220,8 @@ export function LiveWorkspaceShell({
                         onClick={() => setMobileOpen(true)}
                         className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-subtle md:hidden"
                         aria-label="Open navigation"
+                        aria-expanded={mobileOpen}
+                        aria-controls="workspace-navigation"
                     >
                         <Menu className="h-5 w-5" aria-hidden="true" />
                     </button>

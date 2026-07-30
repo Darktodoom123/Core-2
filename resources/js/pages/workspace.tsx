@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { AlertTriangle, Check, Info, LockKeyhole, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
@@ -170,6 +171,19 @@ export default function Workspace(props: WorkspacePageProps) {
                             />
                         </Panel>
                     </div>
+                ) : availableSection === 'overview' ? (
+                    <OperationsOverviewDashboard
+                        jobs={props.jobs}
+                        assets={props.assets}
+                        fuelRequests={props.fuelRequests}
+                        locations={props.locations ?? []}
+                        approvals={props.approvals}
+                        capabilities={props.capabilities}
+                        availableSections={props.navigation.map(
+                            (item) => item.id,
+                        )}
+                        onSectionChange={changeSection}
+                    />
                 ) : availableSection === 'dispatch' ? (
                     <LiveDispatchWorkspace
                         jobs={props.jobs}

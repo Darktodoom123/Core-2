@@ -609,7 +609,7 @@ export function LiveDispatchWorkspace({
                                         setQuery(event.target.value)
                                     }
                                     placeholder="Filter jobs or resources"
-                                    className="h-10 w-64 rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-xs placeholder:text-ink-soft"
+                                    className="h-11 w-64 rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-xs placeholder:text-ink-soft"
                                 />
                             </label>
 
@@ -1361,7 +1361,7 @@ function ConflictReviewList({
                             {conflict.jobId && (
                                 <Link
                                     href={`/operations/dispatch-jobs/${conflict.jobId}`}
-                                    className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
+                                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
                                 >
                                     Open assignment workspace
                                     <ChevronRight

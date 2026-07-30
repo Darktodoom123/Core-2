@@ -34,7 +34,7 @@ export function Button({
                 variant === 'quiet' &&
                     'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                 variant === 'danger' && 'bg-danger text-white hover:bg-red-700',
-                size === 'sm' && 'min-h-9 px-3 text-sm',
+                size === 'sm' && 'min-h-10 px-3 text-sm',
                 size === 'md' && 'px-4 text-sm',
                 size === 'icon' && 'h-11 w-11 p-0',
                 className,

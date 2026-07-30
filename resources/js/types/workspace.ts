@@ -291,6 +291,7 @@ export interface LocationUpdateViewModel {
 }
 
 export type WorkspaceSection =
+    | 'overview'
     | 'dispatch'
     | 'assets'
     | 'fuel'

@@ -389,6 +389,27 @@ final class OperationsWorkspaceViewModel
 
         $items = [
             [
+                'id' => 'overview',
+                'label' => 'Operations overview',
+                'permissions' => [
+                    PermissionName::DispatchViewAll,
+                    PermissionName::DispatchViewAssigned,
+                    PermissionName::FleetViewAll,
+                    PermissionName::FleetViewAssigned,
+                    PermissionName::EquipmentViewAll,
+                    PermissionName::EquipmentViewAssigned,
+                    PermissionName::FuelViewAll,
+                    PermissionName::FuelViewOwn,
+                    PermissionName::FuelRequest,
+                    PermissionName::TrackingViewAll,
+                    PermissionName::TrackingShareOwn,
+                    PermissionName::AssignmentsApprove,
+                    PermissionName::DispatchApprovePriority,
+                    PermissionName::UsersManage,
+                    PermissionName::AuditView,
+                ],
+            ],
+            [
                 'id' => 'dispatch',
                 'label' => $fieldRole ? "Today's work" : 'Dispatch workspace',
                 'permissions' => [
