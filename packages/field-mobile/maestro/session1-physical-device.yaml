@@ -1,0 +1,23 @@
+appId: com.core2.fieldmobile
+name: Session 1 physical-device field journey
+---
+- launchApp:
+      clearState: true
+- assertVisible:
+      id: login-screen
+- tapOn:
+      id: login-email-input
+- inputText: ${FIELD_TEST_EMAIL}
+- tapOn:
+      id: login-password-input
+- inputText: ${FIELD_TEST_PASSWORD}
+- tapOn:
+      id: login-submit-button
+- assertVisible: Active Field Assignments
+- assertNotVisible: ${FORBIDDEN_JOB_REFERENCE}
+- stopApp
+- launchApp
+- assertVisible: Active Field Assignments
+- tapOn: Sign out
+- assertVisible:
+      id: login-screen
