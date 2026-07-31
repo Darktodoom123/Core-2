@@ -101,8 +101,7 @@ final class FieldDispatchJobController extends Controller
             }
         };
 
-        /** @var JsonResponse */
-        return $idempotency->process(
+        $response = $idempotency->process(
             $request->user(),
             $commandId,
             'dispatch.assignment_response',
@@ -114,6 +113,9 @@ final class FieldDispatchJobController extends Controller
                 ...$request->validated(),
             ],
         );
+        assert($response instanceof JsonResponse);
+
+        return $response;
     }
 
     public function transitionStatus(
@@ -155,8 +157,7 @@ final class FieldDispatchJobController extends Controller
             }
         };
 
-        /** @var JsonResponse */
-        return $idempotency->process(
+        $response = $idempotency->process(
             $request->user(),
             $commandId,
             'dispatch.status_transition',
@@ -167,6 +168,9 @@ final class FieldDispatchJobController extends Controller
                 ...$request->validated(),
             ],
         );
+        assert($response instanceof JsonResponse);
+
+        return $response;
     }
 
     /**
