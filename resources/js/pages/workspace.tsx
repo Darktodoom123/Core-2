@@ -7,6 +7,7 @@ import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import { LiveWorkspaceShell } from '@/components/workspace/live-workspace-shell';
+import { getEcho } from '@/echo';
 import { cn } from '@/lib/utils';
 import type {
     WorkspaceFlash,
@@ -42,6 +43,37 @@ export default function Workspace(props: WorkspacePageProps) {
 
         return () => window.clearInterval(timer);
     }, []);
+
+    useEffect(() => {
+        const echo = getEcho();
+
+        if (!echo) {
+            return;
+        }
+
+        const channel = echo.private('operations.workspace');
+        channel.listen('.WorkspaceUpdated', () => {
+            router.reload();
+        });
+
+        const handleFocus = () => {
+            if (
+                isStale(
+                    props.workspace.refreshed_at,
+                    props.workspace.stale_after_seconds,
+                    Date.now(),
+                )
+            ) {
+                router.reload();
+            }
+        };
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            channel.stopListening('.WorkspaceUpdated');
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [props.workspace.refreshed_at, props.workspace.stale_after_seconds]);
 
     const changeSection = (nextSection: WorkspaceSection) => {
         setSection(nextSection);
