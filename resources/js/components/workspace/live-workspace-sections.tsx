@@ -3,7 +3,7 @@ import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { TrackingSurface } from '@/components/surfaces/tracking-surfaces';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { Button, EmptyState, PageHeading, Panel, Skeleton } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
 import type {
@@ -2223,4 +2223,37 @@ function formatDateTime(value: string | null) {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(value));
+}
+
+export function AssetListSkeleton() {
+    return (
+        <div className="space-y-px" aria-label="Loading operational assets">
+            {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="border-b border-line px-4 py-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-24 rounded-full" />
+                    </div>
+                    <Skeleton className="mt-2 h-3.5 w-36" />
+                    <Skeleton className="mt-2 h-3 w-28" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export function FuelTableSkeleton() {
+    return (
+        <div className="divide-y divide-line" aria-label="Loading fuel requests">
+            {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="flex items-center justify-between p-4">
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3.5 w-48" />
+                    </div>
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+            ))}
+        </div>
+    );
 }

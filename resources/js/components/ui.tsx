@@ -1,5 +1,7 @@
 import { AlertTriangle, Check, Inbox, Info, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import type { HTMLMotionProps } from 'motion/react';
 import type {
     ButtonHTMLAttributes,
     HTMLAttributes,
@@ -273,44 +275,79 @@ export function ToastStack({
             aria-live="polite"
             aria-atomic="false"
         >
-            {toasts.map((toast) => (
-                <div
-                    key={toast.id}
-                    className="animate-toast flex items-start gap-3 rounded-xl bg-ink p-4 text-white shadow-lg"
-                    role="status"
-                >
-                    {toast.tone === 'success' ? (
-                        <Check
-                            className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"
-                            aria-hidden="true"
-                        />
-                    ) : toast.tone === 'warning' ? (
-                        <AlertTriangle
-                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-300"
-                            aria-hidden="true"
-                        />
-                    ) : (
-                        <Info
-                            className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
-                            aria-hidden="true"
-                        />
-                    )}
-                    <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold">{toast.title}</p>
-                        <p className="mt-0.5 text-sm leading-5 text-slate-300">
-                            {toast.message}
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => onDismiss(toast.id)}
-                        className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white"
-                        aria-label={`Dismiss ${toast.title}`}
+            <AnimatePresence>
+                {toasts.map((toast) => (
+                    <motion.div
+                        key={toast.id}
+                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="flex items-start gap-3 rounded-xl bg-ink p-4 text-white shadow-lg"
+                        role="status"
                     >
-                        <X className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                </div>
-            ))}
+                        {toast.tone === 'success' ? (
+                            <Check
+                                className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"
+                                aria-hidden="true"
+                            />
+                        ) : toast.tone === 'warning' ? (
+                            <AlertTriangle
+                                className="mt-0.5 h-4 w-4 shrink-0 text-amber-300"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <Info
+                                className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
+                                aria-hidden="true"
+                            />
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold">
+                                {toast.title}
+                            </p>
+                            <p className="mt-0.5 text-sm leading-5 text-slate-300">
+                                {toast.message}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onDismiss(toast.id)}
+                            className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white"
+                            aria-label={`Dismiss ${toast.title}`}
+                        >
+                            <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
         </div>
+    );
+}
+
+export function Skeleton({
+    className,
+    width,
+    height,
+    style,
+    ...props
+}: HTMLMotionProps<'div'> & {
+    width?: string | number;
+    height?: string | number;
+}) {
+    return (
+        <motion.div
+            initial={{ opacity: 0.4 }}
+            animate={{ opacity: [0.4, 0.85, 0.4] }}
+            transition={{
+                duration: 1.4,
+                repeat: Infinity,
+                ease: 'easeInOut',
+            }}
+            className={cn('rounded-md bg-line-strong/50', className)}
+            style={{ width, height, ...style }}
+            aria-hidden="true"
+            {...props}
+        />
     );
 }

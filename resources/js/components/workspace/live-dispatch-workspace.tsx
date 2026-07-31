@@ -2,8 +2,11 @@ import { Link, useForm } from '@inertiajs/react';
 import {
     AlertTriangle,
     CalendarDays,
+    ChevronDown,
     ChevronRight,
+    ChevronUp,
     ClipboardList,
+    FileText,
     MapPin,
     Plus,
     Search,
@@ -11,6 +14,7 @@ import {
     ShieldCheck,
     UserRound,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -19,6 +23,7 @@ import {
     EmptyState,
     PageHeading,
     Panel,
+    Skeleton,
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
@@ -86,6 +91,7 @@ export function LiveDispatchWorkspace({
         jobs[0]?.id ?? null,
     );
     const [showCreate, setShowCreate] = useState(false);
+    const [showIntake, setShowIntake] = useState(false);
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [conflictsOnly, setConflictsOnly] = useState(false);
     const [boardCategory, setBoardCategory] = useState<BoardCategory>('all');
@@ -448,10 +454,51 @@ export function LiveDispatchWorkspace({
                             </div>
                         )}
 
+                        {!fieldMode &&
+                            (capabilities.create_client ||
+                                capabilities.create_service_request ||
+                                capabilities.convert_service_request) && (
+                                <Button
+                                    variant={showIntake ? 'secondary' : 'quiet'}
+                                    onClick={() => {
+                                        setShowIntake((value) => !value);
+
+                                        if (!showIntake) {
+                                            setShowCreate(false);
+                                        }
+                                    }}
+                                    aria-expanded={showIntake}
+                                    aria-controls="service-request-intake-panel"
+                                >
+                                    <FileText
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                    {showIntake ? 'Close intake' : 'Client & intake'}
+                                    {showIntake ? (
+                                        <ChevronUp
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    ) : (
+                                        <ChevronDown
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                </Button>
+                            )}
+
                         {canCreate && (
                             <Button
                                 variant={showCreate ? 'secondary' : 'primary'}
-                                onClick={() => setShowCreate((value) => !value)}
+                                onClick={() => {
+                                    setShowCreate((value) => !value);
+
+                                    if (!showCreate) {
+                                        setShowIntake(false);
+                                    }
+                                }}
                                 aria-expanded={showCreate}
                                 aria-controls="create-dispatch-panel"
                             >
@@ -463,130 +510,161 @@ export function LiveDispatchWorkspace({
                 }
             />
 
-            {(capabilities.create_client ||
-                capabilities.create_service_request ||
-                capabilities.convert_service_request) && (
-                <LiveDispatchIntake
-                    clients={clients}
-                    serviceRequests={serviceRequests}
-                    capabilities={capabilities}
-                />
-            )}
-
-            {showCreate && canCreate && (
-                <section
-                    id="create-dispatch-panel"
-                    className="border-b border-line bg-surface px-4 py-5 md:px-6"
-                    aria-labelledby="create-dispatch-title"
-                >
-                    <div className="mb-4">
-                        <h2
-                            id="create-dispatch-title"
-                            className="text-lg font-semibold"
+            <AnimatePresence>
+                {showIntake &&
+                    !fieldMode &&
+                    (capabilities.create_client ||
+                        capabilities.create_service_request ||
+                        capabilities.convert_service_request) && (
+                        <motion.div
+                            id="service-request-intake-panel"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
                         >
-                            New dispatch
-                        </h2>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            Create the live draft first. Assignment and
-                            activation stay in their existing authorized
-                            workflows.
-                        </p>
-                    </div>
-                    <form
-                        onSubmit={submit}
-                        className="grid gap-4 lg:grid-cols-4"
-                        noValidate
+                            <LiveDispatchIntake
+                                clients={clients}
+                                serviceRequests={serviceRequests}
+                                capabilities={capabilities}
+                            />
+                        </motion.div>
+                    )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showCreate && canCreate && (
+                    <motion.section
+                        id="create-dispatch-panel"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="overflow-hidden border-b border-line bg-surface px-4 py-5 md:px-6"
+                        aria-labelledby="create-dispatch-title"
                     >
-                        <DispatchInput
-                            label="Reference"
-                            value={form.data.reference}
-                            error={form.errors.reference}
-                            onChange={(value) =>
-                                form.setData('reference', value)
-                            }
-                        />
-                        <DispatchInput
-                            label="Client"
-                            value={form.data.client}
-                            error={form.errors.client}
-                            onChange={(value) => form.setData('client', value)}
-                        />
-                        <DispatchInput
-                            label="Job title"
-                            value={form.data.title}
-                            error={form.errors.title}
-                            onChange={(value) => form.setData('title', value)}
-                        />
-                        <DispatchInput
-                            label="Site"
-                            value={form.data.site}
-                            error={form.errors.site}
-                            onChange={(value) => form.setData('site', value)}
-                        />
-                        <DispatchInput
-                            label="Start"
-                            type="datetime-local"
-                            value={form.data.scheduled_start}
-                            error={form.errors.scheduled_start}
-                            onChange={(value) =>
-                                form.setData('scheduled_start', value)
-                            }
-                        />
-                        <DispatchInput
-                            label="End"
-                            type="datetime-local"
-                            value={form.data.scheduled_end}
-                            error={form.errors.scheduled_end}
-                            onChange={(value) =>
-                                form.setData('scheduled_end', value)
-                            }
-                        />
-                        <label className="text-sm font-medium text-ink">
-                            Priority
-                            <select
-                                value={form.data.priority}
-                                onChange={(event) =>
-                                    form.setData('priority', event.target.value)
-                                }
-                                aria-invalid={
-                                    form.errors.priority ? 'true' : undefined
-                                }
-                                className={cn(
-                                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3',
-                                    form.errors.priority
-                                        ? 'border-danger'
-                                        : 'border-line-strong',
-                                )}
+                        <div className="mx-auto mb-4 max-w-6xl">
+                            <h2
+                                id="create-dispatch-title"
+                                className="text-lg font-semibold"
                             >
-                                <option value="routine">Routine</option>
-                                <option value="priority">Priority</option>
-                                <option value="emergency">Emergency</option>
-                            </select>
-                            {form.errors.priority && (
-                                <span className="mt-1 block text-xs text-danger">
-                                    {form.errors.priority}
-                                </span>
-                            )}
-                        </label>
-                        <div className="flex flex-col justify-end">
-                            <Button
-                                type="submit"
-                                variant="primary"
-                                disabled={form.processing || !formComplete}
-                            >
-                                {form.processing
-                                    ? 'Creating dispatch…'
-                                    : 'Create live draft'}
-                            </Button>
-                            {!formComplete && !form.processing && (
-                                <p className="mt-1 text-xs text-ink-soft">
-                                    Complete every required field to continue.
-                                </p>
-                            )}
+                                New dispatch
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Create the live draft first. Assignment and
+                                activation stay in their existing authorized
+                                workflows.
+                            </p>
                         </div>
-                    </form>
-                </section>
-            )}
+                        <form
+                            onSubmit={submit}
+                            className="mx-auto max-w-6xl grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            noValidate
+                        >
+                            <DispatchInput
+                                label="Reference"
+                                value={form.data.reference}
+                                error={form.errors.reference}
+                                onChange={(value) =>
+                                    form.setData('reference', value)
+                                }
+                            />
+                            <DispatchInput
+                                label="Client"
+                                value={form.data.client}
+                                error={form.errors.client}
+                                onChange={(value) =>
+                                    form.setData('client', value)
+                                }
+                            />
+                            <DispatchInput
+                                label="Job title"
+                                value={form.data.title}
+                                error={form.errors.title}
+                                onChange={(value) =>
+                                    form.setData('title', value)
+                                }
+                            />
+                            <DispatchInput
+                                label="Site"
+                                value={form.data.site}
+                                error={form.errors.site}
+                                onChange={(value) =>
+                                    form.setData('site', value)
+                                }
+                            />
+                            <DispatchInput
+                                label="Start"
+                                type="datetime-local"
+                                value={form.data.scheduled_start}
+                                error={form.errors.scheduled_start}
+                                onChange={(value) =>
+                                    form.setData('scheduled_start', value)
+                                }
+                            />
+                            <DispatchInput
+                                label="End"
+                                type="datetime-local"
+                                value={form.data.scheduled_end}
+                                error={form.errors.scheduled_end}
+                                onChange={(value) =>
+                                    form.setData('scheduled_end', value)
+                                }
+                            />
+                            <label className="text-sm font-medium text-ink">
+                                Priority
+                                <select
+                                    value={form.data.priority}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'priority',
+                                            event.target.value,
+                                        )
+                                    }
+                                    aria-invalid={
+                                        form.errors.priority
+                                            ? 'true'
+                                            : undefined
+                                    }
+                                    className={cn(
+                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3',
+                                        form.errors.priority
+                                            ? 'border-danger'
+                                            : 'border-line-strong',
+                                    )}
+                                >
+                                    <option value="routine">Routine</option>
+                                    <option value="priority">Priority</option>
+                                    <option value="emergency">Emergency</option>
+                                </select>
+                                {form.errors.priority && (
+                                    <span className="mt-1 block text-xs text-danger">
+                                        {form.errors.priority}
+                                    </span>
+                                )}
+                            </label>
+                            <div className="flex flex-col justify-end">
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    disabled={form.processing || !formComplete}
+                                >
+                                    {form.processing
+                                        ? 'Creating dispatch…'
+                                        : 'Create live draft'}
+                                </Button>
+                                {!formComplete && !form.processing && (
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                        Complete every required field to
+                                        continue.
+                                    </p>
+                                )}
+                            </div>
+                        </form>
+                    </motion.section>
+                )}
+            </AnimatePresence>
 
             {/* VIEW MODE: BOARD */}
             {viewMode === 'board' && !fieldMode && (
@@ -732,7 +810,8 @@ export function LiveDispatchWorkspace({
                 <div
                     className={cn(
                         'min-h-[calc(100vh-9rem)]',
-                        !fieldMode && 'grid lg:grid-cols-[19rem_minmax(0,1fr)]',
+                        !fieldMode &&
+                            'grid lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]',
                     )}
                 >
                     <aside
@@ -1691,14 +1770,11 @@ function DispatchInput({
 function DispatchListSkeleton() {
     return (
         <div className="space-y-px" aria-label="Loading dispatch jobs">
-            {[1, 2, 3].map((item) => (
-                <div
-                    key={item}
-                    className="animate-pulse border-b border-line px-4 py-4"
-                >
-                    <div className="h-3 w-24 rounded bg-line" />
-                    <div className="mt-3 h-3 w-40 rounded bg-line" />
-                    <div className="mt-3 h-2.5 w-32 rounded bg-surface-subtle" />
+            {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="border-b border-line px-4 py-4">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="mt-2.5 h-3.5 w-44" />
+                    <Skeleton className="mt-2 h-3 w-32" />
                 </div>
             ))}
         </div>

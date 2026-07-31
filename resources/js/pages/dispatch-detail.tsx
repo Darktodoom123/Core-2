@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, DataPair, EmptyState, Panel } from '@/components/ui';
+import { Button, DataPair, EmptyState, Panel, Skeleton } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
 import type {
@@ -2051,4 +2051,26 @@ function formatDate(value: string) {
 
 function humanize(value: string) {
     return value.replaceAll('_', ' ');
+}
+
+export function CandidateListSkeleton() {
+    return (
+        <div className="grid gap-3 sm:grid-cols-2" aria-label="Loading candidate options">
+            {[1, 2, 3, 4].map((item) => (
+                <div
+                    key={item}
+                    className="flex flex-col justify-between rounded-xl border border-line p-3.5"
+                >
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1.5">
+                            <Skeleton className="h-4 w-28" />
+                            <Skeleton className="h-3 w-20" />
+                        </div>
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                    </div>
+                    <Skeleton className="mt-3 h-3 w-36" />
+                </div>
+            ))}
+        </div>
+    );
 }

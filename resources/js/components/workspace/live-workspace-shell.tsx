@@ -16,6 +16,7 @@ import {
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { Button } from '@/components/ui';
@@ -71,14 +72,20 @@ export function LiveWorkspaceShell({
                 Skip to workspace
             </a>
 
-            {mobileOpen && (
-                <button
-                    type="button"
-                    className="fixed inset-0 z-40 bg-ink/35 md:hidden"
-                    onClick={() => setMobileOpen(false)}
-                    aria-label="Close navigation"
-                />
-            )}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        type="button"
+                        className="fixed inset-0 z-40 bg-ink/35 md:hidden"
+                        onClick={() => setMobileOpen(false)}
+                        aria-label="Close navigation"
+                    />
+                )}
+            </AnimatePresence>
 
             <aside
                 id="workspace-navigation"
@@ -159,7 +166,12 @@ export function LiveWorkspaceShell({
                                         }
                                     >
                                         {active && (
-                                            <span
+                                            <motion.span
+                                                layoutId="active-nav-indicator"
+                                                transition={{
+                                                    duration: 0.18,
+                                                    ease: 'easeOut',
+                                                }}
                                                 className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand"
                                                 aria-hidden="true"
                                             />
@@ -225,15 +237,46 @@ export function LiveWorkspaceShell({
                     >
                         <Menu className="h-5 w-5" aria-hidden="true" />
                     </button>
-                    <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                            {auth.user?.name}
-                        </p>
-                        <p className="truncate text-xs text-ink-soft">
-                            {stale
-                                ? 'Workspace data may be stale'
-                                : 'Live Laravel workspace'}
-                        </p>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink">
+                            {section && sectionIcons[section] ? (
+                                (() => {
+                                    const Icon = sectionIcons[section];
+
+                                    return (
+                                        <Icon
+                                            className="h-4 w-4 text-brand-strong"
+                                            aria-hidden="true"
+                                        />
+                                    );
+                                })()
+                            ) : (
+                                <LayoutDashboard
+                                    className="h-4 w-4 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                            )}
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="truncate text-sm font-semibold text-ink">
+                                {section
+                                    ? navigation.find((n) => n.id === section)
+                                          ?.label ?? 'Workspace'
+                                    : 'Workspace'}
+                            </h1>
+                            <p className="truncate text-xs text-ink-soft">
+                                {stale ? (
+                                    <span className="font-medium text-warning-strong">
+                                        Data may be stale · Refresh to sync
+                                    </span>
+                                ) : (
+                                    <span>
+                                        {auth.user?.name ?? 'User'} ·{' '}
+                                        {auth.role_label ?? 'Operations'}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
                     </div>
                     <div className="ml-auto flex items-center gap-1 sm:gap-2">
                         {canShareLocation && (
