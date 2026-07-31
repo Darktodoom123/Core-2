@@ -206,10 +206,15 @@ export default function Workspace(props: WorkspacePageProps) {
                 ) : availableSection === 'overview' ? (
                     <OperationsOverviewDashboard
                         jobs={props.jobs}
+                        clients={props.clients}
+                        serviceRequests={props.serviceRequests}
                         assets={props.assets}
                         fuelRequests={props.fuelRequests}
                         locations={props.locations ?? []}
                         approvals={props.approvals}
+                        users={props.users}
+                        auditEvents={props.auditEvents}
+                        gptRecommendations={props.gptRecommendations}
                         capabilities={props.capabilities}
                         availableSections={props.navigation.map(
                             (item) => item.id,

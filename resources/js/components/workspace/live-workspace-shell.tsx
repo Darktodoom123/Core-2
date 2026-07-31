@@ -260,8 +260,8 @@ export function LiveWorkspaceShell({
                         <div className="min-w-0">
                             <h1 className="truncate text-sm font-semibold text-ink">
                                 {section
-                                    ? navigation.find((n) => n.id === section)
-                                          ?.label ?? 'Workspace'
+                                    ? (navigation.find((n) => n.id === section)
+                                          ?.label ?? 'Workspace')
                                     : 'Workspace'}
                             </h1>
                             <p className="truncate text-xs text-ink-soft">

@@ -2055,7 +2055,10 @@ function humanize(value: string) {
 
 export function CandidateListSkeleton() {
     return (
-        <div className="grid gap-3 sm:grid-cols-2" aria-label="Loading candidate options">
+        <div
+            className="grid gap-3 sm:grid-cols-2"
+            aria-label="Loading candidate options"
+        >
             {[1, 2, 3, 4].map((item) => (
                 <div
                     key={item}

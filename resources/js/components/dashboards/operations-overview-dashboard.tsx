@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -5,25 +6,34 @@ import {
     Building2,
     CalendarClock,
     CircleCheck,
+    Cpu,
+    FileText,
     Fuel,
+    Layers,
     MapPin,
     Radio,
     ShieldCheck,
+    Sparkles,
     Truck,
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { Button, EmptyState, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import type {
     ApprovalViewModel,
     AssetViewModel,
+    AuditEventViewModel,
+    ClientViewModel,
     DispatchJobViewModel,
     FuelRequestViewModel,
+    GptRecommendationViewModel,
     LocationUpdateViewModel,
+    ServiceRequestViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
+    WorkspaceUserViewModel,
 } from '@/types/workspace';
 
 type DashboardAction = {
@@ -35,25 +45,184 @@ type DashboardAction = {
     category: 'approvals' | 'assets' | 'fuel' | 'tracking';
 };
 
-export function OperationsOverviewDashboard({
+export interface OperationsOverviewDashboardProps {
+    jobs: DispatchJobViewModel[];
+    clients?: ClientViewModel[];
+    serviceRequests?: ServiceRequestViewModel[];
+    assets: AssetViewModel[];
+    fuelRequests: FuelRequestViewModel[];
+    locations: LocationUpdateViewModel[];
+    approvals: ApprovalViewModel[];
+    users?: WorkspaceUserViewModel[];
+    auditEvents?: AuditEventViewModel[];
+    gptRecommendations?: GptRecommendationViewModel[];
+    capabilities: WorkspaceCapabilities;
+    availableSections: WorkspaceSection[];
+    onSectionChange: (section: WorkspaceSection) => void;
+}
+
+export function OperationsOverviewDashboard(
+    props: OperationsOverviewDashboardProps,
+) {
+    const { auth } = usePage<{
+        auth?: {
+            user?: { id: number; name: string };
+            role?: string;
+            role_label?: string;
+            prototype_role?: string;
+        };
+    }>().props;
+
+    const canonicalRole = auth?.role ?? 'operations_manager';
+
+    return (
+        <div>
+            {/* Perspective Header */}
+            <DashboardHeader
+                role={canonicalRole}
+                roleLabel={auth?.role_label}
+                onSectionChange={props.onSectionChange}
+                availableSections={props.availableSections}
+            />
+
+            <div className="space-y-6 p-4 md:p-6">
+                {canonicalRole === 'operations_manager' && (
+                    <OperationsManagerDashboardView {...props} />
+                )}
+                {canonicalRole === 'dispatcher' && (
+                    <DispatcherDashboardView {...props} />
+                )}
+                {canonicalRole === 'system_administrator' && (
+                    <SystemAdminDashboardView {...props} />
+                )}
+                {[
+                    'driver',
+                    'crane_operator',
+                    'field_technician',
+                    'field_worker',
+                ].includes(canonicalRole) && (
+                    <FieldWorkerDashboardView {...props} />
+                )}
+                {![
+                    'operations_manager',
+                    'dispatcher',
+                    'system_administrator',
+                    'driver',
+                    'crane_operator',
+                    'field_technician',
+                    'field_worker',
+                ].includes(canonicalRole) && (
+                    <OperationsManagerDashboardView {...props} />
+                )}
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================================
+   HEADER
+   ========================================================================= */
+
+function DashboardHeader({
+    role,
+    roleLabel,
+    onSectionChange,
+    availableSections,
+}: {
+    role: string;
+    roleLabel?: string | null;
+    onSectionChange: (section: WorkspaceSection) => void;
+    availableSections: WorkspaceSection[];
+}) {
+    const displayRoleLabel =
+        roleLabel ??
+        (role === 'system_administrator'
+            ? 'System Admin'
+            : role === 'dispatcher'
+              ? 'Dispatcher'
+              : role === 'operations_manager'
+                ? 'Operations Manager'
+                : 'Field Operations');
+
+    const isSystemAdmin = role === 'system_administrator';
+    const isDispatcher = role === 'dispatcher';
+    const canOpenDispatch = availableSections.includes('dispatch');
+    const canOpenUsers = availableSections.includes('users');
+    const canOpenApprovals = availableSections.includes('approvals');
+
+    return (
+        <div className="border-b border-line bg-surface px-4 py-5 md:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-xl font-bold tracking-tight text-ink md:text-2xl">
+                            Operations overview
+                        </h1>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-strong">
+                            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                            {displayRoleLabel}
+                        </span>
+                    </div>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        {isSystemAdmin
+                            ? 'System security, user access governance, telemetry health, and audit trail stream.'
+                            : isDispatcher
+                              ? 'Active dispatch workloads, service request conversion, live telemetry, and resource allocation.'
+                              : 'High-level operational governance, decision approvals queue, fleet readiness, and GPT advisory.'}
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {/* Quick Action Button */}
+                    {isSystemAdmin && canOpenUsers ? (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onSectionChange('users')}
+                        >
+                            Manage users
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    ) : isDispatcher && canOpenDispatch ? (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onSectionChange('dispatch')}
+                        >
+                            Review dispatches
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    ) : canOpenApprovals ? (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onSectionChange('approvals')}
+                        >
+                            Review approvals
+                            <ArrowRight className="h-4 w-4" />
+                        </Button>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================================
+   1. OPERATIONS MANAGER DASHBOARD VIEW
+   ========================================================================= */
+
+function OperationsManagerDashboardView({
     jobs,
     assets,
     fuelRequests,
     locations,
     approvals,
+    gptRecommendations = [],
     capabilities,
     availableSections,
     onSectionChange,
-}: {
-    jobs: DispatchJobViewModel[];
-    assets: AssetViewModel[];
-    fuelRequests: FuelRequestViewModel[];
-    locations: LocationUpdateViewModel[];
-    approvals: ApprovalViewModel[];
-    capabilities: WorkspaceCapabilities;
-    availableSections: WorkspaceSection[];
-    onSectionChange: (section: WorkspaceSection) => void;
-}) {
+}: OperationsOverviewDashboardProps) {
     const [actionFilter, setActionFilter] = useState<
         'all' | 'approvals' | 'assets' | 'fuel' | 'tracking'
     >('all');
@@ -66,15 +235,6 @@ export function OperationsOverviewDashboard({
         approvals,
         capabilities,
     });
-
-    const categoriesInActions = Array.from(
-        new Set(actions.map((a) => a.category)),
-    );
-
-    const filteredActions =
-        actionFilter === 'all'
-            ? actions
-            : actions.filter((a) => a.category === actionFilter);
 
     const activeJobs = jobs.filter((job) =>
         ['dispatched', 'accepted', 'en_route', 'arrived', 'working'].includes(
@@ -92,238 +252,266 @@ export function OperationsOverviewDashboard({
     ).slice(0, 6);
 
     const totalAssets = assets.length;
-    const dispatchableAssets = assets.filter(
-        (asset) => asset.is_dispatchable,
-    ).length;
+    const dispatchableAssets = assets.filter((a) => a.is_dispatchable).length;
     const readinessPercentage =
         totalAssets > 0
             ? Math.round((dispatchableAssets / totalAssets) * 100)
             : 100;
 
     const blockingAssets = assets.filter(
-        (asset) => asset.blocking_work_orders_count > 0,
+        (a) => a.blocking_work_orders_count > 0,
     ).length;
-
     const freshLocations = locations.filter((l) =>
         ['live', 'recent'].includes(l.freshness_status),
     ).length;
 
+    const pendingApprovalsCount = approvals.filter((a) => a.can_decide).length;
+    const activeGptRecommendations = gptRecommendations.filter(
+        (rec) => rec.status === 'pending' || rec.is_advisory,
+    );
+
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenAssets = availableSections.includes('assets');
-    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenApprovals = availableSections.includes('approvals');
+
+    const categoriesInActions = Array.from(
+        new Set(actions.map((a) => a.category)),
+    );
+
+    const filteredActions =
+        actionFilter === 'all'
+            ? actions
+            : actions.filter((a) => a.category === actionFilter);
 
     return (
-        <div>
-            <PageHeading
-                title="Operations overview"
-                description="Start with the decisions that affect safe dispatch, then move directly into the authorized workflow."
-                actions={
-                    canOpenDispatch ? (
-                        <Button
-                            variant="primary"
-                            onClick={() => onSectionChange('dispatch')}
-                        >
-                            Review dispatches
-                            <ArrowRight
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                            />
-                        </Button>
-                    ) : undefined
-                }
-            />
+        <div className="space-y-6">
+            {/* Manager KPI Cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                    label="Decision Approvals"
+                    value={`${approvals.length}`}
+                    subtext={
+                        pendingApprovalsCount > 0
+                            ? `${pendingApprovalsCount} ready for your decision`
+                            : 'All reviews clear'
+                    }
+                    icon={ShieldCheck}
+                    tone={pendingApprovalsCount > 0 ? 'warning' : 'success'}
+                    onClick={
+                        canOpenApprovals
+                            ? () => onSectionChange('approvals')
+                            : undefined
+                    }
+                />
 
-            <div className="space-y-6 p-4 md:p-6">
-                {/* Executive KPI Stats Bar */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <KpiCard
-                        label="Active Workloads"
-                        value={`${activeJobs.length}`}
-                        subtext={`of ${jobs.length} visible jobs active`}
-                        icon={Activity}
-                        tone={activeJobs.length > 0 ? 'brand' : 'default'}
-                        onClick={() => onSectionChange('dispatch')}
-                    />
+                <KpiCard
+                    label="Fleet Readiness"
+                    value={`${readinessPercentage}%`}
+                    subtext={`${dispatchableAssets} of ${totalAssets} assets ready`}
+                    icon={Truck}
+                    tone={
+                        readinessPercentage >= 80
+                            ? 'success'
+                            : readinessPercentage >= 60
+                              ? 'warning'
+                              : 'danger'
+                    }
+                    onClick={
+                        canOpenAssets
+                            ? () => onSectionChange('assets')
+                            : undefined
+                    }
+                />
 
-                    <KpiCard
-                        label="Fleet Readiness"
-                        value={`${readinessPercentage}%`}
-                        subtext={`${dispatchableAssets} of ${totalAssets} assets ready`}
-                        icon={Truck}
-                        tone={
-                            readinessPercentage >= 80
-                                ? 'success'
-                                : readinessPercentage >= 60
-                                  ? 'warning'
-                                  : 'danger'
-                        }
-                        onClick={
-                            canOpenAssets
-                                ? () => onSectionChange('assets')
-                                : undefined
-                        }
-                    />
+                <KpiCard
+                    label="Active Workloads"
+                    value={`${activeJobs.length}`}
+                    subtext={`of ${jobs.length} visible jobs active`}
+                    icon={Activity}
+                    tone={activeJobs.length > 0 ? 'brand' : 'default'}
+                    onClick={
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
+                            : undefined
+                    }
+                />
 
-                    <KpiCard
-                        label="Decision Blockers"
-                        value={`${actions.length}`}
-                        subtext={
-                            actions.length === 0
-                                ? 'All reviews clear'
-                                : `${actions.length} require action`
-                        }
-                        icon={ShieldCheck}
-                        tone={actions.length > 0 ? 'warning' : 'success'}
-                    />
+                <KpiCard
+                    label="GPT Insights & Risk"
+                    value={`${activeGptRecommendations.length}`}
+                    subtext={
+                        blockingAssets > 0
+                            ? `${blockingAssets} maintenance blockers`
+                            : 'Operational risk normal'
+                    }
+                    icon={Sparkles}
+                    tone={blockingAssets > 0 ? 'warning' : 'brand'}
+                />
+            </div>
 
-                    <KpiCard
-                        label="GPS Telemetry"
-                        value={`${locations.length}`}
-                        subtext={
-                            locations.length === 0
-                                ? 'No active pings'
-                                : `${freshLocations} fresh location pings`
-                        }
-                        icon={Radio}
-                        tone={freshLocations > 0 ? 'brand' : 'default'}
-                        liveIndicator={freshLocations > 0}
-                        onClick={
-                            canOpenTracking
-                                ? () => onSectionChange('tracking')
-                                : undefined
-                        }
-                    />
-                </div>
-
-                {/* Decision Queue Section */}
-                <section aria-labelledby="decision-queue-heading">
-                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h2
-                                    id="decision-queue-heading"
-                                    className="text-lg font-semibold tracking-[-0.02em] text-ink"
-                                >
-                                    Decision queue
-                                </h2>
-                                {actions.length > 0 && (
-                                    <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
-                                        {actions.length} action
-                                        {actions.length === 1 ? '' : 's'}{' '}
-                                        required
-                                    </span>
-                                )}
-                            </div>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                Items requiring review are kept separate from
-                                completed operational context.
-                            </p>
+            {/* Manager Decision Queue */}
+            <section aria-labelledby="manager-queue-heading">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2
+                                id="manager-queue-heading"
+                                className="text-lg font-semibold tracking-tight text-ink"
+                            >
+                                Manager decision queue
+                            </h2>
+                            {actions.length > 0 && (
+                                <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
+                                    {actions.length} action required
+                                </span>
+                            )}
                         </div>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            Priority dispatches, assignment overrides, and
+                            safety clearances requiring manager approval.
+                        </p>
+                    </div>
 
-                        {/* Filter Pills - Only show if there are multiple action categories */}
-                        {categoriesInActions.length > 1 && (
-                            <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-1 text-xs">
+                    {categoriesInActions.length > 1 && (
+                        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-1 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => setActionFilter('all')}
+                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    actionFilter === 'all'
+                                        ? 'bg-surface text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink'
+                                }`}
+                            >
+                                All ({actions.length})
+                            </button>
+                            {categoriesInActions.includes('approvals') && (
                                 <button
                                     type="button"
-                                    onClick={() => setActionFilter('all')}
+                                    onClick={() => setActionFilter('approvals')}
                                     className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                        actionFilter === 'all'
+                                        actionFilter === 'approvals'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'
                                     }`}
                                 >
-                                    All ({actions.length})
+                                    Approvals (
+                                    {countByCategory(actions, 'approvals')})
                                 </button>
-                                {categoriesInActions.includes('approvals') && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setActionFilter('approvals')
-                                        }
-                                        className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                            actionFilter === 'approvals'
-                                                ? 'bg-surface text-ink shadow-xs'
-                                                : 'text-ink-soft hover:text-ink'
-                                        }`}
-                                    >
-                                        Approvals (
-                                        {countByCategory(actions, 'approvals')})
-                                    </button>
-                                )}
-                                {categoriesInActions.includes('assets') && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setActionFilter('assets')
-                                        }
-                                        className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                            actionFilter === 'assets'
-                                                ? 'bg-surface text-ink shadow-xs'
-                                                : 'text-ink-soft hover:text-ink'
-                                        }`}
-                                    >
-                                        Assets (
-                                        {countByCategory(actions, 'assets')})
-                                    </button>
-                                )}
-                                {categoriesInActions.includes('fuel') && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setActionFilter('fuel')}
-                                        className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                            actionFilter === 'fuel'
-                                                ? 'bg-surface text-ink shadow-xs'
-                                                : 'text-ink-soft hover:text-ink'
-                                        }`}
-                                    >
-                                        Fuel ({countByCategory(actions, 'fuel')}
-                                        )
-                                    </button>
-                                )}
-                                {categoriesInActions.includes('tracking') && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setActionFilter('tracking')
-                                        }
-                                        className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                            actionFilter === 'tracking'
-                                                ? 'bg-surface text-ink shadow-xs'
-                                                : 'text-ink-soft hover:text-ink'
-                                        }`}
-                                    >
-                                        Tracking (
-                                        {countByCategory(actions, 'tracking')})
-                                    </button>
-                                )}
-                            </div>
-                        )}
+                            )}
+                            {categoriesInActions.includes('assets') && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActionFilter('assets')}
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        actionFilter === 'assets'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Assets ({countByCategory(actions, 'assets')}
+                                    )
+                                </button>
+                            )}
+                            {categoriesInActions.includes('fuel') && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActionFilter('fuel')}
+                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        actionFilter === 'fuel'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Fuel ({countByCategory(actions, 'fuel')})
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <Panel className="overflow-hidden">
+                    {filteredActions.length === 0 ? (
+                        <EmptyState
+                            compact
+                            icon={CircleCheck}
+                            title="No decision blockers requiring attention"
+                            message="All pending approvals, blocking assets, and fuel workflow reviews are clear."
+                        />
+                    ) : (
+                        <ul className="divide-y divide-line">
+                            {filteredActions.map((action) => (
+                                <DashboardActionRow
+                                    key={`${action.section}-${action.title}`}
+                                    action={action}
+                                    onClick={() =>
+                                        onSectionChange(action.section)
+                                    }
+                                />
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
+            </section>
+
+            {/* Grid Layout: Schedule & GPT Recommendations */}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
+                {/* Work Schedule */}
+                <section aria-labelledby="manager-schedule-heading">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <h2
+                                id="manager-schedule-heading"
+                                className="text-lg font-semibold tracking-tight text-ink"
+                            >
+                                Dispatch overview & schedule
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Active workload tracking across visible jobs.
+                            </p>
+                        </div>
+                        <div className="flex gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => setJobView('all')}
+                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    jobView === 'all'
+                                        ? 'bg-surface text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink'
+                                }`}
+                            >
+                                All ({jobs.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setJobView('active')}
+                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    jobView === 'active'
+                                        ? 'bg-surface text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink'
+                                }`}
+                            >
+                                Active ({activeJobs.length})
+                            </button>
+                        </div>
                     </div>
 
                     <Panel className="overflow-hidden">
-                        {filteredActions.length === 0 ? (
+                        {upcomingJobs.length === 0 ? (
                             <EmptyState
                                 compact
-                                icon={CircleCheck}
-                                title={
-                                    actions.length === 0
-                                        ? 'No decision blockers in this workspace'
-                                        : 'No matching items in this filter'
-                                }
-                                message={
-                                    actions.length === 0
-                                        ? 'There are no pending approvals, blocking assets, actionable fuel requests, or stale locations in the records available to you.'
-                                        : 'Select another filter tab above to view other pending operational decisions.'
-                                }
+                                icon={CalendarClock}
+                                title="No scheduled work available"
+                                message="Jobs visible to your account will appear here."
                             />
                         ) : (
                             <ul className="divide-y divide-line">
-                                {filteredActions.map((action) => (
-                                    <DashboardActionRow
-                                        key={`${action.section}-${action.title}`}
-                                        action={action}
+                                {upcomingJobs.map((job) => (
+                                    <JobOverviewRow
+                                        key={job.id}
+                                        job={job}
                                         onClick={() =>
-                                            onSectionChange(action.section)
+                                            onSectionChange('dispatch')
                                         }
                                     />
                                 ))}
@@ -332,216 +520,772 @@ export function OperationsOverviewDashboard({
                     </Panel>
                 </section>
 
-                {/* Main Content Grid */}
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
-                    {/* Work Schedule / Work in Motion */}
-                    <section aria-labelledby="scheduled-work-heading">
-                        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <h2
-                                    id="scheduled-work-heading"
-                                    className="text-lg font-semibold tracking-[-0.02em] text-ink"
-                                >
-                                    Work in motion & schedule
-                                </h2>
-                                <p className="mt-1 text-sm text-ink-soft">
-                                    Track operational progress across active and
-                                    scheduled dispatch jobs.
-                                </p>
-                            </div>
-                            <div className="flex shrink-0 gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
-                                <button
-                                    type="button"
-                                    onClick={() => setJobView('all')}
-                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                        jobView === 'all'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
-                                >
-                                    All Visible ({jobs.length})
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setJobView('active')}
-                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                        jobView === 'active'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
-                                >
-                                    In Motion ({activeJobs.length})
-                                </button>
-                            </div>
+                {/* Readiness & GPT Panel */}
+                <div className="space-y-6">
+                    <section aria-labelledby="manager-readiness-heading">
+                        <div className="mb-3">
+                            <h2
+                                id="manager-readiness-heading"
+                                className="text-lg font-semibold tracking-tight text-ink"
+                            >
+                                Governance & Fleet Readiness
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Safety and resource breakdown.
+                            </p>
                         </div>
-
-                        <Panel className="overflow-hidden">
-                            {upcomingJobs.length === 0 ? (
-                                <EmptyState
-                                    compact
-                                    icon={CalendarClock}
-                                    title="No matching work available"
-                                    message="Jobs visible to your account will appear here when they are scheduled or active."
-                                    primaryAction={
-                                        canOpenDispatch ? (
-                                            <Button
-                                                size="sm"
-                                                onClick={() =>
-                                                    onSectionChange('dispatch')
-                                                }
-                                            >
-                                                Open dispatch workspace
-                                            </Button>
-                                        ) : undefined
-                                    }
-                                />
-                            ) : (
-                                <ul className="divide-y divide-line">
-                                    {upcomingJobs.map((job) => (
-                                        <JobOverviewRow
-                                            key={job.id}
-                                            job={job}
-                                            onClick={() =>
-                                                onSectionChange('dispatch')
-                                            }
-                                        />
-                                    ))}
-                                </ul>
-                            )}
+                        <Panel className="divide-y divide-line">
+                            <ReadinessRow
+                                label="Fleet Available"
+                                value={`${dispatchableAssets} / ${totalAssets}`}
+                                detail={`${readinessPercentage}% ready for deployment`}
+                                icon={Truck}
+                            />
+                            <ReadinessRow
+                                label="Safety Maintenance Blockers"
+                                value={String(blockingAssets)}
+                                detail={
+                                    blockingAssets === 0
+                                        ? 'No active maintenance blocks'
+                                        : `${blockingAssets} asset${blockingAssets === 1 ? '' : 's'} require release`
+                                }
+                                icon={ShieldCheck}
+                                tone={
+                                    blockingAssets > 0 ? 'warning' : 'default'
+                                }
+                            />
+                            <ReadinessRow
+                                label="Telemetry Connection"
+                                value={`${freshLocations} pings`}
+                                detail={`${locations.length} total active devices`}
+                                icon={Radio}
+                            />
                         </Panel>
                     </section>
 
-                    {/* Resource Readiness & Quick Telemetry */}
-                    <div className="space-y-6">
-                        <section aria-labelledby="readiness-heading">
-                            <div className="mb-3">
-                                <h2
-                                    id="readiness-heading"
-                                    className="text-lg font-semibold tracking-[-0.02em] text-ink"
-                                >
-                                    Resource readiness
-                                </h2>
-                                <p className="mt-1 text-sm text-ink-soft">
-                                    Readiness breakdown before initiating
-                                    assignments.
-                                </p>
-                            </div>
-                            <Panel className="divide-y divide-line">
-                                <ReadinessRow
-                                    label="Scoped workload"
-                                    value={String(jobs.length)}
-                                    detail={`${activeJobs.length} active in field`}
-                                    icon={CalendarClock}
-                                />
-                                <ReadinessRow
-                                    label="Dispatchable assets"
-                                    value={`${dispatchableAssets} / ${totalAssets}`}
-                                    detail={`${readinessPercentage}% fleet available`}
-                                    icon={Truck}
-                                />
-                                <ReadinessRow
-                                    label="Blocking work orders"
-                                    value={String(blockingAssets)}
-                                    detail={
-                                        blockingAssets === 0
-                                            ? 'No maintenance blocks'
-                                            : blockingAssets === 1
-                                              ? '1 asset needs safety clearance'
-                                              : `${blockingAssets} assets need safety clearance`
-                                    }
-                                    icon={ShieldCheck}
-                                    tone={
-                                        blockingAssets > 0
-                                            ? 'warning'
-                                            : 'default'
-                                    }
-                                />
-                                {canOpenAssets && (
-                                    <div className="p-3">
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full"
-                                            onClick={() =>
-                                                onSectionChange('assets')
-                                            }
-                                        >
-                                            Review fleet and equipment
-                                        </Button>
-                                    </div>
-                                )}
-                            </Panel>
-                        </section>
-
-                        {/* Telemetry Status Summary Widget */}
-                        <section aria-labelledby="telemetry-summary-heading">
+                    {/* GPT Advisory Panel */}
+                    {activeGptRecommendations.length > 0 && (
+                        <section aria-labelledby="gpt-advisory-heading">
                             <div className="mb-3 flex items-center justify-between">
                                 <h2
-                                    id="telemetry-summary-heading"
-                                    className="text-sm font-semibold tracking-wide text-ink uppercase"
+                                    id="gpt-advisory-heading"
+                                    className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
                                 >
-                                    Field Telemetry
+                                    <Sparkles className="h-4 w-4 text-brand" />
+                                    GPT AI Recommendations
                                 </h2>
-                                {canOpenTracking && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onSectionChange('tracking')
-                                        }
-                                        className="text-xs font-semibold text-brand hover:underline"
-                                    >
-                                        View map →
-                                    </button>
-                                )}
                             </div>
-                            <Panel className="p-4">
-                                {locations.length === 0 ? (
-                                    <div className="flex items-center gap-3 text-sm text-ink-soft">
-                                        <Radio
-                                            className="h-4 w-4 shrink-0 text-muted"
-                                            aria-hidden="true"
-                                        />
-                                        <span>
-                                            No location updates recorded
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="flex items-center gap-1.5 font-medium text-ink">
-                                                <span className="relative flex h-2 w-2">
-                                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                            <Panel className="space-y-3 p-4">
+                                {activeGptRecommendations
+                                    .slice(0, 3)
+                                    .map((rec) => (
+                                        <div
+                                            key={rec.id}
+                                            className="space-y-1.5 rounded-lg bg-surface-subtle p-3 text-xs"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-semibold text-ink">
+                                                    {rec.purpose.replace(
+                                                        '_',
+                                                        ' ',
+                                                    )}
                                                 </span>
-                                                Live Pings
-                                            </span>
-                                            <span className="font-semibold text-ink">
-                                                {freshLocations} /{' '}
-                                                {locations.length}
-                                            </span>
+                                                <span className="text-muted">
+                                                    Model: {rec.model}
+                                                </span>
+                                            </div>
+                                            <p className="line-clamp-2 text-ink-soft">
+                                                {rec.prompt_summary ??
+                                                    rec.response_summary ??
+                                                    'Recommendation pending review'}
+                                            </p>
                                         </div>
-                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
-                                            <div
-                                                className="h-full rounded-full bg-success transition-all duration-500"
-                                                style={{
-                                                    width: `${locations.length > 0 ? (freshLocations / locations.length) * 100 : 0}%`,
-                                                }}
-                                            />
-                                        </div>
-                                        <p className="text-xs text-ink-soft">
-                                            {freshLocations === locations.length
-                                                ? 'All registered device locations are active and transmitting.'
-                                                : `${locations.length - freshLocations} position updates marked stale or offline.`}
-                                        </p>
-                                    </div>
-                                )}
+                                    ))}
                             </Panel>
                         </section>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
+
+/* =========================================================================
+   2. DISPATCHER DASHBOARD VIEW
+   ========================================================================= */
+
+function DispatcherDashboardView({
+    jobs,
+    serviceRequests = [],
+    assets,
+    locations,
+    availableSections,
+    onSectionChange,
+}: OperationsOverviewDashboardProps) {
+    const [jobView, setJobView] = useState<'all' | 'active'>('all');
+
+    const activeJobs = jobs.filter((job) =>
+        ['dispatched', 'accepted', 'en_route', 'arrived', 'working'].includes(
+            job.status.value,
+        ),
+    );
+
+    const pendingRequests = serviceRequests.filter(
+        (sr) => sr.status.value === 'submitted',
+    );
+
+    const upcomingJobs = (
+        jobView === 'active'
+            ? activeJobs
+            : jobs.filter(
+                  (job) =>
+                      !['completed', 'cancelled'].includes(job.status.value),
+              )
+    ).slice(0, 6);
+
+    const readyAssetsCount = assets.filter((a) => a.is_dispatchable).length;
+    const freshLocationsCount = locations.filter((l) =>
+        ['live', 'recent'].includes(l.freshness_status),
+    ).length;
+
+    const canOpenDispatch = availableSections.includes('dispatch');
+    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenAssets = availableSections.includes('assets');
+
+    return (
+        <div className="space-y-6">
+            {/* Dispatcher KPIs */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                    label="Active Workloads"
+                    value={`${activeJobs.length}`}
+                    subtext={`of ${jobs.length} visible dispatches active`}
+                    icon={Activity}
+                    tone={activeJobs.length > 0 ? 'brand' : 'default'}
+                    onClick={
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Service Requests"
+                    value={`${serviceRequests.length}`}
+                    subtext={
+                        pendingRequests.length > 0
+                            ? `${pendingRequests.length} pending conversion to dispatch`
+                            : 'All requests processed'
+                    }
+                    icon={FileText}
+                    tone={pendingRequests.length > 0 ? 'warning' : 'success'}
+                    onClick={
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Telemetry Pings"
+                    value={`${locations.length}`}
+                    subtext={`${freshLocationsCount} live position updates`}
+                    icon={Radio}
+                    tone={freshLocationsCount > 0 ? 'brand' : 'default'}
+                    liveIndicator={freshLocationsCount > 0}
+                    onClick={
+                        canOpenTracking
+                            ? () => onSectionChange('tracking')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Ready Assets"
+                    value={`${readyAssetsCount}`}
+                    subtext={`of ${assets.length} fleet assets ready`}
+                    icon={Truck}
+                    tone={readyAssetsCount > 0 ? 'success' : 'danger'}
+                    onClick={
+                        canOpenAssets
+                            ? () => onSectionChange('assets')
+                            : undefined
+                    }
+                />
+            </div>
+
+            {/* Service Requests Queue for Dispatchers */}
+            {serviceRequests.length > 0 && (
+                <section aria-labelledby="service-requests-heading">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2
+                                    id="service-requests-heading"
+                                    className="text-lg font-semibold tracking-tight text-ink"
+                                >
+                                    Client Service Requests
+                                </h2>
+                                {pendingRequests.length > 0 && (
+                                    <span className="inline-flex items-center rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
+                                        {pendingRequests.length} pending
+                                        conversion
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Convert client service requests into active
+                                draft dispatch jobs.
+                            </p>
+                        </div>
+
+                        {canOpenDispatch && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => onSectionChange('dispatch')}
+                            >
+                                Convert in workspace →
+                            </Button>
+                        )}
+                    </div>
+
+                    <Panel className="overflow-hidden">
+                        <ul className="divide-y divide-line">
+                            {serviceRequests.slice(0, 4).map((request) => (
+                                <li
+                                    key={request.id}
+                                    className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-ink">
+                                                {request.reference}
+                                            </span>
+                                            <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
+                                                {request.client.company_name}
+                                            </span>
+                                            <CanonicalStatusBadge
+                                                status={request.status}
+                                            />
+                                        </div>
+                                        <p className="mt-1 text-sm font-medium text-ink">
+                                            {request.project_name} —{' '}
+                                            <span className="text-ink-soft">
+                                                {request.service_type}
+                                            </span>
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-muted">
+                                            Site: {request.location}
+                                        </p>
+                                    </div>
+
+                                    {canOpenDispatch && (
+                                        <Button
+                                            size="sm"
+                                            variant="primary"
+                                            onClick={() =>
+                                                onSectionChange('dispatch')
+                                            }
+                                        >
+                                            Create Dispatch
+                                        </Button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </Panel>
+                </section>
+            )}
+
+            {/* Work in Motion & Telemetry Grid */}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
+                {/* Dispatch Schedule */}
+                <section aria-labelledby="dispatcher-jobs-heading">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <h2
+                                id="dispatcher-jobs-heading"
+                                className="text-lg font-semibold tracking-tight text-ink"
+                            >
+                                Dispatch execution & schedule
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Track progress for queued and dispatched work.
+                            </p>
+                        </div>
+                        <div className="flex gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => setJobView('all')}
+                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    jobView === 'all'
+                                        ? 'bg-surface text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink'
+                                }`}
+                            >
+                                All ({jobs.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setJobView('active')}
+                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    jobView === 'active'
+                                        ? 'bg-surface text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink'
+                                }`}
+                            >
+                                Active ({activeJobs.length})
+                            </button>
+                        </div>
+                    </div>
+
+                    <Panel className="overflow-hidden">
+                        {upcomingJobs.length === 0 ? (
+                            <EmptyState
+                                compact
+                                icon={CalendarClock}
+                                title="No active dispatches"
+                                message="Create or convert service requests to begin dispatch scheduling."
+                            />
+                        ) : (
+                            <ul className="divide-y divide-line">
+                                {upcomingJobs.map((job) => (
+                                    <JobOverviewRow
+                                        key={job.id}
+                                        job={job}
+                                        onClick={() =>
+                                            onSectionChange('dispatch')
+                                        }
+                                    />
+                                ))}
+                            </ul>
+                        )}
+                    </Panel>
+                </section>
+
+                {/* Telemetry Widget */}
+                <div className="space-y-6">
+                    <section aria-labelledby="dispatcher-telemetry-heading">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2
+                                id="dispatcher-telemetry-heading"
+                                className="text-sm font-semibold tracking-wide text-ink uppercase"
+                            >
+                                GPS Tracking Stream
+                            </h2>
+                            {canOpenTracking && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSectionChange('tracking')}
+                                    className="text-xs font-semibold text-brand hover:underline"
+                                >
+                                    Open map →
+                                </button>
+                            )}
+                        </div>
+
+                        <Panel className="space-y-3 p-4">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="flex items-center gap-1.5 font-medium text-ink">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                                    </span>
+                                    Live Field Pings
+                                </span>
+                                <span className="font-semibold text-ink">
+                                    {freshLocationsCount} / {locations.length}
+                                </span>
+                            </div>
+
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
+                                <div
+                                    className="h-full rounded-full bg-success transition-all duration-500"
+                                    style={{
+                                        width: `${locations.length > 0 ? (freshLocationsCount / locations.length) * 100 : 0}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <p className="text-xs text-ink-soft">
+                                {locations.length === 0
+                                    ? 'No device location updates recorded.'
+                                    : freshLocationsCount === locations.length
+                                      ? 'All registered field units actively reporting live coordinates.'
+                                      : `${locations.length - freshLocationsCount} location updates offline or stale.`}
+                            </p>
+                        </Panel>
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================================
+   3. SYSTEM ADMINISTRATOR DASHBOARD VIEW
+   ========================================================================= */
+
+function SystemAdminDashboardView({
+    users = [],
+    auditEvents = [],
+    locations = [],
+    availableSections,
+    onSectionChange,
+}: OperationsOverviewDashboardProps) {
+    const activeUsersCount = users.filter((u) => u.is_active).length;
+    const freshLocationsCount = locations.filter((l) =>
+        ['live', 'recent'].includes(l.freshness_status),
+    ).length;
+
+    const canOpenUsers = availableSections.includes('users');
+    const canOpenAudit = availableSections.includes('audit');
+    const canOpenTracking = availableSections.includes('tracking');
+
+    // Role Distribution Summary
+    const rolesDistribution = users.reduce(
+        (acc, user) => {
+            const roleKey = user.role ?? 'unassigned';
+            acc[roleKey] = (acc[roleKey] ?? 0) + 1;
+
+            return acc;
+        },
+        {} as Record<string, number>,
+    );
+
+    return (
+        <div className="space-y-6">
+            {/* System Admin KPIs */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                    label="Registered Accounts"
+                    value={`${users.length}`}
+                    subtext={`${activeUsersCount} active user sessions`}
+                    icon={Users}
+                    tone="brand"
+                    onClick={
+                        canOpenUsers
+                            ? () => onSectionChange('users')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Audit Trail Events"
+                    value={`${auditEvents.length}`}
+                    subtext="Recorded system & access logs"
+                    icon={FileText}
+                    tone="info"
+                    onClick={
+                        canOpenAudit
+                            ? () => onSectionChange('audit')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Telemetry Health"
+                    value={`${freshLocationsCount} / ${locations.length}`}
+                    subtext={
+                        freshLocationsCount === locations.length
+                            ? 'All device streams healthy'
+                            : 'Some pings stale or delayed'
+                    }
+                    icon={Radio}
+                    tone={freshLocationsCount > 0 ? 'success' : 'warning'}
+                    liveIndicator={freshLocationsCount > 0}
+                    onClick={
+                        canOpenTracking
+                            ? () => onSectionChange('tracking')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="System Security"
+                    value="Optimal"
+                    subtext="Active session guards intact"
+                    icon={ShieldCheck}
+                    tone="success"
+                />
+            </div>
+
+            {/* Audit Log Stream & Role Distribution Grid */}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
+                {/* Audit Stream */}
+                <section aria-labelledby="admin-audit-heading">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <h2
+                                id="admin-audit-heading"
+                                className="text-lg font-semibold tracking-tight text-ink"
+                            >
+                                Audit trail event stream
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Real-time system actions, access edits, and
+                                security log updates.
+                            </p>
+                        </div>
+                        {canOpenAudit && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => onSectionChange('audit')}
+                            >
+                                View full audit →
+                            </Button>
+                        )}
+                    </div>
+
+                    <Panel className="overflow-hidden">
+                        {auditEvents.length === 0 ? (
+                            <EmptyState
+                                compact
+                                icon={FileText}
+                                title="No audit events recorded"
+                                message="Audit log records will appear here as system actions take place."
+                            />
+                        ) : (
+                            <ul className="divide-y divide-line">
+                                {auditEvents.slice(0, 6).map((event) => (
+                                    <li
+                                        key={event.id}
+                                        className="flex items-start justify-between gap-4 p-4 text-xs"
+                                    >
+                                        <div className="min-w-0 space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-ink">
+                                                    {event.action}
+                                                </span>
+                                                {event.actor && (
+                                                    <span className="rounded bg-surface-subtle px-2 py-0.5 text-ink-soft">
+                                                        by {event.actor.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {event.reason && (
+                                                <p className="text-ink-soft">
+                                                    Reason: {event.reason}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <span className="shrink-0 font-medium text-muted">
+                                            {formatSchedule(event.occurred_at)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </Panel>
+                </section>
+
+                {/* Role Distribution Panel */}
+                <div className="space-y-6">
+                    <section aria-labelledby="admin-users-heading">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2
+                                id="admin-users-heading"
+                                className="text-sm font-semibold tracking-wide text-ink uppercase"
+                            >
+                                Role Distribution
+                            </h2>
+                            {canOpenUsers && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSectionChange('users')}
+                                    className="text-xs font-semibold text-brand hover:underline"
+                                >
+                                    Manage →
+                                </button>
+                            )}
+                        </div>
+
+                        <Panel className="divide-y divide-line">
+                            <ReadinessRow
+                                label="Operations Managers"
+                                value={String(
+                                    rolesDistribution['operations_manager'] ??
+                                        0,
+                                )}
+                                detail="Governance & decision approval role"
+                                icon={ShieldCheck}
+                            />
+                            <ReadinessRow
+                                label="Dispatchers"
+                                value={String(
+                                    rolesDistribution['dispatcher'] ?? 0,
+                                )}
+                                detail="Dispatch creation & scheduling role"
+                                icon={Layers}
+                            />
+                            <ReadinessRow
+                                label="System Administrators"
+                                value={String(
+                                    rolesDistribution['system_administrator'] ??
+                                        0,
+                                )}
+                                detail="System health & access control role"
+                                icon={Cpu}
+                            />
+                            <ReadinessRow
+                                label="Drivers & Field Workers"
+                                value={String(
+                                    (rolesDistribution['driver'] ?? 0) +
+                                        (rolesDistribution['crane_operator'] ??
+                                            0) +
+                                        (rolesDistribution[
+                                            'field_technician'
+                                        ] ?? 0),
+                                )}
+                                detail="Field execution & assignment role"
+                                icon={Truck}
+                            />
+                        </Panel>
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================================
+   4. FIELD WORKER DASHBOARD VIEW
+   ========================================================================= */
+
+function FieldWorkerDashboardView({
+    jobs,
+    assets,
+    fuelRequests,
+    locations,
+    capabilities,
+    availableSections,
+    onSectionChange,
+}: OperationsOverviewDashboardProps) {
+    const activeJobs = jobs.filter((job) =>
+        ['dispatched', 'accepted', 'en_route', 'arrived', 'working'].includes(
+            job.status.value,
+        ),
+    );
+
+    const canOpenDispatch = availableSections.includes('dispatch');
+    const canOpenFuel = availableSections.includes('fuel');
+    const canOpenTracking = availableSections.includes('tracking');
+
+    const freshLocations = locations.filter((l) =>
+        ['live', 'recent'].includes(l.freshness_status),
+    ).length;
+
+    return (
+        <div className="space-y-6">
+            {/* Field Worker KPIs */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiCard
+                    label="Today's Work"
+                    value={`${jobs.length}`}
+                    subtext={`${activeJobs.length} active in field`}
+                    icon={CalendarClock}
+                    tone="brand"
+                    onClick={
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Assigned Vehicle / Assets"
+                    value={`${assets.length}`}
+                    subtext="Assigned equipment & vehicles"
+                    icon={Truck}
+                    tone="success"
+                    onClick={
+                        availableSections.includes('assets')
+                            ? () => onSectionChange('assets')
+                            : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="Fuel Requests"
+                    value={`${fuelRequests.length}`}
+                    subtext="Submitted fuel requests"
+                    icon={Fuel}
+                    tone="info"
+                    onClick={
+                        canOpenFuel ? () => onSectionChange('fuel') : undefined
+                    }
+                />
+
+                <KpiCard
+                    label="GPS Telemetry Sharing"
+                    value={capabilities.share_location ? 'Active' : 'Disabled'}
+                    subtext={`${freshLocations} location pings transmitted`}
+                    icon={Radio}
+                    tone={capabilities.share_location ? 'success' : 'default'}
+                    liveIndicator={capabilities.share_location}
+                    onClick={
+                        canOpenTracking
+                            ? () => onSectionChange('tracking')
+                            : undefined
+                    }
+                />
+            </div>
+
+            {/* Field Schedule */}
+            <section aria-labelledby="field-schedule-heading">
+                <div className="mb-3 flex items-center justify-between">
+                    <div>
+                        <h2
+                            id="field-schedule-heading"
+                            className="text-lg font-semibold tracking-tight text-ink"
+                        >
+                            Assigned Work Schedule
+                        </h2>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            Your assigned jobs for today.
+                        </p>
+                    </div>
+                    {canOpenDispatch && (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => onSectionChange('dispatch')}
+                        >
+                            Open Today's Work →
+                        </Button>
+                    )}
+                </div>
+
+                <Panel className="overflow-hidden">
+                    {jobs.length === 0 ? (
+                        <EmptyState
+                            compact
+                            icon={CalendarClock}
+                            title="No assigned jobs for today"
+                            message="When you are assigned to a dispatch job, it will appear here."
+                        />
+                    ) : (
+                        <ul className="divide-y divide-line">
+                            {jobs.slice(0, 5).map((job) => (
+                                <JobOverviewRow
+                                    key={job.id}
+                                    job={job}
+                                    onClick={() => onSectionChange('dispatch')}
+                                />
+                            ))}
+                        </ul>
+                    )}
+                </Panel>
+            </section>
+        </div>
+    );
+}
+
+/* =========================================================================
+   HELPER COMPONENTS & FUNCTIONS
+   ========================================================================= */
 
 function KpiCard({
     label,
@@ -556,7 +1300,7 @@ function KpiCard({
     value: string;
     subtext: string;
     icon: LucideIcon;
-    tone?: 'default' | 'brand' | 'success' | 'warning' | 'danger';
+    tone?: 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
     liveIndicator?: boolean;
     onClick?: () => void;
 }) {
@@ -589,7 +1333,9 @@ function KpiCard({
                             ? 'bg-warning-soft text-warning-strong'
                             : tone === 'danger'
                               ? 'bg-danger-soft text-danger'
-                              : 'bg-surface-subtle text-ink-soft'
+                              : tone === 'info'
+                                ? 'bg-info-soft text-info-strong'
+                                : 'bg-surface-subtle text-ink-soft'
                 }`}
             >
                 <Icon className="h-5 w-5" aria-hidden="true" />
@@ -782,7 +1528,7 @@ function ReadinessRow({
                     {detail}
                 </span>
             </span>
-            <span className="text-xl font-semibold tracking-[-0.02em] tabular-nums">
+            <span className="text-xl font-semibold tracking-tight tabular-nums">
                 {value}
             </span>
         </div>
@@ -803,17 +1549,15 @@ function buildDashboardActions({
     capabilities: WorkspaceCapabilities;
 }): DashboardAction[] {
     const actions: DashboardAction[] = [];
-    const decisionReadyApprovals = approvals.filter(
-        (approval) => approval.can_decide,
-    );
+    const decisionReadyApprovals = approvals.filter((a) => a.can_decide);
     const blockedAssets = assets.filter(
-        (asset) => asset.blocking_work_orders_count > 0,
+        (a) => a.blocking_work_orders_count > 0,
     );
     const actionableFuelRequests = fuelRequests.filter((request) =>
         canActOnFuelRequest(request, capabilities),
     );
-    const staleLocations = locations.filter((location) =>
-        ['stale', 'offline'].includes(location.freshness_status),
+    const staleLocations = locations.filter((l) =>
+        ['stale', 'offline'].includes(l.freshness_status),
     );
 
     if (approvals.length > 0) {

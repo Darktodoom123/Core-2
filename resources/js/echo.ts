@@ -21,14 +21,16 @@ export function getEcho(): Echo<'reverb'> | null {
         window.Echo = new Echo<'reverb'>({
             broadcaster: 'reverb',
             key: import.meta.env.VITE_REVERB_APP_KEY ?? 'reverb-key',
-            wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
+            wsHost:
+                import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
             wsPort: import.meta.env.VITE_REVERB_PORT
                 ? Number(import.meta.env.VITE_REVERB_PORT)
                 : 8080,
             wssPort: import.meta.env.VITE_REVERB_PORT
                 ? Number(import.meta.env.VITE_REVERB_PORT)
                 : 443,
-            forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+            forceTLS:
+                (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
             enabledTransports: ['ws', 'wss'],
         });
     }

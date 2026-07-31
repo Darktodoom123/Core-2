@@ -474,7 +474,9 @@ export function LiveDispatchWorkspace({
                                         className="h-4 w-4"
                                         aria-hidden="true"
                                     />
-                                    {showIntake ? 'Close intake' : 'Client & intake'}
+                                    {showIntake
+                                        ? 'Close intake'
+                                        : 'Client & intake'}
                                     {showIntake ? (
                                         <ChevronUp
                                             className="h-3.5 w-3.5"
@@ -559,7 +561,7 @@ export function LiveDispatchWorkspace({
                         </div>
                         <form
                             onSubmit={submit}
-                            className="mx-auto max-w-6xl grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4"
                             noValidate
                         >
                             <DispatchInput

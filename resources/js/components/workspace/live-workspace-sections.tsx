@@ -3,7 +3,13 @@ import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { TrackingSurface } from '@/components/surfaces/tracking-surfaces';
-import { Button, EmptyState, PageHeading, Panel, Skeleton } from '@/components/ui';
+import {
+    Button,
+    EmptyState,
+    PageHeading,
+    Panel,
+    Skeleton,
+} from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
 import type {
@@ -2244,9 +2250,15 @@ export function AssetListSkeleton() {
 
 export function FuelTableSkeleton() {
     return (
-        <div className="divide-y divide-line" aria-label="Loading fuel requests">
+        <div
+            className="divide-y divide-line"
+            aria-label="Loading fuel requests"
+        >
             {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="flex items-center justify-between p-4">
+                <div
+                    key={item}
+                    className="flex items-center justify-between p-4"
+                >
                     <div className="space-y-2">
                         <Skeleton className="h-4 w-32" />
                         <Skeleton className="h-3.5 w-48" />

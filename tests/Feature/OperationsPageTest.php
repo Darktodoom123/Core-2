@@ -121,3 +121,31 @@ it('adapts live navigation labels for assigned field work without exposing unava
             ->where('capabilities.convert_service_request', false)
         );
 });
+
+it('serves operational overview workspace for Operations Manager and System Administrator roles', function () {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    $this->actingAs($manager)->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.role', 'operations_manager')
+            ->where('navigation.0.id', 'overview')
+            ->has('jobs')
+            ->has('assets')
+            ->has('approvals')
+            ->has('fuelRequests')
+        );
+
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $this->actingAs($admin)->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.role', 'system_administrator')
+            ->where('navigation.0.id', 'overview')
+            ->has('users')
+            ->has('auditEvents')
+        );
+});
