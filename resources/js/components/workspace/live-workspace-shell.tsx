@@ -19,6 +19,7 @@ import type { LucideIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import type { PropsWithChildren } from 'react';
+import { ApplicationLogo } from '@/components/application-logo';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
@@ -101,9 +102,7 @@ export function LiveWorkspaceShell({
                         collapsed ? 'justify-center' : 'gap-3',
                     )}
                 >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-brand-contrast">
-                        C2
-                    </div>
+                    <ApplicationLogo variant="badge" />
                     {!collapsed && (
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold">

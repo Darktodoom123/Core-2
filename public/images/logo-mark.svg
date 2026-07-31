@@ -1,12 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="105 70 270 220" width="100%" height="100%">
-  <g fill="#ffffff">
-    <!-- Outer 'A' Structure Left Leg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 70 270 220" width="100%" height="100%">
+  <g fill="currentColor">
     <path d="M 235 83 L 155 281 L 204 281 L 221 239 C 228 221, 239 204, 250 188 L 235 83 Z" />
-    <!-- Outer 'A' Structure Right Leg -->
     <path d="M 265 83 L 250 188 C 261 204, 272 221, 279 239 L 296 281 L 345 281 L 265 83 Z" />
-    <!-- Inner 'A' Triangle / Apex -->
     <polygon points="250,220 228,281 272,281" />
-    <!-- Curved Swoosh / Arc -->
     <path d="M 120 267 C 175 210, 248 181, 325 183 C 348 184, 357 190, 360 212 C 362 232, 358 249, 355 268 C 353 234, 340 205, 305 201 C 240 193, 178 221, 120 267 Z" />
   </g>
 </svg>

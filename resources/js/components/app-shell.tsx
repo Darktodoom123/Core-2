@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
+import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -175,9 +176,7 @@ export function AppShell({
                         collapsed ? 'justify-center' : 'gap-3',
                     )}
                 >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-white">
-                        C2
-                    </div>
+                    <ApplicationLogo variant="badge" />
                     {!collapsed && (
                         <div className="min-w-0">
                             <p className="truncate text-sm font-semibold">

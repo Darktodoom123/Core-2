@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from 'react';
+import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 
 export function AuthShell({ children }: PropsWithChildren) {
@@ -9,12 +10,13 @@ export function AuthShell({ children }: PropsWithChildren) {
                 aria-labelledby="auth-title"
             >
                 <div className="mb-7 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand text-sm font-semibold text-white">
-                        C2
-                    </div>
+                    <ApplicationLogo
+                        variant="badge"
+                        badgeClassName="h-10 w-10"
+                    />
                     <div>
                         <p className="font-semibold text-ink">
-                            Core Transaction 2
+                            Alibaton Construction
                         </p>
                         <p className="text-sm text-ink-soft">
                             Secure operations access
