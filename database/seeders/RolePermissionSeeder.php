@@ -32,9 +32,13 @@ final class RolePermissionSeeder extends Seeder
     public static function rolePermissions(): array
     {
         $all = array_map(static fn (PermissionName $permission): string => $permission->value, PermissionName::cases());
+        $adminPermissions = array_values(array_filter(
+            $all,
+            static fn (string $permission): bool => $permission !== PermissionName::TrackingShareOwn->value
+        ));
 
         return [
-            RoleName::SystemAdministrator->value => $all,
+            RoleName::SystemAdministrator->value => $adminPermissions,
             RoleName::Dispatcher->value => self::values([
                 PermissionName::DispatchViewAll, PermissionName::DispatchCreate, PermissionName::DispatchUpdate,
                 PermissionName::DispatchActivate, PermissionName::DispatchCancel, PermissionName::AssignmentsViewAll, PermissionName::AssignmentsCreate,

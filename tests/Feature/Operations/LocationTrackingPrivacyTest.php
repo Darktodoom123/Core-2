@@ -2,11 +2,13 @@
 
 use App\Enums\DispatchPriority;
 use App\Enums\DispatchStatus;
+use App\Enums\PermissionName;
 use App\Enums\RoleName;
 use App\Models\AuditEvent;
 use App\Models\DispatchJob;
 use App\Models\LocationUpdate;
 use App\Models\User;
+use App\ViewModels\OperationsWorkspaceViewModel;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -169,4 +171,16 @@ it('correctly calculates location freshness status categories', function () {
         ->and($delayed->freshness_status)->toBe('delayed')
         ->and($stale->freshness_status)->toBe('stale')
         ->and($offline->freshness_status)->toBe('offline');
+});
+
+it('prevents system administrators from having location sharing permissions', function () {
+    $admin = createFieldUser(RoleName::SystemAdministrator);
+    $driver = createFieldUser(RoleName::Driver);
+
+    expect($admin->can(PermissionName::TrackingShareOwn->value))->toBeFalse()
+        ->and($admin->can(PermissionName::TrackingViewAll->value))->toBeTrue()
+        ->and($driver->can(PermissionName::TrackingShareOwn->value))->toBeTrue();
+
+    expect(OperationsWorkspaceViewModel::capabilities($admin)['share_location'])->toBeFalse()
+        ->and(OperationsWorkspaceViewModel::capabilities($driver)['share_location'])->toBeTrue();
 });
