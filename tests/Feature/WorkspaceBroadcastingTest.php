@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\WorkspaceUpdated;
+use App\Platform\Workspace\Events\WorkspaceUpdated;
 use Illuminate\Support\Facades\Event;
 
 test('workspace updated event broadcasts on private operations workspace channel', function () {

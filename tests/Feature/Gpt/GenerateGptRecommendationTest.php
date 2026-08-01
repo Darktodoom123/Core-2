@@ -1,14 +1,14 @@
 <?php
 
-use App\Actions\RecordAuditEvent;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Jobs\GenerateGptRecommendationJob;
-use App\Models\DispatchJob;
-use App\Models\GptRecommendation;
-use App\Models\User;
-use App\Services\Gpt\OpenAiClientWrapper;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Gpt\Jobs\GenerateGptRecommendationJob;
+use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\OpenAiClientWrapper;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -55,7 +55,7 @@ test('authorized dispatcher can initiate async gpt recommendation request', func
     $job = gptDispatchJob($dispatcher);
 
     $response = $this->actingAs($dispatcher)->post('/operations/gpt-recommendations', [
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'purpose' => 'dispatch_assignment',
     ]);
@@ -64,7 +64,7 @@ test('authorized dispatcher can initiate async gpt recommendation request', func
     $response->assertSessionHas('flash.success');
 
     $this->assertDatabaseHas('gpt_recommendations', [
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
@@ -80,7 +80,7 @@ test('unauthorized user cannot request gpt recommendation', function (): void {
     $job = gptDispatchJob($driver);
 
     $response = $this->actingAs($driver)->post('/operations/gpt-recommendations', [
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'purpose' => 'dispatch_assignment',
     ]);
@@ -93,7 +93,7 @@ test('async job processes context redaction and generates structured recommendat
     $job = gptDispatchJob($dispatcher);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',

@@ -1,7 +1,7 @@
 <?php
 
-use App\Enums\RoleName;
-use App\Models\User;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;

@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\RoleName;
-use App\Models\Client;
-use App\Models\DispatchJob;
-use App\Models\JobReport;
-use App\Models\ServiceRequest;
-use App\Models\User;
+use App\Modules\Dispatch\Models\Client;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Reporting\Models\JobReport;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;

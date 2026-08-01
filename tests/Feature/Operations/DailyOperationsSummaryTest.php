@@ -1,8 +1,8 @@
 <?php
 
-use App\Enums\RoleName;
-use App\Models\AuditEvent;
-use App\Models\User;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

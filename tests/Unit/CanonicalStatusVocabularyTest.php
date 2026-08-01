@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\ApprovalStatus;
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\FuelRequestStatus;
-use App\Enums\ServiceRequestStatus;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Enums\ServiceRequestStatus;
+use App\Modules\Fuel\Enums\FuelRequestStatus;
+use App\Shared\Assets\Enums\AssetStatus;
 
 it('publishes the canonical operational status vocabulary and labels', function () {
     expect(enumVocabulary(DispatchStatus::cases()))->toBe([

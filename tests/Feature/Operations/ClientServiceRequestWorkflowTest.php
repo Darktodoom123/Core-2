@@ -1,12 +1,12 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\RoleName;
-use App\Models\AuditEvent;
-use App\Models\Client;
-use App\Models\DispatchJob;
-use App\Models\ServiceRequest;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Models\Client;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;

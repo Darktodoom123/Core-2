@@ -1,16 +1,16 @@
 <?php
 
-use App\Enums\ApprovalStatus;
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\PermissionName;
-use App\Enums\RoleName;
-use App\Models\ApprovalRequest;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\OperationalAsset;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -87,7 +87,7 @@ function requestExceptionalWorkflowApproval(
     OperationalAsset $asset,
 ): ApprovalRequest {
     return ApprovalRequest::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'kind' => 'assignment_override',
         'requested_changes' => [
@@ -123,7 +123,7 @@ it('activates a ready routine dispatch through the browser and records the actor
         ->activated_by->toBe($dispatcher->id);
 
     $events = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->orderBy('id')
         ->get();
@@ -429,7 +429,7 @@ it('limits the pending approval feed to kinds the reviewer is authorized to deci
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6803');
     requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
     ApprovalRequest::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'kind' => 'dispatch_activation',
         'status' => ApprovalStatus::Pending,

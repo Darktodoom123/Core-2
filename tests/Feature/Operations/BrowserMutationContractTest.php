@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\RoleName;
-use App\Models\DispatchJob;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

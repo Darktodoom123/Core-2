@@ -1,18 +1,18 @@
 <?php
 
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\FuelRequestStatus;
-use App\Enums\RoleName;
-use App\Models\Attachment;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\FuelLog;
-use App\Models\FuelRequest;
-use App\Models\LocationUpdate;
-use App\Models\OperationalAsset;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fuel\Enums\FuelRequestStatus;
+use App\Modules\Fuel\Models\FuelLog;
+use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Models\LocationUpdate;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -328,7 +328,7 @@ it('handles receipt file uploads securely during fuel logging', function () {
     expect($fuelLog->receipt_path)->not()->toBeNull();
     expect(Storage::disk('private')->exists($fuelLog->receipt_path))->toBeTrue();
 
-    $attachment = Attachment::query()->where('owner_id', $fuelLog->id)->where('owner_type', FuelLog::class)->sole();
+    $attachment = Attachment::query()->where('owner_id', $fuelLog->id)->where('owner_type', $fuelLog->getMorphClass())->sole();
     expect($attachment->kind)->toBe('fuel_receipt')
         ->and($attachment->original_filename)->toBe('fuel_receipt.pdf')
         ->and($attachment->mime_type)->toBe('application/pdf');

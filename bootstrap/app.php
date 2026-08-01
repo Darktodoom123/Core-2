@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Middleware\EnsurePersonalAccessToken;
-use App\Http\Middleware\EnsureUserIsActive;
-use App\Http\Middleware\HandleInertiaRequests;
+use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
+use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
+use App\Platform\Workspace\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;

@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -144,7 +144,7 @@ it('allows each adjacent field progression and records one attributable audit ev
         ->and($job->version)->toBe(8);
 
     $event = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.status_updated')
         ->sole();

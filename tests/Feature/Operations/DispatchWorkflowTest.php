@@ -1,18 +1,18 @@
 <?php
 
-use App\Enums\ApprovalStatus;
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\PermissionName;
-use App\Enums\RoleName;
-use App\Models\ApprovalRequest;
-use App\Models\AuditEvent;
-use App\Models\DispatchAssetAssignment;
-use App\Models\DispatchJob;
-use App\Models\DispatchPersonnelAssignment;
-use App\Models\OperationalAsset;
-use App\Models\User;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +116,7 @@ it('assigns every supported personnel and asset type atomically and records the 
         ->toBe(['crane', 'equipment', 'truck']);
 
     $audit = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.resources_assigned')
         ->sole();
@@ -397,7 +397,7 @@ it('requires independent manager approval before a priority dispatch activates',
     $asset = OperationalAsset::query()->create(['code' => 'TR-2001', 'name' => 'Truck 2001', 'kind' => 'truck', 'status' => AssetStatus::Available]);
     $job->personnelAssignments()->create(['user_id' => $driver->id, 'assignment_type' => 'driver', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
     $job->assetAssignments()->create(['operational_asset_id' => $asset->id, 'assignment_type' => 'truck', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);
-    $approval = ApprovalRequest::query()->create(['subject_type' => DispatchJob::class, 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);
+    $approval = ApprovalRequest::query()->create(['subject_type' => (new DispatchJob)->getMorphClass(), 'subject_id' => $job->id, 'kind' => 'dispatch_activation', 'status' => ApprovalStatus::Pending, 'requested_by' => $dispatcher->id]);
     $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertSessionHasErrors('approval');
     $this->actingAs($manager)->post("/operations/approval-requests/{$approval->id}/decision", ['status' => 'approved', 'reason' => 'Resources and timing verified'])->assertRedirect('/');
     $this->actingAs($dispatcher)->from("/operations/dispatch-jobs/{$job->id}")->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])->assertRedirect("/operations/dispatch-jobs/{$job->id}");

@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\DispatchJob;
-use App\Models\GptRecommendation;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -32,7 +32,7 @@ test('authorized dispatcher can reject a pending gpt recommendation with reason'
     ]);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',

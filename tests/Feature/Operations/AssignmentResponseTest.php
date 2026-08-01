@@ -1,12 +1,12 @@
 <?php
 
-use App\Enums\AssignmentResponse;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\DispatchJob;
-use App\Models\DispatchPersonnelAssignment;
-use App\Models\User;
+use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -89,7 +89,7 @@ it('allows an assigned field worker to accept their pending assignment', functio
 
     $this->assertDatabaseHas('audit_events', [
         'actor_id' => $driver->id,
-        'subject_type' => DispatchPersonnelAssignment::class,
+        'subject_type' => (new DispatchPersonnelAssignment)->getMorphClass(),
         'subject_id' => $assignment->id,
         'action' => 'dispatch.assignment_accepted',
     ]);
@@ -127,7 +127,7 @@ it('allows an assigned field worker to reject their pending assignment with a re
 
     $this->assertDatabaseHas('audit_events', [
         'actor_id' => $driver->id,
-        'subject_type' => DispatchPersonnelAssignment::class,
+        'subject_type' => (new DispatchPersonnelAssignment)->getMorphClass(),
         'subject_id' => $assignment->id,
         'action' => 'dispatch.assignment_rejected',
         'reason' => 'Schedule conflict with family emergency.',

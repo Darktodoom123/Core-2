@@ -1,14 +1,14 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\JobReportStatus;
-use App\Enums\RoleName;
-use App\Models\Attachment;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\JobReport;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Reporting\Enums\JobReportStatus;
+use App\Platform\Reporting\Models\JobReport;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -123,7 +123,7 @@ it('enforces maximum limit of 10 attachments per owner record', function (): voi
     // Pre-populate 10 attachments
     for ($i = 0; $i < 10; $i++) {
         Attachment::query()->create([
-            'owner_type' => DispatchJob::class,
+            'owner_type' => (new DispatchJob)->getMorphClass(),
             'owner_id' => $job->id,
             'uploaded_by' => $user->id,
             'kind' => 'document',
@@ -178,7 +178,7 @@ it('enforces file isolation preventing unauthorized user from downloading privat
     Storage::disk('local')->put($path, $fileContent);
 
     $attachment = Attachment::query()->create([
-        'owner_type' => JobReport::class,
+        'owner_type' => (new JobReport)->getMorphClass(),
         'owner_id' => $report->id,
         'uploaded_by' => $uploader->id,
         'kind' => 'document',

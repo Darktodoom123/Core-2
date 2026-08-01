@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Enums\AssignmentResponse;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Models\DispatchJob;
-use App\Models\DispatchPersonnelAssignment;
-use App\Models\User;
+use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use LogicException;

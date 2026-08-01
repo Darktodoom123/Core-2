@@ -1,21 +1,21 @@
 <?php
 
-use App\Enums\ApprovalStatus;
-use App\Enums\AssetStatus;
-use App\Enums\AssignmentResponse;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\PermissionName;
-use App\Enums\RoleName;
-use App\Models\ApprovalRequest;
-use App\Models\AuditEvent;
-use App\Models\Client;
-use App\Models\DispatchAssetAssignment;
-use App\Models\DispatchJob;
-use App\Models\DispatchPersonnelAssignment;
-use App\Models\OperationalAsset;
-use App\Models\ServiceRequest;
-use App\Models\User;
+use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
+use App\Modules\Dispatch\Models\Client;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,7 +129,7 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
         ->assertSessionDoesntHaveErrors();
 
     $approval = ApprovalRequest::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->sole();
 
@@ -250,7 +250,7 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
 
     // 7. Audit Trail Attributability Check
     $statusAudits = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.status_updated')
         ->get();

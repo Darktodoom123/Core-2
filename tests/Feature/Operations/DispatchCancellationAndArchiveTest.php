@@ -1,15 +1,15 @@
 <?php
 
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\AuditEvent;
-use App\Models\DispatchAssetAssignment;
-use App\Models\DispatchJob;
-use App\Models\DispatchPersonnelAssignment;
-use App\Models\OperationalAsset;
-use App\Models\User;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,7 +93,7 @@ it('allows authorized user to cancel a job with a required reason and closes act
         ->and($assetAssignment->fresh()->active_until)->not->toBeNull();
 
     $audit = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.cancelled')
         ->latest('id')
@@ -207,7 +207,7 @@ it('allows an operations manager to reopen a cancelled job back to draft', funct
         ->and($job->version)->toBe(3);
 
     $audit = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.reopened')
         ->first();
@@ -269,7 +269,7 @@ it('allows authorized administrative user to archive and restore jobs using soft
         ->and($job->fresh()->version)->toBe(2);
 
     $archiveAudit = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.archived')
         ->first();
@@ -285,7 +285,7 @@ it('allows authorized administrative user to archive and restore jobs using soft
     expect($job->fresh()->version)->toBe(3);
 
     $restoreAudit = AuditEvent::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('action', 'dispatch.restored')
         ->first();

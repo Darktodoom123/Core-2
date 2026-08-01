@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Platform\Identity\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

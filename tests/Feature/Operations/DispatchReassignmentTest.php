@@ -1,17 +1,17 @@
 <?php
 
-use App\Enums\ApprovalStatus;
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\PermissionName;
-use App\Enums\RoleName;
-use App\Models\ApprovalRequest;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\OperationalAsset;
-use App\Models\PersonnelCredential;
-use App\Models\User;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\PersonnelCredential;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -246,7 +246,7 @@ test('post-activation reassignment creates approval request when actor lacks ove
     expect($oldAssignment->active_until)->toBeNull(); // Not modified immediately
 
     $approval = ApprovalRequest::query()
-        ->where('subject_type', DispatchJob::class)
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
         ->where('subject_id', $job->id)
         ->where('kind', 'reassignment_override')
         ->first();

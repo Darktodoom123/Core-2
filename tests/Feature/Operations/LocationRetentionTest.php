@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\LocationUpdate;
-use App\Models\User;
+use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Models\LocationUpdate;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

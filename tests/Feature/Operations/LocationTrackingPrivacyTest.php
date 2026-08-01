@@ -1,14 +1,14 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\PermissionName;
-use App\Enums\RoleName;
-use App\Models\AuditEvent;
-use App\Models\DispatchJob;
-use App\Models\LocationUpdate;
-use App\Models\User;
-use App\ViewModels\OperationsWorkspaceViewModel;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

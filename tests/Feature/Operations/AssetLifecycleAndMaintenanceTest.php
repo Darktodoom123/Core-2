@@ -1,15 +1,15 @@
 <?php
 
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\DispatchJob;
-use App\Models\Inspection;
-use App\Models\MaintenanceWorkOrder;
-use App\Models\OperationalAsset;
-use App\Models\User;
-use App\Services\DispatchResourceEligibility;
+use App\Modules\Assignment\Services\DispatchResourceEligibility;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\Inspection;
+use App\Shared\Assets\Models\MaintenanceWorkOrder;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

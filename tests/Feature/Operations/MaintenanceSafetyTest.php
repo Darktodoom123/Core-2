@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\AssetStatus;
-use App\Enums\RoleName;
-use App\Models\OperationalAsset;
-use App\Models\User;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

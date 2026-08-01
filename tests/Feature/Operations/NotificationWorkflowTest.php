@@ -1,13 +1,13 @@
 <?php
 
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Jobs\SendQueuedNotificationJob;
-use App\Models\DispatchJob;
-use App\Models\Notification;
-use App\Models\User;
-use App\Notifications\DispatchAssignmentNotification;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\DispatchAssignmentNotification;
+use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
+use App\Platform\Notifications\Models\Notification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -61,8 +61,8 @@ it('allows recipient to list and mark notification as read while protecting cros
     $userB = createNotifUser(RoleName::Driver);
 
     $notifA = Notification::query()->create([
-        'type' => 'App\Notifications\DispatchAssignmentNotification',
-        'notifiable_type' => User::class,
+        'type' => 'App\Platform\Notifications\DispatchAssignmentNotification',
+        'notifiable_type' => $userA->getMorphClass(),
         'notifiable_id' => $userA->id,
         'status' => 'unread',
         'data' => ['message' => 'Assignment for User A'],

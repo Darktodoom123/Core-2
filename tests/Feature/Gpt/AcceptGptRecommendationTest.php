@@ -1,17 +1,17 @@
 <?php
 
-use App\Enums\AssetStatus;
-use App\Enums\DispatchPriority;
-use App\Enums\DispatchStatus;
-use App\Enums\RoleName;
-use App\Models\ApprovalRequest;
-use App\Models\DispatchJob;
-use App\Models\GptRecommendation;
-use App\Models\OperationalAsset;
-use App\Models\PersonnelCredential;
-use App\Models\PersonnelProfile;
-use App\Models\User;
-use App\Services\Gpt\BoundedContextBuilder;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BoundedContextBuilder;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\PersonnelCredential;
+use App\Platform\Identity\Models\PersonnelProfile;
+use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -86,7 +86,7 @@ test('authorized dispatcher can accept valid pending gpt recommendation', functi
     $contextData = $contextBuilder->buildForDispatchJob($job);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
@@ -165,7 +165,7 @@ test('accepting an expired recommendation fails closed and marks status expired'
     $contextData = $contextBuilder->buildForDispatchJob($job);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
@@ -211,7 +211,7 @@ test('accepting a recommendation with stale context hash fails closed and marks 
     ]);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $job->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
@@ -260,7 +260,7 @@ test('gpt recommendation cannot bypass priority approval requirement for emergen
     $contextData = $contextBuilder->buildForDispatchJob($emergencyJob);
 
     $recommendation = GptRecommendation::query()->create([
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $emergencyJob->id,
         'requested_by' => $dispatcher->id,
         'purpose' => 'dispatch_assignment',
@@ -286,7 +286,7 @@ test('gpt recommendation cannot bypass priority approval requirement for emergen
 
     // Confirm that exceptional work created an ApprovalRequest in pending status for manager review
     $this->assertDatabaseHas('approval_requests', [
-        'subject_type' => DispatchJob::class,
+        'subject_type' => (new DispatchJob)->getMorphClass(),
         'subject_id' => $emergencyJob->id,
         'status' => 'pending',
         'kind' => 'assignment_override',

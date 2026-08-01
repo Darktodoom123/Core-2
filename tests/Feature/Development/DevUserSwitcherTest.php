@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Platform\Identity\Models\User;
 use Database\Seeders\LocalDevelopmentSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
