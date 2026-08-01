@@ -3,14 +3,20 @@ name: Session 1 physical-device field journey
 ---
 - launchApp:
       clearState: true
-- assertVisible:
-      id: login-screen
+- tapOn: 'http://'
+- inputText: 'http://127.0.0.1:18081'
+- tapOn: Connect
+- extendedWaitUntil:
+      visible:
+          id: login-screen
+      timeout: 60000
 - tapOn:
       id: login-email-input
 - inputText: ${FIELD_TEST_EMAIL}
 - tapOn:
       id: login-password-input
 - inputText: ${FIELD_TEST_PASSWORD}
+- hideKeyboard
 - tapOn:
       id: login-submit-button
 - assertVisible: Active Field Assignments

@@ -20,7 +20,6 @@
         "mobile:start": "npm --prefix packages/field-mobile run start -- --dev-client",
         "mobile:android": "npm --prefix packages/field-mobile run android",
         "mobile:export:android": "npm --prefix packages/field-mobile run export:android",
-        "mobile:export:ios": "npm --prefix packages/field-mobile run export:ios",
         "mobile:build:android:debug": "npm --prefix packages/field-mobile run build:android:debug",
         "mobile:e2e:create-avd:android": "npm --prefix packages/field-mobile run e2e:create-avd:android",
         "mobile:e2e:build:android": "npm --prefix packages/field-mobile run e2e:build:android",

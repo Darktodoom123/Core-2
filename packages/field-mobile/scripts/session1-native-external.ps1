@@ -562,7 +562,8 @@ function Prepare-AndroidDevice {
     $commands.Add([string[]] @('shell', 'input', 'keyevent', 'KEYCODE_HOME'))
 
     foreach ($arguments in $commands) {
-        Invoke-Checked -FilePath $AdbPath -Arguments $arguments `
+        Invoke-Checked -FilePath $AdbPath `
+            -Arguments (@('-s', $Serial) + $arguments) `
             -FailureMessage 'Android device wake and focus preparation failed'
     }
 }
