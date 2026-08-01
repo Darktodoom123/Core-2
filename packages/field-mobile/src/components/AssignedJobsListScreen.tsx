@@ -16,18 +16,26 @@ export interface AssignedJobsListScreenProps {
     jobs: DispatchJob[];
     outboxCommands: OutboxCommand[];
     isLoading: boolean;
+    isOnline?: boolean | null;
     error?: string | null;
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
+    onSyncNow?: () => void;
+    onRetryCommand?: (commandId: string) => void;
+    onDiscardCommand?: (commandId: string) => void;
 }
 
 export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     jobs,
     outboxCommands,
     isLoading,
+    isOnline = null,
     error,
     onRefresh,
     onSelectJob,
+    onSyncNow,
+    onRetryCommand,
+    onDiscardCommand,
 }) => {
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
@@ -43,6 +51,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const conflictCount = outboxCommands.filter(
         (command) => command.state === 'conflict',
     ).length;
+    const failedCommands = outboxCommands.filter(
+        (command) => command.state === 'failed',
+    );
 
     return (
         <ScrollView
@@ -102,6 +113,20 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 testID="outbox-status-bar"
             >
                 <Text style={styles.outboxHeading}>Outbox status</Text>
+                <Text
+                    style={[
+                        styles.connectivityValue,
+                        isOnline === true
+                            ? styles.onlineValue
+                            : styles.offlineValue,
+                    ]}
+                >
+                    {isOnline === null
+                        ? 'Checking connection'
+                        : isOnline
+                          ? 'Online'
+                          : 'Offline — commands stay on this device'}
+                </Text>
                 <Text style={[styles.outboxValue, { color: colors.blue }]}>
                     Queued: {queuedCount}
                 </Text>
@@ -119,7 +144,79 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 >
                     Conflicts: {conflictCount}
                 </Text>
+                {onSyncNow &&
+                isOnline === true &&
+                (queuedCount > 0 || failedCount > 0) ? (
+                    <Pressable
+                        accessibilityLabel="Sync queued commands now"
+                        accessibilityRole="button"
+                        onPress={onSyncNow}
+                        style={({ pressed }) => [
+                            sharedStyles.button,
+                            styles.syncButton,
+                            pressed && styles.pressed,
+                        ]}
+                    >
+                        <Text style={sharedStyles.buttonText}>Sync now</Text>
+                    </Pressable>
+                ) : null}
             </View>
+
+            {failedCommands.map((command) => (
+                <View
+                    accessible
+                    accessibilityRole="alert"
+                    key={command.id}
+                    style={styles.failedCommand}
+                    testID={`failed-command-${command.id}`}
+                >
+                    <Text style={styles.failedTitle}>
+                        Action needs review: {command.type.replaceAll('_', ' ')}
+                    </Text>
+                    <Text style={styles.failedMessage}>
+                        {command.error?.message ||
+                            'This command could not be synchronized.'}
+                    </Text>
+                    <Text style={styles.failedMeta}>
+                        Attempts: {command.attempts}
+                    </Text>
+                    <View style={styles.failedActions}>
+                        {command.error?.retryable && onRetryCommand ? (
+                            <Pressable
+                                accessibilityLabel="Retry failed command"
+                                accessibilityRole="button"
+                                onPress={() => onRetryCommand(command.id)}
+                                style={({ pressed }) => [
+                                    sharedStyles.button,
+                                    styles.retryButton,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text style={sharedStyles.buttonText}>
+                                    Retry
+                                </Text>
+                            </Pressable>
+                        ) : null}
+                        {onDiscardCommand ? (
+                            <Pressable
+                                accessibilityLabel="Discard failed command"
+                                accessibilityHint="Permanently removes this unsynchronized action from this device"
+                                accessibilityRole="button"
+                                onPress={() => onDiscardCommand(command.id)}
+                                style={({ pressed }) => [
+                                    sharedStyles.button,
+                                    styles.discardButton,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text style={sharedStyles.buttonText}>
+                                    Discard
+                                </Text>
+                            </Pressable>
+                        ) : null}
+                    </View>
+                </View>
+            ))}
 
             {error ? (
                 <View
@@ -286,12 +383,69 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         width: '100%',
     },
+    connectivityValue: {
+        fontSize: 13,
+        fontWeight: '800',
+        width: '100%',
+    },
+    onlineValue: {
+        color: colors.green,
+    },
+    offlineValue: {
+        color: colors.amber,
+    },
     outboxValue: {
         fontSize: 13,
         fontWeight: '700',
     },
     conflictValue: {
         color: colors.red,
+    },
+    syncButton: {
+        backgroundColor: colors.blue,
+        minHeight: 44,
+        width: '100%',
+    },
+    failedCommand: {
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginBottom: 12,
+        padding: 12,
+    },
+    failedTitle: {
+        color: colors.red,
+        fontSize: 14,
+        fontWeight: '800',
+        textTransform: 'capitalize',
+    },
+    failedMessage: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 19,
+        marginTop: 4,
+    },
+    failedMeta: {
+        color: colors.muted,
+        fontSize: 12,
+        marginTop: 4,
+    },
+    failedActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 10,
+    },
+    retryButton: {
+        backgroundColor: colors.green,
+        flexGrow: 1,
+        minHeight: 44,
+    },
+    discardButton: {
+        backgroundColor: colors.red,
+        flexGrow: 1,
+        minHeight: 44,
     },
     errorBox: {
         backgroundColor: colors.redSoft,

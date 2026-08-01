@@ -41,6 +41,7 @@ export interface JobDetailScreenProps {
     ) => void;
     onAcceptServerState: (commandId: string) => void;
     onRetryNewVersion: (commandId: string, newVersion: number) => void;
+    onLocationQueued?: (commandId: string) => void;
 }
 
 export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
@@ -55,6 +56,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     onTransitionStatus,
     onAcceptServerState,
     onRetryNewVersion,
+    onLocationQueued,
 }) => {
     const jobConflicts = outboxCommands.filter(
         (command) => command.state === 'conflict' && command.jobId === job.id,
@@ -122,6 +124,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 job={job}
                 locationService={locationService}
                 getCurrentLocation={getCurrentLocation}
+                onLocationQueued={onLocationQueued}
             />
 
             <View style={styles.teamCard}>

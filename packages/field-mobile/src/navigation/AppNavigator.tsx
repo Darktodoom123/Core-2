@@ -4,7 +4,6 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
-    useRef,
     useState,
 } from 'react';
 import {
@@ -24,12 +23,13 @@ import { LoginScreen } from '../auth/LoginScreen';
 import { AssignedJobsListScreen } from '../components/AssignedJobsListScreen';
 import { JobDetailScreen } from '../components/JobDetailScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
+import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
+import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { ApiClientError } from '../services/apiClient';
-import {
-    CommandOutboxManager,
-    createCommandId,
-} from '../services/commandOutbox';
+import { CommandOutboxManager } from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
+import { createDefaultOutboxRepository } from '../storage/outboxRepository';
+import type { OutboxRepository } from '../storage/outboxRepository';
 import type {
     DispatchJob,
     DispatchStatus,
@@ -101,7 +101,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
 }
 
-export const AppNavigator: React.FC = () => {
+export interface AppNavigatorProps {
+    networkMonitor?: NetworkMonitor;
+    outboxRepository?: OutboxRepository;
+}
+
+export const AppNavigator: React.FC<AppNavigatorProps> = ({
+    networkMonitor,
+    outboxRepository,
+}) => {
     const {
         user,
         status,
@@ -115,11 +123,22 @@ export const AppNavigator: React.FC = () => {
     const [outboxCommands, setOutboxCommands] = useState<OutboxCommand[]>([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState(false);
     const [jobsError, setJobsError] = useState<string | null>(null);
-    const previousUserId = useRef<number | null>(null);
+    const [isOnline, setIsOnline] = useState<boolean | null>(null);
+    const [isOutboxReady, setIsOutboxReady] = useState(false);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
-    const commandOutbox = useMemo(() => new CommandOutboxManager(), []);
+    const commandOutbox = useMemo(
+        () =>
+            new CommandOutboxManager({
+                repository: outboxRepository ?? createDefaultOutboxRepository(),
+            }),
+        [outboxRepository],
+    );
+    const connectivity = useMemo(
+        () => networkMonitor ?? defaultNetworkMonitor,
+        [networkMonitor],
+    );
     const locationService = useMemo(
         () => new LocationSharingService(commandOutbox),
         [commandOutbox],
@@ -131,14 +150,27 @@ export const AppNavigator: React.FC = () => {
     );
 
     useEffect(() => {
-        const currentUserId =
-            status === 'authenticated' ? (user?.id ?? null) : null;
+        let active = true;
+        const unsubscribe = connectivity.subscribe(setIsOnline);
 
-        if (previousUserId.current !== currentUserId) {
-            commandOutbox.clearAll();
-            previousUserId.current = currentUserId;
-        }
-    }, [commandOutbox, status, user?.id]);
+        void connectivity
+            .fetchIsOnline()
+            .then((online) => {
+                if (active) {
+                    setIsOnline(online);
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    setIsOnline(false);
+                }
+            });
+
+        return () => {
+            active = false;
+            unsubscribe();
+        };
+    }, [connectivity]);
 
     const handleRequestFailure = useCallback(
         async (err: unknown, fallback: string) => {
@@ -157,7 +189,7 @@ export const AppNavigator: React.FC = () => {
     );
 
     const fetchJobs = useCallback(async () => {
-        if (status !== 'authenticated') {
+        if (status !== 'authenticated' || isOnline !== true) {
             return;
         }
 
@@ -174,18 +206,104 @@ export const AppNavigator: React.FC = () => {
         } finally {
             setIsLoadingJobs(false);
         }
-    }, [apiClient, handleRequestFailure, status]);
+    }, [apiClient, handleRequestFailure, isOnline, status]);
+
+    const syncQueue = useCallback(async () => {
+        if (status !== 'authenticated' || isOnline !== true || !isOutboxReady) {
+            return;
+        }
+
+        const result = await commandOutbox.processQueue(apiClient);
+
+        if (result.requiresAuthentication) {
+            await logout();
+
+            return;
+        }
+
+        if (result.completed > 0) {
+            await fetchJobs();
+        }
+    }, [
+        apiClient,
+        commandOutbox,
+        fetchJobs,
+        isOnline,
+        isOutboxReady,
+        logout,
+        status,
+    ]);
 
     useEffect(() => {
-        if (status === 'authenticated') {
-            queueMicrotask(() => void fetchJobs());
+        let active = true;
+
+        if (status === 'authenticated' && user) {
+            queueMicrotask(() => {
+                if (active) {
+                    setIsOutboxReady(false);
+                }
+            });
+            void commandOutbox
+                .activateActor(user.id)
+                .then(() => {
+                    if (active) {
+                        setIsOutboxReady(true);
+                    }
+                })
+                .catch(() => {
+                    if (active) {
+                        setJobsError(
+                            'Secure offline storage could not be initialized.',
+                        );
+                    }
+                });
         } else {
+            commandOutbox.deactivateActor();
+            queueMicrotask(() => {
+                if (active) {
+                    setIsOutboxReady(false);
+                }
+            });
+        }
+
+        return () => {
+            active = false;
+        };
+    }, [commandOutbox, status, user]);
+
+    useEffect(() => {
+        if (status === 'authenticated' && isOnline === true) {
+            queueMicrotask(() => void fetchJobs());
+        } else if (status !== 'authenticated') {
             queueMicrotask(() => {
                 setJobs([]);
                 setSelectedJobId(null);
             });
         }
-    }, [fetchJobs, status]);
+    }, [fetchJobs, isOnline, status]);
+
+    useEffect(() => {
+        if (isOnline === true && isOutboxReady) {
+            queueMicrotask(() => void syncQueue());
+        }
+    }, [isOnline, isOutboxReady, syncQueue]);
+
+    useEffect(() => {
+        if (isOnline !== true || !isOutboxReady) {
+            return;
+        }
+
+        const nextRetryAt = commandOutbox.getNextRetryAt();
+
+        if (!nextRetryAt) {
+            return;
+        }
+
+        const delay = Math.max(0, Date.parse(nextRetryAt) - Date.now());
+        const timeout = setTimeout(() => void syncQueue(), delay);
+
+        return () => clearTimeout(timeout);
+    }, [commandOutbox, isOnline, isOutboxReady, outboxCommands, syncQueue]);
 
     useEffect(() => {
         const subscription = BackHandler.addEventListener(
@@ -215,19 +333,14 @@ export const AppNavigator: React.FC = () => {
             setIsLoadingJobs(true);
 
             try {
-                const updated = await apiClient.respondAssignment(
+                await commandOutbox.enqueueRespondAssignment(
                     jobId,
                     assignmentId,
                     'accepted',
                     undefined,
                     version,
-                    createCommandId(),
                 );
-                setJobs((previous) =>
-                    previous.map((job) =>
-                        job.id === updated.id ? updated : job,
-                    ),
-                );
+                await syncQueue();
             } catch (error: unknown) {
                 await handleRequestFailure(
                     error,
@@ -237,7 +350,7 @@ export const AppNavigator: React.FC = () => {
                 setIsLoadingJobs(false);
             }
         },
-        [apiClient, handleRequestFailure],
+        [commandOutbox, handleRequestFailure, syncQueue],
     );
 
     const handleRejectAssignment = useCallback(
@@ -250,19 +363,14 @@ export const AppNavigator: React.FC = () => {
             setIsLoadingJobs(true);
 
             try {
-                const updated = await apiClient.respondAssignment(
+                await commandOutbox.enqueueRespondAssignment(
                     jobId,
                     assignmentId,
                     'rejected',
                     reason,
                     version,
-                    createCommandId(),
                 );
-                setJobs((previous) =>
-                    previous.map((job) =>
-                        job.id === updated.id ? updated : job,
-                    ),
-                );
+                await syncQueue();
             } catch (error: unknown) {
                 await handleRequestFailure(
                     error,
@@ -272,7 +380,7 @@ export const AppNavigator: React.FC = () => {
                 setIsLoadingJobs(false);
             }
         },
-        [apiClient, handleRequestFailure],
+        [commandOutbox, handleRequestFailure, syncQueue],
     );
 
     const handleTransitionStatus = useCallback(
@@ -280,44 +388,84 @@ export const AppNavigator: React.FC = () => {
             setIsLoadingJobs(true);
 
             try {
-                const updated = await apiClient.transitionStatus(
+                await commandOutbox.enqueueTransitionStatus(
                     jobId,
                     nextStatus,
                     version,
-                    createCommandId(),
                 );
-                setJobs((previous) =>
-                    previous.map((job) =>
-                        job.id === updated.id ? updated : job,
-                    ),
-                );
+                await syncQueue();
             } catch (error: unknown) {
                 await handleRequestFailure(error, 'Failed to progress status.');
             } finally {
                 setIsLoadingJobs(false);
             }
         },
-        [apiClient, handleRequestFailure],
+        [commandOutbox, handleRequestFailure, syncQueue],
     );
 
     const handleAcceptServerState = useCallback(
         (commandId: string) => {
-            commandOutbox.resolveConflictAcceptServer(commandId);
-            void fetchJobs();
+            void commandOutbox
+                .resolveConflictAcceptServer(commandId)
+                .then(fetchJobs)
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to accept current server state.',
+                    ),
+                );
         },
-        [commandOutbox, fetchJobs],
+        [commandOutbox, fetchJobs, handleRequestFailure],
     );
 
     const handleRetryNewVersion = useCallback(
         (commandId: string, newVersion: number) => {
-            void commandOutbox.resolveConflictWithNewVersion(
-                commandId,
-                newVersion,
-                apiClient,
-            );
-            void fetchJobs();
+            void commandOutbox
+                .resolveConflictWithNewVersion(commandId, newVersion, apiClient)
+                .then(fetchJobs)
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to create the reviewed command.',
+                    ),
+                );
         },
-        [apiClient, commandOutbox, fetchJobs],
+        [apiClient, commandOutbox, fetchJobs, handleRequestFailure],
+    );
+
+    const handleRetryCommand = useCallback(
+        (commandId: string) => {
+            void commandOutbox
+                .retryCommand(commandId, apiClient)
+                .then(async (result) => {
+                    if (result.requiresAuthentication) {
+                        await logout();
+                    } else if (result.completed > 0) {
+                        await fetchJobs();
+                    }
+                })
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to retry the queued command.',
+                    ),
+                );
+        },
+        [apiClient, commandOutbox, fetchJobs, handleRequestFailure, logout],
+    );
+
+    const handleDiscardCommand = useCallback(
+        (commandId: string) => {
+            void commandOutbox
+                .discardCommand(commandId)
+                .catch((error: unknown) =>
+                    handleRequestFailure(
+                        error,
+                        'Failed to discard the queued command.',
+                    ),
+                );
+        },
+        [commandOutbox, handleRequestFailure],
     );
 
     if (isInitializing) {
@@ -484,8 +632,12 @@ export const AppNavigator: React.FC = () => {
                                 jobs={jobs}
                                 outboxCommands={outboxCommands}
                                 isLoading={isLoadingJobs}
+                                isOnline={isOnline}
                                 error={jobsError}
                                 onRefresh={() => void fetchJobs()}
+                                onSyncNow={() => void syncQueue()}
+                                onRetryCommand={handleRetryCommand}
+                                onDiscardCommand={handleDiscardCommand}
                                 onSelectJob={handleSelectJob}
                             />
                         ) : (
@@ -500,6 +652,7 @@ export const AppNavigator: React.FC = () => {
                                 onTransitionStatus={handleTransitionStatus}
                                 onAcceptServerState={handleAcceptServerState}
                                 onRetryNewVersion={handleRetryNewVersion}
+                                onLocationQueued={() => void syncQueue()}
                             />
                         )}
                     </View>

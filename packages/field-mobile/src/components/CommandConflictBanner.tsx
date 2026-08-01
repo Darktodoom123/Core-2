@@ -52,6 +52,13 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
                             Submitted version: v{command.expectedVersion ?? '?'}
                             , current server version: v{currentVersion}
                         </Text>
+                        {command.error?.serverSnapshot ? (
+                            <Text style={styles.snapshotText}>
+                                Server state:{' '}
+                                {command.error.serverSnapshot.reference} —{' '}
+                                {command.error.serverSnapshot.status.label}
+                            </Text>
+                        ) : null}
                         <View style={styles.actions}>
                             <Pressable
                                 accessibilityLabel={`Accept server state at version ${currentVersion}`}
@@ -136,6 +143,13 @@ const styles = StyleSheet.create({
         lineHeight: 19,
         marginBottom: 10,
         marginTop: 4,
+    },
+    snapshotText: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        lineHeight: 19,
+        marginBottom: 10,
     },
     actions: {
         flexDirection: 'row',

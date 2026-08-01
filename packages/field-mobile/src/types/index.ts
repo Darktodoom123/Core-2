@@ -124,20 +124,26 @@ export interface CommandErrorDetails {
     code?: string;
     currentVersion?: number;
     serverSnapshot?: DispatchJob | null;
+    retryable?: boolean;
 }
 
 export interface OutboxCommand {
     id: string; // UUID command_id
+    actorId: number;
     type: OutboxCommandType;
     jobId?: number | null;
     assignmentId?: number | null;
     payload: Record<string, unknown>;
+    payloadHash: string;
     expectedVersion?: number | null;
     state: OutboxCommandState;
     error?: CommandErrorDetails | null;
     createdAt: string;
     updatedAt: string;
-    retryCount: number;
+    attempts: number;
+    lastAttemptAt?: string | null;
+    nextAttemptAt?: string | null;
+    completedAt?: string | null;
 }
 
 export interface LocationSharePayload {

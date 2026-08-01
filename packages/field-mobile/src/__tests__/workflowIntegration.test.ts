@@ -3,9 +3,14 @@ import { test, describe } from 'node:test';
 import type { FieldApiClient } from '../services/apiClient';
 import { ApiClientError } from '../services/apiClient';
 import { CommandOutboxManager } from '../services/commandOutbox';
+import { canonicalJson } from '../storage/outboxRepository';
 import type { DispatchJob, DispatchStatus, User } from '../types/index';
 
 describe('Field Mobile Workflow Integration', () => {
+    const createOutbox = () =>
+        new CommandOutboxManager({
+            hasher: { hash: async (envelope) => canonicalJson(envelope) },
+        });
     const activeWorker: User = {
         id: 1,
         name: 'Field Technician Alex',
@@ -15,7 +20,8 @@ describe('Field Mobile Workflow Integration', () => {
     };
 
     test('completes full assignment accept and forward-only progression workflow', async () => {
-        const outbox = new CommandOutboxManager();
+        const outbox = createOutbox();
+        await outbox.activateActor(activeWorker.id);
 
         // Mock API server database state
         let serverJob: DispatchJob = {
@@ -148,7 +154,7 @@ describe('Field Mobile Workflow Integration', () => {
         assert.equal(jobs[0].my_assignment?.response_status, 'pending');
 
         // Step 2: Accept assignment
-        const acceptCmd = outbox.enqueueRespondAssignment(
+        const acceptCmd = await outbox.enqueueRespondAssignment(
             jobs[0].id,
             jobs[0].my_assignment!.id,
             'accepted',
@@ -163,7 +169,7 @@ describe('Field Mobile Workflow Integration', () => {
         assert.equal(serverJob.my_assignment?.response_status, 'accepted');
 
         // Step 3: Forward progression: Dispatched -> Accepted -> En Route
-        const stepCmd = outbox.enqueueTransitionStatus(
+        const stepCmd = await outbox.enqueueTransitionStatus(
             serverJob.id,
             'en_route',
             serverJob.version,
@@ -176,7 +182,8 @@ describe('Field Mobile Workflow Integration', () => {
     });
 
     test('detects version conflict and resolves via retry with updated server version', async () => {
-        const outbox = new CommandOutboxManager();
+        const outbox = createOutbox();
+        await outbox.activateActor(activeWorker.id);
         let serverVersion = 10;
 
         const mockApiClient = {
@@ -209,7 +216,7 @@ describe('Field Mobile Workflow Integration', () => {
         } as unknown as FieldApiClient;
 
         // Worker attempts transition with stale version 9 (server is at 10)
-        const cmd = outbox.enqueueTransitionStatus(100, 'working', 9);
+        const cmd = await outbox.enqueueTransitionStatus(100, 'working', 9);
 
         await outbox.processQueue(mockApiClient);
 
@@ -218,9 +225,14 @@ describe('Field Mobile Workflow Integration', () => {
         assert.equal(cmd.error?.currentVersion, 10);
 
         // Resolve conflict by updating to current server version (10) and retrying
-        await outbox.resolveConflictWithNewVersion(cmd.id, 10, mockApiClient);
+        const replacement = await outbox.resolveConflictWithNewVersion(
+            cmd.id,
+            10,
+            mockApiClient,
+        );
 
-        assert.equal(cmd.state, 'completed');
+        assert.equal(replacement?.state, 'completed');
+        assert.notEqual(replacement?.id, cmd.id);
         assert.equal(serverVersion, 11);
     });
 });

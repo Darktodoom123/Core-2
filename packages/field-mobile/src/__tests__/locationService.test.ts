@@ -2,9 +2,14 @@
 import { test, describe } from 'node:test';
 import { CommandOutboxManager } from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
+import { canonicalJson } from '../storage/outboxRepository';
 import type { DispatchJob, User } from '../types/index';
 
 describe('LocationSharingService', () => {
+    const createOutbox = () =>
+        new CommandOutboxManager({
+            hasher: { hash: async (envelope) => canonicalJson(envelope) },
+        });
     const activeUser: User = {
         id: 10,
         name: 'Driver Dan',
@@ -23,11 +28,12 @@ describe('LocationSharingService', () => {
         },
     };
 
-    test('validates server capability contract before queueing location sharing', () => {
-        const outbox = new CommandOutboxManager();
+    test('validates server capability contract before queueing location sharing', async () => {
+        const outbox = createOutbox();
+        await outbox.activateActor(activeUser.id);
         const locationService = new LocationSharingService(outbox);
 
-        const result = locationService.shareLocation(
+        const result = await locationService.shareLocation(
             activeUser,
             validJob as DispatchJob,
             null,
@@ -43,8 +49,9 @@ describe('LocationSharingService', () => {
         assert.equal(commands[0].payload.latitude, 37.7749);
     });
 
-    test('rejects location sharing when server job capability denies it', () => {
-        const outbox = new CommandOutboxManager();
+    test('rejects location sharing when server job capability denies it', async () => {
+        const outbox = createOutbox();
+        await outbox.activateActor(activeUser.id);
         const locationService = new LocationSharingService(outbox);
 
         const restrictedJob: Partial<DispatchJob> = {
@@ -56,7 +63,7 @@ describe('LocationSharingService', () => {
             },
         };
 
-        const result = locationService.shareLocation(
+        const result = await locationService.shareLocation(
             activeUser,
             restrictedJob as DispatchJob,
             null,

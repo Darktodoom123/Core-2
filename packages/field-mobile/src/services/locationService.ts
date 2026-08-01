@@ -25,13 +25,13 @@ export class LocationSharingService {
         return true;
     }
 
-    public shareLocation(
+    public async shareLocation(
         user: User,
         job: DispatchJob | null,
         assetId: number | null,
         coords: LocationCoordinates,
         remarks?: string,
-    ): { success: boolean; commandId?: string; reason?: string } {
+    ): Promise<{ success: boolean; commandId?: string; reason?: string }> {
         if (!this.canShareLocation(user, job)) {
             return {
                 success: false,
@@ -50,7 +50,7 @@ export class LocationSharingService {
             remarks: remarks ?? null,
         };
 
-        const command = this.outbox.enqueueShareLocation(payload);
+        const command = await this.outbox.enqueueShareLocation(payload);
 
         return {
             success: true,
@@ -58,10 +58,10 @@ export class LocationSharingService {
         };
     }
 
-    public pauseSharing(
+    public async pauseSharing(
         user: User,
         job?: DispatchJob | null,
-    ): { success: boolean; commandId?: string; reason?: string } {
+    ): Promise<{ success: boolean; commandId?: string; reason?: string }> {
         if (!user || !user.is_active) {
             return {
                 success: false,
@@ -78,7 +78,7 @@ export class LocationSharingService {
             remarks: 'Sharing paused by user',
         };
 
-        const command = this.outbox.enqueueShareLocation(payload);
+        const command = await this.outbox.enqueueShareLocation(payload);
 
         return {
             success: true,

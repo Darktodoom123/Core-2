@@ -6,6 +6,7 @@
 /packages/field-mobile/.env.local
 /packages/field-mobile/.npm-cache
 /packages/field-mobile/.expo
+/.expo-sprint2/
 /packages/field-mobile/.expo-export
 /packages/field-mobile/.detox-runtime
 /packages/field-mobile/dist

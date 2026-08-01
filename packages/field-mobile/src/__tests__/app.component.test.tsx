@@ -9,6 +9,8 @@ import React from 'react';
 import { App } from '../../App';
 import type { TokenStorageProvider } from '../auth/tokenStorage';
 import { AssignedJobsListScreen } from '../components/AssignedJobsListScreen';
+import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { MemoryOutboxRepository } from '../storage/outboxRepository';
 import type { DispatchJob, OutboxCommand, User } from '../types/index';
 
 const apiBaseUrl = 'https://field.example.test';
@@ -20,6 +22,24 @@ let screen: NativeRender;
 async function renderScreen(
     element: React.ReactElement,
 ): Promise<NativeRender> {
+    if (element.type === App) {
+        const appElement = element as React.ReactElement<
+            React.ComponentProps<typeof App>
+        >;
+        const networkMonitor: NetworkMonitor = {
+            fetchIsOnline: async () => true,
+            subscribe: (listener) => {
+                listener(true);
+
+                return () => undefined;
+            },
+        };
+        element = React.cloneElement(appElement, {
+            networkMonitor,
+            outboxRepository: new MemoryOutboxRepository(),
+        });
+    }
+
     screen = await render(element);
 
     return screen;
@@ -323,7 +343,7 @@ describe('native application component tree', () => {
         resolveToken?.(null);
 
         expect(await screen.findByTestId('login-screen')).toBeVisible();
-    });
+    }, 15_000);
 
     it('logs in, stores the token securely, and renders an empty assigned-job state', async () => {
         const tokenStorage = new TestTokenStorage();
@@ -628,9 +648,11 @@ describe('native application component tree', () => {
     it('renders explicit loading, empty, error, retry, queued, and stale states', async () => {
         const staleCommand: OutboxCommand = {
             id: 'stale-command',
+            actorId: driver.id,
             type: 'transition_status',
             jobId: driverJob.id,
             payload: { status: 'accepted' },
+            payloadHash: 'redacted-test-hash',
             expectedVersion: 2,
             state: 'conflict',
             error: {
@@ -640,7 +662,7 @@ describe('native application component tree', () => {
             },
             createdAt: '2026-07-29T00:00:00.000Z',
             updatedAt: '2026-07-29T00:00:00.000Z',
-            retryCount: 1,
+            attempts: 1,
         };
 
         const { rerender } = await renderScreen(

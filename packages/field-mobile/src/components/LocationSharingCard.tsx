@@ -47,7 +47,7 @@ export const LocationSharingCard: React.FC<LocationSharingCardProps> = ({
 
         try {
             const coords = await getCurrentLocation();
-            const result = locationService.shareLocation(
+            const result = await locationService.shareLocation(
                 user,
                 job ?? null,
                 null,
