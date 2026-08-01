@@ -25,7 +25,9 @@
         "mobile:e2e:create-avd:android": "npm --prefix packages/field-mobile run e2e:create-avd:android",
         "mobile:e2e:build:android": "npm --prefix packages/field-mobile run e2e:build:android",
         "mobile:e2e:test:android": "npm --prefix packages/field-mobile run e2e:test:android",
-        "mobile:session1:native": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1"
+        "mobile:session1:native": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1",
+        "mobile:session1:native:api30": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -AndroidAvd core2_api_30_phone",
+        "mobile:session1:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -AndroidAvd core2_api_36"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
@@ -60,8 +62,8 @@
         "lucide-react": "^1.24.0",
         "motion": "^12.43.0",
         "pusher-js": "^8.6.0",
-        "react": "19.2.8",
-        "react-dom": "19.2.8",
+        "react": "19.2.3",
+        "react-dom": "19.2.3",
         "react-leaflet": "^5.0.0",
         "tailwind-merge": "^3.0.1",
         "tailwindcss": "^4.0.0",

@@ -109,10 +109,16 @@ function jsonResponse(
 
 class TestTokenStorage implements TokenStorageProvider {
     public clearCalls = 0;
+    public clearPendingCalls = 0;
     public getCalls = 0;
+    public getPendingCalls = 0;
     public setCalls: string[] = [];
+    public stageCalls: string[] = [];
 
-    public constructor(public token: string | null = null) {}
+    public constructor(
+        public token: string | null = null,
+        public pendingRevocationToken: string | null = null,
+    ) {}
 
     public async getToken(): Promise<string | null> {
         this.getCalls += 1;
@@ -129,12 +135,29 @@ class TestTokenStorage implements TokenStorageProvider {
         this.clearCalls += 1;
         this.token = null;
     }
+
+    public async getPendingRevocationToken(): Promise<string | null> {
+        this.getPendingCalls += 1;
+
+        return this.pendingRevocationToken;
+    }
+
+    public async stageTokenForRevocation(token: string): Promise<void> {
+        this.stageCalls.push(token);
+        this.pendingRevocationToken = token;
+    }
+
+    public async clearPendingRevocationToken(): Promise<void> {
+        this.clearPendingCalls += 1;
+        this.pendingRevocationToken = null;
+    }
 }
 
 interface ApiScenario {
     assignedJobs?: DispatchJob[] | (() => DispatchJob[]);
     jobsResponses?: Array<{ body: unknown; status: number }>;
     loginStatus?: number;
+    logoutResponses?: Array<'network-error' | { status: number }>;
     meStatus?: number;
     user?: User;
 }
@@ -146,6 +169,7 @@ function createApi(scenario: ApiScenario = {}) {
         url: string;
     }> = [];
     let jobsRequestIndex = 0;
+    let logoutRequestIndex = 0;
 
     const fetchFn = jest.fn(
         async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -199,6 +223,26 @@ function createApi(scenario: ApiScenario = {}) {
             }
 
             if (url.endsWith('/api/v1/auth/logout')) {
+                const queuedResponse =
+                    scenario.logoutResponses?.[logoutRequestIndex];
+                logoutRequestIndex += 1;
+
+                if (queuedResponse === 'network-error') {
+                    throw new TypeError('Network request failed');
+                }
+
+                if (queuedResponse) {
+                    return jsonResponse(
+                        {
+                            message:
+                                queuedResponse.status === 401
+                                    ? 'Unauthenticated.'
+                                    : 'Revocation failed.',
+                        },
+                        { status: queuedResponse.status },
+                    );
+                }
+
                 return jsonResponse({
                     message:
                         'Successfully logged out and revoked device token.',
@@ -251,13 +295,16 @@ describe('native application component tree', () => {
 
     it('shows bootstrap loading until secure storage resolves', async () => {
         let resolveToken: ((value: string | null) => void) | undefined;
+        const tokenPromise = new Promise<string | null>((resolve) => {
+            resolveToken = resolve;
+        });
         const tokenStorage: TokenStorageProvider = {
             clearToken: async () => undefined,
-            getToken: () =>
-                new Promise((resolve) => {
-                    resolveToken = resolve;
-                }),
+            clearPendingRevocationToken: async () => undefined,
+            getToken: () => tokenPromise,
+            getPendingRevocationToken: async () => null,
             setToken: async () => undefined,
+            stageTokenForRevocation: async () => undefined,
         };
         const { fetchFn } = createApi();
 
@@ -447,6 +494,87 @@ describe('native application component tree', () => {
         expect(
             calls.filter((call) => call.url.endsWith('/api/v1/auth/logout')),
         ).toHaveLength(1);
+    });
+
+    it('fails closed after a revocation failure and retries without restoring the old identity', async () => {
+        const tokenStorage = new TestTokenStorage();
+        const { calls, fetchFn } = createApi({
+            assignedJobs: [driverJob],
+            logoutResponses: ['network-error', { status: 200 }],
+        });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={tokenStorage}
+            />,
+        );
+        await signIn();
+        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+
+        await fireEvent.press(screen.getByLabelText('Sign out of field app'));
+
+        expect(await screen.findByTestId('login-screen')).toBeVisible();
+        expect(
+            await screen.findByText('Secure sign-out pending'),
+        ).toBeVisible();
+        expect(screen.queryByText(driverJob.reference)).toBeNull();
+        expect(tokenStorage.token).toBeNull();
+        expect(tokenStorage.pendingRevocationToken).toBe(rawToken);
+        expect(tokenStorage.stageCalls).toEqual([rawToken]);
+        expect(screen.queryByText(rawToken)).toBeNull();
+
+        await fireEvent.press(screen.getByTestId('retry-logout-button'));
+
+        await waitFor(() => {
+            expect(screen.queryByText('Secure sign-out pending')).toBeNull();
+        });
+        expect(tokenStorage.pendingRevocationToken).toBeNull();
+        expect(
+            calls.filter((call) => call.url.endsWith('/api/v1/auth/logout')),
+        ).toHaveLength(2);
+    });
+
+    it('retries a pending revocation on cold start before allowing authentication', async () => {
+        const tokenStorage = new TestTokenStorage(null, rawToken);
+        const { calls, fetchFn } = createApi();
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={tokenStorage}
+            />,
+        );
+
+        expect(await screen.findByTestId('login-screen')).toBeVisible();
+        expect(tokenStorage.pendingRevocationToken).toBeNull();
+        expect(
+            calls.filter((call) => call.url.endsWith('/api/v1/auth/logout')),
+        ).toHaveLength(1);
+        expect(
+            calls.filter((call) => call.url.endsWith('/api/v1/auth/me')),
+        ).toHaveLength(0);
+    });
+
+    it('clears a pending revocation when the server confirms the token is already rejected', async () => {
+        const tokenStorage = new TestTokenStorage(null, rawToken);
+        const { fetchFn } = createApi({
+            logoutResponses: [{ status: 401 }],
+        });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={tokenStorage}
+            />,
+        );
+
+        expect(await screen.findByTestId('login-screen')).toBeVisible();
+        expect(tokenStorage.pendingRevocationToken).toBeNull();
+        expect(screen.queryByText('Secure sign-out pending')).toBeNull();
     });
 
     it('clears an expired or revoked token and returns to sign in', async () => {

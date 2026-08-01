@@ -6,11 +6,32 @@ For an isolated local authenticated run from standalone Windows PowerShell:
 npm run mobile:session1:native
 ```
 
+Run the complete minimum/current Android matrix explicitly with:
+
+```powershell
+npm run mobile:session1:native:api30
+npm run mobile:session1:native:api36
+```
+
 The runner uses Android Studio's external SDK and JBR, creates a dedicated
 ignored SQLite database, seeds local-only fixtures, starts the Laravel API and
 Metro, builds the Detox APKs, and runs the authenticated emulator journey.
 Fixture credentials remain in child-process environment only. The evidence
 summary never includes a password or bearer token.
+Each target and build mode writes a redacted evidence file alongside the
+latest-run `session1-native-evidence.txt`. Every run overwrites both its
+target-and-mode file and the latest-run file with `RUNNING` before doing work,
+then records `FAILED` or `PASSED`. A failed clean-build rerun therefore cannot
+be mistaken for an earlier reused-artifact pass.
+
+Before recording a pass, the runner scans the API, Metro, emulator, and
+application-relevant device logs plus both generated APKs. Device capture is
+restricted to React Native, Expo, Android runtime, networking, and lifecycle
+tags so the Android automation/input subsystem cannot duplicate typed fixture
+passwords into the retained log. It fails on fixture passwords, populated
+Authorization headers, bearer-token values, password values, or Sanctum-shaped
+raw tokens. Evidence records only zero/nonzero category counts and never a
+matched value.
 
 Pass `-SkipNativeBuild` directly to the PowerShell script to reuse existing
 application and instrumentation APKs. That path does not invoke or claim to
@@ -23,17 +44,18 @@ does not claim authenticated-acceptance evidence.
 Dedicated ports `18000` (isolated Laravel API) and `18081` (Metro) must be free
 before the runner starts. The runner fails fast instead of reusing an unknown
 process, verifies Metro through its status endpoint, and terminates the process
-trees it starts. It cold-boots the API 36 AVD headlessly with Android's software
-renderer and gives Detox an already-online device instead of relying on
-Detox's incompatible legacy emulator launch arguments. Detox opens each fresh
-app state through the Expo development-client URL so clearing app data cannot
-strand the test in the launcher. API, Metro, and emulator output use
-timestamped per-run log files under `storage/framework/testing` so an orphaned
-process cannot lock the next run's diagnostics.
+trees it starts. It cold-boots the selected API 30 or API 36 AVD headlessly
+with Android's software renderer and gives Detox an already-online device
+instead of relying on Detox's incompatible legacy emulator launch arguments.
+Detox opens each fresh app state through the Expo development-client URL so
+clearing app data cannot strand the test in the launcher. API, Metro, and
+emulator output use timestamped per-run log files under
+`storage/framework/testing` so an orphaned process cannot lock the next run's
+diagnostics.
 
-The runner keeps the API 36 AVD configuration in the Android Studio device
-manager, but creates its writable runtime state under the ignored testing
-storage. Detox addresses that runner-owned emulator as the attached ADB device
+The runner keeps the selected API 30 or API 36 AVD configuration in Android
+Studio's device manager, but creates its writable runtime state under the
+ignored testing storage. Detox addresses that runner-owned emulator as the attached ADB device
 `emulator-5554`, avoiding emulator-console discovery. Running
 `e2e:test:android` directly therefore requires that serial to already be online.
 

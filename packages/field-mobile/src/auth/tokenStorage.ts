@@ -2,6 +2,9 @@ export interface TokenStorageProvider {
     getToken(): Promise<string | null>;
     setToken(token: string): Promise<void>;
     clearToken(): Promise<void>;
+    getPendingRevocationToken(): Promise<string | null>;
+    stageTokenForRevocation(token: string): Promise<void>;
+    clearPendingRevocationToken(): Promise<void>;
 }
 
 export interface SecureStoreProvider {
@@ -37,6 +40,7 @@ const expoSecureStore: SecureStoreProvider = {
 
 export class SecureTokenStorage implements TokenStorageProvider {
     private readonly storageKey: string;
+    private readonly pendingRevocationStorageKey: string;
     private readonly secureStore: SecureStoreProvider;
 
     constructor(
@@ -44,6 +48,7 @@ export class SecureTokenStorage implements TokenStorageProvider {
         secureStore: SecureStoreProvider = expoSecureStore,
     ) {
         this.storageKey = storageKey;
+        this.pendingRevocationStorageKey = `${storageKey}_pending_revocation`;
         this.secureStore = secureStore;
     }
 
@@ -57,6 +62,23 @@ export class SecureTokenStorage implements TokenStorageProvider {
 
     async clearToken(): Promise<void> {
         await this.secureStore.deleteItemAsync(this.storageKey);
+    }
+
+    async getPendingRevocationToken(): Promise<string | null> {
+        return this.secureStore.getItemAsync(this.pendingRevocationStorageKey);
+    }
+
+    async stageTokenForRevocation(token: string): Promise<void> {
+        await this.secureStore.setItemAsync(
+            this.pendingRevocationStorageKey,
+            token,
+        );
+    }
+
+    async clearPendingRevocationToken(): Promise<void> {
+        await this.secureStore.deleteItemAsync(
+            this.pendingRevocationStorageKey,
+        );
     }
 }
 

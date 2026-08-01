@@ -28,6 +28,7 @@ export interface AuthState {
     status: AuthStatus;
     error: string | null;
     isInitializing: boolean;
+    hasPendingRevocation: boolean;
 }
 
 export interface AuthContextType extends AuthState {
@@ -36,7 +37,7 @@ export interface AuthContextType extends AuthState {
         password: string,
         deviceName?: string,
     ) => Promise<void>;
-    logout: () => Promise<void>;
+    logout: () => Promise<boolean>;
     bootstrap: () => Promise<void>;
     clearError: () => void;
     apiClient: FieldApiClient;
@@ -61,6 +62,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const [token, setToken] = useState<string | null>(null);
     const [status, setStatus] = useState<AuthStatus>('uninitialized');
     const [error, setError] = useState<string | null>(null);
+    const [hasPendingRevocation, setHasPendingRevocation] = useState(false);
 
     const apiClient = useMemo(() => {
         return new FieldApiClient({
@@ -74,11 +76,90 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         setError(null);
     }, []);
 
+    const clearLocalIdentity = useCallback(() => {
+        setUser(null);
+        setToken(null);
+        setStatus('unauthenticated');
+    }, []);
+
+    const revokeStagedToken = useCallback(
+        async (tokenToRevoke: string): Promise<boolean> => {
+            const revocationClient = new FieldApiClient({
+                baseUrl,
+                getToken: () => tokenToRevoke,
+                fetchFn,
+            });
+
+            try {
+                await revocationClient.logout();
+            } catch (err: unknown) {
+                if (!(err instanceof ApiClientError && err.status === 401)) {
+                    setHasPendingRevocation(true);
+                    setError(
+                        'Secure sign-out is pending. Reconnect and retry before signing in again.',
+                    );
+
+                    return false;
+                }
+            }
+
+            try {
+                await tokenStorage.clearToken();
+                await tokenStorage.clearPendingRevocationToken();
+            } catch {
+                setHasPendingRevocation(true);
+                setError(
+                    'The server rejected the previous token, but secure local cleanup is pending. Retry before signing in again.',
+                );
+
+                return false;
+            }
+
+            setHasPendingRevocation(false);
+            setError(null);
+
+            return true;
+        },
+        [baseUrl, fetchFn, tokenStorage],
+    );
+
+    const stageAndRevokeToken = useCallback(
+        async (tokenToRevoke: string): Promise<boolean> => {
+            try {
+                await tokenStorage.stageTokenForRevocation(tokenToRevoke);
+                await tokenStorage.clearToken();
+            } catch {
+                setError(
+                    'Secure sign-out could not be prepared. Try again before leaving the app.',
+                );
+
+                return false;
+            }
+
+            clearLocalIdentity();
+            setHasPendingRevocation(true);
+
+            return revokeStagedToken(tokenToRevoke);
+        },
+        [clearLocalIdentity, revokeStagedToken, tokenStorage],
+    );
+
     const bootstrap = useCallback(async () => {
         setStatus('bootstrapping');
         setError(null);
 
         try {
+            const pendingToken = await tokenStorage.getPendingRevocationToken();
+
+            if (pendingToken) {
+                clearLocalIdentity();
+                setHasPendingRevocation(true);
+
+                if (!(await revokeStagedToken(pendingToken))) {
+                    return;
+                }
+            }
+
             let activeToken = token;
 
             if (!activeToken) {
@@ -89,6 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 setUser(null);
                 setToken(null);
                 setStatus('unauthenticated');
+                setHasPendingRevocation(false);
 
                 return;
             }
@@ -108,6 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 setUser(null);
                 setToken(null);
                 setStatus('suspended');
+                setHasPendingRevocation(false);
                 setError(
                     'This account is suspended. Contact a system administrator.',
                 );
@@ -116,13 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             }
 
             if (!isAuthorizedFieldRole(meUser.role)) {
-                try {
-                    await verifyClient.logout();
-                } finally {
-                    await tokenStorage.clearToken();
-                    setUser(null);
-                    setToken(null);
-                    setStatus('unauthenticated');
+                if (await stageAndRevokeToken(activeToken)) {
                     setError(
                         'This account role cannot use the field mobile application.',
                     );
@@ -140,6 +217,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     setUser(null);
                     setToken(null);
                     setStatus('suspended');
+                    setHasPendingRevocation(false);
                     setError(
                         err.message ||
                             'Account access is forbidden or suspended.',
@@ -153,6 +231,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     setUser(null);
                     setToken(null);
                     setStatus('unauthenticated');
+                    setHasPendingRevocation(false);
                     setError('Your session has expired. Please sign in again.');
 
                     return;
@@ -168,13 +247,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 'Unable to verify your session. Check your connection and try again.',
             );
         }
-    }, [baseUrl, token, tokenStorage, fetchFn]);
+    }, [
+        baseUrl,
+        clearLocalIdentity,
+        fetchFn,
+        revokeStagedToken,
+        stageAndRevokeToken,
+        token,
+        tokenStorage,
+    ]);
 
     const login = useCallback(
         async (email: string, password: string, deviceName?: string) => {
             setError(null);
 
             try {
+                const pendingToken =
+                    await tokenStorage.getPendingRevocationToken();
+
+                if (pendingToken && !(await revokeStagedToken(pendingToken))) {
+                    return;
+                }
+
                 const result = await apiClient.login(
                     email,
                     password,
@@ -182,19 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 );
 
                 if (!isAuthorizedFieldRole(result.user.role)) {
-                    const restrictedClient = new FieldApiClient({
-                        baseUrl,
-                        getToken: () => result.token,
-                        fetchFn,
-                    });
-
-                    try {
-                        await restrictedClient.logout();
-                    } finally {
-                        await tokenStorage.clearToken();
-                        setUser(null);
-                        setToken(null);
-                        setStatus('unauthenticated');
+                    if (await stageAndRevokeToken(result.token)) {
                         setError(
                             'This account role cannot use the field mobile application.',
                         );
@@ -204,9 +286,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 }
 
                 await tokenStorage.setToken(result.token);
+                await tokenStorage.clearPendingRevocationToken();
                 setToken(result.token);
                 setUser(result.user);
                 setStatus('authenticated');
+                setHasPendingRevocation(false);
             } catch (err: unknown) {
                 if (err instanceof ApiClientError) {
                     if (err.status === 403) {
@@ -241,22 +325,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 );
             }
         },
-        [apiClient, baseUrl, fetchFn, tokenStorage],
+        [apiClient, revokeStagedToken, stageAndRevokeToken, tokenStorage],
     );
 
-    const logout = useCallback(async () => {
+    const logout = useCallback(async (): Promise<boolean> => {
+        setError(null);
+
         try {
-            await apiClient.logout();
+            const pendingToken = await tokenStorage.getPendingRevocationToken();
+            const tokenToRevoke = token ?? pendingToken;
+
+            if (!tokenToRevoke) {
+                await tokenStorage.clearToken();
+                clearLocalIdentity();
+                setHasPendingRevocation(false);
+
+                return true;
+            }
+
+            if (pendingToken && !token) {
+                clearLocalIdentity();
+                setHasPendingRevocation(true);
+
+                return revokeStagedToken(pendingToken);
+            }
+
+            return stageAndRevokeToken(tokenToRevoke);
         } catch {
-            // Swallowed on network failure to ensure client session is always revoked locally
-        } finally {
-            await tokenStorage.clearToken();
-            setUser(null);
-            setToken(null);
-            setStatus('unauthenticated');
-            setError(null);
+            setError(
+                'Secure sign-out could not access protected storage. Try again before leaving the app.',
+            );
+
+            return false;
         }
-    }, [apiClient, tokenStorage]);
+    }, [
+        clearLocalIdentity,
+        revokeStagedToken,
+        stageAndRevokeToken,
+        token,
+        tokenStorage,
+    ]);
 
     useEffect(() => {
         if (status === 'uninitialized') {
@@ -271,6 +379,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             user,
             status,
             error,
+            hasPendingRevocation,
             isInitializing:
                 status === 'uninitialized' || status === 'bootstrapping',
             login,
@@ -279,7 +388,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             clearError,
             apiClient,
         }),
-        [user, status, error, login, logout, bootstrap, clearError, apiClient],
+        [
+            user,
+            status,
+            error,
+            hasPendingRevocation,
+            login,
+            logout,
+            bootstrap,
+            clearError,
+            apiClient,
+        ],
     );
 
     return (

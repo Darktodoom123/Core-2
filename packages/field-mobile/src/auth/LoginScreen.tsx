@@ -18,11 +18,13 @@ export interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-    const { login, error, clearError, status } = useAuth();
+    const { login, logout, error, clearError, status, hasPendingRevocation } =
+        useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [deviceName, setDeviceName] = useState('Field Mobile Device');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isRetryingRevocation, setIsRetryingRevocation] = useState(false);
 
     const handleSubmit = async () => {
         if (!email.trim() || !password.trim() || isSubmitting) {
@@ -42,7 +44,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    const submitDisabled = isSubmitting || !email.trim() || !password.trim();
+    const handleRetryRevocation = async () => {
+        if (isRetryingRevocation) {
+            return;
+        }
+
+        setIsRetryingRevocation(true);
+
+        try {
+            await logout();
+        } finally {
+            setIsRetryingRevocation(false);
+        }
+    };
+
+    const formDisabled =
+        isSubmitting || isRetryingRevocation || hasPendingRevocation;
+    const submitDisabled = formDisabled || !email.trim() || !password.trim();
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -112,6 +130,51 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                             </View>
                         ) : null}
 
+                        {hasPendingRevocation ? (
+                            <View
+                                accessible
+                                style={styles.revocationBanner}
+                                accessibilityRole="alert"
+                                accessibilityLiveRegion="assertive"
+                            >
+                                <Text style={styles.revocationTitle}>
+                                    Secure sign-out pending
+                                </Text>
+                                <Text style={styles.revocationText}>
+                                    This device is locked out until the server
+                                    confirms that the previous token cannot be
+                                    reused.
+                                </Text>
+                                <Pressable
+                                    onPress={() => void handleRetryRevocation()}
+                                    disabled={isRetryingRevocation}
+                                    style={({ pressed }) => [
+                                        styles.retryButton,
+                                        pressed && styles.pressed,
+                                        isRetryingRevocation &&
+                                            styles.disabledButton,
+                                    ]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Retry secure sign out"
+                                    accessibilityState={{
+                                        busy: isRetryingRevocation,
+                                        disabled: isRetryingRevocation,
+                                    }}
+                                    testID="retry-logout-button"
+                                >
+                                    {isRetryingRevocation ? (
+                                        <ActivityIndicator
+                                            color={colors.white}
+                                        />
+                                    ) : (
+                                        <Text style={styles.retryButtonText}>
+                                            Retry secure sign out
+                                        </Text>
+                                    )}
+                                </Pressable>
+                            </View>
+                        ) : null}
+
                         <View style={styles.form}>
                             <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>Email address</Text>
@@ -124,7 +187,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     textContentType="emailAddress"
-                                    editable={!isSubmitting}
+                                    editable={!formDisabled}
                                     style={styles.input}
                                     accessibilityLabel="Email address"
                                     accessibilityHint="Enter your verified work email"
@@ -144,7 +207,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     textContentType="password"
-                                    editable={!isSubmitting}
+                                    editable={!formDisabled}
                                     style={styles.input}
                                     accessibilityLabel="Password"
                                     returnKeyType="go"
@@ -163,7 +226,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     placeholder="e.g. Field Tablet 4"
                                     placeholderTextColor={colors.muted}
                                     autoCapitalize="words"
-                                    editable={!isSubmitting}
+                                    editable={!formDisabled}
                                     style={styles.input}
                                     accessibilityLabel="Device identification"
                                     accessibilityHint="Optional name used to identify this device"
@@ -300,6 +363,30 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         marginTop: 4,
     },
+    revocationBanner: {
+        backgroundColor: '#78350f',
+        borderWidth: 1,
+        borderColor: '#d97706',
+        borderRadius: 10,
+        padding: 14,
+        marginBottom: 16,
+    },
+    revocationTitle: { color: colors.white, fontWeight: '700', fontSize: 15 },
+    revocationText: {
+        color: '#fef3c7',
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 4,
+    },
+    retryButton: {
+        minHeight: 48,
+        borderRadius: 8,
+        backgroundColor: colors.amber,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 12,
+    },
+    retryButtonText: { color: colors.white, fontSize: 15, fontWeight: '700' },
     form: { gap: 16 },
     fieldGroup: { gap: 8 },
     label: { color: colors.secondary, fontSize: 15, fontWeight: '600' },

@@ -8,6 +8,7 @@ import { FieldApiClient, ApiClientError } from '../services/apiClient';
 
 class MemoryTokenStorage implements TokenStorageProvider {
     private token: string | null = null;
+    private pendingRevocationToken: string | null = null;
 
     async getToken(): Promise<string | null> {
         return this.token;
@@ -19,6 +20,18 @@ class MemoryTokenStorage implements TokenStorageProvider {
 
     async clearToken(): Promise<void> {
         this.token = null;
+    }
+
+    async getPendingRevocationToken(): Promise<string | null> {
+        return this.pendingRevocationToken;
+    }
+
+    async stageTokenForRevocation(token: string): Promise<void> {
+        this.pendingRevocationToken = token;
+    }
+
+    async clearPendingRevocationToken(): Promise<void> {
+        this.pendingRevocationToken = null;
     }
 }
 
@@ -295,8 +308,16 @@ describe('Field Mobile Authentication Shell', () => {
         await storage.setToken('secure-token');
         assert.equal(await storage.getToken(), 'secure-token');
         assert.equal(values.get('test-token'), 'secure-token');
+        await storage.stageTokenForRevocation('secure-token');
+        assert.equal(await storage.getPendingRevocationToken(), 'secure-token');
+        assert.equal(
+            values.get('test-token_pending_revocation'),
+            'secure-token',
+        );
         await storage.clearToken();
         assert.equal(await storage.getToken(), null);
+        await storage.clearPendingRevocationToken();
+        assert.equal(await storage.getPendingRevocationToken(), null);
     });
 
     it('requires a valid API origin and removes trailing slashes', () => {

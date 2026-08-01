@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch] $SkipNativeBuild,
-    [switch] $SmokeOnly
+    [switch] $SmokeOnly,
+    [ValidateSet('core2_api_30_phone', 'core2_api_36')]
+    [string] $AndroidAvd = 'core2_api_36'
 )
 
 Set-StrictMode -Version Latest
@@ -16,6 +18,14 @@ $publicRoot = Join-Path $repositoryRoot 'public'
 $runId = (Get-Date).ToString('yyyyMMdd-HHmmss-fff')
 $database = Join-Path $runtimeRoot 'session1-native.sqlite'
 $evidence = Join-Path $runtimeRoot 'session1-native-evidence.txt'
+$nativeBuildMode = if ($SkipNativeBuild) {
+    'existing-artifacts-reused'
+} else {
+    'clean-build-requested'
+}
+$targetEvidence = Join-Path $runtimeRoot (
+    "session1-native-evidence-$AndroidAvd-$nativeBuildMode.txt"
+)
 $apiOutput = Join-Path $runtimeRoot "session1-$runId-api.stdout.log"
 $apiError = Join-Path $runtimeRoot "session1-$runId-api.stderr.log"
 $metroOutput = Join-Path $runtimeRoot "session1-$runId-metro.stdout.log"
@@ -25,6 +35,10 @@ $emulatorError = Join-Path $runtimeRoot "session1-$runId-emulator.stderr.log"
 $deviceOutput = Join-Path $runtimeRoot "session1-$runId-device.log"
 $deviceError = Join-Path $runtimeRoot "session1-$runId-device.stderr.log"
 $apk = Join-Path $mobileRoot 'android\app\build\outputs\apk\debug\app-debug.apk'
+$testApk = Join-Path $mobileRoot (
+    'android\app\build\outputs\apk\androidTest\debug\' +
+    'app-debug-androidTest.apk'
+)
 $expoCli = Join-Path $repositoryRoot 'node_modules\expo\bin\cli'
 $laravelServer = Join-Path $repositoryRoot (
     'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
@@ -134,6 +148,11 @@ function Initialize-WorkspaceAvd {
     $runtimeDirectory = Join-Path $RuntimeHome "$Name.avd"
     $runtimeConfig = Join-Path $runtimeDirectory 'config.ini'
     $runtimeIni = Join-Path $RuntimeHome "$Name.ini"
+    $targetApi = if ($Name -match 'api_(\d+)') {
+        $Matches[1]
+    } else {
+        throw "Could not derive the Android API level from AVD $Name."
+    }
 
     if (-not (Test-Path -LiteralPath $sourceConfig -PathType Leaf)) {
         throw "Required source AVD configuration is missing at $sourceConfig."
@@ -179,7 +198,7 @@ function Initialize-WorkspaceAvd {
         'avd.ini.encoding=UTF-8'
         "path=$runtimeDirectory"
         "path.rel=$Name.avd"
-        'target=android-36'
+        "target=android-$targetApi"
     )
 }
 
@@ -548,20 +567,185 @@ function Prepare-AndroidDevice {
     }
 }
 
+function Measure-SecretPatternsInStream {
+    param(
+        [Parameter(Mandatory)][System.IO.Stream] $Stream,
+        [Parameter(Mandatory)][hashtable] $Patterns
+    )
+
+    $detected = @{}
+    $buffer = New-Object byte[] 1048576
+    $encoding = [System.Text.Encoding]::GetEncoding(28591)
+    $tail = ''
+
+    while (($bytesRead = $Stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+        $text = $tail + $encoding.GetString($buffer, 0, $bytesRead)
+
+        foreach ($name in $Patterns.Keys) {
+            if (-not $detected.ContainsKey($name) -and $text -match $Patterns[$name]) {
+                $detected[$name] = $true
+            }
+        }
+
+        if ($text.Length -gt 512) {
+            $tail = $text.Substring($text.Length - 512)
+        } else {
+            $tail = $text
+        }
+    }
+
+    return $detected
+}
+
+function Test-SecretLeaks {
+    param(
+        [Parameter(Mandatory)][string[]] $Paths,
+        [Parameter(Mandatory)][string[]] $FixtureSecrets
+    )
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $fixturePattern = ($FixtureSecrets | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_)
+    } | ForEach-Object { [Regex]::Escape($_) }) -join '|'
+    $patterns = @{
+        authorization_header = (
+            '(?i)\bauthorization\s*[:=]\s*["'']?(?:bearer\s+)?' +
+            '[a-z0-9._~+/|=-]{16,}'
+        )
+        bearer_token = '(?i)\bbearer\s+[a-z0-9._~+/|=-]{24,}'
+        password_value = (
+            '(?i)\b(?:password|passwd)\s*[:=]\s*["'']?' +
+            '[^\s,"''}\]]{8,}'
+        )
+        sanctum_raw_token = '(?i)(?<![a-z0-9])\d+\|[a-z0-9]{20,}(?![a-z0-9])'
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($fixturePattern)) {
+        $patterns.fixture_password = $fixturePattern
+    }
+
+    $sourceCounts = @{}
+
+    foreach ($name in $patterns.Keys) {
+        $sourceCounts[$name] = 0
+    }
+
+    $scannedPaths = 0
+    $affectedInputs = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($path in $Paths | Select-Object -Unique) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Secret-leak validation input is missing: $path"
+        }
+
+        $scannedPaths += 1
+        $pathDetections = @{}
+
+        if ([System.IO.Path]::GetExtension($path) -eq '.apk') {
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($path)
+
+            try {
+                foreach ($entry in $archive.Entries) {
+                    if ($entry.Length -eq 0) {
+                        continue
+                    }
+
+                    $stream = $entry.Open()
+
+                    try {
+                        $entryDetections = Measure-SecretPatternsInStream `
+                            -Stream $stream -Patterns $patterns
+
+                        foreach ($name in $entryDetections.Keys) {
+                            $pathDetections[$name] = $true
+                        }
+                    } finally {
+                        $stream.Dispose()
+                    }
+                }
+            } finally {
+                $archive.Dispose()
+            }
+        } else {
+            $stream = [System.IO.File]::Open(
+                $path,
+                [System.IO.FileMode]::Open,
+                [System.IO.FileAccess]::Read,
+                [System.IO.FileShare]::ReadWrite
+            )
+
+            try {
+                $pathDetections = Measure-SecretPatternsInStream `
+                    -Stream $stream -Patterns $patterns
+            } finally {
+                $stream.Dispose()
+            }
+        }
+
+        foreach ($name in $pathDetections.Keys) {
+            $sourceCounts[$name] += 1
+        }
+
+        if ($pathDetections.Count -gt 0) {
+            $safeName = [System.IO.Path]::GetFileName($path)
+            $safeCategories = @($pathDetections.Keys | Sort-Object) -join ','
+            $affectedInputs.Add("$safeName[$safeCategories]")
+        }
+    }
+
+    $totalDetections = 0
+
+    foreach ($count in $sourceCounts.Values) {
+        $totalDetections += $count
+    }
+
+    if ($totalDetections -gt 0) {
+        $categoryCount = @(
+            $sourceCounts.GetEnumerator() | Where-Object { $_.Value -gt 0 }
+        ).Count
+        throw (
+            'Secret-leak validation failed. ' +
+            "Categories with detections: $categoryCount; " +
+            "affected sources: $totalDetections. " +
+            'Redacted category counts: ' +
+            "fixture_password=$($sourceCounts.fixture_password), " +
+            "authorization_header=$($sourceCounts.authorization_header), " +
+            "bearer_token=$($sourceCounts.bearer_token), " +
+            "password_value=$($sourceCounts.password_value), " +
+            "sanctum_raw_token=$($sourceCounts.sanctum_raw_token). " +
+            "Affected inputs: $($affectedInputs -join '; ')."
+        )
+    }
+
+    return [PSCustomObject] @{
+        Paths = $scannedPaths
+        FixturePassword = $sourceCounts.fixture_password
+        AuthorizationHeader = $sourceCounts.authorization_header
+        BearerToken = $sourceCounts.bearer_token
+        PasswordValue = $sourceCounts.password_value
+        SanctumRawToken = $sourceCounts.sanctum_raw_token
+    }
+}
+
 function Write-SafeEvidenceStatus {
     param(
         [Parameter(Mandatory)][string] $RunStatus,
         [Parameter(Mandatory)][string] $CurrentStage
     )
 
-    Set-Content -LiteralPath $evidence -Encoding utf8 -Value @(
+    $statusEvidence = @(
         'Core 2 Session 1 native evidence'
         "Status: $RunStatus"
         "Stage: $CurrentStage"
+        "Android AVD: $AndroidAvd"
+        "Native build mode: $nativeBuildMode"
         "Started: $startedAt"
         "Updated: $((Get-Date).ToString('o'))"
         'Raw bearer tokens: not recorded'
     )
+    Set-Content -LiteralPath $evidence -Encoding utf8 -Value $statusEvidence
+    Set-Content -LiteralPath $targetEvidence -Encoding utf8 `
+        -Value $statusEvidence
 }
 
 function Set-NativeStage {
@@ -627,7 +811,7 @@ try {
     }
 
     Initialize-WorkspaceAvd -SourceHome $sourceAvdHome `
-        -RuntimeHome $runtimeAvdHome -Name 'core2_api_36'
+        -RuntimeHome $runtimeAvdHome -Name $AndroidAvd
     $env:ANDROID_AVD_HOME = $runtimeAvdHome
 
     Assert-LocalPortAvailable -Port $apiPort -Name 'Laravel API'
@@ -640,7 +824,7 @@ try {
     Invoke-Checked -FilePath $adb -Arguments @('start-server') `
         -FailureMessage 'Android Debug Bridge startup failed'
     $emulatorProcess = Start-Process -FilePath $emulator -ArgumentList @(
-        '@core2_api_36',
+        "@$AndroidAvd",
         '-port',
         '5554',
         '-no-snapshot',
@@ -654,6 +838,20 @@ try {
         -RedirectStandardError $emulatorError
     Wait-AndroidBoot -AdbPath $adb -Serial $emulatorSerial `
         -Process $emulatorProcess -LogPaths @($emulatorOutput, $emulatorError)
+    $androidApiLevel = (& $adb -s $emulatorSerial shell getprop `
+        ro.build.version.sdk | Select-Object -Last 1).Trim()
+    $expectedApiLevel = if ($AndroidAvd -eq 'core2_api_30_phone') {
+        '30'
+    } else {
+        '36'
+    }
+
+    if ($androidApiLevel -ne $expectedApiLevel) {
+        throw (
+            "AVD $AndroidAvd booted API $androidApiLevel; " +
+            "expected API $expectedApiLevel."
+        )
+    }
     Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial
     Invoke-Checked -FilePath $adb -Arguments @(
         '-s',
@@ -666,7 +864,17 @@ try {
         $emulatorSerial,
         'logcat',
         '-v',
-        'time'
+        'time',
+        'ReactNativeJS:V',
+        'AndroidRuntime:E',
+        'Expo:V',
+        'ExpoModulesCore:V',
+        'SoLoader:W',
+        'OkHttp:V',
+        'System.err:W',
+        'ActivityManager:I',
+        'ActivityTaskManager:I',
+        '*:S'
     ) -WorkingDirectory $repositoryRoot -WindowStyle Hidden -PassThru `
         -RedirectStandardOutput $deviceOutput `
         -RedirectStandardError $deviceError
@@ -756,6 +964,10 @@ try {
         throw "Expected debug APK was not produced at $apk."
     }
 
+    if (-not (Test-Path -LiteralPath $testApk -PathType Leaf)) {
+        throw "Expected instrumentation APK was not produced at $testApk."
+    }
+
     if ($SmokeOnly) {
         Set-NativeStage -Name 'Detox native sign-in smoke'
     } else {
@@ -767,13 +979,32 @@ try {
         'mobile:e2e:test:android'
     ) -FailureMessage 'Detox native acceptance failed'
 
+    Set-NativeStage -Name 'redacted secret-leak validation'
+    Stop-ProcessTree -Process $deviceLogProcess
+    $deviceLogProcess = $null
+    $secretScan = Test-SecretLeaks -Paths @(
+        $apiOutput,
+        $apiError,
+        $metroOutput,
+        $metroError,
+        $emulatorOutput,
+        $emulatorError,
+        $deviceOutput,
+        $deviceError,
+        $apk,
+        $testApk
+    ) -FixtureSecrets @($env:FIELD_TEST_PASSWORD)
+
     $apkItem = Get-Item -LiteralPath $apk
     $apkHash = Get-FileHash -LiteralPath $apk -Algorithm SHA256
 
-    Set-Content -LiteralPath $evidence -Encoding utf8 -Value @(
+    $passedEvidence = @(
         'Core 2 Session 1 native evidence'
         'Status: PASSED'
         'Stage: completed'
+        "Android AVD: $AndroidAvd"
+        "Android API level: $androidApiLevel"
+        "Native build mode: $nativeBuildMode"
         "Started: $startedAt"
         "Completed: $((Get-Date).ToString('o'))"
         'Node: v22.13.0'
@@ -791,8 +1022,18 @@ try {
         'Android emulator graphics: software'
         "Android AVD runtime: $runtimeAvdHome"
         'Fixture database: isolated local SQLite'
+        'Secret-leak validation: passed'
+        "Secret-leak sources scanned: $($secretScan.Paths)"
+        "Fixture-password detections: $($secretScan.FixturePassword)"
+        "Authorization-header detections: $($secretScan.AuthorizationHeader)"
+        "Bearer-token detections: $($secretScan.BearerToken)"
+        "Password-value detections: $($secretScan.PasswordValue)"
+        "Sanctum-raw-token detections: $($secretScan.SanctumRawToken)"
         'Raw bearer tokens: not recorded'
     )
+    Set-Content -LiteralPath $evidence -Encoding utf8 -Value $passedEvidence
+    Set-Content -LiteralPath $targetEvidence -Encoding utf8 `
+        -Value $passedEvidence
 
     if ($SmokeOnly) {
         Write-Host "Session 1 emulator smoke passed." -ForegroundColor Green

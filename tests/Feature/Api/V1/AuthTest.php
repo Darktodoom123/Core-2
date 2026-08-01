@@ -176,6 +176,7 @@ it('revokes Sanctum device token on logout and blocks subsequent requests', func
     $logoutResponse = $this->withToken($token)->postJson('/api/v1/auth/logout');
     $logoutResponse->assertOk()
         ->assertJson(['message' => 'Successfully logged out and revoked device token.']);
+    expect($user->tokens()->count())->toBe(0);
 
     // Forget cached auth state in test runner so guard re-checks DB
     $this->app['auth']->forgetGuards();
