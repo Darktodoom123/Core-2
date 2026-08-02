@@ -1,7 +1,7 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage, usePoll } from '@inertiajs/react';
 import type { ConnectionStatus } from 'laravel-echo';
 import { AlertTriangle, Check, Info, LockKeyhole, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
 import { Button, EmptyState, Panel } from '@/components/ui';
@@ -16,6 +16,8 @@ import type {
     WorkspaceSection,
 } from '@/types/workspace';
 
+const FALLBACK_POLL_INTERVAL_MS = 15_000;
+
 export default function Workspace(props: WorkspacePageProps) {
     const { flash, errors } = usePage().props;
     const [section, setSection] = useState<WorkspaceSection | null>(() =>
@@ -23,6 +25,16 @@ export default function Workspace(props: WorkspacePageProps) {
     );
     const [wsState, setWsState] = useState<ConnectionStatus>(getInitialWsState);
     const [refreshing, setRefreshing] = useState(false);
+    const fallbackPoll = usePoll(
+        FALLBACK_POLL_INTERVAL_MS,
+        {},
+        {
+            autoStart: false,
+            keepAlive: false,
+            mode: 'rest',
+        },
+    );
+    const fallbackPollControls = useRef(fallbackPoll);
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
     const [dismissedRefreshedAt, setDismissedRefreshedAt] = useState<
@@ -35,7 +47,7 @@ export default function Workspace(props: WorkspacePageProps) {
         ? section
         : (props.navigation[0]?.id ?? null);
 
-    const isWsDisconnected = wsState === 'disconnected' || wsState === 'failed';
+    const usingPollingFallback = wsState !== 'connected';
     const timeStale = isStale(
         props.workspace.refreshed_at,
         props.workspace.stale_after_seconds,
@@ -43,7 +55,7 @@ export default function Workspace(props: WorkspacePageProps) {
     );
     const staleDismissed =
         dismissedRefreshedAt === props.workspace.refreshed_at;
-    const showStaleNotice = (isWsDisconnected || timeStale) && !staleDismissed;
+    const showStaleNotice = timeStale && !staleDismissed;
 
     useEffect(() => {
         const timer = window.setInterval(
@@ -53,6 +65,18 @@ export default function Workspace(props: WorkspacePageProps) {
 
         return () => window.clearInterval(timer);
     }, []);
+
+    useEffect(() => {
+        const poll = fallbackPollControls.current;
+
+        if (usingPollingFallback) {
+            poll.start();
+        } else {
+            poll.stop();
+        }
+
+        return () => poll.stop();
+    }, [usingPollingFallback]);
 
     useEffect(() => {
         const echo = getEcho();
@@ -81,6 +105,13 @@ export default function Workspace(props: WorkspacePageProps) {
                 router.reload();
             });
 
+        return () => {
+            unsubscribeConnection();
+            echo.leave('operations.workspace');
+        };
+    }, []);
+
+    useEffect(() => {
         const handleFocus = () => {
             if (
                 isStale(
@@ -94,11 +125,7 @@ export default function Workspace(props: WorkspacePageProps) {
         };
         window.addEventListener('focus', handleFocus);
 
-        return () => {
-            unsubscribeConnection();
-            echo.leave('operations.workspace');
-            window.removeEventListener('focus', handleFocus);
-        };
+        return () => window.removeEventListener('focus', handleFocus);
     }, [props.workspace.refreshed_at, props.workspace.stale_after_seconds]);
 
     const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<
@@ -215,8 +242,8 @@ export default function Workspace(props: WorkspacePageProps) {
                             <StateNotice
                                 tone="warning"
                                 message={
-                                    isWsDisconnected
-                                        ? 'Live workspace updates are disconnected. Review current data or reconnect to sync.'
+                                    usingPollingFallback
+                                        ? 'Automatic refresh could not keep this workspace current. Review current data or retry the live connection.'
                                         : 'This workspace has not refreshed recently. Review current data before making an operational decision.'
                                 }
                                 onDismiss={() =>
@@ -229,7 +256,7 @@ export default function Workspace(props: WorkspacePageProps) {
                                         size="sm"
                                         variant="secondary"
                                         onClick={
-                                            isWsDisconnected
+                                            usingPollingFallback
                                                 ? reconnectAndRefresh
                                                 : refresh
                                         }
@@ -237,8 +264,8 @@ export default function Workspace(props: WorkspacePageProps) {
                                     >
                                         {refreshing
                                             ? 'Refreshing…'
-                                            : isWsDisconnected
-                                              ? 'Reconnect & Refresh'
+                                            : usingPollingFallback
+                                              ? 'Retry live & refresh'
                                               : 'Refresh now'}
                                     </Button>
                                 }
