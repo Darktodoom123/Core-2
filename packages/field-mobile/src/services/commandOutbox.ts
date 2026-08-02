@@ -36,7 +36,7 @@ export interface CommandOutboxOptions {
 const completedRetentionMs = 8 * 60 * 60 * 1000;
 const maxRetryDelayMs = 5 * 60 * 1000;
 
-export function createCommandId(): string {
+export async function createCommandId(): Promise<string> {
     if (
         typeof globalThis.crypto !== 'undefined' &&
         typeof globalThis.crypto.randomUUID === 'function'
@@ -48,9 +48,9 @@ export function createCommandId(): string {
         typeof globalThis.crypto === 'undefined' ||
         typeof globalThis.crypto.getRandomValues !== 'function'
     ) {
-        throw new Error(
-            'A cryptographically secure random source is required for command IDs.',
-        );
+        const crypto = await import('expo-crypto');
+
+        return crypto.randomUUID();
     }
 
     const bytes = new Uint8Array(16);
@@ -83,7 +83,7 @@ function emptyResult(): OutboxProcessResult {
 export class CommandOutboxManager {
     private commands = new Map<string, OutboxCommand>();
     private listeners = new Set<OutboxListener>();
-    private isProcessing = false;
+    private processingActors = new Set<number>();
     private activeActorId: number | null = null;
     private activationSequence = 0;
     private lastCreatedAtMs = 0;
@@ -161,6 +161,14 @@ export class CommandOutboxManager {
         return this.activeActorId;
     }
 
+    private requireSameActor(actorId: number): void {
+        if (this.activeActorId !== actorId) {
+            throw new Error(
+                'The authenticated actor changed while queueing the command.',
+            );
+        }
+    }
+
     public getCommands(): OutboxCommand[] {
         return Array.from(this.commands.values()).sort(
             (a, b) =>
@@ -220,6 +228,7 @@ export class CommandOutboxManager {
             payload,
             expectedVersion,
         );
+        this.requireSameActor(actorId);
         const existing = this.getCommands().find(
             (command) =>
                 command.type === type &&
@@ -237,8 +246,10 @@ export class CommandOutboxManager {
         );
         this.lastCreatedAtMs = createdAtMs;
         const now = new Date(createdAtMs).toISOString();
+        const commandId = await createCommandId();
+        this.requireSameActor(actorId);
         const command: OutboxCommand = {
-            id: createCommandId(),
+            id: commandId,
             actorId,
             type,
             jobId: jobId ?? null,
@@ -256,8 +267,11 @@ export class CommandOutboxManager {
         };
 
         await this.repository.save(command);
-        this.commands.set(command.id, command);
-        this.notify();
+
+        if (this.activeActorId === actorId) {
+            this.commands.set(command.id, command);
+            this.notify();
+        }
 
         return command;
     }
@@ -306,20 +320,24 @@ export class CommandOutboxManager {
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
-        this.commands.set(command.id, command);
-        this.notify();
+
+        if (this.activeActorId === command.actorId) {
+            this.commands.set(command.id, command);
+            this.notify();
+        }
     }
 
     public async processQueue(
         apiClient: FieldApiClient,
     ): Promise<OutboxProcessResult> {
         const result = emptyResult();
+        const actorId = this.activeActorId;
 
-        if (this.isProcessing || this.activeActorId === null) {
+        if (actorId === null || this.processingActors.has(actorId)) {
             return result;
         }
 
-        this.isProcessing = true;
+        this.processingActors.add(actorId);
         const blockedScopes = new Set<string>();
 
         try {
@@ -367,7 +385,7 @@ export class CommandOutboxManager {
 
             return result;
         } finally {
-            this.isProcessing = false;
+            this.processingActors.delete(actorId);
         }
     }
 
@@ -401,8 +419,11 @@ export class CommandOutboxManager {
     public async resolveConflictAcceptServer(commandId: string): Promise<void> {
         const actorId = this.requireActor();
         await this.repository.remove(actorId, commandId);
-        this.commands.delete(commandId);
-        this.notify();
+
+        if (this.activeActorId === actorId) {
+            this.commands.delete(commandId);
+            this.notify();
+        }
     }
 
     public async resolveConflictWithNewVersion(
@@ -425,9 +446,12 @@ export class CommandOutboxManager {
             newVersion,
         );
         await this.repository.remove(actorId, commandId);
-        this.commands.delete(commandId);
-        this.notify();
-        await this.retryCommand(replacement.id, apiClient);
+
+        if (this.activeActorId === actorId) {
+            this.commands.delete(commandId);
+            this.notify();
+            await this.retryCommand(replacement.id, apiClient);
+        }
 
         return replacement;
     }
@@ -435,8 +459,11 @@ export class CommandOutboxManager {
     public async discardCommand(commandId: string): Promise<void> {
         const actorId = this.requireActor();
         await this.repository.remove(actorId, commandId);
-        this.commands.delete(commandId);
-        this.notify();
+
+        if (this.activeActorId === actorId) {
+            this.commands.delete(commandId);
+            this.notify();
+        }
     }
 
     private async executeCommand(
@@ -625,7 +652,10 @@ export class CommandOutboxManager {
     public async clearActiveActorCommands(): Promise<void> {
         const actorId = this.requireActor();
         await this.repository.clearActor(actorId);
-        this.commands.clear();
-        this.notify();
+
+        if (this.activeActorId === actorId) {
+            this.commands.clear();
+            this.notify();
+        }
     }
 }

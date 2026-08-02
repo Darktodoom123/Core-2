@@ -114,6 +114,7 @@ export default [
             'vendor',
             'node_modules',
             'public',
+            'storage/**',
             'bootstrap/ssr',
             '.android-sdk/**',
             'android-sdk-runtime/**',

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, test } from 'node:test';
 import { SqliteOutboxRepository } from '../storage/outboxRepository';
@@ -52,6 +55,42 @@ function commandFixture(overrides: Partial<OutboxCommand> = {}): OutboxCommand {
 }
 
 describe('SqliteOutboxRepository', () => {
+    test('survives a database restart at the eight-hour offline boundary', async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'core2-outbox-'));
+        const databasePath = join(directory, 'field-outbox.sqlite');
+
+        try {
+            const firstDatabase = new DatabaseSync(databasePath);
+            const firstRepository = new SqliteOutboxRepository(
+                async () => new NodeSqliteDatabase(firstDatabase),
+            );
+            const command = commandFixture();
+            await firstRepository.save(command);
+            firstDatabase.close();
+
+            const restartedDatabase = new DatabaseSync(databasePath);
+            const restartedRepository = new SqliteOutboxRepository(
+                async () => new NodeSqliteDatabase(restartedDatabase),
+            );
+            await restartedRepository.recoverInterrupted(
+                command.actorId,
+                '2026-08-01T08:00:00.000Z',
+            );
+            const restored = await restartedRepository.listForActor(
+                command.actorId,
+            );
+
+            assert.equal(restored.length, 1);
+            assert.equal(restored[0].id, command.id);
+            assert.equal(restored[0].state, 'queued');
+            assert.equal(restored[0].createdAt, command.createdAt);
+            assert.equal(restored[0].expectedVersion, command.expectedVersion);
+            restartedDatabase.close();
+        } finally {
+            await rm(directory, { force: true, recursive: true });
+        }
+    });
+
     test('persists actor-scoped commands and recovers interrupted sync across repository restart', async () => {
         const database = new NodeSqliteDatabase(new DatabaseSync(':memory:'));
         const repository = new SqliteOutboxRepository(async () => database);

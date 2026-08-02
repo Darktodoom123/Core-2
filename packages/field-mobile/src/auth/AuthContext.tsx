@@ -23,6 +23,9 @@ export type AuthStatus =
     | 'unauthenticated'
     | 'suspended';
 
+export const offlineSessionVerificationError =
+    'Unable to verify your session. Check your connection and try again.';
+
 export interface AuthState {
     user: User | null;
     status: AuthStatus;
@@ -243,9 +246,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             // bootstrap can retry without forcing the worker to sign in again.
             setUser(null);
             setStatus('unauthenticated');
-            setError(
-                'Unable to verify your session. Check your connection and try again.',
-            );
+            setError(offlineSessionVerificationError);
         }
     }, [
         baseUrl,

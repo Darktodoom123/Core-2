@@ -4,6 +4,7 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import {
@@ -18,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
+import { offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
 import { AssignedJobsListScreen } from '../components/AssignedJobsListScreen';
@@ -30,6 +32,7 @@ import { CommandOutboxManager } from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
 import type { OutboxRepository } from '../storage/outboxRepository';
+import type { PayloadHasher } from '../storage/outboxRepository';
 import type {
     DispatchJob,
     DispatchStatus,
@@ -103,16 +106,19 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 export interface AppNavigatorProps {
     networkMonitor?: NetworkMonitor;
+    outboxHasher?: PayloadHasher;
     outboxRepository?: OutboxRepository;
 }
 
 export const AppNavigator: React.FC<AppNavigatorProps> = ({
     networkMonitor,
+    outboxHasher,
     outboxRepository,
 }) => {
     const {
         user,
         status,
+        bootstrap,
         logout,
         isInitializing,
         apiClient,
@@ -125,15 +131,17 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [jobsError, setJobsError] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
+    const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
 
     const commandOutbox = useMemo(
         () =>
             new CommandOutboxManager({
+                hasher: outboxHasher,
                 repository: outboxRepository ?? createDefaultOutboxRepository(),
             }),
-        [outboxRepository],
+        [outboxHasher, outboxRepository],
     );
     const connectivity = useMemo(
         () => networkMonitor ?? defaultNetworkMonitor,
@@ -171,6 +179,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             unsubscribe();
         };
     }, [connectivity]);
+
+    useEffect(() => {
+        const reconnected =
+            previousOnlineRef.current === false && isOnline === true;
+        previousOnlineRef.current = isOnline;
+
+        if (
+            reconnected &&
+            status === 'unauthenticated' &&
+            authError === offlineSessionVerificationError
+        ) {
+            queueMicrotask(() => void bootstrap());
+        }
+    }, [authError, bootstrap, isOnline, status]);
 
     const handleRequestFailure = useCallback(
         async (err: unknown, fallback: string) => {
@@ -627,6 +649,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             !isCompact && styles.mainContentExpanded,
                         ]}
                     >
+                        {selectedJobId !== null && jobsError ? (
+                            <View
+                                accessible
+                                accessibilityLiveRegion="assertive"
+                                accessibilityRole="alert"
+                                style={styles.commandError}
+                                testID="command-error-alert"
+                            >
+                                <Text style={styles.commandErrorText}>
+                                    {jobsError}
+                                </Text>
+                            </View>
+                        ) : null}
                         {selectedJobId === null || !activeJob || !user ? (
                             <AssignedJobsListScreen
                                 jobs={jobs}
@@ -773,6 +808,21 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 1040,
         width: '100%',
+    },
+    commandError: {
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 12,
+    },
+    commandErrorText: {
+        color: colors.red,
+        fontSize: 14,
+        fontWeight: '700',
+        lineHeight: 20,
     },
     centerCard: {
         alignSelf: 'center',

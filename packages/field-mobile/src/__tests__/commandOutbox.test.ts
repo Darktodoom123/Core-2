@@ -280,6 +280,73 @@ describe('CommandOutboxManager', () => {
         assert.equal(outbox.getCommand(blocked.id)?.state, 'completed');
     });
 
+    test('does not enqueue into a new actor queue when identity changes during hashing', async () => {
+        const repository = new MemoryOutboxRepository();
+        let releaseHash: ((hash: string) => void) | undefined;
+        const delayedHasher: PayloadHasher = {
+            hash: () =>
+                new Promise<string>((resolve) => {
+                    releaseHash = resolve;
+                }),
+        };
+        const outbox = new CommandOutboxManager({
+            repository,
+            hasher: delayedHasher,
+        });
+        await outbox.activateActor(11);
+
+        const enqueue = outbox.enqueueTransitionStatus(50, 'arrived', 1);
+        outbox.deactivateActor();
+        await outbox.activateActor(12);
+        releaseHash?.('delayed-payload-hash');
+
+        await assert.rejects(
+            enqueue,
+            /authenticated actor changed while queueing/i,
+        );
+        assert.deepEqual(outbox.getCommands(), []);
+        assert.deepEqual(await repository.listForActor(11), []);
+        assert.deepEqual(await repository.listForActor(12), []);
+    });
+
+    test('allows a new actor queue to process while the previous actor request finishes', async () => {
+        const repository = new MemoryOutboxRepository();
+        const outbox = await createOutbox(11, { repository });
+        await outbox.enqueueTransitionStatus(50, 'arrived', 1);
+        let releasePreviousRequest: ((job: DispatchJob) => void) | undefined;
+        const previousRequest = new Promise<DispatchJob>((resolve) => {
+            releasePreviousRequest = resolve;
+        });
+        const previousProcessing = outbox.processQueue({
+            transitionStatus: async () => previousRequest,
+        } as unknown as FieldApiClient);
+
+        outbox.deactivateActor();
+        await outbox.activateActor(12);
+        const nextCommand = await outbox.enqueueTransitionStatus(
+            60,
+            'arrived',
+            1,
+        );
+        let nextActorCalls = 0;
+        const nextResult = await outbox.processQueue({
+            transitionStatus: async () => {
+                nextActorCalls += 1;
+
+                return { id: 60, version: 2 } as DispatchJob;
+            },
+        } as unknown as FieldApiClient);
+
+        assert.equal(nextActorCalls, 1);
+        assert.equal(nextResult.completed, 1);
+        assert.equal(outbox.getCommand(nextCommand.id)?.state, 'completed');
+
+        releasePreviousRequest?.({ id: 50, version: 2 } as DispatchJob);
+        await previousProcessing;
+        assert.equal(outbox.getCommands().length, 1);
+        assert.equal(outbox.getCommand(nextCommand.id)?.actorId, 12);
+    });
+
     test('does not replay a completed command and permits explicit discard', async () => {
         const outbox = await createOutbox();
         const command = await outbox.enqueueTransitionStatus(60, 'arrived', 1);

@@ -6,6 +6,12 @@ For an isolated local authenticated run from standalone Windows PowerShell:
 npm run mobile:session1:native
 ```
 
+For Sprint 2 durable-outbox acceptance, use the
+mobile:sprint2:native:api30 and mobile:sprint2:native:api36 npm scripts. These
+focused journeys cover process death, offline/reconnect, SQLite restoration,
+and exactly-once replay. They write separate redacted Sprint 2 evidence files
+without mixing Sprint 1 and Sprint 2 verdicts.
+
 Run the complete minimum/current Android matrix explicitly with:
 
 ```powershell

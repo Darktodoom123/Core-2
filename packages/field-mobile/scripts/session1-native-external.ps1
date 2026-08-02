@@ -3,7 +3,10 @@ param(
     [switch] $SkipNativeBuild,
     [switch] $SmokeOnly,
     [ValidateSet('core2_api_30_phone', 'core2_api_36')]
-    [string] $AndroidAvd = 'core2_api_36'
+    [string] $AndroidAvd = 'core2_api_36',
+    [string] $DetoxTestPath = '',
+    [ValidateSet('session1', 'sprint2')]
+    [string] $EvidenceScope = 'session1'
 )
 
 Set-StrictMode -Version Latest
@@ -17,23 +20,35 @@ $runtimeRoot = Join-Path $repositoryRoot 'storage\framework\testing'
 $publicRoot = Join-Path $repositoryRoot 'public'
 $runId = (Get-Date).ToString('yyyyMMdd-HHmmss-fff')
 $database = Join-Path $runtimeRoot 'session1-native.sqlite'
-$evidence = Join-Path $runtimeRoot 'session1-native-evidence.txt'
+$evidenceTitle = if ($EvidenceScope -eq 'sprint2') {
+    'Core 2 Sprint 2 native evidence'
+} else {
+    'Core 2 Session 1 native evidence'
+}
+$evidencePrefix = if ($EvidenceScope -eq 'sprint2') {
+    'sprint2'
+} else {
+    'session1'
+}
+$evidence = Join-Path $runtimeRoot "$evidencePrefix-native-evidence.txt"
 $nativeBuildMode = if ($SkipNativeBuild) {
     'existing-artifacts-reused'
 } else {
     'clean-build-requested'
 }
 $targetEvidence = Join-Path $runtimeRoot (
-    "session1-native-evidence-$AndroidAvd-$nativeBuildMode.txt"
+    "$evidencePrefix-native-evidence-$AndroidAvd-$nativeBuildMode.txt"
 )
-$apiOutput = Join-Path $runtimeRoot "session1-$runId-api.stdout.log"
-$apiError = Join-Path $runtimeRoot "session1-$runId-api.stderr.log"
-$metroOutput = Join-Path $runtimeRoot "session1-$runId-metro.stdout.log"
-$metroError = Join-Path $runtimeRoot "session1-$runId-metro.stderr.log"
-$emulatorOutput = Join-Path $runtimeRoot "session1-$runId-emulator.stdout.log"
-$emulatorError = Join-Path $runtimeRoot "session1-$runId-emulator.stderr.log"
-$deviceOutput = Join-Path $runtimeRoot "session1-$runId-device.log"
-$deviceError = Join-Path $runtimeRoot "session1-$runId-device.stderr.log"
+$apiOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-api.stdout.log"
+$apiError = Join-Path $runtimeRoot "$evidencePrefix-$runId-api.stderr.log"
+$metroOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-metro.stdout.log"
+$metroError = Join-Path $runtimeRoot "$evidencePrefix-$runId-metro.stderr.log"
+$emulatorOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-emulator.stdout.log"
+$emulatorError = Join-Path $runtimeRoot "$evidencePrefix-$runId-emulator.stderr.log"
+$deviceOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-device.log"
+$deviceError = Join-Path $runtimeRoot "$evidencePrefix-$runId-device.stderr.log"
+$detoxOutput = Join-Path $runtimeRoot "$evidencePrefix-$runId-detox.stdout.log"
+$detoxError = Join-Path $runtimeRoot "$evidencePrefix-$runId-detox.stderr.log"
 $apk = Join-Path $mobileRoot 'android\app\build\outputs\apk\debug\app-debug.apk'
 $testApk = Join-Path $mobileRoot (
     'android\app\build\outputs\apk\androidTest\debug\' +
@@ -735,7 +750,7 @@ function Write-SafeEvidenceStatus {
     )
 
     $statusEvidence = @(
-        'Core 2 Session 1 native evidence'
+        $evidenceTitle
         "Status: $RunStatus"
         "Stage: $CurrentStage"
         "Android AVD: $AndroidAvd"
@@ -913,6 +928,8 @@ try {
     if ($SmokeOnly) {
         $env:DETOX_TEST_PATH = 'e2e/session1-smoke.e2e.test.js'
         $env:RUN_NATIVE_ACCEPTANCE = '0'
+    } elseif (-not [string]::IsNullOrWhiteSpace($DetoxTestPath)) {
+        $env:DETOX_TEST_PATH = $DetoxTestPath
     } else {
         Remove-Item Env:DETOX_TEST_PATH -ErrorAction SilentlyContinue
     }
@@ -971,14 +988,20 @@ try {
 
     if ($SmokeOnly) {
         Set-NativeStage -Name 'Detox native sign-in smoke'
+    } elseif ($EvidenceScope -eq 'sprint2') {
+        Set-NativeStage -Name 'Detox durable outbox acceptance'
     } else {
         Set-NativeStage -Name 'Detox authenticated native acceptance'
     }
     Prepare-AndroidDevice -AdbPath $adb -Serial $emulatorSerial
-    Invoke-Checked -FilePath $npm -Arguments @(
+    $detoxProcess = Start-Process -FilePath $npm -ArgumentList @(
         'run',
         'mobile:e2e:test:android'
-    ) -FailureMessage 'Detox native acceptance failed'
+    ) -WorkingDirectory $repositoryRoot -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $detoxOutput -RedirectStandardError $detoxError
+
+    if ($detoxProcess.ExitCode -ne 0) {
+        throw "Detox native acceptance failed (exit code $($detoxProcess.ExitCode))."
+    }
 
     Set-NativeStage -Name 'redacted secret-leak validation'
     Stop-ProcessTree -Process $deviceLogProcess
@@ -992,6 +1015,8 @@ try {
         $emulatorError,
         $deviceOutput,
         $deviceError,
+        $detoxOutput,
+        $detoxError,
         $apk,
         $testApk
     ) -FixtureSecrets @($env:FIELD_TEST_PASSWORD)
@@ -1000,7 +1025,7 @@ try {
     $apkHash = Get-FileHash -LiteralPath $apk -Algorithm SHA256
 
     $passedEvidence = @(
-        'Core 2 Session 1 native evidence'
+        $evidenceTitle
         'Status: PASSED'
         'Stage: completed'
         "Android AVD: $AndroidAvd"
@@ -1017,6 +1042,8 @@ try {
         "APK SHA-256: $($apkHash.Hash)"
         if ($SmokeOnly) {
             'Detox native sign-in smoke: passed'
+        } elseif ($EvidenceScope -eq 'sprint2') {
+            'Detox durable outbox acceptance: passed'
         } else {
             'Detox authenticated acceptance: passed'
         }

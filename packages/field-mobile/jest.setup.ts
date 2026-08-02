@@ -15,6 +15,10 @@ jest.mock('expo-secure-store', () => ({
     setItemAsync: jest.fn(),
 }));
 
+jest.mock('expo-crypto', () => ({
+    randomUUID: jest.fn(() => '157849b3-e318-4892-88e6-3f705394d299'),
+}));
+
 jest.mock('react-native-safe-area-context', () => {
     const safeAreaMock = jest.requireActual(
         'react-native-safe-area-context/jest/mock',

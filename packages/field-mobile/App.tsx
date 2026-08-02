@@ -5,12 +5,14 @@ import type { TokenStorageProvider } from './src/auth/tokenStorage';
 import type { NetworkMonitor } from './src/connectivity/networkMonitor';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import type { OutboxRepository } from './src/storage/outboxRepository';
+import type { PayloadHasher } from './src/storage/outboxRepository';
 
 export interface AppProps {
     baseUrl?: string;
     tokenStorage?: TokenStorageProvider;
     fetchFn?: typeof fetch;
     networkMonitor?: NetworkMonitor;
+    outboxHasher?: PayloadHasher;
     outboxRepository?: OutboxRepository;
 }
 
@@ -19,6 +21,7 @@ export const App: React.FC<AppProps> = ({
     tokenStorage,
     fetchFn,
     networkMonitor,
+    outboxHasher,
     outboxRepository,
 }) => {
     return (
@@ -30,6 +33,7 @@ export const App: React.FC<AppProps> = ({
             >
                 <AppNavigator
                     networkMonitor={networkMonitor}
+                    outboxHasher={outboxHasher}
                     outboxRepository={outboxRepository}
                 />
             </AuthProvider>

@@ -1,8 +1,10 @@
 import {
+    act,
     cleanup,
     fireEvent,
     render,
     waitFor,
+    within,
 } from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
@@ -11,10 +13,14 @@ import type { TokenStorageProvider } from '../auth/tokenStorage';
 import { AssignedJobsListScreen } from '../components/AssignedJobsListScreen';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { MemoryOutboxRepository } from '../storage/outboxRepository';
+import type { PayloadHasher } from '../storage/outboxRepository';
 import type { DispatchJob, OutboxCommand, User } from '../types/index';
 
 const apiBaseUrl = 'https://field.example.test';
 const rawToken = '1|raw-bearer-token-must-never-render';
+const testPayloadHasher: PayloadHasher = {
+    hash: async (envelope) => 'test-hash:' + JSON.stringify(envelope),
+};
 type NativeRender = Awaited<ReturnType<typeof render>>;
 
 let screen: NativeRender;
@@ -35,14 +41,42 @@ async function renderScreen(
             },
         };
         element = React.cloneElement(appElement, {
-            networkMonitor,
-            outboxRepository: new MemoryOutboxRepository(),
+            networkMonitor: appElement.props.networkMonitor ?? networkMonitor,
+            outboxHasher: appElement.props.outboxHasher ?? testPayloadHasher,
+            outboxRepository:
+                appElement.props.outboxRepository ??
+                new MemoryOutboxRepository(),
         });
     }
 
     screen = await render(element);
 
     return screen;
+}
+
+class ControlledNetworkMonitor implements NetworkMonitor {
+    private listeners = new Set<(isOnline: boolean) => void>();
+
+    public constructor(private online: boolean) {}
+
+    public async fetchIsOnline(): Promise<boolean> {
+        return this.online;
+    }
+
+    public subscribe(listener: (isOnline: boolean) => void): () => void {
+        this.listeners.add(listener);
+        listener(this.online);
+
+        return () => this.listeners.delete(listener);
+    }
+
+    public setOnline(online: boolean): void {
+        this.online = online;
+
+        for (const listener of this.listeners) {
+            listener(online);
+        }
+    }
 }
 
 const driver: User = {
@@ -58,6 +92,14 @@ const dispatcher: User = {
     name: 'Dana Dispatcher',
     email: 'dispatcher@example.test',
     role: 'dispatcher',
+    is_active: true,
+};
+
+const secondDriver: User = {
+    id: 12,
+    name: 'John Driver',
+    email: 'second-driver@example.test',
+    role: 'driver',
     is_active: true,
 };
 
@@ -175,21 +217,37 @@ class TestTokenStorage implements TokenStorageProvider {
 
 interface ApiScenario {
     assignedJobs?: DispatchJob[] | (() => DispatchJob[]);
+    commandResponses?: Array<
+        'network-error' | { body: unknown; status: number }
+    >;
     jobsResponses?: Array<{ body: unknown; status: number }>;
     loginStatus?: number;
     logoutResponses?: Array<'network-error' | { status: number }>;
+    meResponses?: Array<'network-error' | { status: number }>;
     meStatus?: number;
     user?: User;
+    users?: User[];
 }
 
 function createApi(scenario: ApiScenario = {}) {
     const calls: Array<{
         body?: Record<string, unknown>;
+        headers?: Record<string, string>;
         method: string;
         url: string;
     }> = [];
+    let commandRequestIndex = 0;
     let jobsRequestIndex = 0;
     let logoutRequestIndex = 0;
+    let meRequestIndex = 0;
+    let userRequestIndex = 0;
+
+    const nextUser = (): User => {
+        const user = scenario.users?.[userRequestIndex];
+        userRequestIndex += 1;
+
+        return user ?? scenario.user ?? driver;
+    };
 
     const fetchFn = jest.fn(
         async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -199,7 +257,8 @@ function createApi(scenario: ApiScenario = {}) {
                 typeof init?.body === 'string'
                     ? (JSON.parse(init.body) as Record<string, unknown>)
                     : undefined;
-            calls.push({ body, method, url });
+            const headers = init?.headers as Record<string, string> | undefined;
+            calls.push({ body, headers, method, url });
 
             if (url.endsWith('/api/v1/auth/login')) {
                 const status = scenario.loginStatus ?? 200;
@@ -219,13 +278,23 @@ function createApi(scenario: ApiScenario = {}) {
                 return jsonResponse({
                     data: {
                         token: rawToken,
-                        user: scenario.user ?? driver,
+                        user: nextUser(),
                     },
                 });
             }
 
             if (url.endsWith('/api/v1/auth/me')) {
-                const status = scenario.meStatus ?? 200;
+                const queuedResponse = scenario.meResponses?.[meRequestIndex];
+                meRequestIndex += 1;
+
+                if (queuedResponse === 'network-error') {
+                    throw new TypeError('Network request failed');
+                }
+
+                const status =
+                    (queuedResponse === undefined
+                        ? scenario.meStatus
+                        : queuedResponse.status) ?? 200;
 
                 if (status !== 200) {
                     return jsonResponse(
@@ -239,7 +308,7 @@ function createApi(scenario: ApiScenario = {}) {
                     );
                 }
 
-                return jsonResponse({ data: scenario.user ?? driver });
+                return jsonResponse({ data: nextUser() });
             }
 
             if (url.endsWith('/api/v1/auth/logout')) {
@@ -286,6 +355,37 @@ function createApi(scenario: ApiScenario = {}) {
                         : (scenario.assignedJobs ?? []);
 
                 return jsonResponse({ data: jobs });
+            }
+
+            if (
+                /\/api\/v1\/dispatch-jobs\/\d+\/(?:status|assignments\/\d+\/response)$/.test(
+                    url,
+                )
+            ) {
+                const queuedResponse =
+                    scenario.commandResponses?.[commandRequestIndex];
+                commandRequestIndex += 1;
+
+                if (queuedResponse === 'network-error') {
+                    throw new TypeError('Network request failed');
+                }
+
+                if (queuedResponse) {
+                    return jsonResponse(queuedResponse.body, {
+                        status: queuedResponse.status,
+                    });
+                }
+
+                return jsonResponse({
+                    data: {
+                        ...driverJob,
+                        status: {
+                            value: body?.status ?? driverJob.status.value,
+                            label: 'Updated',
+                        },
+                        version: Number(body?.version ?? driverJob.version) + 1,
+                    },
+                });
             }
 
             return jsonResponse({ message: 'Not found.' }, { status: 404 });
@@ -699,6 +799,358 @@ describe('native application component tree', () => {
         expect(screen.getByTestId('empty-assignments-msg')).toBeVisible();
         expect(screen.getByText('Queued: 1')).toBeVisible();
         expect(screen.getByText('Conflicts: 1')).toBeVisible();
+    });
+
+    it('restores an eight-hour-old command and replays it once after reconnect', async () => {
+        const repository = new MemoryOutboxRepository();
+        const networkMonitor = new ControlledNetworkMonitor(false);
+        const queuedCommand: OutboxCommand = {
+            id: '157849b3-e318-4892-88e6-3f705394d201',
+            actorId: driver.id,
+            type: 'transition_status',
+            jobId: driverJob.id,
+            assignmentId: null,
+            payload: { status: 'accepted' },
+            payloadHash: 'eight-hour-offline-command',
+            expectedVersion: driverJob.version,
+            state: 'queued',
+            attempts: 0,
+            error: null,
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            lastAttemptAt: null,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        await repository.save(queuedCommand);
+        const { calls, fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                networkMonitor={networkMonitor}
+                outboxRepository={repository}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        expect(await screen.findByText('Queued: 1')).toBeVisible();
+        expect(
+            calls.filter((call) => call.url.endsWith('/status')),
+        ).toHaveLength(0);
+
+        await act(() => networkMonitor.setOnline(true));
+
+        await waitFor(() => {
+            expect(
+                calls.filter((call) => call.url.endsWith('/status')),
+            ).toHaveLength(1);
+        });
+        const [replay] = calls.filter((call) => call.url.endsWith('/status'));
+        expect(replay.body?.command_id).toBe(queuedCommand.id);
+        expect(replay.headers?.['Idempotency-Key']).toBe(queuedCommand.id);
+        expect((await repository.listForActor(driver.id))[0].state).toBe(
+            'completed',
+        );
+
+        await act(() => networkMonitor.setOnline(false));
+        await act(() => networkMonitor.setOnline(true));
+        await waitFor(() => {
+            expect(
+                calls.filter((call) => call.url.endsWith('/status')),
+            ).toHaveLength(1);
+        });
+    });
+
+    it('verifies a preserved session after reconnect and resumes the durable queue', async () => {
+        const repository = new MemoryOutboxRepository();
+        const networkMonitor = new ControlledNetworkMonitor(false);
+        const queuedCommand: OutboxCommand = {
+            id: '157849b3-e318-4892-88e6-3f705394d207',
+            actorId: driver.id,
+            type: 'transition_status',
+            jobId: driverJob.id,
+            assignmentId: null,
+            payload: { status: 'accepted' },
+            payloadHash: 'offline-cold-start-command',
+            expectedVersion: driverJob.version,
+            state: 'queued',
+            attempts: 0,
+            error: null,
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            lastAttemptAt: null,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        await repository.save(queuedCommand);
+        const tokenStorage = new TestTokenStorage(rawToken);
+        const { calls, fetchFn } = createApi({
+            assignedJobs: [driverJob],
+            meResponses: ['network-error', { status: 200 }],
+        });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                networkMonitor={networkMonitor}
+                outboxRepository={repository}
+                tokenStorage={tokenStorage}
+            />,
+        );
+
+        expect(
+            await screen.findByText(
+                'Unable to verify your session. Check your connection and try again.',
+            ),
+        ).toBeVisible();
+        expect(tokenStorage.token).toBe(rawToken);
+
+        await act(() => networkMonitor.setOnline(true));
+
+        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        await waitFor(() => {
+            expect(
+                calls.filter((call) => call.url.endsWith('/status')),
+            ).toHaveLength(1);
+        });
+        expect((await repository.listForActor(driver.id))[0].state).toBe(
+            'completed',
+        );
+    });
+
+    it('fails closed on a revoked queued command and isolates the next user', async () => {
+        const repository = new MemoryOutboxRepository();
+        const queuedCommand: OutboxCommand = {
+            id: '157849b3-e318-4892-88e6-3f705394d206',
+            actorId: driver.id,
+            type: 'transition_status',
+            jobId: driverJob.id,
+            assignmentId: null,
+            payload: { status: 'accepted' },
+            payloadHash: 'revoked-token-command',
+            expectedVersion: driverJob.version,
+            state: 'queued',
+            attempts: 0,
+            error: null,
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            lastAttemptAt: null,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        await repository.save(queuedCommand);
+        const tokenStorage = new TestTokenStorage(rawToken);
+        const { fetchFn } = createApi({
+            assignedJobs: [secondDriverJob],
+            commandResponses: [
+                {
+                    body: { message: 'Unauthenticated.' },
+                    status: 401,
+                },
+            ],
+            users: [driver, secondDriver],
+        });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                outboxRepository={repository}
+                tokenStorage={tokenStorage}
+            />,
+        );
+
+        expect(await screen.findByTestId('login-screen')).toBeVisible();
+        expect(tokenStorage.token).toBeNull();
+        expect((await repository.listForActor(driver.id))[0].error?.code).toBe(
+            'AUTHENTICATION_REQUIRED',
+        );
+
+        await signIn();
+        expect(
+            await screen.findByText(secondDriverJob.reference),
+        ).toBeVisible();
+        expect(await repository.listForActor(secondDriver.id)).toEqual([]);
+        expect(screen.queryByText('Queued: 1')).toBeNull();
+        expect((await repository.listForActor(driver.id))[0].id).toBe(
+            queuedCommand.id,
+        );
+    });
+
+    it('wires conflict review to accept server state or retry with a new command', async () => {
+        const repository = new MemoryOutboxRepository();
+        const acceptCommand: OutboxCommand = {
+            id: '157849b3-e318-4892-88e6-3f705394d202',
+            actorId: driver.id,
+            type: 'transition_status',
+            jobId: driverJob.id,
+            assignmentId: null,
+            payload: { status: 'accepted' },
+            payloadHash: 'accept-server-state-command',
+            expectedVersion: 2,
+            state: 'conflict',
+            attempts: 1,
+            error: {
+                code: 'stale_version',
+                currentVersion: 4,
+                message: 'The server dispatch is newer.',
+                retryable: false,
+                serverSnapshot: { ...driverJob, version: 4 },
+            },
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:01:00.000Z',
+            lastAttemptAt: '2026-08-01T00:01:00.000Z',
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        const retryCommand: OutboxCommand = {
+            ...acceptCommand,
+            id: '157849b3-e318-4892-88e6-3f705394d203',
+            payload: { status: 'en_route' },
+            payloadHash: 'retry-new-version-command',
+            createdAt: '2026-08-01T00:00:01.000Z',
+        };
+        await repository.save(acceptCommand);
+        await repository.save(retryCommand);
+        const { calls, fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                outboxRepository={repository}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+        await fireEvent.press(
+            await screen.findByTestId('job-card-' + driverJob.id),
+        );
+        expect(
+            await screen.findByTestId('conflict-banner-container'),
+        ).toBeVisible();
+
+        await fireEvent.press(
+            screen.getByTestId('accept-server-btn-' + acceptCommand.id),
+        );
+        await waitFor(async () => {
+            expect(
+                (await repository.listForActor(driver.id)).some(
+                    (command) => command.id === acceptCommand.id,
+                ),
+            ).toBe(false);
+        });
+
+        await fireEvent.press(
+            screen.getByTestId('retry-version-btn-' + retryCommand.id),
+        );
+        await waitFor(() => {
+            expect(screen.queryByTestId('command-error-alert')).toBeNull();
+        });
+        await waitFor(() => {
+            expect(
+                calls.filter((call) => call.url.endsWith('/status')),
+            ).toHaveLength(1);
+        });
+        const [retry] = calls.filter((call) => call.url.endsWith('/status'));
+        expect(retry.body?.version).toBe(4);
+        expect(retry.body?.command_id).not.toBe(retryCommand.id);
+        expect(retry.headers?.['Idempotency-Key']).toBe(retry.body?.command_id);
+        await waitFor(async () => {
+            const commands = await repository.listForActor(driver.id);
+            expect(
+                commands.some((command) => command.id === retryCommand.id),
+            ).toBe(false);
+            expect(
+                commands.some(
+                    (command) =>
+                        command.id === retry.body?.command_id &&
+                        command.state === 'completed',
+                ),
+            ).toBe(true);
+        });
+    });
+
+    it('wires manual retry and discard controls for failed commands', async () => {
+        const repository = new MemoryOutboxRepository();
+        const retryable: OutboxCommand = {
+            id: '157849b3-e318-4892-88e6-3f705394d204',
+            actorId: driver.id,
+            type: 'transition_status',
+            jobId: driverJob.id,
+            assignmentId: null,
+            payload: { status: 'accepted' },
+            payloadHash: 'manual-retry-command',
+            expectedVersion: driverJob.version,
+            state: 'failed',
+            attempts: 5,
+            error: {
+                code: 'RETRY_EXHAUSTED',
+                message: 'Automatic retry limit reached.',
+                retryable: true,
+            },
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:05:00.000Z',
+            lastAttemptAt: '2026-08-01T00:05:00.000Z',
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        const discardable: OutboxCommand = {
+            ...retryable,
+            id: '157849b3-e318-4892-88e6-3f705394d205',
+            payloadHash: 'manual-discard-command',
+            error: {
+                code: 'VALIDATION_FAILED',
+                message: 'The command is no longer valid.',
+                retryable: false,
+            },
+            createdAt: '2026-08-01T00:00:01.000Z',
+        };
+        await repository.save(retryable);
+        await repository.save(discardable);
+        const { calls, fetchFn } = createApi({ assignedJobs: [] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                outboxRepository={repository}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        const retryCard = await screen.findByTestId(
+            'failed-command-' + retryable.id,
+        );
+        await fireEvent.press(
+            within(retryCard).getByLabelText('Retry failed command'),
+        );
+        await waitFor(() => {
+            expect(
+                calls.filter((call) => call.url.endsWith('/status')),
+            ).toHaveLength(1);
+        });
+        expect(
+            (await repository.listForActor(driver.id)).find(
+                (command) => command.id === retryable.id,
+            )?.state,
+        ).toBe('completed');
+
+        const discardCard = screen.getByTestId(
+            'failed-command-' + discardable.id,
+        );
+        await fireEvent.press(
+            within(discardCard).getByLabelText('Discard failed command'),
+        );
+        await waitFor(async () => {
+            expect(
+                (await repository.listForActor(driver.id)).some(
+                    (command) => command.id === discardable.id,
+                ),
+            ).toBe(false);
+        });
     });
 
     it('uses compact and expanded shells without truncating large header text', async () => {
