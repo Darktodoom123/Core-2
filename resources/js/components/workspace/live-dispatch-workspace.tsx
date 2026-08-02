@@ -21,6 +21,7 @@ import type { FormEvent } from 'react';
 import {
     Button,
     DataPair,
+    DateTimePicker,
     EmptyState,
     PageHeading,
     Panel,
@@ -541,7 +542,10 @@ export function LiveDispatchWorkspace({
                                 {showCreate ? (
                                     <X className="h-4 w-4" aria-hidden="true" />
                                 ) : (
-                                    <Plus className="h-4 w-4" aria-hidden="true" />
+                                    <Plus
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
                                 )}
                                 {showCreate ? 'Close form' : 'Create dispatch'}
                             </Button>
@@ -636,23 +640,23 @@ export function LiveDispatchWorkspace({
                                         form.setData('site', value)
                                     }
                                 />
-                                <DispatchInput
+                                <DateTimePicker
                                     label="Start"
-                                    type="datetime-local"
                                     value={form.data.scheduled_start}
                                     error={form.errors.scheduled_start}
                                     onChange={(value) =>
                                         form.setData('scheduled_start', value)
                                     }
+                                    required
                                 />
-                                <DispatchInput
+                                <DateTimePicker
                                     label="End"
-                                    type="datetime-local"
                                     value={form.data.scheduled_end}
                                     error={form.errors.scheduled_end}
                                     onChange={(value) =>
                                         form.setData('scheduled_end', value)
                                     }
+                                    required
                                 />
                                 <label className="text-sm font-medium text-ink">
                                     Priority
@@ -670,15 +674,19 @@ export function LiveDispatchWorkspace({
                                                 : undefined
                                         }
                                         className={cn(
-                                            'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
+                                            'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
                                             form.errors.priority
                                                 ? 'border-danger'
                                                 : 'border-line-strong hover:border-ink-soft',
                                         )}
                                     >
                                         <option value="routine">Routine</option>
-                                        <option value="priority">Priority</option>
-                                        <option value="emergency">Emergency</option>
+                                        <option value="priority">
+                                            Priority
+                                        </option>
+                                        <option value="emergency">
+                                            Emergency
+                                        </option>
                                     </select>
                                     {form.errors.priority && (
                                         <span className="mt-1 block text-xs text-danger">
@@ -1800,7 +1808,7 @@ function DispatchInput({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
                     error
                         ? 'border-danger'
                         : 'border-line-strong hover:border-ink-soft',

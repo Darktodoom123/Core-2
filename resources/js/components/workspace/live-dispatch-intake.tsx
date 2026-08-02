@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
-import { Button, DataPair, EmptyState, Panel } from '@/components/ui';
+import { Button, DataPair, DateTimePicker, EmptyState, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
 import type {
@@ -322,10 +322,9 @@ function ServiceRequestIntakeForm({
                     onChange={(value) => form.setData('location', value)}
                     required
                 />
-                <IntakeInput
+                <DateTimePicker
                     id="request-schedule"
                     label="Requested schedule"
-                    type="datetime-local"
                     value={form.data.scheduled_date}
                     error={form.errors.scheduled_date}
                     onChange={(value) => form.setData('scheduled_date', value)}
@@ -550,10 +549,9 @@ function DispatchConversion({
                             required
                         />
                         <div className="hidden sm:block" aria-hidden="true" />
-                        <IntakeInput
+                        <DateTimePicker
                             id="conversion-start"
                             label="Dispatch start"
-                            type="datetime-local"
                             value={form.data.scheduled_start}
                             error={form.errors.scheduled_start}
                             onChange={(value) =>
@@ -561,10 +559,9 @@ function DispatchConversion({
                             }
                             required
                         />
-                        <IntakeInput
+                        <DateTimePicker
                             id="conversion-end"
                             label="Dispatch end"
-                            type="datetime-local"
                             value={form.data.scheduled_end}
                             error={form.errors.scheduled_end}
                             onChange={(value) =>

@@ -44,7 +44,7 @@ final class OperationsWorkspaceController extends Controller
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
                 'refreshed_at' => now()->toIso8601String(),
-                'stale_after_seconds' => 900,
+                'stale_after_seconds' => 120,
             ],
         ]);
     }
