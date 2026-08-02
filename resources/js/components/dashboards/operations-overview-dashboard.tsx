@@ -895,10 +895,43 @@ function DispatcherDashboardView({
                             <div className="flex items-center justify-between text-xs">
                                 <span className="flex items-center gap-1.5 font-medium text-ink">
                                     <span className="relative flex h-2 w-2">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                                        {freshLocationsCount > 0 ? (
+                                            <>
+                                                <span
+                                                    className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                                                        freshLocationsCount ===
+                                                        locations.length
+                                                            ? 'bg-success'
+                                                            : 'bg-warning'
+                                                    }`}
+                                                />
+                                                <span
+                                                    className={`relative inline-flex h-2 w-2 rounded-full ${
+                                                        freshLocationsCount ===
+                                                        locations.length
+                                                            ? 'bg-success'
+                                                            : 'bg-warning'
+                                                    }`}
+                                                />
+                                            </>
+                                        ) : (
+                                            <span
+                                                className={`relative inline-flex h-2 w-2 rounded-full ${
+                                                    locations.length === 0
+                                                        ? 'bg-muted'
+                                                        : 'bg-danger'
+                                                }`}
+                                            />
+                                        )}
                                     </span>
-                                    Live Field Pings
+                                    {locations.length === 0
+                                        ? 'No Field Units'
+                                        : freshLocationsCount ===
+                                            locations.length
+                                          ? 'Live Field Pings'
+                                          : freshLocationsCount > 0
+                                            ? 'Partial Field Pings'
+                                            : 'Field Units Offline'}
                                 </span>
                                 <span className="font-semibold text-ink">
                                     {freshLocationsCount} / {locations.length}
@@ -907,7 +940,16 @@ function DispatcherDashboardView({
 
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
                                 <div
-                                    className="h-full rounded-full bg-success transition-all duration-500"
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                        locations.length === 0
+                                            ? 'bg-surface-subtle'
+                                            : freshLocationsCount ===
+                                                locations.length
+                                              ? 'bg-success'
+                                              : freshLocationsCount > 0
+                                                ? 'bg-warning'
+                                                : 'bg-danger'
+                                    }`}
                                     style={{
                                         width: `${locations.length > 0 ? (freshLocationsCount / locations.length) * 100 : 0}%`,
                                     }}
@@ -919,7 +961,9 @@ function DispatcherDashboardView({
                                     ? 'No device location updates recorded.'
                                     : freshLocationsCount === locations.length
                                       ? 'All registered field units actively reporting live coordinates.'
-                                      : `${locations.length - freshLocationsCount} location updates offline or stale.`}
+                                      : freshLocationsCount > 0
+                                        ? `${locations.length - freshLocationsCount} of ${locations.length} location updates offline or stale.`
+                                        : `All ${locations.length} location updates offline or stale.`}
                             </p>
                         </Panel>
                     </section>
