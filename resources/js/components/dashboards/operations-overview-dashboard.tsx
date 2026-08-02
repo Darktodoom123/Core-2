@@ -58,7 +58,10 @@ export interface OperationsOverviewDashboardProps {
     gptRecommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
     availableSections: WorkspaceSection[];
-    onSectionChange: (section: WorkspaceSection) => void;
+    onSectionChange: (
+        section: WorkspaceSection,
+        options?: { serviceRequestId?: number },
+    ) => void;
 }
 
 export function OperationsOverviewDashboard(
@@ -785,7 +788,10 @@ function DispatcherDashboardView({
                                             size="sm"
                                             variant="primary"
                                             onClick={() =>
-                                                onSectionChange('dispatch')
+                                                onSectionChange('dispatch', {
+                                                    serviceRequestId:
+                                                        request.id,
+                                                })
                                             }
                                         >
                                             Create Dispatch

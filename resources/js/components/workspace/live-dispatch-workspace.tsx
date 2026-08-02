@@ -16,7 +16,7 @@ import {
     X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
     Button,
@@ -75,6 +75,7 @@ export function LiveDispatchWorkspace({
     capabilities,
     canCreate,
     refreshing,
+    initialServiceRequestId,
 }: {
     jobs: DispatchJobViewModel[];
     clients: ClientViewModel[];
@@ -86,13 +87,45 @@ export function LiveDispatchWorkspace({
     capabilities: WorkspaceCapabilities;
     canCreate: boolean;
     refreshing: boolean;
+    initialServiceRequestId?: number | null;
 }) {
     const [query, setQuery] = useState('');
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
     const [showCreate, setShowCreate] = useState(false);
-    const [showIntake, setShowIntake] = useState(false);
+    const [showIntake, setShowIntake] = useState(
+        Boolean(initialServiceRequestId),
+    );
+    const [prevInitialRequestId, setPrevInitialRequestId] = useState(
+        initialServiceRequestId,
+    );
+
+    if (initialServiceRequestId !== prevInitialRequestId) {
+        setPrevInitialRequestId(initialServiceRequestId);
+
+        if (initialServiceRequestId) {
+            setShowIntake(true);
+            setShowCreate(false);
+        }
+    }
+
+    useEffect(() => {
+        if (initialServiceRequestId && showIntake) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(
+                    'service-request-intake-panel',
+                );
+
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+    }, [initialServiceRequestId, showIntake]);
+
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [conflictsOnly, setConflictsOnly] = useState(false);
     const [boardCategory, setBoardCategory] = useState<BoardCategory>('all');
@@ -535,6 +568,7 @@ export function LiveDispatchWorkspace({
                                 clients={clients}
                                 serviceRequests={serviceRequests}
                                 capabilities={capabilities}
+                                initialRequestId={initialServiceRequestId}
                             />
                         </motion.div>
                     )}

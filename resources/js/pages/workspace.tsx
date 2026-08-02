@@ -75,8 +75,16 @@ export default function Workspace(props: WorkspacePageProps) {
         };
     }, [props.workspace.refreshed_at, props.workspace.stale_after_seconds]);
 
-    const changeSection = (nextSection: WorkspaceSection) => {
+    const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<
+        number | null
+    >(null);
+
+    const changeSection = (
+        nextSection: WorkspaceSection,
+        options?: { serviceRequestId?: number },
+    ) => {
         setSection(nextSection);
+        setSelectedServiceRequestId(options?.serviceRequestId ?? null);
         const url = new URL(window.location.href);
         url.searchParams.set('view', nextSection);
         window.history.replaceState({}, '', url);
@@ -233,6 +241,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         capabilities={props.capabilities}
                         canCreate={props.capabilities.create_dispatch}
                         refreshing={refreshing}
+                        initialServiceRequestId={selectedServiceRequestId}
                     />
                 ) : (
                     <LiveWorkspaceSection

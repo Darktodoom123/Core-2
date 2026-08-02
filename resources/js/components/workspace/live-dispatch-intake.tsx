@@ -6,7 +6,7 @@ import {
     UserRoundPlus,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent, InputHTMLAttributes, ReactNode } from 'react';
 import { Button, DataPair, EmptyState, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
@@ -23,10 +23,12 @@ export function LiveDispatchIntake({
     clients,
     serviceRequests,
     capabilities,
+    initialRequestId,
 }: {
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
     capabilities: WorkspaceCapabilities;
+    initialRequestId?: number | null;
 }) {
     const [mode, setMode] = useState<IntakeMode>(null);
 
@@ -116,6 +118,7 @@ export function LiveDispatchIntake({
                     <DispatchConversion
                         serviceRequests={serviceRequests}
                         className={mode === null ? 'mt-5' : 'mt-4'}
+                        initialRequestId={initialRequestId}
                     />
                 )}
             </div>
@@ -374,9 +377,11 @@ function ServiceRequestIntakeForm({
 function DispatchConversion({
     serviceRequests,
     className,
+    initialRequestId,
 }: {
     serviceRequests: ServiceRequestViewModel[];
     className?: string;
+    initialRequestId?: number | null;
 }) {
     const form = useForm({
         service_request_id: '',
@@ -384,6 +389,44 @@ function DispatchConversion({
         scheduled_start: '',
         scheduled_end: '',
     });
+    const { setData } = form;
+
+    const chooseRequest = (id: string) => {
+        const request = serviceRequests.find(
+            (candidate) => String(candidate.id) === id,
+        );
+        const start = toLocalDateTime(request?.scheduled_date ?? null);
+
+        setData((prev) => ({
+            ...prev,
+            service_request_id: id,
+            scheduled_start: start,
+            scheduled_end: addHours(start, 4),
+        }));
+    };
+
+    useEffect(() => {
+        if (
+            initialRequestId &&
+            serviceRequests.some((r) => r.id === initialRequestId)
+        ) {
+            const request = serviceRequests.find(
+                (candidate) => candidate.id === initialRequestId,
+            );
+
+            if (request) {
+                const start = toLocalDateTime(request.scheduled_date ?? null);
+
+                setData((prev) => ({
+                    ...prev,
+                    service_request_id: String(initialRequestId),
+                    scheduled_start: start,
+                    scheduled_end: addHours(start, 4),
+                }));
+            }
+        }
+    }, [initialRequestId, serviceRequests, setData]);
+
     const selectedRequest =
         serviceRequests.find(
             (request) => String(request.id) === form.data.service_request_id,
@@ -394,20 +437,6 @@ function DispatchConversion({
         form.data.scheduled_start,
         form.data.scheduled_end,
     ].every((value) => value.trim() !== '');
-
-    const chooseRequest = (id: string) => {
-        const request = serviceRequests.find(
-            (candidate) => String(candidate.id) === id,
-        );
-        const start = toLocalDateTime(request?.scheduled_date ?? null);
-
-        form.setData({
-            service_request_id: id,
-            reference: form.data.reference,
-            scheduled_start: start,
-            scheduled_end: addHours(start, 4),
-        });
-    };
     const submit = (event: FormEvent) => {
         event.preventDefault();
         form.post('/operations/dispatch-jobs', {
