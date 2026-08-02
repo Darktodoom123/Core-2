@@ -13,6 +13,7 @@ import {
     SearchX,
     ShieldCheck,
     UserRound,
+    X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
@@ -385,7 +386,7 @@ export function LiveDispatchWorkspace({
                 description={
                     fieldMode
                         ? 'Review the jobs actively assigned to you, then open one to record only its next valid field milestone.'
-                        : 'Review live jobs, schedule board, and operational conflicts. Laravel remains authoritative for every visible record and write.'
+                        : 'Review live jobs, schedule board, and operational conflicts in real time.'
                 }
                 actions={
                     <div className="flex flex-wrap items-center gap-2">
@@ -504,7 +505,11 @@ export function LiveDispatchWorkspace({
                                 aria-expanded={showCreate}
                                 aria-controls="create-dispatch-panel"
                             >
-                                <Plus className="h-4 w-4" aria-hidden="true" />
+                                {showCreate ? (
+                                    <X className="h-4 w-4" aria-hidden="true" />
+                                ) : (
+                                    <Plus className="h-4 w-4" aria-hidden="true" />
+                                )}
                                 {showCreate ? 'Close form' : 'Create dispatch'}
                             </Button>
                         )}
@@ -561,92 +566,103 @@ export function LiveDispatchWorkspace({
                         </div>
                         <form
                             onSubmit={submit}
-                            className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                            className="mx-auto max-w-6xl space-y-4"
                             noValidate
                         >
-                            <DispatchInput
-                                label="Reference"
-                                value={form.data.reference}
-                                error={form.errors.reference}
-                                onChange={(value) =>
-                                    form.setData('reference', value)
-                                }
-                            />
-                            <DispatchInput
-                                label="Client"
-                                value={form.data.client}
-                                error={form.errors.client}
-                                onChange={(value) =>
-                                    form.setData('client', value)
-                                }
-                            />
-                            <DispatchInput
-                                label="Job title"
-                                value={form.data.title}
-                                error={form.errors.title}
-                                onChange={(value) =>
-                                    form.setData('title', value)
-                                }
-                            />
-                            <DispatchInput
-                                label="Site"
-                                value={form.data.site}
-                                error={form.errors.site}
-                                onChange={(value) =>
-                                    form.setData('site', value)
-                                }
-                            />
-                            <DispatchInput
-                                label="Start"
-                                type="datetime-local"
-                                value={form.data.scheduled_start}
-                                error={form.errors.scheduled_start}
-                                onChange={(value) =>
-                                    form.setData('scheduled_start', value)
-                                }
-                            />
-                            <DispatchInput
-                                label="End"
-                                type="datetime-local"
-                                value={form.data.scheduled_end}
-                                error={form.errors.scheduled_end}
-                                onChange={(value) =>
-                                    form.setData('scheduled_end', value)
-                                }
-                            />
-                            <label className="text-sm font-medium text-ink">
-                                Priority
-                                <select
-                                    value={form.data.priority}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'priority',
-                                            event.target.value,
-                                        )
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <DispatchInput
+                                    label="Reference"
+                                    value={form.data.reference}
+                                    error={form.errors.reference}
+                                    onChange={(value) =>
+                                        form.setData('reference', value)
                                     }
-                                    aria-invalid={
-                                        form.errors.priority
-                                            ? 'true'
-                                            : undefined
+                                />
+                                <DispatchInput
+                                    label="Client"
+                                    value={form.data.client}
+                                    error={form.errors.client}
+                                    onChange={(value) =>
+                                        form.setData('client', value)
                                     }
-                                    className={cn(
-                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3',
-                                        form.errors.priority
-                                            ? 'border-danger'
-                                            : 'border-line-strong',
+                                />
+                                <DispatchInput
+                                    label="Job title"
+                                    value={form.data.title}
+                                    error={form.errors.title}
+                                    onChange={(value) =>
+                                        form.setData('title', value)
+                                    }
+                                />
+                                <DispatchInput
+                                    label="Site"
+                                    value={form.data.site}
+                                    error={form.errors.site}
+                                    onChange={(value) =>
+                                        form.setData('site', value)
+                                    }
+                                />
+                                <DispatchInput
+                                    label="Start"
+                                    type="datetime-local"
+                                    value={form.data.scheduled_start}
+                                    error={form.errors.scheduled_start}
+                                    onChange={(value) =>
+                                        form.setData('scheduled_start', value)
+                                    }
+                                />
+                                <DispatchInput
+                                    label="End"
+                                    type="datetime-local"
+                                    value={form.data.scheduled_end}
+                                    error={form.errors.scheduled_end}
+                                    onChange={(value) =>
+                                        form.setData('scheduled_end', value)
+                                    }
+                                />
+                                <label className="text-sm font-medium text-ink">
+                                    Priority
+                                    <select
+                                        value={form.data.priority}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'priority',
+                                                event.target.value,
+                                            )
+                                        }
+                                        aria-invalid={
+                                            form.errors.priority
+                                                ? 'true'
+                                                : undefined
+                                        }
+                                        className={cn(
+                                            'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
+                                            form.errors.priority
+                                                ? 'border-danger'
+                                                : 'border-line-strong hover:border-ink-soft',
+                                        )}
+                                    >
+                                        <option value="routine">Routine</option>
+                                        <option value="priority">Priority</option>
+                                        <option value="emergency">Emergency</option>
+                                    </select>
+                                    {form.errors.priority && (
+                                        <span className="mt-1 block text-xs text-danger">
+                                            {form.errors.priority}
+                                        </span>
                                     )}
-                                >
-                                    <option value="routine">Routine</option>
-                                    <option value="priority">Priority</option>
-                                    <option value="emergency">Emergency</option>
-                                </select>
-                                {form.errors.priority && (
-                                    <span className="mt-1 block text-xs text-danger">
-                                        {form.errors.priority}
-                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                                {!formComplete && !form.processing ? (
+                                    <p className="text-xs text-ink-soft">
+                                        Complete every required field to
+                                        continue.
+                                    </p>
+                                ) : (
+                                    <div />
                                 )}
-                            </label>
-                            <div className="flex flex-col justify-end">
                                 <Button
                                     type="submit"
                                     variant="primary"
@@ -656,12 +672,6 @@ export function LiveDispatchWorkspace({
                                         ? 'Creating dispatch…'
                                         : 'Create live draft'}
                                 </Button>
-                                {!formComplete && !form.processing && (
-                                    <p className="mt-1 text-xs text-ink-soft">
-                                        Complete every required field to
-                                        continue.
-                                    </p>
-                                )}
                             </div>
                         </form>
                     </motion.section>
@@ -1756,8 +1766,10 @@ function DispatchInput({
                 aria-invalid={error ? 'true' : undefined}
                 aria-describedby={error ? errorId : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3',
-                    error ? 'border-danger' : 'border-line-strong',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30',
+                    error
+                        ? 'border-danger'
+                        : 'border-line-strong hover:border-ink-soft',
                 )}
             />
             {error && (
