@@ -60,10 +60,62 @@ const TILE_LAYERS: Record<
     },
 };
 
+export function HeavyEquipmentIcon({
+    className,
+    ...props
+}: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            {...props}
+        >
+            <rect x="2" y="16" width="13" height="4" rx="2" />
+            <path d="M4 16V10a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6" />
+            <path d="M6 10h4v3H6z" />
+            <path d="M10 11l4-5 5 4" />
+            <path d="M19 10l2 3h-3.5" />
+        </svg>
+    );
+}
+
+export function CraneTruckIcon({
+    className,
+    ...props
+}: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            {...props}
+        >
+            <path d="M14 18V10a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v8h2" />
+            <path d="M14 18h2" />
+            <path d="M19 18h2a1 1 0 0 0 1-1v-4a1 1 0 0 0-.25-.67l-2.5-3A1 1 0 0 0 18.5 9H14" />
+            <circle cx="7" cy="18" r="2" />
+            <circle cx="17" cy="18" r="2" />
+            <path d="M5 9L15 2" />
+            <path d="M15 2v5" />
+        </svg>
+    );
+}
+
 const ASSET_SVG_ICONS: Record<AssetKind, string> = {
     truck: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>`,
     crane: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14v7"/><path d="M14 14v7"/></svg>`,
-    equipment: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+    equipment: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="2" y="16" width="13" height="4" rx="2"/><path d="M4 16V10a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6"/><path d="M6 10h4v3H6z"/><path d="M10 11l4-5 5 4"/><path d="M19 10l2 3h-3.5"/></svg>`,
     personnel: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
 };
 
@@ -407,7 +459,7 @@ export function OpenStreetMapTrackingMap({
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
                         <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-emerald-600 text-white">
-                            <Wrench className="h-2.5 w-2.5" />
+                            <HeavyEquipmentIcon className="h-2.5 w-2.5" />
                         </span>
                         <span>Equipment</span>
                     </div>
@@ -430,8 +482,9 @@ export function OpenStreetMapTrackingMap({
                 {mappedLocations.length === 0 && (
                     <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
                         <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
-                            Coordinates are unavailable for the selected
-                            updates.
+                            {locations.length === 0
+                                ? 'No location updates match the selected filter.'
+                                : 'Coordinates are unavailable for the selected updates.'}
                         </div>
                     </div>
                 )}
@@ -471,7 +524,9 @@ export function OpenStreetMapTrackingMap({
                 <div className="flex-1 scrollbar-thin divide-y divide-line overflow-y-auto">
                     {filteredLocations.length === 0 ? (
                         <div className="p-6 text-center text-xs text-ink-soft">
-                            No locations match &ldquo;{searchQuery}&rdquo;.
+                            {searchQuery
+                                ? `No locations match "${searchQuery}".`
+                                : 'No location updates match the selected filter.'}
                         </div>
                     ) : (
                         filteredLocations.map((location) => {

@@ -3,12 +3,20 @@ import {
     Activity,
     AlertTriangle,
     Compass,
+    Construction,
     Navigation,
     PauseCircle,
     RefreshCw,
+    Truck,
+    UserRoundCog,
+    Wrench,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { OpenStreetMapTrackingMap } from '@/components/openstreetmap-tracking-map';
+import {
+    getAssetKind,
+    HeavyEquipmentIcon,
+    OpenStreetMapTrackingMap,
+} from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import {
     getOutboxQueue,
@@ -33,6 +41,9 @@ export function TrackingSurface({
     const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
     const [statusFilter, setStatusFilter] = useState<
         'all' | 'fresh' | 'delayed' | 'stale' | 'offline'
+    >('all');
+    const [assetFilter, setAssetFilter] = useState<
+        'all' | 'truck' | 'crane' | 'equipment' | 'personnel'
     >('all');
     const [lastPolledAt, setLastPolledAt] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -133,11 +144,12 @@ export function TrackingSurface({
     }, []);
 
     const filteredLocations = locations.filter((loc) => {
-        if (statusFilter === 'all') {
-            return true;
-        }
+        const matchesStatus =
+            statusFilter === 'all' || loc.freshness_status === statusFilter;
+        const matchesAsset =
+            assetFilter === 'all' || getAssetKind(loc) === assetFilter;
 
-        return loc.freshness_status === statusFilter;
+        return matchesStatus && matchesAsset;
     });
 
     return (
@@ -269,70 +281,159 @@ export function TrackingSurface({
                     />
                 )}
 
-                {/* Filter Tabs */}
-                <div className="flex flex-wrap items-center gap-1.5 border-b border-line pb-3">
-                    {(
-                        ['all', 'fresh', 'delayed', 'stale', 'offline'] as const
-                    ).map((status) => {
-                        const count = locations.filter((l) => {
-                            if (status === 'all') {
-                                return true;
-                            }
+                {/* Filter Tabs: Freshness Status & Asset Category */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                    {/* Freshness Status Filter */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {(
+                            [
+                                'all',
+                                'fresh',
+                                'delayed',
+                                'stale',
+                                'offline',
+                            ] as const
+                        ).map((status) => {
+                            const count = locations.filter((l) => {
+                                const matchesStatus =
+                                    status === 'all' ||
+                                    l.freshness_status === status;
+                                const matchesAsset =
+                                    assetFilter === 'all' ||
+                                    getAssetKind(l) === assetFilter;
 
-                            return l.freshness_status === status;
-                        }).length;
+                                return matchesStatus && matchesAsset;
+                            }).length;
 
-                        const isSelected = statusFilter === status;
-                        const statusDotColor =
-                            status === 'fresh'
-                                ? 'bg-success-strong'
-                                : status === 'delayed'
-                                  ? 'bg-warning-strong'
-                                  : status === 'stale'
-                                    ? 'bg-danger'
-                                    : status === 'offline'
-                                      ? 'bg-muted'
-                                      : 'bg-brand-strong';
+                            const isSelected = statusFilter === status;
+                            const statusDotColor =
+                                status === 'fresh'
+                                    ? 'bg-success-strong'
+                                    : status === 'delayed'
+                                      ? 'bg-warning-strong'
+                                      : status === 'stale'
+                                        ? 'bg-danger'
+                                        : status === 'offline'
+                                          ? 'bg-muted'
+                                          : 'bg-brand-strong';
 
-                        return (
-                            <button
-                                key={status}
-                                type="button"
-                                onClick={() => setStatusFilter(status)}
-                                className={cn(
-                                    'inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-150',
-                                    isSelected
-                                        ? 'bg-brand-strong font-semibold text-white shadow-xs'
-                                        : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
-                                )}
-                                aria-pressed={isSelected}
-                            >
-                                <span
+                            return (
+                                <button
+                                    key={status}
+                                    type="button"
+                                    onClick={() => setStatusFilter(status)}
                                     className={cn(
-                                        'h-2 w-2 shrink-0 rounded-full',
+                                        'inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-150',
                                         isSelected
-                                            ? 'bg-white'
-                                            : statusDotColor,
+                                            ? 'bg-brand-strong font-semibold text-white shadow-xs'
+                                            : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                     )}
-                                />
-                                <span>{status}</span>
-                                <span
-                                    className={cn(
-                                        'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
-                                        isSelected
-                                            ? 'bg-white/20 text-white'
-                                            : 'bg-surface text-ink-soft',
-                                    )}
+                                    aria-pressed={isSelected}
                                 >
-                                    {count}
-                                </span>
-                            </button>
-                        );
-                    })}
+                                    <span
+                                        className={cn(
+                                            'h-2 w-2 shrink-0 rounded-full',
+                                            isSelected
+                                                ? 'bg-white'
+                                                : statusDotColor,
+                                        )}
+                                    />
+                                    <span>{status}</span>
+                                    <span
+                                        className={cn(
+                                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                                            isSelected
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-surface text-ink-soft',
+                                        )}
+                                    >
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Asset Type Filter */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="mr-1 text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                            Asset:
+                        </span>
+                        {(
+                            [
+                                { id: 'all', label: 'All Types', icon: null },
+                                { id: 'truck', label: 'Trucks', icon: Truck },
+                                {
+                                    id: 'crane',
+                                    label: 'Cranes',
+                                    icon: Construction,
+                                },
+                                {
+                                    id: 'equipment',
+                                    label: 'Heavy Eqp',
+                                    icon: HeavyEquipmentIcon,
+                                },
+                                {
+                                    id: 'personnel',
+                                    label: 'Personnel',
+                                    icon: UserRoundCog,
+                                },
+                            ] as const
+                        ).map((item) => {
+                            const count = locations.filter((l) => {
+                                const matchesStatus =
+                                    statusFilter === 'all' ||
+                                    l.freshness_status === statusFilter;
+                                const matchesAsset =
+                                    item.id === 'all' ||
+                                    getAssetKind(l) === item.id;
+
+                                return matchesStatus && matchesAsset;
+                            }).length;
+
+                            const isSelected = assetFilter === item.id;
+                            const Icon = item.icon;
+
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => setAssetFilter(item.id)}
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150',
+                                        isSelected
+                                            ? 'bg-ink font-semibold text-white shadow-xs'
+                                            : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                    )}
+                                    aria-pressed={isSelected}
+                                >
+                                    {Icon && (
+                                        <Icon
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    <span>{item.label}</span>
+                                    <span
+                                        className={cn(
+                                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                                            isSelected
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-surface text-ink-soft',
+                                        )}
+                                    >
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Main Content Pane */}
-                {filteredLocations.length === 0 ? (
+                {viewMode === 'visual' ? (
+                    <OpenStreetMapTrackingMap locations={filteredLocations} />
+                ) : filteredLocations.length === 0 ? (
                     <Panel>
                         <EmptyState
                             icon={Compass}
@@ -340,8 +441,6 @@ export function TrackingSurface({
                             message="No field worker or asset updates match the selected freshness filter."
                         />
                     </Panel>
-                ) : viewMode === 'visual' ? (
-                    <OpenStreetMapTrackingMap locations={filteredLocations} />
                 ) : (
                     <SynchronizedLocationList locations={filteredLocations} />
                 )}
