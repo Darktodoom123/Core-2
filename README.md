@@ -76,23 +76,34 @@ Open your browser and navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:80
 
 ## 🐳 Running with Docker
 
-You can run the full application stack (Laravel, Inertia/React static assets, Reverb WebSockets, PostgreSQL 16, and Redis 7) using Docker Compose:
+The repository includes a Docker Compose stack with Laravel, built Inertia/React
+assets, Nginx, background workers, Reverb, PostgreSQL 16, and Redis 7.
 
-### 1. Build & Start Containers
+Copy `.env.example` to `.env`, then configure the required `APP_KEY`, PostgreSQL,
+and Reverb values before starting the stack. The complete first-run instructions,
+configuration reference, operations, data-reset behavior, and troubleshooting are
+in the [Docker operations guide](Docs/docker.md).
+
+Validate and start the configured stack:
+
 ```bash
+docker compose config --quiet
 docker compose up -d --build
 ```
 
-### 2. Access Application
-- Web Application: **[http://localhost:8000](http://localhost:8000)**
-- WebSocket Server (Reverb): **`ws://localhost:8080`**
+With the default published ports:
 
-### 3. Seed Database (Optional)
+- Web application: **[http://localhost:8000](http://localhost:8000)**
+- Reverb WebSocket server: **`ws://localhost:8080`**
+
+To seed optional development data:
+
 ```bash
 docker compose exec app php artisan db:seed
 ```
 
-### 4. Stop Containers
+To stop the stack while preserving its named volumes:
+
 ```bash
 docker compose down
 ```
@@ -148,3 +159,4 @@ npm run mobile:android
 Detailed architecture, business rules, product requirements, database design, and API specs are documented in `Docs/`:
 
 - Read [`Docs/README.md`](Docs/README.md) for the complete index of product & architecture documentation.
+- Read the [Docker operations guide](Docs/docker.md) for container setup, runtime commands, persistence, and troubleshooting.

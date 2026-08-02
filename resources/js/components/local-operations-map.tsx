@@ -11,14 +11,15 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import {
     Circle,
-    CircleMarker,
     MapContainer,
+    Marker,
     Polyline,
     Popup,
     TileLayer,
     useMap,
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createCustomAssetIcon } from '@/components/openstreetmap-tracking-map';
 import { Button, StatusBadge } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { TelemetryPoint } from '@/types/operations';
@@ -69,17 +70,18 @@ export function LocalOperationsMap({
 
     return (
         <div className="grid min-h-[34rem] grid-cols-1 border-t border-line xl:grid-cols-[minmax(0,1fr)_20rem]">
-            <div className="relative min-h-[28rem] overflow-hidden bg-[#eef3f6]">
+            <div className="relative min-h-[28rem] overflow-hidden bg-surface-subtle">
                 <MapContainer
                     center={DEFAULT_CENTER}
                     zoom={DEFAULT_ZOOM}
                     scrollWheelZoom
+                    zoomControl={false}
                     className="h-full min-h-[28rem] w-full"
                     aria-label="OpenStreetMap showing Metro Manila job sites and tracked resources"
                 >
                     <TileLayer
-                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
                     />
                     <MapViewport selected={selected} />
                     <MapControls
@@ -117,44 +119,96 @@ export function LocalOperationsMap({
                             />
                         ))}
 
-                    {points.map((point) => (
-                        <CircleMarker
-                            key={point.id}
-                            center={pointPosition(point)}
-                            radius={
-                                selected?.resourceId === point.resourceId
-                                    ? 11
-                                    : 8
-                            }
-                            eventHandlers={{
-                                click: () => onSelect(point.resourceId),
-                            }}
-                            pathOptions={{
-                                color: 'var(--color-surface)',
-                                fillColor: markerColor(point.freshness),
-                                fillOpacity:
-                                    point.freshness === 'Offline' ? 0.55 : 0.95,
-                                weight:
-                                    selected?.resourceId === point.resourceId
-                                        ? 4
-                                        : 2,
-                            }}
-                        >
-                            <Popup>
-                                <strong>{point.label}</strong>
-                                <br />
-                                {point.destination}
-                                <br />
-                                {point.freshness} · {point.updatedAt}
-                            </Popup>
-                        </CircleMarker>
-                    ))}
+                    {points.map((point) => {
+                        const position = pointPosition(point);
+                        const isSelected =
+                            selected?.resourceId === point.resourceId;
+                        const kind =
+                            point.kind === 'truck'
+                                ? 'truck'
+                                : point.kind === 'crane'
+                                  ? 'crane'
+                                  : 'personnel';
+                        const markerIcon = createCustomAssetIcon(
+                            kind,
+                            point.freshness,
+                            isSelected,
+                        );
+
+                        return (
+                            <Marker
+                                key={point.id}
+                                position={position}
+                                icon={markerIcon}
+                                eventHandlers={{
+                                    click: () => onSelect(point.resourceId),
+                                }}
+                            >
+                                <Popup closeButton={true}>
+                                    <div className="w-52 p-3">
+                                        <div className="flex items-center gap-2 border-b border-line pb-2">
+                                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-xs font-semibold text-brand-strong">
+                                                {point.kind === 'truck' ? (
+                                                    <Truck className="h-4 w-4 text-brand-strong" />
+                                                ) : point.kind === 'crane' ? (
+                                                    <Construction className="h-4 w-4 text-brand-strong" />
+                                                ) : (
+                                                    <UserRoundCog className="h-4 w-4 text-brand-strong" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm leading-tight font-semibold text-ink">
+                                                    {point.label}
+                                                </p>
+                                                <p className="text-[11px] text-ink-soft">
+                                                    {point.destination}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2.5 flex items-center justify-between text-xs text-ink-soft">
+                                            <StatusBadge
+                                                status={point.freshness.toLowerCase()}
+                                            />
+                                            <span className="text-[11px]">
+                                                Updated {point.updatedAt}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Popup>
+                            </Marker>
+                        );
+                    })}
                 </MapContainer>
 
-                <div className="pointer-events-none absolute right-3 bottom-8 z-[500] rounded-lg bg-surface/95 p-3 text-xs text-ink-soft shadow-sm">
+                {/* Map Asset Shapes Legend */}
+                <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex flex-wrap items-center gap-3 rounded-xl border border-line/70 bg-surface/90 px-3 py-2 text-[11px] text-ink shadow-sm backdrop-blur-md">
+                    <div className="flex items-center gap-1.5 font-medium">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-md bg-emerald-600 text-white">
+                            <Truck className="h-2.5 w-2.5" />
+                        </span>
+                        <span>Truck</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                        <span className="flex h-4 w-4 rotate-45 items-center justify-center rounded-md bg-emerald-600 text-white">
+                            <Construction className="h-2.5 w-2.5 -rotate-45" />
+                        </span>
+                        <span>Crane</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white">
+                            <UserRoundCog className="h-2.5 w-2.5" />
+                        </span>
+                        <span>Personnel</span>
+                    </div>
+                </div>
+
+                <div className="pointer-events-none absolute right-3 bottom-3 z-[500] rounded-lg border border-line/60 bg-surface/90 p-2.5 text-xs text-ink-soft shadow-sm backdrop-blur-md">
                     <div className="flex items-center gap-2">
-                        <Construction className="h-4 w-4" aria-hidden="true" />
-                        OpenStreetMap basemap · Prototype telemetry
+                        <Construction
+                            className="h-4 w-4 text-brand-strong"
+                            aria-hidden="true"
+                        />
+                        CARTO basemap · Telemetry
                     </div>
                 </div>
             </div>
@@ -184,28 +238,50 @@ export function LocalOperationsMap({
                                   ? Construction
                                   : UserRoundCog;
 
+                        const isSelected =
+                            selected?.resourceId === point.resourceId;
+
                         return (
                             <li key={point.id}>
                                 <button
                                     type="button"
                                     onClick={() => onSelect(point.resourceId)}
                                     className={cn(
-                                        'w-full px-4 py-3 text-left hover:bg-surface-subtle',
-                                        selected?.resourceId ===
-                                            point.resourceId && 'bg-brand-soft',
+                                        'min-h-[44px] w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
+                                        isSelected &&
+                                            'bg-brand-soft/80 font-medium text-ink shadow-2xs ring-1 ring-brand-strong/20',
                                     )}
                                 >
                                     <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-start gap-2">
-                                            <Icon
-                                                className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft"
-                                                aria-hidden="true"
-                                            />
+                                        <div className="flex items-start gap-2.5">
+                                            <div
+                                                className={cn(
+                                                    'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center text-xs font-semibold shadow-xs',
+                                                    point.kind === 'truck'
+                                                        ? 'rounded-lg bg-emerald-600 text-white'
+                                                        : point.kind === 'crane'
+                                                          ? 'rotate-45 rounded-md bg-emerald-600 text-white'
+                                                          : 'rounded-full bg-emerald-600 text-white',
+                                                )}
+                                            >
+                                                <span
+                                                    className={
+                                                        point.kind === 'crane'
+                                                            ? '-rotate-45'
+                                                            : ''
+                                                    }
+                                                >
+                                                    <Icon
+                                                        className="h-3.5 w-3.5"
+                                                        aria-hidden="true"
+                                                    />
+                                                </span>
+                                            </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-ink">
                                                     {point.label}
                                                 </p>
-                                                <p className="mt-1 text-xs text-ink-soft">
+                                                <p className="mt-0.5 text-xs text-ink-soft">
                                                     {point.destination}
                                                 </p>
                                             </div>
@@ -302,17 +378,4 @@ function pointPosition(point: TelemetryPoint): [number, number] {
     const longitudeOffset = (point.x - 50) * 0.00012;
 
     return [base[0] + latitudeOffset, base[1] + longitudeOffset];
-}
-
-function markerColor(freshness: TelemetryPoint['freshness']): string {
-    switch (freshness) {
-        case 'Live':
-            return 'var(--color-success-strong)';
-        case 'Delayed':
-            return 'var(--color-warning-strong)';
-        case 'Stale':
-            return 'var(--color-danger)';
-        case 'Offline':
-            return 'var(--color-muted)';
-    }
 }

@@ -270,7 +270,7 @@ export function TrackingSurface({
                 )}
 
                 {/* Filter Tabs */}
-                <div className="flex border-b border-line">
+                <div className="flex flex-wrap items-center gap-1.5 border-b border-line pb-3">
                     {(
                         ['all', 'fresh', 'delayed', 'stale', 'offline'] as const
                     ).map((status) => {
@@ -282,20 +282,50 @@ export function TrackingSurface({
                             return l.freshness_status === status;
                         }).length;
 
+                        const isSelected = statusFilter === status;
+                        const statusDotColor =
+                            status === 'fresh'
+                                ? 'bg-success-strong'
+                                : status === 'delayed'
+                                  ? 'bg-warning-strong'
+                                  : status === 'stale'
+                                    ? 'bg-danger'
+                                    : status === 'offline'
+                                      ? 'bg-muted'
+                                      : 'bg-brand-strong';
+
                         return (
                             <button
                                 key={status}
                                 type="button"
                                 onClick={() => setStatusFilter(status)}
                                 className={cn(
-                                    'border-b-2 px-4 py-2.5 text-sm font-medium capitalize transition-colors',
-                                    statusFilter === status
-                                        ? 'border-brand-strong font-semibold text-brand-strong'
-                                        : 'border-transparent text-ink-soft hover:text-ink',
+                                    'inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-150',
+                                    isSelected
+                                        ? 'bg-brand-strong font-semibold text-white shadow-xs'
+                                        : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
                                 )}
-                                aria-pressed={statusFilter === status}
+                                aria-pressed={isSelected}
                             >
-                                {status} ({count})
+                                <span
+                                    className={cn(
+                                        'h-2 w-2 shrink-0 rounded-full',
+                                        isSelected
+                                            ? 'bg-white'
+                                            : statusDotColor,
+                                    )}
+                                />
+                                <span>{status}</span>
+                                <span
+                                    className={cn(
+                                        'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                                        isSelected
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-surface text-ink-soft',
+                                    )}
+                                >
+                                    {count}
+                                </span>
                             </button>
                         );
                     })}
