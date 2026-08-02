@@ -20,20 +20,32 @@ export default function Workspace(props: WorkspacePageProps) {
     const [section, setSection] = useState<WorkspaceSection | null>(() =>
         initialSection(props.navigation),
     );
+    const [wsState, setWsState] = useState<string>(getInitialWsState);
     const [refreshing, setRefreshing] = useState(false);
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [dismissedRefreshedAt, setDismissedRefreshedAt] = useState<
+        string | null
+    >(null);
     const [currentTime, setCurrentTime] = useState(() => Date.now());
     const availableSection = props.navigation.some(
         (item) => item.id === section,
     )
         ? section
         : (props.navigation[0]?.id ?? null);
-    const stale = isStale(
+
+    const isWsDisconnected =
+        wsState === 'disconnected' ||
+        wsState === 'unavailable' ||
+        wsState === 'failed';
+    const timeStale = isStale(
         props.workspace.refreshed_at,
         props.workspace.stale_after_seconds,
         currentTime,
     );
+    const staleDismissed =
+        dismissedRefreshedAt === props.workspace.refreshed_at;
+    const showStaleNotice = (isWsDisconnected || timeStale) && !staleDismissed;
 
     useEffect(() => {
         const timer = window.setInterval(
@@ -49,6 +61,50 @@ export default function Workspace(props: WorkspacePageProps) {
 
         if (!echo) {
             return;
+        }
+
+        const pusher = (
+            echo as unknown as {
+                connector?: {
+                    pusher?: {
+                        connection?: {
+                            state: string;
+                            bind: (
+                                event: string,
+                                callback: (data: {
+                                    current: string;
+                                    previous: string;
+                                }) => void,
+                            ) => void;
+                            unbind: (
+                                event: string,
+                                callback: (data: {
+                                    current: string;
+                                    previous: string;
+                                }) => void,
+                            ) => void;
+                        };
+                    };
+                };
+            }
+        )?.connector?.pusher;
+
+        const handleStateChange = (states: {
+            current: string;
+            previous: string;
+        }) => {
+            setWsState(states.current);
+
+            if (
+                states.previous !== 'connected' &&
+                states.current === 'connected'
+            ) {
+                router.reload();
+            }
+        };
+
+        if (pusher?.connection) {
+            pusher.connection.bind('state_change', handleStateChange);
         }
 
         const channel = echo.private('operations.workspace');
@@ -70,6 +126,10 @@ export default function Workspace(props: WorkspacePageProps) {
         window.addEventListener('focus', handleFocus);
 
         return () => {
+            if (pusher?.connection) {
+                pusher.connection.unbind('state_change', handleStateChange);
+            }
+
             channel.stopListening('.WorkspaceUpdated');
             window.removeEventListener('focus', handleFocus);
         };
@@ -153,7 +213,7 @@ export default function Workspace(props: WorkspacePageProps) {
             <LiveWorkspaceShell
                 navigation={props.navigation}
                 section={availableSection}
-                stale={stale}
+                stale={showStaleNotice}
                 refreshing={refreshing}
                 canShareLocation={props.capabilities.share_location}
                 locationPending={locationPending}
@@ -164,7 +224,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 {(flash ||
                     locationError ||
                     validationErrorCount > 0 ||
-                    stale) && (
+                    showStaleNotice) && (
                     <div className="space-y-2 border-b border-line bg-surface px-4 py-3 md:px-6">
                         {flash && <FlashNotice flash={flash} />}
                         {locationError && (
@@ -180,10 +240,19 @@ export default function Workspace(props: WorkspacePageProps) {
                                 message={`${validationErrorCount} field${validationErrorCount === 1 ? '' : 's'} need attention. Your entries were preserved.`}
                             />
                         )}
-                        {stale && (
+                        {showStaleNotice && (
                             <StateNotice
                                 tone="warning"
-                                message="This workspace has not refreshed recently. Review current data before making an operational decision."
+                                message={
+                                    isWsDisconnected
+                                        ? 'Live workspace updates are disconnected. Review current data or reconnect to sync.'
+                                        : 'This workspace has not refreshed recently. Review current data before making an operational decision.'
+                                }
+                                onDismiss={() =>
+                                    setDismissedRefreshedAt(
+                                        props.workspace.refreshed_at,
+                                    )
+                                }
                                 action={
                                     <Button
                                         size="sm"
@@ -193,7 +262,9 @@ export default function Workspace(props: WorkspacePageProps) {
                                     >
                                         {refreshing
                                             ? 'Refreshing…'
-                                            : 'Refresh now'}
+                                            : isWsDisconnected
+                                              ? 'Reconnect & Refresh'
+                                              : 'Refresh now'}
                                     </Button>
                                 }
                             />
@@ -345,4 +416,30 @@ function locationErrorMessage(code: number) {
     }
 
     return 'Your current location is unavailable. Check device location services and try again.';
+}
+
+function getInitialWsState(): string {
+    if (typeof window === 'undefined') {
+        return 'connected';
+    }
+
+    const echo = getEcho();
+
+    if (!echo) {
+        return 'disconnected';
+    }
+
+    const pusher = (
+        echo as unknown as {
+            connector?: {
+                pusher?: {
+                    connection?: {
+                        state: string;
+                    };
+                };
+            };
+        }
+    )?.connector?.pusher;
+
+    return pusher?.connection?.state ?? 'connected';
 }
