@@ -89,7 +89,7 @@ export function ApplicationMark({
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="100 70 270 220"
+            viewBox="110 73 260 218"
             fill="none"
             className={cn('h-full w-full', className)}
             {...props}

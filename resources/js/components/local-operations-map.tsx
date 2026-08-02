@@ -265,11 +265,12 @@ export function LocalOperationsMap({
                                                 )}
                                             >
                                                 <span
-                                                    className={
-                                                        point.kind === 'crane'
-                                                            ? '-rotate-45'
-                                                            : ''
-                                                    }
+                                                    className={cn(
+                                                        'flex items-center justify-center',
+                                                        point.kind ===
+                                                            'crane' &&
+                                                            '-rotate-45',
+                                                    )}
                                                 >
                                                     <Icon
                                                         className="h-3.5 w-3.5"
