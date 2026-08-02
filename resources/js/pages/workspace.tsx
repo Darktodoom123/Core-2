@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import type { ConnectionStatus } from 'laravel-echo';
 import { AlertTriangle, Check, Info, LockKeyhole, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -7,7 +8,7 @@ import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import { LiveWorkspaceShell } from '@/components/workspace/live-workspace-shell';
-import { getEcho } from '@/echo';
+import { getEcho, reconnectEcho } from '@/echo';
 import { cn } from '@/lib/utils';
 import type {
     WorkspaceFlash,
@@ -20,7 +21,7 @@ export default function Workspace(props: WorkspacePageProps) {
     const [section, setSection] = useState<WorkspaceSection | null>(() =>
         initialSection(props.navigation),
     );
-    const [wsState, setWsState] = useState<string>(getInitialWsState);
+    const [wsState, setWsState] = useState<ConnectionStatus>(getInitialWsState);
     const [refreshing, setRefreshing] = useState(false);
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
@@ -34,10 +35,7 @@ export default function Workspace(props: WorkspacePageProps) {
         ? section
         : (props.navigation[0]?.id ?? null);
 
-    const isWsDisconnected =
-        wsState === 'disconnected' ||
-        wsState === 'unavailable' ||
-        wsState === 'failed';
+    const isWsDisconnected = wsState === 'disconnected' || wsState === 'failed';
     const timeStale = isStale(
         props.workspace.refreshed_at,
         props.workspace.stale_after_seconds,
@@ -63,54 +61,25 @@ export default function Workspace(props: WorkspacePageProps) {
             return;
         }
 
-        const pusher = (
-            echo as unknown as {
-                connector?: {
-                    pusher?: {
-                        connection?: {
-                            state: string;
-                            bind: (
-                                event: string,
-                                callback: (data: {
-                                    current: string;
-                                    previous: string;
-                                }) => void,
-                            ) => void;
-                            unbind: (
-                                event: string,
-                                callback: (data: {
-                                    current: string;
-                                    previous: string;
-                                }) => void,
-                            ) => void;
-                        };
-                    };
-                };
-            }
-        )?.connector?.pusher;
+        let previousState = echo.connectionStatus();
+        const handleStateChange = (current: ConnectionStatus) => {
+            setWsState(current);
 
-        const handleStateChange = (states: {
-            current: string;
-            previous: string;
-        }) => {
-            setWsState(states.current);
-
-            if (
-                states.previous !== 'connected' &&
-                states.current === 'connected'
-            ) {
+            if (previousState !== 'connected' && current === 'connected') {
                 router.reload();
             }
+
+            previousState = current;
         };
+        const unsubscribeConnection =
+            echo.connector.onConnectionChange(handleStateChange);
 
-        if (pusher?.connection) {
-            pusher.connection.bind('state_change', handleStateChange);
-        }
-
-        const channel = echo.private('operations.workspace');
-        channel.listen('.WorkspaceUpdated', () => {
-            router.reload();
-        });
+        echo.private('operations.workspace')
+            .subscribed(() => setWsState(echo.connectionStatus()))
+            .error(() => setWsState('failed'))
+            .listen('.WorkspaceUpdated', () => {
+                router.reload();
+            });
 
         const handleFocus = () => {
             if (
@@ -126,11 +95,8 @@ export default function Workspace(props: WorkspacePageProps) {
         window.addEventListener('focus', handleFocus);
 
         return () => {
-            if (pusher?.connection) {
-                pusher.connection.unbind('state_change', handleStateChange);
-            }
-
-            channel.stopListening('.WorkspaceUpdated');
+            unsubscribeConnection();
+            echo.leave('operations.workspace');
             window.removeEventListener('focus', handleFocus);
         };
     }, [props.workspace.refreshed_at, props.workspace.stale_after_seconds]);
@@ -155,6 +121,11 @@ export default function Workspace(props: WorkspacePageProps) {
             onStart: () => setRefreshing(true),
             onFinish: () => setRefreshing(false),
         });
+
+    const reconnectAndRefresh = () => {
+        reconnectEcho();
+        refresh();
+    };
 
     const shareLocation = () => {
         setLocationError(null);
@@ -257,7 +228,11 @@ export default function Workspace(props: WorkspacePageProps) {
                                     <Button
                                         size="sm"
                                         variant="secondary"
-                                        onClick={refresh}
+                                        onClick={
+                                            isWsDisconnected
+                                                ? reconnectAndRefresh
+                                                : refresh
+                                        }
                                         disabled={refreshing}
                                     >
                                         {refreshing
@@ -418,28 +393,10 @@ function locationErrorMessage(code: number) {
     return 'Your current location is unavailable. Check device location services and try again.';
 }
 
-function getInitialWsState(): string {
+function getInitialWsState(): ConnectionStatus {
     if (typeof window === 'undefined') {
         return 'connected';
     }
 
-    const echo = getEcho();
-
-    if (!echo) {
-        return 'disconnected';
-    }
-
-    const pusher = (
-        echo as unknown as {
-            connector?: {
-                pusher?: {
-                    connection?: {
-                        state: string;
-                    };
-                };
-            };
-        }
-    )?.connector?.pusher;
-
-    return pusher?.connection?.state ?? 'connected';
+    return getEcho()?.connectionStatus() ?? 'disconnected';
 }

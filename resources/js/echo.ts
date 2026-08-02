@@ -12,6 +12,25 @@ if (typeof window !== 'undefined') {
     window.Pusher = Pusher;
 }
 
+export function reconnectEcho(): void {
+    const echo = getEcho();
+
+    if (!echo) {
+        return;
+    }
+
+    const pusher = echo.connector.pusher;
+
+    if (
+        pusher.connection.state === 'connected' ||
+        pusher.connection.state === 'connecting'
+    ) {
+        return;
+    }
+
+    pusher.connect();
+}
+
 export function getEcho(): Echo<'reverb'> | null {
     if (typeof window === 'undefined') {
         return null;

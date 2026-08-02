@@ -3,6 +3,9 @@
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('operations.workspace', function (User $user) {
-    return true;
+Broadcast::channel('operations.workspace', function (User $user): bool {
+    return $user->is_active
+        && $user->suspended_at === null
+        && $user->hasVerifiedEmail()
+        && $user->operationalRole() !== null;
 });
