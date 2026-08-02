@@ -37,8 +37,6 @@ class DatabaseSeeder extends Seeder
         );
         $administrator->syncRoles([RoleName::SystemAdministrator->value]);
 
-        if (app()->environment('local')) {
-            $this->call(LocalDevelopmentSeeder::class);
-        }
+        $this->call(LocalDevelopmentSeeder::class);
     }
 }

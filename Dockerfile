@@ -1,13 +1,52 @@
 # ==========================================
-# Stage 1: Build Frontend Assets
+# Stage 1: Install Composer Dependencies
+# ==========================================
+FROM composer:2 AS composer-builder
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-scripts
+
+# ==========================================
+# Stage 2: Build Frontend Assets
 # ==========================================
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app
+
+# Install PHP CLI & required extensions for Laravel artisan (Wayfinder route generation)
+RUN apk add --no-cache \
+    php84 \
+    php84-cli \
+    php84-phar \
+    php84-mbstring \
+    php84-openssl \
+    php84-tokenizer \
+    php84-xml \
+    php84-ctype \
+    php84-json \
+    php84-pdo \
+    php84-pdo_sqlite \
+    php84-dom \
+    php84-fileinfo \
+    php84-curl \
+    php84-session \
+    php84-simplexml \
+    php84-iconv \
+    php84-posix \
+    php84-pcntl \
+    php84-bcmath \
+    && ln -sf /usr/bin/php84 /usr/bin/php
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+COPY --from=composer-builder /app/vendor ./vendor
 
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST=localhost
@@ -22,23 +61,9 @@ ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY} \
 RUN npm run build
 
 # ==========================================
-# Stage 2: Install Composer Dependencies
-# ==========================================
-FROM composer:2 AS composer-builder
-WORKDIR /app
-
-COPY composer.json composer.lock ./
-RUN composer install \
-    --no-dev \
-    --no-interaction \
-    --prefer-dist \
-    --optimize-autoloader \
-    --no-scripts
-
-# ==========================================
 # Stage 3: Production Runtime
 # ==========================================
-FROM php:8.3-fpm-alpine AS runtime
+FROM php:8.4-fpm-alpine AS runtime
 
 # Install system dependencies & runtime utilities
 RUN apk add --no-cache \
@@ -92,8 +117,8 @@ COPY --from=frontend-builder --chown=www-data:www-data /app/public/build ./publi
 RUN rm -f bootstrap/cache/*.php \
     && php artisan package:discover --ansi
 
-# Set permissions for storage & bootstrap cache
-RUN mkdir -p storage bootstrap/cache database \
+# Set permissions for storage & bootstrap cache & supervisor log directory
+RUN mkdir -p storage bootstrap/cache database /var/log/supervisor \
     && chown -R www-data:www-data storage bootstrap/cache database \
     && chmod -R 775 storage bootstrap/cache
 

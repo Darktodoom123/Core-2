@@ -4,17 +4,18 @@ namespace Database\Seeders;
 
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Models\LocationUpdate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 final class LocalDevelopmentSeeder extends Seeder
 {
     /**
-     * Seed one quick-login account for each operational role.
+     * Seed one quick-login account for each operational role with location updates.
      */
     public function run(): void
     {
-        foreach (self::accounts() as $account) {
+        foreach (self::accounts() as $index => $account) {
             $user = User::query()->updateOrCreate(
                 ['email' => $account['email']],
                 [
@@ -27,6 +28,21 @@ final class LocalDevelopmentSeeder extends Seeder
             );
 
             $user->syncRoles([$account['role']->value]);
+
+            \Illuminate\Support\Facades\DB::table('location_updates')->updateOrInsert(
+                ['user_id' => $user->id],
+                [
+                    'latitude' => 3.1390 + ($index * 0.012),
+                    'longitude' => 101.6869 + ($index * 0.015),
+                    'accuracy_metres' => 5.0,
+                    'sharing_enabled' => true,
+                    'source' => 'mobile',
+                    'captured_at' => now(),
+                    'received_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            );
         }
     }
 

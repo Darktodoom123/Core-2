@@ -45,6 +45,7 @@ storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*
 storage/logs/*
+storage/framework/testing/
 database/*.sqlite
 database/*.sqlite-journal
 bootstrap/cache/*.php

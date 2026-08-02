@@ -44,4 +44,8 @@ if [ "${APP_ENV:-production}" = "production" ]; then
     php artisan view:cache
 fi
 
+# Ensure storage and bootstrap cache are owned by www-data after setup
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 exec "$@"
