@@ -12,7 +12,12 @@ RUN composer install \
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 RUN apk add --no-cache \
+    ca-certificates \
+    gcompat \
+    libc6-compat \
     php84 \
     php84-cli \
     php84-phar \
@@ -51,7 +56,11 @@ ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY} \
     VITE_REVERB_PORT=${VITE_REVERB_PORT} \
     VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
 
-RUN npm run build
+RUN cp .env.example .env \
+    && php artisan key:generate --force \
+    && touch database/database.sqlite \
+    && npm run build \
+    && rm -f .env database/database.sqlite
 
 FROM php:8.4-fpm-alpine AS runtime
 

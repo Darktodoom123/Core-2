@@ -20,13 +20,13 @@ services:
       APP_KEY: "${APP_KEY:?Set APP_KEY in .env}"
       APP_DEBUG: "${APP_DEBUG:-false}"
       APP_URL: "${APP_URL:-http://localhost:8000}"
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
+      DB_CONNECTION: "${DB_CONNECTION:-pgsql}"
+      DB_HOST: "${DB_HOST:-db}"
+      DB_PORT: "${DB_PORT:-5432}"
       DB_DATABASE: "${DB_DATABASE:?Set DB_DATABASE in .env}"
       DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
       DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
-      DB_SSLMODE: "${DB_SSLMODE:-disable}"
+      DB_SSLMODE: "${DB_SSLMODE:-prefer}"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CACHE_STORE: "${CACHE_STORE:-file}"
@@ -45,6 +45,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
     healthcheck:

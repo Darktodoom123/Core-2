@@ -76,33 +76,33 @@ Open your browser and navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:80
 
 ## 🐳 Running with Docker
 
-The repository includes a Docker Compose stack with Laravel, built Inertia/React
-assets, Nginx, background workers, Reverb, PostgreSQL 16, and Redis 7.
+The repository includes a production-ready Docker Compose stack with Laravel 13, built Inertia/React assets, Nginx, Supervisor background workers, Laravel Reverb (WebSockets), PostgreSQL 16, and Redis 7.
 
-Copy `.env.example` to `.env`, then configure the required `APP_KEY`, PostgreSQL,
-and Reverb values before starting the stack. The complete first-run instructions,
-configuration reference, operations, data-reset behavior, and troubleshooting are
-in the [Docker operations guide](Docs/docker.md).
+### 1. Configure Environment
+Copy `.env.example` to `.env` and configure your secrets (`APP_KEY`, `DB_PASSWORD`, `REVERB_APP_KEY`, etc.):
 
-Validate and start the configured stack:
+- **Local Database (Default)**: Keep `DB_HOST=db` to use the bundled local PostgreSQL 16 container.
+- **Cloud Database (Supabase, AWS RDS, Neon)**: Set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE=require` in `.env` to connect to your remote cloud database.
+
+### 2. Build & Launch Stack
 
 ```bash
 docker compose config --quiet
 docker compose up -d --build
 ```
 
-With the default published ports:
+### 3. Access Services & Operations
 
-- Web application: **[http://localhost:8000](http://localhost:8000)**
-- Reverb WebSocket server: **`ws://localhost:8080`**
+- Web Application: **[http://localhost:8000](http://localhost:8000)**
+- Reverb WebSocket Server: **`ws://localhost:8080`**
 
-To seed optional development data:
+To seed default development data:
 
 ```bash
-docker compose exec app php artisan db:seed
+docker compose exec --user www-data app php artisan db:seed
 ```
 
-To stop the stack while preserving its named volumes:
+To stop the stack while preserving volumes:
 
 ```bash
 docker compose down
