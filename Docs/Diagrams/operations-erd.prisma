@@ -1,0 +1,391 @@
+// @nimbalyst {"viewport":{"x":620.0343625470479,"y":341.2117853346053,"zoom":0.1741101126592249},"positions":{"User":{"x":-320,"y":-460},"Client":{"x":440,"y":-840},"ServiceRequest":{"x":800,"y":100},"PersonnelProfile":{"x":1150,"y":100},"PersonnelCredential":{"x":-2260,"y":-540},"OperationalAsset":{"x":1840,"y":-1020},"DispatchJob":{"x":-1200,"y":820},"DispatchPersonnelAssignment":{"x":1150,"y":400},"DispatchAssetAssignment":{"x":100,"y":700},"Inspection":{"x":1660,"y":880},"MaintenanceWorkOrder":{"x":800,"y":700},"FuelRequest":{"x":1150,"y":700},"FuelLog":{"x":100,"y":1000},"LocationUpdate":{"x":-1560,"y":1740},"JobReport":{"x":800,"y":1000},"ApprovalRequest":{"x":1150,"y":1000},"AuditEvent":{"x":-1200,"y":-560},"GptRecommendation":{"x":-320,"y":-1500},"Attachment":{"x":1060,"y":1720},"Notification":{"x":1150,"y":1300},"CommandLog":{"x":1800,"y":1600}},"entityViewMode":"standard"}
+
+// Conceptual operational ERD. Laravel migrations and Eloquent models remain
+// authoritative. Infrastructure and Spatie RBAC tables are intentionally
+// omitted; see Docs/database.md for the complete table catalog.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          BigInt      @id @default(autoincrement())
+  name        String
+  email       String
+  emailVerifiedAt DateTime?
+  password    String
+  phone       String?
+  isActive    Boolean     @default(true)
+  suspendedAt DateTime?
+  rememberToken String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  serviceRequests ServiceRequest[]
+  personnelProfile PersonnelProfile?
+  personnelCredentials PersonnelCredential[]
+  dispatchJobs DispatchJob[]
+  dispatchPersonnelAssignments DispatchPersonnelAssignment[]
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  inspections Inspection[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
+  fuelRequests FuelRequest[]
+  fuelLogs FuelLog[]
+  locationUpdates LocationUpdate[]
+  jobReports JobReport[]
+  approvalRequests ApprovalRequest[]
+  auditEvents AuditEvent[]
+  gptRecommendations GptRecommendation[]
+  attachments Attachment[]
+  commandLogs CommandLog[]
+}
+
+model Client {
+  id          BigInt      @id @default(autoincrement())
+  code        String
+  companyName String
+  contactPerson String?
+  phone       String?
+  email       String?
+  address     String?
+  status      String      @default("active")
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  serviceRequests ServiceRequest[]
+}
+
+model ServiceRequest {
+  id          BigInt      @id @default(autoincrement())
+  reference   String
+  clientId    BigInt
+  createdBy   BigInt
+  projectName String
+  serviceType String
+  location    String
+  siteNotes   String?
+  scheduledDate DateTime?
+  priority    String      @default("routine")
+  status      String      @default("submitted")
+  requirements Json?
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchJobs DispatchJob[]
+}
+
+model PersonnelProfile {
+  id          BigInt      @id @default(autoincrement())
+  userId      BigInt
+  employeeNumber String?
+  availabilityStatus String @default("available")
+  emergencyContactName String?
+  emergencyContactPhone String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model PersonnelCredential {
+  id          BigInt      @id @default(autoincrement())
+  userId      BigInt
+  kind        String
+  credentialNumber String
+  credentialType String
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  status      String      @default("active")
+  verifiedBy  BigInt?
+  verifiedAt  DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model OperationalAsset {
+  id          BigInt      @id @default(autoincrement())
+  code        String
+  name        String
+  kind        String
+  subtype     String?
+  status      String
+  location    String?
+  specifications Json?
+  registrationNumber String?
+  manufacturer String?
+  model       String?
+  ratedCapacity Decimal?
+  capacityUnit String?
+  meterType   String?
+  meterValue  Decimal?
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  inspections Inspection[]
+  maintenanceWorkOrders MaintenanceWorkOrder[]
+  fuelRequests FuelRequest[]
+  locationUpdates LocationUpdate[]
+}
+
+model DispatchJob {
+  id          BigInt      @id @default(autoincrement())
+  serviceRequestId BigInt?
+  reference   String
+  client      String
+  title       String
+  site        String
+  siteNotes   String?
+  scheduledStart DateTime?
+  scheduledEnd DateTime?
+  priority    String
+  status      String
+  requirements Json?
+  createdBy   BigInt
+  activatedBy BigInt?
+  cancelledBy BigInt?
+  cancellationReason String?
+  version     Int         @default(1)
+  deletedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  dispatchPersonnelAssignments DispatchPersonnelAssignment[]
+  dispatchAssetAssignments DispatchAssetAssignment[]
+  fuelRequests FuelRequest[]
+  locationUpdates LocationUpdate[]
+  jobReports JobReport[]
+  notifications Notification[]
+}
+
+model DispatchPersonnelAssignment {
+  id          BigInt      @id @default(autoincrement())
+  dispatchJobId BigInt
+  userId      BigInt
+  assignmentType String
+  responseStatus String @default("pending")
+  respondedAt DateTime?
+  responseReason String?
+  assignedBy  BigInt
+  approvedBy  BigInt?
+  activeFrom  DateTime?
+  activeUntil DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model DispatchAssetAssignment {
+  id          BigInt      @id @default(autoincrement())
+  dispatchJobId BigInt
+  operationalAssetId BigInt
+  assignmentType String
+  assignedBy  BigInt
+  approvedBy  BigInt?
+  activeFrom  DateTime?
+  activeUntil DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model Inspection {
+  id          BigInt      @id @default(autoincrement())
+  operationalAssetId BigInt
+  technicianId BigInt
+  type        String
+  result      String
+  checklist   Json
+  findings    String?
+  completedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model MaintenanceWorkOrder {
+  id          BigInt      @id @default(autoincrement())
+  operationalAssetId BigInt
+  technicianId BigInt?
+  status      String
+  defect      String
+  workPerformed Json?
+  parts       Json?
+  dispatchBlocking Boolean @default(true)
+  scheduledAt DateTime?
+  releasedAt  DateTime?
+  releaseVerifiedBy BigInt?
+  releaseChecklist Json?
+  nextDueAt   DateTime?
+  remarks     String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model FuelRequest {
+  id          BigInt      @id @default(autoincrement())
+  reference   String
+  requesterId BigInt
+  dispatchJobId BigInt?
+  operationalAssetId BigInt?
+  quantityLitres Decimal
+  fuelType    String
+  purpose     String
+  status      String      @default("submitted")
+  reviewedBy  BigInt?
+  approvedBy  BigInt?
+  verifiedBy  BigInt?
+  reviewedAt  DateTime?
+  approvedAt  DateTime?
+  verifiedAt  DateTime?
+  decisionReason String?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  fuelLogs FuelLog[]
+}
+
+model FuelLog {
+  id          BigInt      @id @default(autoincrement())
+  fuelRequestId BigInt
+  recordedBy  BigInt
+  quantityLitres Decimal
+  odometerKm  BigInt?
+  hourMeter   Decimal?
+  pricePerLitre Decimal?
+  totalCost   Decimal?
+  fuelStation String?
+  receiptPath String?
+  remarks     String?
+  recordedAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model LocationUpdate {
+  id          BigInt      @id @default(autoincrement())
+  userId      BigInt
+  operationalAssetId BigInt?
+  dispatchJobId BigInt?
+  latitude    Decimal
+  longitude   Decimal
+  accuracyMetres Decimal?
+  speed       Decimal?
+  source      String      @default("mobile")
+  sharingEnabled Boolean @default(true)
+  remarks     String?
+  capturedAt  DateTime
+  receivedAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model JobReport {
+  id          BigInt      @id @default(autoincrement())
+  dispatchJobId BigInt
+  authorId    BigInt
+  startedAt   DateTime?
+  endedAt     DateTime?
+  workSummary String
+  remarks     String?
+  status      String      @default("draft")
+  submittedAt DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model ApprovalRequest {
+  id          BigInt      @id @default(autoincrement())
+  subjectType String
+  subjectId   BigInt
+  kind        String
+  requestedChanges Json?
+  status      String      @default("pending")
+  requestedBy BigInt
+  decidedBy   BigInt?
+  reason      String?
+  decidedAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  // subjectType + subjectId is a polymorphic subject reference.
+}
+
+model AuditEvent {
+  id          BigInt      @id @default(autoincrement())
+  actorId     BigInt?
+  subjectType String?
+  subjectId   BigInt?
+  action      String
+  before      Json?
+  after       Json?
+  reason      String?
+  requestId   String?
+  ipAddress   String?
+  occurredAt  DateTime
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
+
+model GptRecommendation {
+  id          BigInt      @id @default(autoincrement())
+  subjectType String?
+  subjectId   BigInt?
+  requestedBy BigInt
+  decidedBy   BigInt?
+  purpose     String
+  contextHash String
+  inputReferences Json
+  recommendation Json
+  conflicts   Json?
+  model       String
+  status      String      @default("draft")
+  usage       Json?
+  decidedAt   DateTime?
+  promptSummary String?
+  responseSummary String?
+  costUsd Decimal?
+  errorMessage String?
+  expiresAt   DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  // subjectType + subjectId is a polymorphic subject reference.
+}
+
+model Attachment {
+  id          BigInt      @id @default(autoincrement())
+  ownerType   String
+  ownerId     BigInt
+  uploadedBy  BigInt
+  kind        String      @default("document")
+  disk        String      @default("local")
+  path        String
+  originalFilename String
+  mimeType    String
+  sizeBytes   BigInt
+  checksumSha256 String
+  retentionUntil DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  // ownerType + ownerId is a polymorphic owner reference.
+}
+
+model Notification {
+  id          String      @id @default(uuid())
+  type        String
+  notifiableType String
+  notifiableId BigInt
+  dispatchJobId BigInt?
+  status      String      @default("unread")
+  data        String
+  readAt      DateTime?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  // notifiableType + notifiableId is Laravel's polymorphic recipient.
+}
+
+model CommandLog {
+  id          BigInt      @id @default(autoincrement())
+  userId      BigInt
+  commandId   String
+  actionName  String
+  payloadHash String?
+  expectedVersion Int?
+  status      String      @default("completed")
+  responseCode Int        @default(200)
+  responsePayload Json?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+}
