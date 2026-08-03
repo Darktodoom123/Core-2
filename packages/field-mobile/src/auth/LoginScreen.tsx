@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -22,7 +22,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [deviceName, setDeviceName] = useState('Field Mobile Device');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isRetryingRevocation, setIsRetryingRevocation] = useState(false);
 
@@ -34,7 +33,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         setIsSubmitting(true);
 
         try {
-            await login(email.trim(), password, deviceName.trim() || undefined);
+            await login(email.trim(), password);
 
             if (onLoginSuccess) {
                 onLoginSuccess();
@@ -216,24 +215,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 />
                             </View>
 
-                            <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>
-                                    Device identification
-                                </Text>
-                                <TextInput
-                                    value={deviceName}
-                                    onChangeText={setDeviceName}
-                                    placeholder="e.g. Field Tablet 4"
-                                    placeholderTextColor={colors.muted}
-                                    autoCapitalize="words"
-                                    editable={!formDisabled}
-                                    style={styles.input}
-                                    accessibilityLabel="Device identification"
-                                    accessibilityHint="Optional name used to identify this device"
-                                    returnKeyType="done"
-                                    testID="login-device-input"
-                                />
-                            </View>
 
                             <Pressable
                                 onPress={() => void handleSubmit()}
@@ -259,6 +240,75 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     </Text>
                                 )}
                             </Pressable>
+
+                            {__DEV__ ? (
+                                <View style={styles.devSection} testID="dev-quick-login-section">
+                                    <Text style={styles.devTitle}>
+                                        Dev Quick Sign-In
+                                    </Text>
+                                    <View style={styles.devButtons}>
+                                        <Pressable
+                                            onPress={() => {
+                                                setEmail('driver@example.com');
+                                                setPassword('password');
+                                            }}
+                                            disabled={formDisabled}
+                                            style={({ pressed }) => [
+                                                styles.devButton,
+                                                pressed && styles.pressed,
+                                                formDisabled && styles.disabledButton,
+                                            ]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Fill Driver dev credentials"
+                                            testID="dev-login-driver"
+                                        >
+                                            <Text style={styles.devButtonText}>
+                                                Driver
+                                            </Text>
+                                        </Pressable>
+
+                                        <Pressable
+                                            onPress={() => {
+                                                setEmail('technician@example.com');
+                                                setPassword('password');
+                                            }}
+                                            disabled={formDisabled}
+                                            style={({ pressed }) => [
+                                                styles.devButton,
+                                                pressed && styles.pressed,
+                                                formDisabled && styles.disabledButton,
+                                            ]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Fill Technician dev credentials"
+                                            testID="dev-login-technician"
+                                        >
+                                            <Text style={styles.devButtonText}>
+                                                Technician
+                                            </Text>
+                                        </Pressable>
+
+                                        <Pressable
+                                            onPress={() => {
+                                                setEmail('operator@example.com');
+                                                setPassword('password');
+                                            }}
+                                            disabled={formDisabled}
+                                            style={({ pressed }) => [
+                                                styles.devButton,
+                                                pressed && styles.pressed,
+                                                formDisabled && styles.disabledButton,
+                                            ]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Fill Operator dev credentials"
+                                            testID="dev-login-operator"
+                                        >
+                                            <Text style={styles.devButtonText}>
+                                                Operator
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            ) : null}
                         </View>
                     </View>
                 </ScrollView>
@@ -412,4 +462,36 @@ const styles = StyleSheet.create({
     submitButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
     disabledButton: { opacity: 0.55 },
     pressed: { opacity: 0.8 },
+    devSection: {
+        borderTopWidth: 1,
+        borderTopColor: '#334155',
+        paddingTop: 16,
+        marginTop: 4,
+    },
+    devTitle: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.6,
+        textTransform: 'uppercase',
+        marginBottom: 10,
+    },
+    devButtons: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    devButton: {
+        flex: 1,
+        minHeight: 40,
+        backgroundColor: '#334155',
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+    },
+    devButtonText: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });
