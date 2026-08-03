@@ -1,45 +1,27 @@
-# ==========================================
-# Version Control & CI/CD
-# ==========================================
 .git
 .github
 .ci
 
-# ==========================================
-# AI Agents & Development Notes
-# ==========================================
 .agents
 .codex
 .impeccable
 AGENTS.md
 PENCIL_PROMPTS.md
 
-# ==========================================
-# Mobile Workspace & SDKs (Field Mobile App)
-# ==========================================
 .android-sdk
 .expo-sprint2
 packages/field-mobile
 
-# ==========================================
-# Host Dependencies & Local Caches
-# ==========================================
 node_modules
 vendor
 public/build
 .npm-cache
 nimbalyst-local
 
-# ==========================================
-# Local Environment Files & Secrets
-# ==========================================
 .env
 .env.*
 !.env.example
 
-# ==========================================
-# Local Runtime Storage & Database Files
-# ==========================================
 storage/*.key
 storage/framework/cache/*
 storage/framework/sessions/*
@@ -51,8 +33,5 @@ database/*.sqlite-journal
 bootstrap/cache/*.php
 !bootstrap/cache/.gitignore
 
-# ==========================================
-# Package Manager Logs
-# ==========================================
 npm-debug.log
 yarn-error.log

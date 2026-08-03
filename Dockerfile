@@ -1,6 +1,3 @@
-# ==========================================
-# Stage 1: Install Composer Dependencies
-# ==========================================
 FROM composer:2 AS composer-builder
 WORKDIR /app
 
@@ -12,13 +9,9 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-# ==========================================
-# Stage 2: Build Frontend Assets
-# ==========================================
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 
-# Install PHP CLI & required extensions for Laravel artisan (Wayfinder route generation)
 RUN apk add --no-cache \
     php84 \
     php84-cli \
@@ -60,12 +53,8 @@ ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY} \
 
 RUN npm run build
 
-# ==========================================
-# Stage 3: Production Runtime
-# ==========================================
 FROM php:8.4-fpm-alpine AS runtime
 
-# Install system dependencies & runtime utilities
 RUN apk add --no-cache \
     nginx \
     supervisor \
@@ -82,7 +71,6 @@ RUN apk add --no-cache \
     postgresql-dev \
     fcgi
 
-# Configure & install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
@@ -98,26 +86,20 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 WORKDIR /var/www/html
 
-# Copy configuration files
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Copy application source code
 COPY --chown=www-data:www-data . .
 
-# Copy vendor from composer-builder & built assets from frontend-builder
 COPY --from=composer-builder --chown=www-data:www-data /app/vendor ./vendor
 COPY --from=frontend-builder --chown=www-data:www-data /app/public/build ./public/build
 
-# Rebuild package discovery from the production dependency set. This avoids
-# copying stale host cache files that reference development-only providers.
 RUN rm -f bootstrap/cache/*.php \
     && php artisan package:discover --ansi
 
-# Set permissions for storage & bootstrap cache & supervisor log directory
 RUN mkdir -p storage bootstrap/cache database /var/log/supervisor \
     && chown -R www-data:www-data storage bootstrap/cache database \
     && chmod -R 775 storage bootstrap/cache
