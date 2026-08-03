@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
-    Platform,
     Pressable,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../components/nativeStyles';
 import { useAuth } from './AuthContext';
 
 export interface LoginScreenProps {
@@ -63,18 +64,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <KeyboardAvoidingView
-                style={styles.flex}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
+            <StatusBar
+                barStyle="dark-content"
+                backgroundColor={colors.background}
+            />
+            <KeyboardAvoidingView style={styles.flex}>
                 <ScrollView
+                    contentInsetAdjustmentBehavior="automatic"
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     testID="login-screen"
                 >
                     <View style={styles.card}>
                         <View style={styles.header}>
-                            <Text style={styles.badge}>Core 2 Field App</Text>
+                            <View style={styles.brandLockup}>
+                                <View style={styles.brandMark} />
+                                <Text style={styles.badge}>
+                                    Core 2 Field App
+                                </Text>
+                            </View>
                             <Text
                                 style={styles.title}
                                 accessibilityRole="header"
@@ -100,7 +108,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 >
                                     !
                                 </Text>
-                                <Text style={styles.errorText}>{error}</Text>
+                                <Text selectable style={styles.errorText}>
+                                    {error}
+                                </Text>
                                 <Pressable
                                     onPress={clearError}
                                     style={styles.iconButton}
@@ -139,7 +149,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 <Text style={styles.revocationTitle}>
                                     Secure sign-out pending
                                 </Text>
-                                <Text style={styles.revocationText}>
+                                <Text selectable style={styles.revocationText}>
                                     This device is locked out until the server
                                     confirms that the previous token cannot be
                                     reused.
@@ -163,7 +173,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 >
                                     {isRetryingRevocation ? (
                                         <ActivityIndicator
-                                            color={colors.white}
+                                            color={colors.amber}
                                         />
                                     ) : (
                                         <Text style={styles.retryButtonText}>
@@ -215,7 +225,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 />
                             </View>
 
-
                             <Pressable
                                 onPress={() => void handleSubmit()}
                                 disabled={submitDisabled}
@@ -233,16 +242,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 testID="login-submit-button"
                             >
                                 {isSubmitting ? (
-                                    <ActivityIndicator color={colors.white} />
+                                    <ActivityIndicator color={colors.amber} />
                                 ) : (
-                                    <Text style={styles.submitButtonText}>
+                                    <Text
+                                        style={[
+                                            styles.submitButtonText,
+                                            submitDisabled &&
+                                                styles.disabledButtonText,
+                                        ]}
+                                    >
                                         Sign in
                                     </Text>
                                 )}
                             </Pressable>
 
                             {__DEV__ ? (
-                                <View style={styles.devSection} testID="dev-quick-login-section">
+                                <View
+                                    style={styles.devSection}
+                                    testID="dev-quick-login-section"
+                                >
                                     <Text style={styles.devTitle}>
                                         Dev Quick Sign-In
                                     </Text>
@@ -256,7 +274,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                             style={({ pressed }) => [
                                                 styles.devButton,
                                                 pressed && styles.pressed,
-                                                formDisabled && styles.disabledButton,
+                                                formDisabled &&
+                                                    styles.disabledButton,
                                             ]}
                                             accessibilityRole="button"
                                             accessibilityLabel="Fill Driver dev credentials"
@@ -269,14 +288,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                                         <Pressable
                                             onPress={() => {
-                                                setEmail('technician@example.com');
+                                                setEmail(
+                                                    'technician@example.com',
+                                                );
                                                 setPassword('password');
                                             }}
                                             disabled={formDisabled}
                                             style={({ pressed }) => [
                                                 styles.devButton,
                                                 pressed && styles.pressed,
-                                                formDisabled && styles.disabledButton,
+                                                formDisabled &&
+                                                    styles.disabledButton,
                                             ]}
                                             accessibilityRole="button"
                                             accessibilityLabel="Fill Technician dev credentials"
@@ -289,14 +311,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                                         <Pressable
                                             onPress={() => {
-                                                setEmail('operator@example.com');
+                                                setEmail(
+                                                    'operator@example.com',
+                                                );
                                                 setPassword('password');
                                             }}
                                             disabled={formDisabled}
                                             style={({ pressed }) => [
                                                 styles.devButton,
                                                 pressed && styles.pressed,
-                                                formDisabled && styles.disabledButton,
+                                                formDisabled &&
+                                                    styles.disabledButton,
                                             ]}
                                             accessibilityRole="button"
                                             accessibilityLabel="Fill Operator dev credentials"
@@ -317,66 +342,62 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     );
 };
 
-const colors = {
-    background: '#0f172a',
-    surface: '#1e293b',
-    input: '#111827',
-    border: '#475569',
-    text: '#f8fafc',
-    secondary: '#cbd5e1',
-    muted: '#94a3b8',
-    amber: '#d97706',
-    red: '#991b1b',
-    redText: '#fecaca',
-    white: '#ffffff',
-};
-
 const styles = StyleSheet.create({
     flex: { flex: 1 },
     safeArea: { flex: 1, backgroundColor: colors.background },
-    scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        padding: 20,
+        paddingVertical: 32,
+    },
     card: {
         width: '100%',
-        maxWidth: 520,
+        maxWidth: 480,
         alignSelf: 'center',
         backgroundColor: colors.surface,
         borderRadius: 16,
         padding: 24,
         borderWidth: 1,
-        borderColor: '#334155',
+        borderColor: colors.border,
     },
-    header: { alignItems: 'center', marginBottom: 24 },
-    badge: {
-        color: colors.white,
+    header: { marginBottom: 24 },
+    brandLockup: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 24,
+    },
+    brandMark: {
         backgroundColor: colors.amber,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-        marginBottom: 14,
+        borderRadius: 3,
+        height: 28,
+        width: 8,
+    },
+    badge: {
+        color: colors.amberDark,
+        fontSize: 15,
+        fontWeight: '800',
     },
     title: {
         color: colors.text,
-        fontSize: 26,
-        fontWeight: '700',
-        textAlign: 'center',
+        fontSize: 25,
+        fontWeight: '800',
+        lineHeight: 32,
     },
     subtitle: {
         color: colors.secondary,
-        fontSize: 16,
-        lineHeight: 23,
-        textAlign: 'center',
+        fontSize: 15,
+        lineHeight: 22,
         marginTop: 8,
     },
     errorBanner: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#7f1d1d',
+        backgroundColor: colors.redSoft,
         borderWidth: 1,
-        borderColor: '#b91c1c',
-        borderRadius: 10,
+        borderColor: colors.redBorder,
+        borderRadius: 12,
         padding: 12,
         marginBottom: 16,
     },
@@ -385,13 +406,18 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 12,
         color: colors.white,
-        backgroundColor: '#b91c1c',
+        backgroundColor: colors.red,
         textAlign: 'center',
         lineHeight: 24,
         fontWeight: '800',
         marginRight: 8,
     },
-    errorText: { flex: 1, color: colors.redText, fontSize: 14, lineHeight: 20 },
+    errorText: {
+        flex: 1,
+        color: colors.redDark,
+        fontSize: 14,
+        lineHeight: 20,
+    },
     iconButton: {
         minWidth: 48,
         minHeight: 48,
@@ -399,31 +425,41 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginLeft: 4,
     },
-    iconButtonText: { color: colors.redText, fontSize: 28, lineHeight: 32 },
+    iconButtonText: { color: colors.redDark, fontSize: 28, lineHeight: 32 },
     suspendedBanner: {
-        backgroundColor: colors.red,
-        borderRadius: 10,
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        borderRadius: 12,
+        borderWidth: 1,
         padding: 14,
         marginBottom: 16,
     },
-    suspendedTitle: { color: colors.white, fontWeight: '700', fontSize: 15 },
+    suspendedTitle: {
+        color: colors.redDark,
+        fontWeight: '800',
+        fontSize: 15,
+    },
     suspendedText: {
-        color: colors.white,
+        color: colors.redDark,
         fontSize: 14,
         lineHeight: 20,
         marginTop: 4,
     },
     revocationBanner: {
-        backgroundColor: '#78350f',
+        backgroundColor: colors.warningSoft,
         borderWidth: 1,
-        borderColor: '#d97706',
-        borderRadius: 10,
+        borderColor: colors.warningBorder,
+        borderRadius: 12,
         padding: 14,
         marginBottom: 16,
     },
-    revocationTitle: { color: colors.white, fontWeight: '700', fontSize: 15 },
+    revocationTitle: {
+        color: colors.warningDark,
+        fontWeight: '800',
+        fontSize: 15,
+    },
     revocationText: {
-        color: '#fef3c7',
+        color: colors.warningDark,
         fontSize: 14,
         lineHeight: 20,
         marginTop: 4,
@@ -439,13 +475,13 @@ const styles = StyleSheet.create({
     retryButtonText: { color: colors.white, fontSize: 15, fontWeight: '700' },
     form: { gap: 16 },
     fieldGroup: { gap: 8 },
-    label: { color: colors.secondary, fontSize: 15, fontWeight: '600' },
+    label: { color: colors.text, fontSize: 15, fontWeight: '700' },
     input: {
         minHeight: 48,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.borderStrong,
         borderRadius: 8,
-        backgroundColor: colors.input,
+        backgroundColor: colors.surface,
         color: colors.text,
         paddingHorizontal: 14,
         paddingVertical: 12,
@@ -460,11 +496,17 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     submitButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
-    disabledButton: { opacity: 0.55 },
+    disabledButton: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderWidth: 1,
+        opacity: 1,
+    },
+    disabledButtonText: { color: colors.muted },
     pressed: { opacity: 0.8 },
     devSection: {
         borderTopWidth: 1,
-        borderTopColor: '#334155',
+        borderTopColor: colors.border,
         paddingTop: 16,
         marginTop: 4,
     },
@@ -482,8 +524,10 @@ const styles = StyleSheet.create({
     },
     devButton: {
         flex: 1,
-        minHeight: 40,
-        backgroundColor: '#334155',
+        minHeight: 48,
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderWidth: 1,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',

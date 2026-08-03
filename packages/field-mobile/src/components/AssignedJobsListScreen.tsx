@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -57,6 +57,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
     return (
         <ScrollView
+            contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             refreshControl={
                 <RefreshControl
@@ -71,7 +72,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 <View style={styles.headerCopy}>
                     <Text style={styles.title}>Active Field Assignments</Text>
                     <Text style={styles.subtitle}>
-                        Server-authoritative field operations
+                        Today’s assigned work and next safe action.
                     </Text>
                 </View>
                 <Pressable
@@ -95,9 +96,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     testID="refresh-jobs-btn"
                 >
                     {isLoading ? (
-                        <ActivityIndicator color="#ffffff" size="small" />
+                        <ActivityIndicator color={colors.amber} size="small" />
                     ) : (
-                        <Text style={sharedStyles.buttonText}>Refresh</Text>
+                        <Text style={styles.refreshButtonText}>Refresh</Text>
                     )}
                 </Pressable>
             </View>
@@ -112,38 +113,113 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 ]}
                 testID="outbox-status-bar"
             >
-                <Text style={styles.outboxHeading}>Outbox status</Text>
-                <Text
-                    style={[
-                        styles.connectivityValue,
-                        isOnline === true
-                            ? styles.onlineValue
-                            : styles.offlineValue,
-                    ]}
-                >
-                    {isOnline === null
-                        ? 'Checking connection'
-                        : isOnline
-                          ? 'Online'
-                          : 'Offline — commands stay on this device'}
-                </Text>
-                <Text style={[styles.outboxValue, { color: colors.blue }]}>
-                    Queued: {queuedCount}
-                </Text>
-                <Text style={[styles.outboxValue, { color: colors.amber }]}>
-                    Syncing: {syncingCount}
-                </Text>
-                <Text style={[styles.outboxValue, { color: colors.red }]}>
-                    Failed: {failedCount}
-                </Text>
-                <Text
-                    style={[
-                        styles.outboxValue,
-                        conflictCount > 0 && styles.conflictValue,
-                    ]}
-                >
-                    Conflicts: {conflictCount}
-                </Text>
+                <View style={styles.outboxHeader}>
+                    <View
+                        style={[
+                            styles.connectionMark,
+                            isOnline === null
+                                ? styles.connectionChecking
+                                : isOnline
+                                  ? styles.connectionOnline
+                                  : styles.connectionOffline,
+                        ]}
+                    />
+                    <View style={styles.outboxHeaderCopy}>
+                        <Text style={styles.outboxHeading}>Sync status</Text>
+                        <Text
+                            style={[
+                                styles.connectivityValue,
+                                isOnline === true
+                                    ? styles.onlineValue
+                                    : styles.offlineValue,
+                            ]}
+                        >
+                            {isOnline === null
+                                ? 'Checking connection'
+                                : isOnline
+                                  ? 'Online'
+                                  : 'Offline — commands stay on this device'}
+                        </Text>
+                    </View>
+                </View>
+                <View style={styles.outboxChipRow}>
+                    <View
+                        style={[
+                            styles.outboxChip,
+                            queuedCount > 0
+                                ? styles.queuedChip
+                                : styles.zeroChip,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.outboxChipText,
+                                queuedCount > 0
+                                    ? styles.queuedChipText
+                                    : styles.zeroChipText,
+                            ]}
+                        >
+                            Queued: {queuedCount}
+                        </Text>
+                    </View>
+                    <View
+                        style={[
+                            styles.outboxChip,
+                            syncingCount > 0
+                                ? styles.syncingChip
+                                : styles.zeroChip,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.outboxChipText,
+                                syncingCount > 0
+                                    ? styles.syncingChipText
+                                    : styles.zeroChipText,
+                            ]}
+                        >
+                            Syncing: {syncingCount}
+                        </Text>
+                    </View>
+                    <View
+                        style={[
+                            styles.outboxChip,
+                            failedCount > 0
+                                ? styles.failedChip
+                                : styles.zeroChip,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.outboxChipText,
+                                failedCount > 0
+                                    ? styles.failedChipText
+                                    : styles.zeroChipText,
+                            ]}
+                        >
+                            Failed: {failedCount}
+                        </Text>
+                    </View>
+                    <View
+                        style={[
+                            styles.outboxChip,
+                            conflictCount > 0
+                                ? styles.conflictChip
+                                : styles.zeroChip,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.outboxChipText,
+                                conflictCount > 0
+                                    ? styles.conflictChipText
+                                    : styles.zeroChipText,
+                            ]}
+                        >
+                            Conflicts: {conflictCount}
+                        </Text>
+                    </View>
+                </View>
                 {onSyncNow &&
                 isOnline === true &&
                 (queuedCount > 0 || failedCount > 0) ? (
@@ -243,9 +319,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {jobs.length === 0 && !isLoading ? (
                 <View style={styles.emptyBox} testID="empty-assignments-msg">
+                    <View style={styles.emptyMark}>
+                        <View style={styles.emptyMarkLine} />
+                    </View>
                     <Text style={styles.emptyTitle}>No active assignments</Text>
                     <Text style={styles.emptyText}>
-                        New work assigned to your account will appear here.
+                        New work assigned to your account will appear here. Pull
+                        down or use Refresh to check again.
                     </Text>
                 </View>
             ) : null}
@@ -254,16 +334,17 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 {jobs.map((job) => {
                     const isPending =
                         job.my_assignment?.response_status === 'pending';
-                    const priorityColor =
+                    const priorityStyle =
                         job.priority.value === 'emergency'
-                            ? colors.red
+                            ? styles.emergencyBadge
                             : job.priority.value === 'priority'
-                              ? colors.amber
-                              : colors.green;
+                              ? styles.priorityBadge
+                              : styles.routineBadge;
 
                     return (
                         <Pressable
                             accessibilityLabel={`Open assignment ${job.reference}`}
+                            accessibilityHint="Reviews the job, assignment response, progress, and safety context"
                             accessibilityRole="button"
                             key={job.id}
                             onPress={() => onSelectJob(job.id)}
@@ -278,15 +359,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     {job.reference}
                                 </Text>
                                 <View style={styles.badgeRow}>
-                                    <Text
-                                        style={[
-                                            styles.badge,
-                                            {
-                                                backgroundColor: `${priorityColor}22`,
-                                                color: priorityColor,
-                                            },
-                                        ]}
-                                    >
+                                    <Text style={[styles.badge, priorityStyle]}>
                                         {job.priority.label}
                                     </Text>
                                     <Text
@@ -303,7 +376,24 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             <Text style={styles.jobTitle}>
                                 {job.title} — {job.client}
                             </Text>
-                            <Text style={styles.site}>Site: {job.site}</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Site</Text>
+                                <Text selectable style={styles.detailValue}>
+                                    {job.site}
+                                </Text>
+                            </View>
+                            {job.scheduled_start ? (
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>
+                                        Starts
+                                    </Text>
+                                    <Text selectable style={styles.detailValue}>
+                                        {new Date(
+                                            job.scheduled_start,
+                                        ).toLocaleString()}
+                                    </Text>
+                                </View>
+                            ) : null}
 
                             {isPending ? (
                                 <View
@@ -315,6 +405,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     </Text>
                                 </View>
                             ) : null}
+
+                            <View style={styles.cardActionRow}>
+                                <Text style={styles.actionBtnText}>
+                                    Review assignment
+                                </Text>
+                            </View>
                         </Pressable>
                     );
                 })}
@@ -326,7 +422,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 const styles = StyleSheet.create({
     content: {
         alignSelf: 'center',
-        maxWidth: 1040,
+        maxWidth: 720,
         padding: 16,
         paddingBottom: 32,
         width: '100%',
@@ -348,62 +444,133 @@ const styles = StyleSheet.create({
     },
     title: {
         color: colors.text,
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '800',
+        lineHeight: 28,
     },
     subtitle: {
         color: colors.secondary,
-        fontSize: 12,
+        fontSize: 14,
+        lineHeight: 20,
         marginTop: 4,
     },
     refreshButton: {
+        backgroundColor: colors.surface,
+        borderColor: colors.amberBorder,
+        borderWidth: 1,
+        minHeight: 48,
         minWidth: 96,
+        borderRadius: 8,
+        paddingHorizontal: 14,
+    },
+    refreshButtonText: {
+        color: colors.amberDark,
+        fontSize: 15,
+        fontWeight: '800',
+        textAlign: 'center',
     },
     pressed: {
         opacity: 0.78,
     },
     outboxBar: {
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
         gap: 10,
         marginBottom: 16,
-        padding: 12,
+        padding: 16,
+    },
+    outboxHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
+    },
+    outboxHeaderCopy: {
+        flex: 1,
+    },
+    connectionMark: {
+        borderRadius: 6,
+        height: 12,
+        width: 12,
+    },
+    connectionChecking: {
+        backgroundColor: colors.muted,
+    },
+    connectionOnline: {
+        backgroundColor: colors.green,
+    },
+    connectionOffline: {
+        backgroundColor: colors.warning,
+    },
+    outboxChipRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 2,
+    },
+    outboxChip: {
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    outboxChipText: {
+        fontSize: 12,
+        fontWeight: '800',
+        fontVariant: ['tabular-nums'],
+    },
+    queuedChip: {
+        backgroundColor: colors.surfaceMuted,
+    },
+    queuedChipText: {
+        color: colors.secondary,
+    },
+    syncingChip: {
+        backgroundColor: colors.blueSoft,
+    },
+    syncingChipText: {
+        color: colors.blueDark,
+    },
+    failedChip: {
+        backgroundColor: colors.redSoft,
+    },
+    failedChipText: {
+        color: colors.redDark,
+    },
+    conflictChip: {
+        backgroundColor: colors.warningSoft,
+    },
+    conflictChipText: {
+        color: colors.warningDark,
+    },
+    zeroChip: {
+        backgroundColor: colors.surfaceMuted,
+    },
+    zeroChipText: {
+        color: colors.secondary,
     },
     outboxConflict: {
-        backgroundColor: colors.redSoft,
-        borderColor: colors.redBorder,
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
     },
     outboxHeading: {
         color: colors.text,
         fontSize: 13,
         fontWeight: '800',
-        width: '100%',
     },
     connectivityValue: {
         fontSize: 13,
         fontWeight: '800',
-        width: '100%',
     },
     onlineValue: {
         color: colors.green,
     },
     offlineValue: {
-        color: colors.amber,
-    },
-    outboxValue: {
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    conflictValue: {
-        color: colors.red,
+        color: colors.warningDark,
     },
     syncButton: {
-        backgroundColor: colors.blue,
-        minHeight: 44,
+        backgroundColor: colors.amber,
+        minHeight: 48,
         width: '100%',
     },
     failedCommand: {
@@ -438,14 +605,14 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     retryButton: {
-        backgroundColor: colors.green,
+        backgroundColor: colors.amber,
         flexGrow: 1,
-        minHeight: 44,
+        minHeight: 48,
     },
     discardButton: {
         backgroundColor: colors.red,
         flexGrow: 1,
-        minHeight: 44,
+        minHeight: 48,
     },
     errorBox: {
         backgroundColor: colors.redSoft,
@@ -467,10 +634,27 @@ const styles = StyleSheet.create({
     },
     emptyBox: {
         alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: 10,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 16,
+        borderWidth: 1,
         marginBottom: 16,
-        padding: 32,
+        padding: 36,
+    },
+    emptyMark: {
+        alignItems: 'center',
+        backgroundColor: colors.amberSoft,
+        borderRadius: 24,
+        justifyContent: 'center',
+        width: 48,
+        height: 48,
+        marginBottom: 12,
+    },
+    emptyMarkLine: {
+        backgroundColor: colors.amberDark,
+        borderRadius: 2,
+        height: 4,
+        width: 18,
     },
     emptyTitle: {
         color: colors.text,
@@ -504,7 +688,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     reference: {
-        color: colors.blue,
+        color: colors.blueDark,
         flexShrink: 1,
         fontSize: 16,
         fontWeight: '800',
@@ -528,7 +712,19 @@ const styles = StyleSheet.create({
     },
     statusBadge: {
         backgroundColor: colors.blueSoft,
-        color: colors.blue,
+        color: colors.blueDark,
+    },
+    emergencyBadge: {
+        backgroundColor: colors.redSoft,
+        color: colors.redDark,
+    },
+    priorityBadge: {
+        backgroundColor: colors.warningSoft,
+        color: colors.warningDark,
+    },
+    routineBadge: {
+        backgroundColor: colors.surfaceMuted,
+        color: colors.secondary,
     },
     jobTitle: {
         color: colors.text,
@@ -537,11 +733,23 @@ const styles = StyleSheet.create({
         lineHeight: 21,
         marginTop: 12,
     },
-    site: {
+    detailRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 8,
+    },
+    detailLabel: {
+        color: colors.muted,
+        fontSize: 13,
+        fontWeight: '700',
+        width: 48,
+    },
+    detailValue: {
         color: colors.secondary,
+        flex: 1,
         fontSize: 14,
         lineHeight: 20,
-        marginTop: 8,
     },
     pendingBadge: {
         alignSelf: 'flex-start',
@@ -556,6 +764,21 @@ const styles = StyleSheet.create({
     pendingText: {
         color: colors.amberDark,
         fontSize: 12,
+        fontWeight: '800',
+    },
+    cardActionRow: {
+        alignItems: 'center',
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 16,
+        minHeight: 48,
+        paddingTop: 10,
+    },
+    actionBtnText: {
+        color: colors.amberDark,
+        fontSize: 14,
         fontWeight: '800',
     },
 });

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DispatchJob, DispatchStatus } from '../types/index';
 import { colors, sharedStyles } from './nativeStyles';
 
@@ -32,15 +32,11 @@ export const FieldProgressionStepper: React.FC<
     return (
         <View style={styles.card} testID="field-progression-stepper">
             <Text accessibilityRole="header" style={styles.heading}>
-                Forward-only field progression
+                Job progress
             </Text>
 
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.steps}
-            >
-                {progression.steps.map((step) => {
+            <View style={styles.steps}>
+                {progression.steps.map((step, index) => {
                     const isComplete = step.state === 'complete';
                     const isCurrent = step.state === 'current';
 
@@ -49,31 +45,55 @@ export const FieldProgressionStepper: React.FC<
                             key={step.status.value}
                             accessibilityLabel={`${step.status.label}: ${step.state}`}
                             style={[
-                                styles.stepPill,
-                                isComplete && styles.completePill,
-                                isCurrent && styles.currentPill,
+                                styles.stepRow,
+                                isCurrent && styles.currentStepRow,
                             ]}
                             testID={`step-pill-${step.status.value}`}
                         >
-                            <Text
+                            <View
                                 style={[
-                                    styles.stepText,
-                                    isComplete && styles.completeText,
-                                    isCurrent && styles.currentText,
+                                    styles.stepMark,
+                                    isComplete && styles.completeMark,
+                                    isCurrent && styles.currentMark,
                                 ]}
                             >
-                                {isComplete ? '✓ ' : ''}
-                                {step.status.label}
-                            </Text>
+                                <Text
+                                    style={[
+                                        styles.stepNumber,
+                                        (isComplete || isCurrent) &&
+                                            styles.activeStepNumber,
+                                    ]}
+                                >
+                                    {index + 1}
+                                </Text>
+                            </View>
+                            <View style={styles.stepCopy}>
+                                <Text
+                                    style={[
+                                        styles.stepText,
+                                        isComplete && styles.completeText,
+                                        isCurrent && styles.currentText,
+                                    ]}
+                                >
+                                    {step.status.label}
+                                </Text>
+                                <Text style={styles.stepState}>
+                                    {isComplete
+                                        ? 'Complete'
+                                        : isCurrent
+                                          ? 'Current step'
+                                          : 'Upcoming'}
+                                </Text>
+                            </View>
                         </View>
                     );
                 })}
-            </ScrollView>
+            </View>
 
             {nextStep ? (
                 <View style={styles.nextCard} testID="next-step-card">
                     <Text style={styles.nextTitle}>
-                        Next milestone: {nextStep.confirmation_title}
+                        Next action: {nextStep.confirmation_title}
                     </Text>
                     <Text style={styles.nextMessage}>
                         {nextStep.confirmation_message}
@@ -96,13 +116,13 @@ export const FieldProgressionStepper: React.FC<
                         testID="advance-status-btn"
                     >
                         <Text style={sharedStyles.buttonText}>
-                            {nextStep.action_label} (v{job.version})
+                            {nextStep.action_label}
                         </Text>
                     </Pressable>
                 </View>
             ) : (
                 <Text style={styles.completeMessage}>
-                    ✓ {progression.message}
+                    Completed — {progression.message}
                 </Text>
             )}
         </View>
@@ -126,7 +146,7 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
@@ -138,47 +158,75 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     steps: {
-        gap: 8,
-        paddingBottom: 4,
+        gap: 6,
     },
-    stepPill: {
+    stepRow: {
+        alignItems: 'center',
+        borderRadius: 8,
+        flexDirection: 'row',
+        gap: 12,
+        minHeight: 56,
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+    },
+    currentStepRow: {
+        backgroundColor: colors.amberLight,
+    },
+    stepMark: {
+        alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
         borderRadius: 18,
         borderWidth: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        height: 36,
+        justifyContent: 'center',
+        width: 36,
     },
-    completePill: {
-        backgroundColor: colors.greenSoft,
-        borderColor: colors.greenBorder,
+    completeMark: {
+        backgroundColor: colors.green,
+        borderColor: colors.green,
     },
-    currentPill: {
-        backgroundColor: colors.blueSoft,
-        borderColor: colors.blueBorder,
+    currentMark: {
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
+    },
+    stepNumber: {
+        color: colors.secondary,
+        fontSize: 13,
+        fontWeight: '800',
+        fontVariant: ['tabular-nums'],
+    },
+    activeStepNumber: {
+        color: colors.white,
+    },
+    stepCopy: {
+        flex: 1,
     },
     stepText: {
-        color: colors.secondary,
-        fontSize: 12,
-    },
-    completeText: {
-        color: colors.green,
+        color: colors.text,
+        fontSize: 14,
         fontWeight: '700',
     },
+    completeText: {
+        color: colors.greenDark,
+    },
     currentText: {
-        color: colors.blue,
+        color: colors.amberDark,
         fontWeight: '800',
     },
+    stepState: {
+        color: colors.muted,
+        fontSize: 12,
+        marginTop: 2,
+    },
     nextCard: {
-        backgroundColor: colors.surfaceMuted,
-        borderLeftColor: colors.blue,
-        borderLeftWidth: 4,
-        borderRadius: 6,
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
         marginTop: 16,
-        padding: 14,
+        paddingTop: 16,
     },
     nextTitle: {
-        color: colors.blue,
+        color: colors.text,
         fontSize: 15,
         fontWeight: '800',
     },
@@ -190,7 +238,7 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     advanceButton: {
-        backgroundColor: colors.blue,
+        backgroundColor: colors.amber,
     },
     completeMessage: {
         color: colors.green,

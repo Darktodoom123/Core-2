@@ -1,4 +1,4 @@
-﻿import type { ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import React, {
     Component,
     useCallback,
@@ -126,14 +126,36 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     } = useAuth();
     const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
     const [jobs, setJobs] = useState<DispatchJob[]>([]);
+    const [jobsError, setJobsError] = useState<string | null>(null);
     const [outboxCommands, setOutboxCommands] = useState<OutboxCommand[]>([]);
     const [isLoadingJobs, setIsLoadingJobs] = useState(false);
-    const [jobsError, setJobsError] = useState<string | null>(null);
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
+    const queuedSyncCount = outboxCommands.filter(
+        (command) => command.state === 'queued',
+    ).length;
+    const reviewSyncCount = outboxCommands.filter(
+        (command) => command.state === 'failed' || command.state === 'conflict',
+    ).length;
+    const pendingSyncCount = queuedSyncCount + reviewSyncCount;
+    const isSyncing = outboxCommands.some(
+        (command) => command.state === 'syncing',
+    );
+    const connectivityLabel =
+        isOnline === null
+            ? 'Checking connection'
+            : !isOnline
+              ? 'Offline'
+              : isSyncing
+                ? 'Syncing'
+                : reviewSyncCount > 0
+                  ? `${reviewSyncCount} need review`
+                  : queuedSyncCount > 0
+                    ? `${queuedSyncCount} queued`
+                    : 'Synchronized';
 
     const commandOutbox = useMemo(
         () =>
@@ -495,7 +517,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             <SafeAreaView style={styles.fullScreen}>
                 <StatusBar
                     barStyle="dark-content"
-                    backgroundColor={colors.background}
+                    backgroundColor={colors.surface}
                 />
                 <View
                     accessible
@@ -582,7 +604,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             <SafeAreaView style={styles.fullScreen}>
                 <StatusBar
                     barStyle="dark-content"
-                    backgroundColor={colors.background}
+                    backgroundColor={colors.surface}
                 />
                 <View
                     style={styles.appShell}
@@ -596,27 +618,33 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             isCompact && styles.headerCompact,
                         ]}
                     >
-                        <View
-                            style={[
-                                styles.headerBrand,
-                                isCompact && styles.headerBrandCompact,
-                            ]}
-                        >
-                            <Text style={styles.headerTitle}>
-                                Core 2 Mobile
-                            </Text>
-                            {selectedJobId !== null ? (
-                                <Pressable
-                                    accessibilityLabel="Back to assigned jobs list"
-                                    accessibilityRole="button"
-                                    onPress={handleBackToList}
-                                    style={styles.backButton}
-                                >
-                                    <Text style={styles.backButtonText}>
-                                        Back to jobs
-                                    </Text>
-                                </Pressable>
-                            ) : null}
+                        <View style={styles.headerBrand}>
+                            <View style={styles.brandMark} />
+                            <Text style={styles.headerTitle}>Core 2 Field</Text>
+                            <View
+                                accessible
+                                accessibilityLabel={`Connection status: ${connectivityLabel}`}
+                                accessibilityLiveRegion="polite"
+                                accessibilityRole="summary"
+                                style={styles.connectivityPill}
+                            >
+                                <View
+                                    style={[
+                                        styles.connectivityDot,
+                                        isOnline === null
+                                            ? styles.connectivityChecking
+                                            : isOnline
+                                              ? isSyncing ||
+                                                pendingSyncCount > 0
+                                                  ? styles.connectivityPending
+                                                  : styles.connectivityOnline
+                                              : styles.connectivityOffline,
+                                    ]}
+                                />
+                                <Text style={styles.connectivityText}>
+                                    {connectivityLabel}
+                                </Text>
+                            </View>
                         </View>
                         <View
                             style={[
@@ -624,13 +652,27 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 isCompact && styles.userProfileCompact,
                             ]}
                         >
-                            <View style={styles.userInfo}>
-                                <Text style={styles.userName}>
-                                    {user?.name}
-                                </Text>
-                                <Text style={styles.roleBadge}>
-                                    {user?.role}
-                                </Text>
+                            <View style={styles.avatarPill}>
+                                <View style={styles.avatarCircle}>
+                                    <Text style={styles.avatarInitials}>
+                                        {user?.name
+                                            ? user.name
+                                                  .split(' ')
+                                                  .map((n) => n[0])
+                                                  .join('')
+                                                  .toUpperCase()
+                                                  .slice(0, 2)
+                                            : 'FM'}
+                                    </Text>
+                                </View>
+                                <View style={styles.userInfo}>
+                                    <Text selectable style={styles.userName}>
+                                        {user?.name}
+                                    </Text>
+                                    <Text style={styles.roleBadge}>
+                                        {user?.role.replaceAll('_', ' ')}
+                                    </Text>
+                                </View>
                             </View>
                             <Pressable
                                 accessibilityLabel="Sign out of field app"
@@ -719,12 +761,14 @@ const styles = StyleSheet.create({
     },
     header: {
         alignItems: 'center',
-        backgroundColor: colors.surfaceDark,
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
         minHeight: 72,
         paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingVertical: 12,
     },
     headerCompact: {
         alignItems: 'stretch',
@@ -737,27 +781,49 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         gap: 10,
     },
-    headerBrandCompact: {
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
+    brandMark: {
+        backgroundColor: colors.amber,
+        borderRadius: 2,
+        height: 28,
+        width: 7,
     },
     headerTitle: {
-        color: colors.amber,
+        color: colors.text,
         fontSize: 18,
         fontWeight: '800',
     },
-    backButton: {
+    connectivityPill: {
         alignItems: 'center',
-        backgroundColor: colors.surfaceDarkElevated,
-        borderRadius: 7,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 999,
+        flexDirection: 'row',
+        gap: 6,
         justifyContent: 'center',
-        minHeight: 48,
-        paddingHorizontal: 12,
+        minHeight: 32,
+        paddingHorizontal: 10,
     },
-    backButtonText: {
-        color: colors.textOnDark,
-        fontSize: 13,
+    connectivityDot: {
+        borderRadius: 5,
+        height: 10,
+        width: 10,
+    },
+    connectivityChecking: {
+        backgroundColor: colors.muted,
+    },
+    connectivityOnline: {
+        backgroundColor: colors.green,
+    },
+    connectivityPending: {
+        backgroundColor: colors.warning,
+    },
+    connectivityOffline: {
+        backgroundColor: colors.red,
+    },
+    connectivityText: {
+        color: colors.secondary,
+        fontSize: 12,
         fontWeight: '700',
+        fontVariant: ['tabular-nums'],
     },
     userProfile: {
         alignItems: 'center',
@@ -770,33 +836,53 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     userInfo: {
-        alignItems: 'flex-end',
+        alignItems: 'flex-start',
         flexShrink: 1,
     },
     userName: {
-        color: colors.textOnDark,
-        fontSize: 13,
+        color: colors.text,
+        fontSize: 14,
         fontWeight: '700',
         maxWidth: 220,
-        textAlign: 'right',
     },
     roleBadge: {
-        color: colors.mutedOnDark,
-        fontSize: 10,
+        color: colors.secondary,
+        fontSize: 11,
+        fontWeight: '600',
         marginTop: 2,
-        textTransform: 'uppercase',
+        textTransform: 'capitalize',
+    },
+    avatarPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    avatarCircle: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.amberSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatarInitials: {
+        color: colors.amberDark,
+        fontSize: 12,
+        fontWeight: '800',
     },
     logoutButton: {
         alignItems: 'center',
-        backgroundColor: colors.red,
-        borderRadius: 7,
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
+        borderWidth: 1,
+        borderRadius: 8,
         justifyContent: 'center',
         minHeight: 48,
         minWidth: 76,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
     },
     logoutText: {
-        color: '#ffffff',
+        color: colors.text,
         fontSize: 13,
         fontWeight: '800',
     },
@@ -806,7 +892,7 @@ const styles = StyleSheet.create({
     },
     mainContentExpanded: {
         alignSelf: 'center',
-        maxWidth: 1040,
+        maxWidth: 720,
         width: '100%',
     },
     commandError: {
@@ -826,7 +912,9 @@ const styles = StyleSheet.create({
     },
     centerCard: {
         alignSelf: 'center',
-        backgroundColor: colors.surfaceDark,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderWidth: 1,
         borderRadius: 12,
         margin: 24,
         maxWidth: 440,
@@ -840,7 +928,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     bodyText: {
-        color: colors.textOnDark,
+        color: colors.secondary,
         fontSize: 15,
         lineHeight: 22,
     },

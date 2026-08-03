@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { OutboxCommand } from '../types/index';
 import { colors, sharedStyles } from './nativeStyles';
@@ -27,11 +27,11 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
             testID="conflict-banner-container"
         >
             <Text accessibilityRole="header" style={styles.heading}>
-                Action required: version conflict
+                Update conflict needs review
             </Text>
             <Text style={styles.description}>
-                One or more actions could not be saved because this dispatch was
-                updated on another device.
+                This job changed on the server before your saved action could
+                sync. Choose which result to keep.
             </Text>
 
             {conflictedCommands.map((command) => {
@@ -46,7 +46,7 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
                         testID={`conflict-item-${command.id}`}
                     >
                         <Text style={styles.actionName}>
-                            Action: {command.type.replace('_', ' ')}
+                            Saved action: {command.type.replaceAll('_', ' ')}
                         </Text>
                         <Text style={styles.versionText}>
                             Submitted version: v{command.expectedVersion ?? '?'}
@@ -61,7 +61,7 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
                         ) : null}
                         <View style={styles.actions}>
                             <Pressable
-                                accessibilityLabel={`Accept server state at version ${currentVersion}`}
+                                accessibilityLabel={`Discard this saved action and keep server version ${currentVersion}`}
                                 accessibilityRole="button"
                                 onPress={() => onAcceptServerState(command.id)}
                                 style={({ pressed }) => [
@@ -71,12 +71,12 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
                                 ]}
                                 testID={`accept-server-btn-${command.id}`}
                             >
-                                <Text style={sharedStyles.buttonText}>
-                                    Accept server state
+                                <Text style={styles.serverButtonText}>
+                                    Keep server update
                                 </Text>
                             </Pressable>
                             <Pressable
-                                accessibilityLabel={`Retry command with version ${currentVersion}`}
+                                accessibilityLabel={`Retry saved action against server version ${currentVersion}`}
                                 accessibilityRole="button"
                                 onPress={() =>
                                     onRetryNewVersion(
@@ -92,7 +92,7 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
                                 testID={`retry-version-btn-${command.id}`}
                             >
                                 <Text style={sharedStyles.buttonText}>
-                                    Retry with v{currentVersion}
+                                    Retry my action
                                 </Text>
                             </Pressable>
                         </View>
@@ -105,15 +105,15 @@ export const CommandConflictBanner: React.FC<CommandConflictBannerProps> = ({
 
 const styles = StyleSheet.create({
     banner: {
-        backgroundColor: colors.redSoft,
-        borderColor: colors.redBorder,
-        borderRadius: 10,
+        backgroundColor: colors.warningSoft,
+        borderColor: colors.warningBorder,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
     },
     heading: {
-        color: colors.red,
+        color: colors.warningDark,
         fontSize: 17,
         fontWeight: '800',
     },
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     },
     item: {
         backgroundColor: colors.surface,
-        borderColor: colors.amberBorder,
+        borderColor: colors.warningBorder,
         borderRadius: 8,
         borderWidth: 1,
         marginBottom: 8,
@@ -157,11 +157,19 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     serverButton: {
-        backgroundColor: colors.blue,
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
+        borderWidth: 1,
         flexGrow: 1,
     },
+    serverButtonText: {
+        color: colors.text,
+        fontSize: 15,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
     retryButton: {
-        backgroundColor: colors.green,
+        backgroundColor: colors.amber,
         flexGrow: 1,
     },
     pressed: {

@@ -1180,4 +1180,65 @@ describe('native application component tree', () => {
             ).toBeVisible();
         });
     });
+
+    it('keeps navigation focused on live field work with truthful sync state', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        expect(await screen.findByText(driverJob.reference)).toBeVisible();
+        expect(screen.getByText('Synchronized')).toBeVisible();
+        expect(screen.queryByTestId('bottom-nav-bar')).toBeNull();
+        expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
+        expect(screen.queryByText('Inspection')).toBeNull();
+    });
+
+    it('shows only server-provided job requirements and honest location availability', async () => {
+        const fieldJob: DispatchJob = {
+            ...driverJob,
+            site_notes: 'Check in with the site supervisor at the east gate.',
+            requirements: ['Full PPE', 'Inspect outriggers before setup'],
+            capabilities: {
+                ...driverJob.capabilities,
+                can_share_location: true,
+            },
+        };
+        const { fetchFn } = createApi({ assignedJobs: [fieldJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+        await fireEvent.press(
+            await screen.findByTestId(`job-card-${fieldJob.id}`),
+        );
+
+        expect(screen.getByText('Full PPE')).toBeVisible();
+        expect(
+            screen.getByText('Inspect outriggers before setup'),
+        ).toBeVisible();
+        expect(
+            screen.getByText(
+                'Check in with the site supervisor at the east gate.',
+            ),
+        ).toBeVisible();
+        expect(
+            screen.getByText(
+                'Device location is not connected in this build. No location update will be recorded.',
+            ),
+        ).toBeVisible();
+        expect(screen.queryByText(/Lift and set HVAC/i)).toBeNull();
+        expect(screen.queryByText(/ETA 7:28/i)).toBeNull();
+        expect(screen.getByText('Accept job responsibility')).toBeVisible();
+        expect(screen.queryByText('Accept job responsibility (v3)')).toBeNull();
+    });
 });

@@ -82,7 +82,7 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                         ]}
                         testID="reject-assignment-btn"
                     >
-                        <Text style={sharedStyles.buttonText}>
+                        <Text style={styles.secondaryButtonText}>
                             Reject assignment
                         </Text>
                     </Pressable>
@@ -131,7 +131,7 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                             onPress={handleRejectSubmit}
                             style={({ pressed }) => [
                                 sharedStyles.button,
-                                styles.rejectButton,
+                                styles.confirmRejectButton,
                                 pressed && styles.pressed,
                             ]}
                             testID="submit-rejection-btn"
@@ -165,15 +165,15 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: colors.blueSoft,
-        borderColor: colors.blueBorder,
-        borderRadius: 10,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
     },
     heading: {
-        color: colors.blueDark,
+        color: colors.amberDark,
         fontSize: 17,
         fontWeight: '800',
     },
@@ -190,12 +190,24 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     acceptButton: {
-        backgroundColor: colors.green,
+        backgroundColor: colors.amber,
         flexGrow: 1,
     },
     rejectButton: {
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
+        borderWidth: 1,
+        flexGrow: 1,
+    },
+    confirmRejectButton: {
         backgroundColor: colors.red,
         flexGrow: 1,
+    },
+    secondaryButtonText: {
+        color: colors.text,
+        fontSize: 15,
+        fontWeight: '700',
+        textAlign: 'center',
     },
     cancelButton: {
         backgroundColor: colors.surfaceMuted,
@@ -217,7 +229,7 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: colors.surface,
-        borderColor: colors.border,
+        borderColor: colors.borderStrong,
         borderRadius: 8,
         borderWidth: 1,
         color: colors.text,

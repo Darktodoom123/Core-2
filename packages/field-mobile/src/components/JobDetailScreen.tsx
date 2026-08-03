@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type {
     LocationCoordinates,
@@ -61,9 +61,17 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     const jobConflicts = outboxCommands.filter(
         (command) => command.state === 'conflict' && command.jobId === job.id,
     );
+    const requirements = Array.isArray(job.requirements)
+        ? job.requirements.filter(
+              (requirement): requirement is string =>
+                  typeof requirement === 'string' &&
+                  requirement.trim().length > 0,
+          )
+        : [];
 
     return (
         <ScrollView
+            contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             accessibilityLabel={`Assignment ${job.reference}`}
         >
@@ -77,7 +85,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                     pressed && styles.pressed,
                 ]}
             >
-                <Text style={sharedStyles.buttonText}>Back to assignments</Text>
+                <Text style={styles.backButtonText}>Back to assignments</Text>
             </Pressable>
 
             <CommandConflictBanner
@@ -88,27 +96,72 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
             <View style={styles.headerCard}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.reference}>{job.reference}</Text>
-                    <Text style={styles.statusBadge}>
-                        {job.status.label} · v{job.version}
+                    <Text selectable style={styles.reference}>
+                        {job.reference}
                     </Text>
+                    <View style={styles.statusBadge}>
+                        <View style={styles.statusMark} />
+                        <Text style={styles.statusText}>
+                            {job.status.label}
+                        </Text>
+                    </View>
                 </View>
                 <Text style={styles.title}>
                     {job.title} — {job.client}
                 </Text>
-                <Text style={styles.site}>Site location: {job.site}</Text>
+                <View style={styles.jobMeta}>
+                    <View style={styles.metaRow}>
+                        <Text style={styles.metaLabel}>Site</Text>
+                        <Text selectable style={styles.metaValue}>
+                            {job.site}
+                        </Text>
+                    </View>
+                    {job.scheduled_start ? (
+                        <View style={styles.metaRow}>
+                            <Text style={styles.metaLabel}>Starts</Text>
+                            <Text selectable style={styles.metaValue}>
+                                {new Date(job.scheduled_start).toLocaleString()}
+                            </Text>
+                        </View>
+                    ) : null}
+                    <View style={styles.metaRow}>
+                        <Text style={styles.metaLabel}>Version</Text>
+                        <Text selectable style={styles.metaValue}>
+                            {job.version}
+                        </Text>
+                    </View>
+                </View>
                 {job.site_notes ? (
-                    <Text style={styles.notes}>
-                        Site notes: {job.site_notes}
-                    </Text>
-                ) : null}
-                {job.scheduled_start ? (
-                    <Text style={styles.notes}>
-                        Scheduled start:{' '}
-                        {new Date(job.scheduled_start).toLocaleString()}
-                    </Text>
+                    <View style={styles.siteNotes}>
+                        <Text style={styles.siteNotesLabel}>Site notes</Text>
+                        <Text selectable style={styles.siteNotesText}>
+                            {job.site_notes}
+                        </Text>
+                    </View>
                 ) : null}
             </View>
+
+            {requirements.length > 0 ? (
+                <View style={styles.requirementsCard}>
+                    <Text
+                        accessibilityRole="header"
+                        style={styles.sectionHeading}
+                    >
+                        Job requirements
+                    </Text>
+                    {requirements.map((requirement, index) => (
+                        <View
+                            key={`${job.id}-requirement-${index}`}
+                            style={styles.requirementRow}
+                        >
+                            <View style={styles.requirementMark} />
+                            <Text selectable style={styles.requirementText}>
+                                {requirement}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            ) : null}
 
             <AssignmentResponseCard
                 job={job}
@@ -134,10 +187,13 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 <Text style={styles.label}>Assigned assets</Text>
                 {job.asset_assignments && job.asset_assignments.length > 0 ? (
                     job.asset_assignments.map((asset) => (
-                        <Text key={asset.id} style={styles.listItem}>
-                            • [{asset.asset_code}] {asset.asset_name} (
-                            {asset.asset_kind})
-                        </Text>
+                        <View key={asset.id} style={styles.assignmentRow}>
+                            <View style={styles.assignmentMark} />
+                            <Text selectable style={styles.listItem}>
+                                [{asset.asset_code}] {asset.asset_name} (
+                                {asset.asset_kind})
+                            </Text>
+                        </View>
                     ))
                 ) : (
                     <Text style={styles.emptyText}>None assigned</Text>
@@ -149,10 +205,13 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 {job.personnel_assignments &&
                 job.personnel_assignments.length > 0 ? (
                     job.personnel_assignments.map((person) => (
-                        <Text key={person.id} style={styles.listItem}>
-                            • {person.user_name} —{' '}
-                            {person.response_status_label}
-                        </Text>
+                        <View key={person.id} style={styles.assignmentRow}>
+                            <View style={styles.assignmentMark} />
+                            <Text selectable style={styles.listItem}>
+                                {person.user_name} —{' '}
+                                {person.response_status_label}
+                            </Text>
+                        </View>
                     ))
                 ) : (
                     <Text style={styles.emptyText}>None assigned</Text>
@@ -165,23 +224,59 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 const styles = StyleSheet.create({
     content: {
         alignSelf: 'center',
-        maxWidth: 1040,
+        maxWidth: 720,
         padding: 16,
         paddingBottom: 32,
         width: '100%',
     },
     backButton: {
         alignSelf: 'flex-start',
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderWidth: 1,
+        borderRadius: 8,
+        minHeight: 48,
         marginBottom: 16,
+    },
+    backButtonText: {
+        color: colors.amberDark,
+        fontSize: 14,
+        fontWeight: '700',
     },
     headerCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 18,
+        padding: 16,
+    },
+    requirementsCard: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 16,
+        padding: 16,
+    },
+    requirementRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 10,
+    },
+    requirementMark: {
+        backgroundColor: colors.amber,
+        borderRadius: 4,
+        height: 8,
+        marginTop: 6,
+        width: 8,
+    },
+    requirementText: {
+        color: colors.secondary,
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 20,
     },
     headerRow: {
         alignItems: 'flex-start',
@@ -190,20 +285,30 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     reference: {
-        color: colors.blue,
+        color: colors.blueDark,
         flexShrink: 1,
         fontSize: 21,
         fontWeight: '800',
     },
     statusBadge: {
+        alignItems: 'center',
         backgroundColor: colors.blueSoft,
-        borderRadius: 14,
-        color: colors.blue,
-        fontSize: 12,
-        fontWeight: '800',
-        overflow: 'hidden',
+        borderRadius: 999,
+        flexDirection: 'row',
+        gap: 6,
         paddingHorizontal: 10,
         paddingVertical: 6,
+    },
+    statusMark: {
+        backgroundColor: colors.blue,
+        borderRadius: 4,
+        height: 8,
+        width: 8,
+    },
+    statusText: {
+        color: colors.blueDark,
+        fontSize: 12,
+        fontWeight: '800',
     },
     title: {
         color: colors.text,
@@ -212,23 +317,52 @@ const styles = StyleSheet.create({
         lineHeight: 23,
         marginTop: 12,
     },
-    site: {
-        color: colors.text,
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: 10,
+    jobMeta: {
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        gap: 8,
+        marginTop: 16,
+        paddingTop: 14,
     },
-    notes: {
+    metaRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        gap: 12,
+    },
+    metaLabel: {
+        color: colors.muted,
+        fontSize: 13,
+        fontWeight: '700',
+        width: 56,
+    },
+    metaValue: {
+        color: colors.secondary,
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 19,
+        fontVariant: ['tabular-nums'],
+    },
+    siteNotes: {
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 8,
+        marginTop: 14,
+        padding: 12,
+    },
+    siteNotesLabel: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    siteNotesText: {
         color: colors.secondary,
         fontSize: 13,
-        fontStyle: 'italic',
         lineHeight: 19,
-        marginTop: 6,
+        marginTop: 4,
     },
     teamCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         padding: 16,
     },
@@ -249,9 +383,22 @@ const styles = StyleSheet.create({
     },
     listItem: {
         color: colors.secondary,
+        flex: 1,
         fontSize: 14,
         lineHeight: 20,
-        marginBottom: 4,
+    },
+    assignmentRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 6,
+    },
+    assignmentMark: {
+        backgroundColor: colors.borderStrong,
+        borderRadius: 4,
+        height: 8,
+        marginTop: 6,
+        width: 8,
     },
     emptyText: {
         color: colors.muted,

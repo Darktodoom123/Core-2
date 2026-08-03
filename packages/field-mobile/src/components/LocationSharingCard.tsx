@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -75,13 +75,27 @@ export const LocationSharingCard: React.FC<LocationSharingCardProps> = ({
     };
 
     return (
-        <View style={styles.card} testID="location-sharing-card">
-            <Text accessibilityRole="header" style={styles.heading}>
-                Own location sharing active
-            </Text>
+        <View
+            style={[styles.card, !getCurrentLocation && styles.cardUnavailable]}
+            testID="location-sharing-card"
+        >
+            <View style={styles.headingRow}>
+                <View
+                    style={[
+                        styles.stateMark,
+                        !getCurrentLocation && styles.stateMarkUnavailable,
+                    ]}
+                />
+                <Text accessibilityRole="header" style={styles.heading}>
+                    {getCurrentLocation
+                        ? 'Location sharing available'
+                        : 'Location sharing unavailable'}
+                </Text>
+            </View>
             <Text style={styles.description}>
-                Location sharing is authorized for this active assignment under
-                server policy rules.
+                {getCurrentLocation
+                    ? 'Share a current location update for this active assignment. The update is queued safely if the network drops.'
+                    : 'Device location is not connected in this build. No location update will be recorded.'}
             </Text>
             <View style={styles.row}>
                 <Pressable
@@ -102,6 +116,7 @@ export const LocationSharingCard: React.FC<LocationSharingCardProps> = ({
                     style={({ pressed }) => [
                         sharedStyles.button,
                         styles.shareButton,
+                        !getCurrentLocation && styles.unavailableButton,
                         pressed && styles.pressed,
                     ]}
                     testID="share-location-btn"
@@ -109,7 +124,13 @@ export const LocationSharingCard: React.FC<LocationSharingCardProps> = ({
                     {isLoading ? (
                         <ActivityIndicator color="#ffffff" size="small" />
                     ) : (
-                        <Text style={sharedStyles.buttonText}>
+                        <Text
+                            style={[
+                                sharedStyles.buttonText,
+                                !getCurrentLocation &&
+                                    styles.unavailableButtonText,
+                            ]}
+                        >
                             {getCurrentLocation
                                 ? 'Share current location'
                                 : 'Location unavailable'}
@@ -134,10 +155,28 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.greenSoft,
         borderColor: colors.greenBorder,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
+    },
+    cardUnavailable: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+    },
+    headingRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
+    },
+    stateMark: {
+        backgroundColor: colors.green,
+        borderRadius: 6,
+        height: 12,
+        width: 12,
+    },
+    stateMarkUnavailable: {
+        backgroundColor: colors.muted,
     },
     heading: {
         color: colors.greenDark,
@@ -158,8 +197,16 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     shareButton: {
-        backgroundColor: colors.green,
+        backgroundColor: colors.amber,
         flexGrow: 1,
+    },
+    unavailableButton: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderWidth: 1,
+    },
+    unavailableButtonText: {
+        color: colors.muted,
     },
     status: {
         color: colors.greenDark,
