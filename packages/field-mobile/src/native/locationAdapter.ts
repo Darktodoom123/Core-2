@@ -92,14 +92,23 @@ export class NativeLocationAdapter {
         }
     }
 
-    public async getCurrentLocation(): Promise<LocationCoordinates> {
+    public async getCurrentLocation(isStationary = false): Promise<LocationCoordinates> {
         const mod = await this.getModule();
         if (!mod) {
             throw new Error('Native location module is not available on this platform.');
         }
 
+        // Active mid-shift permission check to prevent crash if revoked in system settings
+        const permissions = await this.checkPermissions();
+        if (!permissions.foregroundGranted) {
+            throw new Error('Location permission was revoked in device settings.');
+        }
+
+        // Battery optimization: Use Balanced accuracy (cell/Wi-Fi triangulation) when stationary, High when moving
+        const accuracySetting = isStationary ? mod.Accuracy.Balanced : mod.Accuracy.High;
+
         const position = await mod.getCurrentPositionAsync({
-            accuracy: mod.Accuracy.High,
+            accuracy: accuracySetting,
         });
 
         return {

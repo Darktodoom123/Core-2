@@ -34,8 +34,8 @@ Whenever an AI model builds a feature or makes code changes, it MUST answer thes
 ### 2. ⚡ Efficiency Check: "Did you build this the most efficient way?"
 - **Status:** **PASS / EFFICIENT**
 - **Smart GPS Battery Saving**: 
-  - *Moving (Foreground)*: Updates every 30 seconds for live fleet tracking.
-  - *Stationary / Background*: Updates slow down to every 2 minutes (saves 75% battery).
+  - *Moving (Foreground)*: Updates every 30 seconds with high GPS accuracy for fleet tracking.
+  - *Stationary / Background*: Switches to `Accuracy.Balanced` (cell/Wi-Fi triangulation) and updates every 2 minutes (saves 75% battery).
 - **Dynamic Imports**: `expo-location` module is loaded dynamically so automated test runners stay fast and don't leak memory.
 - **Offline Outbox Replay**: Location updates are saved in local SQLite storage and sent in clean batches when internet reconnects.
 - **Memory Leak Defense**: GPS timers automatically turn off when the user pauses tracking, logs out, or completes a job.
@@ -43,12 +43,13 @@ Whenever an AI model builds a feature or makes code changes, it MUST answer thes
 ---
 
 ### 3. ⚠️ Regression Risk Check: "What regressions could this introduce?"
-- **Battery Drain**: Continuous GPS on low-end phones could drain battery faster.  
-  *Mitigation*: Adaptive 2-minute stationary cadence is enabled.
-- **Android Background Location Denied**: If a user allows location while using the app but denies background access.  
-  *Mitigation*: App gracefully falls back to foreground-only tracking and alerts the user.
-- **Permission Revoked Mid-Job**: User turns off Location in Phone Settings while on a job.  
-  *Mitigation*: Error is caught safely without crashing the mobile app.
+- **Status:** **SOLVED IN CODE**
+- **Battery Drain Risk**: Continuous GPS on low-end phones could drain battery faster.  
+  *Solution Implemented*: Low-power `Accuracy.Balanced` mode automatically activates when stationary to preserve battery life.
+- **Android Background Location Denied Risk**: User allows location while using the app but denies background access.  
+  *Solution Implemented*: App checks permission states and gracefully falls back to foreground-only tracking with status guidance.
+- **Permission Revoked Mid-Job Risk**: User turns off Location in Phone Settings while on an active job.  
+  *Solution Implemented*: Active `checkPermissions()` check runs before capture; if revoked, auto-tracking safely halts (`stopAutoTracking()`) without crashing the app.
 
 ---
 

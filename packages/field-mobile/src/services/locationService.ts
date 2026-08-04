@@ -114,8 +114,14 @@ export class LocationSharingService {
             try {
                 const coords = await getLocationCoords();
                 await this.shareLocation(user, job, null, coords, 'Periodic field telemetry');
-            } catch {
-                // Ignore transient GPS capture errors during periodic loop
+            } catch (error: unknown) {
+                // If location permissions were revoked mid-shift, halt auto-tracking immediately
+                if (
+                    error instanceof Error &&
+                    error.message.includes('revoked')
+                ) {
+                    this.stopAutoTracking();
+                }
             }
         };
 
