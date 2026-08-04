@@ -16,13 +16,25 @@
                 }
             ],
             "expo-secure-store",
+            [
+                "expo-location",
+                {
+                    "locationAlwaysAndWhenInUsePermission": "Allow Core 2 Field App to access your location to track job progress and update operational telemetry.",
+                    "isAndroidBackgroundLocationEnabled": true
+                }
+            ],
             "./plugins/with-gradle-build-memory.cjs",
             "./plugins/with-gradle-problems-report.cjs",
             "./plugins/with-detox-android.cjs",
             "expo-splash-screen"
         ],
         "android": {
-            "package": "com.core2.fieldmobile"
+            "package": "com.core2.fieldmobile",
+            "permissions": [
+                "ACCESS_COARSE_LOCATION",
+                "ACCESS_FINE_LOCATION",
+                "ACCESS_BACKGROUND_LOCATION"
+            ]
         }
     }
 }

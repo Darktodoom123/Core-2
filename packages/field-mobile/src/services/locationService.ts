@@ -1,4 +1,4 @@
-﻿import type { DispatchJob, LocationSharePayload, User } from '../types/index';
+import type { DispatchJob, LocationSharePayload, User } from '../types/index';
 import type { CommandOutboxManager } from './commandOutbox';
 
 export interface LocationCoordinates {
@@ -8,6 +8,9 @@ export interface LocationCoordinates {
 }
 
 export class LocationSharingService {
+    private trackingTimer: ReturnType<typeof setInterval> | null = null;
+    private isAutoTracking = false;
+
     constructor(private outbox: CommandOutboxManager) {}
 
     public canShareLocation(
@@ -62,6 +65,8 @@ export class LocationSharingService {
         user: User,
         job?: DispatchJob | null,
     ): Promise<{ success: boolean; commandId?: string; reason?: string }> {
+        this.stopAutoTracking();
+
         if (!user || !user.is_active) {
             return {
                 success: false,
@@ -84,5 +89,51 @@ export class LocationSharingService {
             success: true,
             commandId: command.id,
         };
+    }
+
+    public startAutoTracking(
+        user: User,
+        job: DispatchJob | null,
+        getLocationCoords: () => Promise<LocationCoordinates>,
+        intervalMs: number = 30000, // Default 30s cadence for active work
+    ): void {
+        this.stopAutoTracking();
+
+        if (!this.canShareLocation(user, job)) {
+            return;
+        }
+
+        this.isAutoTracking = true;
+
+        const captureAndQueue = async () => {
+            if (!this.isAutoTracking || !this.canShareLocation(user, job)) {
+                this.stopAutoTracking();
+                return;
+            }
+
+            try {
+                const coords = await getLocationCoords();
+                await this.shareLocation(user, job, null, coords, 'Periodic field telemetry');
+            } catch {
+                // Ignore transient GPS capture errors during periodic loop
+            }
+        };
+
+        void captureAndQueue();
+        this.trackingTimer = setInterval(() => {
+            void captureAndQueue();
+        }, intervalMs);
+    }
+
+    public stopAutoTracking(): void {
+        this.isAutoTracking = false;
+        if (this.trackingTimer) {
+            clearInterval(this.trackingTimer);
+            this.trackingTimer = null;
+        }
+    }
+
+    public isTracking(): boolean {
+        return this.isAutoTracking;
     }
 }
