@@ -20,7 +20,7 @@ migrations and application code define currently implemented behavior.
    failures when applicable.
 4. Validate in proportion to risk and report checks that could not run.
 5. Do not commit, push, or open a pull request unless explicitly asked.
-6. AI Quality Gate: For every code change, feature, bug fix, refactor, or sprint implementation, evaluate and document responses to the 4 mandatory AI verification questions in [`Docs/ai-verification-questions.md`](file:///c:/Users/User/Desktop/Core-2/Docs/ai-verification-questions.md):
+6. AI Quality Gate: For every code change, feature, bug fix, refactor, or sprint implementation, evaluate and document responses to the 4 mandatory AI verification questions in [`Docs/reports/ai-verification-questions.md`](file:///c:/Users/User/Desktop/Core-2/Docs/reports/ai-verification-questions.md):
    - Did you build this the most secure way?
    - Did you build this the most efficient way?
    - What regressions could this introduce?

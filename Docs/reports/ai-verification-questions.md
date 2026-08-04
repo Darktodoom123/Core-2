@@ -1,6 +1,6 @@
 # Universal AI Quality & Security Gate Framework
 
-**Location:** [`Docs/ai-verification-questions.md`](file:///c:/Users/User/Desktop/Core-2/Docs/ai-verification-questions.md)  
+**Location:** [`Docs/reports/ai-verification-questions.md`](file:///c:/Users/User/Desktop/Core-2/Docs/reports/ai-verification-questions.md)  
 **Rule Standard:** Mandatory quality gate analysis for **every code change, feature, bug fix, refactor, or sprint task** implemented by AI assistants in this repository (as enforced in [`AGENTS.md`](file:///c:/Users/User/Desktop/Core-2/AGENTS.md)).
 
 ---
