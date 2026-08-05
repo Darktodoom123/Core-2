@@ -290,6 +290,64 @@ export interface LocationUpdateViewModel {
     freshness_status: 'fresh' | 'delayed' | 'stale' | 'offline';
 }
 
+export interface AttachmentViewModel {
+    id: number;
+    kind: string;
+    original_filename: string;
+    mime_type: string;
+    size_bytes: number;
+    checksum_sha256: string;
+    download_url: string;
+}
+
+export interface JobReportViewModel {
+    id: number;
+    dispatch_job_id: number;
+    job: {
+        id: number;
+        reference: string;
+        title: string;
+    } | null;
+    author: {
+        id: number;
+        name: string;
+    } | null;
+    status: StatusViewModel<'submitted' | 'approved' | 'rejected'>;
+    work_summary: string;
+    remarks: string | null;
+    started_at: string | null;
+    ended_at: string | null;
+    submitted_at: string | null;
+    attachments: AttachmentViewModel[];
+}
+
+export interface NotificationViewModel {
+    id: string;
+    type: string;
+    status: string;
+    data: Record<string, unknown>;
+    read_at: string | null;
+    created_at: string | null;
+    dispatch_job: {
+        id: number;
+        reference: string;
+        title: string;
+    } | null;
+}
+
+export interface ArchivedJobViewModel {
+    id: number;
+    reference: string;
+    client: string;
+    title: string;
+    site: string;
+    priority: StatusViewModel<DispatchPriorityValue>;
+    status: StatusViewModel<DispatchStatusValue>;
+    cancellation_reason: string | null;
+    version: number;
+    deleted_at: string | null;
+}
+
 export type WorkspaceSection =
     | 'overview'
     | 'dispatch'
@@ -297,6 +355,9 @@ export type WorkspaceSection =
     | 'fuel'
     | 'tracking'
     | 'approvals'
+    | 'reports'
+    | 'notifications'
+    | 'archive'
     | 'users'
     | 'audit';
 
@@ -323,6 +384,13 @@ export interface WorkspaceCapabilities {
     update_asset_status: boolean;
     inspect_asset: boolean;
     maintain_asset: boolean;
+    request_gpt_assistance: boolean;
+    decide_gpt_recommendation: boolean;
+    create_job_report: boolean;
+    review_job_report: boolean;
+    manage_notifications: boolean;
+    view_archive: boolean;
+    restore_dispatch: boolean;
 }
 
 export interface WorkspaceFreshness {
@@ -375,6 +443,9 @@ export interface WorkspacePageProps {
     users: WorkspaceUserViewModel[];
     auditEvents: AuditEventViewModel[];
     gptRecommendations: GptRecommendationViewModel[];
+    jobReports?: JobReportViewModel[];
+    notifications?: NotificationViewModel[];
+    archivedJobs?: ArchivedJobViewModel[];
     navigation: WorkspaceNavigationItem[];
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;

@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Tracking\Models\LocationUpdate;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 final class LocalDevelopmentSeeder extends Seeder
@@ -29,7 +29,7 @@ final class LocalDevelopmentSeeder extends Seeder
 
             $user->syncRoles([$account['role']->value]);
 
-            \Illuminate\Support\Facades\DB::table('location_updates')->updateOrInsert(
+            DB::table('location_updates')->updateOrInsert(
                 ['user_id' => $user->id],
                 [
                     'latitude' => 3.1390 + ($index * 0.012),

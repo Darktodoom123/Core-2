@@ -1,9 +1,12 @@
 import { router, usePage } from '@inertiajs/react';
 import {
+    Archive,
+    Bell,
     Bot,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
+    FileText,
     LayoutDashboard,
     Fuel,
     LogOut,
@@ -34,6 +37,9 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     fuel: Fuel,
     tracking: MapPin,
     approvals: ShieldCheck,
+    reports: FileText,
+    notifications: Bell,
+    archive: Archive,
     users: Users,
     audit: Bot,
 };

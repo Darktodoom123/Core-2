@@ -12,6 +12,8 @@ use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\Models\Notification;
+use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -40,6 +42,9 @@ final class OperationsWorkspaceController extends Controller
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+            'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
+            'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
+            'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
@@ -234,6 +239,53 @@ final class OperationsWorkspaceController extends Controller
             ->with(['requestedBy:id,name', 'decidedBy:id,name'])
             ->latest()
             ->limit(50)
+            ->get();
+    }
+
+    /** @return Collection<int, JobReport> */
+    private function fetchJobReports(User $user): Collection
+    {
+        if (! $user->can(PermissionName::ReportsViewAll->value)
+            && ! $user->can(PermissionName::ReportsViewDispatch->value)
+            && ! $user->can(PermissionName::ReportsViewOwn->value)) {
+            return collect();
+        }
+
+        return JobReport::query()
+            ->visibleTo($user)
+            ->with(['job:id,reference,title', 'author:id,name', 'attachments'])
+            ->latest('submitted_at')
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, Notification> */
+    private function fetchNotifications(User $user): Collection
+    {
+        return Notification::query()
+            ->where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->id)
+            ->with(['dispatchJob:id,reference,title'])
+            ->latest()
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, DispatchJob> */
+    private function fetchArchivedJobs(User $user): Collection
+    {
+        if (! $user->can(PermissionName::ArchiveManage->value) && ! $user->can(PermissionName::DispatchViewAll->value)) {
+            return collect();
+        }
+
+        return DispatchJob::onlyTrashed()
+            ->visibleTo($user)
+            ->with([
+                'personnelAssignments.user:id,name',
+                'assetAssignments.asset:id,code,name',
+            ])
+            ->latest('deleted_at')
+            ->limit(100)
             ->get();
     }
 }

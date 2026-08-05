@@ -10,14 +10,20 @@ import {
     Panel,
     Skeleton,
 } from '@/components/ui';
+import { ArchiveSurface } from '@/components/workspace/archive-workspace-section';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
+import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
+    ArchivedJobViewModel,
     AssetViewModel,
     AuditEventViewModel,
     FuelRequestViewModel,
+    JobReportViewModel,
     LocationUpdateViewModel,
+    NotificationViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -32,6 +38,9 @@ export function LiveWorkspaceSection({
     users,
     auditEvents,
     capabilities,
+    jobReports = [],
+    notifications = [],
+    archivedJobs = [],
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
@@ -41,6 +50,9 @@ export function LiveWorkspaceSection({
     users: WorkspaceUserViewModel[];
     auditEvents: AuditEventViewModel[];
     capabilities: WorkspaceCapabilities;
+    jobReports?: JobReportViewModel[];
+    notifications?: NotificationViewModel[];
+    archivedJobs?: ArchivedJobViewModel[];
 }) {
     switch (section) {
         case 'assets':
@@ -66,6 +78,22 @@ export function LiveWorkspaceSection({
                 <ApprovalsSurface
                     approvals={approvals}
                     canDecide={capabilities.decide_approval}
+                />
+            );
+        case 'reports':
+            return (
+                <ReportsSurface
+                    reports={jobReports}
+                    capabilities={capabilities}
+                />
+            );
+        case 'notifications':
+            return <NotificationsSurface notifications={notifications} />;
+        case 'archive':
+            return (
+                <ArchiveSurface
+                    jobs={archivedJobs}
+                    capabilities={capabilities}
                 />
             );
         case 'users':

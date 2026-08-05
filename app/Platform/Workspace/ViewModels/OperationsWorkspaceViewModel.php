@@ -10,11 +10,14 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Notifications\Models\Notification;
+use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Carbon;
@@ -453,6 +456,32 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
+                'id' => 'reports',
+                'label' => 'Job reports',
+                'permissions' => [
+                    PermissionName::ReportsViewAll,
+                    PermissionName::ReportsViewDispatch,
+                    PermissionName::ReportsViewOwn,
+                ],
+            ],
+            [
+                'id' => 'notifications',
+                'label' => 'Notifications',
+                'permissions' => [
+                    PermissionName::DispatchViewAll,
+                    PermissionName::DispatchViewAssigned,
+                    PermissionName::ReportsViewOwn,
+                    PermissionName::FuelViewOwn,
+                ],
+            ],
+            [
+                'id' => 'archive',
+                'label' => 'Archived dispatches',
+                'permissions' => [
+                    PermissionName::ArchiveManage,
+                ],
+            ],
+            [
                 'id' => 'users',
                 'label' => 'Users & roles',
                 'permissions' => [PermissionName::UsersManage],
@@ -497,6 +526,11 @@ final class OperationsWorkspaceViewModel
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
+            'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
+            'review_job_report' => $user->can(PermissionName::ReportsViewAll->value) || $user->can(PermissionName::ReportsViewDispatch->value),
+            'manage_notifications' => true,
+            'view_archive' => $user->can(PermissionName::ArchiveManage->value),
+            'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
         ];
     }
 
@@ -533,6 +567,94 @@ final class OperationsWorkspaceViewModel
             'decided_at' => $rec->decided_at instanceof Carbon ? $rec->decided_at->toIso8601String() : null,
             'created_at' => $rec->created_at instanceof Carbon ? $rec->created_at->toIso8601String() : null,
             'is_advisory' => true,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, JobReport>  $reports
+     * @return array<int, array<string, mixed>>
+     */
+    public static function jobReports(Collection $reports): array
+    {
+        return $reports->map(static fn (JobReport $report): array => [
+            'id' => (int) $report->getKey(),
+            'dispatch_job_id' => (int) $report->dispatch_job_id,
+            'job' => $report->relationLoaded('job') ? [
+                'id' => (int) $report->job->getKey(),
+                'reference' => $report->job->reference,
+                'title' => $report->job->title,
+            ] : null,
+            'author' => $report->relationLoaded('author') && $report->author !== null ? [
+                'id' => (int) $report->author->getKey(),
+                'name' => $report->author->name,
+            ] : null,
+            'status' => [
+                'value' => $report->status->value,
+                'label' => $report->status->label(),
+            ],
+            'work_summary' => $report->work_summary,
+            'remarks' => $report->remarks,
+            'started_at' => $report->started_at?->toIso8601String(),
+            'ended_at' => $report->ended_at?->toIso8601String(),
+            'submitted_at' => $report->submitted_at?->toIso8601String(),
+            'attachments' => $report->relationLoaded('attachments')
+                ? $report->attachments->map(static fn (Attachment $attachment): array => [
+                    'id' => (int) $attachment->getKey(),
+                    'kind' => $attachment->kind,
+                    'original_filename' => $attachment->original_filename,
+                    'mime_type' => $attachment->mime_type,
+                    'size_bytes' => (int) $attachment->size_bytes,
+                    'checksum_sha256' => $attachment->checksum_sha256,
+                    'download_url' => "/operations/attachments/{$attachment->getKey()}/download",
+                ])->values()->all()
+                : [],
+        ])->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, Notification>  $notifications
+     * @return array<int, array<string, mixed>>
+     */
+    public static function notifications(Collection $notifications): array
+    {
+        return $notifications->map(static fn (Notification $notification): array => [
+            'id' => (string) $notification->getKey(),
+            'type' => $notification->type,
+            'status' => $notification->status,
+            'data' => $notification->data,
+            'read_at' => $notification->read_at?->toIso8601String(),
+            'created_at' => $notification->created_at instanceof Carbon ? $notification->created_at->toIso8601String() : null,
+            'dispatch_job' => $notification->dispatchJob !== null ? [
+                'id' => (int) $notification->dispatchJob->getKey(),
+                'reference' => $notification->dispatchJob->reference,
+                'title' => $notification->dispatchJob->title,
+            ] : null,
+        ])->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, DispatchJob>  $jobs
+     * @return array<int, array<string, mixed>>
+     */
+    public static function archivedJobs(Collection $jobs): array
+    {
+        return $jobs->map(static fn (DispatchJob $job): array => [
+            'id' => (int) $job->getKey(),
+            'reference' => $job->reference,
+            'client' => $job->client,
+            'title' => $job->title,
+            'site' => $job->site,
+            'priority' => [
+                'value' => $job->priority->value,
+                'label' => $job->priority->label(),
+            ],
+            'status' => [
+                'value' => $job->status->value,
+                'label' => $job->status->label(),
+            ],
+            'cancellation_reason' => $job->cancellation_reason,
+            'version' => $job->version,
+            'deleted_at' => $job->deleted_at?->toIso8601String(),
         ])->values()->all();
     }
 
