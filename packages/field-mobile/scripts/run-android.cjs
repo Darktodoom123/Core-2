@@ -15,4 +15,15 @@ features.add('-Vulkan');
 process.env.ANDROID_EMULATOR_FEATURES = [...features].join(',');
 
 process.argv.splice(2, 0, 'run:android');
-require('@expo/cli');
+
+function resolveExpoCli() {
+    try {
+        return require.resolve('@expo/cli');
+    } catch {
+        return require.resolve('@expo/cli', {
+            paths: [require.resolve('expo')],
+        });
+    }
+}
+
+require(resolveExpoCli());
