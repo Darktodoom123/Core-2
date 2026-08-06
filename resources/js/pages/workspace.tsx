@@ -332,7 +332,6 @@ export default function Workspace(props: WorkspacePageProps) {
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
                     />
-
                 )}
             </LiveWorkspaceShell>
         </>

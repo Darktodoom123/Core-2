@@ -4,7 +4,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
-import type { ArchivedJobViewModel, WorkspaceCapabilities } from '@/types/workspace';
+import type {
+    ArchivedJobViewModel,
+    WorkspaceCapabilities,
+} from '@/types/workspace';
 
 export function ArchiveSurface({
     jobs = [],
@@ -13,7 +16,9 @@ export function ArchiveSurface({
     jobs?: ArchivedJobViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
-    const [selectedJob, setSelectedJob] = useState<ArchivedJobViewModel | null>(null);
+    const [selectedJob, setSelectedJob] = useState<ArchivedJobViewModel | null>(
+        null,
+    );
 
     return (
         <div>
@@ -40,30 +45,49 @@ export function ArchiveSurface({
                                         <th className="px-4 py-3">Client</th>
                                         <th className="px-4 py-3">Title</th>
                                         <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3">Archived / Deleted</th>
-                                        <th className="px-4 py-3 text-right">Actions</th>
+                                        <th className="px-4 py-3">
+                                            Archived / Deleted
+                                        </th>
+                                        <th className="px-4 py-3 text-right">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-line">
                                     {jobs.map((job) => (
-                                        <tr key={job.id} className="hover:bg-surface-subtle/50">
-                                            <td className="px-4 py-3 font-semibold text-ink font-mono">
+                                        <tr
+                                            key={job.id}
+                                            className="hover:bg-surface-subtle/50"
+                                        >
+                                            <td className="px-4 py-3 font-mono font-semibold text-ink">
                                                 {job.reference}
                                             </td>
-                                            <td className="px-4 py-3 text-ink">{job.client}</td>
-                                            <td className="px-4 py-3 text-ink font-medium">{job.title}</td>
+                                            <td className="px-4 py-3 text-ink">
+                                                {job.client}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-ink">
+                                                {job.title}
+                                            </td>
                                             <td className="px-4 py-3">
-                                                <CanonicalStatusBadge status={job.status} />
+                                                <CanonicalStatusBadge
+                                                    status={job.status}
+                                                />
                                             </td>
                                             <td className="px-4 py-3 text-xs text-ink-soft">
-                                                {job.deleted_at ? new Date(job.deleted_at).toLocaleString() : 'N/A'}
+                                                {job.deleted_at
+                                                    ? new Date(
+                                                          job.deleted_at,
+                                                      ).toLocaleString()
+                                                    : 'N/A'}
                                             </td>
                                             <td className="px-4 py-3 text-right">
                                                 {capabilities.restore_dispatch && (
                                                     <Button
                                                         size="sm"
                                                         variant="secondary"
-                                                        onClick={() => setSelectedJob(job)}
+                                                        onClick={() =>
+                                                            setSelectedJob(job)
+                                                        }
                                                     >
                                                         <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                                                         Restore
@@ -117,12 +141,13 @@ function RestoreJobModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <Panel className="w-full max-w-lg p-6 space-y-4">
+            <Panel className="w-full max-w-lg space-y-4 p-6">
                 <h3 className="text-lg font-bold text-ink">
                     Restore Dispatch {job.reference}
                 </h3>
                 <p className="text-sm text-ink-soft">
-                    Restoring this dispatch will remove its archived soft-delete flag and return it to active workspace operations.
+                    Restoring this dispatch will remove its archived soft-delete
+                    flag and return it to active workspace operations.
                 </p>
                 <form onSubmit={submit} className="space-y-4" noValidate>
                     <div>
@@ -132,26 +157,38 @@ function RestoreJobModal({
                         <input
                             type="text"
                             value={form.data.reason}
-                            onChange={(e) => form.setData('reason', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('reason', e.target.value)
+                            }
                             className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm"
                             placeholder="e.g. Accidental archive by dispatcher"
                             required
                         />
                         {form.errors.reason && (
-                            <p className="mt-1 text-xs text-danger">{form.errors.reason}</p>
+                            <p className="mt-1 text-xs text-danger">
+                                {form.errors.reason}
+                            </p>
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-2 border-t border-line">
-                        <Button type="button" variant="secondary" onClick={onClose}>
+                    <div className="flex justify-end gap-3 border-t border-line pt-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                        >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             variant="primary"
-                            disabled={form.processing || !form.data.reason.trim()}
+                            disabled={
+                                form.processing || !form.data.reason.trim()
+                            }
                         >
-                            {form.processing ? 'Restoring…' : 'Confirm Restoration'}
+                            {form.processing
+                                ? 'Restoring…'
+                                : 'Confirm Restoration'}
                         </Button>
                     </div>
                 </form>

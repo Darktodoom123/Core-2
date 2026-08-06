@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, sharedStyles } from './nativeStyles';
 
 export interface InspectionCheckItem {

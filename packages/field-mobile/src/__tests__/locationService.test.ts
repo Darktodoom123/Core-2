@@ -40,7 +40,10 @@ const activeJob: DispatchJob = {
 describe('LocationSharingService Unit Tests', () => {
     test('authorizes location sharing for active user with valid job capabilities', () => {
         const repo = new MemoryOutboxRepository();
-        const outbox = new CommandOutboxManager({ repository: repo, hasher: testHasher });
+        const outbox = new CommandOutboxManager({
+            repository: repo,
+            hasher: testHasher,
+        });
         void outbox.activateActor(activeUser.id);
         const service = new LocationSharingService(outbox);
 
@@ -49,7 +52,10 @@ describe('LocationSharingService Unit Tests', () => {
 
     test('denies location sharing for inactive user or disabled job capability', () => {
         const repo = new MemoryOutboxRepository();
-        const outbox = new CommandOutboxManager({ repository: repo, hasher: testHasher });
+        const outbox = new CommandOutboxManager({
+            repository: repo,
+            hasher: testHasher,
+        });
         const service = new LocationSharingService(outbox);
 
         const inactiveUser = { ...activeUser, is_active: false };
@@ -57,19 +63,35 @@ describe('LocationSharingService Unit Tests', () => {
 
         const disabledJob = {
             ...activeJob,
-            capabilities: { ...activeJob.capabilities, can_share_location: false },
+            capabilities: {
+                ...activeJob.capabilities,
+                can_share_location: false,
+            },
         };
         assert.equal(service.canShareLocation(activeUser, disabledJob), false);
     });
 
     test('enqueues location payload to outbox when shareLocation is invoked', async () => {
         const repo = new MemoryOutboxRepository();
-        const outbox = new CommandOutboxManager({ repository: repo, hasher: testHasher });
+        const outbox = new CommandOutboxManager({
+            repository: repo,
+            hasher: testHasher,
+        });
         await outbox.activateActor(activeUser.id);
         const service = new LocationSharingService(outbox);
 
-        const coords = { latitude: 14.5995, longitude: 120.9842, accuracyMetres: 5 };
-        const result = await service.shareLocation(activeUser, activeJob, null, coords, 'Manual checkin');
+        const coords = {
+            latitude: 14.5995,
+            longitude: 120.9842,
+            accuracyMetres: 5,
+        };
+        const result = await service.shareLocation(
+            activeUser,
+            activeJob,
+            null,
+            coords,
+            'Manual checkin',
+        );
 
         assert.equal(result.success, true);
         assert.ok(result.commandId);
@@ -77,13 +99,22 @@ describe('LocationSharingService Unit Tests', () => {
         const pending = outbox.getCommands();
         assert.equal(pending.length, 1);
         assert.equal(pending[0].type, 'share_location');
-        assert.equal((pending[0].payload as { latitude: number }).latitude, 14.5995);
-        assert.equal((pending[0].payload as { longitude: number }).longitude, 120.9842);
+        assert.equal(
+            (pending[0].payload as { latitude: number }).latitude,
+            14.5995,
+        );
+        assert.equal(
+            (pending[0].payload as { longitude: number }).longitude,
+            120.9842,
+        );
     });
 
     test('pauseSharing enqueues sharing_enabled=false payload and stops auto tracking', async () => {
         const repo = new MemoryOutboxRepository();
-        const outbox = new CommandOutboxManager({ repository: repo, hasher: testHasher });
+        const outbox = new CommandOutboxManager({
+            repository: repo,
+            hasher: testHasher,
+        });
         await outbox.activateActor(activeUser.id);
         const service = new LocationSharingService(outbox);
 
@@ -92,6 +123,10 @@ describe('LocationSharingService Unit Tests', () => {
 
         const pending = outbox.getCommands();
         assert.equal(pending.length, 1);
-        assert.equal((pending[0].payload as { sharing_enabled: boolean }).sharing_enabled, false);
+        assert.equal(
+            (pending[0].payload as { sharing_enabled: boolean })
+                .sharing_enabled,
+            false,
+        );
     });
 });

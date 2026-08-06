@@ -29,7 +29,8 @@ export type AssetStatusValue =
 
 export type ApprovalStatusValue = 'pending' | 'approved' | 'rejected';
 
-export type ReportExportStatusValue = 'queued' | 'processing' | 'completed' | 'failed' | 'expired';
+export type ReportExportStatusValue =
+    'queued' | 'processing' | 'completed' | 'failed' | 'expired';
 
 export type CanonicalStatusValue =
     | DispatchStatusValue
@@ -39,7 +40,6 @@ export type CanonicalStatusValue =
     | AssetStatusValue
     | ApprovalStatusValue
     | ReportExportStatusValue;
-
 
 export interface StatusViewModel<TValue extends string> {
     value: TValue;
@@ -356,7 +356,9 @@ export interface ReportExportViewModel {
     id: string;
     export_type: StatusViewModel<string>;
     format: string;
-    status: StatusViewModel<'queued' | 'processing' | 'completed' | 'failed' | 'expired'>;
+    status: StatusViewModel<
+        'queued' | 'processing' | 'completed' | 'failed' | 'expired'
+    >;
     filters: Record<string, unknown> | null;
     file_size_bytes: number | null;
     row_count: number | null;
@@ -369,7 +371,6 @@ export interface ReportExportViewModel {
     download_url: string;
     retry_url: string;
 }
-
 
 export type WorkspaceSection =
     | 'overview'
@@ -439,8 +440,18 @@ export interface GptRecommendationViewModel {
     prompt_summary: string | null;
     response_summary: string | null;
     recommendation: Record<string, unknown>;
-    proposed_personnel?: Array<{ user_id: number; name?: string; role?: string; assignment_type: string }>;
-    proposed_assets?: Array<{ operational_asset_id: number; asset_code?: string; name?: string; assignment_type: string }>;
+    proposed_personnel?: Array<{
+        user_id: number;
+        name?: string;
+        role?: string;
+        assignment_type: string;
+    }>;
+    proposed_assets?: Array<{
+        operational_asset_id: number;
+        asset_code?: string;
+        name?: string;
+        assignment_type: string;
+    }>;
     conflicts: Array<Record<string, unknown>>;
     model: string;
     cost_usd: number | null;
@@ -481,7 +492,6 @@ export interface WorkspacePageProps {
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
 }
-
 
 export interface AssignmentScheduleConflictViewModel {
     id: number;

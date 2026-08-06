@@ -114,7 +114,13 @@ export class LocationSharingService {
 
             try {
                 const coords = await getLocationCoords();
-                await this.shareLocation(user, job, null, coords, 'Periodic field telemetry');
+                await this.shareLocation(
+                    user,
+                    job,
+                    null,
+                    coords,
+                    'Periodic field telemetry',
+                );
             } catch (error: unknown) {
                 // If location permissions were revoked mid-shift, halt auto-tracking immediately
                 if (

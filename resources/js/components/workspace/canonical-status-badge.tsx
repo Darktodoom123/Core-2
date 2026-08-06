@@ -40,7 +40,6 @@ const statusTones: Record<CanonicalStatusValue, StatusTone> = {
     expired: 'neutral',
 };
 
-
 const toneClasses: Record<StatusTone, string> = {
     neutral: 'bg-surface-subtle text-ink-soft',
     brand: 'bg-brand-soft text-brand-strong',

@@ -16,7 +16,9 @@ export function NotificationsSurface({
         );
     };
 
-    const unreadCount = notifications.filter((n) => n.status !== 'read' && !n.read_at).length;
+    const unreadCount = notifications.filter(
+        (n) => n.status !== 'read' && !n.read_at,
+    ).length;
 
     return (
         <div>
@@ -45,7 +47,8 @@ export function NotificationsSurface({
                     <Panel className="overflow-hidden">
                         <ul className="divide-y divide-line">
                             {notifications.map((n) => {
-                                const isUnread = n.status !== 'read' && !n.read_at;
+                                const isUnread =
+                                    n.status !== 'read' && !n.read_at;
 
                                 return (
                                     <li
@@ -54,10 +57,12 @@ export function NotificationsSurface({
                                             isUnread ? 'bg-brand-soft/30' : ''
                                         }`}
                                     >
-                                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                                        <div className="flex min-w-0 flex-1 items-start gap-3">
                                             <Bell
                                                 className={`mt-0.5 h-5 w-5 shrink-0 ${
-                                                    isUnread ? 'text-brand-strong' : 'text-ink-soft'
+                                                    isUnread
+                                                        ? 'text-brand-strong'
+                                                        : 'text-ink-soft'
                                                 }`}
                                             />
                                             <div>
@@ -66,17 +71,22 @@ export function NotificationsSurface({
                                                         {humanizeType(n.type)}
                                                     </span>
                                                     {n.dispatch_job && (
-                                                        <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs font-mono text-ink-soft">
-                                                            {n.dispatch_job.reference}
+                                                        <span className="rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs text-ink-soft">
+                                                            {
+                                                                n.dispatch_job
+                                                                    .reference
+                                                            }
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="mt-1 text-sm text-ink line-clamp-2">
+                                                <p className="mt-1 line-clamp-2 text-sm text-ink">
                                                     {extractMessage(n.data)}
                                                 </p>
                                                 {n.created_at && (
                                                     <p className="mt-1 text-xs text-ink-soft">
-                                                        {new Date(n.created_at).toLocaleString()}
+                                                        {new Date(
+                                                            n.created_at,
+                                                        ).toLocaleString()}
                                                     </p>
                                                 )}
                                             </div>
