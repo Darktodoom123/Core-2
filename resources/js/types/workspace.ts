@@ -29,13 +29,17 @@ export type AssetStatusValue =
 
 export type ApprovalStatusValue = 'pending' | 'approved' | 'rejected';
 
+export type ReportExportStatusValue = 'queued' | 'processing' | 'completed' | 'failed' | 'expired';
+
 export type CanonicalStatusValue =
     | DispatchStatusValue
     | DispatchPriorityValue
     | ServiceRequestStatusValue
     | FuelRequestStatusValue
     | AssetStatusValue
-    | ApprovalStatusValue;
+    | ApprovalStatusValue
+    | ReportExportStatusValue;
+
 
 export interface StatusViewModel<TValue extends string> {
     value: TValue;
@@ -348,6 +352,25 @@ export interface ArchivedJobViewModel {
     deleted_at: string | null;
 }
 
+export interface ReportExportViewModel {
+    id: string;
+    export_type: StatusViewModel<string>;
+    format: string;
+    status: StatusViewModel<'queued' | 'processing' | 'completed' | 'failed' | 'expired'>;
+    filters: Record<string, unknown> | null;
+    file_size_bytes: number | null;
+    row_count: number | null;
+    error_message: string | null;
+    expires_at: string | null;
+    created_at: string | null;
+    completed_at: string | null;
+    is_downloadable: boolean;
+    is_expired: boolean;
+    download_url: string;
+    retry_url: string;
+}
+
+
 export type WorkspaceSection =
     | 'overview'
     | 'dispatch'
@@ -388,6 +411,7 @@ export interface WorkspaceCapabilities {
     decide_gpt_recommendation: boolean;
     create_job_report: boolean;
     review_job_report: boolean;
+    export_reports: boolean;
     manage_notifications: boolean;
     view_archive: boolean;
     restore_dispatch: boolean;
@@ -444,12 +468,14 @@ export interface WorkspacePageProps {
     auditEvents: AuditEventViewModel[];
     gptRecommendations: GptRecommendationViewModel[];
     jobReports?: JobReportViewModel[];
+    reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     navigation: WorkspaceNavigationItem[];
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
 }
+
 
 export interface AssignmentScheduleConflictViewModel {
     id: number;

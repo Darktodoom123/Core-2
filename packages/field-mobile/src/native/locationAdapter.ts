@@ -1,3 +1,4 @@
+import type * as LocationModule from 'expo-location';
 import type { LocationCoordinates } from '../services/locationService';
 
 export interface LocationPermissionState {
@@ -10,10 +11,12 @@ export interface LocationPermissionState {
  * Native location adapter providing hardware GPS access via expo-location with safe fallback for testing environments.
  */
 export class NativeLocationAdapter {
-    private locationModule: typeof import('expo-location') | null = null;
+    private locationModule: typeof LocationModule | null = null;
+
     private isInitialized = false;
 
-    private async getModule(): Promise<typeof import('expo-location') | null> {
+    private async getModule(): Promise<typeof LocationModule | null> {
+
         if (this.isInitialized) {
             return this.locationModule;
         }
@@ -33,6 +36,7 @@ export class NativeLocationAdapter {
 
     public async checkPermissions(): Promise<LocationPermissionState> {
         const mod = await this.getModule();
+
         if (!mod) {
             return {
                 foregroundGranted: false,
@@ -61,6 +65,7 @@ export class NativeLocationAdapter {
 
     public async requestPermissions(): Promise<LocationPermissionState> {
         const mod = await this.getModule();
+
         if (!mod) {
             return {
                 foregroundGranted: false,
@@ -94,12 +99,14 @@ export class NativeLocationAdapter {
 
     public async getCurrentLocation(isStationary = false): Promise<LocationCoordinates> {
         const mod = await this.getModule();
+
         if (!mod) {
             throw new Error('Native location module is not available on this platform.');
         }
 
         // Active mid-shift permission check to prevent crash if revoked in system settings
         const permissions = await this.checkPermissions();
+
         if (!permissions.foregroundGranted) {
             throw new Error('Location permission was revoked in device settings.');
         }

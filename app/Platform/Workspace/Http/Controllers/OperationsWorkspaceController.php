@@ -14,6 +14,7 @@ use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -43,6 +44,7 @@ final class OperationsWorkspaceController extends Controller
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
+            'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
             'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
@@ -53,6 +55,7 @@ final class OperationsWorkspaceController extends Controller
             ],
         ]);
     }
+
 
     /** @return Collection<int, LocationUpdate> */
     private function fetchLocations(User $user): Collection
@@ -288,4 +291,19 @@ final class OperationsWorkspaceController extends Controller
             ->limit(100)
             ->get();
     }
+
+    /** @return Collection<int, ReportExport> */
+    private function fetchReportExports(User $user): Collection
+    {
+        if (! Gate::forUser($user)->allows('viewAny', ReportExport::class)) {
+            return collect();
+        }
+
+        return ReportExport::query()
+            ->visibleTo($user)
+            ->latest()
+            ->limit(50)
+            ->get();
+    }
 }
+

@@ -24,6 +24,7 @@ import type {
     JobReportViewModel,
     LocationUpdateViewModel,
     NotificationViewModel,
+    ReportExportViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -39,6 +40,7 @@ export function LiveWorkspaceSection({
     auditEvents,
     capabilities,
     jobReports = [],
+    reportExports = [],
     notifications = [],
     archivedJobs = [],
 }: {
@@ -51,6 +53,7 @@ export function LiveWorkspaceSection({
     auditEvents: AuditEventViewModel[];
     capabilities: WorkspaceCapabilities;
     jobReports?: JobReportViewModel[];
+    reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
 }) {
@@ -84,9 +87,11 @@ export function LiveWorkspaceSection({
             return (
                 <ReportsSurface
                     reports={jobReports}
+                    exports={reportExports}
                     capabilities={capabilities}
                 />
             );
+
         case 'notifications':
             return <NotificationsSurface notifications={notifications} />;
         case 'archive':

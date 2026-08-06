@@ -9,10 +9,15 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property int $operational_asset_id
+ * @property string $defect
+ * @property string $status
  * @property bool $dispatch_blocking
+ * @property Carbon|null $scheduled_at
  * @property Carbon|null $released_at
  * @property OperationalAsset $asset
  */
+
 class MaintenanceWorkOrder extends Model
 {
     protected $fillable = ['operational_asset_id', 'technician_id', 'status', 'defect', 'work_performed', 'parts', 'dispatch_blocking', 'released_at', 'scheduled_at', 'next_due_at', 'remarks', 'release_verified_by', 'release_checklist'];

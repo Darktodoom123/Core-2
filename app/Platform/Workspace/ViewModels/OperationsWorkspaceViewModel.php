@@ -18,6 +18,7 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Carbon;
@@ -528,11 +529,44 @@ final class OperationsWorkspaceViewModel
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
             'review_job_report' => $user->can(PermissionName::ReportsViewAll->value) || $user->can(PermissionName::ReportsViewDispatch->value),
+            'export_reports' => $user->can(PermissionName::ReportsExport->value),
             'manage_notifications' => true,
             'view_archive' => $user->can(PermissionName::ArchiveManage->value),
             'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
         ];
     }
+
+    /**
+     * @param  Collection<int, ReportExport>  $exports
+     * @return array<int, array<string, mixed>>
+     */
+    public static function reportExports(Collection $exports): array
+    {
+        return $exports->map(static fn (ReportExport $export): array => [
+            'id' => (string) $export->getKey(),
+            'export_type' => [
+                'value' => $export->export_type->value,
+                'label' => $export->export_type->label(),
+            ],
+            'format' => strtoupper($export->format),
+            'status' => [
+                'value' => $export->status->value,
+                'label' => $export->status->label(),
+            ],
+            'filters' => $export->filters,
+            'file_size_bytes' => $export->file_size_bytes,
+            'row_count' => $export->row_count,
+            'error_message' => $export->error_message,
+            'expires_at' => $export->expires_at?->toIso8601String(),
+            'created_at' => $export->created_at?->toIso8601String(),
+            'completed_at' => $export->completed_at?->toIso8601String(),
+            'is_downloadable' => $export->isDownloadable(),
+            'is_expired' => $export->isExpired(),
+            'download_url' => "/operations/reports/exports/{$export->getKey()}/download",
+            'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",
+        ])->values()->all();
+    }
+
 
     /**
      * @param  Collection<int, GptRecommendation>  $recommendations

@@ -108,6 +108,7 @@ export class LocationSharingService {
         const captureAndQueue = async () => {
             if (!this.isAutoTracking || !this.canShareLocation(user, job)) {
                 this.stopAutoTracking();
+
                 return;
             }
 
@@ -133,6 +134,7 @@ export class LocationSharingService {
 
     public stopAutoTracking(): void {
         this.isAutoTracking = false;
+
         if (this.trackingTimer) {
             clearInterval(this.trackingTimer);
             this.trackingTimer = null;

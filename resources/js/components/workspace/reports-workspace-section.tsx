@@ -4,16 +4,20 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
 import type {
     JobReportViewModel,
+    ReportExportViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
 export function ReportsSurface({
     reports = [],
+    exports = [],
     capabilities,
 }: {
     reports?: JobReportViewModel[];
+    exports?: ReportExportViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -103,10 +107,13 @@ export function ReportsSurface({
                         </div>
                     </div>
                 )}
+
+                <ExportsSurface exports={exports} capabilities={capabilities} />
             </div>
         </div>
     );
 }
+
 
 function SubmitJobReportForm({ onDone }: { onDone: () => void }) {
     const form = useForm({

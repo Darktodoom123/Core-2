@@ -34,7 +34,12 @@ const statusTones: Record<CanonicalStatusValue, StatusTone> = {
     ready_for_service: 'success',
     unavailable: 'danger',
     pending: 'warning',
+    queued: 'neutral',
+    processing: 'brand',
+    failed: 'danger',
+    expired: 'neutral',
 };
+
 
 const toneClasses: Record<StatusTone, string> = {
     neutral: 'bg-surface-subtle text-ink-soft',

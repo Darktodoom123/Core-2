@@ -327,9 +327,11 @@ export default function Workspace(props: WorkspacePageProps) {
                         auditEvents={props.auditEvents}
                         capabilities={props.capabilities}
                         jobReports={props.jobReports}
+                        reportExports={props.reportExports}
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                     />
+
                 )}
             </LiveWorkspaceShell>
         </>
