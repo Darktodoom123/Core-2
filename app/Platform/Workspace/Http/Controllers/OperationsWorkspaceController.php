@@ -56,7 +56,6 @@ final class OperationsWorkspaceController extends Controller
         ]);
     }
 
-
     /** @return Collection<int, LocationUpdate> */
     private function fetchLocations(User $user): Collection
     {
@@ -306,4 +305,3 @@ final class OperationsWorkspaceController extends Controller
             ->get();
     }
 }
-

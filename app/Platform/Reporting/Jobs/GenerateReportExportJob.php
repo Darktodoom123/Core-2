@@ -181,7 +181,6 @@ class GenerateReportExportJob implements ShouldQueue
             });
     }
 
-
     /**
      * @param  list<string>  $headers
      * @param  list<list<mixed>>  $rows

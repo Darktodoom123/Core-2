@@ -567,7 +567,6 @@ final class OperationsWorkspaceViewModel
         ])->values()->all();
     }
 
-
     /**
      * @param  Collection<int, GptRecommendation>  $recommendations
      * @return array<int, array<string, mixed>>

@@ -16,4 +16,3 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
     Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download']);
     Route::post('/reports/exports/{export}/retry', [ReportExportController::class, 'retry']);
 });
-

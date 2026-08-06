@@ -3,6 +3,7 @@
 namespace App\Platform\Reporting\Http\Requests;
 
 use App\Platform\Reporting\Enums\ReportExportType;
+use App\Platform\Reporting\Models\ReportExport;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +11,7 @@ class StoreReportExportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null && $this->user()->can('create', \App\Platform\Reporting\Models\ReportExport::class);
+        return $this->user() !== null && $this->user()->can('create', ReportExport::class);
     }
 
     /** @return array<string, mixed> */
