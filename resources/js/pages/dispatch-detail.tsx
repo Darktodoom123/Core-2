@@ -14,6 +14,7 @@ import {
     Navigation,
     RefreshCw,
     ShieldCheck,
+    Sparkles,
     Truck,
     UserRound,
     Wrench,
@@ -142,11 +143,27 @@ export default function DispatchDetail({
                                     {job.reference} · {job.client}
                                 </p>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <CanonicalStatusBadge status={job.priority} />
                                 <span className="inline-flex min-h-6 items-center rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
                                     Version {job.version}
                                 </span>
+                                {capabilities.request_gpt_assistance && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => {
+                                            router.post('/operations/gpt-recommendations', {
+                                                subject_type: 'dispatch_job',
+                                                subject_id: job.id,
+                                                purpose: 'dispatch_assignment',
+                                            });
+                                        }}
+                                    >
+                                        <Sparkles className="h-4 w-4 text-amber-500" />
+                                        Request AI Assistance
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>

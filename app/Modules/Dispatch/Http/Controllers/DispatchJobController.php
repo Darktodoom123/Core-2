@@ -174,6 +174,7 @@ final class DispatchJobController extends Controller
                 'reopen' => Gate::forUser($user)->allows('reopen', $job),
                 'archive' => Gate::forUser($user)->allows('archive', $job),
                 'restore' => Gate::forUser($user)->allows('restore', $job),
+                'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             ],
         ]);
     }

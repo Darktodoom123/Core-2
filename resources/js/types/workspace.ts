@@ -576,5 +576,6 @@ export interface DispatchDetailPageProps {
         reopen: boolean;
         archive: boolean;
         restore: boolean;
+        request_gpt_assistance?: boolean;
     };
 }

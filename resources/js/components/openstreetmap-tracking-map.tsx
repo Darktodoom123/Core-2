@@ -550,7 +550,7 @@ export function OpenStreetMapTrackingMap({
                                 <div
                                     key={location.id}
                                     className={cn(
-                                        'group relative flex flex-col p-3.5 transition-all duration-150',
+                                        'group relative flex items-start justify-between p-3.5 transition-all duration-150',
                                         isSelected
                                             ? 'bg-brand-soft/80 font-medium text-ink shadow-2xs ring-1 ring-brand-strong/20'
                                             : 'text-ink-soft hover:bg-surface-subtle',
@@ -564,7 +564,7 @@ export function OpenStreetMapTrackingMap({
                                             setSelectedId(location.id)
                                         }
                                         disabled={!isMapped}
-                                        className="min-h-[44px] w-full text-left focus:outline-none"
+                                        className="min-h-[44px] flex-1 text-left focus:outline-none"
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2.5">
@@ -626,28 +626,28 @@ export function OpenStreetMapTrackingMap({
                                                     ? `${location.latitude!.toFixed(5)}, ${location.longitude!.toFixed(5)}`
                                                     : 'Coordinates unavailable'}
                                             </span>
-                                            {isMapped && (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) =>
-                                                        copyCoordinates(
-                                                            location,
-                                                            e,
-                                                        )
-                                                    }
-                                                    className="rounded p-1 text-ink-soft transition-colors hover:text-ink"
-                                                    title="Copy coordinates"
-                                                >
-                                                    {copiedId ===
-                                                    location.id ? (
-                                                        <Check className="h-3.5 w-3.5 text-success-strong" />
-                                                    ) : (
-                                                        <Copy className="h-3.5 w-3.5" />
-                                                    )}
-                                                </button>
-                                            )}
                                         </div>
                                     </button>
+
+                                    {isMapped && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) =>
+                                                copyCoordinates(
+                                                    location,
+                                                    e,
+                                                )
+                                            }
+                                            className="ml-2 rounded p-1 text-ink-soft transition-colors hover:text-ink focus:outline-none"
+                                            title="Copy coordinates"
+                                        >
+                                            {copiedId === location.id ? (
+                                                <Check className="h-3.5 w-3.5 text-success-strong" />
+                                            ) : (
+                                                <Copy className="h-3.5 w-3.5" />
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             );
                         })
