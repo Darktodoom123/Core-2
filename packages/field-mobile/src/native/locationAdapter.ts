@@ -16,7 +16,6 @@ export class NativeLocationAdapter {
     private isInitialized = false;
 
     private async getModule(): Promise<typeof LocationModule | null> {
-
         if (this.isInitialized) {
             return this.locationModule;
         }
@@ -35,6 +34,7 @@ export class NativeLocationAdapter {
     }
 
     public async checkPermissions(): Promise<LocationPermissionState> {
+
         const mod = await this.getModule();
 
         if (!mod) {
