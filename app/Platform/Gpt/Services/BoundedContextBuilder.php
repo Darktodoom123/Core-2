@@ -33,10 +33,12 @@ final class BoundedContextBuilder
             ->where('is_active', true)
             ->whereNull('suspended_at')
             ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials', 'dispatchAssignments.job'])
+            ->orderBy('id')
             ->get();
 
         $candidateAssets = OperationalAsset::query()
             ->with(['maintenanceWorkOrders', 'assignments.job', 'inspections'])
+            ->orderBy('id')
             ->get();
 
         $personnelCandidates = [];

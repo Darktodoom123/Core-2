@@ -330,6 +330,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         reportExports={props.reportExports}
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
+                        gptRecommendations={props.gptRecommendations}
                     />
 
                 )}

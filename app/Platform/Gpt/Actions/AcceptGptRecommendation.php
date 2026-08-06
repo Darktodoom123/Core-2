@@ -73,8 +73,10 @@ final class AcceptGptRecommendation
             /** @var list<array{operational_asset_id: int, assignment_type: string}> $assets */
             $assets = is_array($rawPayload['proposed_assets'] ?? null) ? $rawPayload['proposed_assets'] : [];
 
-            // Revalidate and execute operational mutation via the normal domain action under human authority
-            $updatedJob = $this->assignAction->handle($actor, $job, $personnel, $assets);
+            // Execute operational mutation via the normal domain action under human authority if resources are proposed
+            if ($personnel !== [] || $assets !== []) {
+                $this->assignAction->handle($actor, $job, $personnel, $assets);
+            }
 
             $lockedRecommendation->update([
                 'status' => 'accepted',
@@ -96,7 +98,7 @@ final class AcceptGptRecommendation
                 ]
             );
 
-            return $updatedJob;
+            return $job->fresh() ?? $job;
         });
     }
 }

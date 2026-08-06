@@ -14,6 +14,7 @@ import {
     Menu,
     RefreshCw,
     ShieldCheck,
+    Sparkles,
     Truck,
     Users,
     X,
@@ -40,6 +41,7 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     reports: FileText,
     notifications: Bell,
     archive: Archive,
+    'gpt-recommendations': Sparkles,
     users: Users,
     audit: Bot,
 };

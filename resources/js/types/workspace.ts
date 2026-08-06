@@ -381,6 +381,7 @@ export type WorkspaceSection =
     | 'reports'
     | 'notifications'
     | 'archive'
+    | 'gpt-recommendations'
     | 'users'
     | 'audit';
 
@@ -434,13 +435,17 @@ export interface GptRecommendationViewModel {
     purpose: string;
     context_hash: string;
     status: string;
+    is_stale?: boolean;
     prompt_summary: string | null;
     response_summary: string | null;
     recommendation: Record<string, unknown>;
+    proposed_personnel?: Array<{ user_id: number; name?: string; role?: string; assignment_type: string }>;
+    proposed_assets?: Array<{ operational_asset_id: number; asset_code?: string; name?: string; assignment_type: string }>;
     conflicts: Array<Record<string, unknown>>;
     model: string;
     cost_usd: number | null;
     expires_at: string | null;
+    expires_in_seconds?: number;
     is_expired: boolean;
     error_message: string | null;
     requested_by: {
@@ -451,6 +456,7 @@ export interface GptRecommendationViewModel {
         id: number;
         name: string;
     } | null;
+    decided_by_name?: string | null;
     decided_at: string | null;
     created_at: string | null;
     is_advisory: boolean;

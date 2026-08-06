@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import { ArchiveSurface } from '@/components/workspace/archive-workspace-section';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ import type {
     AssetViewModel,
     AuditEventViewModel,
     FuelRequestViewModel,
+    GptRecommendationViewModel,
     JobReportViewModel,
     LocationUpdateViewModel,
     NotificationViewModel,
@@ -43,6 +45,7 @@ export function LiveWorkspaceSection({
     reportExports = [],
     notifications = [],
     archivedJobs = [],
+    gptRecommendations = [],
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
@@ -56,6 +59,7 @@ export function LiveWorkspaceSection({
     reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
+    gptRecommendations?: GptRecommendationViewModel[];
 }) {
     switch (section) {
         case 'assets':
@@ -98,6 +102,13 @@ export function LiveWorkspaceSection({
             return (
                 <ArchiveSurface
                     jobs={archivedJobs}
+                    capabilities={capabilities}
+                />
+            );
+        case 'gpt-recommendations':
+            return (
+                <GptRecommendationsSurface
+                    recommendations={gptRecommendations}
                     capabilities={capabilities}
                 />
             );

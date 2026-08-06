@@ -33,6 +33,7 @@ final class RejectGptRecommendation
                 'status' => 'rejected',
                 'decided_by' => $actor->id,
                 'decided_at' => now(),
+                'response_summary' => $reason,
             ]);
 
             $subject = $recommendation->subject;
