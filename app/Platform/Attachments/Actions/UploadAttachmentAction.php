@@ -23,6 +23,8 @@ final class UploadAttachmentAction
         string $kind = 'document',
         ?Carbon $retentionUntil = null
     ): Attachment {
+        $retentionUntil ??= now()->addDays((int) config('attachments.retention_days'));
+
         $sizeBytes = (int) $file->getSize();
         if ($sizeBytes > (int) config('attachments.max_bytes')) {
             throw new InvalidArgumentException('File size exceeds the maximum limit of 15 MiB.');

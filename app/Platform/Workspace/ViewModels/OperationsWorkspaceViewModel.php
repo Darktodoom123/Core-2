@@ -514,7 +514,7 @@ final class OperationsWorkspaceViewModel
             ])->values()->all();
     }
 
-    /** @return array<string, bool> */
+    /** @return array<string, mixed> */
     public static function capabilities(User $user): array
     {
         return [
@@ -539,6 +539,13 @@ final class OperationsWorkspaceViewModel
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
+            'attachment_upload' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
+            'attachment_policy' => [
+                'owner_type' => 'job_report',
+                'max_bytes' => (int) config('attachments.max_bytes'),
+                'max_count' => (int) config('attachments.max_count_per_owner'),
+                'accepted_mime_types' => array_keys(config('attachments.mime_extensions', [])),
+            ],
             'review_job_report' => $user->can(PermissionName::ReportsViewAll->value) || $user->can(PermissionName::ReportsViewDispatch->value),
             'export_reports' => $user->can(PermissionName::ReportsExport->value),
             'manage_notifications' => true,

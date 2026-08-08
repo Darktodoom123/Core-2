@@ -23,7 +23,6 @@ class UploadAttachmentRequest extends FormRequest
             'owner_type' => ['required', 'string', Rule::in(AttachmentOwnerResolver::acceptedTypes())],
             'owner_id' => ['required', 'integer', 'min:1'],
             'kind' => ['nullable', 'string', 'max:32'],
-            'retention_until' => ['nullable', 'date'],
         ];
     }
 

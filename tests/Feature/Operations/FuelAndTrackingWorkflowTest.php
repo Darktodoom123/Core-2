@@ -14,8 +14,10 @@ use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -332,6 +334,43 @@ it('handles receipt file uploads securely during fuel logging', function () {
     expect($attachment->kind)->toBe('fuel_receipt')
         ->and($attachment->original_filename)->toBe('fuel_receipt.pdf')
         ->and($attachment->mime_type)->toBe('application/pdf');
+});
+
+it('rolls back fuel state and receipt storage when audit persistence fails after upload', function () {
+    Storage::fake('private');
+
+    $driver = fieldUser(RoleName::Driver);
+    $fuel = FuelRequest::query()->create([
+        'reference' => 'FUEL-RECEIPT-ROLLBACK',
+        'requester_id' => $driver->id,
+        'quantity_litres' => 90,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Receipt rollback test',
+        'status' => FuelRequestStatus::Verified,
+    ]);
+
+    $auditWrites = 0;
+    DB::listen(function (QueryExecuted $query) use (&$auditWrites): void {
+        if (str_contains(strtolower($query->sql), 'insert into "audit_events"')) {
+            $auditWrites++;
+            if ($auditWrites >= 2) {
+                throw new RuntimeException('simulated fuel audit persistence failure');
+            }
+        }
+    });
+
+    $this->actingAs($driver)
+        ->post("/operations/fuel-requests/{$fuel->id}/status", [
+            'status' => 'logged',
+            'quantity_litres' => 90,
+            'receipt' => UploadedFile::fake()->create('rollback.pdf', 100, 'application/pdf'),
+        ])
+        ->assertServerError();
+
+    expect($fuel->fresh()->status)->toBe(FuelRequestStatus::Verified)
+        ->and(FuelLog::query()->count())->toBe(0)
+        ->and(Attachment::query()->count())->toBe(0)
+        ->and(Storage::disk('private')->allFiles())->toBe([]);
 });
 
 it('accepts own location sharing but reserves the all-operations feed for office roles', function () {

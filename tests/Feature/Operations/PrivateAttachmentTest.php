@@ -3,15 +3,23 @@
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fuel\Enums\FuelRequestStatus;
+use App\Modules\Fuel\Models\FuelLog;
+use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Jobs\PruneExpiredAttachmentsJob;
 use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -62,7 +70,9 @@ it('allows uploading a valid attachment and computes sha256 checksum', function 
         ->and($attachment->mime_type)->toBe('application/pdf')
         ->and($attachment->checksum_sha256)->not()->toBeEmpty()
         ->and($attachment->disk)->toBe('private')
-        ->and($attachment->path)->toEndWith('.pdf');
+        ->and($attachment->path)->toEndWith('.pdf')
+        ->and($attachment->retention_until)->not()->toBeNull()
+        ->and($attachment->retention_until->isFuture())->toBeTrue();
 
     Storage::disk('private')->assertExists($attachment->path);
     expect(AuditEvent::query()->where('action', 'attachment.uploaded')->exists())->toBeTrue();
@@ -268,4 +278,142 @@ it('returns not found when an authorized attachment file is missing from private
     $this->actingAs($uploader)
         ->get("/operations/attachments/{$attachment->id}/download")
         ->assertNotFound();
+});
+
+it('prunes expired generic attachments idempotently and records an audit event', function (): void {
+    $user = createAttachUser(RoleName::Dispatcher);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-RETENTION',
+        'client' => 'Client',
+        'title' => 'Retention dispatch',
+        'site' => 'Site',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $user->id,
+        'version' => 1,
+    ]);
+
+    Storage::disk('private')->put('attachments/expired.pdf', 'expired');
+    Storage::disk('private')->put('attachments/active.pdf', 'active');
+
+    $expired = Attachment::query()->create([
+        'owner_type' => $job->getMorphClass(),
+        'owner_id' => $job->id,
+        'uploaded_by' => $user->id,
+        'kind' => 'document',
+        'disk' => 'private',
+        'path' => 'attachments/expired.pdf',
+        'original_filename' => 'expired.pdf',
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 7,
+        'checksum_sha256' => hash('sha256', 'expired'),
+        'retention_until' => now()->subMinute(),
+    ]);
+    $active = Attachment::query()->create([
+        'owner_type' => $job->getMorphClass(),
+        'owner_id' => $job->id,
+        'uploaded_by' => $user->id,
+        'kind' => 'document',
+        'disk' => 'private',
+        'path' => 'attachments/active.pdf',
+        'original_filename' => 'active.pdf',
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 6,
+        'checksum_sha256' => hash('sha256', 'active'),
+        'retention_until' => now()->addDay(),
+    ]);
+
+    (new PruneExpiredAttachmentsJob)->handle(app(RecordAuditEvent::class));
+
+    expect(Attachment::query()->find($expired->id))->toBeNull()
+        ->and(Attachment::query()->find($active->id))->not()->toBeNull()
+        ->and(Storage::disk('private')->exists('attachments/expired.pdf'))->toBeFalse()
+        ->and(Storage::disk('private')->exists('attachments/active.pdf'))->toBeTrue()
+        ->and(AuditEvent::query()->where('action', 'attachment.expired')->count())->toBe(1);
+
+    (new PruneExpiredAttachmentsJob)->handle(app(RecordAuditEvent::class));
+
+    expect(AuditEvent::query()->where('action', 'attachment.expired')->count())->toBe(1);
+});
+
+it('prunes expired fuel receipts and clears the fuel log path', function (): void {
+    $user = createAttachUser(RoleName::Driver);
+    $fuel = FuelRequest::query()->create([
+        'reference' => 'FUEL-ATT-RETENTION',
+        'requester_id' => $user->id,
+        'quantity_litres' => 20,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Retention test',
+        'status' => FuelRequestStatus::Logged,
+    ]);
+    $path = 'attachments/fuel-expired.pdf';
+    Storage::disk('private')->put($path, 'receipt');
+    $log = FuelLog::query()->create([
+        'fuel_request_id' => $fuel->id,
+        'recorded_by' => $user->id,
+        'quantity_litres' => 20,
+        'receipt_path' => $path,
+        'recorded_at' => now(),
+    ]);
+    $attachment = Attachment::query()->create([
+        'owner_type' => $log->getMorphClass(),
+        'owner_id' => $log->id,
+        'uploaded_by' => $user->id,
+        'kind' => 'fuel_receipt',
+        'disk' => 'private',
+        'path' => $path,
+        'original_filename' => 'receipt.pdf',
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 7,
+        'checksum_sha256' => hash('sha256', 'receipt'),
+        'retention_until' => now()->subDay(),
+    ]);
+
+    (new PruneExpiredAttachmentsJob)->handle(app(RecordAuditEvent::class));
+
+    expect(Attachment::query()->find($attachment->id))->toBeNull()
+        ->and($log->fresh()->receipt_path)->toBeNull()
+        ->and(Storage::disk('private')->exists($path))->toBeFalse()
+        ->and(AuditEvent::query()->where('action', 'attachment.expired')->exists())->toBeTrue();
+});
+
+it('registers bounded attachment retention cleanup with the scheduler', function (): void {
+    expect(collect(app(Schedule::class)->events())
+        ->contains(fn ($event): bool => str_contains($event->description ?? '', 'attachments:prune-expired')))
+        ->toBeTrue();
+});
+
+it('removes the stored file when audit persistence fails after upload', function (): void {
+    $user = createAttachUser(RoleName::Dispatcher);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-AUDIT-FAIL',
+        'client' => 'Client',
+        'title' => 'Audit failure',
+        'site' => 'Site',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $user->id,
+        'version' => 1,
+    ]);
+
+    DB::listen(function (QueryExecuted $query): void {
+        if (str_contains(strtolower($query->sql), 'insert into "audit_events"')) {
+            throw new RuntimeException('simulated audit persistence failure');
+        }
+    });
+
+    $this->actingAs($user)
+        ->postJson('/operations/attachments', [
+            'file' => UploadedFile::fake()->create('audit-failure.pdf', 10, 'application/pdf'),
+            'owner_type' => 'dispatch_job',
+            'owner_id' => $job->id,
+        ])
+        ->assertServerError();
+
+    expect(Attachment::query()->count())->toBe(0)
+        ->and(Storage::disk('private')->allFiles())->toBe([]);
 });

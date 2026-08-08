@@ -412,6 +412,13 @@ export interface WorkspaceCapabilities {
     request_gpt_assistance: boolean;
     decide_gpt_recommendation: boolean;
     create_job_report: boolean;
+    attachment_upload: boolean;
+    attachment_policy: {
+        owner_type: 'job_report';
+        max_bytes: number;
+        max_count: number;
+        accepted_mime_types: string[];
+    };
     review_job_report: boolean;
     export_reports: boolean;
     manage_notifications: boolean;

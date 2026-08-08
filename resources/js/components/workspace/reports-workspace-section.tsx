@@ -36,7 +36,10 @@ export function ReportsSurface({
                 {capabilities.create_job_report && (
                     <div className="flex justify-end">
                         <Button
+                            id="report-submit-toggle"
                             variant={showSubmitModal ? 'secondary' : 'primary'}
+                            aria-expanded={showSubmitModal}
+                            aria-controls="report-submit-form"
                             onClick={() => setShowSubmitModal(!showSubmitModal)}
                         >
                             <Plus className="mr-2 h-4 w-4" />
@@ -49,7 +52,15 @@ export function ReportsSurface({
 
                 {showSubmitModal && capabilities.create_job_report && (
                     <SubmitJobReportForm
-                        onDone={() => setShowSubmitModal(false)}
+                        capabilities={capabilities}
+                        onDone={() => {
+                            setShowSubmitModal(false);
+                            window.setTimeout(() => {
+                                document
+                                    .getElementById('report-submit-toggle')
+                                    ?.focus();
+                            }, 0);
+                        }}
                     />
                 )}
 
@@ -144,19 +155,38 @@ export function ReportsSurface({
     );
 }
 
-function SubmitJobReportForm({ onDone }: { onDone: () => void }) {
+function SubmitJobReportForm({
+    capabilities,
+    onDone,
+}: {
+    capabilities: WorkspaceCapabilities;
+    onDone: () => void;
+}) {
     const form = useForm({
         dispatch_job_id: '',
         work_summary: '',
         remarks: '',
         started_at: '',
         ended_at: '',
+        attachments: [] as File[],
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
         form.post('/operations/job-reports', {
             preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                form.reset();
+                onDone();
+            },
+        });
+    };
+
+    const retry = () => {
+        form.post('/operations/job-reports', {
+            preserveScroll: true,
+            forceFormData: true,
             onSuccess: () => {
                 form.reset();
                 onDone();
@@ -165,11 +195,16 @@ function SubmitJobReportForm({ onDone }: { onDone: () => void }) {
     };
 
     return (
-        <Panel className="p-4 md:p-6">
+        <Panel id="report-submit-form" className="p-4 md:p-6">
             <h3 className="text-base font-semibold text-ink">
                 Submit Job Report
             </h3>
-            <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
+            <form
+                onSubmit={submit}
+                className="mt-4 space-y-4"
+                noValidate
+                aria-busy={form.processing}
+            >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                         <label className="block text-sm font-medium text-ink">
@@ -226,6 +261,103 @@ function SubmitJobReportForm({ onDone }: { onDone: () => void }) {
                         placeholder="Additional operational observations or notes"
                     />
                 </div>
+
+                {capabilities.attachment_upload && (
+                    <div>
+                        <label
+                            htmlFor="report-attachments"
+                            className="block text-sm font-medium text-ink"
+                        >
+                            Evidence attachments
+                        </label>
+                        <input
+                            id="report-attachments"
+                            type="file"
+                            multiple
+                            accept={capabilities.attachment_policy.accepted_mime_types.join(
+                                ',',
+                            )}
+                            onChange={(event) =>
+                                form.setData(
+                                    'attachments',
+                                    Array.from(event.target.files ?? []),
+                                )
+                            }
+                            className="mt-1 block w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:font-semibold file:text-ink"
+                        />
+                        <p className="mt-1 text-xs text-ink-soft">
+                            Up to {capabilities.attachment_policy.max_count}{' '}
+                            files,{' '}
+                            {Math.round(
+                                capabilities.attachment_policy.max_bytes /
+                                    1024 /
+                                    1024,
+                            )}{' '}
+                            MiB each. Files stay private and are checked by
+                            content.
+                        </p>
+                        <p className="mt-1 text-xs text-ink-soft">
+                            Files are linked to this report by the server after
+                            submission.
+                        </p>
+                        {form.data.attachments.length > 0 && (
+                            <ul
+                                className="mt-2 space-y-1 text-xs text-ink-soft"
+                                aria-label="Selected attachments"
+                            >
+                                {form.data.attachments.map((file) => (
+                                    <li
+                                        key={`${file.name}-${file.lastModified}`}
+                                    >
+                                        {file.name}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {form.errors.attachments && (
+                            <p
+                                className="mt-1 text-xs text-danger"
+                                role="alert"
+                            >
+                                {form.errors.attachments}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {form.progress && (
+                    <div aria-live="polite" className="space-y-1">
+                        <div className="flex justify-between text-xs text-ink-soft">
+                            <span>Uploading securely…</span>
+                            <span>{form.progress.percentage}%</span>
+                        </div>
+                        <progress
+                            className="h-2 w-full accent-brand"
+                            value={form.progress.percentage}
+                            max="100"
+                            aria-label="Upload progress"
+                        />
+                    </div>
+                )}
+
+                {Object.keys(form.errors).length > 0 && (
+                    <div
+                        className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+                        role="alert"
+                    >
+                        <p>
+                            We could not submit the report. Check the
+                            highlighted fields and try again.
+                        </p>
+                        <button
+                            type="button"
+                            className="mt-2 font-semibold underline"
+                            onClick={retry}
+                        >
+                            Retry submission
+                        </button>
+                    </div>
+                )}
 
                 <div className="flex justify-end gap-3 border-t border-line pt-4">
                     <Button type="button" variant="secondary" onClick={onDone}>

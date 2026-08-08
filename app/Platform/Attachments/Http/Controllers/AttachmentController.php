@@ -11,7 +11,6 @@ use App\Platform\Audit\Models\AuditEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,17 +28,13 @@ class AttachmentController extends Controller
         $owner = $owners->resolve((string) $ownerType, $ownerId);
         Gate::forUser($request->user())->authorize('view', $owner);
 
-        $retentionUntil = $request->input('retention_until')
-            ? Carbon::parse($request->input('retention_until'))
-            : null;
-
         try {
             $attachment = $action->execute(
                 $request->user(),
                 $owner,
                 $request->file('file'),
                 $request->input('kind', 'document'),
-                $retentionUntil,
+                null,
             );
         } catch (InvalidArgumentException $exception) {
             throw ValidationException::withMessages([
