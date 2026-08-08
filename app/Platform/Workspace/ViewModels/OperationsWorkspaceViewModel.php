@@ -12,6 +12,7 @@ use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
@@ -595,8 +596,8 @@ final class OperationsWorkspaceViewModel
             'subject_id' => $rec->subject_id,
             'purpose' => $rec->purpose,
             'context_hash' => $rec->context_hash,
-            'status' => $rec->status,
-            'is_stale' => $rec->status === 'stale',
+            'status' => $rec->status->value,
+            'is_stale' => $rec->status === GptRecommendationStatus::Stale,
             'prompt_summary' => $rec->prompt_summary,
             'response_summary' => $rec->response_summary,
             'recommendation' => $rec->recommendation ?? [],
@@ -605,6 +606,9 @@ final class OperationsWorkspaceViewModel
             'conflicts' => $rec->conflicts ?? [],
             'model' => $rec->model,
             'cost_usd' => $rec->cost_usd !== null ? (float) $rec->cost_usd : null,
+            'generated_at' => $rec->generated_at?->toIso8601String(),
+            'latency_ms' => $rec->latency_ms,
+            'purge_at' => $rec->purge_at?->toIso8601String(),
             'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
             'expires_in_seconds' => $rec->expires_at instanceof Carbon ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
             'is_expired' => $rec->isExpired(),

@@ -52,7 +52,7 @@ test('authorized dispatcher can reject a pending gpt recommendation with reason'
     $response->assertSessionHas('flash.info');
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('rejected')
+    expect($recommendation->status->value)->toBe('rejected')
         ->and($recommendation->decided_by)->toBe($dispatcher->id)
         ->and($recommendation->decided_at)->not->toBeNull();
 

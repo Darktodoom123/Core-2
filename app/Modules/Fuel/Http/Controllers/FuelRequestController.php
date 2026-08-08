@@ -47,7 +47,7 @@ final class FuelRequestController extends Controller
             'total_cost' => ['nullable', 'numeric', 'min:0'],
             'fuel_station' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string', 'max:2000'],
-            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,webp', 'max:10240'],
+            'receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:15360'],
         ]);
 
         $status = FuelRequestStatus::from($validated['status']);

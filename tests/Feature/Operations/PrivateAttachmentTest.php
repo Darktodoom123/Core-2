@@ -18,7 +18,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
-    Storage::fake('local');
+    Storage::fake('private');
 });
 
 function createAttachUser(RoleName $role): User
@@ -61,9 +61,10 @@ it('allows uploading a valid attachment and computes sha256 checksum', function 
         ->and($attachment->original_filename)->toBe('site_plan.pdf')
         ->and($attachment->mime_type)->toBe('application/pdf')
         ->and($attachment->checksum_sha256)->not()->toBeEmpty()
-        ->and($attachment->disk)->toBe('local');
+        ->and($attachment->disk)->toBe('private')
+        ->and($attachment->path)->toEndWith('.pdf');
 
-    Storage::disk('local')->assertExists($attachment->path);
+    Storage::disk('private')->assertExists($attachment->path);
     expect(AuditEvent::query()->where('action', 'attachment.uploaded')->exists())->toBeTrue();
 });
 
@@ -103,6 +104,34 @@ it('rejects invalid upload types and oversized files', function (): void {
         ])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['file']);
+});
+
+it('uses the detected MIME type rather than the client-provided extension', function (): void {
+    $user = createAttachUser(RoleName::Dispatcher);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-MIME',
+        'client' => 'Client',
+        'title' => 'Title',
+        'site' => 'Site',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $user->id,
+        'version' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->postJson('/operations/attachments', [
+        'file' => UploadedFile::fake()->create('misleading.jpg', 20, 'application/pdf'),
+        'owner_type' => 'dispatch_job',
+        'owner_id' => $job->id,
+    ]);
+
+    $response->assertCreated();
+
+    $attachment = Attachment::query()->sole();
+    expect($attachment->mime_type)->toBe('application/pdf')
+        ->and($attachment->path)->toEndWith('.pdf');
 });
 
 it('enforces maximum limit of 10 attachments per owner record', function (): void {
@@ -175,14 +204,14 @@ it('enforces file isolation preventing unauthorized user from downloading privat
 
     $fileContent = 'Confidential Report Content';
     $path = 'attachments/private/secret.pdf';
-    Storage::disk('local')->put($path, $fileContent);
+    Storage::disk('private')->put($path, $fileContent);
 
     $attachment = Attachment::query()->create([
         'owner_type' => (new JobReport)->getMorphClass(),
         'owner_id' => $report->id,
         'uploaded_by' => $uploader->id,
         'kind' => 'document',
-        'disk' => 'local',
+        'disk' => 'private',
         'path' => $path,
         'original_filename' => 'secret.pdf',
         'mime_type' => 'application/pdf',
@@ -228,7 +257,7 @@ it('returns not found when an authorized attachment file is missing from private
         'owner_id' => $job->id,
         'uploaded_by' => $uploader->id,
         'kind' => 'document',
-        'disk' => 'local',
+        'disk' => 'private',
         'path' => 'attachments/missing.pdf',
         'original_filename' => 'missing.pdf',
         'mime_type' => 'application/pdf',

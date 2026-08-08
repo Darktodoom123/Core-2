@@ -1,6 +1,14 @@
 FROM composer:2 AS composer-builder
 WORKDIR /app
 
+RUN apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    $PHPIZE_DEPS \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd
+
 COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
@@ -8,6 +16,35 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader \
     --no-scripts
+
+# This target intentionally contains only the PHP runtime needed by the
+# PostgreSQL row-lock tests. Compose mounts the working tree and its existing
+# development dependencies, so the production image stays production-only.
+FROM php:8.4-cli-alpine AS test-runner
+
+RUN apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    icu-dev \
+    oniguruma-dev \
+    sqlite-dev \
+    postgresql-dev \
+    $PHPIZE_DEPS \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        pdo_pgsql \
+        pdo_sqlite \
+        bcmath \
+        mbstring \
+        zip \
+        pcntl \
+        gd \
+        intl
+
+WORKDIR /var/www/html
 
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app

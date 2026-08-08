@@ -66,7 +66,7 @@ it('allows authorized dispatcher to request GPT recommendation and queues backgr
         ->and($recommendation->requested_by)->toBe($dispatcher->id)
         ->and($recommendation->subject_id)->toBe($job->id)
         ->and($recommendation->purpose)->toBe('dispatch_assignment')
-        ->and($recommendation->status)->toBe('draft');
+        ->and($recommendation->status->value)->toBe('draft');
 
     Queue::assertPushed(GenerateGptRecommendationJob::class);
 });
@@ -114,7 +114,7 @@ it('allows authorized dispatcher to accept valid GPT recommendation and record a
         ->assertRedirect();
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('accepted')
+    expect($recommendation->status->value)->toBe('accepted')
         ->and($recommendation->decided_by)->toBe($dispatcher->id)
         ->and($recommendation->decided_at)->not()->toBeNull();
 
@@ -144,7 +144,7 @@ it('rejects acceptance of expired GPT recommendation after 15 minutes', function
         ->assertSessionHasErrors('gpt');
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('expired');
+    expect($recommendation->status->value)->toBe('expired');
 });
 
 it('rejects acceptance when dispatch context hash changes (stale revalidation)', function (): void {
@@ -170,7 +170,7 @@ it('rejects acceptance when dispatch context hash changes (stale revalidation)',
         ->assertSessionHasErrors('gpt');
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('stale');
+    expect($recommendation->status->value)->toBe('stale');
 });
 
 it('rejects acceptance when the dispatch version changes after recommendation generation', function (): void {
@@ -198,7 +198,7 @@ it('rejects acceptance when the dispatch version changes after recommendation ge
         ->post("/operations/gpt-recommendations/{$recommendation->id}/accept")
         ->assertSessionHasErrors('gpt');
 
-    expect($recommendation->fresh()->status)->toBe('stale');
+    expect($recommendation->fresh()->status->value)->toBe('stale');
 });
 
 it('allows human actor to reject GPT recommendation with optional reason', function (): void {
@@ -226,7 +226,7 @@ it('allows human actor to reject GPT recommendation with optional reason', funct
         ->assertRedirect();
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('rejected')
+    expect($recommendation->status->value)->toBe('rejected')
         ->and($recommendation->decided_by)->toBe($dispatcher->id)
         ->and($recommendation->response_summary)->toBe('Resource requested off shift');
 
@@ -278,7 +278,7 @@ it('prevents a second terminal GPT decision', function (): void {
         ->post("/operations/gpt-recommendations/{$recommendation->id}/accept")
         ->assertSessionHasErrors('gpt');
 
-    expect($recommendation->fresh()->status)->toBe('rejected');
+    expect($recommendation->fresh()->status->value)->toBe('rejected');
 });
 
 it('does not resurrect a recommendation rejected while its generation job is processing', function (): void {
@@ -317,6 +317,6 @@ it('does not resurrect a recommendation rejected while its generation job is pro
         app(RecordAuditEvent::class),
     );
 
-    expect($recommendation->fresh()->status)->toBe('rejected');
+    expect($recommendation->fresh()->status->value)->toBe('rejected');
     OpenAiClientWrapper::resetFakes();
 });

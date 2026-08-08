@@ -91,8 +91,8 @@ test('handles openai timeout gracefully and sets status failed', function (): vo
     $jobHandler->handle(app(OpenAiClientWrapper::class), app(RecordAuditEvent::class));
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('failed')
-        ->and($recommendation->error_message)->toContain('timed out');
+    expect($recommendation->status->value)->toBe('failed')
+        ->and($recommendation->error_message)->toBe('GPT generation timed out. Please retry.');
 });
 
 test('handles model refusal gracefully and sets status failed', function (): void {
@@ -133,6 +133,7 @@ test('handles model refusal gracefully and sets status failed', function (): voi
     $jobHandler->handle(app(OpenAiClientWrapper::class), app(RecordAuditEvent::class));
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('failed')
-        ->and($recommendation->error_message)->toContain('refused');
+    expect($recommendation->status->value)->toBe('failed')
+        ->and($recommendation->error_message)->toBe('GPT generation failed. Please retry.')
+        ->and($recommendation->error_message)->not->toContain('refused');
 });

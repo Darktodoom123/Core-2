@@ -455,6 +455,9 @@ export interface GptRecommendationViewModel {
     conflicts: Array<Record<string, unknown>>;
     model: string;
     cost_usd: number | null;
+    generated_at: string | null;
+    latency_ms: number | null;
+    purge_at: string | null;
     expires_at: string | null;
     expires_in_seconds?: number;
     is_expired: boolean;

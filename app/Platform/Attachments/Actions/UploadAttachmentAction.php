@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
-class UploadAttachmentAction
+final class UploadAttachmentAction
 {
     public function execute(
         User $uploader,
@@ -22,85 +23,97 @@ class UploadAttachmentAction
         string $kind = 'document',
         ?Carbon $retentionUntil = null
     ): Attachment {
-        // Enforce max size: 15 MB = 15728640 bytes
-        if ($file->getSize() > 15728640) {
+        $sizeBytes = (int) $file->getSize();
+        if ($sizeBytes > (int) config('attachments.max_bytes')) {
             throw new InvalidArgumentException('File size exceeds the maximum limit of 15 MiB.');
         }
 
-        if ($file->getSize() === 0) {
+        if ($sizeBytes === 0) {
             throw new InvalidArgumentException('File cannot be empty.');
         }
 
-        // Validate MIME type
-        $allowedMimes = [
-            'image/jpeg',
-            'image/png',
-            'image/heic',
-            'image/heif',
-            'image/heic-sequence',
-            'image/heif-sequence',
-            'application/pdf',
-        ];
-
         $mimeType = $file->getMimeType();
-        if (! in_array($mimeType, $allowedMimes, true)) {
+        $extension = config("attachments.mime_extensions.{$mimeType}");
+        if (! is_string($extension)) {
             throw new InvalidArgumentException('Unsupported file MIME type. Only JPEG, PNG, HEIC/HEIF, and PDF are allowed.');
         }
 
-        return DB::transaction(function () use ($uploader, $owner, $file, $kind, $mimeType, $retentionUntil): Attachment {
-            $existingCount = Attachment::query()
-                ->where('owner_type', $owner->getMorphClass())
-                ->where('owner_id', $owner->getKey())
-                ->lockForUpdate()
-                ->count();
+        Gate::forUser($uploader)->authorize('view', $owner);
 
-            if ($existingCount >= 10) {
-                throw new InvalidArgumentException('Maximum attachment limit of 10 files per record has been reached.');
-            }
+        $disk = (string) config('attachments.disk');
+        $storedPath = null;
+        $requestId = request()->header('X-Request-ID');
+        if (! is_string($requestId) || ! Str::isUuid($requestId)) {
+            $requestId = (string) Str::uuid();
+        }
 
-            $checksum = hash_file('sha256', $file->getRealPath());
-            $uuid = (string) Str::uuid();
-            $extension = $file->getClientOriginalExtension() ?: 'bin';
-            $relativeDir = sprintf('attachments/%s/%s', date('Y'), date('m'));
-            $filename = sprintf('%s.%s', $uuid, $extension);
-            $path = sprintf('%s/%s', $relativeDir, $filename);
+        try {
+            return DB::transaction(function () use ($uploader, $owner, $file, $kind, $mimeType, $extension, $retentionUntil, $sizeBytes, $disk, $requestId, &$storedPath): Attachment {
+                // Serialize uploads per owner by locking its concrete row. PostgreSQL
+                // does not permit FOR UPDATE on an aggregate COUNT query, and locking
+                // only existing attachments would leave the zero-attachment case open.
+                $owner->newQuery()->whereKey($owner->getKey())->lockForUpdate()->firstOrFail();
 
-            // Store on local private disk
-            Storage::disk('local')->putFileAs($relativeDir, $file, $filename);
+                $existingCount = Attachment::query()
+                    ->where('owner_type', $owner->getMorphClass())
+                    ->where('owner_id', $owner->getKey())
+                    ->count();
 
-            $attachment = Attachment::query()->create([
-                'owner_type' => $owner->getMorphClass(),
-                'owner_id' => $owner->getKey(),
-                'uploaded_by' => $uploader->id,
-                'kind' => $kind,
-                'disk' => 'local',
-                'path' => $path,
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => $mimeType,
-                'size_bytes' => $file->getSize(),
-                'checksum_sha256' => $checksum,
-                'retention_until' => $retentionUntil,
-            ]);
+                if ($existingCount >= (int) config('attachments.max_count_per_owner')) {
+                    throw new InvalidArgumentException('Maximum attachment limit reached for this item.');
+                }
 
-            AuditEvent::query()->create([
-                'actor_id' => $uploader->id,
-                'subject_type' => $attachment->getMorphClass(),
-                'subject_id' => $attachment->id,
-                'action' => 'attachment.uploaded',
-                'after_state' => [
+                $checksum = hash_file('sha256', $file->getRealPath());
+                $relativeDir = sprintf('attachments/%s/%s', date('Y'), date('m'));
+                $filename = sprintf('%s.%s', (string) Str::uuid(), $extension);
+                $path = sprintf('%s/%s', $relativeDir, $filename);
+                $originalFilename = str_replace(["\0", '/', '\\'], '_', $file->getClientOriginalName());
+
+                $storedPath = Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
+                if ($storedPath !== $path) {
+                    throw new \RuntimeException('Unable to store attachment in private storage.');
+                }
+
+                $attachment = Attachment::query()->create([
                     'owner_type' => $owner->getMorphClass(),
                     'owner_id' => $owner->getKey(),
-                    'original_filename' => $attachment->original_filename,
+                    'uploaded_by' => $uploader->id,
+                    'kind' => $kind,
+                    'disk' => $disk,
+                    'path' => $path,
+                    'original_filename' => $originalFilename,
                     'mime_type' => $mimeType,
-                    'size_bytes' => $attachment->size_bytes,
+                    'size_bytes' => $sizeBytes,
                     'checksum_sha256' => $checksum,
-                ],
-                'request_id' => request()->header('X-Request-ID') ?? request()->ip(),
-                'ip_address' => request()->ip(),
-                'occurred_at' => now(),
-            ]);
+                    'retention_until' => $retentionUntil,
+                ]);
 
-            return $attachment;
-        });
+                AuditEvent::query()->create([
+                    'actor_id' => $uploader->id,
+                    'subject_type' => $attachment->getMorphClass(),
+                    'subject_id' => $attachment->id,
+                    'action' => 'attachment.uploaded',
+                    'after_state' => [
+                        'owner_type' => $owner->getMorphClass(),
+                        'owner_id' => $owner->getKey(),
+                        'original_filename' => $attachment->original_filename,
+                        'mime_type' => $mimeType,
+                        'size_bytes' => $attachment->size_bytes,
+                        'checksum_sha256' => $checksum,
+                    ],
+                    'request_id' => $requestId,
+                    'ip_address' => request()->ip(),
+                    'occurred_at' => now(),
+                ]);
+
+                return $attachment;
+            });
+        } catch (\Throwable $exception) {
+            if (is_string($storedPath) && Storage::disk($disk)->exists($storedPath)) {
+                Storage::disk($disk)->delete($storedPath);
+            }
+
+            throw $exception;
+        }
     }
 }

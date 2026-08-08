@@ -4,6 +4,7 @@ namespace App\Platform\Reporting\Policies;
 
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Models\ReportExport;
 
 class ReportExportPolicy
@@ -45,6 +46,7 @@ class ReportExportPolicy
     {
         return $this->canAccessExports($user)
             && $user->id === $export->user_id
+            && $export->status === ReportExportStatus::Failed
             && $this->canCreateExports($user);
     }
 

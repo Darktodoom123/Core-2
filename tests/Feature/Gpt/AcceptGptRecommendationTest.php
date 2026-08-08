@@ -84,6 +84,9 @@ test('authorized dispatcher can accept valid pending gpt recommendation', functi
 
     $contextBuilder = app(BoundedContextBuilder::class);
     $contextData = $contextBuilder->buildForDispatchJob($job);
+    $rebuiltContext = $contextBuilder->buildForDispatchJob($job->fresh());
+
+    expect($rebuiltContext['context'])->toEqual($contextData['context']);
 
     $recommendation = GptRecommendation::query()->create([
         'subject_type' => (new DispatchJob)->getMorphClass(),
@@ -115,7 +118,7 @@ test('authorized dispatcher can accept valid pending gpt recommendation', functi
     $response->assertSessionHas('flash.success');
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('accepted')
+    expect($recommendation->status->value)->toBe('accepted')
         ->and($recommendation->decided_by)->toBe($dispatcher->id)
         ->and($recommendation->decided_at)->not->toBeNull();
 
@@ -188,7 +191,7 @@ test('accepting an expired recommendation fails closed and marks status expired'
     $response->assertSessionHasErrors(['gpt']);
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('expired');
+    expect($recommendation->status->value)->toBe('expired');
 });
 
 test('accepting a recommendation with stale context hash fails closed and marks status stale', function (): void {
@@ -234,7 +237,7 @@ test('accepting a recommendation with stale context hash fails closed and marks 
     $response->assertSessionHasErrors(['gpt']);
 
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('stale');
+    expect($recommendation->status->value)->toBe('stale');
 });
 
 test('gpt recommendation cannot bypass priority approval requirement for emergency jobs', function (): void {
@@ -282,7 +285,7 @@ test('gpt recommendation cannot bypass priority approval requirement for emergen
 
     $response->assertRedirect();
     $recommendation->refresh();
-    expect($recommendation->status)->toBe('accepted');
+    expect($recommendation->status->value)->toBe('accepted');
 
     // Confirm that exceptional work created an ApprovalRequest in pending status for manager review
     $this->assertDatabaseHas('approval_requests', [

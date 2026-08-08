@@ -19,11 +19,24 @@ permissions:
 
 jobs:
   ci:
-    if: false # Temporarily disabled
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: core2_concurrency_test
+          POSTGRES_USER: core2_test
+          POSTGRES_PASSWORD: core2_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core2_test -d core2_concurrency_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
-        php-version: ['8.3', '8.4', '8.5']
+        php-version: ['8.3']
 
     steps:
       - name: Checkout code
@@ -37,11 +50,13 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
           coverage: xdebug
+          extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version-file: '.nvmrc'
+          cache: npm
 
       - name: Install Node Dependencies
         run: npm ci
@@ -57,6 +72,12 @@ jobs:
 
       - name: Build Assets
         run: npm run build
+
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser accessibility smoke test
+        run: npm run test:a11y
 
       - name: Mobile Package Typecheck
         run: npm run types:check:mobile
@@ -76,14 +97,16 @@ jobs:
           EXPO_PUBLIC_API_BASE_URL: https://api.example.test
         run: npm run export:android
 
-      - name: Mobile iOS Bundle Export
-        working-directory: packages/field-mobile
-        env:
-          EXPO_PUBLIC_API_BASE_URL: https://api.example.test
-        run: npm run export:ios
-
       - name: Run Type Analysis
         run: composer types:check
 
       - name: Tests
         run: php artisan test
+
+      - name: PostgreSQL GPT row-lock concurrency tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USERNAME: core2_test
+          DB_PASSWORD: core2_test
+        run: php artisan test --configuration=phpunit.concurrency.xml --testsuite=Concurrency

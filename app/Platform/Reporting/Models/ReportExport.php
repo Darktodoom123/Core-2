@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $file_path
  * @property int|null $file_size_bytes
  * @property int|null $row_count
+ * @property int $generation_attempts
  * @property string|null $error_message
  * @property Carbon|null $expires_at
  * @property Carbon|null $download_expires_at
@@ -40,6 +41,7 @@ class ReportExport extends Model
         'export_type',
         'format',
         'status',
+        'generation_attempts',
         'filters',
         'authorization_snapshot',
         'request_fingerprint',
@@ -65,6 +67,7 @@ class ReportExport extends Model
             'authorization_snapshot' => 'array',
             'file_size_bytes' => 'integer',
             'row_count' => 'integer',
+            'generation_attempts' => 'integer',
             'expires_at' => 'datetime',
             'download_expires_at' => 'datetime',
             'purge_at' => 'datetime',

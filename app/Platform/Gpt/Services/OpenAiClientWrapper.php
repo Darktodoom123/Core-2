@@ -91,7 +91,7 @@ final class OpenAiClientWrapper
      */
     public function reserveRateLimit(User $user): array
     {
-        return Cache::lock("gpt_rate_limit_lock:{$user->id}", 5)->block(3, function () use ($user): array {
+        return Cache::lock('gpt_rate_limit_lock:global', 5)->block(3, function () use ($user): array {
             $result = $this->checkRateLimits($user);
             if ($result['allowed']) {
                 $this->incrementRateLimits($user);
@@ -111,6 +111,21 @@ final class OpenAiClientWrapper
 
         Cache::add($systemKey, 0, 86400);
         Cache::increment($systemKey);
+    }
+
+    public function releaseRateLimit(User $user): void
+    {
+        Cache::lock('gpt_rate_limit_lock:global', 5)->block(3, function () use ($user): void {
+            $userKey = "gpt_rate_limit:user:{$user->id}:".now()->format('Y-m-d-H');
+            $systemKey = 'gpt_rate_limit:system:'.now()->format('Y-m-d');
+
+            if ((int) Cache::get($userKey, 0) > 0) {
+                Cache::decrement($userKey);
+            }
+            if ((int) Cache::get($systemKey, 0) > 0) {
+                Cache::decrement($systemKey);
+            }
+        });
     }
 
     /**
@@ -183,8 +198,7 @@ final class OpenAiClientWrapper
 
             if ($response->failed()) {
                 $status = $response->status();
-                $body = $response->body();
-                Log::error("OpenAI API request failed ({$status}): {$body}");
+                Log::warning('OpenAI API request failed.', ['status' => $status]);
 
                 return [
                     'success' => false,
@@ -295,14 +309,14 @@ final class OpenAiClientWrapper
                 'is_timeout' => true,
             ];
         } catch (\Throwable $e) {
-            Log::error('OpenAI client exception: '.$e->getMessage());
+            Log::error('OpenAI client exception.', ['exception' => $e::class]);
 
             return [
                 'success' => false,
                 'recommendation' => null,
                 'usage' => null,
                 'cost_usd' => null,
-                'error_message' => 'OpenAI API request failed: '.$e->getMessage(),
+                'error_message' => 'OpenAI API request failed.',
                 'response_summary' => null,
                 'is_refusal' => false,
                 'is_timeout' => false,

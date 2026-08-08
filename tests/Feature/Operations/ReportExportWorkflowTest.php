@@ -346,6 +346,33 @@ it('prunes expired export files on schedule', function (): void {
     expect(AuditEvent::query()->where('action', 'report_export.expired')->exists())->toBeTrue();
 });
 
+it('prunes retention files idempotently in bounded job batches', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+
+    foreach (range(1, 101) as $index) {
+        $path = "exports/expired-{$index}.csv";
+        Storage::disk('private')->put($path, "Header\nValue");
+
+        ReportExport::query()->create([
+            'user_id' => $manager->id,
+            'export_type' => ReportExportType::JobReports,
+            'format' => 'csv',
+            'status' => ReportExportStatus::Completed,
+            'file_path' => $path,
+            'purge_at' => now()->subMinute(),
+        ]);
+    }
+
+    $job = new PruneExpiredExportsJob;
+    $job->handle(app(RecordAuditEvent::class));
+    $job->handle(app(RecordAuditEvent::class));
+
+    expect($job->backoff)->toBe([60, 300])
+        ->and(ReportExport::query()->where('status', ReportExportStatus::Expired)->count())->toBe(101)
+        ->and(Storage::disk('private')->allFiles('exports'))->toBe([])
+        ->and(AuditEvent::query()->where('action', 'report_export.expired')->count())->toBe(101);
+});
+
 it('registers audited export retention cleanup with the scheduler', function (): void {
     expect(collect(app(Schedule::class)->events())
         ->map(static fn ($event): string => (string) $event->description)
@@ -413,6 +440,22 @@ it('prevents duplicate export jobs for an identical request', function (): void 
 
     expect($first->id)->toBe($second->id)
         ->and(ReportExport::query()->count())->toBe(1);
+});
+
+it('records bounded generation attempts and never reprocesses a completed export', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+    $export = createQueuedExport($manager, ReportExportType::JobReports, 'csv');
+    $job = new GenerateReportExportJob($export->id);
+
+    $job->handle(app(RecordAuditEvent::class), app(ReportExportCatalog::class));
+    $job->handle(app(RecordAuditEvent::class), app(ReportExportCatalog::class));
+
+    expect($export->fresh()->generation_attempts)->toBe(1)
+        ->and($job->backoff)->toBe([10, 30]);
+
+    $this->actingAs($manager)
+        ->post("/operations/reports/exports/{$export->id}/retry")
+        ->assertForbidden();
 });
 
 it('omits report export rows outside the validated date range', function (): void {

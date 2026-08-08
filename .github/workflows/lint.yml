@@ -30,19 +30,37 @@ jobs:
         with:
           php-version: '8.4'
 
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
       - name: Install Dependencies
         run: |
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm ci
 
-      - name: Run Pint
-        run: composer lint
+      - name: Check PHP formatting
+        run: composer lint:check
 
-      - name: Format Frontend
-        run: npm run format
+      - name: Check frontend formatting
+        run: npm run format:check
 
-      - name: Lint Frontend
-        run: npm run lint
+      - name: Check frontend linting
+        run: npm run lint:check
+
+      - name: Check frontend types
+        run: npm run types:check
+
+      - name: Check PHP types
+        run: composer types:check
+
+      - name: Audit Composer dependencies
+        run: composer audit --locked
+
+      - name: Audit production npm dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v7

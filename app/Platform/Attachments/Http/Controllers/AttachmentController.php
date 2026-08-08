@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -64,6 +65,11 @@ class AttachmentController extends Controller
             abort(404, 'Attachment file not found on storage.');
         }
 
+        $requestId = $request->header('X-Request-ID');
+        if (! is_string($requestId) || ! Str::isUuid($requestId)) {
+            $requestId = (string) Str::uuid();
+        }
+
         // Audit download / file access
         AuditEvent::query()->create([
             'actor_id' => $request->user()->id,
@@ -78,7 +84,7 @@ class AttachmentController extends Controller
                 'size_bytes' => $attachment->size_bytes,
                 'checksum_sha256' => $attachment->checksum_sha256,
             ],
-            'request_id' => $request->header('X-Request-ID') ?? $request->ip(),
+            'request_id' => $requestId,
             'ip_address' => $request->ip(),
             'occurred_at' => now(),
         ]);

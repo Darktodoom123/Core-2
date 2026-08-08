@@ -5,8 +5,10 @@ namespace App\Platform\Gpt\Actions;
 use App\Modules\Assignment\Actions\AssignDispatchResources;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
+use App\Platform\Gpt\Services\GptRecommendationTransition;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +19,8 @@ final class AcceptGptRecommendation
     public function __construct(
         private AssignDispatchResources $assignAction,
         private BoundedContextBuilder $contextBuilder,
-        private RecordAuditEvent $audit
+        private RecordAuditEvent $audit,
+        private GptRecommendationTransition $transitions,
     ) {}
 
     public function handle(User $actor, GptRecommendation $recommendation): DispatchJob
@@ -39,14 +42,18 @@ final class AcceptGptRecommendation
             }
 
             // All mutable preconditions are deliberately evaluated after both locks.
-            Gate::forUser($actor)->authorize('decide', $lockedRecommendation);
+            // Reload the actor after the row locks. A privilege revoked while
+            // this request waited must fail closed instead of relying on a
+            // stale in-memory permission relationship.
+            $lockedActor = User::query()->findOrFail($actor->id);
+            Gate::forUser($lockedActor)->authorize('decide', $lockedRecommendation);
 
-            if ($lockedRecommendation->status !== 'pending_review') {
-                return ['message' => "Recommendation cannot be accepted in status '{$lockedRecommendation->status}'."];
+            if ($lockedRecommendation->status !== GptRecommendationStatus::PendingReview) {
+                return ['message' => "Recommendation cannot be accepted in status '{$lockedRecommendation->status->value}'."];
             }
 
             if ($lockedRecommendation->isExpired()) {
-                $lockedRecommendation->update(['status' => 'expired']);
+                $this->transitions->transitionLocked($lockedRecommendation, GptRecommendationStatus::Expired);
 
                 return ['message' => 'This GPT recommendation has expired (valid for 15 minutes). Please generate a fresh recommendation.'];
             }
@@ -54,7 +61,7 @@ final class AcceptGptRecommendation
             // Rebuild from the locked dispatch to verify context and version atomically.
             $currentContext = $this->contextBuilder->buildForDispatchJob($job);
             if ($lockedRecommendation->isStale($currentContext['context_hash'])) {
-                $lockedRecommendation->update(['status' => 'stale']);
+                $this->transitions->transitionLocked($lockedRecommendation, GptRecommendationStatus::Stale);
 
                 return ['message' => 'The underlying dispatch context has changed since this recommendation was generated. Please generate a fresh recommendation.'];
             }
@@ -74,17 +81,16 @@ final class AcceptGptRecommendation
 
             // Execute operational mutation via the normal domain action under human authority if resources are proposed
             if ($personnel !== [] || $assets !== []) {
-                $this->assignAction->handle($actor, $job, $personnel, $assets);
+                $this->assignAction->handle($lockedActor, $job, $personnel, $assets);
             }
 
-            $lockedRecommendation->update([
-                'status' => 'accepted',
-                'decided_by' => $actor->id,
+            $this->transitions->transitionLocked($lockedRecommendation, GptRecommendationStatus::Accepted, [
+                'decided_by' => $lockedActor->id,
                 'decided_at' => now(),
             ]);
 
             $this->audit->handle(
-                $actor,
+                $lockedActor,
                 $job,
                 'gpt.recommendation_accepted',
                 null,

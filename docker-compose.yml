@@ -83,6 +83,37 @@ services:
       timeout: 3s
       retries: 10
 
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test-runner
+    profiles: ["test"]
+    working_dir: /var/www/html
+    entrypoint: []
+    command: ["php", "vendor/bin/pest", "--configuration=phpunit.concurrency.xml", "--testsuite=Concurrency"]
+    environment:
+      APP_ENV: testing
+      APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: core2_concurrency_test
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
+      DB_SSLMODE: disable
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: array
+      PULSE_ENABLED: "false"
+      TELESCOPE_ENABLED: "false"
+      NIGHTWATCH_ENABLED: "false"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   storage-data:
   postgres-data:

@@ -110,7 +110,7 @@ test('async job processes context redaction and generates structured recommendat
 
     $recommendation->refresh();
 
-    expect($recommendation->status)->toBe('pending_review')
+    expect($recommendation->status->value)->toBe('pending_review')
         ->and($recommendation->expires_at)->not->toBeNull()
         ->and($recommendation->expires_at->isFuture())->toBeTrue()
         ->and($recommendation->cost_usd)->toBeGreaterThan(0)

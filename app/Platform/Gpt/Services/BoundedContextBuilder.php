@@ -23,6 +23,12 @@ final class BoundedContextBuilder
      */
     public function buildForDispatchJob(DispatchJob $job): array
     {
+        // Context hashes must represent the persisted dispatch state. Database
+        // defaults (such as version) are not present on an in-memory model
+        // immediately after create(), which would otherwise make a valid
+        // recommendation appear stale during locked acceptance.
+        $job = $job->fresh() ?? $job;
+
         $job->loadMissing([
             'serviceRequest.client',
             'personnelAssignments.user',
@@ -99,15 +105,14 @@ final class BoundedContextBuilder
             'asset_candidates' => $assetCandidates,
         ];
 
-        $jsonContext = json_encode($context, JSON_THROW_ON_ERROR);
+        // Relationship and JSON-cast maps do not promise key order. Hash a
+        // canonical form so unchanged context is not mistaken for stale data.
+        $jsonContext = json_encode($this->canonicalize($context), JSON_THROW_ON_ERROR);
         $contextHash = hash('sha256', $jsonContext);
 
         $promptSummary = sprintf(
-            'Dispatch recommendation for job %s (%s, priority: %s, site: %s)',
-            $job->reference,
-            $job->title,
+            'Dispatch recommendation requested (priority: %s).',
             $job->priority->value,
-            $job->site
         );
 
         return [
@@ -146,5 +151,19 @@ final class BoundedContextBuilder
         }
 
         return $value;
+    }
+
+    private function canonicalize(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $normalized = array_map(fn (mixed $item): mixed => $this->canonicalize($item), $value);
+        if (! array_is_list($normalized)) {
+            ksort($normalized);
+        }
+
+        return $normalized;
     }
 }

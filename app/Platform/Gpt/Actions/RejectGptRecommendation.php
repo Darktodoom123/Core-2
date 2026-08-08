@@ -3,7 +3,9 @@
 namespace App\Platform\Gpt\Actions;
 
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\GptRecommendationTransition;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -12,7 +14,8 @@ use Illuminate\Validation\ValidationException;
 final class RejectGptRecommendation
 {
     public function __construct(
-        private RecordAuditEvent $audit
+        private RecordAuditEvent $audit,
+        private GptRecommendationTransition $transitions,
     ) {}
 
     public function handle(User $actor, GptRecommendation $recommendation, ?string $reason = null): GptRecommendation
@@ -23,14 +26,13 @@ final class RejectGptRecommendation
             /** @var GptRecommendation $recommendation */
             $recommendation = GptRecommendation::query()->lockForUpdate()->findOrFail($recommendation->id);
 
-            if (! in_array($recommendation->status, ['pending_review', 'draft', 'processing'], true)) {
+            if (! in_array($recommendation->status, [GptRecommendationStatus::PendingReview, GptRecommendationStatus::Draft, GptRecommendationStatus::Processing], true)) {
                 throw ValidationException::withMessages([
-                    'gpt' => "Recommendation cannot be rejected in status '{$recommendation->status}'.",
+                    'gpt' => "Recommendation cannot be rejected in status '{$recommendation->status->value}'.",
                 ]);
             }
 
-            $recommendation->update([
-                'status' => 'rejected',
+            $this->transitions->transitionLocked($recommendation, GptRecommendationStatus::Rejected, [
                 'decided_by' => $actor->id,
                 'decided_at' => now(),
                 'response_summary' => $reason,

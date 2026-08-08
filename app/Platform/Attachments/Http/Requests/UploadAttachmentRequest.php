@@ -10,16 +10,6 @@ use Illuminate\Validation\Validator;
 
 class UploadAttachmentRequest extends FormRequest
 {
-    public const ALLOWED_MIME_TYPES = [
-        'image/jpeg',
-        'image/png',
-        'image/heic',
-        'image/heif',
-        'image/heic-sequence',
-        'image/heif-sequence',
-        'application/pdf',
-    ];
-
     public function authorize(): bool
     {
         return $this->user()->can('create', Attachment::class);
@@ -29,7 +19,7 @@ class UploadAttachmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:15360'], // 15MB max
+            'file' => ['required', 'file', 'max:'.(int) ceil((int) config('attachments.max_bytes') / 1024)],
             'owner_type' => ['required', 'string', Rule::in(AttachmentOwnerResolver::acceptedTypes())],
             'owner_id' => ['required', 'integer', 'min:1'],
             'kind' => ['nullable', 'string', 'max:32'],
@@ -43,7 +33,7 @@ class UploadAttachmentRequest extends FormRequest
             $file = $this->file('file');
             if ($file && $file->isValid()) {
                 $mimeType = $file->getMimeType();
-                if (! in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
+                if (! array_key_exists($mimeType, config('attachments.mime_extensions', []))) {
                     $validator->errors()->add('file', 'The file must be a JPEG, PNG, HEIC/HEIF, or PDF document.');
                 }
 
@@ -74,8 +64,8 @@ class UploadAttachmentRequest extends FormRequest
                     ->where('owner_id', $ownerId)
                     ->count();
 
-                if ($existingCount >= 10) {
-                    $validator->errors()->add('file', 'Maximum attachment limit (10 files) reached for this item.');
+                if ($existingCount >= (int) config('attachments.max_count_per_owner')) {
+                    $validator->errors()->add('file', 'Maximum attachment limit reached for this item.');
                 }
             }
         });

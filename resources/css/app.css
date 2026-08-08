@@ -17,8 +17,8 @@
     --color-muted: oklch(0.42 0.025 255);
     --color-line: oklch(0.88 0.01 255);
     --color-line-strong: oklch(0.78 0.01 255);
-    --color-brand: oklch(0.74 0.19 80);
-    --color-brand-strong: oklch(0.62 0.19 76);
+    --color-brand: oklch(0.52 0.16 76);
+    --color-brand-strong: oklch(0.48 0.15 76);
     --color-brand-soft: oklch(0.96 0.07 88);
     --color-brand-contrast: oklch(0.99 0.005 80);
     --color-success: oklch(0.55 0.145 151);

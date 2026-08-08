@@ -2,6 +2,7 @@
 
 namespace App\Platform\Gpt\Models;
 
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,9 +17,12 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $recommendation
  * @property array<string, mixed>|null $conflicts
  * @property string $model
- * @property string $status
+ * @property GptRecommendationStatus $status
  * @property Carbon|null $decided_at
  * @property Carbon|null $expires_at
+ * @property Carbon|null $generated_at
+ * @property int|null $latency_ms
+ * @property Carbon|null $purge_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -43,6 +47,9 @@ class GptRecommendation extends Model
         'expires_at',
         'cost_usd',
         'error_message',
+        'generated_at',
+        'latency_ms',
+        'purge_at',
     ];
 
     protected function casts(): array
@@ -54,7 +61,11 @@ class GptRecommendation extends Model
             'usage' => 'array',
             'decided_at' => 'datetime',
             'expires_at' => 'datetime',
+            'generated_at' => 'datetime',
+            'purge_at' => 'datetime',
+            'latency_ms' => 'integer',
             'cost_usd' => 'decimal:4',
+            'status' => GptRecommendationStatus::class,
         ];
     }
 
@@ -83,17 +94,17 @@ class GptRecommendation extends Model
 
     public function isPending(): bool
     {
-        return in_array($this->status, ['draft', 'processing', 'pending_review'], true);
+        return in_array($this->status, [GptRecommendationStatus::Draft, GptRecommendationStatus::Processing, GptRecommendationStatus::PendingReview], true);
     }
 
     public function isAccepted(): bool
     {
-        return $this->status === 'accepted';
+        return $this->status === GptRecommendationStatus::Accepted;
     }
 
     public function isRejected(): bool
     {
-        return $this->status === 'rejected';
+        return $this->status === GptRecommendationStatus::Rejected;
     }
 
     public function isStale(string $currentHash): bool

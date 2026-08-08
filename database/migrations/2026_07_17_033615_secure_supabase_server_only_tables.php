@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -49,6 +50,10 @@ return new class extends Migration
         }
 
         foreach ($this->tables as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
             DB::statement(sprintf('alter table public.%s enable row level security', $table));
         }
 
@@ -60,6 +65,10 @@ return new class extends Migration
             }
 
             foreach ($this->tables as $table) {
+                if (! Schema::hasTable($table)) {
+                    continue;
+                }
+
                 DB::statement(sprintf('revoke all privileges on table public.%s from %s', $table, $role));
             }
 
@@ -76,6 +85,10 @@ return new class extends Migration
         }
 
         foreach ($this->tables as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
             DB::statement(sprintf('alter table public.%s disable row level security', $table));
         }
 

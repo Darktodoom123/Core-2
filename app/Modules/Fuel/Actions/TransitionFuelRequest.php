@@ -5,6 +5,7 @@ namespace App\Modules\Fuel\Actions;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Actions\UploadAttachmentAction;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
@@ -12,11 +13,15 @@ use App\Platform\Identity\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 final class TransitionFuelRequest
 {
-    public function __construct(private RecordAuditEvent $audit) {}
+    public function __construct(
+        private RecordAuditEvent $audit,
+        private UploadAttachmentAction $uploadAttachment
+    ) {}
 
     /**
      * @param  array<string, mixed>  $logDetails
@@ -35,86 +40,80 @@ final class TransitionFuelRequest
             throw new AuthorizationException;
         }
 
-        return DB::transaction(function () use ($actor, $fuel, $next, $reason, $requiredPreviousStatus, $logDetails): FuelRequest {
-            /** @var FuelRequest $fuel */
-            $fuel = FuelRequest::query()->lockForUpdate()->findOrFail($fuel->id);
+        if (array_key_exists('receipt_path', $logDetails)) {
+            throw ValidationException::withMessages(['receipt' => 'Receipt paths must be generated from an uploaded file.']);
+        }
 
-            if ($fuel->status !== $requiredPreviousStatus) {
-                throw ValidationException::withMessages(['status' => 'The fuel request is not at the required stage.']);
-            }
+        $receiptAttachment = null;
 
-            if ($next === FuelRequestStatus::Logged && $fuel->logs()->exists()) {
-                throw ValidationException::withMessages(['status' => 'The fuel request has already been logged.']);
-            }
+        try {
+            return DB::transaction(function () use ($actor, $fuel, $next, $reason, $requiredPreviousStatus, $logDetails, &$receiptAttachment): FuelRequest {
+                /** @var FuelRequest $fuel */
+                $fuel = FuelRequest::query()->lockForUpdate()->findOrFail($fuel->id);
 
-            $before = ['status' => $fuel->status->value];
-
-            $updateData = ['status' => $next, 'decision_reason' => $reason];
-            if ($next === FuelRequestStatus::Forwarded) {
-                $updateData['reviewed_by'] = $actor->id;
-                $updateData['reviewed_at'] = now();
-            } elseif ($next === FuelRequestStatus::Approved || $next === FuelRequestStatus::Rejected) {
-                $updateData['approved_by'] = $actor->id;
-                $updateData['approved_at'] = now();
-            } elseif ($next === FuelRequestStatus::Verified) {
-                $updateData['verified_by'] = $actor->id;
-                $updateData['verified_at'] = now();
-            }
-
-            $fuel->update($updateData);
-
-            if ($next === FuelRequestStatus::Logged) {
-                $quantityLitres = isset($logDetails['quantity_litres']) ? (float) $logDetails['quantity_litres'] : (float) $fuel->quantity_litres;
-                if ($quantityLitres <= 0) {
-                    throw ValidationException::withMessages(['quantity_litres' => 'Fuel quantity must be greater than zero.']);
+                if ($fuel->status !== $requiredPreviousStatus) {
+                    throw ValidationException::withMessages(['status' => 'The fuel request is not at the required stage.']);
                 }
 
-                $pricePerLitre = isset($logDetails['price_per_litre']) && $logDetails['price_per_litre'] !== '' ? (float) $logDetails['price_per_litre'] : null;
-                $totalCost = isset($logDetails['total_cost']) && $logDetails['total_cost'] !== '' ? (float) $logDetails['total_cost'] : ($pricePerLitre !== null ? round($pricePerLitre * $quantityLitres, 2) : null);
-
-                $receiptPath = null;
-                if (isset($logDetails['receipt']) && $logDetails['receipt'] instanceof UploadedFile) {
-                    $file = $logDetails['receipt'];
-                    $receiptPath = $file->store('receipts', 'private');
-                } elseif (isset($logDetails['receipt_path']) && is_string($logDetails['receipt_path'])) {
-                    $receiptPath = $logDetails['receipt_path'];
+                if ($next === FuelRequestStatus::Logged && $fuel->logs()->exists()) {
+                    throw ValidationException::withMessages(['status' => 'The fuel request has already been logged.']);
                 }
 
-                $fuelLog = FuelLog::query()->create([
-                    'fuel_request_id' => $fuel->id,
-                    'recorded_by' => $actor->id,
-                    'quantity_litres' => $quantityLitres,
-                    'odometer_km' => isset($logDetails['odometer_km']) && $logDetails['odometer_km'] !== '' ? (int) $logDetails['odometer_km'] : null,
-                    'hour_meter' => isset($logDetails['hour_meter']) && $logDetails['hour_meter'] !== '' ? (float) $logDetails['hour_meter'] : null,
-                    'price_per_litre' => $pricePerLitre,
-                    'total_cost' => $totalCost,
-                    'fuel_station' => isset($logDetails['fuel_station']) && is_string($logDetails['fuel_station']) ? $logDetails['fuel_station'] : null,
-                    'remarks' => isset($logDetails['remarks']) && is_string($logDetails['remarks']) ? $logDetails['remarks'] : null,
-                    'receipt_path' => $receiptPath,
-                    'recorded_at' => now(),
-                ]);
+                $before = ['status' => $fuel->status->value];
 
-                if (isset($logDetails['receipt']) && $logDetails['receipt'] instanceof UploadedFile) {
-                    /** @var UploadedFile $file */
-                    $file = $logDetails['receipt'];
-                    Attachment::query()->create([
-                        'owner_type' => $fuelLog->getMorphClass(),
-                        'owner_id' => $fuelLog->id,
-                        'uploaded_by' => $actor->id,
-                        'kind' => 'fuel_receipt',
-                        'disk' => 'private',
-                        'path' => $receiptPath,
-                        'original_filename' => $file->getClientOriginalName(),
-                        'mime_type' => $file->getClientMimeType(),
-                        'size_bytes' => $file->getSize(),
-                        'checksum_sha256' => hash_file('sha256', $file->getRealPath()),
+                $updateData = ['status' => $next, 'decision_reason' => $reason];
+                if ($next === FuelRequestStatus::Forwarded) {
+                    $updateData['reviewed_by'] = $actor->id;
+                    $updateData['reviewed_at'] = now();
+                } elseif ($next === FuelRequestStatus::Approved || $next === FuelRequestStatus::Rejected) {
+                    $updateData['approved_by'] = $actor->id;
+                    $updateData['approved_at'] = now();
+                } elseif ($next === FuelRequestStatus::Verified) {
+                    $updateData['verified_by'] = $actor->id;
+                    $updateData['verified_at'] = now();
+                }
+
+                $fuel->update($updateData);
+
+                if ($next === FuelRequestStatus::Logged) {
+                    $quantityLitres = isset($logDetails['quantity_litres']) ? (float) $logDetails['quantity_litres'] : (float) $fuel->quantity_litres;
+                    if ($quantityLitres <= 0) {
+                        throw ValidationException::withMessages(['quantity_litres' => 'Fuel quantity must be greater than zero.']);
+                    }
+
+                    $pricePerLitre = isset($logDetails['price_per_litre']) && $logDetails['price_per_litre'] !== '' ? (float) $logDetails['price_per_litre'] : null;
+                    $totalCost = isset($logDetails['total_cost']) && $logDetails['total_cost'] !== '' ? (float) $logDetails['total_cost'] : ($pricePerLitre !== null ? round($pricePerLitre * $quantityLitres, 2) : null);
+
+                    $fuelLog = FuelLog::query()->create([
+                        'fuel_request_id' => $fuel->id,
+                        'recorded_by' => $actor->id,
+                        'quantity_litres' => $quantityLitres,
+                        'odometer_km' => isset($logDetails['odometer_km']) && $logDetails['odometer_km'] !== '' ? (int) $logDetails['odometer_km'] : null,
+                        'hour_meter' => isset($logDetails['hour_meter']) && $logDetails['hour_meter'] !== '' ? (float) $logDetails['hour_meter'] : null,
+                        'price_per_litre' => $pricePerLitre,
+                        'total_cost' => $totalCost,
+                        'fuel_station' => isset($logDetails['fuel_station']) && is_string($logDetails['fuel_station']) ? $logDetails['fuel_station'] : null,
+                        'remarks' => isset($logDetails['remarks']) && is_string($logDetails['remarks']) ? $logDetails['remarks'] : null,
+                        'receipt_path' => null,
+                        'recorded_at' => now(),
                     ]);
+
+                    if (isset($logDetails['receipt']) && $logDetails['receipt'] instanceof UploadedFile) {
+                        $receiptAttachment = $this->uploadAttachment->execute($actor, $fuelLog, $logDetails['receipt'], 'fuel_receipt');
+                        $fuelLog->update(['receipt_path' => $receiptAttachment->path]);
+                    }
                 }
+
+                $this->audit->handle($actor, $fuel, 'fuel.status_updated', $before, ['status' => $next->value], $reason);
+
+                return $fuel->refresh();
+            });
+        } catch (\Throwable $exception) {
+            if ($receiptAttachment instanceof Attachment) {
+                Storage::disk($receiptAttachment->disk)->delete($receiptAttachment->path);
             }
 
-            $this->audit->handle($actor, $fuel, 'fuel.status_updated', $before, ['status' => $next->value], $reason);
-
-            return $fuel->refresh();
-        });
+            throw $exception;
+        }
     }
 }

@@ -14,6 +14,8 @@
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
         "types:check": "tsc --noEmit",
+        "test:e2e": "playwright test",
+        "test:a11y": "playwright test tests/Browser/accessibility.spec.ts",
         "types:check:mobile": "npm --prefix packages/field-mobile run types:check",
         "test:mobile": "npm --prefix packages/field-mobile run test",
         "mobile:doctor": "npm --prefix packages/field-mobile run doctor",
@@ -32,8 +34,10 @@
         "mobile:sprint2:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_36"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.12.1",
         "@eslint/js": "^9.19.0",
         "@laravel/vite-plugin-wayfinder": "^0.1.3",
+        "@playwright/test": "^1.62.1",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@types/leaflet": "^1.9.21",
         "@types/node": "^22.13.5",

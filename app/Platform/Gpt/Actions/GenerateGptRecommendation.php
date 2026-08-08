@@ -3,6 +3,7 @@
 namespace App\Platform\Gpt\Actions;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Jobs\GenerateGptRecommendationJob;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
@@ -50,11 +51,19 @@ final class GenerateGptRecommendation
             'recommendation' => [],
             'conflicts' => [],
             'model' => config('services.openai.model', 'gpt-5-mini'),
-            'status' => 'draft',
+            'status' => GptRecommendationStatus::Draft,
             'prompt_summary' => $contextData['prompt_summary'],
+            'purge_at' => now()->addDays(90),
         ]);
 
-        GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context']);
+        try {
+            GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context']);
+        } catch (\Throwable $exception) {
+            $recommendation->delete();
+            $this->openAi->releaseRateLimit($actor);
+
+            throw $exception;
+        }
 
         return $recommendation->fresh() ?? $recommendation;
     }

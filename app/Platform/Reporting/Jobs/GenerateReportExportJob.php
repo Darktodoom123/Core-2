@@ -27,6 +27,9 @@ class GenerateReportExportJob implements ShouldQueue
 
     public int $tries = 2;
 
+    /** @var list<int> */
+    public array $backoff = [10, 30];
+
     public int $timeout = 300;
 
     public function __construct(
@@ -44,6 +47,7 @@ class GenerateReportExportJob implements ShouldQueue
             $lockedExport->update([
                 'status' => ReportExportStatus::Processing,
                 'started_at' => now(),
+                'generation_attempts' => $lockedExport->generation_attempts + 1,
             ]);
 
             return $lockedExport->fresh();
