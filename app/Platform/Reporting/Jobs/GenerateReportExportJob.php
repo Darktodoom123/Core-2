@@ -15,6 +15,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 use Throwable;
@@ -166,9 +168,28 @@ class GenerateReportExportJob implements ShouldQueue
             $boundedRows[] = $row;
         }
 
-        Storage::disk('private')->put($temporaryPath, $this->generatePdfContent($export, $headers, $boundedRows));
+        $rendererTempDir = $this->pdfTemporaryDirectory($export);
+
+        try {
+            Storage::disk('private')->put($temporaryPath, $this->generatePdfContent($export, $headers, $boundedRows, $rendererTempDir));
+        } finally {
+            File::deleteDirectory($rendererTempDir);
+        }
 
         return count($boundedRows);
+    }
+
+    /**
+     * mPDF creates and mutates font-cache data under its temporary directory.
+     * A per-export directory prevents concurrent workers from racing on that
+     * cache while keeping all renderer artifacts on the private disk.
+     */
+    protected function pdfTemporaryDirectory(ReportExport $export): string
+    {
+        $directory = Storage::disk('private')->path('export-tmp/'.$export->id);
+        File::ensureDirectoryExists($directory, 0700, true);
+
+        return $directory;
     }
 
     /**
@@ -178,10 +199,34 @@ class GenerateReportExportJob implements ShouldQueue
      * @param  list<string>  $headers
      * @param  list<list<mixed>>  $rows
      */
-    private function generatePdfContent(ReportExport $export, array $headers, array $rows): string
+    protected function generatePdfContent(ReportExport $export, array $headers, array $rows, string $tempDir): string
     {
-        $tempDir = Storage::disk('private')->path('export-tmp');
-        File::ensureDirectoryExists($tempDir, 0700, true);
+        $defaultConfig = (new ConfigVariables)->getDefaults();
+        $fontConfig = (new FontVariables)->getDefaults();
+
+        $pdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'tempDir' => $tempDir,
+            'fontDir' => $defaultConfig['fontDir'],
+            'fontdata' => $fontConfig['fontdata'],
+            'default_font' => 'dejavusanscondensed',
+        ]);
+
+        $pdf->WriteHTML($this->buildPdfHtml($export, $headers, $rows));
+
+        return $pdf->Output('', Destination::STRING_RETURN);
+    }
+
+    /**
+     * Render only server-authored markup. Dataset values are text nodes, never
+     * trusted HTML, stylesheets, paths, or assets supplied by a requester.
+     *
+     * @param  list<string>  $headers
+     * @param  list<list<mixed>>  $rows
+     */
+    protected function buildPdfHtml(ReportExport $export, array $headers, array $rows): string
+    {
 
         $headerHtml = implode('', array_map(
             fn (string $header): string => '<th>'.$this->escapeHtml($header).'</th>',
@@ -202,14 +247,7 @@ class GenerateReportExportJob implements ShouldQueue
             .'<table><thead><tr>'.$headerHtml.'</tr></thead><tbody>'.$rowHtml.'</tbody></table>'
             .'</body></html>';
 
-        $pdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'tempDir' => $tempDir,
-        ]);
-        $pdf->WriteHTML($html);
-
-        return $pdf->Output('', Destination::STRING_RETURN);
+        return $html;
     }
 
     private function sanitizeCsvValue(mixed $value): string

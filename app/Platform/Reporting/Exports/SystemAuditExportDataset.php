@@ -4,6 +4,7 @@ namespace App\Platform\Reporting\Exports;
 
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\ReportExportType;
 use Generator;
@@ -17,7 +18,8 @@ final class SystemAuditExportDataset extends AbstractReportExportDataset
 
     public function authorize(User $actor): bool
     {
-        return $actor->can(PermissionName::AuditView->value);
+        return $actor->hasRole(RoleName::SystemAdministrator->value)
+            && $actor->can(PermissionName::AuditView->value);
     }
 
     public function headers(): array

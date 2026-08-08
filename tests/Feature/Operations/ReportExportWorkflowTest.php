@@ -5,6 +5,7 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Actions\CreateReportExportAction;
@@ -21,6 +22,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -158,6 +160,42 @@ final class ObservingPromotionReportExportJob extends GenerateReportExportJob
         $this->finalFileExistedBeforePromotion = Storage::disk('private')->exists($relativePath);
 
         parent::promote($temporaryPath, $relativePath);
+    }
+}
+
+final class ObservingPdfRendererJob extends GenerateReportExportJob
+{
+    public ?string $rendererTempDir = null;
+
+    protected function pdfTemporaryDirectory(ReportExport $export): string
+    {
+        return $this->rendererTempDir = parent::pdfTemporaryDirectory($export);
+    }
+
+    /** @param list<string> $headers
+     * @param  list<list<mixed>>  $rows
+     */
+    public function buildHtml(ReportExport $export, array $headers, array $rows): string
+    {
+        return $this->buildPdfHtml($export, $headers, $rows);
+    }
+}
+
+final class FailingPdfRendererJob extends GenerateReportExportJob
+{
+    public ?string $rendererTempDir = null;
+
+    protected function pdfTemporaryDirectory(ReportExport $export): string
+    {
+        return $this->rendererTempDir = parent::pdfTemporaryDirectory($export);
+    }
+
+    /** @param list<string> $headers
+     * @param  list<list<mixed>>  $rows
+     */
+    protected function generatePdfContent(ReportExport $export, array $headers, array $rows, string $tempDir): string
+    {
+        throw new RuntimeException('mPDF renderer failure');
     }
 }
 
@@ -468,6 +506,52 @@ it('generates the expected MIME type and file signature for every scoped dataset
     'system audit CSV' => [RoleName::SystemAdministrator, ReportExportType::SystemAudit, 'csv'],
     'system audit PDF' => [RoleName::SystemAdministrator, ReportExportType::SystemAudit, 'pdf'],
 ]);
+
+it('uses an isolated private mPDF workspace and sends only escaped dataset text to the renderer', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+    createExportReport($manager, '<img src="https://attacker.invalid/tracker.png">', now());
+    $export = createQueuedExport($manager, ReportExportType::JobReports, 'pdf');
+    $job = new ObservingPdfRendererJob($export->id);
+
+    $html = $job->buildHtml($export, ['Summary'], [['<img src="https://attacker.invalid/tracker.png">']]);
+    $job->handle(app(RecordAuditEvent::class), app(ReportExportCatalog::class));
+
+    expect($html)->toContain('&lt;img src=&quot;https://attacker.invalid/tracker.png&quot;&gt;')
+        ->not->toContain('<img ')
+        ->and($export->fresh()->status)->toBe(ReportExportStatus::Completed)
+        ->and(Storage::disk('private')->get($export->fresh()->file_path))->toStartWith('%PDF-')
+        ->and($job->rendererTempDir)->not->toBeNull()
+        ->and($job->rendererTempDir)->toStartWith(Storage::disk('private')->path('export-tmp'))
+        ->and(File::isDirectory($job->rendererTempDir))->toBeFalse();
+});
+
+it('reserves system audit exports for system administrators even when another role receives audit permission', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+    $manager->givePermissionTo(PermissionName::AuditView->value);
+
+    $this->actingAs($manager)
+        ->post('/operations/reports/exports', [
+            'export_type' => ReportExportType::SystemAudit->value,
+            'format' => 'csv',
+        ])
+        ->assertForbidden();
+
+    expect(ReportExport::query()->count())->toBe(0);
+});
+
+it('cleans private PDF files and renderer workspace when mPDF fails', function (): void {
+    $manager = createExportUser(RoleName::OperationsManager);
+    $export = createQueuedExport($manager, ReportExportType::JobReports, 'pdf');
+    $job = new FailingPdfRendererJob($export->id);
+
+    expect(fn () => $job->handle(app(RecordAuditEvent::class), app(ReportExportCatalog::class)))
+        ->toThrow(RuntimeException::class);
+
+    expect($export->fresh()->status)->toBe(ReportExportStatus::Failed)
+        ->and(Storage::disk('private')->allFiles('exports'))->toBe([])
+        ->and($job->rendererTempDir)->not->toBeNull()
+        ->and(File::isDirectory($job->rendererTempDir))->toBeFalse();
+});
 
 it('rechecks permission and account activity when queued export generation begins', function (): void {
     $manager = createExportUser(RoleName::OperationsManager);
