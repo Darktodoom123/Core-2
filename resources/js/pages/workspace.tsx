@@ -205,6 +205,10 @@ export default function Workspace(props: WorkspacePageProps) {
 
     const validationErrorCount = Object.keys(errors).length;
 
+    const unreadNotificationCount = (props.notifications ?? []).filter(
+        (n) => n.status !== 'read' && !n.read_at,
+    ).length;
+
     return (
         <>
             <Head title="Operations workspace" />
@@ -215,6 +219,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 refreshing={refreshing}
                 canShareLocation={props.capabilities.share_location}
                 locationPending={locationPending}
+                unreadNotificationCount={unreadNotificationCount}
                 onSectionChange={changeSection}
                 onRefresh={refresh}
                 onShareLocation={shareLocation}

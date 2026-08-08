@@ -53,6 +53,7 @@ export function LiveWorkspaceShell({
     refreshing,
     canShareLocation,
     locationPending,
+    unreadNotificationCount = 0,
     onSectionChange,
     onRefresh,
     onShareLocation,
@@ -64,6 +65,7 @@ export function LiveWorkspaceShell({
     refreshing: boolean;
     canShareLocation: boolean;
     locationPending: boolean;
+    unreadNotificationCount?: number;
     onSectionChange: (section: WorkspaceSection) => void;
     onRefresh: () => void;
     onShareLocation: () => void;
@@ -144,6 +146,9 @@ export function LiveWorkspaceShell({
                         {navigation.map((item) => {
                             const Icon = sectionIcons[item.id];
                             const active = item.id === section;
+                            const isNotifications = item.id === 'notifications';
+                            const showBadge =
+                                isNotifications && unreadNotificationCount > 0;
 
                             return (
                                 <li key={item.id}>
@@ -166,10 +171,18 @@ export function LiveWorkspaceShell({
                                             active ? 'page' : undefined
                                         }
                                         aria-label={
-                                            collapsed ? item.label : undefined
+                                            collapsed
+                                                ? showBadge
+                                                    ? `${item.label} (${unreadNotificationCount} unread)`
+                                                    : item.label
+                                                : undefined
                                         }
                                         title={
-                                            collapsed ? item.label : undefined
+                                            collapsed
+                                                ? showBadge
+                                                    ? `${item.label} (${unreadNotificationCount} unread)`
+                                                    : item.label
+                                                : undefined
                                         }
                                     >
                                         {active && (
@@ -183,13 +196,39 @@ export function LiveWorkspaceShell({
                                                 aria-hidden="true"
                                             />
                                         )}
-                                        <Icon
-                                            className="h-5 w-5 shrink-0"
-                                            aria-hidden="true"
-                                        />
+                                        {/* Icon + badge wrapper */}
+                                        <span className="relative shrink-0">
+                                            <Icon
+                                                className="h-5 w-5"
+                                                aria-hidden="true"
+                                            />
+                                            {showBadge && (
+                                                <span
+                                                    className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white"
+                                                    aria-hidden="true"
+                                                >
+                                                    {unreadNotificationCount > 9
+                                                        ? '9+'
+                                                        : unreadNotificationCount}
+                                                </span>
+                                            )}
+                                        </span>
                                         {!collapsed && (
-                                            <span className="text-left font-medium">
+                                            <span className="flex flex-1 items-center justify-between text-left font-medium">
                                                 {item.label}
+                                                {showBadge && (
+                                                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
+                                                        {unreadNotificationCount >
+                                                        9
+                                                            ? '9+'
+                                                            : unreadNotificationCount}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        )}
+                                        {showBadge && (
+                                            <span className="sr-only">
+                                                {unreadNotificationCount} unread
                                             </span>
                                         )}
                                     </button>
@@ -308,6 +347,51 @@ export function LiveWorkspaceShell({
                                 </span>
                             </Button>
                         )}
+
+                        {/* Bell notification button — only shown when notifications section is accessible */}
+                        {navigation.some((n) => n.id === 'notifications') && (
+                            <button
+                                type="button"
+                                onClick={() => onSectionChange('notifications')}
+                                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                aria-label={
+                                    unreadNotificationCount > 0
+                                        ? `Notifications — ${unreadNotificationCount} unread`
+                                        : 'Notifications'
+                                }
+                                title={
+                                    unreadNotificationCount > 0
+                                        ? `${unreadNotificationCount} unread notification${unreadNotificationCount === 1 ? '' : 's'}`
+                                        : 'Notifications'
+                                }
+                            >
+                                <Bell className="h-5 w-5" aria-hidden="true" />
+                                {unreadNotificationCount > 0 && (
+                                    <>
+                                        {/* Animated ping for visual attention */}
+                                        <span
+                                            className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center"
+                                            aria-hidden="true"
+                                        >
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-60" />
+                                            <span className="relative flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white">
+                                                {unreadNotificationCount > 9
+                                                    ? '9+'
+                                                    : unreadNotificationCount}
+                                            </span>
+                                        </span>
+                                        <span className="sr-only">
+                                            {unreadNotificationCount} unread
+                                            notification
+                                            {unreadNotificationCount === 1
+                                                ? ''
+                                                : 's'}
+                                        </span>
+                                    </>
+                                )}
+                            </button>
+                        )}
+
                         <Button
                             size="icon"
                             variant="quiet"

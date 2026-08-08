@@ -622,6 +622,8 @@ function DispatcherDashboardView({
     serviceRequests = [],
     assets,
     locations,
+    gptRecommendations = [],
+    capabilities,
     availableSections,
     onSectionChange,
 }: OperationsOverviewDashboardProps) {
@@ -633,9 +635,47 @@ function DispatcherDashboardView({
         ),
     );
 
-    const pendingRequests = serviceRequests.filter(
+    // [Improvement 4] Detect dispatched jobs where any assigned worker has rejected or is still pending response
+    const needsAttentionJobs = jobs.filter(
+        (job) =>
+            job.status.value === 'dispatched' &&
+            job.personnel_assignments.some(
+                (a) => a.response_status.value === 'rejected',
+            ),
+    );
+    const pendingResponseJobs = jobs.filter(
+        (job) =>
+            job.status.value === 'dispatched' &&
+            job.personnel_assignments.length > 0 &&
+            job.personnel_assignments.every(
+                (a) => a.response_status.value === 'pending',
+            ),
+    );
+
+    // [Improvement 5] Sort service requests oldest-first so urgent unprocessed ones surface
+    const sortedServiceRequests = [...serviceRequests].sort((a, b) => {
+        if (!a.scheduled_date && !b.scheduled_date) {
+            return 0;
+        }
+
+        if (!a.scheduled_date) {
+            return 1;
+        }
+
+        if (!b.scheduled_date) {
+            return -1;
+        }
+
+        return (
+            new Date(a.scheduled_date).getTime() -
+            new Date(b.scheduled_date).getTime()
+        );
+    });
+    const pendingRequests = sortedServiceRequests.filter(
         (sr) => sr.status.value === 'submitted',
     );
+    const visibleRequests = sortedServiceRequests.slice(0, 4);
+    const hiddenRequestsCount = Math.max(0, sortedServiceRequests.length - 4);
 
     const upcomingJobs = (
         jobView === 'active'
@@ -646,17 +686,87 @@ function DispatcherDashboardView({
               )
     ).slice(0, 6);
 
+    const totalAssets = assets.length;
     const readyAssetsCount = assets.filter((a) => a.is_dispatchable).length;
+    // [Improvement 2 & 3] Blocking assets count and readiness %
+    const blockingAssetsCount = assets.filter(
+        (a) => a.blocking_work_orders_count > 0,
+    ).length;
+    const readinessPercentage =
+        totalAssets > 0
+            ? Math.round((readyAssetsCount / totalAssets) * 100)
+            : 100;
+
     const freshLocationsCount = locations.filter((l) =>
         ['live', 'recent'].includes(l.freshness_status),
     ).length;
 
+    // [Improvement 1] GPT pending recommendations for dispatcher
+    const pendingGptRecommendations = gptRecommendations.filter(
+        (r) => r.status === 'pending_review' && !r.is_expired,
+    );
+
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenTracking = availableSections.includes('tracking');
     const canOpenAssets = availableSections.includes('assets');
+    const canOpenGpt = availableSections.includes('gpt-recommendations');
 
     return (
         <div className="space-y-6">
+            {/* [Improvement 4] Rejected Assignment Alert Banner */}
+            {needsAttentionJobs.length > 0 && (
+                <div className="flex items-start gap-3 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-ink">
+                            {needsAttentionJobs.length} dispatch
+                            {needsAttentionJobs.length === 1 ? '' : 'es'}{' '}
+                            require reassignment
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            An assigned worker has rejected their assignment.
+                            Review and reassign in the dispatch workspace.
+                        </p>
+                    </div>
+                    {canOpenDispatch && (
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => onSectionChange('dispatch')}
+                        >
+                            Review â†’
+                        </Button>
+                    )}
+                </div>
+            )}
+
+            {/* [Improvement 2] Blocking Assets Alert Banner */}
+            {blockingAssetsCount > 0 && (
+                <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong" />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-ink">
+                            {blockingAssetsCount} asset
+                            {blockingAssetsCount === 1 ? '' : 's'} blocked by
+                            maintenance
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            These assets cannot be assigned to dispatches until
+                            their maintenance work orders are released.
+                        </p>
+                    </div>
+                    {canOpenAssets && (
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => onSectionChange('assets')}
+                        >
+                            View assets â†’
+                        </Button>
+                    )}
+                </div>
+            )}
+
             {/* Dispatcher KPIs */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KpiCard
@@ -689,29 +799,52 @@ function DispatcherDashboardView({
                     }
                 />
 
+                {/* [Improvement 3] Fleet Readiness shown as % */}
                 <KpiCard
-                    label="Telemetry Pings"
-                    value={`${locations.length}`}
-                    subtext={`${freshLocationsCount} live position updates`}
-                    icon={Radio}
-                    tone={freshLocationsCount > 0 ? 'brand' : 'default'}
-                    liveIndicator={freshLocationsCount > 0}
+                    label="Fleet Readiness"
+                    value={`${readinessPercentage}%`}
+                    subtext={
+                        blockingAssetsCount > 0
+                            ? `${readyAssetsCount} of ${totalAssets} ready Â· ${blockingAssetsCount} blocked`
+                            : `${readyAssetsCount} of ${totalAssets} assets ready`
+                    }
+                    icon={Truck}
+                    tone={
+                        readinessPercentage >= 80
+                            ? 'success'
+                            : readinessPercentage >= 50
+                              ? 'warning'
+                              : 'danger'
+                    }
                     onClick={
-                        canOpenTracking
-                            ? () => onSectionChange('tracking')
+                        canOpenAssets
+                            ? () => onSectionChange('assets')
                             : undefined
                     }
                 />
 
+                {/* [Improvement 4] Rejected/pending assignment KPI */}
                 <KpiCard
-                    label="Ready Assets"
-                    value={`${readyAssetsCount}`}
-                    subtext={`of ${assets.length} fleet assets ready`}
-                    icon={Truck}
-                    tone={readyAssetsCount > 0 ? 'success' : 'danger'}
+                    label="Assignment Responses"
+                    value={`${needsAttentionJobs.length + pendingResponseJobs.length}`}
+                    subtext={
+                        needsAttentionJobs.length > 0
+                            ? `${needsAttentionJobs.length} rejected Â· needs reassignment`
+                            : pendingResponseJobs.length > 0
+                              ? `${pendingResponseJobs.length} awaiting worker response`
+                              : 'All assignments acknowledged'
+                    }
+                    icon={Users}
+                    tone={
+                        needsAttentionJobs.length > 0
+                            ? 'danger'
+                            : pendingResponseJobs.length > 0
+                              ? 'warning'
+                              : 'success'
+                    }
                     onClick={
-                        canOpenAssets
-                            ? () => onSectionChange('assets')
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
                             : undefined
                     }
                 />
@@ -738,7 +871,7 @@ function DispatcherDashboardView({
                             </div>
                             <p className="mt-1 text-sm text-ink-soft">
                                 Convert client service requests into active
-                                draft dispatch jobs.
+                                draft dispatch jobs. Sorted oldest first.
                             </p>
                         </div>
 
@@ -748,14 +881,15 @@ function DispatcherDashboardView({
                                 size="sm"
                                 onClick={() => onSectionChange('dispatch')}
                             >
-                                Convert in workspace →
+                                Convert in workspace â†’
                             </Button>
                         )}
                     </div>
 
                     <Panel className="overflow-hidden">
                         <ul className="divide-y divide-line">
-                            {serviceRequests.slice(0, 4).map((request) => (
+                            {/* [Improvement 5] Sorted oldest-first, slice(0,4) */}
+                            {visibleRequests.map((request) => (
                                 <li
                                     key={request.id}
                                     className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -773,7 +907,7 @@ function DispatcherDashboardView({
                                             />
                                         </div>
                                         <p className="mt-1 text-sm font-medium text-ink">
-                                            {request.project_name} —{' '}
+                                            {request.project_name} â€”{' '}
                                             <span className="text-ink-soft">
                                                 {request.service_type}
                                             </span>
@@ -800,11 +934,28 @@ function DispatcherDashboardView({
                                 </li>
                             ))}
                         </ul>
+                        {/* [Improvement 5] Overflow count link */}
+                        {hiddenRequestsCount > 0 && (
+                            <div className="border-t border-line px-4 py-3">
+                                <button
+                                    type="button"
+                                    onClick={
+                                        canOpenDispatch
+                                            ? () => onSectionChange('dispatch')
+                                            : undefined
+                                    }
+                                    className="text-xs font-semibold text-brand hover:underline"
+                                >
+                                    + {hiddenRequestsCount} more service request
+                                    {hiddenRequestsCount === 1 ? '' : 's'} â†’
+                                </button>
+                            </div>
+                        )}
                     </Panel>
                 </section>
             )}
 
-            {/* Work in Motion & Telemetry Grid */}
+            {/* Work in Motion & Telemetry + GPT Grid */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Dispatch Schedule */}
                 <section aria-labelledby="dispatcher-jobs-heading">
@@ -870,8 +1021,9 @@ function DispatcherDashboardView({
                     </Panel>
                 </section>
 
-                {/* Telemetry Widget */}
+                {/* Right sidebar: Telemetry + GPT Advisory */}
                 <div className="space-y-6">
+                    {/* Telemetry Widget */}
                     <section aria-labelledby="dispatcher-telemetry-heading">
                         <div className="mb-3 flex items-center justify-between">
                             <h2
@@ -886,7 +1038,7 @@ function DispatcherDashboardView({
                                     onClick={() => onSectionChange('tracking')}
                                     className="text-xs font-semibold text-brand hover:underline"
                                 >
-                                    Open map →
+                                    Open map â†’
                                 </button>
                             )}
                         </div>
@@ -967,6 +1119,102 @@ function DispatcherDashboardView({
                             </p>
                         </Panel>
                     </section>
+
+                    {/* [Improvement 1] GPT Advisory Panel for Dispatcher */}
+                    {(capabilities.request_gpt_assistance ||
+                        pendingGptRecommendations.length > 0) && (
+                        <section aria-labelledby="dispatcher-gpt-heading">
+                            <div className="mb-3 flex items-center justify-between">
+                                <h2
+                                    id="dispatcher-gpt-heading"
+                                    className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
+                                >
+                                    <Sparkles className="h-4 w-4 text-brand" />
+                                    GPT AI Advisory
+                                </h2>
+                                {canOpenGpt && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onSectionChange(
+                                                'gpt-recommendations',
+                                            )
+                                        }
+                                        className="text-xs font-semibold text-brand hover:underline"
+                                    >
+                                        View all →
+                                    </button>
+                                )}
+                            </div>
+
+                            <Panel className="space-y-3 p-4">
+                                {pendingGptRecommendations.length === 0 ? (
+                                    <div className="space-y-2 text-center">
+                                        <Sparkles className="mx-auto h-6 w-6 text-muted" />
+                                        <p className="text-xs text-ink-soft">
+                                            No pending AI recommendations.
+                                            Request one from a dispatch job to
+                                            get resource assignment suggestions.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="font-medium text-ink">
+                                                {
+                                                    pendingGptRecommendations.length
+                                                }{' '}
+                                                pending review
+                                            </span>
+                                            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-strong">
+                                                Advisory only
+                                            </span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {pendingGptRecommendations
+                                                .slice(0, 2)
+                                                .map((rec) => (
+                                                    <div
+                                                        key={rec.id}
+                                                        className="space-y-1 rounded-lg bg-surface-subtle p-3 text-xs"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-semibold text-ink">
+                                                                Dispatch #
+                                                                {rec.subject_id}
+                                                            </span>
+                                                            {rec.expires_in_seconds && (
+                                                                <span className="text-muted">
+                                                                    {Math.ceil(
+                                                                        rec.expires_in_seconds /
+                                                                            60,
+                                                                    )}
+                                                                    m left
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="line-clamp-2 text-ink-soft">
+                                                            {rec.prompt_summary ??
+                                                                rec.response_summary ??
+                                                                'Recommendation pending review'}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                        {pendingGptRecommendations.length >
+                                            2 && (
+                                            <p className="text-center text-xs text-ink-soft">
+                                                +{' '}
+                                                {pendingGptRecommendations.length -
+                                                    2}{' '}
+                                                more recommendations
+                                            </p>
+                                        )}
+                                    </>
+                                )}
+                            </Panel>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>
