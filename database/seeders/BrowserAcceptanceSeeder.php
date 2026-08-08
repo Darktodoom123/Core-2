@@ -1,0 +1,202 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Modules\Assignment\Enums\AssignmentResponse;
+use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
+use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\User;
+use App\Platform\Reporting\Enums\JobReportStatus;
+use App\Platform\Reporting\Enums\ReportExportStatus;
+use App\Platform\Reporting\Enums\ReportExportType;
+use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Reporting\Models\ReportExport;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+
+final class BrowserAcceptanceSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $this->call(RolePermissionSeeder::class);
+
+        $dispatcher = $this->user('Browser Dispatcher', 'browser.dispatcher@example.com', RoleName::Dispatcher);
+        $manager = $this->user('Browser Manager', 'browser.manager@example.com', RoleName::OperationsManager);
+        $driver = $this->user('Browser Driver', 'browser.driver@example.com', RoleName::Driver);
+
+        $job = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-001',
+            'client' => 'Browser Acceptance Client',
+            'title' => 'Deterministic browser acceptance lift',
+            'site' => 'Browser fixture site',
+            'scheduled_start' => now()->addDay(),
+            'scheduled_end' => now()->addDay()->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => [],
+            'created_by' => $dispatcher->id,
+        ]);
+        $assignedJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-002',
+            'client' => 'Browser Assigned Client',
+            'title' => 'Assigned browser upload lift',
+            'site' => 'Assigned fixture site',
+            'scheduled_start' => now()->addDay(),
+            'scheduled_end' => now()->addDay()->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Dispatched,
+            'requirements' => [],
+            'created_by' => $dispatcher->id,
+        ]);
+        DispatchPersonnelAssignment::query()->create([
+            'dispatch_job_id' => $assignedJob->id,
+            'user_id' => $driver->id,
+            'assignment_type' => 'driver',
+            'response_status' => AssignmentResponse::Accepted,
+            'assigned_by' => $dispatcher->id,
+            'active_from' => now()->subMinute(),
+        ]);
+
+        $report = JobReport::query()->create([
+            'dispatch_job_id' => $job->id,
+            'author_id' => $dispatcher->id,
+            'started_at' => now()->subHour(),
+            'ended_at' => now()->subMinutes(10),
+            'work_summary' => 'Browser fixture report for authorized download coverage.',
+            'remarks' => 'Deterministic local browser evidence.',
+            'status' => JobReportStatus::Submitted,
+            'submitted_at' => now()->subMinutes(5),
+        ]);
+
+        $attachmentPath = 'attachments/browser/r6-report.txt';
+        Storage::disk('local')->put($attachmentPath, 'R6 browser attachment fixture');
+        $attachment = $report->attachments()->create([
+            'uploaded_by' => $dispatcher->id,
+            'kind' => 'document',
+            'disk' => 'local',
+            'path' => $attachmentPath,
+            'original_filename' => 'r6-report.txt',
+            'mime_type' => 'text/plain',
+            'size_bytes' => Storage::disk('local')->size($attachmentPath),
+            'checksum_sha256' => hash_file('sha256', Storage::disk('local')->path($attachmentPath)),
+            'retention_until' => now()->addDays(30),
+        ]);
+
+        $exportPath = 'exports/browser/r6-report.csv';
+        Storage::disk('local')->put($exportPath, "reference,status\nR6-BROWSER-001,draft\n");
+        $export = ReportExport::query()->create([
+            'id' => '00000000-0000-0000-0000-000000000006',
+            'user_id' => $manager->id,
+            'export_type' => ReportExportType::JobReports,
+            'format' => 'csv',
+            'status' => ReportExportStatus::Completed,
+            'filters' => ['job_id' => $job->id],
+            'file_path' => $exportPath,
+            'mime_type' => 'text/csv',
+            'file_size_bytes' => Storage::disk('local')->size($exportPath),
+            'row_count' => 1,
+            'expires_at' => now()->addDay(),
+            'download_expires_at' => now()->addDay(),
+            'completed_at' => now(),
+            'purge_at' => now()->addDays(2),
+        ]);
+        $pdfPath = 'exports/browser/r6-report.pdf';
+        Storage::disk('local')->put($pdfPath, '%PDF-1.4 browser fixture');
+        $pdfExport = ReportExport::query()->create([
+            'id' => '00000000-0000-0000-0000-000000000007',
+            'user_id' => $manager->id,
+            'export_type' => ReportExportType::JobReports,
+            'format' => 'pdf',
+            'status' => ReportExportStatus::Completed,
+            'filters' => ['job_id' => $job->id],
+            'file_path' => $pdfPath,
+            'mime_type' => 'application/pdf',
+            'file_size_bytes' => Storage::disk('local')->size($pdfPath),
+            'row_count' => 1,
+            'expires_at' => now()->addDay(),
+            'download_expires_at' => now()->addDay(),
+            'completed_at' => now(),
+            'purge_at' => now()->addDays(2),
+        ]);
+
+        $recommendations = [
+            'pending_accept' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview),
+            'pending_reject' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview),
+            'failed' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
+            'stale' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Stale),
+            'accepted' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Accepted, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(3)]),
+            'rejected' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
+        ];
+
+        File::ensureDirectoryExists(storage_path('framework/testing'));
+        File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
+            'users' => [
+                'dispatcher' => $dispatcher->email,
+                'manager' => $manager->email,
+                'driver' => $driver->email,
+            ],
+            'password' => 'password',
+            'job_id' => $job->id,
+            'assigned_job_id' => $assignedJob->id,
+            'report_id' => $report->id,
+            'attachment_id' => $attachment->id,
+            'export_ids' => [$export->id, $pdfExport->id],
+            'recommendations' => collect($recommendations)->mapWithKeys(static fn (GptRecommendation $rec, string $key): array => [$key => $rec->id])->all(),
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+    }
+
+    private function user(string $name, string $email, RoleName $role): User
+    {
+        $user = User::query()->create([
+            'name' => $name,
+            'email' => $email,
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $user->syncRoles([$role->value]);
+
+        return $user;
+    }
+
+    /** @param array<string, mixed> $overrides */
+    private function recommendation(DispatchJob $job, User $requester, GptRecommendationStatus $status, array $overrides = []): GptRecommendation
+    {
+        return GptRecommendation::query()->create(array_merge([
+            'subject_type' => $job->getMorphClass(),
+            'subject_id' => $job->id,
+            'requested_by' => $requester->id,
+            'purpose' => 'dispatch_assignment',
+            'context_hash' => hash('sha256', 'r6-browser-'.$job->id),
+            'input_references' => ['job_reference' => $job->reference],
+            'recommendation' => [
+                'summary' => 'Use the available qualified crew for this fixture job.',
+                'reasons' => ['Qualification and availability were checked.'],
+                'assumptions' => ['Fixture availability is current.'],
+                'conflicts' => [],
+                'proposed_personnel' => [],
+                'proposed_assets' => [],
+            ],
+            'conflicts' => [],
+            'model' => 'gpt-5-mini',
+            'status' => $status,
+            'prompt_summary' => 'Bounded fixture context for browser acceptance.',
+            'response_summary' => $status === GptRecommendationStatus::Failed ? null : 'Fixture recommendation summary.',
+            'usage' => ['prompt_tokens' => 12, 'completion_tokens' => 8, 'total_tokens' => 20],
+            'cost_usd' => 0.0002,
+            'generated_at' => now()->subMinute(),
+            'latency_ms' => 42,
+            'expires_at' => in_array($status, [GptRecommendationStatus::PendingReview, GptRecommendationStatus::Stale], true)
+                ? now()->addMinutes(10)
+                : null,
+            'purge_at' => now()->addDays(30),
+        ], $overrides));
+    }
+}

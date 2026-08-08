@@ -314,25 +314,37 @@ export function GptRecommendationsSurface({
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                                            rec.status ===
-                                                            'accepted'
-                                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
-                                                                : rec.status ===
-                                                                    'rejected'
-                                                                  ? 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200'
-                                                                  : rec.status ===
-                                                                          'stale' ||
-                                                                      rec.is_expired
-                                                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
-                                                                    : 'bg-surface-subtle text-ink-soft'
-                                                        }`}
-                                                    >
-                                                        {rec.is_expired
-                                                            ? 'Expired (15m)'
-                                                            : rec.status}
-                                                    </span>
+                                                    <div className="space-y-1">
+                                                        <span
+                                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                                rec.status ===
+                                                                'accepted'
+                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
+                                                                    : rec.status ===
+                                                                        'rejected'
+                                                                      ? 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200'
+                                                                      : rec.status ===
+                                                                              'stale' ||
+                                                                          rec.is_expired
+                                                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+                                                                        : 'bg-surface-subtle text-ink-soft'
+                                                            }`}
+                                                        >
+                                                            {rec.is_expired
+                                                                ? 'Expired (15m)'
+                                                                : rec.status}
+                                                        </span>
+                                                        {rec.error_message && (
+                                                            <p
+                                                                className="max-w-xs text-xs text-danger"
+                                                                role="status"
+                                                            >
+                                                                {
+                                                                    rec.error_message
+                                                                }
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3 font-mono text-ink-soft">
                                                     {rec.model}

@@ -425,9 +425,9 @@ function ReportDetailPane({
             </div>
 
             <div>
-                <h4 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                     Work Summary
-                </h4>
+                </h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink">
                     {report.work_summary}
                 </p>
@@ -441,9 +441,9 @@ function ReportDetailPane({
 
             {report.attachments.length > 0 && (
                 <div className="border-t border-line pt-4">
-                    <h4 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                         Attachments ({report.attachments.length})
-                    </h4>
+                    </h3>
                     <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
                         {report.attachments.map((file) => (
                             <li
@@ -481,9 +481,9 @@ function ReportDetailPane({
             {capabilities.review_job_report &&
                 report.status.value === 'submitted' && (
                     <div className="border-t border-line pt-4">
-                        <h4 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                             Review Action
-                        </h4>
+                        </h3>
                         <div className="mt-3 space-y-3">
                             <input
                                 type="text"

@@ -164,6 +164,10 @@ final class OpenAiClientWrapper
             return self::$fakeInstance->handleFakeCall($boundedContext);
         }
 
+        if ((bool) config('services.openai.fake', false)) {
+            return $this->handleFakeCall($boundedContext);
+        }
+
         if (empty($this->apiKey)) {
             return [
                 'success' => false,
