@@ -12,6 +12,9 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "baseUrl": ".",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "paths": {
       "@/*": [
         "./resources/js/*"
