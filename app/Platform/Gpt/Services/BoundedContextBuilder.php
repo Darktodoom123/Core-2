@@ -89,6 +89,7 @@ final class BoundedContextBuilder
                 'title' => $this->sanitizeText($job->title),
                 'client' => $this->sanitizeText($job->client !== '' ? $job->client : ($job->serviceRequest->client->company_name ?? '')),
                 'priority' => $job->priority->value,
+                'version' => $job->version,
                 'scheduled_start' => $job->scheduled_start?->toIso8601String(),
                 'scheduled_end' => $job->scheduled_end?->toIso8601String(),
                 'requirements' => $this->sanitizeValue($job->requirements ?? []),

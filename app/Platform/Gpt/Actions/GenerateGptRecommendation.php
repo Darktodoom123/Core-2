@@ -54,8 +54,6 @@ final class GenerateGptRecommendation
             'prompt_summary' => $contextData['prompt_summary'],
         ]);
 
-        $this->openAi->incrementRateLimits($actor);
-
         GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context']);
 
         return $recommendation->fresh() ?? $recommendation;

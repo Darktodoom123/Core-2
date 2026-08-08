@@ -2,6 +2,7 @@
 
 use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
 use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
+use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
 use App\Platform\Workspace\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('location:prune')->dailyAt('02:15');
+        $schedule->job(new PruneExpiredExportsJob)->dailyAt('02:30')->withoutOverlapping()->name('reports:prune-expired');
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

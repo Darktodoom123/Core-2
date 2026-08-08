@@ -24,41 +24,40 @@ final class AcceptGptRecommendation
     {
         Gate::forUser($actor)->authorize('decide', $recommendation);
 
-        if ($recommendation->status !== 'pending_review') {
-            throw ValidationException::withMessages([
-                'gpt' => "Recommendation cannot be accepted in status '{$recommendation->status}'.",
-            ]);
-        }
-
-        if ($recommendation->isExpired()) {
-            $recommendation->update(['status' => 'expired']);
-            throw ValidationException::withMessages([
-                'gpt' => 'This GPT recommendation has expired (valid for 15 minutes). Please generate a fresh recommendation.',
-            ]);
-        }
-
-        $subject = $recommendation->subject;
-        if (! $subject instanceof DispatchJob) {
-            throw ValidationException::withMessages([
-                'gpt' => 'Recommendation subject is not a dispatch job.',
-            ]);
-        }
-
-        // Revalidate operational context hash to ensure no underlying changes occurred
-        $currentContext = $this->contextBuilder->buildForDispatchJob($subject);
-        if ($recommendation->isStale($currentContext['context_hash'])) {
-            $recommendation->update(['status' => 'stale']);
-            throw ValidationException::withMessages([
-                'gpt' => 'The underlying dispatch context has changed since this recommendation was generated. Please generate a fresh recommendation.',
-            ]);
-        }
-
-        return DB::transaction(function () use ($actor, $recommendation, $subject): DispatchJob {
+        /** @var DispatchJob|array{message: string} $result */
+        $result = DB::transaction(function () use ($actor, $recommendation): DispatchJob|array {
             /** @var GptRecommendation $lockedRecommendation */
             $lockedRecommendation = GptRecommendation::query()->lockForUpdate()->findOrFail($recommendation->id);
 
-            /** @var DispatchJob $job */
-            $job = DispatchJob::query()->lockForUpdate()->findOrFail($subject->id);
+            if (! in_array($lockedRecommendation->subject_type, [DispatchJob::class, (new DispatchJob)->getMorphClass()], true)) {
+                return ['message' => 'Recommendation subject is not a dispatch job.'];
+            }
+
+            $job = DispatchJob::query()->lockForUpdate()->find($lockedRecommendation->subject_id);
+            if ($job === null) {
+                return ['message' => 'Recommendation subject is not a dispatch job.'];
+            }
+
+            // All mutable preconditions are deliberately evaluated after both locks.
+            Gate::forUser($actor)->authorize('decide', $lockedRecommendation);
+
+            if ($lockedRecommendation->status !== 'pending_review') {
+                return ['message' => "Recommendation cannot be accepted in status '{$lockedRecommendation->status}'."];
+            }
+
+            if ($lockedRecommendation->isExpired()) {
+                $lockedRecommendation->update(['status' => 'expired']);
+
+                return ['message' => 'This GPT recommendation has expired (valid for 15 minutes). Please generate a fresh recommendation.'];
+            }
+
+            // Rebuild from the locked dispatch to verify context and version atomically.
+            $currentContext = $this->contextBuilder->buildForDispatchJob($job);
+            if ($lockedRecommendation->isStale($currentContext['context_hash'])) {
+                $lockedRecommendation->update(['status' => 'stale']);
+
+                return ['message' => 'The underlying dispatch context has changed since this recommendation was generated. Please generate a fresh recommendation.'];
+            }
 
             $rawPayload = $lockedRecommendation->recommendation;
             if (! is_array($rawPayload)) {
@@ -100,5 +99,11 @@ final class AcceptGptRecommendation
 
             return $job->fresh() ?? $job;
         });
+
+        if (is_array($result)) {
+            throw ValidationException::withMessages(['gpt' => $result['message']]);
+        }
+
+        return $result;
     }
 }

@@ -1,5 +1,8 @@
 <?php
 
+use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Http\Resources\V1\UserResource;
@@ -9,9 +12,13 @@ use App\Shared\Assets\Http\Resources\V1\OperationalAssetResource;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\Process\Process;
 
 uses(RefreshDatabase::class);
 
@@ -21,6 +28,8 @@ beforeEach(function (): void {
     RateLimiter::clear('uploads');
     RateLimiter::clear('exports');
     RateLimiter::clear('gpt');
+    Cache::flush();
+    Storage::fake('local');
 });
 
 function createSprint7User(RoleName $role): User
@@ -72,11 +81,60 @@ it('enforces endpoint-specific rate limiters for location, uploads, exports, and
             'format' => 'csv',
         ])
         ->assertStatus(429);
+
+    // 3. Private attachment upload throttle (20 req/min)
+    $dispatcher = createSprint7User(RoleName::Dispatcher);
+    for ($i = 0; $i < 20; $i++) {
+        $job = DispatchJob::query()->create([
+            'reference' => 'UPL-'.$i.'-'.uniqid(),
+            'client' => 'Client',
+            'title' => 'Upload throttle',
+            'site' => 'Site',
+            'status' => DispatchStatus::Draft,
+            'priority' => DispatchPriority::Routine,
+            'scheduled_start' => now()->addHour(),
+            'scheduled_end' => now()->addHours(2),
+            'created_by' => $dispatcher->id,
+            'version' => 1,
+        ]);
+        $this->actingAs($dispatcher)->postJson('/operations/attachments', [
+            'file' => UploadedFile::fake()->create("upload-{$i}.pdf", 1, 'application/pdf'),
+            'owner_type' => 'dispatch_job',
+            'owner_id' => $job->id,
+        ])->assertCreated();
+    }
+    $this->actingAs($dispatcher)->postJson('/operations/attachments', [
+        'file' => UploadedFile::fake()->create('overflow.pdf', 1, 'application/pdf'),
+        'owner_type' => 'dispatch_job',
+        'owner_id' => DispatchJob::query()->firstOrFail()->id,
+    ])->assertStatus(429);
+
+    // 4. GPT request throttle (10 req/min)
+    Queue::fake();
+    for ($i = 0; $i < 10; $i++) {
+        $this->actingAs($dispatcher)->post('/operations/gpt-recommendations', [
+            'subject_type' => (new DispatchJob)->getMorphClass(),
+            'subject_id' => DispatchJob::query()->firstOrFail()->id,
+            'purpose' => 'dispatch_assignment',
+        ])->assertRedirect();
+    }
+    $this->actingAs($dispatcher)->post('/operations/gpt-recommendations', [
+        'subject_type' => (new DispatchJob)->getMorphClass(),
+        'subject_id' => DispatchJob::query()->firstOrFail()->id,
+        'purpose' => 'dispatch_assignment',
+    ])->assertStatus(429);
 });
 
-it('isolates dev routes in non-local environments', function (): void {
-    // In testing environment, /dev/users should return 200
-    $this->get('/dev/users')->assertStatus(200);
+it('omits development routes when a production application boots', function (): void {
+    $process = new Process(
+        [PHP_BINARY, 'artisan', 'route:list', '--path=dev'],
+        base_path(),
+        ['APP_ENV' => 'production'],
+    );
+    $process->mustRun();
+
+    expect($process->getOutput().$process->getErrorOutput())
+        ->toContain("doesn't have any routes matching the given criteria");
 });
 
 it('authorizes private attachment downloads correctly', function (): void {

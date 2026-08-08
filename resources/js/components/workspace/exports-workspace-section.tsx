@@ -35,9 +35,8 @@ export function ExportsSurface({
                         Asynchronous Data Exports
                     </h3>
                     <p className="text-sm text-ink-soft">
-                        Generate and download background CSV/Excel exports for
-                        operational reports, dispatches, fuel, and fleet
-                        maintenance records.
+                        Generate and download background CSV exports for scoped
+                        operational reports and dispatches.
                     </p>
                 </div>
                 <Button
@@ -215,10 +214,14 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             <option value="dispatches">
                                 Dispatch Lifecycle
                             </option>
-                            <option value="fuel_logs">Fuel Logs</option>
+                            <option value="fuel_logs">Fuel Receipts</option>
                             <option value="maintenance_logs">
                                 Fleet Maintenance
                             </option>
+                            <option value="location_audit">
+                                Location Audit
+                            </option>
+                            <option value="system_audit">System Audit</option>
                         </select>
                         {form.errors.export_type && (
                             <p className="mt-1 text-xs text-danger">
@@ -241,7 +244,9 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             <option value="csv">
                                 CSV (Comma Separated Values)
                             </option>
-                            <option value="xlsx">Excel (.xlsx format)</option>
+                            <option value="pdf">
+                                PDF (Printable Document)
+                            </option>
                         </select>
                         {form.errors.format && (
                             <p className="mt-1 text-xs text-danger">

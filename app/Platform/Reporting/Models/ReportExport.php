@@ -19,11 +19,14 @@ use Illuminate\Support\Carbon;
  * @property string $format
  * @property ReportExportStatus $status
  * @property array<string, mixed>|null $filters
+ * @property array<string, mixed>|null $authorization_snapshot
  * @property string|null $file_path
  * @property int|null $file_size_bytes
  * @property int|null $row_count
  * @property string|null $error_message
  * @property Carbon|null $expires_at
+ * @property Carbon|null $download_expires_at
+ * @property Carbon|null $purge_at
  * @property Carbon|null $started_at
  * @property Carbon|null $completed_at
  * @property User $user
@@ -38,11 +41,17 @@ class ReportExport extends Model
         'format',
         'status',
         'filters',
+        'authorization_snapshot',
+        'request_fingerprint',
         'file_path',
+        'mime_type',
+        'checksum_sha256',
         'file_size_bytes',
         'row_count',
         'error_message',
         'expires_at',
+        'download_expires_at',
+        'purge_at',
         'started_at',
         'completed_at',
     ];
@@ -53,9 +62,12 @@ class ReportExport extends Model
             'export_type' => ReportExportType::class,
             'status' => ReportExportStatus::class,
             'filters' => 'array',
+            'authorization_snapshot' => 'array',
             'file_size_bytes' => 'integer',
             'row_count' => 'integer',
             'expires_at' => 'datetime',
+            'download_expires_at' => 'datetime',
+            'purge_at' => 'datetime',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
@@ -70,7 +82,8 @@ class ReportExport extends Model
     public function isExpired(): bool
     {
         return $this->status === ReportExportStatus::Expired
-            || ($this->expires_at !== null && $this->expires_at->isPast());
+            || (($this->download_expires_at ?? $this->expires_at) !== null
+                && ($this->download_expires_at ?? $this->expires_at)->isPast());
     }
 
     public function isDownloadable(): bool

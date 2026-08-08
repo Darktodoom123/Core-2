@@ -45,16 +45,25 @@ final class GenerateGptRecommendationJob implements ShouldQueue
 
         if ($result['success']) {
             $recPayload = $result['recommendation'] ?? [];
-            $recommendation->update([
-                'status' => 'pending_review',
-                'recommendation' => $recPayload,
-                'conflicts' => $recPayload['conflicts'] ?? [],
-                'response_summary' => $result['response_summary'],
-                'usage' => $result['usage'],
-                'cost_usd' => $result['cost_usd'],
-                'expires_at' => now()->addMinutes(15),
-                'error_message' => null,
-            ]);
+            $updated = GptRecommendation::query()
+                ->whereKey($recommendation->id)
+                ->where('status', 'processing')
+                ->update([
+                    'status' => 'pending_review',
+                    'recommendation' => $recPayload,
+                    'conflicts' => $recPayload['conflicts'] ?? [],
+                    'response_summary' => $result['response_summary'],
+                    'usage' => $result['usage'],
+                    'cost_usd' => $result['cost_usd'],
+                    'expires_at' => now()->addMinutes(15),
+                    'error_message' => null,
+                ]);
+
+            if ($updated !== 1) {
+                return;
+            }
+
+            $recommendation->refresh();
 
             $requestedBy = $recommendation->requestedBy;
             if ($requestedBy !== null && $recommendation->subject !== null) {
@@ -73,11 +82,18 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 );
             }
         } else {
-            $recommendation->update([
-                'status' => 'failed',
-                'error_message' => $result['error_message'],
-                'response_summary' => $result['response_summary'],
-            ]);
+            $updated = GptRecommendation::query()
+                ->whereKey($recommendation->id)
+                ->where('status', 'processing')
+                ->update([
+                    'status' => 'failed',
+                    'error_message' => $result['error_message'],
+                    'response_summary' => $result['response_summary'],
+                ]);
+
+            if ($updated !== 1) {
+                return;
+            }
 
             Log::warning("GPT Recommendation #{$recommendation->id} failed: {$result['error_message']}");
         }
@@ -86,11 +102,14 @@ final class GenerateGptRecommendationJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         $recommendation = GptRecommendation::query()->find($this->recommendationId);
-        if ($recommendation instanceof GptRecommendation && $recommendation->status !== 'accepted') {
-            $recommendation->update([
-                'status' => 'failed',
-                'error_message' => 'Job execution failed: '.$exception->getMessage(),
-            ]);
+        if ($recommendation instanceof GptRecommendation) {
+            GptRecommendation::query()
+                ->whereKey($recommendation->id)
+                ->whereIn('status', ['draft', 'processing'])
+                ->update([
+                    'status' => 'failed',
+                    'error_message' => 'Job execution failed: '.$exception->getMessage(),
+                ]);
         }
     }
 }

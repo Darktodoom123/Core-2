@@ -207,3 +207,36 @@ it('enforces file isolation preventing unauthorized user from downloading privat
         ->get("/operations/attachments/{$attachment->id}/download")
         ->assertStatus(200);
 });
+
+it('returns not found when an authorized attachment file is missing from private storage', function (): void {
+    $uploader = createAttachUser(RoleName::Dispatcher);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-MISSING',
+        'client' => 'Client',
+        'title' => 'Missing attachment',
+        'site' => 'Site',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $uploader->id,
+        'version' => 1,
+    ]);
+
+    $attachment = Attachment::query()->create([
+        'owner_type' => $job->getMorphClass(),
+        'owner_id' => $job->id,
+        'uploaded_by' => $uploader->id,
+        'kind' => 'document',
+        'disk' => 'local',
+        'path' => 'attachments/missing.pdf',
+        'original_filename' => 'missing.pdf',
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 1,
+        'checksum_sha256' => hash('sha256', 'missing'),
+    ]);
+
+    $this->actingAs($uploader)
+        ->get("/operations/attachments/{$attachment->id}/download")
+        ->assertNotFound();
+});

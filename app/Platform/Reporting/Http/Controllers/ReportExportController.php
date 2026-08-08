@@ -63,7 +63,7 @@ class ReportExportController extends Controller
         $filename = basename($export->file_path);
 
         return Storage::disk('private')->download($export->file_path, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type' => $export->format === 'pdf' ? 'application/pdf' : 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -77,7 +77,9 @@ class ReportExportController extends Controller
             'file_size_bytes' => null,
             'row_count' => null,
             'error_message' => null,
-            'expires_at' => now()->addDays(7),
+            'expires_at' => now()->addDay(),
+            'download_expires_at' => now()->addDay(),
+            'purge_at' => now()->addDays(7),
         ]);
 
         $recordAudit->handle(

@@ -14,7 +14,9 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
 
     Route::middleware('throttle:exports')->group(function (): void {
         Route::post('/reports/exports', [ReportExportController::class, 'store']);
-        Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download']);
+        Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download'])
+            ->name('operations.exports.download')
+            ->middleware('signed');
         Route::post('/reports/exports/{export}/retry', [ReportExportController::class, 'retry']);
     });
 });

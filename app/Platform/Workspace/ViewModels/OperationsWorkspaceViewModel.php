@@ -24,6 +24,7 @@ use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 
 final class OperationsWorkspaceViewModel
 {
@@ -571,7 +572,13 @@ final class OperationsWorkspaceViewModel
             'completed_at' => $export->completed_at?->toIso8601String(),
             'is_downloadable' => $export->isDownloadable(),
             'is_expired' => $export->isExpired(),
-            'download_url' => "/operations/reports/exports/{$export->getKey()}/download",
+            'download_url' => $export->isDownloadable()
+                ? URL::temporarySignedRoute(
+                    'operations.exports.download',
+                    $export->download_expires_at ?? $export->expires_at ?? now(),
+                    ['export' => $export->getKey()],
+                )
+                : null,
             'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",
         ])->values()->all();
     }
