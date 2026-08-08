@@ -153,11 +153,16 @@ export default function DispatchDetail({
                                         variant="secondary"
                                         size="sm"
                                         onClick={() => {
-                                            router.post('/operations/gpt-recommendations', {
-                                                subject_type: 'dispatch_job',
-                                                subject_id: job.id,
-                                                purpose: 'dispatch_assignment',
-                                            });
+                                            router.post(
+                                                '/operations/gpt-recommendations',
+                                                {
+                                                    subject_type:
+                                                        'dispatch_job',
+                                                    subject_id: job.id,
+                                                    purpose:
+                                                        'dispatch_assignment',
+                                                },
+                                            );
                                         }}
                                     >
                                         <Sparkles className="h-4 w-4 text-amber-500" />

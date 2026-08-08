@@ -633,10 +633,7 @@ export function OpenStreetMapTrackingMap({
                                         <button
                                             type="button"
                                             onClick={(e) =>
-                                                copyCoordinates(
-                                                    location,
-                                                    e,
-                                                )
+                                                copyCoordinates(location, e)
                                             }
                                             className="ml-2 rounded p-1 text-ink-soft transition-colors hover:text-ink focus:outline-none"
                                             title="Copy coordinates"

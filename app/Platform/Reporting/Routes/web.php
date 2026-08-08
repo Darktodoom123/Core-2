@@ -12,7 +12,9 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
     Route::post('/job-reports/{jobReport}/review', [JobReportController::class, 'review']);
     Route::get('/reports/daily-summary', [OperationsSummaryController::class, 'dailySummary']);
 
-    Route::post('/reports/exports', [ReportExportController::class, 'store']);
-    Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download']);
-    Route::post('/reports/exports/{export}/retry', [ReportExportController::class, 'retry']);
+    Route::middleware('throttle:exports')->group(function (): void {
+        Route::post('/reports/exports', [ReportExportController::class, 'store']);
+        Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download']);
+        Route::post('/reports/exports/{export}/retry', [ReportExportController::class, 'retry']);
+    });
 });
