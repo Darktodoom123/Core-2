@@ -2,6 +2,8 @@
 /bootstrap/ssr
 /node_modules
 /.npm-cache
+/.expo
+/dist
 /packages/field-mobile/node_modules
 /packages/field-mobile/.env.local
 /packages/field-mobile/.npm-cache
