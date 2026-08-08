@@ -3,6 +3,7 @@
 namespace App\Platform\Gpt\Policies;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -31,6 +32,16 @@ final class GptRecommendationPolicy
     public function decide(User $user, GptRecommendation $recommendation): bool
     {
         return $this->canAccessPurpose($user, $recommendation->purpose)
+            && $this->canAccessSubject($user, $recommendation);
+    }
+
+    public function retry(User $user, GptRecommendation $recommendation): bool
+    {
+        $retryable = $recommendation->status->isTerminal()
+            && $recommendation->status !== GptRecommendationStatus::Accepted;
+
+        return ($retryable || ($recommendation->status === GptRecommendationStatus::PendingReview && $recommendation->isExpired()))
+            && $this->canAccessPurpose($user, $recommendation->purpose)
             && $this->canAccessSubject($user, $recommendation);
     }
 

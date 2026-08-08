@@ -3,10 +3,11 @@ import {
     AlertTriangle,
     CheckCircle,
     Clock,
+    RefreshCw,
     Sparkles,
     XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import type {
@@ -25,12 +26,18 @@ export function GptRecommendationsSurface({
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
+    const [retryingId, setRetryingId] = useState<number | null>(null);
 
     const pending = recommendations.filter(
         (r) => r.status === 'pending_review' && !r.is_expired,
     );
+    const processing = recommendations.filter((r) =>
+        ['draft', 'processing'].includes(r.status),
+    );
     const history = recommendations.filter(
-        (r) => r.status !== 'pending_review' || r.is_expired,
+        (r) =>
+            !['pending_review', 'draft', 'processing'].includes(r.status) ||
+            r.is_expired,
     );
 
     return (
@@ -101,6 +108,8 @@ export function GptRecommendationsSurface({
                                             {rec.prompt_summary}
                                         </p>
                                     )}
+
+                                    <RecommendationDetails rec={rec} />
 
                                     {/* Proposed Resource Plan Summary */}
                                     <div className="space-y-2 text-xs">
@@ -210,6 +219,44 @@ export function GptRecommendationsSurface({
                     )}
                 </div>
 
+                {processing.length > 0 && (
+                    <div className="space-y-3" aria-live="polite">
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-ink">
+                            <Clock className="text-cobalt-600 h-5 w-5" />
+                            Processing ({processing.length})
+                        </h3>
+                        <Panel className="space-y-2">
+                            {processing.map((rec) => (
+                                <div
+                                    key={rec.id}
+                                    className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-2 last:border-0 last:pb-0"
+                                >
+                                    <div>
+                                        <p className="text-sm font-medium text-ink">
+                                            Recommendation #{rec.id} · Dispatch
+                                            #{rec.subject_id}
+                                        </p>
+                                        <p className="text-xs text-ink-soft">
+                                            {rec.status === 'draft'
+                                                ? 'Queued for processing.'
+                                                : 'The advisory model is processing this request.'}
+                                        </p>
+                                    </div>
+                                    <span className="bg-cobalt-50 text-cobalt-700 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+                                        <RefreshCw
+                                            className="h-3.5 w-3.5 animate-spin"
+                                            aria-hidden="true"
+                                        />
+                                        {rec.status === 'draft'
+                                            ? 'Queued'
+                                            : 'Processing'}
+                                    </span>
+                                </div>
+                            ))}
+                        </Panel>
+                    </div>
+                )}
+
                 {/* Recommendation History Table */}
                 <div className="space-y-4 pt-4">
                     <h3 className="text-base font-semibold text-ink">
@@ -245,6 +292,9 @@ export function GptRecommendationsSurface({
                                             </th>
                                             <th className="px-4 py-3">
                                                 Decided At
+                                            </th>
+                                            <th className="px-4 py-3">
+                                                Action
                                             </th>
                                         </tr>
                                     </thead>
@@ -302,6 +352,44 @@ export function GptRecommendationsSurface({
                                                           ).toLocaleString()
                                                         : 'N/A'}
                                                 </td>
+                                                <td className="px-4 py-3">
+                                                    {capabilities.retry_gpt_recommendation &&
+                                                        rec.is_retryable && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="secondary"
+                                                                disabled={
+                                                                    retryingId ===
+                                                                    rec.id
+                                                                }
+                                                                onClick={() => {
+                                                                    setRetryingId(
+                                                                        rec.id,
+                                                                    );
+                                                                    router.post(
+                                                                        rec.retry_url,
+                                                                        {},
+                                                                        {
+                                                                            onFinish:
+                                                                                () =>
+                                                                                    setRetryingId(
+                                                                                        null,
+                                                                                    ),
+                                                                        },
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <RefreshCw
+                                                                    className={`mr-1 h-3.5 w-3.5 ${retryingId === rec.id ? 'animate-spin' : ''}`}
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {retryingId ===
+                                                                rec.id
+                                                                    ? 'Retrying…'
+                                                                    : 'Retry'}
+                                                            </Button>
+                                                        )}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -329,6 +417,86 @@ export function GptRecommendationsSurface({
     );
 }
 
+function RecommendationDetails({ rec }: { rec: GptRecommendationViewModel }) {
+    const recommendation = rec.recommendation ?? {};
+    const reasons = Array.isArray(recommendation.reasons)
+        ? recommendation.reasons
+        : [];
+    const assumptions = Array.isArray(recommendation.assumptions)
+        ? recommendation.assumptions
+        : [];
+
+    return (
+        <div className="grid gap-2 rounded border border-line bg-surface-subtle p-3 text-xs text-ink-soft sm:grid-cols-2">
+            <div>
+                <span className="font-semibold text-ink">Freshness:</span>{' '}
+                {rec.generated_at
+                    ? new Date(rec.generated_at).toLocaleString()
+                    : 'Not generated yet'}
+            </div>
+            <div>
+                <span className="font-semibold text-ink">Model:</span>{' '}
+                {rec.model}
+            </div>
+            <div>
+                <span className="font-semibold text-ink">Usage:</span>{' '}
+                {rec.usage
+                    ? `${rec.usage.total_tokens.toLocaleString()} tokens`
+                    : 'Not available'}
+            </div>
+            <div>
+                <span className="font-semibold text-ink">Cost / latency:</span>{' '}
+                {rec.cost_usd === null
+                    ? 'Not available'
+                    : `$${rec.cost_usd.toFixed(4)}`}
+                {rec.latency_ms === null ? '' : ` · ${rec.latency_ms} ms`}
+            </div>
+            <div>
+                <span className="font-semibold text-ink">Expires:</span>{' '}
+                {rec.expires_at
+                    ? new Date(rec.expires_at).toLocaleString()
+                    : 'Not available'}
+            </div>
+            <div>
+                <span className="font-semibold text-ink">Requested by:</span>{' '}
+                {rec.requested_by.name}
+            </div>
+            {rec.decided_by && (
+                <div>
+                    <span className="font-semibold text-ink">Decided by:</span>{' '}
+                    {rec.decided_by.name}
+                </div>
+            )}
+            {reasons.length > 0 && (
+                <div className="sm:col-span-2">
+                    <span className="font-semibold text-ink">Reasons:</span>{' '}
+                    {reasons.map(String).join(' ')}
+                </div>
+            )}
+            {assumptions.length > 0 && (
+                <div className="sm:col-span-2">
+                    <span className="font-semibold text-ink">Assumptions:</span>{' '}
+                    {assumptions.map(String).join(' ')}
+                </div>
+            )}
+            {rec.error_message && (
+                <div
+                    className="rounded border border-red-200 bg-red-50 p-2 text-red-700 sm:col-span-2"
+                    role="alert"
+                >
+                    {rec.error_message}
+                </div>
+            )}
+            {rec.response_summary && (
+                <div className="sm:col-span-2">
+                    <span className="font-semibold text-ink">Summary:</span>{' '}
+                    {rec.response_summary}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function AcceptGptModal({
     rec,
     onClose,
@@ -337,6 +505,9 @@ function AcceptGptModal({
     onClose: () => void;
 }) {
     const [processing, setProcessing] = useState(false);
+    useEffect(() => {
+        document.getElementById(`accept-gpt-cancel-${rec.id}`)?.focus();
+    }, [rec.id]);
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -356,10 +527,18 @@ function AcceptGptModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md space-y-4 rounded-lg bg-surface p-6 shadow-xl">
+            <div
+                className="w-full max-w-md space-y-4 rounded-lg bg-surface p-6 shadow-xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={`accept-gpt-title-${rec.id}`}
+            >
                 <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
                     <CheckCircle className="h-6 w-6" />
-                    <h3 className="text-lg font-semibold text-ink">
+                    <h3
+                        id={`accept-gpt-title-${rec.id}`}
+                        className="text-lg font-semibold text-ink"
+                    >
                         Accept AI Recommendation
                     </h3>
                 </div>
@@ -396,6 +575,7 @@ function AcceptGptModal({
                     className="flex justify-end gap-3 pt-2"
                 >
                     <Button
+                        id={`accept-gpt-cancel-${rec.id}`}
                         type="button"
                         variant="secondary"
                         onClick={onClose}
@@ -413,6 +593,9 @@ function AcceptGptModal({
                             : 'Confirm & Apply Resource Plan'}
                     </Button>
                 </form>
+                <p className="sr-only" aria-live="polite">
+                    {processing ? 'Applying recommendation.' : ''}
+                </p>
             </div>
         </div>
     );
@@ -428,6 +611,11 @@ function RejectGptModal({
     const form = useForm({
         reason: '',
     });
+    const reasonRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        reasonRef.current?.focus();
+    }, []);
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -439,10 +627,18 @@ function RejectGptModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md space-y-4 rounded-lg bg-surface p-6 shadow-xl">
+            <div
+                className="w-full max-w-md space-y-4 rounded-lg bg-surface p-6 shadow-xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={`reject-gpt-title-${rec.id}`}
+            >
                 <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
                     <XCircle className="h-6 w-6" />
-                    <h3 className="text-lg font-semibold text-ink">
+                    <h3
+                        id={`reject-gpt-title-${rec.id}`}
+                        className="text-lg font-semibold text-ink"
+                    >
                         Reject AI Recommendation
                     </h3>
                 </div>
@@ -458,6 +654,7 @@ function RejectGptModal({
                             Rejection Reason (Optional)
                         </label>
                         <input
+                            ref={reasonRef}
                             type="text"
                             className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-amber-500 focus:outline-none"
                             placeholder="e.g. Driver requested off shift / Asset under inspection"

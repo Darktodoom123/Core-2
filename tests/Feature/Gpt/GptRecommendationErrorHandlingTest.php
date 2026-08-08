@@ -135,5 +135,6 @@ test('handles model refusal gracefully and sets status failed', function (): voi
     $recommendation->refresh();
     expect($recommendation->status->value)->toBe('failed')
         ->and($recommendation->error_message)->toBe('GPT generation failed. Please retry.')
+        ->and($recommendation->response_summary)->toBeNull()
         ->and($recommendation->error_message)->not->toContain('refused');
 });

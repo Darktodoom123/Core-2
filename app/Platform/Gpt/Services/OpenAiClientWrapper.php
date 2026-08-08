@@ -283,9 +283,11 @@ final class OpenAiClientWrapper
                 ];
             }
 
+            $safeRecommendation = $this->sanitizeRecommendation($parsedJson, $boundedContext);
+
             return [
                 'success' => true,
-                'recommendation' => $parsedJson,
+                'recommendation' => $safeRecommendation,
                 'usage' => [
                     'prompt_tokens' => $promptTokens,
                     'completion_tokens' => $completionTokens,
@@ -293,7 +295,7 @@ final class OpenAiClientWrapper
                 ],
                 'cost_usd' => $costUsd,
                 'error_message' => null,
-                'response_summary' => $parsedJson['summary'] ?? 'Generated recommendation',
+                'response_summary' => $safeRecommendation['summary'] ?? 'Generated recommendation',
                 'is_refusal' => false,
                 'is_timeout' => false,
             ];
@@ -383,6 +385,8 @@ final class OpenAiClientWrapper
             ];
         }
 
+        $recommendation = $this->sanitizeRecommendation($recommendation, $boundedContext);
+
         return [
             'success' => true,
             'recommendation' => $recommendation,
@@ -403,6 +407,51 @@ final class OpenAiClientWrapper
             && isset($data['proposed_assets']) && is_array($data['proposed_assets'])
             && isset($data['reasons']) && is_array($data['reasons'])
             && isset($data['assumptions']) && is_array($data['assumptions']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $recommendation
+     * @param  array<string, mixed>  $boundedContext
+     * @return array<string, mixed>
+     */
+    private function sanitizeRecommendation(array $recommendation, array $boundedContext): array
+    {
+        $sensitive = [];
+        $job = $boundedContext['job'] ?? [];
+        if (is_array($job)) {
+            foreach (['reference', 'title', 'site', 'site_name', 'client'] as $key) {
+                $value = $job[$key] ?? null;
+                if (is_string($value) && mb_strlen($value) >= 3) {
+                    $sensitive[] = $value;
+                }
+            }
+        }
+
+        $redact = function (mixed $value) use (&$redact, $sensitive): mixed {
+            if (is_array($value)) {
+                return array_map($redact, $value);
+            }
+
+            if (! is_string($value)) {
+                return $value;
+            }
+
+            foreach ($sensitive as $secret) {
+                $value = (string) preg_replace('/'.preg_quote($secret, '/').'/i', '[REDACTED]', $value);
+            }
+
+            $value = (string) preg_replace('/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', '[REDACTED_EMAIL]', $value);
+            $value = (string) preg_replace('/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/', '[REDACTED_PHONE]', $value);
+            $value = (string) preg_replace('/-?\d{1,3}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}/', '[REDACTED_GPS]', $value);
+            $value = (string) preg_replace('/\b(?:sk|pk|token|bearer)[-_:\s]*[A-Za-z0-9._-]{8,}\b/i', '[REDACTED_SECRET]', $value);
+
+            return mb_substr($value, 0, 500);
+        };
+
+        /** @var array<string, mixed> $safe */
+        $safe = $redact($recommendation);
+
+        return $safe;
     }
 
     /** @param array<string, mixed> $boundedContext

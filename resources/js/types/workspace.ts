@@ -411,6 +411,7 @@ export interface WorkspaceCapabilities {
     maintain_asset: boolean;
     request_gpt_assistance: boolean;
     decide_gpt_recommendation: boolean;
+    retry_gpt_recommendation: boolean;
     create_job_report: boolean;
     attachment_upload: boolean;
     attachment_policy: {
@@ -462,13 +463,20 @@ export interface GptRecommendationViewModel {
     conflicts: Array<Record<string, unknown>>;
     model: string;
     cost_usd: number | null;
+    usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    } | null;
     generated_at: string | null;
     latency_ms: number | null;
     purge_at: string | null;
     expires_at: string | null;
     expires_in_seconds?: number;
     is_expired: boolean;
+    is_retryable: boolean;
     error_message: string | null;
+    retry_url: string;
     requested_by: {
         id: number;
         name: string;

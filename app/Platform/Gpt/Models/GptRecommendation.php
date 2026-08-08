@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $generated_at
  * @property int|null $latency_ms
  * @property Carbon|null $purge_at
+ * @property array<string, mixed>|null $usage
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

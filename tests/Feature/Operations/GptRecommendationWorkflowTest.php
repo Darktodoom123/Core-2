@@ -281,6 +281,92 @@ it('prevents a second terminal GPT decision', function (): void {
     expect($recommendation->fresh()->status->value)->toBe('rejected');
 });
 
+it('retries a terminal recommendation by creating a fresh recommendation and preserving the original', function (): void {
+    Queue::fake();
+
+    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $job = createGptJob($dispatcher, DispatchStatus::Draft);
+    $original = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'old-hash',
+        'input_references' => [],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'failed',
+        'error_message' => 'GPT generation failed. Please retry.',
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->post("/operations/gpt-recommendations/{$original->id}/retry")
+        ->assertRedirect()
+        ->assertSessionHas('flash.success');
+
+    $original->refresh();
+    $newRecommendation = GptRecommendation::query()
+        ->where('id', '!=', $original->id)
+        ->latest('id')
+        ->firstOrFail();
+
+    expect($original->status->value)->toBe('failed')
+        ->and($newRecommendation->status->value)->toBe('draft')
+        ->and($newRecommendation->context_hash)->not->toBe('old-hash')
+        ->and($newRecommendation->id)->not->toBe($original->id);
+
+    expect(AuditEvent::query()->where('action', 'gpt.recommendation_retried')->exists())->toBeTrue();
+    Queue::assertPushed(GenerateGptRecommendationJob::class);
+});
+
+it('denies retry when the actor cannot view the recommendation subject', function (): void {
+    Queue::fake();
+    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $driver = createGptUser(RoleName::Driver);
+    $job = createGptJob($dispatcher, DispatchStatus::Draft);
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'old-hash',
+        'input_references' => [],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'stale',
+    ]);
+
+    $this->actingAs($driver)
+        ->post("/operations/gpt-recommendations/{$recommendation->id}/retry")
+        ->assertForbidden();
+
+    expect(GptRecommendation::query()->count())->toBe(1);
+});
+
+it('does not retry an accepted recommendation', function (): void {
+    Queue::fake();
+    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $job = createGptJob($dispatcher, DispatchStatus::Draft);
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'accepted-hash',
+        'input_references' => [],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'accepted',
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->post("/operations/gpt-recommendations/{$recommendation->id}/retry")
+        ->assertForbidden();
+});
+
 it('does not resurrect a recommendation rejected while its generation job is processing', function (): void {
     $dispatcher = createGptUser(RoleName::Dispatcher);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);

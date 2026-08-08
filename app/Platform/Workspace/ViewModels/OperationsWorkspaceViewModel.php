@@ -538,6 +538,7 @@ final class OperationsWorkspaceViewModel
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),
             'decide_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
+            'retry_gpt_recommendation' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             'create_job_report' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
             'attachment_upload' => $user->can(PermissionName::DispatchUpdateOwnStatus->value) || $user->can(PermissionName::ReportsViewOwn->value),
             'attachment_policy' => [
@@ -613,12 +614,20 @@ final class OperationsWorkspaceViewModel
             'conflicts' => $rec->conflicts ?? [],
             'model' => $rec->model,
             'cost_usd' => $rec->cost_usd !== null ? (float) $rec->cost_usd : null,
+            'usage' => is_array($rec->usage) ? [
+                'prompt_tokens' => (int) ($rec->usage['prompt_tokens'] ?? 0),
+                'completion_tokens' => (int) ($rec->usage['completion_tokens'] ?? 0),
+                'total_tokens' => (int) ($rec->usage['total_tokens'] ?? 0),
+            ] : null,
             'generated_at' => $rec->generated_at?->toIso8601String(),
             'latency_ms' => $rec->latency_ms,
             'purge_at' => $rec->purge_at?->toIso8601String(),
             'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
             'expires_in_seconds' => $rec->expires_at instanceof Carbon ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
             'is_expired' => $rec->isExpired(),
+            'is_retryable' => $rec->status !== GptRecommendationStatus::Accepted
+                && ($rec->status->isTerminal() || ($rec->status === GptRecommendationStatus::PendingReview && $rec->isExpired())),
+            'retry_url' => "/operations/gpt-recommendations/{$rec->id}/retry",
             'error_message' => $rec->error_message,
             'requested_by' => [
                 'id' => (int) $rec->requestedBy->getKey(),

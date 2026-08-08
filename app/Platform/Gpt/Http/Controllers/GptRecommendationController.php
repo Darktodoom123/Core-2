@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Gpt\Actions\AcceptGptRecommendation;
 use App\Platform\Gpt\Actions\GenerateGptRecommendation;
 use App\Platform\Gpt\Actions\RejectGptRecommendation;
+use App\Platform\Gpt\Actions\RetryGptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,6 +64,15 @@ final class GptRecommendationController extends Controller
 
         return redirect()->back()->with('flash', [
             'info' => 'GPT recommendation rejected.',
+        ]);
+    }
+
+    public function retry(Request $request, GptRecommendation $recommendation, RetryGptRecommendation $retryAction): RedirectResponse
+    {
+        $retryAction->handle($request->user(), $recommendation);
+
+        return redirect()->back()->with('flash', [
+            'success' => 'A fresh GPT recommendation request was queued.',
         ]);
     }
 }
