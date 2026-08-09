@@ -112,12 +112,14 @@ export default [
     {
         ignores: [
             'vendor',
+            'third_party/**',
             'node_modules',
             'public',
             'storage/**',
             'bootstrap/ssr',
             '.android-sdk/**',
             'android-sdk-runtime/**',
+            'dist/**',
             'packages/field-mobile/.expo/**',
             'packages/field-mobile/.expo-export/**',
             'packages/field-mobile/dist/**',

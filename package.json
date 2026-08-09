@@ -31,7 +31,8 @@
         "mobile:session1:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -AndroidAvd core2_api_36",
         "mobile:sprint2:native": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js",
         "mobile:sprint2:native:api30": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_30_phone",
-        "mobile:sprint2:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_36"
+        "mobile:sprint2:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_36",
+        "security:image-size": "node scripts/test-image-size-hardening.cjs"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.12.1",
@@ -64,6 +65,7 @@
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
         "globals": "^15.14.0",
+        "image-size": "file:third_party/image-size",
         "laravel-echo": "^2.4.0",
         "laravel-vite-plugin": "^3.1",
         "leaflet": "^1.9.4",
@@ -84,6 +86,12 @@
         "lightningcss-linux-x64-gnu": "^1.29.1"
     },
     "overrides": {
-        "nanoid": "3.3.17"
+        "metro": {
+            "image-size": "$image-size"
+        },
+        "nanoid": "3.3.17",
+        "xcode@3.0.1": {
+            "uuid": "11.1.1"
+        }
     }
 }

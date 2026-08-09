@@ -41,6 +41,9 @@ jobs:
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm ci
 
+      - name: Validate Composer manifest
+        run: composer validate --strict
+
       - name: Check PHP formatting
         run: composer lint:check
 
@@ -61,6 +64,9 @@ jobs:
 
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Verify image-size parser hardening
+        run: npm run security:image-size
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v7
