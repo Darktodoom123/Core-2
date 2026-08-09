@@ -79,7 +79,7 @@ worker:
 
 ```powershell
 $env:RUN_NATIVE_ACCEPTANCE = '1'
-$env:FIELD_TEST_EMAIL = '<test account email>'
+$env:FIELD_TEST_USERNAME = '<test account username>'
 $env:FIELD_TEST_PASSWORD = '<test account password>'
 $env:FORBIDDEN_JOB_REFERENCE = '<other worker job reference>'
 npm run e2e:test:android

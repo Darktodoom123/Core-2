@@ -4,12 +4,12 @@ const path = require('node:path');
 const { createDevClientLaunchOptions } = require('./dev-client.cjs');
 
 const acceptanceEnabled = process.env.RUN_NATIVE_ACCEPTANCE === '1';
-const fieldEmail = process.env.FIELD_TEST_EMAIL;
+const fieldUsername = process.env.FIELD_TEST_USERNAME;
 const fieldPassword = process.env.FIELD_TEST_PASSWORD;
 const forbiddenJobReference = process.env.FORBIDDEN_JOB_REFERENCE;
 const assignedJobReference = process.env.ASSIGNED_JOB_REFERENCE;
-const nonFieldEmail = process.env.NON_FIELD_TEST_EMAIL;
-const secondFieldEmail = process.env.SECOND_FIELD_TEST_EMAIL;
+const nonFieldUsername = process.env.NON_FIELD_TEST_USERNAME;
+const secondFieldUsername = process.env.SECOND_FIELD_TEST_USERNAME;
 
 function mutateLocalFixture(action) {
     const database = process.env.DB_DATABASE;
@@ -57,8 +57,8 @@ function mutateLocalFixture(action) {
     }
 }
 
-async function signIn(email) {
-    await element(by.id('login-email-input')).replaceText(email);
+async function signIn(username) {
+    await element(by.id('login-username-input')).replaceText(username);
     await element(by.id('login-password-input')).replaceText(fieldPassword);
     await element(by.id('login-submit-button')).tap();
 }
@@ -79,12 +79,12 @@ describe('Session 1 authenticated field journey', () => {
         }
 
         if (
-            !fieldEmail ||
+            !fieldUsername ||
             !fieldPassword ||
             !forbiddenJobReference ||
             !assignedJobReference ||
-            !nonFieldEmail ||
-            !secondFieldEmail
+            !nonFieldUsername ||
+            !secondFieldUsername
         ) {
             throw new Error(
                 'RUN_NATIVE_ACCEPTANCE=1 requires all Session 1 fixture environment variables.',
@@ -107,7 +107,7 @@ describe('Session 1 authenticated field journey', () => {
         async () => {
             await launchFreshApp();
 
-            await signIn(fieldEmail);
+            await signIn(fieldUsername);
 
             await waitFor(element(by.text('Active Field Assignments')))
                 .toBeVisible()
@@ -124,7 +124,7 @@ describe('Session 1 authenticated field journey', () => {
                 .toBeVisible()
                 .withTimeout(30000);
             await element(by.id('logout-button')).tap({ x: 5, y: 5 });
-            await waitFor(element(by.id('login-email-input')))
+            await waitFor(element(by.id('login-username-input')))
                 .toBeVisible()
                 .withTimeout(30000);
         },
@@ -134,7 +134,7 @@ describe('Session 1 authenticated field journey', () => {
         'rejects non-field roles and revokes their temporary token',
         async () => {
             await launchFreshApp();
-            await signIn(nonFieldEmail);
+            await signIn(nonFieldUsername);
 
             await waitFor(
                 element(
@@ -145,7 +145,7 @@ describe('Session 1 authenticated field journey', () => {
             )
                 .toBeVisible()
                 .withTimeout(30000);
-            await expect(element(by.id('login-email-input'))).toBeVisible();
+            await expect(element(by.id('login-username-input'))).toBeVisible();
         },
     );
 
@@ -153,7 +153,7 @@ describe('Session 1 authenticated field journey', () => {
         'fails closed after suspension and clears the native identity state',
         async () => {
             await launchFreshApp();
-            await signIn(fieldEmail);
+            await signIn(fieldUsername);
             await waitFor(element(by.text('Active Field Assignments')))
                 .toBeVisible()
                 .withTimeout(30000);
@@ -174,7 +174,7 @@ describe('Session 1 authenticated field journey', () => {
                 mutateLocalFixture('reactivate');
                 await device.terminateApp();
                 await device.launchApp(createDevClientLaunchOptions());
-                await waitFor(element(by.id('login-email-input')))
+                await waitFor(element(by.id('login-username-input')))
                     .toBeVisible()
                     .withTimeout(30000);
             } finally {
@@ -187,7 +187,7 @@ describe('Session 1 authenticated field journey', () => {
         'fails closed after server revocation and isolates a subsequent user',
         async () => {
             await launchFreshApp();
-            await signIn(fieldEmail);
+            await signIn(fieldUsername);
             await waitFor(element(by.text(assignedJobReference)))
                 .toBeVisible()
                 .withTimeout(30000);
@@ -203,16 +203,16 @@ describe('Session 1 authenticated field journey', () => {
             )
                 .toBeVisible()
                 .withTimeout(30000);
-            await expect(element(by.id('login-email-input'))).toExist();
+            await expect(element(by.id('login-username-input'))).toExist();
             await expect(element(by.text(assignedJobReference))).not.toExist();
 
-            await signIn(secondFieldEmail);
+            await signIn(secondFieldUsername);
             await waitFor(element(by.text(forbiddenJobReference)))
                 .toBeVisible()
                 .withTimeout(30000);
             await expect(element(by.text(assignedJobReference))).not.toExist();
             await element(by.id('logout-button')).tap({ x: 5, y: 5 });
-            await waitFor(element(by.id('login-email-input')))
+            await waitFor(element(by.id('login-username-input')))
                 .toBeVisible()
                 .withTimeout(30000);
         },

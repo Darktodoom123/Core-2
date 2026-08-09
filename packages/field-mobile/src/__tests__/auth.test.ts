@@ -55,7 +55,7 @@ describe('Field Mobile Authentication Shell', () => {
                 const body = JSON.parse(init?.body as string);
 
                 if (
-                    body.email === 'driver@example.com' &&
+                    body.username === 'driver' &&
                     body.password === 'password'
                 ) {
                     return new Response(
@@ -65,6 +65,7 @@ describe('Field Mobile Authentication Shell', () => {
                                 user: {
                                     id: 42,
                                     name: 'Jane Driver',
+                                    username: 'driver',
                                     email: 'driver@example.com',
                                     role: 'driver',
                                     is_active: true,
@@ -91,11 +92,7 @@ describe('Field Mobile Authentication Shell', () => {
             fetchFn: mockFetch as typeof fetch,
         });
 
-        const result = await client.login(
-            'driver@example.com',
-            'password',
-            'Field Tablet',
-        );
+        const result = await client.login('driver', 'password', 'Field Tablet');
         assert.equal(result.token, 'sample-sanctum-token-123');
         assert.equal(result.user.name, 'Jane Driver');
         assert.equal(result.user.role, 'driver');
@@ -111,7 +108,7 @@ describe('Field Mobile Authentication Shell', () => {
                 JSON.stringify({
                     message: 'The provided credentials are invalid.',
                     errors: {
-                        email: ['The provided credentials are invalid.'],
+                        username: ['The provided credentials are invalid.'],
                     },
                 }),
                 {
@@ -129,7 +126,7 @@ describe('Field Mobile Authentication Shell', () => {
 
         await assert.rejects(
             async () => {
-                await client.login('wrong@example.com', 'badpass');
+                await client.login('wrong-user', 'badpass');
             },
             (err: unknown) => {
                 assert.ok(err instanceof ApiClientError);
@@ -166,7 +163,7 @@ describe('Field Mobile Authentication Shell', () => {
 
         await assert.rejects(
             async () => {
-                await client.login('suspended@example.com', 'password');
+                await client.login('suspended-user', 'password');
             },
             (err: unknown) => {
                 assert.ok(err instanceof ApiClientError);
@@ -200,6 +197,7 @@ describe('Field Mobile Authentication Shell', () => {
                         data: {
                             id: 99,
                             name: 'Sam Tech',
+                            username: 'sam.tech',
                             email: 'tech@example.com',
                             role: 'field_technician',
                             is_active: true,

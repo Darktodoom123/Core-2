@@ -11,6 +11,7 @@ use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Support\Username;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Enums\ReportExportType;
@@ -138,9 +139,9 @@ final class BrowserAcceptanceSeeder extends Seeder
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
-                'dispatcher' => $dispatcher->email,
-                'manager' => $manager->email,
-                'driver' => $driver->email,
+                'dispatcher' => $dispatcher->username,
+                'manager' => $manager->username,
+                'driver' => $driver->username,
             ],
             'password' => 'password',
             'job_id' => $job->id,
@@ -156,6 +157,7 @@ final class BrowserAcceptanceSeeder extends Seeder
     {
         $user = User::query()->create([
             'name' => $name,
+            'username' => Username::fromEmail($email),
             'email' => $email,
             'email_verified_at' => now(),
             'password' => Hash::make('password'),

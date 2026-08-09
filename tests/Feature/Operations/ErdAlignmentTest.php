@@ -21,7 +21,7 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         expect(Schema::hasTable($table))->toBeTrue("Expected {$table} to exist.");
     }
 
-    expect(Schema::hasColumns('users', ['phone', 'is_active', 'suspended_at']))->toBeTrue()
+    expect(Schema::hasColumns('users', ['username', 'phone', 'is_active', 'suspended_at']))->toBeTrue()
         ->and(Schema::hasColumns('operational_assets', ['registration_number', 'manufacturer', 'model', 'rated_capacity', 'capacity_unit', 'meter_type', 'meter_value']))->toBeTrue()
         ->and(Schema::hasColumns('location_updates', ['dispatch_job_id', 'speed', 'remarks']))->toBeTrue()
         ->and(Schema::hasColumns('fuel_logs', ['price_per_litre', 'total_cost', 'fuel_station', 'remarks']))->toBeTrue()

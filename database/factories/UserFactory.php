@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Support\Username;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -20,6 +21,15 @@ class UserFactory extends Factory
      */
     protected static ?string $password;
 
+    public function configure(): static
+    {
+        return $this->afterMaking(static function (User $user): void {
+            if ($user->getAttribute('username') === null) {
+                $user->username = Username::fromEmail($user->email, $user->id);
+            }
+        });
+    }
+
     /**
      * Define the model's default state.
      *
@@ -29,6 +39,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            'username' => null,
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->optional()->phoneNumber(),
             'email_verified_at' => now(),

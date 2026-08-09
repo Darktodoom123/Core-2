@@ -2,6 +2,7 @@
 
 namespace App\Platform\Identity\Http\Requests\Auth;
 
+use App\Platform\Identity\Support\Username;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +17,20 @@ final class LoginRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $username = $this->input('username');
+
+        $this->merge([
+            'username' => is_string($username) ? Username::normalize($username) : $username,
+        ]);
+    }
+
     /** @return array<string, array<int, string>> */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'username' => ['required', ...Username::validationRules()],
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
         ];
@@ -31,7 +41,7 @@ final class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt([
-            'email' => Str::lower((string) $this->string('email')),
+            'username' => Username::normalize((string) $this->string('username')),
             'password' => (string) $this->string('password'),
             'is_active' => true,
             'suspended_at' => null,
@@ -39,7 +49,7 @@ final class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => 'The provided credentials are invalid or the account is suspended.',
+                'username' => 'The provided credentials are invalid.',
             ]);
         }
 
@@ -56,12 +66,12 @@ final class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => "Too many login attempts. Try again in {$seconds} seconds.",
+            'username' => "Too many login attempts. Try again in {$seconds} seconds.",
         ]);
     }
 
     private function throttleKey(): string
     {
-        return Str::transliterate(Str::lower((string) $this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Username::normalize((string) $this->string('username')).'|'.$this->ip());
     }
 }

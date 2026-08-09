@@ -82,6 +82,7 @@ class ControlledNetworkMonitor implements NetworkMonitor {
 const driver: User = {
     id: 11,
     name: 'Jane Driver',
+    username: 'driver',
     email: 'driver@example.test',
     role: 'driver',
     is_active: true,
@@ -90,6 +91,7 @@ const driver: User = {
 const dispatcher: User = {
     id: 22,
     name: 'Dana Dispatcher',
+    username: 'dispatcher',
     email: 'dispatcher@example.test',
     role: 'dispatcher',
     is_active: true,
@@ -98,6 +100,7 @@ const dispatcher: User = {
 const secondDriver: User = {
     id: 12,
     name: 'John Driver',
+    username: 'second-driver',
     email: 'second-driver@example.test',
     role: 'driver',
     is_active: true,
@@ -398,8 +401,8 @@ function createApi(scenario: ApiScenario = {}) {
 async function signIn(): Promise<void> {
     await screen.findByTestId('login-screen');
     await fireEvent.changeText(
-        screen.getByTestId('login-email-input'),
-        driver.email,
+        screen.getByTestId('login-username-input'),
+        driver.username!,
     );
     await fireEvent.changeText(
         screen.getByTestId('login-password-input'),
@@ -731,12 +734,12 @@ describe('native application component tree', () => {
 
         const submit = await screen.findByLabelText('Sign in to field app');
         expect(submit).toBeDisabled();
-        expect(screen.getByLabelText('Email address')).toBeVisible();
+        expect(screen.getByLabelText('Username')).toBeVisible();
         expect(screen.getByLabelText('Password')).toBeVisible();
 
         await fireEvent.changeText(
-            screen.getByLabelText('Email address'),
-            driver.email,
+            screen.getByLabelText('Username'),
+            driver.username!,
         );
         await fireEvent.changeText(
             screen.getByLabelText('Password'),

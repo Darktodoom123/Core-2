@@ -103,7 +103,7 @@ export class FieldApiClient {
     }
 
     public async login(
-        email: string,
+        username: string,
         password: string,
         deviceName?: string,
     ): Promise<{ token: string; user: User }> {
@@ -115,7 +115,7 @@ export class FieldApiClient {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                email,
+                username,
                 password,
                 device_name: deviceName ?? 'React Native Field Mobile',
             }),

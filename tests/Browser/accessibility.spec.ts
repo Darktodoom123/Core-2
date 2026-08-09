@@ -8,7 +8,7 @@ test('unauthenticated operations access redirects to an accessible sign-in form'
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('heading', { name: 'Sign in to operations' })).toBeVisible();
-    await expect(page.getByLabel('Email')).toBeFocused();
+    await expect(page.getByLabel('Username')).toBeFocused();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled();
 
     const results = await new AxeBuilder({ page }).analyze();

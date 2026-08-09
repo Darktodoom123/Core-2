@@ -36,7 +36,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
     login: (
-        email: string,
+        username: string,
         password: string,
         deviceName?: string,
     ) => Promise<void>;
@@ -259,7 +259,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     ]);
 
     const login = useCallback(
-        async (email: string, password: string, deviceName?: string) => {
+        async (username: string, password: string, deviceName?: string) => {
             setError(null);
 
             try {
@@ -271,7 +271,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 }
 
                 const result = await apiClient.login(
-                    email,
+                    username,
                     password,
                     deviceName,
                 );

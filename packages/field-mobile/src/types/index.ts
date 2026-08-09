@@ -17,6 +17,7 @@ export type AssignmentResponse = 'pending' | 'accepted' | 'rejected';
 export interface User {
     id: number;
     name: string;
+    username: string;
     email: string;
     role: string;
     is_active: boolean;

@@ -21,20 +21,20 @@ export interface LoginScreenProps {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     const { login, logout, error, clearError, status, hasPendingRevocation } =
         useAuth();
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isRetryingRevocation, setIsRetryingRevocation] = useState(false);
 
     const handleSubmit = async () => {
-        if (!email.trim() || !password.trim() || isSubmitting) {
+        if (!username.trim() || !password.trim() || isSubmitting) {
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-            await login(email.trim(), password);
+            await login(username.trim(), password);
 
             if (onLoginSuccess) {
                 onLoginSuccess();
@@ -60,7 +60,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     const formDisabled =
         isSubmitting || isRetryingRevocation || hasPendingRevocation;
-    const submitDisabled = formDisabled || !email.trim() || !password.trim();
+    const submitDisabled = formDisabled || !username.trim() || !password.trim();
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -186,22 +186,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                         <View style={styles.form}>
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>Email address</Text>
+                                <Text style={styles.label}>Username</Text>
                                 <TextInput
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    placeholder="worker@example.com"
+                                    value={username}
+                                    onChangeText={setUsername}
+                                    placeholder="your.username"
                                     placeholderTextColor={colors.muted}
-                                    keyboardType="email-address"
+                                    keyboardType="default"
                                     autoCapitalize="none"
                                     autoCorrect={false}
-                                    textContentType="emailAddress"
+                                    textContentType="username"
                                     editable={!formDisabled}
                                     style={styles.input}
-                                    accessibilityLabel="Email address"
-                                    accessibilityHint="Enter your verified work email"
+                                    accessibilityLabel="Username"
+                                    accessibilityHint="Enter your work username"
                                     returnKeyType="next"
-                                    testID="login-email-input"
+                                    testID="login-username-input"
                                 />
                             </View>
 
@@ -267,7 +267,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                     <View style={styles.devButtons}>
                                         <Pressable
                                             onPress={() => {
-                                                setEmail('driver@example.com');
+                                                setUsername('driver');
                                                 setPassword('password');
                                             }}
                                             disabled={formDisabled}
@@ -288,9 +288,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                                         <Pressable
                                             onPress={() => {
-                                                setEmail(
-                                                    'technician@example.com',
-                                                );
+                                                setUsername('technician');
                                                 setPassword('password');
                                             }}
                                             disabled={formDisabled}
@@ -311,9 +309,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                                         <Pressable
                                             onPress={() => {
-                                                setEmail(
-                                                    'operator@example.com',
-                                                );
+                                                setUsername('operator');
                                                 setPassword('password');
                                             }}
                                             disabled={formDisabled}

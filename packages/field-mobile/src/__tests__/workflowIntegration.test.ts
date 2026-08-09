@@ -14,6 +14,7 @@ describe('Field Mobile Workflow Integration', () => {
     const activeWorker: User = {
         id: 1,
         name: 'Field Technician Alex',
+        username: 'alex',
         email: 'alex@example.com',
         role: 'field_technician',
         is_active: true,

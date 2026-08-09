@@ -4,7 +4,7 @@ const path = require('node:path');
 const { createDevClientLaunchOptions } = require('./dev-client.cjs');
 
 const acceptanceEnabled = process.env.RUN_NATIVE_ACCEPTANCE === '1';
-const fieldEmail = process.env.FIELD_TEST_EMAIL;
+const fieldUsername = process.env.FIELD_TEST_USERNAME;
 const fieldPassword = process.env.FIELD_TEST_PASSWORD;
 const assignedJobReference = process.env.ASSIGNED_JOB_REFERENCE;
 
@@ -141,7 +141,7 @@ async function waitForAssignmentResponseCommandCount(
 }
 
 async function signIn() {
-    await element(by.id('login-email-input')).replaceText(fieldEmail);
+    await element(by.id('login-username-input')).replaceText(fieldUsername);
     await element(by.id('login-password-input')).replaceText(fieldPassword);
     await element(by.id('login-submit-button')).tap();
 }
@@ -161,7 +161,7 @@ describe('Sprint 2 durable outbox acceptance', () => {
             return;
         }
 
-        if (!fieldEmail || !fieldPassword || !assignedJobReference) {
+        if (!fieldUsername || !fieldPassword || !assignedJobReference) {
             throw new Error(
                 'RUN_NATIVE_ACCEPTANCE=1 requires the Sprint 2 fixture environment variables.',
             );

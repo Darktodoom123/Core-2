@@ -912,7 +912,7 @@ try {
     $env:EXPO_PUBLIC_API_BASE_URL = "http://10.0.2.2:$apiPort"
     $env:EXPO_DEV_CLIENT_METRO_URL = "http://127.0.0.1:$metroPort"
     $env:RUN_NATIVE_ACCEPTANCE = '1'
-    $env:FIELD_TEST_EMAIL = 'driver@example.com'
+    $env:FIELD_TEST_USERNAME = 'driver'
     $fixturePasswordBytes = New-Object byte[] 32
     $randomNumberGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     $randomNumberGenerator.GetBytes($fixturePasswordBytes)
@@ -921,8 +921,8 @@ try {
     $env:SESSION1_NATIVE_PASSWORD = $env:FIELD_TEST_PASSWORD
     $env:FORBIDDEN_JOB_REFERENCE = 'SESSION1-FORBIDDEN-002'
     $env:ASSIGNED_JOB_REFERENCE = 'SESSION1-DRIVER-001'
-    $env:NON_FIELD_TEST_EMAIL = 'dispatcher@example.com'
-    $env:SECOND_FIELD_TEST_EMAIL = 'technician@example.com'
+    $env:NON_FIELD_TEST_USERNAME = 'dispatcher'
+    $env:SECOND_FIELD_TEST_USERNAME = 'technician'
     $env:CI = '1'
 
     if ($SmokeOnly) {

@@ -114,6 +114,12 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Temporary compatibility for installed mobile builds that still send
+    | email. Disable after the documented migration window has elapsed.
+    */
+    'legacy_email_login_until' => env('AUTH_LEGACY_EMAIL_LOGIN_UNTIL', '2026-11-07'),
+
     'bootstrap_admin_password' => env('ADMIN_PASSWORD'),
 
 ];

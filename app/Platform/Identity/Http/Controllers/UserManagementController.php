@@ -7,6 +7,7 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Support\Username;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,10 +29,23 @@ final class UserManagementController extends Controller
     public function store(Request $request, RecordAuditEvent $audit): JsonResponse
     {
         Gate::authorize(PermissionName::UsersManage->value);
-        $validated = $request->validate(['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'max:255', 'unique:users,email'], 'phone' => ['nullable', 'string', 'max:32'], 'role' => ['required', Rule::enum(RoleName::class)]]);
+        $email = $request->input('email');
+        $username = $request->input('username');
+
+        $request->merge([
+            'email' => is_string($email) ? Str::lower(trim($email)) : $email,
+            'username' => is_string($username) ? Username::normalize($username) : $username,
+        ]);
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', ...Username::validationRules(), Rule::unique('users', 'username')],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'role' => ['required', Rule::enum(RoleName::class)],
+        ]);
 
         $user = DB::transaction(function () use ($request, $validated, $audit): User {
-            $user = User::query()->create(['name' => $validated['name'], 'email' => Str::lower($validated['email']), 'phone' => $validated['phone'] ?? null, 'password' => Hash::make(Str::password(40)), 'is_active' => true]);
+            $user = User::query()->create(['name' => $validated['name'], 'username' => $validated['username'], 'email' => $validated['email'], 'phone' => $validated['phone'] ?? null, 'password' => Hash::make(Str::password(40)), 'is_active' => true]);
             $user->syncRoles([$validated['role']]);
             $audit->handle($request->user(), $user, 'user.invited', null, ['email' => $user->email, 'role' => $validated['role']]);
 

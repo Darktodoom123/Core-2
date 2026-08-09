@@ -14,11 +14,27 @@ beforeEach(function (): void {
 it('allows administrators to provision one canonical role and revokes sessions on access changes', function () {
     $admin = User::factory()->create();
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
-    $response = $this->actingAs($admin)->postJson('/operations/users', ['name' => 'New Dispatcher', 'email' => 'dispatcher@core.test', 'role' => RoleName::Dispatcher->value])->assertCreated();
+    $response = $this->actingAs($admin)->postJson('/operations/users', ['name' => 'New Dispatcher', 'username' => ' New.Dispatcher ', 'email' => 'dispatcher@core.test', 'role' => RoleName::Dispatcher->value])->assertCreated();
     $user = User::findOrFail($response->json('data.id'));
-    expect($user->roles)->toHaveCount(1)->and($user->hasRole(RoleName::Dispatcher->value))->toBeTrue();
+    expect($user->username)->toBe('new.dispatcher')->and($user->roles)->toHaveCount(1)->and($user->hasRole(RoleName::Dispatcher->value))->toBeTrue();
     $this->actingAs($admin)->patchJson("/operations/users/{$user->id}", ['is_active' => false])->assertOk();
     expect($user->refresh()->is_active)->toBeFalse()->and($user->suspended_at)->not->toBeNull();
+});
+
+it('prevents duplicate usernames after normalization', function (): void {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+    User::factory()->create(['username' => 'existing-user']);
+
+    $this->actingAs($admin)
+        ->postJson('/operations/users', [
+            'name' => 'Duplicate User',
+            'username' => ' Existing-User ',
+            'email' => 'duplicate@core.test',
+            'role' => RoleName::Dispatcher->value,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['username']);
 });
 
 it('prevents removal of the last active system administrator', function () {

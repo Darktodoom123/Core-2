@@ -26,7 +26,7 @@ final class EnsureUserIsActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'email' => 'This account is suspended. Contact a system administrator.',
+                'username' => 'This account is suspended. Contact a system administrator.',
             ]);
         }
 

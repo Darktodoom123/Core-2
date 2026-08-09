@@ -10,9 +10,7 @@ Route::get('/user', function (Request $request) {
 })->middleware(['auth:sanctum', 'active']);
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
-    Route::post('/auth/login', [AuthController::class, 'login'])
-        ->middleware('throttle:5,1')
-        ->name('auth.login');
+    Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
 
     Route::middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');

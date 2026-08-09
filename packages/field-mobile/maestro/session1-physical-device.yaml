@@ -11,8 +11,8 @@ name: Session 1 physical-device field journey
           id: login-screen
       timeout: 60000
 - tapOn:
-      id: login-email-input
-- inputText: ${FIELD_TEST_EMAIL}
+      id: login-username-input
+- inputText: ${FIELD_TEST_USERNAME}
 - tapOn:
       id: login-password-input
 - inputText: ${FIELD_TEST_PASSWORD}

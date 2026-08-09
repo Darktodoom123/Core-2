@@ -10,6 +10,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    RateLimiter::clear('dispatcher|127.0.0.1');
     RateLimiter::clear('dispatcher@example.com|127.0.0.1');
 });
 
@@ -17,13 +18,14 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
     /** @var User $user */
     $user = User::factory()->create([
         'email' => 'dispatcher@example.com',
+        'username' => 'dispatcher',
         'is_active' => true,
         'email_verified_at' => now(),
     ]);
     $user->syncRoles([RoleName::Dispatcher->value]);
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email' => 'dispatcher@example.com',
+        'username' => ' Dispatcher ',
         'password' => 'password',
         'device_name' => 'Field iPad Air Pro',
     ]);
@@ -35,6 +37,7 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
                 'user' => [
                     'id',
                     'name',
+                    'username',
                     'email',
                     'phone',
                     'role',
@@ -48,6 +51,7 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
 
     $data = $response->json('data');
     expect($data['token'])->toBeString()
+        ->and($data['user']['username'])->toBe('dispatcher')
         ->and($data['user']['email'])->toBe('dispatcher@example.com')
         ->and($data['user']['role'])->toBe(RoleName::Dispatcher->value);
 
@@ -57,25 +61,55 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
 });
 
 it('rejects login with invalid credentials', function (): void {
-    User::factory()->create(['email' => 'dispatcher@example.com']);
+    User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatcher']);
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email' => 'dispatcher@example.com',
+        'username' => 'dispatcher',
         'password' => 'wrong-password',
     ]);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['email']);
+        ->assertJsonValidationErrors(['username'])
+        ->assertJson(['message' => 'The provided credentials are invalid.']);
+});
+
+it('accepts legacy email login during the mobile compatibility window', function (): void {
+    User::factory()->create([
+        'email' => 'legacy@example.com',
+        'username' => 'legacy-user',
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+
+    $this->postJson('/api/v1/auth/login', [
+        'email' => ' LEGACY@EXAMPLE.COM ',
+        'password' => 'password',
+    ])->assertOk()->assertJsonPath('data.user.username', 'legacy-user');
+});
+
+it('rejects usernames outside the documented safe format', function (): void {
+    $this->postJson('/api/v1/auth/login', [
+        'username' => 'not safe',
+        'password' => 'password',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['username']);
+});
+
+it('rejects non-string username input at the API boundary', function (): void {
+    $this->postJson('/api/v1/auth/login', [
+        'username' => ['dispatcher'],
+        'password' => 'password',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['username']);
 });
 
 it('rejects suspended accounts with 403 Forbidden', function (): void {
     /** @var User $user */
     $user = User::factory()->suspended()->create([
         'email' => 'suspended@example.com',
+        'username' => 'suspended-user',
     ]);
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email' => 'suspended@example.com',
+        'username' => 'suspended-user',
         'password' => 'password',
     ]);
 
@@ -89,11 +123,12 @@ it('rejects unverified email accounts with 403 Forbidden', function (): void {
     /** @var User $user */
     $user = User::factory()->unverified()->create([
         'email' => 'unverified@example.com',
+        'username' => 'unverified-user',
         'is_active' => true,
     ]);
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email' => 'unverified@example.com',
+        'username' => 'unverified-user',
         'password' => 'password',
     ]);
 
@@ -104,17 +139,17 @@ it('rejects unverified email accounts with 403 Forbidden', function (): void {
 });
 
 it('throttles excessive login attempts with 429 Too Many Requests', function (): void {
-    User::factory()->create(['email' => 'dispatcher@example.com']);
+    User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatcher']);
 
     for ($i = 0; $i < 5; $i++) {
         $this->postJson('/api/v1/auth/login', [
-            'email' => 'dispatcher@example.com',
+            'username' => 'dispatcher',
             'password' => 'wrong-password',
         ]);
     }
 
     $response = $this->postJson('/api/v1/auth/login', [
-        'email' => 'dispatcher@example.com',
+        'username' => 'dispatcher',
         'password' => 'wrong-password',
     ]);
 
@@ -134,6 +169,7 @@ it('allows current user profile retrieval with valid bearer token', function ():
         ->assertJson([
             'data' => [
                 'id' => $user->id,
+                'username' => $user->username,
                 'email' => 'driver@example.com',
                 'role' => RoleName::Driver->value,
                 'is_active' => true,
@@ -159,7 +195,7 @@ it('returns the current user resource through the versioned user alias', functio
     $response = $this->withToken($token)->getJson('/api/v1/user');
 
     $response->assertOk()
-        ->assertJsonStructure(['data' => ['id', 'name', 'email', 'role']])
+        ->assertJsonStructure(['data' => ['id', 'name', 'username', 'email', 'role']])
         ->assertJsonMissingPath('data.password')
         ->assertJsonMissingPath('data.remember_token');
 });

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Support\Username;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +31,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name' => 'System Administrator',
+                'username' => Username::fromEmail('admin@example.com'),
                 'email_verified_at' => now(),
                 'password' => Hash::make(is_string($bootstrapPassword) ? $bootstrapPassword : 'password'),
                 'is_active' => true,

@@ -12,6 +12,7 @@ const testHasher = {
 const activeUser: User = {
     id: 10,
     name: 'Test Driver',
+    username: 'driver',
     email: 'driver@example.com',
     role: 'driver',
     is_active: true,
