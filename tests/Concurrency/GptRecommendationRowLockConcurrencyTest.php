@@ -152,7 +152,10 @@ function finishConcurrentGptProcess(array $process): array
 
 function waitForBarrier(string $pattern, int $expected): void
 {
-    $deadline = microtime(true) + 10;
+    // Parallel PHP worker startup is slower on Docker Desktop bind mounts than
+    // on the native Linux CI runner; keep the barrier bounded but allow the
+    // full worker set to start before asserting concurrency behavior.
+    $deadline = microtime(true) + 30;
     while (count(glob($pattern) ?: []) < $expected && microtime(true) < $deadline) {
         usleep(10_000);
     }
