@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import {
     ActivityIndicator,
+    AppState,
     BackHandler,
     Pressable,
     StatusBar,
@@ -27,6 +28,7 @@ import { JobDetailScreen } from '../components/JobDetailScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import { nativeLocationAdapter } from '../native/locationAdapter';
 import { ApiClientError } from '../services/apiClient';
 import { CommandOutboxManager } from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
@@ -172,6 +174,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const locationService = useMemo(
         () => new LocationSharingService(commandOutbox),
         [commandOutbox],
+    );
+    const getCurrentLocation = useCallback(
+        () => nativeLocationAdapter.getCurrentLocation(),
+        [],
     );
 
     useEffect(
@@ -348,6 +354,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
         return () => clearTimeout(timeout);
     }, [commandOutbox, isOnline, isOutboxReady, outboxCommands, syncQueue]);
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active' && status === 'authenticated' && user) {
+                void commandOutbox
+                    .activateActor(user.id)
+                    .then(() => void syncQueue());
+            }
+        });
+
+        return () => subscription.remove();
+    }, [commandOutbox, status, syncQueue, user]);
 
     useEffect(() => {
         const subscription = BackHandler.addEventListener(
@@ -723,6 +741,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 user={user}
                                 outboxCommands={outboxCommands}
                                 locationService={locationService}
+                                getCurrentLocation={getCurrentLocation}
                                 onBackToList={handleBackToList}
                                 onAcceptAssignment={handleAcceptAssignment}
                                 onRejectAssignment={handleRejectAssignment}

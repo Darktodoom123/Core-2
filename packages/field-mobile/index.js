@@ -1,4 +1,5 @@
 import { registerRootComponent } from 'expo';
+import './src/native/backgroundLocationTask';
 import App from './App';
 
 // Register the root component for Expo / React Native execution environment.

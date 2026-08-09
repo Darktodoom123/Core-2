@@ -1231,11 +1231,7 @@ describe('native application component tree', () => {
                 'Check in with the site supervisor at the east gate.',
             ),
         ).toBeVisible();
-        expect(
-            screen.getByText(
-                'Device location is not connected in this build. No location update will be recorded.',
-            ),
-        ).toBeVisible();
+        expect(screen.getByText('Location sharing available')).toBeVisible();
         expect(screen.queryByText(/Lift and set HVAC/i)).toBeNull();
         expect(screen.queryByText(/ETA 7:28/i)).toBeNull();
         expect(screen.getByText('Accept job responsibility')).toBeVisible();

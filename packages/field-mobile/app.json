@@ -21,7 +21,8 @@
                 "expo-location",
                 {
                     "locationAlwaysAndWhenInUsePermission": "Allow Core 2 Field App to access your location to track job progress and update operational telemetry.",
-                    "isAndroidBackgroundLocationEnabled": true
+                    "isAndroidBackgroundLocationEnabled": true,
+                    "isAndroidForegroundServiceEnabled": true
                 }
             ],
             "./plugins/with-gradle-build-memory.cjs",

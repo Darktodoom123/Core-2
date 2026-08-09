@@ -1,5 +1,17 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import {
+    AppState,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import type { AppStateStatus } from 'react-native';
+import {
+    startBackgroundLocationUpdates,
+    stopBackgroundLocationUpdates,
+} from '../native/backgroundLocationBridge';
 import type {
     LocationCoordinates,
     LocationSharingService,
@@ -58,6 +70,60 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     onRetryNewVersion,
     onLocationQueued,
 }) => {
+    useEffect(() => {
+        if (
+            !getCurrentLocation ||
+            !locationService.canShareLocation(user, job)
+        ) {
+            return;
+        }
+
+        let disposed = false;
+        const context = { actorId: user.id, jobId: job.id };
+        const startForegroundTracking = () => {
+            if (!disposed) {
+                locationService.startAutoTracking(
+                    user,
+                    job,
+                    getCurrentLocation,
+                );
+            }
+        };
+        const syncBackgroundTracking = (nextState: AppStateStatus) => {
+            if (disposed) {
+                return;
+            }
+
+            if (nextState === 'active') {
+                void stopBackgroundLocationUpdates().catch(() => undefined);
+                startForegroundTracking();
+
+                return;
+            }
+
+            locationService.stopAutoTracking();
+            void startBackgroundLocationUpdates(context).catch(() => undefined);
+        };
+
+        if (AppState.currentState === 'active') {
+            startForegroundTracking();
+        } else {
+            syncBackgroundTracking(AppState.currentState);
+        }
+
+        const subscription = AppState.addEventListener(
+            'change',
+            syncBackgroundTracking,
+        );
+
+        return () => {
+            disposed = true;
+            subscription.remove();
+            locationService.stopAutoTracking();
+            void stopBackgroundLocationUpdates().catch(() => undefined);
+        };
+    }, [getCurrentLocation, job, locationService, user]);
+
     const jobConflicts = outboxCommands.filter(
         (command) => command.state === 'conflict' && command.jobId === job.id,
     );
