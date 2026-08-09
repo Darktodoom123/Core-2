@@ -6,8 +6,10 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Actions\GenerateGptRecommendation;
+use App\Platform\Gpt\Actions\RetryGptRecommendation;
 use App\Platform\Gpt\Jobs\GenerateGptRecommendationJob;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Gpt\Services\BoundedContextBuilder;
 use App\Platform\Gpt\Services\OpenAiClientWrapper;
 use App\Platform\Identity\Enums\RoleName;
@@ -21,6 +23,11 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    OpenAiClientWrapper::fake();
+});
+
+afterEach(function (): void {
+    OpenAiClientWrapper::resetFakes();
 });
 
 function createGptUser(RoleName $role): User
@@ -365,6 +372,64 @@ it('does not retry an accepted recommendation', function (): void {
     $this->actingAs($dispatcher)
         ->post("/operations/gpt-recommendations/{$recommendation->id}/retry")
         ->assertForbidden();
+});
+
+it('deduplicates repeated GPT retries and records only safe retry metrics', function (): void {
+    Queue::fake();
+    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $job = createGptJob($dispatcher, DispatchStatus::Draft);
+    $original = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'old-hash',
+        'input_references' => [],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'failed',
+    ]);
+
+    $first = app(RetryGptRecommendation::class)->handle($dispatcher, $original);
+    $second = app(RetryGptRecommendation::class)->handle($dispatcher, $original->fresh());
+
+    expect($first->id)->toBe($second->id)
+        ->and($first->retry_of_id)->toBe($original->id)
+        ->and(GptRecommendation::query()->count())->toBe(2)
+        ->and(GptRecommendationMetric::query()->where('event', 'retried')->count())->toBe(1)
+        ->and(GptRecommendationMetric::query()->whereNotNull('recommendation_id')->pluck('event')->all())->toBe(['retried']);
+
+    Queue::assertPushed(GenerateGptRecommendationJob::class, 1);
+});
+
+it('records bounded generation metrics without provider context', function (): void {
+    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $job = createGptJob($dispatcher, DispatchStatus::Draft);
+    $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => $context['context_hash'],
+        'input_references' => $context['input_references'],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'draft',
+    ]);
+
+    (new GenerateGptRecommendationJob($recommendation->id, $context['context']))->handle(
+        app(OpenAiClientWrapper::class),
+        app(RecordAuditEvent::class),
+    );
+
+    $metric = GptRecommendationMetric::query()->sole();
+    expect($metric->event)->toBe('generated')
+        ->and($metric->status)->toBe('pending_review')
+        ->and($metric->total_tokens)->toBeGreaterThan(0)
+        ->and($metric->purge_at->isBetween(now()->addDays(89), now()->addDays(91)))->toBeTrue();
 });
 
 it('does not resurrect a recommendation rejected while its generation job is processing', function (): void {

@@ -3,6 +3,7 @@
 namespace App\Platform\Attachments\Http\Requests;
 
 use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Attachments\Services\AttachmentFilePolicy;
 use App\Platform\Attachments\Services\AttachmentOwnerResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,13 +32,10 @@ class UploadAttachmentRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $file = $this->file('file');
             if ($file && $file->isValid()) {
-                $mimeType = $file->getMimeType();
-                if (! array_key_exists($mimeType, config('attachments.mime_extensions', []))) {
-                    $validator->errors()->add('file', 'The file must be a JPEG, PNG, HEIC/HEIF, or PDF document.');
-                }
-
-                if ($file->getSize() === 0) {
-                    $validator->errors()->add('file', 'The file cannot be empty.');
+                try {
+                    AttachmentFilePolicy::validate($file);
+                } catch (\InvalidArgumentException $exception) {
+                    $validator->errors()->add('file', $exception->getMessage());
                 }
             }
 

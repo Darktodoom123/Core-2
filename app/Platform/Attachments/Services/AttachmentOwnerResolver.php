@@ -3,6 +3,7 @@
 namespace App\Platform\Attachments\Services;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Reporting\Models\JobReport;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -25,6 +26,9 @@ final class AttachmentOwnerResolver
         'fuel_request' => FuelRequest::class,
         'FuelRequest' => FuelRequest::class,
         'fuel_requests' => FuelRequest::class,
+        'fuel_log' => FuelLog::class,
+        'FuelLog' => FuelLog::class,
+        'fuel_logs' => FuelLog::class,
     ];
 
     /** @return list<string> */

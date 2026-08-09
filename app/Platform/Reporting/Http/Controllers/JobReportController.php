@@ -12,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class JobReportController extends Controller
 {
@@ -39,7 +41,11 @@ class JobReportController extends Controller
     {
         /** @var array{dispatch_job_id: int, started_at?: string|null, ended_at?: string|null, work_summary: string, remarks?: string|null, attachments?: array<int, mixed>} $validated */
         $validated = $request->validated();
-        $report = $action->execute($request->user(), $validated);
+        try {
+            $report = $action->execute($request->user(), $validated);
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['attachments' => $exception->getMessage()]);
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['data' => $report->load(['job', 'author', 'attachments'])], 201);

@@ -4,6 +4,7 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Jobs\PruneGptRecommendationsJob;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Identity\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -25,6 +26,13 @@ it('prunes due recommendation metadata idempotently and records a safe audit eve
         'error_message' => 'Sensitive provider error',
         'purge_at' => now()->subMinute(),
     ]);
+    $metric = GptRecommendationMetric::query()->create([
+        'recommendation_id' => $recommendation->id,
+        'event' => 'generated',
+        'status' => 'accepted',
+        'occurred_at' => now()->subDays(91),
+        'purge_at' => now()->subMinute(),
+    ]);
 
     $job = app(PruneGptRecommendationsJob::class);
     $audit = app(RecordAuditEvent::class);
@@ -32,5 +40,6 @@ it('prunes due recommendation metadata idempotently and records a safe audit eve
     $job->handle($audit);
 
     expect(GptRecommendation::query()->find($recommendation->id))->toBeNull()
+        ->and(GptRecommendationMetric::query()->find($metric->id))->toBeNull()
         ->and(AuditEvent::query()->where('action', 'gpt.recommendation_purged')->count())->toBe(1);
 });

@@ -6,7 +6,10 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 
 const packageRoot = path.resolve(process.cwd(), 'node_modules', 'image-size');
-const timeoutMs = 500;
+// Windows child-process startup can consume more than 500 ms even when the
+// parser returns immediately. Keep the strict parser bound on CI/Linux while
+// allowing a bounded startup margin on the supported local Windows runner.
+const timeoutMs = process.platform === 'win32' ? 2000 : 500;
 
 function box(size, type, payload = []) {
     return [

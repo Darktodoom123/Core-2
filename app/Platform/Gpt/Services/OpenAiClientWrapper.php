@@ -233,15 +233,13 @@ final class OpenAiClientWrapper
             }
 
             if (($choice['finish_reason'] ?? null) === 'content_filter' || ! empty($choice['message']['refusal'])) {
-                $refusal = $choice['message']['refusal'] ?? 'Model refused to generate recommendation.';
-
                 return [
                     'success' => false,
                     'recommendation' => null,
                     'usage' => null,
                     'cost_usd' => null,
-                    'error_message' => $refusal,
-                    'response_summary' => $refusal,
+                    'error_message' => 'The provider refused to generate a recommendation.',
+                    'response_summary' => null,
                     'is_refusal' => true,
                     'is_timeout' => false,
                 ];
@@ -257,7 +255,7 @@ final class OpenAiClientWrapper
                     'usage' => null,
                     'cost_usd' => null,
                     'error_message' => 'Model output failed schema validation.',
-                    'response_summary' => mb_substr($content, 0, 255),
+                    'response_summary' => null,
                     'is_refusal' => false,
                     'is_timeout' => false,
                 ];

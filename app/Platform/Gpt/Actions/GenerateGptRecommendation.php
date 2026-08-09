@@ -22,7 +22,7 @@ final class GenerateGptRecommendation
         private OpenAiClientWrapper $openAi
     ) {}
 
-    public function handle(User $actor, Model $subject, string $purpose = 'dispatch_assignment'): GptRecommendation
+    public function handle(User $actor, Model $subject, string $purpose = 'dispatch_assignment', ?int $retryOfId = null): GptRecommendation
     {
         $this->authorize($actor, $subject, $purpose);
 
@@ -45,6 +45,7 @@ final class GenerateGptRecommendation
             'subject_type' => $subject->getMorphClass(),
             'subject_id' => $subject->id,
             'requested_by' => $actor->id,
+            'retry_of_id' => $retryOfId,
             'purpose' => $purpose,
             'context_hash' => $contextData['context_hash'],
             'input_references' => $contextData['input_references'],
@@ -57,7 +58,7 @@ final class GenerateGptRecommendation
         ]);
 
         try {
-            GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context']);
+            GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context'])->afterCommit();
         } catch (\Throwable $exception) {
             $recommendation->delete();
             $this->openAi->releaseRateLimit($actor);

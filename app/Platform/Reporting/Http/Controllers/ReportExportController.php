@@ -5,10 +5,9 @@ namespace App\Platform\Reporting\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Reporting\Actions\CreateReportExportAction;
-use App\Platform\Reporting\Enums\ReportExportStatus;
+use App\Platform\Reporting\Actions\RetryReportExportAction;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Http\Requests\StoreReportExportRequest;
-use App\Platform\Reporting\Jobs\GenerateReportExportJob;
 use App\Platform\Reporting\Models\ReportExport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,35 +66,17 @@ class ReportExportController extends Controller
         ]);
     }
 
-    public function retry(Request $request, ReportExport $export, RecordAuditEvent $recordAudit): RedirectResponse
+    public function retry(Request $request, ReportExport $export, RetryReportExportAction $retryAction): RedirectResponse
     {
         Gate::authorize('retry', $export);
 
-        $export->update([
-            'status' => ReportExportStatus::Queued,
-            'file_path' => null,
-            'file_size_bytes' => null,
-            'row_count' => null,
-            'error_message' => null,
-            'expires_at' => now()->addDay(),
-            'download_expires_at' => now()->addDay(),
-            'purge_at' => now()->addDays(7),
-        ]);
-
-        $recordAudit->handle(
-            actor: $request->user(),
-            subject: $export,
-            action: 'report_export.retried',
-            after: [
-                'export_id' => $export->id,
-            ]
-        );
-
-        GenerateReportExportJob::dispatch($export->id);
+        $result = $retryAction->execute($request->user(), $export);
 
         return back()->with('flash', [
             'type' => 'success',
-            'message' => 'Export task retried and queued for generation.',
+            'message' => $result['queued']
+                ? 'Export task retried and queued for generation.'
+                : 'Export task is already queued for generation.',
         ]);
     }
 }

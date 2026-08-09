@@ -27,6 +27,9 @@ export function GptRecommendationsSurface({
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
     const [retryingId, setRetryingId] = useState<number | null>(null);
+    const [pollingStoppedFor, setPollingStoppedFor] = useState<string | null>(
+        null,
+    );
 
     const pending = recommendations.filter(
         (r) => r.status === 'pending_review' && !r.is_expired,
@@ -39,6 +42,43 @@ export function GptRecommendationsSurface({
             !['pending_review', 'draft', 'processing'].includes(r.status) ||
             r.is_expired,
     );
+    const processingKey = processing
+        .map((recommendation) => recommendation.id)
+        .join(',');
+    const pollingStopped =
+        processingKey !== '' && pollingStoppedFor === processingKey;
+
+    useEffect(() => {
+        if (processing.length === 0) {
+            return;
+        }
+
+        let attempts = 0;
+        const maxAttempts = 12;
+
+        const timer = window.setInterval(() => {
+            if (attempts >= maxAttempts) {
+                window.clearInterval(timer);
+                setPollingStoppedFor(processingKey);
+
+                return;
+            }
+
+            attempts += 1;
+            router.reload({
+                only: ['gptRecommendations'],
+            });
+        }, 5000);
+
+        return () => window.clearInterval(timer);
+    }, [processing.length, processingKey]);
+
+    const refreshRecommendations = () => {
+        setPollingStoppedFor(null);
+        router.reload({
+            only: ['gptRecommendations'],
+        });
+    };
 
     return (
         <div>
@@ -255,6 +295,26 @@ export function GptRecommendationsSurface({
                             ))}
                         </Panel>
                     </div>
+                )}
+
+                {pollingStopped && (
+                    <Panel className="flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50/40">
+                        <p className="text-sm text-ink" role="status">
+                            Automatic refresh stopped after one minute. Refresh
+                            the workspace to check the recommendation status.
+                        </p>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={refreshRecommendations}
+                        >
+                            <RefreshCw
+                                className="mr-1.5 h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                            Refresh recommendations
+                        </Button>
+                    </Panel>
                 )}
 
                 {/* Recommendation History Table */}

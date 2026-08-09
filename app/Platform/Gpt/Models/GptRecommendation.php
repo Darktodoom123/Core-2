@@ -33,6 +33,7 @@ class GptRecommendation extends Model
         'subject_type',
         'subject_id',
         'requested_by',
+        'retry_of_id',
         'purpose',
         'context_hash',
         'input_references',

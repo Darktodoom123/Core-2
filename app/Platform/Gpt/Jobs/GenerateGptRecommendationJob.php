@@ -7,12 +7,14 @@ use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Services\GptRecommendationTransition;
 use App\Platform\Gpt\Services\OpenAiClientWrapper;
+use App\Platform\Gpt\Services\RecordGptOperationalMetric;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class GenerateGptRecommendationJob implements ShouldQueue
 {
@@ -35,8 +37,10 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         OpenAiClientWrapper $openAi,
         RecordAuditEvent $audit,
         ?GptRecommendationTransition $transitions = null,
+        ?RecordGptOperationalMetric $metrics = null,
     ): void {
         $transitions ??= app(GptRecommendationTransition::class);
+        $metrics ??= app(RecordGptOperationalMetric::class);
 
         $claimed = $transitions->compareAndSet(
             $this->recommendationId,
@@ -80,6 +84,13 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 return;
             }
 
+            $this->recordMetric($metrics, $recommendation, 'generated', [
+                'status' => GptRecommendationStatus::PendingReview->value,
+                'usage' => $result['usage'],
+                'cost_usd' => $result['cost_usd'],
+                'latency_ms' => $latencyMs,
+            ]);
+
             $recommendation->refresh();
 
             $requestedBy = $recommendation->requestedBy;
@@ -114,6 +125,11 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 return;
             }
 
+            $this->recordMetric($metrics, $recommendation, 'failed', [
+                'status' => GptRecommendationStatus::Failed->value,
+                'latency_ms' => $latencyMs,
+            ]);
+
             Log::warning('GPT recommendation generation failed.', [
                 'recommendation_id' => $recommendation->id,
                 'reason' => $result['is_timeout'] ? 'timeout' : 'provider_or_schema_failure',
@@ -121,7 +137,21 @@ final class GenerateGptRecommendationJob implements ShouldQueue
         }
     }
 
-    public function failed(\Throwable $exception): void
+    /** @param array<string, mixed> $values */
+    private function recordMetric(RecordGptOperationalMetric $metrics, GptRecommendation $recommendation, string $event, array $values): void
+    {
+        try {
+            $metrics->handle($recommendation, $event, $values);
+        } catch (Throwable $exception) {
+            Log::warning('GPT operational metric could not be recorded.', [
+                'recommendation_id' => $recommendation->id,
+                'event' => $event,
+                'error' => $exception::class,
+            ]);
+        }
+    }
+
+    public function failed(Throwable $exception): void
     {
         $recommendation = GptRecommendation::query()->find($this->recommendationId);
         if ($recommendation instanceof GptRecommendation) {

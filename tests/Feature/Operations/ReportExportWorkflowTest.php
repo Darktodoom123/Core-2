@@ -9,6 +9,7 @@ use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Actions\CreateReportExportAction;
+use App\Platform\Reporting\Actions\RetryReportExportAction;
 use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Exports\ReportExportCatalog;
@@ -440,6 +441,33 @@ it('prevents duplicate export jobs for an identical request', function (): void 
 
     expect($first->id)->toBe($second->id)
         ->and(ReportExport::query()->count())->toBe(1);
+});
+
+it('serializes duplicate export retries and dispatches only one generation job', function (): void {
+    Queue::fake();
+    $manager = createExportUser(RoleName::OperationsManager);
+    $export = ReportExport::query()->create([
+        'user_id' => $manager->id,
+        'export_type' => ReportExportType::JobReports,
+        'format' => 'csv',
+        'status' => ReportExportStatus::Failed,
+        'error_message' => 'Previous attempt failed.',
+        'expires_at' => now()->subHour(),
+        'download_expires_at' => now()->subHour(),
+        'purge_at' => now()->addDay(),
+    ]);
+
+    $action = app(RetryReportExportAction::class);
+    $first = $action->execute($manager, $export);
+    $second = $action->execute($manager, $export->fresh());
+
+    expect($first['queued'])->toBeTrue()
+        ->and($second['queued'])->toBeFalse()
+        ->and($first['export']->id)->toBe($second['export']->id)
+        ->and($second['export']->status)->toBe(ReportExportStatus::Queued)
+        ->and(AuditEvent::query()->where('action', 'report_export.retried')->count())->toBe(1);
+
+    Queue::assertPushed(GenerateReportExportJob::class, 1);
 });
 
 it('records bounded generation attempts and never reprocesses a completed export', function (): void {

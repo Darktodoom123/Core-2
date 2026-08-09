@@ -3,6 +3,7 @@
 namespace App\Platform\Attachments\Actions;
 
 use App\Platform\Attachments\Models\Attachment;
+use App\Platform\Attachments\Services\AttachmentFilePolicy;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -26,15 +27,7 @@ final class UploadAttachmentAction
         $retentionUntil ??= now()->addDays((int) config('attachments.retention_days'));
 
         $sizeBytes = (int) $file->getSize();
-        if ($sizeBytes > (int) config('attachments.max_bytes')) {
-            throw new InvalidArgumentException('File size exceeds the maximum limit of 15 MiB.');
-        }
-
-        if ($sizeBytes === 0) {
-            throw new InvalidArgumentException('File cannot be empty.');
-        }
-
-        $mimeType = $file->getMimeType();
+        $mimeType = AttachmentFilePolicy::validate($file);
         $extension = config("attachments.mime_extensions.{$mimeType}");
         if (! is_string($extension)) {
             throw new InvalidArgumentException('Unsupported file MIME type. Only JPEG, PNG, HEIC/HEIF, and PDF are allowed.');

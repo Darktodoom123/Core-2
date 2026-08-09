@@ -69,14 +69,15 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(page.getByRole('link', { name: 'Download' })).toHaveCount(
             3,
         );
-        const exportLinks = page
+        const csvUrl = (await page
+            .locator('tbody tr')
+            .filter({ hasText: 'csv' })
             .getByRole('link', { name: 'Download' })
-            .filter({ has: page.locator('svg') });
-        const csvUrl = (await exportLinks
-            .nth(1)
             .getAttribute('href')) as string;
-        const pdfUrl = (await exportLinks
-            .nth(2)
+        const pdfUrl = (await page
+            .locator('tbody tr')
+            .filter({ hasText: 'pdf' })
+            .getByRole('link', { name: 'Download' })
             .getAttribute('href')) as string;
 
         const csv = await browserFetch(page, csvUrl);
@@ -138,6 +139,84 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         );
         await page.getByRole('button', { name: 'Submit report' }).click();
         expect((await deniedUploadResponse).status()).toBe(403);
+    });
+
+    test('report attachment validation, count limit, busy state, and focus recovery are visible', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.driver, fixtures.password);
+        await page.goto('/?view=reports');
+        await page.getByRole('button', { name: 'Submit job report' }).click();
+
+        const jobId = page.locator('input[type="number"]');
+        const summary = page.getByPlaceholder(
+            'Brief description of work executed',
+        );
+        await jobId.fill(String(fixtures.assigned_job_id));
+        await summary.fill('Browser attachment validation report');
+
+        await page.locator('input[type="file"]').setInputFiles({
+            name: 'unsafe.php',
+            mimeType: 'text/x-php',
+            buffer: Buffer.from('<?php echo "unsafe";'),
+        });
+        const invalidResponse = page.waitForResponse(
+            (response) =>
+                response.url().endsWith('/operations/job-reports') &&
+                response.request().method() === 'POST',
+        );
+        await page.getByRole('button', { name: 'Submit report' }).click();
+        expect((await invalidResponse).status()).toBe(302);
+        await expect(
+            page.getByRole('alert').filter({ hasText: 'We could not submit' }),
+        ).toBeVisible();
+
+        await page.locator('input[type="file"]').setInputFiles(
+            Array.from({ length: 11 }, (_, index) => ({
+                name: `too-many-${index}.pdf`,
+                mimeType: 'application/pdf',
+                buffer: Buffer.from('%PDF-1.4 fixture'),
+            })),
+        );
+        const countResponse = page.waitForResponse(
+            (response) =>
+                response.url().endsWith('/operations/job-reports') &&
+                response.request().method() === 'POST',
+        );
+        await page.getByRole('button', { name: 'Submit report' }).click();
+        expect((await countResponse).status()).toBe(302);
+        await expect(
+            page.getByRole('alert').filter({ hasText: 'We could not submit' }),
+        ).toBeVisible();
+
+        await page.locator('input[type="file"]').setInputFiles([]);
+        let releaseRequest!: () => void;
+        const requestReleased = new Promise<void>((resolve) => {
+            releaseRequest = resolve;
+        });
+        await page.route('**/operations/job-reports', async (route) => {
+            await requestReleased;
+            await route.continue();
+        });
+
+        const submitResponse = page.waitForResponse(
+            (response) =>
+                response.url().endsWith('/operations/job-reports') &&
+                response.request().method() === 'POST',
+        );
+        await page.getByRole('button', { name: 'Submit report' }).click();
+        await expect(page.locator('form[aria-busy="true"]')).toBeVisible();
+        await expect(
+            page.locator('#report-submit-form button[type="submit"]'),
+        ).toBeDisabled();
+        releaseRequest();
+        expect((await submitResponse).status()).toBeGreaterThanOrEqual(300);
+        await page.unroute('**/operations/job-reports');
+        await expect(
+            page.getByRole('button', { name: 'Submit job report' }),
+        ).toBeFocused();
     });
 
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({

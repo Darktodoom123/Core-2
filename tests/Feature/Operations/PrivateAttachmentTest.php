@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Actions\UploadAttachmentAction;
 use App\Platform\Attachments\Jobs\PruneExpiredAttachmentsJob;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Actions\RecordAuditEvent;
@@ -114,6 +115,45 @@ it('rejects invalid upload types and oversized files', function (): void {
         ])
         ->assertStatus(422)
         ->assertJsonValidationErrors(['file']);
+});
+
+it('rejects empty files and stores generated paths without traversal segments', function (): void {
+    $user = createAttachUser(RoleName::Dispatcher);
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-ATT-BOUNDARY',
+        'client' => 'Client',
+        'title' => 'Boundary test',
+        'site' => 'Site',
+        'status' => DispatchStatus::Draft,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->addHour(),
+        'scheduled_end' => now()->addHours(4),
+        'created_by' => $user->id,
+        'version' => 1,
+    ]);
+
+    $emptyFile = Mockery::mock(UploadedFile::class);
+    $emptyFile->shouldReceive('isValid')->andReturnTrue();
+    $emptyFile->shouldReceive('getClientOriginalName')->andReturn('empty.pdf');
+    $emptyFile->shouldReceive('getSize')->andReturn(0);
+    $emptyFile->shouldReceive('getMimeType')->andReturn('application/pdf');
+
+    expect(fn () => app(UploadAttachmentAction::class)->execute($user, $job, $emptyFile))
+        ->toThrow(InvalidArgumentException::class, 'File cannot be empty.');
+
+    $traversalPath = tempnam(sys_get_temp_dir(), 'core2-traversal-');
+    if ($traversalPath === false) {
+        throw new RuntimeException('Unable to create a traversal-file fixture.');
+    }
+    file_put_contents($traversalPath, '%PDF-1.4 unsafe name');
+    $traversalFile = new UploadedFile($traversalPath, '../receipt.pdf', 'application/pdf', UPLOAD_ERR_OK, true);
+
+    $attachment = app(UploadAttachmentAction::class)->execute($user, $job, $traversalFile);
+    unlink($traversalPath);
+
+    expect($attachment->path)->not->toContain('..')
+        ->and($attachment->path)->not->toContain('receipt.pdf')
+        ->and($attachment->original_filename)->toBe('receipt.pdf');
 });
 
 it('uses the detected MIME type rather than the client-provided extension', function (): void {

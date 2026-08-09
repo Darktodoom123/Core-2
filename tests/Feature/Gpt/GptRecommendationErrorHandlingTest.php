@@ -12,6 +12,7 @@ use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -137,4 +138,72 @@ test('handles model refusal gracefully and sets status failed', function (): voi
         ->and($recommendation->error_message)->toBe('GPT generation failed. Please retry.')
         ->and($recommendation->response_summary)->toBeNull()
         ->and($recommendation->error_message)->not->toContain('refused');
+});
+
+test('fails closed when the provider key is missing', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config(['services.openai.key' => '', 'services.openai.fake' => false]);
+
+    $result = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['error_message'])->toBe('OpenAI API key is not configured.')
+        ->and($result['response_summary'])->toBeNull();
+});
+
+test('rejects provider responses with an invalid schema without persisting raw output', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config(['services.openai.key' => 'test-key', 'services.openai.fake' => false]);
+    Http::fake([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
+            'choices' => [[
+                'finish_reason' => 'stop',
+                'message' => ['content' => '{"secret":"provider output"}'],
+            ]],
+        ]),
+    ]);
+
+    $result = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
+
+    expect($result['success'])->toBeFalse()
+        ->and($result['error_message'])->toBe('Model output failed schema validation.')
+        ->and($result['response_summary'])->toBeNull();
+});
+
+test('enforces input-token and cost ceilings before accepting provider output', function (): void {
+    OpenAiClientWrapper::resetFakes();
+    config([
+        'services.openai.key' => 'test-key',
+        'services.openai.fake' => false,
+        'services.openai.max_input_tokens' => 1,
+    ]);
+
+    $tooLarge = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => str_repeat('x', 100)]);
+    expect($tooLarge['success'])->toBeFalse()
+        ->and($tooLarge['error_message'])->toBe('The GPT context exceeds the maximum input size.');
+
+    config(['services.openai.max_input_tokens' => 32000, 'services.openai.max_cost_usd' => 0.0001]);
+    Http::fake([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
+            'choices' => [[
+                'finish_reason' => 'stop',
+                'message' => ['content' => json_encode([
+                    'summary' => 'Safe result',
+                    'proposed_personnel' => [],
+                    'proposed_assets' => [],
+                    'reasons' => [],
+                    'assumptions' => [],
+                ], JSON_THROW_ON_ERROR)],
+            ]],
+            'usage' => [
+                'prompt_tokens' => 100000,
+                'completion_tokens' => 100000,
+                'total_tokens' => 200000,
+            ],
+        ]),
+    ]);
+
+    $tooExpensive = app(OpenAiClientWrapper::class)->generateRecommendation(['job' => []]);
+    expect($tooExpensive['success'])->toBeFalse()
+        ->and($tooExpensive['error_message'])->toBe('The estimated GPT cost exceeds the configured ceiling.');
 });
