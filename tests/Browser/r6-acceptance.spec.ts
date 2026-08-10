@@ -287,6 +287,41 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
     });
 
+    test('dispatcher overview prioritizes schedule and telemetry exceptions', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+
+        await expect(
+            page.getByRole('heading', { name: 'Dispatch schedule' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Telemetry exceptions' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Review units' }),
+        ).toBeVisible();
+        const scheduleTop = await page
+            .getByRole('heading', { name: 'Dispatch schedule' })
+            .evaluate((element) => element.getBoundingClientRect().top);
+        const trackingTop = await page
+            .getByRole('heading', { name: 'Live field tracking' })
+            .evaluate((element) => element.getBoundingClientRect().top);
+        expect(scheduleTop).toBeLessThan(trackingTop);
+        await expect(
+            page.getByRole('heading', { name: 'Telemetry summary' }),
+        ).toHaveCount(0);
+        await expect(page.getByText('Open map')).toHaveCount(0);
+
+        const documentWidth = await page.evaluate(
+            () => document.documentElement.scrollWidth,
+        );
+        expect(documentWidth).toBeLessThanOrEqual(390);
+    });
+
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({
         page,
     }) => {

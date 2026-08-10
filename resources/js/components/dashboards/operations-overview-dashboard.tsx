@@ -10,6 +10,7 @@ import {
     FileText,
     Fuel,
     Layers,
+    Lightbulb,
     MapPin,
     Radio,
     ShieldCheck,
@@ -745,10 +746,20 @@ function DispatcherDashboardView({
             ? Math.round((readyAssetsCount / totalAssets) * 100)
             : null;
 
-    const freshLocationsCount = locations.filter(isFreshLocation).length;
-    const hasLocations = locations.length > 0;
-    const allLocationsFresh =
-        hasLocations && freshLocationsCount === locations.length;
+    const freshnessCounts = {
+        fresh: locations.filter(
+            (location) => location.freshness_status === 'fresh',
+        ).length,
+        delayed: locations.filter(
+            (location) => location.freshness_status === 'delayed',
+        ).length,
+        stale: locations.filter(
+            (location) => location.freshness_status === 'stale',
+        ).length,
+        offline: locations.filter(
+            (location) => location.freshness_status === 'offline',
+        ).length,
+    };
 
     // [Improvement 1] GPT pending recommendations for dispatcher
     const pendingGptRecommendations = gptRecommendations.filter(
@@ -783,7 +794,11 @@ function DispatcherDashboardView({
                             variant="secondary"
                             onClick={() => onSectionChange('dispatch')}
                         >
-                            Review â†’
+                            Review
+                            <ArrowRight
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            />
                         </Button>
                     )}
                 </div>
@@ -810,7 +825,11 @@ function DispatcherDashboardView({
                             variant="secondary"
                             onClick={() => onSectionChange('assets')}
                         >
-                            View assets â†’
+                            View assets
+                            <ArrowRight
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            />
                         </Button>
                     )}
                 </div>
@@ -938,7 +957,11 @@ function DispatcherDashboardView({
                                 size="sm"
                                 onClick={() => onSectionChange('dispatch')}
                             >
-                                Convert in workspace â†’
+                                Convert in workspace
+                                <ArrowRight
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
                             </Button>
                         )}
                     </div>
@@ -1004,7 +1027,11 @@ function DispatcherDashboardView({
                                     className="text-xs font-semibold text-brand hover:underline"
                                 >
                                     + {hiddenRequestsCount} more service request
-                                    {hiddenRequestsCount === 1 ? '' : 's'} â†’
+                                    {hiddenRequestsCount === 1 ? '' : 's'}
+                                    <ArrowRight
+                                        className="ml-1 inline h-4 w-4 align-text-bottom"
+                                        aria-hidden="true"
+                                    />
                                 </button>
                             </div>
                         )}
@@ -1012,16 +1039,7 @@ function DispatcherDashboardView({
                 </section>
             )}
 
-            {canOpenTracking && (
-                <LiveTrackingPreview
-                    locations={locations}
-                    refresh={refresh}
-                    realtimeConnected={realtimeConnected}
-                    onOpenTracking={() => onSectionChange('tracking')}
-                />
-            )}
-
-            {/* Work in Motion & Telemetry + GPT Grid */}
+            {/* Dispatch work and review rail */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Dispatch Schedule */}
                 <section
@@ -1034,45 +1052,53 @@ function DispatcherDashboardView({
                                 id="dispatcher-jobs-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Dispatch execution & schedule
+                                Dispatch schedule
                             </h2>
                             <p className="mt-1 text-sm text-ink-soft">
-                                Track progress for queued and dispatched work.
+                                Build today&apos;s schedule and monitor
+                                dispatched work.
                             </p>
                         </div>
-                        <div className="flex gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
-                            <button
-                                type="button"
-                                onClick={() => setJobView('all')}
-                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                    jobView === 'all'
-                                        ? 'bg-surface text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink'
-                                }`}
-                            >
-                                All ({jobs.length})
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setJobView('active')}
-                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                    jobView === 'active'
-                                        ? 'bg-surface text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink'
-                                }`}
-                            >
-                                Active ({activeJobs.length})
-                            </button>
-                        </div>
+                        {jobs.length > 0 && (
+                            <div className="flex gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setJobView('all')}
+                                    className={`min-h-10 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        jobView === 'all'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    All ({jobs.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setJobView('active')}
+                                    className={`min-h-10 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        jobView === 'active'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Active ({activeJobs.length})
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <Panel className="overflow-hidden">
                         {upcomingJobs.length === 0 ? (
-                            <EmptyState
-                                compact
-                                icon={CalendarClock}
-                                title="No active dispatches"
-                                message="Create or convert service requests to begin dispatch scheduling."
+                            <DispatchReadinessState
+                                pendingRequestsCount={pendingRequests.length}
+                                readyAssetsCount={readyAssetsCount}
+                                totalAssets={totalAssets}
+                                freshLocationsCount={freshnessCounts.fresh}
+                                totalLocations={locations.length}
+                                canOpenDispatch={canOpenDispatch}
+                                onOpenDispatch={() =>
+                                    onSectionChange('dispatch')
+                                }
                             />
                         ) : (
                             <ul className="divide-y divide-line">
@@ -1090,143 +1116,52 @@ function DispatcherDashboardView({
                     </Panel>
                 </section>
 
-                {/* Right sidebar: Telemetry summary + GPT Advisory */}
+                {/* Review rail: telemetry exceptions + actionable recommendations */}
                 <div className="space-y-6">
-                    {/* Telemetry Widget */}
-                    <section aria-labelledby="dispatcher-telemetry-heading">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h2
-                                id="dispatcher-telemetry-heading"
-                                className="text-sm font-semibold tracking-wide text-ink uppercase"
-                            >
-                                Telemetry summary
-                            </h2>
-                            {canOpenTracking && (
-                                <button
-                                    type="button"
-                                    onClick={() => onSectionChange('tracking')}
-                                    className="text-xs font-semibold text-brand hover:underline"
-                                >
-                                    Open map â†’
-                                </button>
-                            )}
-                        </div>
+                    <TelemetryExceptions
+                        counts={freshnessCounts}
+                        totalLocations={locations.length}
+                        canOpenTracking={canOpenTracking}
+                        onOpenTracking={() => onSectionChange('tracking')}
+                    />
 
-                        <Panel className="space-y-3 p-4">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="flex items-center gap-1.5 font-medium text-ink">
-                                    <span className="relative flex h-2 w-2">
-                                        {freshLocationsCount > 0 ? (
-                                            <>
-                                                <span
-                                                    className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
-                                                        freshLocationsCount ===
-                                                        locations.length
-                                                            ? 'bg-success'
-                                                            : 'bg-warning'
-                                                    }`}
-                                                />
-                                                <span
-                                                    className={`relative inline-flex h-2 w-2 rounded-full ${
-                                                        freshLocationsCount ===
-                                                        locations.length
-                                                            ? 'bg-success'
-                                                            : 'bg-warning'
-                                                    }`}
-                                                />
-                                            </>
-                                        ) : (
-                                            <span
-                                                className={`relative inline-flex h-2 w-2 rounded-full ${
-                                                    locations.length === 0
-                                                        ? 'bg-muted'
-                                                        : 'bg-danger'
-                                                }`}
-                                            />
-                                        )}
-                                    </span>
-                                    {!hasLocations
-                                        ? 'No Field Units'
-                                        : allLocationsFresh
-                                          ? 'Fresh Field Pings'
-                                          : freshLocationsCount > 0
-                                            ? 'Partial Freshness'
-                                            : 'No Fresh Pings'}
-                                </span>
-                                <span className="font-semibold text-ink">
-                                    {freshLocationsCount} / {locations.length}
-                                </span>
-                            </div>
-
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
-                                <div
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                        locations.length === 0
-                                            ? 'bg-surface-subtle'
-                                            : freshLocationsCount ===
-                                                locations.length
-                                              ? 'bg-success'
-                                              : freshLocationsCount > 0
-                                                ? 'bg-warning'
-                                                : 'bg-danger'
-                                    }`}
-                                    style={{
-                                        width: `${locations.length > 0 ? (freshLocationsCount / locations.length) * 100 : 0}%`,
-                                    }}
-                                />
-                            </div>
-
-                            <p className="text-xs text-ink-soft">
-                                {locations.length === 0
-                                    ? 'No device location updates recorded.'
-                                    : allLocationsFresh
-                                      ? 'All registered field units are reporting fresh coordinates.'
-                                      : freshLocationsCount > 0
-                                        ? `${locations.length - freshLocationsCount} of ${locations.length} location updates are delayed, stale, or offline.`
-                                        : `All ${locations.length} location updates are delayed, stale, or offline.`}
-                            </p>
-                        </Panel>
-                    </section>
-
-                    {/* [Improvement 1] GPT Advisory Panel for Dispatcher */}
                     {(capabilities.request_gpt_assistance ||
                         pendingGptRecommendations.length > 0) && (
                         <section aria-labelledby="dispatcher-gpt-heading">
-                            <div className="mb-3 flex items-center justify-between">
-                                <h2
-                                    id="dispatcher-gpt-heading"
-                                    className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
-                                >
-                                    <Sparkles className="h-4 w-4 text-brand" />
-                                    GPT AI Advisory
-                                </h2>
-                                {canOpenGpt && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onSectionChange(
-                                                'gpt-recommendations',
-                                            )
-                                        }
-                                        className="text-xs font-semibold text-brand hover:underline"
-                                    >
-                                        View all →
-                                    </button>
-                                )}
-                            </div>
-
-                            <Panel className="space-y-3 p-4">
-                                {pendingGptRecommendations.length === 0 ? (
-                                    <div className="space-y-2 text-center">
-                                        <Sparkles className="mx-auto h-6 w-6 text-muted" />
-                                        <p className="text-xs text-ink-soft">
-                                            No pending AI recommendations.
-                                            Request one from a dispatch job to
-                                            get resource assignment suggestions.
-                                        </p>
+                            {pendingGptRecommendations.length > 0 ? (
+                                <>
+                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <h2
+                                            id="dispatcher-gpt-heading"
+                                            className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
+                                        >
+                                            <Lightbulb
+                                                className="h-4 w-4 text-brand"
+                                                aria-hidden="true"
+                                            />
+                                            Recommendations awaiting review
+                                        </h2>
+                                        {canOpenGpt && (
+                                            <Button
+                                                type="button"
+                                                variant="quiet"
+                                                size="sm"
+                                                onClick={() =>
+                                                    onSectionChange(
+                                                        'gpt-recommendations',
+                                                    )
+                                                }
+                                            >
+                                                Review recommendations
+                                                <ArrowRight
+                                                    className="h-4 w-4"
+                                                    aria-hidden="true"
+                                                />
+                                            </Button>
+                                        )}
                                     </div>
-                                ) : (
-                                    <>
+
+                                    <Panel className="space-y-3 p-4">
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="font-medium text-ink">
                                                 {
@@ -1238,21 +1173,21 @@ function DispatcherDashboardView({
                                                 Advisory only
                                             </span>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="divide-y divide-line">
                                             {pendingGptRecommendations
                                                 .slice(0, 2)
                                                 .map((rec) => (
                                                     <div
                                                         key={rec.id}
-                                                        className="space-y-1 rounded-lg bg-surface-subtle p-3 text-xs"
+                                                        className="space-y-1 py-3 text-xs first:pt-0 last:pb-0"
                                                     >
-                                                        <div className="flex items-center justify-between">
+                                                        <div className="flex items-center justify-between gap-3">
                                                             <span className="font-semibold text-ink">
                                                                 Dispatch #
                                                                 {rec.subject_id}
                                                             </span>
                                                             {rec.expires_in_seconds && (
-                                                                <span className="text-muted">
+                                                                <span className="shrink-0 text-muted">
                                                                     {Math.ceil(
                                                                         rec.expires_in_seconds /
                                                                             60,
@@ -1278,14 +1213,275 @@ function DispatcherDashboardView({
                                                 more recommendations
                                             </p>
                                         )}
-                                    </>
-                                )}
-                            </Panel>
+                                    </Panel>
+                                </>
+                            ) : (
+                                <div className="flex items-start gap-3 border-t border-line pt-4">
+                                    <Lightbulb
+                                        className="mt-0.5 h-4 w-4 shrink-0 text-muted"
+                                        aria-hidden="true"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-ink">
+                                            No recommendations awaiting review
+                                        </p>
+                                        <p className="mt-1 text-xs leading-5 text-ink-soft">
+                                            Advisory guidance becomes available
+                                            inside a dispatch job when there is
+                                            enough assignment context.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </section>
                     )}
                 </div>
             </div>
+
+            {canOpenTracking && (
+                <LiveTrackingPreview
+                    locations={locations}
+                    refresh={refresh}
+                    realtimeConnected={realtimeConnected}
+                    onOpenTracking={() => onSectionChange('tracking')}
+                />
+            )}
         </div>
+    );
+}
+
+type TelemetryCounts = {
+    fresh: number;
+    delayed: number;
+    stale: number;
+    offline: number;
+};
+
+function DispatchReadinessState({
+    pendingRequestsCount,
+    readyAssetsCount,
+    totalAssets,
+    freshLocationsCount,
+    totalLocations,
+    canOpenDispatch,
+    onOpenDispatch,
+}: {
+    pendingRequestsCount: number;
+    readyAssetsCount: number;
+    totalAssets: number;
+    freshLocationsCount: number;
+    totalLocations: number;
+    canOpenDispatch: boolean;
+    onOpenDispatch: () => void;
+}) {
+    return (
+        <div className="space-y-5 px-4 py-6 text-left sm:px-6 sm:py-7">
+            <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
+                    <CalendarClock className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                    <p className="font-semibold text-ink">
+                        No dispatches scheduled
+                    </p>
+                    <p className="mt-1 max-w-xl text-sm leading-6 text-ink-soft">
+                        Convert a service request into a dispatch to begin
+                        building today&apos;s schedule.
+                    </p>
+                    {canOpenDispatch && (
+                        <div className="mt-5 flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="sm"
+                                onClick={onOpenDispatch}
+                            >
+                                {pendingRequestsCount > 0
+                                    ? 'Review service requests'
+                                    : 'Open dispatch workspace'}
+                                <ArrowRight
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                            {pendingRequestsCount > 0 && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={onOpenDispatch}
+                                >
+                                    Open dispatch workspace
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="border-t border-line pt-4">
+                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                    Dispatch readiness
+                </p>
+                <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="min-w-0">
+                        <dt className="text-xs text-ink-soft">
+                            Requests ready
+                        </dt>
+                        <dd className="mt-1 text-lg font-semibold text-ink tabular-nums">
+                            {pendingRequestsCount}
+                        </dd>
+                        <p className="text-xs text-ink-soft">
+                            {pendingRequestsCount > 0
+                                ? 'Submitted for conversion'
+                                : 'No submitted requests'}
+                        </p>
+                    </div>
+                    <div className="min-w-0">
+                        <dt className="text-xs text-ink-soft">Assets ready</dt>
+                        <dd className="mt-1 text-lg font-semibold text-ink tabular-nums">
+                            {readyAssetsCount}
+                        </dd>
+                        <p className="text-xs text-ink-soft">
+                            {totalAssets > 0
+                                ? `of ${totalAssets} dispatchable`
+                                : 'No assets available'}
+                        </p>
+                    </div>
+                    <div className="min-w-0">
+                        <dt className="text-xs text-ink-soft">
+                            Fresh telemetry
+                        </dt>
+                        <dd className="mt-1 text-lg font-semibold text-ink tabular-nums">
+                            {freshLocationsCount}
+                        </dd>
+                        <p className="text-xs text-ink-soft">
+                            {totalLocations > 0
+                                ? `of ${totalLocations} field units`
+                                : 'No field units configured'}
+                        </p>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    );
+}
+
+function TelemetryExceptions({
+    counts,
+    totalLocations,
+    canOpenTracking,
+    onOpenTracking,
+}: {
+    counts: TelemetryCounts;
+    totalLocations: number;
+    canOpenTracking: boolean;
+    onOpenTracking: () => void;
+}) {
+    const locationsNeedingReview =
+        counts.delayed + counts.stale + counts.offline;
+    const summary =
+        totalLocations === 0
+            ? 'No field units configured.'
+            : locationsNeedingReview === 0
+              ? 'All field units are reporting fresh coordinates.'
+              : `${locationsNeedingReview} of ${totalLocations} units need review.`;
+
+    const statusItems: Array<{
+        key: keyof TelemetryCounts;
+        label: string;
+        dotClassName: string;
+        valueClassName: string;
+    }> = [
+        {
+            key: 'fresh',
+            label: 'Fresh',
+            dotClassName: 'bg-success',
+            valueClassName: 'text-success-strong',
+        },
+        {
+            key: 'delayed',
+            label: 'Delayed',
+            dotClassName: 'bg-warning',
+            valueClassName: 'text-warning-strong',
+        },
+        {
+            key: 'stale',
+            label: 'Stale',
+            dotClassName: 'bg-warning-strong',
+            valueClassName: 'text-warning-strong',
+        },
+        {
+            key: 'offline',
+            label: 'Offline',
+            dotClassName: 'bg-danger',
+            valueClassName: 'text-danger-strong',
+        },
+    ];
+
+    return (
+        <section aria-labelledby="dispatcher-telemetry-heading">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2
+                    id="dispatcher-telemetry-heading"
+                    className="text-sm font-semibold tracking-wide text-ink uppercase"
+                >
+                    Telemetry exceptions
+                </h2>
+                {canOpenTracking && (
+                    <Button
+                        type="button"
+                        variant="quiet"
+                        size="sm"
+                        onClick={onOpenTracking}
+                    >
+                        Review units
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                )}
+            </div>
+
+            <Panel className="space-y-4 p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-ink">
+                            {counts.fresh} of {totalLocations} fresh
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-ink-soft">
+                            {summary}
+                        </p>
+                    </div>
+                    {locationsNeedingReview > 0 && (
+                        <AlertTriangle
+                            className="h-5 w-5 shrink-0 text-warning-strong"
+                            aria-label="Telemetry requires review"
+                        />
+                    )}
+                </div>
+
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-3">
+                    {statusItems.map((item) => (
+                        <div
+                            key={item.key}
+                            className="flex items-center justify-between gap-2 text-xs"
+                        >
+                            <dt className="flex items-center gap-1.5 text-ink-soft">
+                                <span
+                                    className={`h-2 w-2 shrink-0 rounded-full ${item.dotClassName}`}
+                                    aria-hidden="true"
+                                />
+                                {item.label}
+                            </dt>
+                            <dd
+                                className={`font-semibold tabular-nums ${item.valueClassName}`}
+                            >
+                                {counts[item.key]}
+                            </dd>
+                        </div>
+                    ))}
+                </dl>
+            </Panel>
+        </section>
     );
 }
 
