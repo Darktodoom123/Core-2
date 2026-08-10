@@ -25,6 +25,21 @@ it('authenticates an active verified user', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+it('does not persist a remembered web session', function (): void {
+    $user = User::factory()->create([
+        'username' => 'no-remember',
+        'remember_token' => null,
+    ]);
+
+    $this->post('/login', [
+        'username' => $user->username,
+        'password' => 'password',
+        'remember' => true,
+    ])->assertRedirect('/');
+
+    expect($user->refresh()->remember_token)->toBeNull();
+});
+
 it('rejects a suspended account', function () {
     $user = User::factory()->suspended()->create();
     $this->post('/login', ['username' => $user->username, 'password' => 'password'])->assertSessionHasErrors('username');

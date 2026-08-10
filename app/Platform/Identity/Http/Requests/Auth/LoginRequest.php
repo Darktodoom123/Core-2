@@ -32,7 +32,6 @@ final class LoginRequest extends FormRequest
         return [
             'username' => ['required', ...Username::validationRules()],
             'password' => ['required', 'string'],
-            'remember' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -45,7 +44,7 @@ final class LoginRequest extends FormRequest
             'password' => (string) $this->string('password'),
             'is_active' => true,
             'suspended_at' => null,
-        ], $this->boolean('remember'))) {
+        ])) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

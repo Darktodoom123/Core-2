@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { AuthShell } from './auth-shell';
 
 export default function Login({ status }: { status?: string }) {
-    const form = useForm({ username: '', password: '', remember: false });
+    const form = useForm({ username: '', password: '' });
     const submit = (event: FormEvent) => {
         event.preventDefault();
         form.post('/login', { onFinish: () => form.reset('password') });
@@ -40,16 +40,9 @@ export default function Login({ status }: { status?: string }) {
                             form.setData('username', e.target.value)
                         }
                         autoComplete="username"
-                        aria-describedby="username-help"
                         autoFocus
                         className="mt-1 h-11 w-full rounded-lg border border-line bg-surface px-3 text-ink"
                     />
-                    <span
-                        id="username-help"
-                        className="mt-1 block text-xs font-normal text-ink-soft"
-                    >
-                        3–50 letters, numbers, periods, underscores, or hyphens.
-                    </span>
                     {form.errors.username && (
                         <span className="mt-1 block text-sm text-red-700">
                             {form.errors.username}
@@ -72,16 +65,6 @@ export default function Login({ status }: { status?: string }) {
                             {form.errors.password}
                         </span>
                     )}
-                </label>
-                <label className="flex min-h-11 items-center gap-2 text-sm text-ink-soft">
-                    <input
-                        type="checkbox"
-                        checked={form.data.remember}
-                        onChange={(e) =>
-                            form.setData('remember', e.target.checked)
-                        }
-                    />{' '}
-                    Keep me signed in on this device
                 </label>
                 <button
                     type="submit"
