@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Tracking\Actions\BroadcastTrackingWorkspaceUpdate;
 use App\Platform\Tracking\Http\Requests\StoreLocationUpdateRequest;
 use App\Platform\Tracking\Models\LocationUpdate;
 use Illuminate\Http\JsonResponse;
@@ -27,11 +28,15 @@ final class LocationUpdateController extends Controller
         ]);
     }
 
-    public function store(StoreLocationUpdateRequest $request, IdempotentCommandService $idempotency, RecordAuditEvent $audit): RedirectResponse|JsonResponse
-    {
+    public function store(
+        StoreLocationUpdateRequest $request,
+        IdempotentCommandService $idempotency,
+        RecordAuditEvent $audit,
+        BroadcastTrackingWorkspaceUpdate $broadcast,
+    ): RedirectResponse|JsonResponse {
         $commandId = $request->header('Idempotency-Key') ?: $request->input('command_id');
 
-        $execute = function () use ($request, $audit) {
+        $execute = function () use ($request, $audit, $broadcast) {
             $data = $request->validated();
             unset($data['command_id']);
 
@@ -53,6 +58,7 @@ final class LocationUpdateController extends Controller
                     'captured_at' => $location->captured_at?->toIso8601String(),
                 ],
             );
+            $broadcast->afterCommit();
 
             return to_route('home')->with('flash', [
                 'tone' => 'success',

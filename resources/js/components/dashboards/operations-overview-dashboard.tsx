@@ -45,6 +45,21 @@ type DashboardAction = {
     category: 'approvals' | 'assets' | 'fuel' | 'tracking';
 };
 
+type LocationFreshnessStatus = LocationUpdateViewModel['freshness_status'];
+
+const LOCATION_REVIEW_STATUSES: ReadonlyArray<LocationFreshnessStatus> = [
+    'stale',
+    'offline',
+];
+
+function isFreshLocation(location: LocationUpdateViewModel): boolean {
+    return location.freshness_status === 'fresh';
+}
+
+function needsLocationReview(location: LocationUpdateViewModel): boolean {
+    return LOCATION_REVIEW_STATUSES.includes(location.freshness_status);
+}
+
 export interface OperationsOverviewDashboardProps {
     jobs: DispatchJobViewModel[];
     clients?: ClientViewModel[];
@@ -170,7 +185,7 @@ function DashboardHeader({
                         {isSystemAdmin
                             ? 'System security, user access governance, telemetry health, and audit trail stream.'
                             : isDispatcher
-                              ? 'Active dispatch workloads, service request conversion, live telemetry, and resource allocation.'
+                              ? 'Active dispatch workloads, service request conversion, location telemetry, and resource allocation.'
                               : 'High-level operational governance, decision approvals queue, fleet readiness, and GPT advisory.'}
                     </p>
                 </div>
@@ -259,14 +274,12 @@ function OperationsManagerDashboardView({
     const readinessPercentage =
         totalAssets > 0
             ? Math.round((dispatchableAssets / totalAssets) * 100)
-            : 100;
+            : null;
 
     const blockingAssets = assets.filter(
         (a) => a.blocking_work_orders_count > 0,
     ).length;
-    const freshLocations = locations.filter((l) =>
-        ['live', 'recent'].includes(l.freshness_status),
-    ).length;
+    const freshLocations = locations.filter(isFreshLocation).length;
 
     const pendingApprovalsCount = approvals.filter((a) => a.can_decide).length;
     const activeGptRecommendations = gptRecommendations.filter(
@@ -309,15 +322,25 @@ function OperationsManagerDashboardView({
 
                 <KpiCard
                     label="Fleet Readiness"
-                    value={`${readinessPercentage}%`}
-                    subtext={`${dispatchableAssets} of ${totalAssets} assets ready`}
+                    value={
+                        readinessPercentage === null
+                            ? '—'
+                            : `${readinessPercentage}%`
+                    }
+                    subtext={
+                        readinessPercentage === null
+                            ? 'No assets available'
+                            : `${dispatchableAssets} of ${totalAssets} assets ready`
+                    }
                     icon={Truck}
                     tone={
-                        readinessPercentage >= 80
-                            ? 'success'
-                            : readinessPercentage >= 60
-                              ? 'warning'
-                              : 'danger'
+                        readinessPercentage === null
+                            ? 'default'
+                            : readinessPercentage >= 80
+                              ? 'success'
+                              : readinessPercentage >= 60
+                                ? 'warning'
+                                : 'danger'
                     }
                     onClick={
                         canOpenAssets
@@ -541,7 +564,11 @@ function OperationsManagerDashboardView({
                             <ReadinessRow
                                 label="Fleet Available"
                                 value={`${dispatchableAssets} / ${totalAssets}`}
-                                detail={`${readinessPercentage}% ready for deployment`}
+                                detail={
+                                    readinessPercentage === null
+                                        ? 'No assets available'
+                                        : `${readinessPercentage}% ready for deployment`
+                                }
                                 icon={Truck}
                             />
                             <ReadinessRow
@@ -559,7 +586,7 @@ function OperationsManagerDashboardView({
                             />
                             <ReadinessRow
                                 label="Telemetry Connection"
-                                value={`${freshLocations} pings`}
+                                value={`${freshLocations} fresh pings`}
                                 detail={`${locations.length} total active devices`}
                                 icon={Radio}
                             />
@@ -695,11 +722,12 @@ function DispatcherDashboardView({
     const readinessPercentage =
         totalAssets > 0
             ? Math.round((readyAssetsCount / totalAssets) * 100)
-            : 100;
+            : null;
 
-    const freshLocationsCount = locations.filter((l) =>
-        ['live', 'recent'].includes(l.freshness_status),
-    ).length;
+    const freshLocationsCount = locations.filter(isFreshLocation).length;
+    const hasLocations = locations.length > 0;
+    const allLocationsFresh =
+        hasLocations && freshLocationsCount === locations.length;
 
     // [Improvement 1] GPT pending recommendations for dispatcher
     const pendingGptRecommendations = gptRecommendations.filter(
@@ -802,19 +830,27 @@ function DispatcherDashboardView({
                 {/* [Improvement 3] Fleet Readiness shown as % */}
                 <KpiCard
                     label="Fleet Readiness"
-                    value={`${readinessPercentage}%`}
+                    value={
+                        readinessPercentage === null
+                            ? '—'
+                            : `${readinessPercentage}%`
+                    }
                     subtext={
-                        blockingAssetsCount > 0
-                            ? `${readyAssetsCount} of ${totalAssets} ready Â· ${blockingAssetsCount} blocked`
-                            : `${readyAssetsCount} of ${totalAssets} assets ready`
+                        readinessPercentage === null
+                            ? 'No assets available'
+                            : blockingAssetsCount > 0
+                              ? `${readyAssetsCount} of ${totalAssets} ready Â· ${blockingAssetsCount} blocked`
+                              : `${readyAssetsCount} of ${totalAssets} assets ready`
                     }
                     icon={Truck}
                     tone={
-                        readinessPercentage >= 80
-                            ? 'success'
-                            : readinessPercentage >= 50
-                              ? 'warning'
-                              : 'danger'
+                        readinessPercentage === null
+                            ? 'default'
+                            : readinessPercentage >= 80
+                              ? 'success'
+                              : readinessPercentage >= 50
+                                ? 'warning'
+                                : 'danger'
                     }
                     onClick={
                         canOpenAssets
@@ -1076,14 +1112,13 @@ function DispatcherDashboardView({
                                             />
                                         )}
                                     </span>
-                                    {locations.length === 0
+                                    {!hasLocations
                                         ? 'No Field Units'
-                                        : freshLocationsCount ===
-                                            locations.length
-                                          ? 'Live Field Pings'
+                                        : allLocationsFresh
+                                          ? 'Fresh Field Pings'
                                           : freshLocationsCount > 0
-                                            ? 'Partial Field Pings'
-                                            : 'Field Units Offline'}
+                                            ? 'Partial Freshness'
+                                            : 'No Fresh Pings'}
                                 </span>
                                 <span className="font-semibold text-ink">
                                     {freshLocationsCount} / {locations.length}
@@ -1111,11 +1146,11 @@ function DispatcherDashboardView({
                             <p className="text-xs text-ink-soft">
                                 {locations.length === 0
                                     ? 'No device location updates recorded.'
-                                    : freshLocationsCount === locations.length
-                                      ? 'All registered field units actively reporting live coordinates.'
+                                    : allLocationsFresh
+                                      ? 'All registered field units are reporting fresh coordinates.'
                                       : freshLocationsCount > 0
-                                        ? `${locations.length - freshLocationsCount} of ${locations.length} location updates offline or stale.`
-                                        : `All ${locations.length} location updates offline or stale.`}
+                                        ? `${locations.length - freshLocationsCount} of ${locations.length} location updates are delayed, stale, or offline.`
+                                        : `All ${locations.length} location updates are delayed, stale, or offline.`}
                             </p>
                         </Panel>
                     </section>
@@ -1233,9 +1268,10 @@ function SystemAdminDashboardView({
     onSectionChange,
 }: OperationsOverviewDashboardProps) {
     const activeUsersCount = users.filter((u) => u.is_active).length;
-    const freshLocationsCount = locations.filter((l) =>
-        ['live', 'recent'].includes(l.freshness_status),
-    ).length;
+    const freshLocationsCount = locations.filter(isFreshLocation).length;
+    const hasLocations = locations.length > 0;
+    const allLocationsFresh =
+        hasLocations && freshLocationsCount === locations.length;
 
     const canOpenUsers = availableSections.includes('users');
     const canOpenAudit = availableSections.includes('audit');
@@ -1286,13 +1322,21 @@ function SystemAdminDashboardView({
                     label="Telemetry Health"
                     value={`${freshLocationsCount} / ${locations.length}`}
                     subtext={
-                        freshLocationsCount === locations.length
-                            ? 'All device streams healthy'
-                            : 'Some pings stale or delayed'
+                        !hasLocations
+                            ? 'No device location updates recorded'
+                            : allLocationsFresh
+                              ? 'All device streams report fresh data'
+                              : 'Some pings are delayed, stale, or offline'
                     }
                     icon={Radio}
-                    tone={freshLocationsCount > 0 ? 'success' : 'warning'}
-                    liveIndicator={freshLocationsCount > 0}
+                    tone={
+                        !hasLocations
+                            ? 'default'
+                            : freshLocationsCount > 0
+                              ? 'success'
+                              : 'warning'
+                    }
+                    liveIndicator={hasLocations && freshLocationsCount > 0}
                     onClick={
                         canOpenTracking
                             ? () => onSectionChange('tracking')
@@ -1471,9 +1515,7 @@ function FieldWorkerDashboardView({
     const canOpenFuel = availableSections.includes('fuel');
     const canOpenTracking = availableSections.includes('tracking');
 
-    const freshLocations = locations.filter((l) =>
-        ['live', 'recent'].includes(l.freshness_status),
-    ).length;
+    const freshLocations = locations.filter(isFreshLocation).length;
 
     return (
         <div className="space-y-6">
@@ -1519,7 +1561,7 @@ function FieldWorkerDashboardView({
                 <KpiCard
                     label="GPS Telemetry Sharing"
                     value={capabilities.share_location ? 'Active' : 'Disabled'}
-                    subtext={`${freshLocations} location pings transmitted`}
+                    subtext={`${freshLocations} fresh location pings transmitted`}
                     icon={Radio}
                     tone={capabilities.share_location ? 'success' : 'default'}
                     liveIndicator={capabilities.share_location}
@@ -1854,9 +1896,7 @@ function buildDashboardActions({
     const actionableFuelRequests = fuelRequests.filter((request) =>
         canActOnFuelRequest(request, capabilities),
     );
-    const staleLocations = locations.filter((l) =>
-        ['stale', 'offline'].includes(l.freshness_status),
-    );
+    const staleLocations = locations.filter(needsLocationReview);
 
     if (approvals.length > 0) {
         const canDecideApproval = decisionReadyApprovals.length > 0;

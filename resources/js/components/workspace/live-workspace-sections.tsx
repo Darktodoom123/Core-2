@@ -15,6 +15,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
+import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
@@ -27,6 +28,7 @@ import type {
     LocationUpdateViewModel,
     NotificationViewModel,
     ReportExportViewModel,
+    ScopeRefreshState,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -46,6 +48,14 @@ export function LiveWorkspaceSection({
     notifications = [],
     archivedJobs = [],
     gptRecommendations = [],
+    refresh,
+    onRefresh,
+    sharingEnabled,
+    sharingPending,
+    sharingError,
+    onToggleSharing,
+    outboxQueue,
+    onOutboxChanged,
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
@@ -60,6 +70,14 @@ export function LiveWorkspaceSection({
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
+    refresh: ScopeRefreshState;
+    onRefresh: () => void;
+    sharingEnabled: boolean;
+    sharingPending: boolean;
+    sharingError: string | null;
+    onToggleSharing: (enable: boolean) => void;
+    outboxQueue: OutboxItem[];
+    onOutboxChanged: () => void;
 }) {
     switch (section) {
         case 'assets':
@@ -78,6 +96,14 @@ export function LiveWorkspaceSection({
                 <TrackingSurface
                     locations={locations}
                     capabilities={capabilities}
+                    refresh={refresh}
+                    onRefresh={onRefresh}
+                    sharingEnabled={sharingEnabled}
+                    sharingPending={sharingPending}
+                    sharingError={sharingError}
+                    onToggleSharing={onToggleSharing}
+                    outboxQueue={outboxQueue}
+                    onOutboxChanged={onOutboxChanged}
                 />
             );
         case 'approvals':

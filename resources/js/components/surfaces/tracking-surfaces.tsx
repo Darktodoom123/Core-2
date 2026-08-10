@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -10,32 +9,44 @@ import {
     Truck,
     UserRoundCog,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     getAssetKind,
     HeavyEquipmentIcon,
     OpenStreetMapTrackingMap,
 } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
-import {
-    getOutboxQueue,
-    queueCommand,
-    removeOutboxItem,
-    syncOutbox,
-} from '@/lib/outbox';
+import { removeOutboxItem } from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
     LocationUpdateViewModel,
+    ScopeRefreshState,
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
 export function TrackingSurface({
     locations,
     capabilities,
+    refresh,
+    onRefresh,
+    sharingEnabled,
+    sharingPending,
+    sharingError,
+    onToggleSharing,
+    outboxQueue,
+    onOutboxChanged,
 }: {
     locations: LocationUpdateViewModel[];
     capabilities: WorkspaceCapabilities;
+    refresh: ScopeRefreshState;
+    onRefresh: () => void;
+    sharingEnabled: boolean;
+    sharingPending: boolean;
+    sharingError: string | null;
+    onToggleSharing: (enable: boolean) => void;
+    outboxQueue: OutboxItem[];
+    onOutboxChanged: () => void;
 }) {
     const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
     const [statusFilter, setStatusFilter] = useState<
@@ -44,40 +55,12 @@ export function TrackingSurface({
     const [assetFilter, setAssetFilter] = useState<
         'all' | 'truck' | 'crane' | 'equipment' | 'personnel'
     >('all');
-    const [lastPolledAt, setLastPolledAt] = useState<Date>(new Date());
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [pollError, setPollError] = useState(false);
     const [isOnline, setIsOnline] = useState(
         () => typeof navigator === 'undefined' || navigator.onLine,
     );
-    const [outboxQueue, setOutboxQueue] = useState<OutboxItem[]>(() =>
-        getOutboxQueue(),
-    );
-    const [sharingPending, setSharingPending] = useState(false);
-    const sharingEnabled = locations[0]?.sharing_enabled ?? false;
 
-    const refreshData = useCallback(() => {
-        setIsRefreshing(true);
-        router.reload({
-            only: ['locations', 'workspace'],
-            onSuccess: () => setPollError(false),
-            onError: () => setPollError(true),
-            onFinish: () => {
-                setIsRefreshing(false);
-                setLastPolledAt(new Date());
-                setOutboxQueue(getOutboxQueue());
-            },
-        });
-    }, []);
-
-    // Measured Polling — 15 seconds
-    useEffect(() => {
-        const interval = window.setInterval(() => {
-            refreshData();
-        }, 15_000);
-
-        return () => window.clearInterval(interval);
-    }, [refreshData]);
+    const isRefreshing = refresh.status === 'refreshing';
+    const pollError = refresh.status === 'failed';
 
     useEffect(() => {
         const markOnline = () => setIsOnline(true);
@@ -90,56 +73,6 @@ export function TrackingSurface({
             window.removeEventListener('online', markOnline);
             window.removeEventListener('offline', markOffline);
         };
-    }, []);
-
-    const toggleSharing = async (enable: boolean) => {
-        setSharingPending(true);
-
-        const submit = async (payload: Record<string, unknown>) => {
-            queueCommand('location.store', '/operations/locations', payload);
-            setOutboxQueue(getOutboxQueue());
-            await syncOutbox();
-            setOutboxQueue(getOutboxQueue());
-            setSharingPending(false);
-            refreshData();
-        };
-
-        if (!enable) {
-            await submit({
-                sharing_enabled: false,
-                captured_at: new Date().toISOString(),
-            });
-
-            return;
-        }
-
-        if (!('geolocation' in navigator)) {
-            setSharingPending(false);
-
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (pos) =>
-                void submit({
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                    accuracy_metres: pos.coords.accuracy,
-                    captured_at: new Date(pos.timestamp).toISOString(),
-                    sharing_enabled: true,
-                }),
-            () => setSharingPending(false),
-            { enableHighAccuracy: true, timeout: 10_000 },
-        );
-    };
-
-    useEffect(() => {
-        const flush = () =>
-            void syncOutbox().then(() => setOutboxQueue(getOutboxQueue()));
-        window.addEventListener('online', flush);
-        flush();
-
-        return () => window.removeEventListener('online', flush);
     }, []);
 
     const filteredLocations = locations.filter((loc) => {
@@ -159,7 +92,7 @@ export function TrackingSurface({
             />
 
             <div className="space-y-6 p-4 md:p-6">
-                {/* Header Controls & Measured Polling Status */}
+                {/* Header Controls & Coordinated Refresh Status */}
                 <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface p-4 shadow-sm">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
@@ -168,7 +101,7 @@ export function TrackingSurface({
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="font-semibold text-ink">
-                                    Measured Polling (15s)
+                                    Refresh coordinator (15s fallback)
                                 </span>
                                 <span
                                     className={cn(
@@ -191,13 +124,21 @@ export function TrackingSurface({
                                         ? 'Offline'
                                         : pollError
                                           ? 'Sync issue'
-                                          : 'Live'}
+                                          : isRefreshing
+                                            ? 'Refreshing'
+                                            : refresh.mode === 'polling'
+                                              ? 'Polling fallback'
+                                              : 'Live'}
                                 </span>
                             </div>
                             <p className="text-xs text-ink-soft">
-                                Last poll attempt:{' '}
-                                {lastPolledAt.toLocaleTimeString()} · Retention:
-                                30-day precise coordinates
+                                Last refresh attempt:{' '}
+                                {refresh.last_attempt_at
+                                    ? new Date(
+                                          refresh.last_attempt_at,
+                                      ).toLocaleTimeString()
+                                    : 'Not attempted'}{' '}
+                                · Retention: 30-day precise coordinates
                             </p>
                         </div>
                     </div>
@@ -208,7 +149,7 @@ export function TrackingSurface({
                                 variant="secondary"
                                 size="sm"
                                 disabled={sharingPending}
-                                onClick={() => toggleSharing(!sharingEnabled)}
+                                onClick={() => onToggleSharing(!sharingEnabled)}
                             >
                                 {sharingEnabled ? (
                                     <>
@@ -227,7 +168,7 @@ export function TrackingSurface({
                         <Button
                             variant="secondary"
                             size="sm"
-                            onClick={refreshData}
+                            onClick={onRefresh}
                             disabled={isRefreshing}
                         >
                             <RefreshCw
@@ -236,7 +177,7 @@ export function TrackingSurface({
                                     isRefreshing && 'animate-spin',
                                 )}
                             />
-                            {isRefreshing ? 'Polling…' : 'Refresh now'}
+                            {isRefreshing ? 'Refreshing…' : 'Refresh now'}
                         </Button>
 
                         <div className="inline-flex rounded-lg border border-line bg-surface-subtle p-1">
@@ -272,11 +213,20 @@ export function TrackingSurface({
                     </div>
                 </div>
 
+                {sharingError && (
+                    <div
+                        className="rounded-lg bg-danger-soft px-3 py-2.5 text-sm text-danger"
+                        role="alert"
+                    >
+                        {sharingError}
+                    </div>
+                )}
+
                 {/* Outbox Command Replay & Conflict Section */}
                 {outboxQueue.length > 0 && (
                     <OutboxQueuePanel
                         queue={outboxQueue}
-                        onResolved={() => setOutboxQueue(getOutboxQueue())}
+                        onResolved={onOutboxChanged}
                     />
                 )}
 

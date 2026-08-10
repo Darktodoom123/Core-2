@@ -24,6 +24,7 @@ use App\Platform\Notifications\Policies\NotificationPolicy;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Policies\JobReportPolicy;
 use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Workspace\Observers\WorkspaceResourceObserver;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -39,6 +40,13 @@ final class PlatformServiceProvider extends ServiceProvider
         Gate::policy(GptRecommendation::class, GptRecommendationPolicy::class);
         Gate::policy(JobReport::class, JobReportPolicy::class);
         Gate::policy(Notification::class, NotificationPolicy::class);
+
+        DispatchJob::observe(WorkspaceResourceObserver::class);
+        DispatchAssetAssignment::observe(WorkspaceResourceObserver::class);
+        DispatchPersonnelAssignment::observe(WorkspaceResourceObserver::class);
+        ApprovalRequest::observe(WorkspaceResourceObserver::class);
+        FuelRequest::observe(WorkspaceResourceObserver::class);
+        OperationalAsset::observe(WorkspaceResourceObserver::class);
 
         // Preserve polymorphic rows created before model namespaces became module-oriented.
         Relation::morphMap([

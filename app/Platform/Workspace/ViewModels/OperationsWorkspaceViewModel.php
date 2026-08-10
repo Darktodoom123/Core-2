@@ -365,6 +365,7 @@ final class OperationsWorkspaceViewModel
                 'id' => (int) $location->asset->getKey(),
                 'code' => $location->asset->code,
                 'name' => $location->asset->name,
+                'kind' => $location->asset->kind,
             ],
             'job' => $location->job === null ? null : [
                 'id' => (int) $location->job->getKey(),

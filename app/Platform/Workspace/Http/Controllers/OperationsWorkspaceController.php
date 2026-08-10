@@ -18,6 +18,7 @@ use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -26,11 +27,15 @@ use Inertia\Response;
 
 final class OperationsWorkspaceController extends Controller
 {
+    private const int WORKSPACE_STALE_AFTER_SECONDS = 120;
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
         $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
+        $refreshedAt = now();
+        $locations = $this->fetchLocations($user);
 
         return Inertia::render('workspace', [
             'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
@@ -38,7 +43,7 @@ final class OperationsWorkspaceController extends Controller
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
-            'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+            'locations' => OperationsWorkspaceViewModel::locations($locations),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
@@ -50,10 +55,49 @@ final class OperationsWorkspaceController extends Controller
             'navigation' => OperationsWorkspaceViewModel::navigation($user),
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
-                'refreshed_at' => now()->toIso8601String(),
-                'stale_after_seconds' => 120,
+                'refreshed_at' => $refreshedAt->toIso8601String(),
+                'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
+                'tracking' => $this->trackingFreshness($user, $refreshedAt),
             ],
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function trackingFreshness(User $user, CarbonImmutable $refreshedAt): array
+    {
+        $canViewTracking = $user->can(PermissionName::TrackingViewAll->value)
+            || $user->can(PermissionName::TrackingShareOwn->value);
+
+        if (! $canViewTracking) {
+            return [
+                'refreshed_at' => $refreshedAt->toIso8601String(),
+                'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
+                'latest_received_at' => null,
+                'current_user' => null,
+            ];
+        }
+
+        $latestVisibleLocation = LocationUpdate::query()
+            ->visibleTo($user)
+            ->latest('received_at')
+            ->latest('id')
+            ->first(['received_at']);
+        $latestOwnLocation = LocationUpdate::query()
+            ->where('user_id', $user->id)
+            ->latest('captured_at')
+            ->latest('id')
+            ->first(['sharing_enabled', 'captured_at', 'received_at']);
+
+        return [
+            'refreshed_at' => $refreshedAt->toIso8601String(),
+            'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
+            'latest_received_at' => $latestVisibleLocation?->received_at?->toIso8601String(),
+            'current_user' => [
+                'sharing_enabled' => $latestOwnLocation?->sharing_enabled,
+                'captured_at' => $latestOwnLocation?->captured_at?->toIso8601String(),
+                'received_at' => $latestOwnLocation?->received_at?->toIso8601String(),
+            ],
+        ];
     }
 
     /** @return Collection<int, LocationUpdate> */
@@ -65,7 +109,7 @@ final class OperationsWorkspaceController extends Controller
 
         return LocationUpdate::query()
             ->visibleTo($user)
-            ->with(['user:id,name', 'asset:id,code,name', 'job:id,reference,title'])
+            ->with(['user:id,name', 'asset:id,code,name,kind', 'job:id,reference,title'])
             ->latest('captured_at')
             ->limit(100)
             ->get();

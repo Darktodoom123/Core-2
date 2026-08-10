@@ -276,6 +276,7 @@ export interface LocationUpdateViewModel {
         id: number;
         code: string;
         name: string;
+        kind: 'truck' | 'vehicle' | 'crane' | 'equipment';
     } | null;
     job: {
         id: number;
@@ -430,6 +431,40 @@ export interface WorkspaceCapabilities {
 export interface WorkspaceFreshness {
     refreshed_at: string;
     stale_after_seconds: number;
+    tracking?: WorkspaceTrackingFreshness;
+}
+
+export type RefreshScope = 'workspace' | 'tracking';
+
+export type RefreshMode = 'initial' | 'realtime' | 'polling' | 'manual';
+
+export type RefreshStatus = 'idle' | 'refreshing' | 'succeeded' | 'failed';
+
+export interface WorkspaceScopeFreshness {
+    refreshed_at: string;
+    stale_after_seconds: number;
+}
+
+export interface WorkspaceTrackingFreshness extends WorkspaceScopeFreshness {
+    latest_received_at: string | null;
+    current_user: {
+        sharing_enabled: boolean | null;
+        captured_at: string | null;
+        received_at: string | null;
+    } | null;
+}
+
+export interface ScopeRefreshState extends WorkspaceScopeFreshness {
+    status: RefreshStatus;
+    mode: RefreshMode;
+    last_attempt_at: string | null;
+    last_success_at: string | null;
+    error: string | null;
+}
+
+export interface WorkspaceRefreshState {
+    workspace: ScopeRefreshState;
+    tracking: ScopeRefreshState;
 }
 
 export interface WorkspaceFlash {

@@ -5,6 +5,7 @@ namespace App\Platform\Tracking\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
+use App\Platform\Tracking\Actions\BroadcastTrackingWorkspaceUpdate;
 use App\Platform\Tracking\Http\Requests\StoreLocationUpdateRequest;
 use App\Platform\Tracking\Http\Resources\V1\LocationUpdateResource;
 use App\Platform\Tracking\Models\LocationUpdate;
@@ -16,10 +17,11 @@ final class LocationController extends Controller
         StoreLocationUpdateRequest $request,
         IdempotentCommandService $idempotency,
         RecordAuditEvent $audit,
+        BroadcastTrackingWorkspaceUpdate $broadcast,
     ): JsonResponse {
         $commandId = $idempotency->resolveCommandId($request, required: true);
 
-        $execute = function () use ($request, $audit): JsonResponse {
+        $execute = function () use ($request, $audit, $broadcast): JsonResponse {
             $data = $request->validated();
             unset($data['command_id']);
 
@@ -41,6 +43,7 @@ final class LocationController extends Controller
                     'captured_at' => $location->captured_at?->toIso8601String(),
                 ],
             );
+            $broadcast->afterCommit();
 
             return response()->json(['data' => new LocationUpdateResource($location)], 201);
         };

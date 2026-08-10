@@ -16,7 +16,7 @@ import {
     ZoomIn,
     ZoomOut,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Circle,
     MapContainer,
@@ -120,6 +120,12 @@ const ASSET_SVG_ICONS: Record<AssetKind, string> = {
 };
 
 export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
+    if (location.asset?.kind) {
+        return location.asset.kind === 'vehicle'
+            ? 'truck'
+            : location.asset.kind;
+    }
+
     const text = [
         location.asset?.code,
         location.asset?.name,
@@ -172,11 +178,11 @@ export function createCustomAssetIcon(
     freshness: string,
     isSelected: boolean,
 ) {
-    const isLive = freshness === 'fresh' || freshness === 'Live';
+    const isFresh = freshness === 'fresh' || freshness === 'Live';
     const isDelayed = freshness === 'delayed' || freshness === 'Delayed';
     const isStale = freshness === 'stale' || freshness === 'Stale';
 
-    const bgStyle = isLive
+    const bgStyle = isFresh
         ? 'background: #059669; border-color: #34d399; color: white;'
         : isDelayed
           ? 'background: #d97706; border-color: #fcd34d; color: white;'
@@ -198,7 +204,7 @@ export function createCustomAssetIcon(
             ? 'transform: rotate(-45deg); flex: none;'
             : 'flex: none;';
 
-    const pulseEffect = isLive
+    const pulseEffect = isFresh
         ? `<div style="position: absolute; inset: -4px; border-radius: 9999px; background: rgba(16,185,129,0.35); animation: map-marker-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>`
         : '';
 
@@ -238,11 +244,7 @@ export function OpenStreetMapTrackingMap({
     const [copiedId, setCopiedId] = useState<number | null>(null);
 
     const mappedLocations = useMemo(
-        () =>
-            locations.filter(
-                (location) =>
-                    location.latitude !== null && location.longitude !== null,
-            ),
+        () => locations.filter(hasMapCoordinates),
         [locations],
     );
 
@@ -267,8 +269,12 @@ export function OpenStreetMapTrackingMap({
     );
 
     const selected =
-        mappedLocations.find((location) => location.id === selectedId) ??
+        (selectedId === null
+            ? undefined
+            : locations.find((location) => location.id === selectedId)) ??
         mappedLocations[0];
+    const selectedMapped =
+        selected && hasMapCoordinates(selected) ? selected : undefined;
 
     const copyCoordinates = (
         loc: LocationUpdateViewModel,
@@ -304,7 +310,7 @@ export function OpenStreetMapTrackingMap({
                     scrollWheelZoom
                     zoomControl={false}
                     className="h-full w-full"
-                    aria-label="OpenStreetMap showing live field locations"
+                    aria-label="OpenStreetMap showing field locations and freshness"
                 >
                     <TileLayer
                         key={tileStyle}
@@ -313,7 +319,10 @@ export function OpenStreetMapTrackingMap({
                         maxZoom={19}
                     />
 
-                    <TrackingMapViewport selected={selected} />
+                    <TrackingMapViewport
+                        selected={selectedMapped}
+                        selectedId={selectedId}
+                    />
 
                     <CustomMapControls
                         mappedLocations={mappedLocations}
@@ -564,6 +573,7 @@ export function OpenStreetMapTrackingMap({
                                             setSelectedId(location.id)
                                         }
                                         disabled={!isMapped}
+                                        aria-pressed={isSelected}
                                         className="min-h-[44px] flex-1 text-left focus:outline-none"
                                     >
                                         <div className="flex items-start justify-between gap-2">
@@ -795,20 +805,42 @@ function CustomMapControls({
 
 function TrackingMapViewport({
     selected,
+    selectedId,
 }: {
     selected?: LocationUpdateViewModel;
+    selectedId: number | null;
 }) {
     const map = useMap();
+    const hasCenteredRef = useRef(false);
+    const previousSelectedIdRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!selected) {
             return;
         }
 
+        const selectedIdChanged = previousSelectedIdRef.current !== selected.id;
+        const shouldCenter =
+            !hasCenteredRef.current ||
+            (selectedId !== null &&
+                selected.id === selectedId &&
+                selectedIdChanged);
+
+        previousSelectedIdRef.current = selected.id;
+
+        if (!shouldCenter) {
+            return;
+        }
+
+        hasCenteredRef.current = true;
         map.flyTo(locationPosition(selected), 13, { duration: 0.35 });
-    }, [map, selected]);
+    }, [map, selected, selectedId]);
 
     return null;
+}
+
+function hasMapCoordinates(location: LocationUpdateViewModel): boolean {
+    return location.latitude !== null && location.longitude !== null;
 }
 
 function locationPosition(location: LocationUpdateViewModel): [number, number] {

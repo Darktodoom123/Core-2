@@ -1,7 +1,7 @@
 import { Head, router, usePage, usePoll } from '@inertiajs/react';
 import type { ConnectionStatus } from 'laravel-echo';
 import { AlertTriangle, Check, Info, LockKeyhole, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
 import { Button, EmptyState, Panel } from '@/components/ui';
@@ -9,14 +9,24 @@ import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-work
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import { LiveWorkspaceShell } from '@/components/workspace/live-workspace-shell';
 import { getEcho, reconnectEcho } from '@/echo';
+import { getOutboxQueue, queueCommand, syncOutbox } from '@/lib/outbox';
+import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
+    RefreshMode,
+    RefreshScope,
+    ScopeRefreshState,
     WorkspaceFlash,
     WorkspacePageProps,
+    WorkspaceFreshness,
+    WorkspaceScopeFreshness,
+    WorkspaceRefreshState,
     WorkspaceSection,
 } from '@/types/workspace';
 
 const FALLBACK_POLL_INTERVAL_MS = 15_000;
+const DEFAULT_REFRESH_ERROR =
+    'The workspace could not be refreshed. Review the current data before continuing.';
 
 export default function Workspace(props: WorkspacePageProps) {
     const { flash, errors } = usePage().props;
@@ -24,19 +34,21 @@ export default function Workspace(props: WorkspacePageProps) {
         initialSection(props.navigation),
     );
     const [wsState, setWsState] = useState<ConnectionStatus>(getInitialWsState);
-    const [refreshing, setRefreshing] = useState(false);
-    const fallbackPoll = usePoll(
-        FALLBACK_POLL_INTERVAL_MS,
-        {},
-        {
-            autoStart: false,
-            keepAlive: false,
-            mode: 'rest',
-        },
+    const [refreshState, setRefreshState] = useState<WorkspaceRefreshState>(
+        () => createInitialRefreshState(props.workspace),
     );
-    const fallbackPollControls = useRef(fallbackPoll);
+    const activeRefreshes = useRef(
+        new Map<RefreshScope, { mode: RefreshMode; completed: boolean }>(),
+    );
+    const handledServerRefresh = useRef<string | null>(null);
+    const observedServerRefresh = useRef(props.workspace.refreshed_at);
+    const [outboxQueue, setOutboxQueue] = useState<OutboxItem[]>(() =>
+        getOutboxQueue(),
+    );
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
+    const locationSharingEnabled =
+        props.workspace.tracking?.current_user?.sharing_enabled ?? false;
     const [dismissedRefreshedAt, setDismissedRefreshedAt] = useState<
         string | null
     >(null);
@@ -47,14 +59,177 @@ export default function Workspace(props: WorkspacePageProps) {
         ? section
         : (props.navigation[0]?.id ?? null);
 
+    const beginRefresh = useCallback(
+        (scope: RefreshScope, mode: RefreshMode) => {
+            if (activeRefreshes.current.size > 0) {
+                return false;
+            }
+
+            const attemptedAt = new Date().toISOString();
+            activeRefreshes.current.set(scope, {
+                mode,
+                completed: false,
+            });
+            setRefreshState((current) => ({
+                ...current,
+                [scope]: {
+                    ...current[scope],
+                    status: 'refreshing',
+                    mode,
+                    last_attempt_at: attemptedAt,
+                    error: null,
+                },
+            }));
+
+            return true;
+        },
+        [],
+    );
+
+    const markRefreshSuccess = useCallback(
+        (scope: RefreshScope, page?: unknown) => {
+            const active = activeRefreshes.current.get(scope);
+
+            if (!active) {
+                return;
+            }
+
+            active.completed = true;
+            const freshness = getPageWorkspaceFreshness(page, props.workspace);
+            const now = new Date().toISOString();
+            handledServerRefresh.current = freshness.refreshed_at;
+
+            setRefreshState((current) => {
+                const refreshedScope = scopeFreshness(freshness, scope);
+                const updatedScope = successfulRefreshState(
+                    current[scope],
+                    refreshedScope,
+                    active.mode,
+                    now,
+                );
+
+                if (scope === 'workspace') {
+                    return {
+                        workspace: updatedScope,
+                        tracking: successfulRefreshState(
+                            current.tracking,
+                            scopeFreshness(freshness, 'tracking'),
+                            active.mode,
+                            now,
+                        ),
+                    };
+                }
+
+                return { ...current, tracking: updatedScope };
+            });
+        },
+        [props.workspace],
+    );
+
+    const markRefreshFailure = useCallback(
+        (scope: RefreshScope, message: string) => {
+            const active = activeRefreshes.current.get(scope);
+
+            if (!active) {
+                return;
+            }
+
+            active.completed = true;
+            setRefreshState((current) => ({
+                ...current,
+                [scope]: {
+                    ...current[scope],
+                    status: 'failed',
+                    error: message,
+                },
+            }));
+        },
+        [],
+    );
+
+    const finishRefresh = useCallback(
+        (scope: RefreshScope) => {
+            const active = activeRefreshes.current.get(scope);
+
+            if (!active) {
+                return;
+            }
+
+            if (!active.completed) {
+                markRefreshFailure(scope, 'The refresh was cancelled.');
+            }
+
+            activeRefreshes.current.delete(scope);
+        },
+        [markRefreshFailure],
+    );
+
+    const refresh = useCallback(
+        (scope: RefreshScope = 'workspace', mode: RefreshMode = 'manual') => {
+            if (!beginRefresh(scope, mode)) {
+                return;
+            }
+
+            router.reload({
+                ...(scope === 'tracking'
+                    ? { only: ['locations', 'workspace'] }
+                    : {}),
+                onSuccess: (page) => markRefreshSuccess(scope, page),
+                onError: () => markRefreshFailure(scope, DEFAULT_REFRESH_ERROR),
+                onHttpException: () =>
+                    markRefreshFailure(scope, DEFAULT_REFRESH_ERROR),
+                onNetworkError: () =>
+                    markRefreshFailure(
+                        scope,
+                        'The network is unavailable. Current data is still shown.',
+                    ),
+                onCancel: () =>
+                    markRefreshFailure(scope, 'The refresh was cancelled.'),
+                onFinish: () => finishRefresh(scope),
+            });
+        },
+        [beginRefresh, finishRefresh, markRefreshFailure, markRefreshSuccess],
+    );
+    const refreshWorkspace = useCallback(() => refresh('workspace'), [refresh]);
+    const refreshTracking = useCallback(() => refresh('tracking'), [refresh]);
+    const refreshRef = useRef(refresh);
+
+    useEffect(() => {
+        refreshRef.current = refresh;
+    }, [refresh]);
+
+    const fallbackPoll = usePoll(
+        FALLBACK_POLL_INTERVAL_MS,
+        () => ({
+            onStart: () => beginRefresh('workspace', 'polling'),
+            onSuccess: (page) => markRefreshSuccess('workspace', page),
+            onError: () =>
+                markRefreshFailure('workspace', DEFAULT_REFRESH_ERROR),
+            onHttpException: () =>
+                markRefreshFailure('workspace', DEFAULT_REFRESH_ERROR),
+            onNetworkError: () =>
+                markRefreshFailure(
+                    'workspace',
+                    'The network is unavailable. Current data is still shown.',
+                ),
+            onFinish: () => finishRefresh('workspace'),
+        }),
+        {
+            autoStart: false,
+            keepAlive: false,
+            mode: 'rest',
+        },
+    );
+    const fallbackPollControls = useRef(fallbackPoll);
+    const refreshing = refreshState.workspace.status === 'refreshing';
     const usingPollingFallback = wsState !== 'connected';
     const timeStale = isStale(
-        props.workspace.refreshed_at,
-        props.workspace.stale_after_seconds,
+        refreshState.workspace.refreshed_at,
+        refreshState.workspace.stale_after_seconds,
         currentTime,
     );
     const staleDismissed =
-        dismissedRefreshedAt === props.workspace.refreshed_at;
+        dismissedRefreshedAt === refreshState.workspace.refreshed_at;
     const showStaleNotice = timeStale && !staleDismissed;
 
     useEffect(() => {
@@ -90,7 +265,7 @@ export default function Workspace(props: WorkspacePageProps) {
             setWsState(current);
 
             if (previousState !== 'connected' && current === 'connected') {
-                router.reload();
+                refreshRef.current('workspace', 'realtime');
             }
 
             previousState = current;
@@ -102,7 +277,7 @@ export default function Workspace(props: WorkspacePageProps) {
             .subscribed(() => setWsState(echo.connectionStatus()))
             .error(() => setWsState('failed'))
             .listen('.WorkspaceUpdated', () => {
-                router.reload();
+                refreshRef.current('workspace', 'realtime');
             });
 
         return () => {
@@ -115,18 +290,36 @@ export default function Workspace(props: WorkspacePageProps) {
         const handleFocus = () => {
             if (
                 isStale(
-                    props.workspace.refreshed_at,
-                    props.workspace.stale_after_seconds,
+                    refreshState.workspace.refreshed_at,
+                    refreshState.workspace.stale_after_seconds,
                     Date.now(),
                 )
             ) {
-                router.reload();
+                refreshRef.current('workspace', 'manual');
             }
         };
         window.addEventListener('focus', handleFocus);
 
         return () => window.removeEventListener('focus', handleFocus);
-    }, [props.workspace.refreshed_at, props.workspace.stale_after_seconds]);
+    }, [refreshState.workspace]);
+
+    useEffect(() => {
+        if (observedServerRefresh.current === props.workspace.refreshed_at) {
+            return;
+        }
+
+        observedServerRefresh.current = props.workspace.refreshed_at;
+
+        if (handledServerRefresh.current === props.workspace.refreshed_at) {
+            handledServerRefresh.current = null;
+
+            return;
+        }
+
+        setRefreshState((current) =>
+            applyFullRefreshFreshness(current, props.workspace),
+        );
+    }, [props.workspace]);
 
     const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<
         number | null
@@ -143,65 +336,141 @@ export default function Workspace(props: WorkspacePageProps) {
         window.history.replaceState({}, '', url);
     };
 
-    const refresh = () =>
-        router.reload({
-            onStart: () => setRefreshing(true),
-            onFinish: () => setRefreshing(false),
-        });
-
     const reconnectAndRefresh = () => {
         reconnectEcho();
-        refresh();
+        refreshWorkspace();
     };
 
-    const shareLocation = () => {
-        setLocationError(null);
-
-        if (!('geolocation' in navigator)) {
-            setLocationError(
-                'Location sharing is not supported by this browser.',
+    const syncPendingOutbox = useCallback(async () => {
+        try {
+            await syncOutbox();
+            const queue = getOutboxQueue();
+            setOutboxQueue(queue);
+            const failedLocation = queue.find(
+                (item) =>
+                    item.action === 'location.store' &&
+                    (item.status === 'failed' || item.status === 'conflict'),
             );
 
-            return;
+            if (failedLocation) {
+                setLocationError(
+                    failedLocation.errorMessage ??
+                        'A location change could not be synchronized. It remains queued for retry.',
+                );
+            }
+        } catch {
+            setOutboxQueue(getOutboxQueue());
+            setLocationError(
+                'Location synchronization failed. The command remains queued for retry.',
+            );
         }
+    }, []);
 
-        setLocationPending(true);
-        const commandId =
-            typeof crypto !== 'undefined' && crypto.randomUUID
-                ? crypto.randomUUID()
-                : `cmd-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        navigator.geolocation.getCurrentPosition(
-            (position) =>
-                router.post(
+    useEffect(() => {
+        const handleOnline = () => void syncPendingOutbox();
+        window.addEventListener('online', handleOnline);
+        const initialSync = window.setTimeout(
+            () => void syncPendingOutbox(),
+            0,
+        );
+
+        return () => {
+            window.clearTimeout(initialSync);
+            window.removeEventListener('online', handleOnline);
+        };
+    }, [syncPendingOutbox]);
+
+    const updateOutboxState = useCallback(
+        () => setOutboxQueue(getOutboxQueue()),
+        [],
+    );
+
+    const toggleLocationSharing = useCallback(
+        (enable: boolean) => {
+            if (locationPending) {
+                return;
+            }
+
+            setLocationError(null);
+
+            const submit = async (payload: Record<string, unknown>) => {
+                setLocationPending(true);
+                const command = queueCommand(
+                    'location.store',
                     '/operations/locations',
-                    {
+                    payload,
+                );
+                updateOutboxState();
+
+                try {
+                    await syncOutbox();
+                    const queuedCommand = getOutboxQueue().find(
+                        (item) => item.id === command.id,
+                    );
+                    setOutboxQueue(getOutboxQueue());
+
+                    if (queuedCommand?.status === 'synchronized') {
+                        refreshRef.current('tracking', 'manual');
+                    } else {
+                        setLocationError(
+                            queuedCommand?.errorMessage ??
+                                'Location change queued. It will retry when connectivity returns.',
+                        );
+                    }
+                } catch {
+                    setOutboxQueue(getOutboxQueue());
+                    setLocationError(
+                        'Location synchronization failed. The command remains queued for retry.',
+                    );
+                } finally {
+                    setLocationPending(false);
+                }
+            };
+
+            if (!enable) {
+                void submit({
+                    sharing_enabled: false,
+                    captured_at: new Date().toISOString(),
+                });
+
+                return;
+            }
+
+            if (!('geolocation' in navigator)) {
+                setLocationError(
+                    'Location sharing is not supported by this browser.',
+                );
+
+                return;
+            }
+
+            setLocationPending(true);
+            navigator.geolocation.getCurrentPosition(
+                (position) =>
+                    void submit({
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
                         accuracy_metres: position.coords.accuracy,
                         captured_at: new Date(position.timestamp).toISOString(),
                         sharing_enabled: true,
-                        command_id: commandId,
-                    },
-                    {
-                        preserveScroll: true,
-                        onError: () =>
-                            setLocationError(
-                                'The location could not be saved. Review the form message and try again.',
-                            ),
-                        onFinish: () => setLocationPending(false),
-                    },
-                ),
-            (error) => {
-                setLocationPending(false);
-                setLocationError(locationErrorMessage(error.code));
-            },
-            {
-                enableHighAccuracy: true,
-                maximumAge: 30_000,
-                timeout: 15_000,
-            },
-        );
-    };
+                    }),
+                (error) => {
+                    setLocationPending(false);
+                    setLocationError(locationErrorMessage(error.code));
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 30_000,
+                    timeout: 15_000,
+                },
+            );
+        },
+        [locationPending, updateOutboxState],
+    );
+
+    const shareLocation = useCallback(() => {
+        toggleLocationSharing(true);
+    }, [toggleLocationSharing]);
 
     const validationErrorCount = Object.keys(errors).length;
 
@@ -222,7 +491,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 unreadNotificationCount={unreadNotificationCount}
                 notifications={props.notifications ?? []}
                 onSectionChange={changeSection}
-                onRefresh={refresh}
+                onRefresh={refreshWorkspace}
                 onShareLocation={shareLocation}
             >
                 {(flash ||
@@ -254,7 +523,7 @@ export default function Workspace(props: WorkspacePageProps) {
                                 }
                                 onDismiss={() =>
                                     setDismissedRefreshedAt(
-                                        props.workspace.refreshed_at,
+                                        refreshState.workspace.refreshed_at,
                                     )
                                 }
                                 action={
@@ -264,7 +533,7 @@ export default function Workspace(props: WorkspacePageProps) {
                                         onClick={
                                             usingPollingFallback
                                                 ? reconnectAndRefresh
-                                                : refresh
+                                                : refreshWorkspace
                                         }
                                         disabled={refreshing}
                                     >
@@ -337,6 +606,14 @@ export default function Workspace(props: WorkspacePageProps) {
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
+                        refresh={refreshState.tracking}
+                        onRefresh={refreshTracking}
+                        sharingEnabled={locationSharingEnabled}
+                        sharingPending={locationPending}
+                        sharingError={locationError}
+                        onToggleSharing={toggleLocationSharing}
+                        outboxQueue={outboxQueue}
+                        onOutboxChanged={updateOutboxState}
                     />
                 )}
             </LiveWorkspaceShell>
@@ -437,4 +714,95 @@ function getInitialWsState(): ConnectionStatus {
     }
 
     return getEcho()?.connectionStatus() ?? 'disconnected';
+}
+
+function createInitialRefreshState(
+    freshness: WorkspaceFreshness,
+): WorkspaceRefreshState {
+    return {
+        workspace: createInitialScopeRefreshState(freshness, 'workspace'),
+        tracking: createInitialScopeRefreshState(freshness, 'tracking'),
+    };
+}
+
+function createInitialScopeRefreshState(
+    freshness: WorkspaceFreshness,
+    scope: RefreshScope,
+): ScopeRefreshState {
+    const scopedFreshness = scopeFreshness(freshness, scope);
+
+    return {
+        ...scopedFreshness,
+        status: 'idle',
+        mode: 'initial',
+        last_attempt_at: null,
+        last_success_at: null,
+        error: null,
+    };
+}
+
+function getPageWorkspaceFreshness(
+    page: unknown,
+    fallback: WorkspaceFreshness,
+): WorkspaceFreshness {
+    if (
+        typeof page === 'object' &&
+        page !== null &&
+        'props' in page &&
+        typeof page.props === 'object' &&
+        page.props !== null &&
+        'workspace' in page.props &&
+        typeof page.props.workspace === 'object' &&
+        page.props.workspace !== null
+    ) {
+        return page.props.workspace as WorkspaceFreshness;
+    }
+
+    return fallback;
+}
+
+function scopeFreshness(
+    freshness: WorkspaceFreshness,
+    scope: RefreshScope,
+): WorkspaceScopeFreshness {
+    if (scope === 'tracking' && freshness.tracking) {
+        return freshness.tracking;
+    }
+
+    return {
+        refreshed_at: freshness.refreshed_at,
+        stale_after_seconds: freshness.stale_after_seconds,
+    };
+}
+
+function successfulRefreshState(
+    current: ScopeRefreshState,
+    freshness: WorkspaceScopeFreshness,
+    mode: RefreshMode,
+    completedAt: string,
+): ScopeRefreshState {
+    return {
+        ...current,
+        ...freshness,
+        status: 'succeeded',
+        mode,
+        last_success_at: completedAt,
+        error: null,
+    };
+}
+
+function applyFullRefreshFreshness(
+    current: WorkspaceRefreshState,
+    freshness: WorkspaceFreshness,
+): WorkspaceRefreshState {
+    return {
+        workspace: {
+            ...current.workspace,
+            ...scopeFreshness(freshness, 'workspace'),
+        },
+        tracking: {
+            ...current.tracking,
+            ...scopeFreshness(freshness, 'tracking'),
+        },
+    };
 }
