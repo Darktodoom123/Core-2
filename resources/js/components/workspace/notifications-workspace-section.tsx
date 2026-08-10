@@ -1,6 +1,12 @@
 import { router } from '@inertiajs/react';
 import { Bell, CheckCircle2 } from 'lucide-react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import {
+    exactTimestamp,
+    formatRelativeTime,
+    presentNotification,
+    toneClasses,
+} from '@/components/workspace/notification-center-popover';
 import type { NotificationViewModel } from '@/types/workspace';
 
 export function NotificationsSurface({
@@ -49,6 +55,8 @@ export function NotificationsSurface({
                             {notifications.map((n) => {
                                 const isUnread =
                                     n.status !== 'read' && !n.read_at;
+                                const presentation = presentNotification(n);
+                                const Icon = presentation.Icon;
 
                                 return (
                                     <li
@@ -58,17 +66,18 @@ export function NotificationsSurface({
                                         }`}
                                     >
                                         <div className="flex min-w-0 flex-1 items-start gap-3">
-                                            <Bell
-                                                className={`mt-0.5 h-5 w-5 shrink-0 ${
-                                                    isUnread
-                                                        ? 'text-brand-strong'
-                                                        : 'text-ink-soft'
-                                                }`}
-                                            />
+                                            <span
+                                                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClasses[presentation.tone]}`}
+                                            >
+                                                <Icon
+                                                    className="h-4 w-4"
+                                                    aria-hidden="true"
+                                                />
+                                            </span>
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-semibold text-ink">
-                                                        {humanizeType(n.type)}
+                                                        {presentation.title}
                                                     </span>
                                                     {n.dispatch_job && (
                                                         <span className="rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs text-ink-soft">
@@ -80,13 +89,18 @@ export function NotificationsSurface({
                                                     )}
                                                 </div>
                                                 <p className="mt-1 line-clamp-2 text-sm text-ink">
-                                                    {extractMessage(n.data)}
+                                                    {presentation.message}
                                                 </p>
                                                 {n.created_at && (
-                                                    <p className="mt-1 text-xs text-ink-soft">
-                                                        {new Date(
+                                                    <p
+                                                        className="mt-1 text-xs text-ink-soft"
+                                                        title={exactTimestamp(
                                                             n.created_at,
-                                                        ).toLocaleString()}
+                                                        )}
+                                                    >
+                                                        {formatRelativeTime(
+                                                            n.created_at,
+                                                        )}
                                                     </p>
                                                 )}
                                             </div>
@@ -111,28 +125,4 @@ export function NotificationsSurface({
             </div>
         </div>
     );
-}
-
-function humanizeType(type: string): string {
-    return type
-        .replace(/^[^\\]*\\/, '')
-        .replace(/Notification$/, '')
-        .replace(/([A-Z])/g, ' $1')
-        .trim();
-}
-
-function extractMessage(data: Record<string, unknown>): string {
-    if (typeof data.message === 'string') {
-        return data.message;
-    }
-
-    if (typeof data.title === 'string') {
-        return data.title;
-    }
-
-    if (typeof data.reason === 'string') {
-        return data.reason;
-    }
-
-    return JSON.stringify(data);
 }

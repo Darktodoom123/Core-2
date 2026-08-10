@@ -220,6 +220,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 canShareLocation={props.capabilities.share_location}
                 locationPending={locationPending}
                 unreadNotificationCount={unreadNotificationCount}
+                notifications={props.notifications ?? []}
                 onSectionChange={changeSection}
                 onRefresh={refresh}
                 onShareLocation={shareLocation}
