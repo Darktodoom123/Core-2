@@ -445,7 +445,7 @@ final class OperationsWorkspaceViewModel
             ],
             [
                 'id' => 'tracking',
-                'label' => 'Live tracking',
+                'label' => 'Live Tracking',
                 'permissions' => [
                     PermissionName::TrackingViewAll,
                     PermissionName::TrackingShareOwn,
