@@ -315,13 +315,13 @@ export function OpenStreetMapTrackingMap({
                 'grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition-all duration-300',
                 showLocationList && 'xl:grid-cols-[minmax(0,1fr)_22rem]',
                 isFullscreen
-                    ? 'fixed inset-4 z-[9999] h-[calc(100vh-2rem)] rounded-2xl shadow-2xl ring-1 ring-line/50'
+                    ? 'fixed inset-4 z-[9999] h-[calc(100vh-2rem)] grid-rows-1 rounded-2xl shadow-2xl ring-1 ring-line/50'
                     : compact
                       ? 'h-[360px] md:h-[420px]'
                       : 'h-[560px] lg:h-[620px]',
             )}
         >
-            <div className="relative h-full w-full overflow-hidden bg-surface-subtle">
+            <div className="relative h-full min-h-0 w-full overflow-hidden bg-surface-subtle">
                 <MapContainer
                     center={mapCenter}
                     zoom={DEFAULT_ZOOM}
@@ -336,6 +336,8 @@ export function OpenStreetMapTrackingMap({
                         attribution={activeTileConfig.attribution}
                         maxZoom={19}
                     />
+
+                    <MapSizeSync isFullscreen={isFullscreen} />
 
                     <TrackingMapViewport
                         selected={selectedMapped}
@@ -509,7 +511,7 @@ export function OpenStreetMapTrackingMap({
                 </div>
 
                 {/* Bottom Bar Info Overlay */}
-                <div className="pointer-events-none absolute right-3 bottom-3 z-[500] flex items-center gap-2 rounded-lg border border-line/60 bg-surface/90 px-3 py-1.5 text-xs text-ink-soft shadow-sm backdrop-blur-md">
+                <div className="pointer-events-none absolute top-3 right-3 z-[500] flex items-center gap-2 rounded-lg border border-line/60 bg-surface/90 px-3 py-1.5 text-xs text-ink-soft shadow-sm backdrop-blur-md">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-success-strong" />
                     <span>
                         CARTO basemap · {mappedLocations.length} mapped markers
@@ -530,7 +532,7 @@ export function OpenStreetMapTrackingMap({
             {/* Sidebar list panel */}
             {showLocationList && (
                 <aside
-                    className="flex h-full flex-col overflow-hidden border-t border-line bg-surface xl:border-t-0 xl:border-l"
+                    className="flex h-full min-h-0 flex-col overflow-hidden border-t border-line bg-surface xl:border-t-0 xl:border-l"
                     aria-label="Mapped location list"
                 >
                     <div className="space-y-3 border-b border-line bg-surface p-3.5">
@@ -860,6 +862,30 @@ function TrackingMapViewport({
         hasCenteredRef.current = true;
         map.flyTo(locationPosition(selected), 13, { duration: 0.35 });
     }, [map, selected, selectedId]);
+
+    return null;
+}
+
+function MapSizeSync({ isFullscreen }: { isFullscreen: boolean }) {
+    const map = useMap();
+
+    useEffect(() => {
+        const invalidateSize = () => {
+            map.invalidateSize({ animate: false, pan: false });
+        };
+
+        const frameId = window.requestAnimationFrame(invalidateSize);
+        const transitionTimer = window.setTimeout(invalidateSize, 350);
+        const resizeObserver = new ResizeObserver(invalidateSize);
+
+        resizeObserver.observe(map.getContainer());
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            window.clearTimeout(transitionTimer);
+            resizeObserver.disconnect();
+        };
+    }, [isFullscreen, map]);
 
     return null;
 }
