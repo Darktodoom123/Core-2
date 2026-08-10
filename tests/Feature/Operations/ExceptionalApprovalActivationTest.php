@@ -57,6 +57,14 @@ function assignExceptionalWorkflowResources(
     string $suffix,
 ): array {
     $driver = exceptionalWorkflowUser(RoleName::Driver, "Driver {$suffix}");
+    $driver->personnelCredentials()->create([
+        'kind' => 'driver_license',
+        'credential_number' => "DL-{$suffix}",
+        'credential_type' => 'professional',
+        'issued_at' => now()->subYear(),
+        'expires_at' => now()->addYear(),
+        'status' => 'active',
+    ]);
     $asset = OperationalAsset::query()->create([
         'code' => "TR-{$suffix}",
         'name' => "Truck {$suffix}",
@@ -143,6 +151,14 @@ it('activates a ready routine dispatch through the browser and records the actor
 it('prevents activation without both active personnel and asset assignments', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Assignment Dispatcher');
     $driver = exceptionalWorkflowUser(RoleName::Driver, 'Only Driver');
+    $driver->personnelCredentials()->create([
+        'kind' => 'driver_license',
+        'credential_number' => 'DL-6002',
+        'credential_type' => 'professional',
+        'issued_at' => now()->subYear(),
+        'expires_at' => now()->addYear(),
+        'status' => 'active',
+    ]);
     $personnelOnly = exceptionalWorkflowJob($dispatcher, 'CON-6002');
     $personnelOnly->personnelAssignments()->create([
         'user_id' => $driver->id,
@@ -316,6 +332,20 @@ it('forbids unauthorized decision and activation access while auditing the activ
         ->and($attempt->after)->toBe(['requested_version' => 1]);
 });
 
+it('requires activation capability and dispatch visibility for activation', function () {
+    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Visibility Dispatcher');
+    $activator = User::factory()->create(['name' => 'Unscoped Activator']);
+    $activator->givePermissionTo(PermissionName::DispatchActivate->value);
+    $job = exceptionalWorkflowJob($dispatcher, 'CON-6502');
+    assignExceptionalWorkflowResources($job, $dispatcher, '6502');
+
+    $this->actingAs($activator)
+        ->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])
+        ->assertForbidden();
+
+    expect($job->refresh()->status)->toBe(DispatchStatus::Draft);
+});
+
 it('rejects a stale activation version with a refresh and review error and audits the attempt', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Stale Dispatcher');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6601', DispatchPriority::Routine, version: 2);
@@ -370,6 +400,30 @@ it('revalidates changed asset safety at activation time and audits the blocked a
     expect(session('errors')->first('assets'))->toContain('TR-6702')
         ->and($maintenanceJob->refresh()->status)->toBe(DispatchStatus::Draft)
         ->and(AuditEvent::query()->where('action', 'dispatch.activation_attempted')->count())->toBe(2)
+        ->and(AuditEvent::query()->where('action', 'dispatch.activated')->count())->toBe(0);
+});
+
+it('revalidates assigned personnel eligibility at activation time', function () {
+    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Personnel Safety Dispatcher');
+    $job = exceptionalWorkflowJob($dispatcher, 'CON-6703');
+    $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6703');
+    $resources['driver']->update(['is_active' => false]);
+
+    $this->actingAs($dispatcher)
+        ->get("/operations/dispatch-jobs/{$job->id}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activation.ready', false)
+            ->where('activation.blockers.0', 'Driver 6703 is no longer eligible: Account is Inactive.'));
+
+    $this->actingAs($dispatcher)
+        ->from("/operations/dispatch-jobs/{$job->id}")
+        ->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])
+        ->assertRedirect("/operations/dispatch-jobs/{$job->id}")
+        ->assertSessionHasErrors('personnel');
+
+    expect(session('errors')->first('personnel'))->toContain('Inactive')
+        ->and($job->refresh()->status)->toBe(DispatchStatus::Draft)
+        ->and(AuditEvent::query()->where('action', 'dispatch.activation_attempted')->count())->toBe(1)
         ->and(AuditEvent::query()->where('action', 'dispatch.activated')->count())->toBe(0);
 });
 

@@ -393,6 +393,7 @@ it('requires independent manager approval before a priority dispatch activates',
     $dispatcher = operationsUser(RoleName::Dispatcher);
     $manager = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
+    addWorkflowCredential($driver, 'driver_license');
     $job = DispatchJob::query()->create(['reference' => 'CON-2001', 'client' => 'Northline', 'title' => 'Priority lift', 'site' => 'Marikina', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(2), 'priority' => DispatchPriority::Priority, 'status' => DispatchStatus::Draft, 'created_by' => $dispatcher->id]);
     $asset = OperationalAsset::query()->create(['code' => 'TR-2001', 'name' => 'Truck 2001', 'kind' => 'truck', 'status' => AssetStatus::Available]);
     $job->personnelAssignments()->create(['user_id' => $driver->id, 'assignment_type' => 'driver', 'assigned_by' => $dispatcher->id, 'active_from' => $job->scheduled_start]);

@@ -97,7 +97,14 @@ final class DispatchJobController extends Controller
                         ! $canViewCandidates,
                         fn ($assignment) => $assignment->where('user_id', $user->id),
                     )
-                    ->with('user'),
+                    ->with([
+                        'user.roles:id,name',
+                        'user.personnelProfile',
+                        'user.personnelCredentials',
+                        'user.dispatchAssignments' => fn ($query) => $query
+                            ->whereNull('active_until')
+                            ->with('job'),
+                    ]),
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
                     ->with('asset.maintenanceWorkOrders'),
@@ -159,7 +166,7 @@ final class DispatchJobController extends Controller
             'job' => OperationsWorkspaceViewModel::job($job),
             'personnel_candidates' => DispatchAssignmentWorkspaceViewModel::personnelCandidates($personnel, $job, $eligibility),
             'asset_candidates' => DispatchAssignmentWorkspaceViewModel::assetCandidates($assets, $job, $eligibility),
-            'activation' => DispatchActivationWorkspaceViewModel::make($job),
+            'activation' => DispatchActivationWorkspaceViewModel::make($job, $eligibility),
             'progression' => $canUpdateOwnStatus
                 ? DispatchFieldProgressionViewModel::make($job)
                 : null,

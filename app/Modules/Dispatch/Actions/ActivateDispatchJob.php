@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dispatch\Actions;
 
+use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
@@ -15,7 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 final class ActivateDispatchJob
 {
-    public function __construct(private RecordAuditEvent $audit) {}
+    public function __construct(
+        private RecordAuditEvent $audit,
+        private DispatchResourceEligibility $eligibility,
+    ) {}
 
     public function handle(User $actor, DispatchJob $job, int $version): DispatchJob
     {
@@ -58,6 +62,36 @@ final class ActivateDispatchJob
 
             if ($personnelAssignments->isEmpty()) {
                 throw ValidationException::withMessages(['personnel' => 'Assign at least one active field worker before activation.']);
+            }
+
+            $personnelAssignments->load([
+                'user.roles:id,name',
+                'user.personnelProfile',
+                'user.personnelCredentials',
+                'user.dispatchAssignments' => fn ($query) => $query
+                    ->whereNull('active_until')
+                    ->with('job'),
+            ]);
+
+            foreach ($personnelAssignments as $assignment) {
+                $personnel = $assignment->user;
+
+                if (! $personnel instanceof User) {
+                    throw ValidationException::withMessages(['personnel' => 'One or more assigned field workers no longer exist.']);
+                }
+
+                $assessment = $this->eligibility->personnel(
+                    $personnel,
+                    $assignment->assignment_type,
+                    $job,
+                    true,
+                );
+
+                if (! $assessment['eligible']) {
+                    throw ValidationException::withMessages([
+                        'personnel' => "{$personnel->name} is no longer eligible for this dispatch: ".implode(' ', $assessment['reasons']),
+                    ]);
+                }
             }
 
             if ($assetIds === []) {

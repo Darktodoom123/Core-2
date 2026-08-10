@@ -52,6 +52,7 @@ final class DispatchJobPolicy
     public function activate(User $user, DispatchJob $job): bool
     {
         return $user->can(PermissionName::DispatchActivate->value)
+            && $this->view($user, $job)
             && in_array($job->status, [
                 DispatchStatus::Draft,
                 DispatchStatus::PendingApproval,

@@ -405,6 +405,29 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
     });
 
+    test('selected dispatch details show only its embedded GPT advisory', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=dispatch');
+        await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
+
+        await expect(
+            page.getByRole('heading', { name: 'GPT dispatch advisory' }),
+        ).toBeVisible();
+        await expect(
+            page.getByText(/^Recommendation #\d+$/).first(),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: 'View full advisory' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Accept recommendation' }).first(),
+        ).toBeVisible();
+    });
+
     test('responsive navigation and skip-link focus remain accessible', async ({
         page,
     }) => {
@@ -467,5 +490,204 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(skipLink).toBeVisible();
         await skipLink.click();
         await expect(main).toBeFocused();
+    });
+
+    test('assignment workspace presents a guided setup flow and review rail', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+
+        await expect(
+            page.getByRole('heading', {
+                name: 'Prepare this dispatch for activation',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('navigation', {
+                name: 'Dispatch setup progress',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Assignment plan' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', {
+                name: 'Select resources to continue',
+            }),
+        ).toBeDisabled();
+        await expect(page.locator('#dispatch-activation')).toBeVisible();
+        await expect(
+            page.locator('#dispatch-activation'),
+        ).not.toHaveAttribute('open');
+        await expect(
+            page.locator('#dispatch-activation').getByRole('button', {
+                name: 'Activate dispatch',
+            }),
+        ).toBeHidden();
+        await expect(
+            page.getByRole('region', {
+                name: 'Dispatch setup stage summaries',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', {
+                name: 'Select resources',
+                exact: true,
+            }),
+        ).toBeVisible();
+        await expect(
+            page.locator('#mobile-assignment-action-bar'),
+        ).toBeVisible();
+        await expect(page.locator('#administrative-actions')).toBeVisible();
+        await expect(
+            page.locator('#administrative-actions'),
+        ).not.toHaveAttribute('open');
+
+        await page.locator('#dispatch-activation > summary').click();
+        await expect(
+            page.locator('#dispatch-activation'),
+        ).toHaveAttribute('open', '');
+        await expect(
+            page.locator('#dispatch-activation').getByRole('button', {
+                name: 'Activate dispatch',
+            }),
+        ).toBeVisible();
+        await page.locator('#dispatch-activation > summary').click();
+        await expect(
+            page.locator('#dispatch-activation'),
+        ).not.toHaveAttribute('open');
+
+        await page.locator('#administrative-actions > summary').click();
+        await expect(
+            page.getByRole('button', { name: 'Cancel dispatch' }),
+        ).toBeVisible();
+        await page.evaluate(() =>
+            window.scrollTo(0, document.body.scrollHeight),
+        );
+        const mobileBottomSafety = await page.evaluate(() => {
+            const actionBar = document.querySelector(
+                '#mobile-assignment-action-bar',
+            );
+            const cancelButton = Array.from(
+                document.querySelectorAll('button'),
+            ).find(
+                (button) => button.textContent?.trim() === 'Cancel dispatch',
+            );
+
+            if (!actionBar || !cancelButton) {
+                return null;
+            }
+
+            return {
+                actionBarTop: actionBar.getBoundingClientRect().top,
+                cancelButtonBottom: cancelButton.getBoundingClientRect().bottom,
+            };
+        });
+        expect(mobileBottomSafety).not.toBeNull();
+        expect(mobileBottomSafety?.cancelButtonBottom).toBeLessThanOrEqual(
+            mobileBottomSafety?.actionBarTop ?? 0,
+        );
+
+        const results = await new AxeBuilder({ page }).analyze();
+        expect(results.violations).toEqual([]);
+    });
+
+    test('dispatch details hand off to assignment setup with a return path', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=dispatch');
+        await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
+
+        const assignResources = page.getByRole('link', {
+            name: 'Assign resources',
+        });
+        await expect(assignResources).toBeVisible();
+        await expect(assignResources).toHaveAttribute(
+            'href',
+            /return_to=%2F%3Fview%3Ddispatch/,
+        );
+        await assignResources.click();
+        await expect(
+            page.getByRole('heading', {
+                name: 'Prepare this dispatch for activation',
+            }),
+        ).toBeVisible();
+
+        await page
+            .getByRole('link', { name: 'Back to dispatch workspace' })
+            .click();
+        await expect(page).toHaveURL(/\/\?view=dispatch$/);
+    });
+
+    test('assignment workspace stays usable across mobile, tablet, and desktop widths', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+
+        for (const width of [320, 390, 768, 1280]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+
+            await expect(
+                page.getByRole('heading', {
+                    name: 'Prepare this dispatch for activation',
+                }),
+            ).toBeVisible();
+            await expect(
+                page.locator('#dispatch-activation > summary'),
+            ).toBeVisible();
+
+            const documentWidth = await page.evaluate(
+                () => document.documentElement.scrollWidth,
+            );
+            expect(documentWidth).toBeLessThanOrEqual(width);
+
+            if (width < 1280) {
+                await expect(
+                    page.locator('#mobile-assignment-action-bar'),
+                ).toBeVisible();
+            } else {
+                await expect(
+                    page.locator('#mobile-assignment-action-bar'),
+                ).toBeHidden();
+            }
+        }
+
+        const results = await new AxeBuilder({ page }).analyze();
+        expect(results.violations).toEqual([]);
+    });
+
+    test('existing assignments promote the activation next action', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto(
+            `/operations/dispatch-jobs/${fixtures.assigned_job_id}`,
+        );
+
+        await expect(
+            page.locator('#mobile-assignment-action-bar'),
+        ).toContainText(/Activate dispatch|Review .*blocker|Review activation/);
+        await expect(
+            page.getByRole('heading', { name: 'Resources assigned' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: 'Open fleet asset catalog' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: 'Open equipment catalog' }).first(),
+        ).toBeVisible();
     });
 });

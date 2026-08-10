@@ -1,17 +1,20 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     CalendarDays,
     ChevronDown,
     ChevronRight,
     ChevronUp,
+    Clock,
     ClipboardList,
     FileText,
     MapPin,
     Plus,
+    RefreshCw,
     Search,
     SearchX,
     ShieldCheck,
+    Sparkles,
     UserRound,
     X,
 } from 'lucide-react';
@@ -28,6 +31,11 @@ import {
     Skeleton,
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import {
+    AcceptGptModal,
+    RecommendationDetails,
+    RejectGptModal,
+} from '@/components/workspace/gpt-workspace-section';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { cn } from '@/lib/utils';
 import type {
@@ -90,6 +98,8 @@ export function LiveDispatchWorkspace({
     refreshing: boolean;
     initialServiceRequestId?: number | null;
 }) {
+    const { url: currentWorkspaceUrl } = usePage();
+    const returnTo = currentWorkspaceUrl || '/?view=dispatch';
     const [query, setQuery] = useState('');
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
@@ -367,6 +377,7 @@ export function LiveDispatchWorkspace({
                     description: `AI dispatch recommendation #${rec.id} reported ${rec.conflicts.length} potential constraint note(s).`,
                     actionRequired:
                         'Review advisory recommendation notes in dispatch workflow.',
+                    jobId: rec.subject_id,
                 });
             }
         }
@@ -390,6 +401,16 @@ export function LiveDispatchWorkspace({
 
     const selectedJob =
         jobs.find((job) => job.id === selectedJobId) ?? jobs[0] ?? null;
+    const selectedJobRecommendations = useMemo(
+        () =>
+            selectedJob === null
+                ? []
+                : gptRecommendations.filter(
+                      (recommendation) =>
+                          recommendation.subject_id === selectedJob.id,
+                  ),
+        [gptRecommendations, selectedJob],
+    );
 
     const formComplete = [
         form.data.reference,
@@ -860,6 +881,7 @@ export function LiveDispatchWorkspace({
                     <ConflictReviewList
                         conflicts={derivedConflicts}
                         filter={conflictFilter}
+                        returnTo={returnTo}
                     />
                 </section>
             )}
@@ -1076,6 +1098,9 @@ export function LiveDispatchWorkspace({
                                     conflicts={derivedConflicts.filter(
                                         (c) => c.jobId === selectedJob.id,
                                     )}
+                                    recommendations={selectedJobRecommendations}
+                                    capabilities={capabilities}
+                                    returnTo={returnTo}
                                 />
                             ) : (
                                 <Panel>
@@ -1386,9 +1411,11 @@ function ScheduleBoardTable({
 function ConflictReviewList({
     conflicts,
     filter,
+    returnTo,
 }: {
     conflicts: DerivedConflict[];
     filter: ConflictTypeFilter;
+    returnTo: string;
 }) {
     const filtered = useMemo(() => {
         if (filter === 'all') {
@@ -1498,10 +1525,13 @@ function ConflictReviewList({
 
                             {conflict.jobId && (
                                 <Link
-                                    href={`/operations/dispatch-jobs/${conflict.jobId}`}
+                                    href={assignmentWorkspaceUrl(
+                                        conflict.jobId,
+                                        returnTo,
+                                    )}
                                     className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
                                 >
-                                    Open assignment workspace
+                                    Assign resources
                                     <ChevronRight
                                         className="h-3.5 w-3.5"
                                         aria-hidden="true"
@@ -1631,9 +1661,15 @@ function ApprovalConflictActions({ approvalId }: { approvalId: number }) {
 function DispatchDetails({
     job,
     conflicts = [],
+    recommendations = [],
+    capabilities,
+    returnTo,
 }: {
     job: DispatchJobViewModel;
     conflicts?: DerivedConflict[];
+    recommendations?: GptRecommendationViewModel[];
+    capabilities: WorkspaceCapabilities;
+    returnTo: string;
 }) {
     const assignments = [
         ...job.personnel_assignments.map((assignment) => ({
@@ -1670,10 +1706,10 @@ function DispatchDetails({
                         Version {job.version}
                     </span>
                     <Link
-                        href={`/operations/dispatch-jobs/${job.id}`}
+                        href={assignmentWorkspaceUrl(job.id, returnTo)}
                         className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-subtle"
                     >
-                        Open assignment workspace
+                        Assign resources
                         <ChevronRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                 </div>
@@ -1696,6 +1732,12 @@ function DispatchDetails({
                     </ul>
                 </div>
             )}
+
+            <DispatchGptAdvisory
+                job={job}
+                recommendations={recommendations}
+                capabilities={capabilities}
+            />
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
                 <Panel className="p-4">
@@ -1790,6 +1832,365 @@ function DispatchDetails({
             </div>
         </div>
     );
+}
+
+function DispatchGptAdvisory({
+    job,
+    recommendations,
+    capabilities,
+}: {
+    job: DispatchJobViewModel;
+    recommendations: GptRecommendationViewModel[];
+    capabilities: WorkspaceCapabilities;
+}) {
+    const [selectedForAccept, setSelectedForAccept] =
+        useState<GptRecommendationViewModel | null>(null);
+    const [selectedForReject, setSelectedForReject] =
+        useState<GptRecommendationViewModel | null>(null);
+    const [requesting, setRequesting] = useState(false);
+    const [retryingId, setRetryingId] = useState<number | null>(null);
+    const activeRecommendations = recommendations.filter(
+        (recommendation) =>
+            ['draft', 'processing'].includes(recommendation.status) ||
+            (recommendation.status === 'pending_review' &&
+                !recommendation.is_expired),
+    );
+    const visibleRecommendations =
+        activeRecommendations.length > 0
+            ? activeRecommendations
+            : recommendations.slice(0, 1);
+    const hasOpenRecommendation = activeRecommendations.length > 0;
+
+    const requestRecommendation = () => {
+        setRequesting(true);
+        router.post(
+            '/operations/gpt-recommendations',
+            {
+                subject_type: 'dispatch_job',
+                subject_id: job.id,
+                purpose: 'dispatch_assignment',
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setRequesting(false),
+            },
+        );
+    };
+
+    return (
+        <section
+            className="rounded-lg border border-line bg-surface p-4"
+            aria-labelledby={`dispatch-gpt-advisory-${job.id}`}
+        >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h3
+                        id={`dispatch-gpt-advisory-${job.id}`}
+                        className="flex items-center gap-2 font-semibold"
+                    >
+                        <Sparkles
+                            className="h-4 w-4 text-brand-strong"
+                            aria-hidden="true"
+                        />
+                        GPT dispatch advisory
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-ink-soft">
+                        Explainable resource guidance for this dispatch. It is
+                        advisory and requires human confirmation.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    {capabilities.request_gpt_assistance &&
+                        !hasOpenRecommendation && (
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={requestRecommendation}
+                                disabled={requesting}
+                            >
+                                <Sparkles
+                                    className="mr-1.5 h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                {requesting
+                                    ? 'Requesting…'
+                                    : 'Request AI assistance'}
+                            </Button>
+                        )}
+                    <Link
+                        href="/?view=gpt-recommendations"
+                        className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
+                    >
+                        View full advisory
+                    </Link>
+                </div>
+            </div>
+
+            {visibleRecommendations.length === 0 ? (
+                <p className="mt-4 rounded-lg bg-surface-subtle px-3 py-3 text-sm text-ink-soft">
+                    No GPT recommendation has been requested for this dispatch.
+                </p>
+            ) : (
+                <div className="mt-4 space-y-4">
+                    {visibleRecommendations.map((recommendation) => {
+                        const reviewable =
+                            recommendation.status === 'pending_review' &&
+                            !recommendation.is_expired;
+                        const personnel =
+                            recommendation.proposed_personnel ?? [];
+                        const assets = recommendation.proposed_assets ?? [];
+
+                        return (
+                            <div
+                                key={recommendation.id}
+                                className="space-y-3 border-t border-line pt-4 first:border-t-0 first:pt-0"
+                            >
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-sm font-semibold text-ink">
+                                                Recommendation #
+                                                {recommendation.id}
+                                            </p>
+                                            <span
+                                                className={cn(
+                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                                    gptRecommendationStatusClass(
+                                                        recommendation,
+                                                    ),
+                                                )}
+                                            >
+                                                {gptRecommendationStatusLabel(
+                                                    recommendation,
+                                                )}
+                                            </span>
+                                        </div>
+                                        {recommendation.response_summary && (
+                                            <p className="mt-1 text-sm leading-6 text-ink-soft">
+                                                {
+                                                    recommendation.response_summary
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-ink-soft">
+                                        <Clock
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        {recommendation.is_expired
+                                            ? 'Expired'
+                                            : recommendation.expires_in_seconds
+                                              ? `${Math.ceil(recommendation.expires_in_seconds / 60)}m left`
+                                              : 'No expiry window'}
+                                    </div>
+                                </div>
+
+                                <RecommendationDetails rec={recommendation} />
+
+                                {(personnel.length > 0 ||
+                                    assets.length > 0) && (
+                                    <div className="grid gap-2 text-xs sm:grid-cols-2">
+                                        {personnel.length > 0 && (
+                                            <div>
+                                                <p className="font-semibold text-ink">
+                                                    Proposed personnel
+                                                </p>
+                                                <p className="mt-1 text-ink-soft">
+                                                    {personnel
+                                                        .map(
+                                                            (person) =>
+                                                                `${person.name || `User #${person.user_id}`} (${person.assignment_type})`,
+                                                        )
+                                                        .join(', ')}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {assets.length > 0 && (
+                                            <div>
+                                                <p className="font-semibold text-ink">
+                                                    Proposed assets
+                                                </p>
+                                                <p className="mt-1 text-ink-soft">
+                                                    {assets
+                                                        .map(
+                                                            (asset) =>
+                                                                `${asset.name || asset.asset_code || `Asset #${asset.operational_asset_id}`} (${asset.assignment_type})`,
+                                                        )
+                                                        .join(', ')}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {recommendation.conflicts.length > 0 && (
+                                    <div className="flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger-strong">
+                                        <AlertTriangle
+                                            className="mt-0.5 h-4 w-4 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <div>
+                                            <p className="font-semibold">
+                                                Constraint notes
+                                            </p>
+                                            <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                                                {recommendation.conflicts.map(
+                                                    (conflict, index) => (
+                                                        <li key={index}>
+                                                            {String(
+                                                                conflict.reason ??
+                                                                    conflict.message ??
+                                                                    'Constraint note',
+                                                            )}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                                    <p className="text-xs text-ink-soft">
+                                        Requested by{' '}
+                                        <span className="font-medium text-ink">
+                                            {recommendation.requested_by.name}
+                                        </span>
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {reviewable &&
+                                            capabilities.decide_gpt_recommendation && (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        onClick={() =>
+                                                            setSelectedForReject(
+                                                                recommendation,
+                                                            )
+                                                        }
+                                                    >
+                                                        Reject recommendation
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="primary"
+                                                        onClick={() =>
+                                                            setSelectedForAccept(
+                                                                recommendation,
+                                                            )
+                                                        }
+                                                    >
+                                                        Accept recommendation
+                                                    </Button>
+                                                </>
+                                            )}
+                                        {recommendation.is_retryable &&
+                                            capabilities.retry_gpt_recommendation && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    disabled={
+                                                        retryingId ===
+                                                        recommendation.id
+                                                    }
+                                                    onClick={() => {
+                                                        setRetryingId(
+                                                            recommendation.id,
+                                                        );
+                                                        router.post(
+                                                            recommendation.retry_url,
+                                                            {},
+                                                            {
+                                                                preserveScroll: true,
+                                                                onFinish: () =>
+                                                                    setRetryingId(
+                                                                        null,
+                                                                    ),
+                                                            },
+                                                        );
+                                                    }}
+                                                >
+                                                    <RefreshCw
+                                                        className={cn(
+                                                            'mr-1.5 h-3.5 w-3.5',
+                                                            retryingId ===
+                                                                recommendation.id &&
+                                                                'animate-spin',
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
+                                                    {retryingId ===
+                                                    recommendation.id
+                                                        ? 'Retrying…'
+                                                        : 'Retry recommendation'}
+                                                </Button>
+                                            )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {selectedForAccept && (
+                <AcceptGptModal
+                    rec={selectedForAccept}
+                    onClose={() => setSelectedForAccept(null)}
+                />
+            )}
+            {selectedForReject && (
+                <RejectGptModal
+                    rec={selectedForReject}
+                    onClose={() => setSelectedForReject(null)}
+                />
+            )}
+        </section>
+    );
+}
+
+function gptRecommendationStatusLabel(
+    recommendation: GptRecommendationViewModel,
+): string {
+    if (recommendation.is_expired) {
+        return 'Expired';
+    }
+
+    return (
+        {
+            accepted: 'Accepted',
+            rejected: 'Rejected',
+            stale: 'Stale context',
+            failed: 'Generation failed',
+            processing: 'Processing',
+            draft: 'Queued',
+            pending_review: 'Pending human review',
+        }[recommendation.status] ?? recommendation.status
+    );
+}
+
+function gptRecommendationStatusClass(
+    recommendation: GptRecommendationViewModel,
+): string {
+    if (
+        recommendation.is_expired ||
+        ['stale', 'rejected', 'failed'].includes(recommendation.status)
+    ) {
+        return 'bg-warning-soft text-warning-strong';
+    }
+
+    if (recommendation.status === 'accepted') {
+        return 'bg-success-soft text-success-strong';
+    }
+
+    if (recommendation.status === 'pending_review') {
+        return 'bg-warning-soft text-warning-strong';
+    }
+
+    return 'bg-cobalt-50 text-cobalt-700';
 }
 
 function DispatchInput({
@@ -1909,4 +2310,10 @@ function formatDateTime(value: string | null) {
 
 function humanize(value: string) {
     return value.replaceAll('_', ' ');
+}
+
+function assignmentWorkspaceUrl(jobId: number, returnTo: string) {
+    const query = new URLSearchParams({ return_to: returnTo }).toString();
+
+    return `/operations/dispatch-jobs/${jobId}?${query}`;
 }

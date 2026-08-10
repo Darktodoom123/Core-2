@@ -489,7 +489,11 @@ export function GptRecommendationsSurface({
     );
 }
 
-function RecommendationDetails({ rec }: { rec: GptRecommendationViewModel }) {
+export function RecommendationDetails({
+    rec,
+}: {
+    rec: GptRecommendationViewModel;
+}) {
     const recommendation = rec.recommendation ?? {};
     const reasons = Array.isArray(recommendation.reasons)
         ? recommendation.reasons
@@ -569,7 +573,7 @@ function RecommendationDetails({ rec }: { rec: GptRecommendationViewModel }) {
     );
 }
 
-function AcceptGptModal({
+export function AcceptGptModal({
     rec,
     onClose,
 }: {
@@ -673,7 +677,7 @@ function AcceptGptModal({
     );
 }
 
-function RejectGptModal({
+export function RejectGptModal({
     rec,
     onClose,
 }: {

@@ -3,25 +3,29 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowLeft,
+    ArrowRight,
     CalendarDays,
     Check,
     CheckCircle2,
+    ChevronDown,
     Circle,
     ClipboardList,
     Clock3,
     HardHat,
     MapPin,
     Navigation,
+    ListChecks,
     RefreshCw,
     ShieldCheck,
     Sparkles,
     Truck,
+    Users,
     UserRound,
     Wrench,
     X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
 import { Button, DataPair, EmptyState, Panel, Skeleton } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
@@ -29,6 +33,7 @@ import type {
     AssetCandidateViewModel,
     DispatchDetailPageProps,
     PersonnelCandidateViewModel,
+    WorkspaceFlash,
 } from '@/types/workspace';
 
 interface AssignmentRequestPayload {
@@ -50,12 +55,26 @@ export default function DispatchDetail({
     progression,
     capabilities,
 }: DispatchDetailPageProps) {
-    const { flash, errors } = usePage().props;
+    const { flash, errors, auth } = usePage().props;
     const form = useForm<AssignmentRequestPayload>({
         personnel: [],
         assets: [],
     });
     const selectedCount = form.data.personnel.length + form.data.assets.length;
+    const hasPendingSelections = selectedCount > 0;
+    const assignmentSaved = isAssignmentSuccessFlash(flash);
+    const hasCurrentAssignments =
+        job.personnel_assignments.length + job.asset_assignments.length > 0;
+    const hasAssignmentNextAction = assignmentSaved || hasCurrentAssignments;
+    const returnTo = getSafeReturnTo();
+    const canViewFleetAssets = auth.permissions.some((permission) =>
+        ['fleet.view_all', 'fleet.view_assigned'].includes(permission),
+    );
+    const canViewEquipmentAssets = auth.permissions.some((permission) =>
+        ['equipment.view_all', 'equipment.view_assigned'].includes(permission),
+    );
+    const skipNextNavigationGuard = useRef(false);
+    const bypassNavigationGuard = useRef(false);
     const conflictMessage =
         errors.resources ??
         errors.reassignment ??
@@ -108,9 +127,96 @@ export default function DispatchDetail({
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        bypassNavigationGuard.current = true;
         form.post(`/operations/dispatch-jobs/${job.id}/assignments`, {
             preserveScroll: true,
             onSuccess: () => form.reset(),
+            onFinish: () => {
+                bypassNavigationGuard.current = false;
+            },
+        });
+    };
+
+    const confirmPendingNavigation = useCallback(() => {
+        if (!hasPendingSelections) {
+            return true;
+        }
+
+        if (
+            window.confirm(
+                'You have unsaved resource selections. Leave without assigning them?',
+            )
+        ) {
+            skipNextNavigationGuard.current = true;
+
+            return true;
+        }
+
+        return false;
+    }, [hasPendingSelections]);
+
+    const confirmLeave = (event: MouseEvent<Element>) => {
+        if (!confirmPendingNavigation()) {
+            event.preventDefault();
+        }
+    };
+
+    useEffect(() => {
+        if (!hasPendingSelections) {
+            return;
+        }
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        const removeInertiaGuard = router.on('before', (event) => {
+            if (bypassNavigationGuard.current) {
+                bypassNavigationGuard.current = false;
+
+                return;
+            }
+
+            if (skipNextNavigationGuard.current) {
+                skipNextNavigationGuard.current = false;
+
+                return;
+            }
+
+            if (!confirmPendingNavigation()) {
+                event.preventDefault();
+            }
+        });
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            removeInertiaGuard();
+        };
+    }, [confirmPendingNavigation, hasPendingSelections]);
+
+    const handleMobileActivationAction = () => {
+        const activationPanel = document.getElementById(
+            'dispatch-activation',
+        ) as HTMLDetailsElement | null;
+        const activationButton = document.getElementById(
+            `dispatch-activate-${job.id}`,
+        ) as HTMLButtonElement | null;
+
+        activationPanel?.setAttribute('open', '');
+
+        if (activation.ready && capabilities.activate) {
+            activationButton?.click();
+
+            return;
+        }
+
+        activationPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.requestAnimationFrame(() => {
+            activationPanel
+                ?.querySelector<HTMLButtonElement>('button')
+                ?.focus();
         });
     };
 
@@ -129,7 +235,10 @@ export default function DispatchDetail({
                 <header className="border-b border-line bg-surface">
                     <div className="mx-auto max-w-[96rem] px-4 py-4 md:px-6">
                         <Link
-                            href="/"
+                            href={
+                                capabilities.update_own_status ? '/' : returnTo
+                            }
+                            onClick={confirmLeave}
                             className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-soft hover:bg-surface-subtle hover:text-ink"
                         >
                             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -137,16 +246,25 @@ export default function DispatchDetail({
                                 ? "Back to today's work"
                                 : 'Back to dispatch workspace'}
                         </Link>
-                        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
+                                {!capabilities.update_own_status && (
+                                    <p className="text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
+                                        Assignment workspace
+                                    </p>
+                                )}
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
                                     <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-                                        {job.title}
+                                        {capabilities.update_own_status
+                                            ? job.title
+                                            : 'Assign resources'}
                                     </h1>
                                     <CanonicalStatusBadge status={job.status} />
                                 </div>
                                 <p className="mt-1 text-sm text-ink-soft">
-                                    {job.reference} · {job.client}
+                                    {capabilities.update_own_status
+                                        ? `${job.reference} · ${job.client}`
+                                        : `${job.title} · ${job.reference} · ${job.client}`}
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
@@ -172,7 +290,7 @@ export default function DispatchDetail({
                                         }}
                                     >
                                         <Sparkles className="h-4 w-4 text-amber-500" />
-                                        Request AI Assistance
+                                        Request AI assistance
                                     </Button>
                                 )}
                             </div>
@@ -183,7 +301,11 @@ export default function DispatchDetail({
                 <main
                     id="dispatch-detail-main"
                     tabIndex={-1}
-                    className="mx-auto max-w-[96rem] space-y-5 px-4 py-5 outline-none md:px-6"
+                    className={cn(
+                        'mx-auto max-w-[96rem] space-y-5 px-4 py-5 outline-none md:px-6 md:py-6',
+                        !capabilities.update_own_status &&
+                            'pb-[calc(7rem+env(safe-area-inset-bottom))] xl:pb-6',
+                    )}
                 >
                     {flash && (
                         <div
@@ -242,109 +364,812 @@ export default function DispatchDetail({
                             capabilities={capabilities}
                         />
                     ) : (
-                        <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
-                            <div className="space-y-5">
-                                <DispatchContext job={job} />
-                                <CurrentAssignments
-                                    job={job}
-                                    capabilities={capabilities}
-                                />
-                                {capabilities.activate && (
-                                    <ActivationPanel
-                                        key={job.version}
-                                        job={job}
-                                        activation={activation}
-                                    />
-                                )}
-                                <LifecycleControlsPanel
-                                    key={`lifecycle-${job.version}`}
-                                    job={job}
-                                    capabilities={capabilities}
-                                />
-                            </div>
+                        <>
+                            <AssignmentFlowHeader
+                                job={job}
+                                activation={activation}
+                                selectedCount={selectedCount}
+                                selectedPersonnelCount={
+                                    form.data.personnel.length
+                                }
+                                selectedAssetCount={form.data.assets.length}
+                                canActivate={capabilities.activate}
+                                hasPendingSelections={hasPendingSelections}
+                                returnTo={returnTo}
+                            />
 
-                            {capabilities.view_assignment_candidates ? (
-                                <form
-                                    onSubmit={submit}
-                                    className="space-y-5"
-                                    noValidate
-                                >
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                                        <div>
-                                            <h2 className="text-lg font-semibold">
-                                                Resource eligibility
-                                            </h2>
-                                            <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                                                Availability, credential
-                                                validity, asset readiness,
-                                                maintenance, and overlapping
-                                                schedules are computed by the
-                                                server for this dispatch window.
-                                            </p>
-                                        </div>
-                                        {capabilities.assign_resources && (
-                                            <div className="flex shrink-0 flex-col items-stretch gap-1 sm:items-end">
-                                                <Button
-                                                    type="submit"
-                                                    variant="primary"
-                                                    disabled={
-                                                        form.processing ||
-                                                        selectedCount === 0
-                                                    }
+                            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+                                <div className="min-w-0 space-y-5">
+                                    <DispatchContext job={job} />
+
+                                    {capabilities.view_assignment_candidates ? (
+                                        <form
+                                            id="assignment-selection-form"
+                                            onSubmit={submit}
+                                            className="space-y-6"
+                                            noValidate
+                                            aria-busy={form.processing}
+                                        >
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                                                <div>
+                                                    <p className="text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
+                                                        Step 2 of 3
+                                                    </p>
+                                                    <h2 className="mt-1 text-xl font-semibold">
+                                                        Choose eligible
+                                                        resources
+                                                    </h2>
+                                                    <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
+                                                        Select the people and
+                                                        assets for this
+                                                        dispatch. Every option
+                                                        below is checked against
+                                                        the scheduled window by
+                                                        the server.
+                                                    </p>
+                                                </div>
+                                                <a
+                                                    href="#assignment-summary"
+                                                    className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-lg px-3 text-sm font-medium text-brand-strong hover:bg-brand-soft sm:self-auto"
                                                 >
-                                                    {form.processing
-                                                        ? 'Assigning resources…'
-                                                        : selectedCount > 0
-                                                          ? `Assign ${selectedCount} resource${selectedCount === 1 ? '' : 's'}`
-                                                          : 'Assign resources'}
-                                                </Button>
-                                                {selectedCount === 0 &&
-                                                    !form.processing && (
-                                                        <span className="text-xs text-ink-soft">
-                                                            Select at least one
-                                                            eligible resource.
-                                                        </span>
-                                                    )}
+                                                    Review selection
+                                                    <ArrowRight
+                                                        className="h-4 w-4"
+                                                        aria-hidden="true"
+                                                    />
+                                                </a>
                                             </div>
-                                        )}
-                                    </div>
 
-                                    <PersonnelCandidates
-                                        candidates={personnelCandidates}
-                                        selectedIds={form.data.personnel.map(
-                                            (assignment) => assignment.user_id,
+                                            <section
+                                                aria-labelledby="personnel-heading"
+                                                className="space-y-3"
+                                            >
+                                                <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                                                    <div>
+                                                        <h3
+                                                            id="personnel-heading"
+                                                            className="font-semibold"
+                                                        >
+                                                            People
+                                                        </h3>
+                                                        <p className="mt-0.5 text-sm text-ink-soft">
+                                                            Field workers who
+                                                            can respond to this
+                                                            assignment.
+                                                        </p>
+                                                    </div>
+                                                    <Users
+                                                        className="h-5 w-5 shrink-0 text-ink-soft"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                                <PersonnelCandidates
+                                                    candidates={
+                                                        personnelCandidates
+                                                    }
+                                                    selectedIds={form.data.personnel.map(
+                                                        (assignment) =>
+                                                            assignment.user_id,
+                                                    )}
+                                                    canAssign={
+                                                        capabilities.assign_resources
+                                                    }
+                                                    onToggle={togglePersonnel}
+                                                />
+                                            </section>
+
+                                            <section
+                                                aria-labelledby="asset-heading"
+                                                className="space-y-3"
+                                            >
+                                                <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                                                    <div>
+                                                        <h3
+                                                            id="asset-heading"
+                                                            className="font-semibold"
+                                                        >
+                                                            Assets
+                                                        </h3>
+                                                        <p className="mt-0.5 text-sm text-ink-soft">
+                                                            Trucks, cranes, and
+                                                            equipment available
+                                                            for the window.
+                                                        </p>
+                                                    </div>
+                                                    <Truck
+                                                        className="h-5 w-5 shrink-0 text-ink-soft"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                                <AssetCandidates
+                                                    candidates={assetCandidates}
+                                                    selectedIds={form.data.assets.map(
+                                                        (assignment) =>
+                                                            assignment.operational_asset_id,
+                                                    )}
+                                                    canAssign={
+                                                        capabilities.assign_resources
+                                                    }
+                                                    onToggle={toggleAsset}
+                                                    assetCatalogAccess={{
+                                                        fleet: canViewFleetAssets,
+                                                        equipment:
+                                                            canViewEquipmentAssets,
+                                                    }}
+                                                />
+                                            </section>
+                                        </form>
+                                    ) : (
+                                        <Panel>
+                                            <EmptyState
+                                                icon={ShieldCheck}
+                                                title="Assignment pool is restricted"
+                                                message="Your role can review resources already assigned to this dispatch, but it cannot discover other personnel, credentials, or asset availability."
+                                            />
+                                        </Panel>
+                                    )}
+                                </div>
+
+                                <aside className="min-w-0 space-y-5 xl:sticky xl:top-24 xl:self-start">
+                                    <AssignmentSelectionSummary
+                                        formId={
+                                            capabilities.view_assignment_candidates
+                                                ? 'assignment-selection-form'
+                                                : undefined
+                                        }
+                                        personnel={personnelCandidates.filter(
+                                            (candidate) =>
+                                                form.data.personnel.some(
+                                                    (assignment) =>
+                                                        assignment.user_id ===
+                                                        candidate.id,
+                                                ),
                                         )}
+                                        assets={assetCandidates.filter(
+                                            (candidate) =>
+                                                form.data.assets.some(
+                                                    (assignment) =>
+                                                        assignment.operational_asset_id ===
+                                                        candidate.id,
+                                                ),
+                                        )}
+                                        selectedCount={selectedCount}
+                                        processing={form.processing}
                                         canAssign={
                                             capabilities.assign_resources
                                         }
-                                        onToggle={togglePersonnel}
-                                    />
-                                    <AssetCandidates
-                                        candidates={assetCandidates}
-                                        selectedIds={form.data.assets.map(
-                                            (assignment) =>
-                                                assignment.operational_asset_id,
-                                        )}
-                                        canAssign={
-                                            capabilities.assign_resources
+                                        currentPersonnelCount={
+                                            job.personnel_assignments.length
                                         }
-                                        onToggle={toggleAsset}
+                                        currentAssetCount={
+                                            job.asset_assignments.length
+                                        }
                                     />
-                                </form>
-                            ) : (
-                                <Panel>
-                                    <EmptyState
-                                        icon={ShieldCheck}
-                                        title="Assignment pool is restricted"
-                                        message="Your role can review resources already assigned to this dispatch, but it cannot discover other personnel, credentials, or asset availability."
+                                    {hasAssignmentNextAction && (
+                                        <AssignmentNextAction
+                                            activation={activation}
+                                            canActivate={capabilities.activate}
+                                            assignmentSaved={assignmentSaved}
+                                        />
+                                    )}
+                                    {capabilities.view_assignment_candidates && (
+                                        <MobileAssignmentActionBar
+                                            formId="assignment-selection-form"
+                                            selectedCount={selectedCount}
+                                            processing={form.processing}
+                                            canAssign={
+                                                capabilities.assign_resources
+                                            }
+                                            assignmentSaved={
+                                                hasAssignmentNextAction
+                                            }
+                                            assignmentSavedThisVisit={
+                                                assignmentSaved
+                                            }
+                                            activation={activation}
+                                            canActivate={capabilities.activate}
+                                            jobId={job.id}
+                                            onActivationAction={
+                                                handleMobileActivationAction
+                                            }
+                                        />
+                                    )}
+                                    <CurrentAssignments
+                                        job={job}
+                                        capabilities={capabilities}
                                     />
-                                </Panel>
-                            )}
-                        </div>
+                                    {capabilities.activate && (
+                                        <ActivationPanel
+                                            key={job.version}
+                                            job={job}
+                                            activation={activation}
+                                        />
+                                    )}
+                                </aside>
+                            </div>
+                            <AssignmentStageSummaries
+                                activation={activation}
+                                canActivate={capabilities.activate}
+                            />
+                            <LifecycleControlsPanel
+                                key={`lifecycle-${job.version}`}
+                                job={job}
+                                capabilities={capabilities}
+                            />
+                        </>
                     )}
                 </main>
             </div>
         </>
+    );
+}
+
+function AssignmentFlowHeader({
+    job,
+    activation,
+    selectedCount,
+    selectedPersonnelCount,
+    selectedAssetCount,
+    canActivate,
+    hasPendingSelections,
+    returnTo,
+}: {
+    job: DispatchDetailPageProps['job'];
+    activation: DispatchDetailPageProps['activation'];
+    selectedCount: number;
+    selectedPersonnelCount: number;
+    selectedAssetCount: number;
+    canActivate: boolean;
+    hasPendingSelections: boolean;
+    returnTo: string;
+}) {
+    const personnelCount = job.personnel_assignments.length;
+    const assetCount = job.asset_assignments.length;
+    const hasAssignments = personnelCount + assetCount > 0;
+    const assignmentStepLabel = hasAssignments
+        ? formatResourceCounts(personnelCount, assetCount)
+        : selectedCount > 0
+          ? formatResourceCounts(selectedPersonnelCount, selectedAssetCount)
+          : 'Not started';
+
+    const confirmLeave = (event: MouseEvent<Element>) => {
+        if (
+            hasPendingSelections &&
+            !window.confirm(
+                'You have unsaved resource selections. Leave without assigning them?',
+            )
+        ) {
+            event.preventDefault();
+        }
+    };
+
+    return (
+        <section
+            aria-labelledby="assignment-flow-heading"
+            className="space-y-4"
+        >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
+                        Dispatch setup
+                    </p>
+                    <h2
+                        id="assignment-flow-heading"
+                        className="mt-1 text-xl font-semibold tracking-[-0.01em]"
+                    >
+                        Prepare this dispatch for activation
+                    </h2>
+                    <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
+                        Review the job, confirm eligible resources, then
+                        activate only when the server checklist is clear.
+                    </p>
+                </div>
+                <p className="text-sm text-ink-soft">
+                    {!canActivate
+                        ? 'Activation unavailable'
+                        : activation.ready
+                          ? 'Ready to activate'
+                          : 'Review needed'}
+                </p>
+            </div>
+
+            <nav
+                aria-label="Dispatch setup progress"
+                className="overflow-hidden rounded-xl border border-line bg-surface"
+            >
+                <ol className="grid md:grid-cols-3">
+                    <li className="border-b border-line md:border-r md:border-b-0">
+                        <Link
+                            href={returnTo}
+                            onClick={confirmLeave}
+                            className="flex min-h-20 items-center gap-3 px-4 py-3 hover:bg-surface-subtle sm:px-5"
+                        >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong">
+                                <Check className="h-4 w-4" aria-hidden="true" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-xs font-semibold tracking-[0.06em] text-success-strong uppercase">
+                                    Step 1
+                                </span>
+                                <span className="block font-semibold">
+                                    Review dispatch
+                                </span>
+                                <span className="block truncate text-xs text-ink-soft">
+                                    Context and requirements
+                                </span>
+                            </span>
+                        </Link>
+                    </li>
+                    <li
+                        aria-current="step"
+                        className="border-b border-line bg-brand-soft md:border-r md:border-b-0"
+                    >
+                        <div className="flex min-h-20 items-center gap-3 px-4 py-3 sm:px-5">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-contrast">
+                                2
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-xs font-semibold tracking-[0.06em] text-brand-strong uppercase">
+                                    Current step
+                                </span>
+                                <span className="block font-semibold">
+                                    Assign resources
+                                </span>
+                                <span className="block truncate text-xs text-brand-strong">
+                                    {assignmentStepLabel}
+                                </span>
+                            </span>
+                        </div>
+                    </li>
+                    <li id="dispatch-activation-step">
+                        {canActivate ? (
+                            <a
+                                href="#dispatch-activation"
+                                onClick={() => {
+                                    const activationPanel =
+                                        document.getElementById(
+                                            'dispatch-activation',
+                                        ) as HTMLDetailsElement | null;
+                                    activationPanel?.setAttribute('open', '');
+                                }}
+                                className="flex min-h-20 items-center gap-3 px-4 py-3 hover:bg-surface-subtle sm:px-5"
+                            >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-soft">
+                                    3
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block text-xs font-semibold tracking-[0.06em] text-ink-soft uppercase">
+                                        Next step
+                                    </span>
+                                    <span className="block font-semibold">
+                                        Activate dispatch
+                                    </span>
+                                    <span className="block truncate text-xs text-ink-soft">
+                                        Server readiness check
+                                    </span>
+                                </span>
+                            </a>
+                        ) : (
+                            <div className="flex min-h-20 items-center gap-3 px-4 py-3 opacity-70 sm:px-5">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-soft">
+                                    3
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block text-xs font-semibold tracking-[0.06em] text-ink-soft uppercase">
+                                        Next step
+                                    </span>
+                                    <span className="block font-semibold">
+                                        Activate dispatch
+                                    </span>
+                                    <span className="block truncate text-xs text-ink-soft">
+                                        Requires activation permission
+                                    </span>
+                                </span>
+                            </div>
+                        )}
+                    </li>
+                </ol>
+            </nav>
+        </section>
+    );
+}
+
+function AssignmentSelectionSummary({
+    formId,
+    personnel,
+    assets,
+    selectedCount,
+    processing,
+    canAssign,
+    currentPersonnelCount,
+    currentAssetCount,
+}: {
+    formId?: string;
+    personnel: PersonnelCandidateViewModel[];
+    assets: AssetCandidateViewModel[];
+    selectedCount: number;
+    processing: boolean;
+    canAssign: boolean;
+    currentPersonnelCount: number;
+    currentAssetCount: number;
+}) {
+    const totalPersonnelCount = currentPersonnelCount + personnel.length;
+    const totalAssetCount = currentAssetCount + assets.length;
+
+    return (
+        <Panel
+            id="assignment-summary"
+            className="overflow-hidden border-brand/40"
+        >
+            <div className="border-b border-line px-4 py-4">
+                <div className="flex items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                        <ListChecks className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                        <h2 className="font-semibold">Assignment plan</h2>
+                        <p className="mt-0.5 text-xs leading-5 text-ink-soft">
+                            Review your selections before saving them to the
+                            dispatch.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-4 px-4 py-4">
+                <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold tracking-[-0.03em]">
+                        {selectedCount}
+                    </span>
+                    <span className="text-sm text-ink-soft">
+                        new resource{selectedCount === 1 ? '' : 's'} selected
+                    </span>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                    <AssignmentRequirementRow
+                        label="People"
+                        count={totalPersonnelCount}
+                    />
+                    <AssignmentRequirementRow
+                        label="Assets"
+                        count={totalAssetCount}
+                    />
+                    <SelectionGroup
+                        label="New people"
+                        items={personnel.map((candidate) => candidate.name)}
+                        emptyMessage="No new people selected"
+                    />
+                    <SelectionGroup
+                        label="New assets"
+                        items={assets.map(
+                            (candidate) =>
+                                `${candidate.code} · ${candidate.name}`,
+                        )}
+                        emptyMessage="No new assets selected"
+                    />
+                </div>
+            </div>
+
+            <div className="border-t border-line bg-surface-subtle px-4 py-4">
+                <Button
+                    type="submit"
+                    form={formId}
+                    variant="primary"
+                    className="w-full"
+                    disabled={processing || selectedCount === 0 || !canAssign}
+                    aria-busy={processing}
+                >
+                    {processing
+                        ? 'Saving assignments…'
+                        : selectedCount > 0
+                          ? `Assign ${selectedCount} resource${selectedCount === 1 ? '' : 's'}`
+                          : 'Select resources to continue'}
+                </Button>
+                <p className="mt-2 text-center text-xs leading-5 text-ink-soft">
+                    {canAssign
+                        ? 'At least one eligible resource is required. Activation also needs one person and one asset.'
+                        : 'Your role can review this dispatch but cannot create assignments.'}
+                </p>
+            </div>
+        </Panel>
+    );
+}
+
+function AssignmentRequirementRow({
+    label,
+    count,
+}: {
+    label: string;
+    count: number;
+}) {
+    const ready = count > 0;
+
+    return (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2.5">
+            <span className="font-medium">{label}</span>
+            <span
+                className={cn(
+                    'inline-flex items-center gap-1.5 text-xs font-medium',
+                    ready ? 'text-success-strong' : 'text-warning-strong',
+                )}
+            >
+                {ready ? (
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                )}
+                {ready ? `${count} ready` : 'Needs one'}
+            </span>
+        </div>
+    );
+}
+
+function AssignmentNextAction({
+    activation,
+    canActivate,
+    assignmentSaved,
+}: {
+    activation: DispatchDetailPageProps['activation'];
+    canActivate: boolean;
+    assignmentSaved: boolean;
+}) {
+    const blockerCount = activation.blockers.length;
+    const actionLabel =
+        canActivate && activation.ready
+            ? 'Continue to activation'
+            : blockerCount > 0
+              ? `Review ${blockerCount} activation blocker${blockerCount === 1 ? '' : 's'}`
+              : 'Review activation';
+
+    return (
+        <Panel className="border-success/50 bg-success-soft">
+            <div className="flex items-start gap-3 px-4 py-4">
+                <CheckCircle2
+                    className="mt-0.5 h-5 w-5 shrink-0 text-success-strong"
+                    aria-hidden="true"
+                />
+                <div className="min-w-0">
+                    <h2 className="font-semibold text-success-strong">
+                        {assignmentSaved
+                            ? 'Assignments saved'
+                            : 'Resources assigned'}
+                    </h2>
+                    <p className="mt-1 text-sm leading-5 text-ink-soft">
+                        {canActivate && activation.ready
+                            ? 'The dispatch passed its readiness check and can be activated.'
+                            : blockerCount > 0
+                              ? 'Review the readiness blockers before activation.'
+                              : 'Review the latest readiness and approval state before activation.'}
+                    </p>
+                    <a
+                        href="#dispatch-activation"
+                        onClick={() => {
+                            const activationPanel = document.getElementById(
+                                'dispatch-activation',
+                            ) as HTMLDetailsElement | null;
+                            activationPanel?.setAttribute('open', '');
+                        }}
+                        className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-brand-strong hover:bg-surface"
+                    >
+                        {actionLabel}
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                </div>
+            </div>
+        </Panel>
+    );
+}
+
+function AssignmentStageSummaries({
+    activation,
+    canActivate,
+}: {
+    activation: DispatchDetailPageProps['activation'];
+    canActivate: boolean;
+}) {
+    const blockerCount = activation.blockers.length;
+
+    return (
+        <section
+            aria-label="Dispatch setup stage summaries"
+            className="overflow-hidden rounded-xl border border-line bg-surface"
+        >
+            <a
+                href="#dispatch-context"
+                className="flex min-h-16 items-center justify-between gap-4 border-b border-line px-4 py-3 hover:bg-surface-subtle sm:px-5"
+            >
+                <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong">
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                        <span className="block font-semibold">
+                            Review dispatch details
+                        </span>
+                        <span className="block truncate text-xs text-ink-soft">
+                            Schedule, site, and requirements
+                        </span>
+                    </span>
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand-strong">
+                    View details
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </span>
+            </a>
+            {canActivate && (
+                <a
+                    href="#dispatch-activation"
+                    onClick={() => {
+                        const activationPanel = document.getElementById(
+                            'dispatch-activation',
+                        ) as HTMLDetailsElement | null;
+                        activationPanel?.setAttribute('open', '');
+                    }}
+                    className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 hover:bg-surface-subtle sm:px-5"
+                >
+                    <span className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-soft">
+                            3
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block font-semibold">
+                                Activate dispatch
+                            </span>
+                            <span className="block truncate text-xs text-ink-soft">
+                                Review readiness and activate when ready
+                            </span>
+                        </span>
+                    </span>
+                    <span
+                        className={cn(
+                            'inline-flex shrink-0 items-center gap-1 text-sm font-medium',
+                            activation.ready
+                                ? 'text-success-strong'
+                                : 'text-warning-strong',
+                        )}
+                    >
+                        {activation.ready
+                            ? 'Ready'
+                            : blockerCount > 0
+                              ? `${blockerCount} blocker${blockerCount === 1 ? '' : 's'}`
+                              : 'Review needed'}
+                        <ArrowRight
+                            className="h-4 w-4 text-brand-strong"
+                            aria-hidden="true"
+                        />
+                    </span>
+                </a>
+            )}
+        </section>
+    );
+}
+
+function MobileAssignmentActionBar({
+    formId,
+    selectedCount,
+    processing,
+    canAssign,
+    assignmentSaved,
+    assignmentSavedThisVisit,
+    activation,
+    canActivate,
+    jobId,
+    onActivationAction,
+}: {
+    formId: string;
+    selectedCount: number;
+    processing: boolean;
+    canAssign: boolean;
+    assignmentSaved: boolean;
+    assignmentSavedThisVisit: boolean;
+    activation: DispatchDetailPageProps['activation'];
+    canActivate: boolean;
+    jobId: number;
+    onActivationAction: () => void;
+}) {
+    if (assignmentSaved) {
+        const blockerCount = activation.blockers.length;
+        const nextActionLabel =
+            canActivate && activation.ready
+                ? 'Activate dispatch'
+                : blockerCount > 0
+                  ? `Review ${blockerCount} blocker${blockerCount === 1 ? '' : 's'}`
+                  : 'Review activation';
+
+        return (
+            <div
+                id="mobile-assignment-action-bar"
+                className="mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface px-4 pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] xl:hidden"
+            >
+                <div className="mx-auto flex max-w-[96rem] items-center gap-3">
+                    <p className="min-w-0 flex-1 text-sm text-ink-soft">
+                        <span className="font-semibold text-success-strong">
+                            {assignmentSavedThisVisit ? 'Saved' : 'Assigned'}
+                        </span>{' '}
+                        {canActivate && activation.ready
+                            ? 'Ready for activation.'
+                            : 'Continue with readiness review.'}
+                    </p>
+                    <Button
+                        id={`mobile-activation-action-${jobId}`}
+                        type="button"
+                        variant="primary"
+                        className="shrink-0"
+                        onClick={onActivationAction}
+                    >
+                        {nextActionLabel}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            id="mobile-assignment-action-bar"
+            className="mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface px-4 pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] xl:hidden"
+        >
+            <div className="mx-auto flex max-w-[96rem] items-center gap-3">
+                <p className="min-w-0 flex-1 text-sm text-ink-soft">
+                    <span className="font-semibold text-ink">
+                        {selectedCount}
+                    </span>{' '}
+                    selected
+                </p>
+                <Button
+                    type="submit"
+                    form={formId}
+                    variant="primary"
+                    className="shrink-0"
+                    disabled={processing || selectedCount === 0 || !canAssign}
+                    aria-busy={processing}
+                >
+                    {processing
+                        ? 'Saving…'
+                        : selectedCount > 0
+                          ? 'Assign resources'
+                          : 'Select resources'}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+function SelectionGroup({
+    label,
+    items,
+    emptyMessage,
+}: {
+    label: string;
+    items: string[];
+    emptyMessage: string;
+}) {
+    return (
+        <div>
+            <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{label}</span>
+                <span className="text-xs text-ink-soft">{items.length}</span>
+            </div>
+            {items.length > 0 ? (
+                <ul className="mt-2 space-y-1.5">
+                    {items.map((item) => (
+                        <li
+                            key={item}
+                            className="flex items-start gap-2 text-ink-soft"
+                        >
+                            <CheckCircle2
+                                className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
+                                aria-hidden="true"
+                            />
+                            <span className="min-w-0 break-words">{item}</span>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="mt-1 text-xs text-ink-soft">{emptyMessage}</p>
+            )}
+        </div>
     );
 }
 
@@ -757,30 +1582,43 @@ function ActivationPanel({
     };
 
     return (
-        <Panel className="overflow-hidden">
-            <div className="border-b border-line px-4 py-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h2 className="font-semibold">Dispatch activation</h2>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Version {job.version} will be rechecked with current
-                            approval and asset safety.
-                        </p>
-                    </div>
-                    <span
-                        className={cn(
-                            'rounded-full px-2.5 py-1 text-xs font-medium',
-                            activation.ready
-                                ? 'bg-success-soft text-success-strong'
-                                : 'bg-warning-soft text-warning-strong',
-                        )}
-                    >
-                        {activation.ready ? 'Ready' : 'Review needed'}
+        <details
+            id="dispatch-activation"
+            className="group overflow-hidden rounded-xl border border-line bg-surface"
+            aria-busy={form.processing}
+        >
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                    <span className="flex items-center gap-2">
+                        <span className="font-semibold">Activate dispatch</span>
+                        <span
+                            className={cn(
+                                'rounded-full px-2.5 py-1 text-xs font-medium',
+                                activation.ready
+                                    ? 'bg-success-soft text-success-strong'
+                                    : 'bg-warning-soft text-warning-strong',
+                            )}
+                        >
+                            {activation.ready ? 'Ready' : 'Review needed'}
+                        </span>
                     </span>
-                </div>
-            </div>
+                    <span className="mt-0.5 block truncate text-xs text-ink-soft">
+                        Review readiness and activate when ready
+                    </span>
+                </span>
+                <ChevronDown
+                    className="h-5 w-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180"
+                    aria-hidden="true"
+                />
+            </summary>
 
-            <div className="space-y-4 px-4 py-4">
+            <div className="space-y-4 border-t border-line px-4 py-4">
+                <div>
+                    <p className="text-xs text-ink-soft">
+                        Version {job.version} will be rechecked with current
+                        approval and asset safety.
+                    </p>
+                </div>
                 {activation.approval_required && (
                     <div className="rounded-lg bg-surface-subtle p-3 text-sm">
                         <p className="font-medium">Independent approval</p>
@@ -852,6 +1690,7 @@ function ActivationPanel({
                         Refresh readiness
                     </Button>
                     <Button
+                        id={`dispatch-activate-${job.id}`}
                         variant="primary"
                         onClick={activate}
                         disabled={form.processing || !activation.ready}
@@ -862,7 +1701,7 @@ function ActivationPanel({
                     </Button>
                 </div>
             </div>
-        </Panel>
+        </details>
     );
 }
 
@@ -954,8 +1793,9 @@ function LifecycleControlsPanel({
     };
 
     return (
-        <Panel
-            className="overflow-hidden"
+        <details
+            id="administrative-actions"
+            className="overflow-hidden rounded-xl border border-line bg-surface"
             aria-busy={
                 cancelForm.processing ||
                 reopenForm.processing ||
@@ -963,13 +1803,17 @@ function LifecycleControlsPanel({
                 refreshing
             }
         >
-            <div className="border-b border-line px-4 py-3 sm:px-5">
-                <h2 className="font-semibold">Job lifecycle actions</h2>
-                <p className="mt-0.5 text-xs text-ink-soft">
-                    Administrative lifecycle management (cancellation,
-                    reopening, archive).
-                </p>
-            </div>
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                <span>
+                    <span className="block font-semibold">
+                        Administrative actions
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-soft">
+                        Cancellation, reopening, and archive controls.
+                    </span>
+                </span>
+                <span className="text-sm text-ink-soft">Show</span>
+            </summary>
             <div className="space-y-4 px-4 py-4 sm:px-5">
                 {cancelling ? (
                     <form onSubmit={handleCancel} className="space-y-3">
@@ -1281,13 +2125,13 @@ function LifecycleControlsPanel({
                     </div>
                 )}
             </div>
-        </Panel>
+        </details>
     );
 }
 
 function DispatchContext({ job }: { job: DispatchDetailPageProps['job'] }) {
     return (
-        <Panel className="p-4">
+        <Panel id="dispatch-context" className="p-4">
             <h2 className="font-semibold">Dispatch context</h2>
             <dl className="mt-3 divide-y divide-line">
                 <DataPair
@@ -1873,11 +2717,16 @@ function AssetCandidates({
     selectedIds,
     canAssign,
     onToggle,
+    assetCatalogAccess,
 }: {
     candidates: AssetCandidateViewModel[];
     selectedIds: number[];
     canAssign: boolean;
     onToggle: (candidate: AssetCandidateViewModel) => void;
+    assetCatalogAccess: {
+        fleet: boolean;
+        equipment: boolean;
+    };
 }) {
     const groups: Array<{
         type: AssetCandidateViewModel['assignment_type'];
@@ -1894,6 +2743,18 @@ function AssetCandidates({
                 const resources = candidates.filter(
                     (candidate) => candidate.assignment_type === group.type,
                 );
+                const catalogAccess =
+                    group.type === 'truck'
+                        ? assetCatalogAccess.fleet
+                        : assetCatalogAccess.equipment;
+                const catalogHref =
+                    group.type === 'truck'
+                        ? '/operations/fleet/assets'
+                        : '/operations/equipment/assets';
+                const catalogLabel =
+                    group.type === 'truck'
+                        ? 'Open fleet asset catalog'
+                        : 'Open equipment catalog';
 
                 return (
                     <fieldset
@@ -1917,7 +2778,21 @@ function AssetCandidates({
                                 compact
                                 icon={Truck}
                                 title={`No ${group.label.toLowerCase()}`}
-                                message="Registered assets in this category will appear here."
+                                message={
+                                    catalogAccess
+                                        ? 'No registered assets in this category are available for this dispatch window.'
+                                        : 'Ask a fleet or equipment administrator to register an eligible asset for this dispatch.'
+                                }
+                                primaryAction={
+                                    catalogAccess ? (
+                                        <Link
+                                            href={catalogHref}
+                                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-subtle"
+                                        >
+                                            {catalogLabel}
+                                        </Link>
+                                    ) : undefined
+                                }
                             />
                         ) : (
                             <ul className="divide-y divide-line">
@@ -2115,6 +2990,31 @@ function formatDate(value: string) {
         dateStyle: 'medium',
         timeZone: 'UTC',
     }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function formatResourceCounts(personnelCount: number, assetCount: number) {
+    return `${personnelCount} ${personnelCount === 1 ? 'person' : 'people'} · ${assetCount} ${assetCount === 1 ? 'asset' : 'assets'}`;
+}
+
+function isAssignmentSuccessFlash(flash: WorkspaceFlash | null) {
+    return (
+        flash?.tone === 'success' &&
+        flash.message.startsWith('Resources were assigned to ')
+    );
+}
+
+function getSafeReturnTo() {
+    if (typeof window === 'undefined') {
+        return '/?view=dispatch';
+    }
+
+    const value = new URLSearchParams(window.location.search).get('return_to');
+
+    if (value && value.startsWith('/') && !value.startsWith('//')) {
+        return value;
+    }
+
+    return '/?view=dispatch';
 }
 
 function humanize(value: string) {

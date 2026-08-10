@@ -2,15 +2,19 @@
 
 namespace App\Modules\Dispatch\ViewModels;
 
+use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Models\User;
 
 final class DispatchActivationWorkspaceViewModel
 {
     /** @return array<string, mixed> */
-    public static function make(DispatchJob $job): array
-    {
+    public static function make(
+        DispatchJob $job,
+        DispatchResourceEligibility $eligibility,
+    ): array {
         $blockers = [];
         $personnelAssignments = $job->personnelAssignments
             ->whereNull('active_until');
@@ -31,6 +35,27 @@ final class DispatchActivationWorkspaceViewModel
 
         if ($personnelAssignments->isEmpty()) {
             $blockers[] = 'Assign at least one active field worker.';
+        }
+
+        foreach ($personnelAssignments as $assignment) {
+            $personnel = $assignment->user;
+
+            if (! $personnel instanceof User) {
+                $blockers[] = 'One or more assigned field workers no longer exist.';
+
+                continue;
+            }
+
+            $assessment = $eligibility->personnel(
+                $personnel,
+                $assignment->assignment_type,
+                $job,
+                true,
+            );
+
+            if (! $assessment['eligible']) {
+                $blockers[] = "{$personnel->name} is no longer eligible: ".implode(' ', $assessment['reasons']);
+            }
         }
 
         if ($assetAssignments->isEmpty()) {

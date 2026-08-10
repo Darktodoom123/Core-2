@@ -25,8 +25,12 @@ final class DispatchResourceEligibility
      *     already_assigned: bool
      * }
      */
-    public function personnel(User $user, string $assignmentType, DispatchJob $job): array
-    {
+    public function personnel(
+        User $user,
+        string $assignmentType,
+        DispatchJob $job,
+        bool $ignoreCurrentJobAssignment = false,
+    ): array {
         $reasons = [];
         $expectedRole = $this->personnelRole($assignmentType);
 
@@ -68,6 +72,12 @@ final class DispatchResourceEligibility
         }
 
         $conflicts = $this->personnelScheduleConflicts($user, $job);
+        if ($ignoreCurrentJobAssignment) {
+            $conflicts = array_values(array_filter(
+                $conflicts,
+                static fn (array $conflict): bool => $conflict['id'] !== $job->id,
+            ));
+        }
         $alreadyAssigned = collect($conflicts)->contains(
             static fn (array $conflict): bool => $conflict['id'] === $job->id,
         );
