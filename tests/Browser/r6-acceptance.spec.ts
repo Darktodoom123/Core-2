@@ -219,6 +219,74 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeFocused();
     });
 
+    test('tracking asset filter supports multiple selections and keyboard close', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=tracking');
+
+        const trigger = page.getByRole('button', {
+            name: /Asset type filter:/,
+        });
+        await expect(trigger).toBeVisible();
+        await expect(trigger).toHaveAttribute(
+            'aria-label',
+            'Asset type filter: All Types',
+        );
+        await trigger.click();
+
+        const menu = page.getByRole('menu', {
+            name: 'Asset type filters',
+        });
+        const trucks = menu.getByRole('menuitemcheckbox', {
+            name: /Trucks/,
+        });
+        const cranes = menu.getByRole('menuitemcheckbox', {
+            name: /Cranes/,
+        });
+
+        await trucks.click();
+        await cranes.click();
+
+        await expect(trucks).toHaveAttribute('aria-checked', 'true');
+        await expect(cranes).toHaveAttribute('aria-checked', 'true');
+        await expect(
+            page.getByRole('button', { name: 'Asset type filter: 2 Types' }),
+        ).toBeVisible();
+
+        await page.keyboard.press('Escape');
+        await expect(trigger).toBeFocused();
+        await expect(menu).toBeHidden();
+    });
+
+    test('dashboard live tracking preview supports the same asset multi-select', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await expect(
+            page.getByRole('heading', { name: 'Live field tracking' }),
+        ).toBeVisible();
+
+        const trigger = page.getByRole('button', {
+            name: 'Asset type filter: All Types',
+        });
+        await trigger.click();
+
+        const menu = page.getByRole('menu', {
+            name: 'Asset type filters',
+        });
+        await menu.getByRole('menuitemcheckbox', { name: /Trucks/ }).click();
+        await menu.getByRole('menuitemcheckbox', { name: /Personnel/ }).click();
+
+        await expect(
+            page.getByRole('button', { name: 'Asset type filter: 2 Types' }),
+        ).toBeVisible();
+    });
+
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({
         page,
     }) => {

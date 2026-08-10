@@ -2,19 +2,17 @@ import {
     Activity,
     AlertTriangle,
     Compass,
-    Construction,
     Navigation,
     PauseCircle,
     RefreshCw,
-    Truck,
-    UserRoundCog,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
 import {
     getAssetKind,
-    HeavyEquipmentIcon,
     OpenStreetMapTrackingMap,
 } from '@/components/openstreetmap-tracking-map';
+import type { AssetKind } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { removeOutboxItem } from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
@@ -52,9 +50,9 @@ export function TrackingSurface({
     const [statusFilter, setStatusFilter] = useState<
         'all' | 'fresh' | 'delayed' | 'stale' | 'offline'
     >('all');
-    const [assetFilter, setAssetFilter] = useState<
-        'all' | 'truck' | 'crane' | 'equipment' | 'personnel'
-    >('all');
+    const [assetFilters, setAssetFilters] = useState<Set<AssetKind>>(
+        () => new Set(),
+    );
     const [isOnline, setIsOnline] = useState(
         () => typeof navigator === 'undefined' || navigator.onLine,
     );
@@ -79,7 +77,7 @@ export function TrackingSurface({
         const matchesStatus =
             statusFilter === 'all' || loc.freshness_status === statusFilter;
         const matchesAsset =
-            assetFilter === 'all' || getAssetKind(loc) === assetFilter;
+            assetFilters.size === 0 || assetFilters.has(getAssetKind(loc));
 
         return matchesStatus && matchesAsset;
     });
@@ -248,8 +246,8 @@ export function TrackingSurface({
                                     status === 'all' ||
                                     l.freshness_status === status;
                                 const matchesAsset =
-                                    assetFilter === 'all' ||
-                                    getAssetKind(l) === assetFilter;
+                                    assetFilters.size === 0 ||
+                                    assetFilters.has(getAssetKind(l));
 
                                 return matchesStatus && matchesAsset;
                             }).length;
@@ -304,79 +302,12 @@ export function TrackingSurface({
                     </div>
 
                     {/* Asset Type Filter */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="mr-1 text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                            Asset:
-                        </span>
-                        {(
-                            [
-                                { id: 'all', label: 'All Types', icon: null },
-                                { id: 'truck', label: 'Trucks', icon: Truck },
-                                {
-                                    id: 'crane',
-                                    label: 'Cranes',
-                                    icon: Construction,
-                                },
-                                {
-                                    id: 'equipment',
-                                    label: 'Heavy Eqp',
-                                    icon: HeavyEquipmentIcon,
-                                },
-                                {
-                                    id: 'personnel',
-                                    label: 'Personnel',
-                                    icon: UserRoundCog,
-                                },
-                            ] as const
-                        ).map((item) => {
-                            const count = locations.filter((l) => {
-                                const matchesStatus =
-                                    statusFilter === 'all' ||
-                                    l.freshness_status === statusFilter;
-                                const matchesAsset =
-                                    item.id === 'all' ||
-                                    getAssetKind(l) === item.id;
-
-                                return matchesStatus && matchesAsset;
-                            }).length;
-
-                            const isSelected = assetFilter === item.id;
-                            const Icon = item.icon;
-
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    onClick={() => setAssetFilter(item.id)}
-                                    className={cn(
-                                        'inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-150',
-                                        isSelected
-                                            ? 'bg-brand-strong font-semibold text-white shadow-xs'
-                                            : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
-                                    )}
-                                    aria-pressed={isSelected}
-                                >
-                                    {Icon && (
-                                        <Icon
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    <span>{item.label}</span>
-                                    <span
-                                        className={cn(
-                                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
-                                            isSelected
-                                                ? 'bg-white/20 text-white'
-                                                : 'bg-surface text-ink-soft',
-                                        )}
-                                    >
-                                        {count}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <AssetTypeMultiSelect
+                        locations={locations}
+                        selectedTypes={assetFilters}
+                        onChange={setAssetFilters}
+                        statusFilter={statusFilter}
+                    />
                 </div>
 
                 {/* Main Content Pane */}

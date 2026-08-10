@@ -11,10 +11,12 @@ import {
     Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
 import {
     getAssetKind,
     OpenStreetMapTrackingMap,
 } from '@/components/openstreetmap-tracking-map';
+import type { AssetKind } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import type {
     LocationUpdateViewModel,
@@ -47,10 +49,29 @@ export function LiveTrackingPreview({
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
         null,
     );
+    const [assetFilters, setAssetFilters] = useState<Set<AssetKind>>(
+        () => new Set(),
+    );
+
+    const filteredLocations = useMemo(
+        () =>
+            locations.filter(
+                (location) =>
+                    assetFilters.size === 0 ||
+                    assetFilters.has(getAssetKind(location)),
+            ),
+        [assetFilters, locations],
+    );
+
+    const effectiveSelectedLocationId = filteredLocations.some(
+        (location) => location.id === selectedLocationId,
+    )
+        ? selectedLocationId
+        : null;
 
     const sortedLocations = useMemo(
         () =>
-            [...locations]
+            [...filteredLocations]
                 .sort((a, b) => {
                     const statusDifference =
                         STATUS_ORDER[a.freshness_status] -
@@ -63,10 +84,10 @@ export function LiveTrackingPreview({
                     return timestamp(b.received_at) - timestamp(a.received_at);
                 })
                 .slice(0, 5),
-        [locations],
+        [filteredLocations],
     );
 
-    const latestReceivedAt = locations.reduce<string | null>(
+    const latestReceivedAt = filteredLocations.reduce<string | null>(
         (latest, location) =>
             timestamp(location.received_at) > timestamp(latest)
                 ? location.received_at
@@ -74,7 +95,7 @@ export function LiveTrackingPreview({
         null,
     );
     const connection = getConnectionState(refresh, realtimeConnected);
-    const mappedCount = locations.filter(
+    const mappedCount = filteredLocations.filter(
         (location) => location.latitude !== null && location.longitude !== null,
     ).length;
 
@@ -127,12 +148,20 @@ export function LiveTrackingPreview({
                 </div>
             </div>
 
+            <div className="mb-3 flex justify-end">
+                <AssetTypeMultiSelect
+                    locations={locations}
+                    selectedTypes={assetFilters}
+                    onChange={setAssetFilters}
+                />
+            </div>
+
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.8fr)]">
                 <OpenStreetMapTrackingMap
-                    locations={locations}
+                    locations={filteredLocations}
                     compact
                     showLocationList={false}
-                    selectedLocationId={selectedLocationId}
+                    selectedLocationId={effectiveSelectedLocationId}
                     onSelectedLocationChange={setSelectedLocationId}
                 />
 
@@ -143,9 +172,9 @@ export function LiveTrackingPreview({
                                 Unit status
                             </h3>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                {locations.length === 0
+                                {filteredLocations.length === 0
                                     ? 'No visible field units'
-                                    : `${mappedCount} of ${locations.length} with coordinates`}
+                                    : `${mappedCount} of ${filteredLocations.length} with coordinates`}
                             </p>
                         </div>
                         <Radio
@@ -170,7 +199,8 @@ export function LiveTrackingPreview({
                                     key={location.id}
                                     location={location}
                                     selected={
-                                        location.id === selectedLocationId
+                                        location.id ===
+                                        effectiveSelectedLocationId
                                     }
                                     onSelect={() => {
                                         if (
@@ -185,7 +215,7 @@ export function LiveTrackingPreview({
                         </ul>
                     )}
 
-                    {locations.length > sortedLocations.length &&
+                    {filteredLocations.length > sortedLocations.length &&
                         onOpenTracking && (
                             <div className="mt-auto border-t border-line px-4 py-3">
                                 <button
@@ -193,7 +223,7 @@ export function LiveTrackingPreview({
                                     className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-strong hover:text-brand focus-visible:outline-none"
                                     onClick={onOpenTracking}
                                 >
-                                    View all {locations.length} units
+                                    View all {filteredLocations.length} units
                                     <ArrowUpRight
                                         className="h-4 w-4"
                                         aria-hidden="true"
