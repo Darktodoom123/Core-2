@@ -575,6 +575,8 @@ export default function Workspace(props: WorkspacePageProps) {
                         availableSections={props.navigation.map(
                             (item) => item.id,
                         )}
+                        refresh={refreshState.tracking}
+                        realtimeConnected={wsState === 'connected'}
                         onSectionChange={changeSection}
                     />
                 ) : availableSection === 'dispatch' ? (

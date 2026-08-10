@@ -137,7 +137,7 @@ it('correctly calculates location freshness status categories', function () {
         'longitude' => 120.9842,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinute(),
-        'received_at' => now(),
+        'received_at' => now()->subMinute(),
     ]);
 
     $delayed = LocationUpdate::query()->create([
@@ -146,7 +146,7 @@ it('correctly calculates location freshness status categories', function () {
         'longitude' => 120.9842,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinutes(5),
-        'received_at' => now(),
+        'received_at' => now()->subMinutes(5),
     ]);
 
     $stale = LocationUpdate::query()->create([
@@ -155,7 +155,7 @@ it('correctly calculates location freshness status categories', function () {
         'longitude' => 120.9842,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinutes(15),
-        'received_at' => now(),
+        'received_at' => now()->subMinutes(15),
     ]);
 
     $offline = LocationUpdate::query()->create([
@@ -164,13 +164,38 @@ it('correctly calculates location freshness status categories', function () {
         'longitude' => 120.9842,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinutes(45),
-        'received_at' => now(),
+        'received_at' => now()->subMinutes(45),
     ]);
 
     expect($fresh->freshness_status)->toBe('fresh')
         ->and($delayed->freshness_status)->toBe('delayed')
         ->and($stale->freshness_status)->toBe('stale')
         ->and($offline->freshness_status)->toBe('offline');
+});
+
+it('uses server receive time rather than device capture time for freshness', function () {
+    $driver = createFieldUser(RoleName::Driver);
+
+    $delayedByServer = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now(),
+        'received_at' => now()->subMinutes(5),
+    ]);
+
+    $freshDespiteOldCapture = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(45),
+        'received_at' => now()->subMinute(),
+    ]);
+
+    expect($delayedByServer->freshness_status)->toBe('delayed')
+        ->and($freshDespiteOldCapture->freshness_status)->toBe('fresh');
 });
 
 it('prevents system administrators from having location sharing permissions', function () {

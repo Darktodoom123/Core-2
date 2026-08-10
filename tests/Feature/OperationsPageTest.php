@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Models\LocationUpdate;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -158,4 +159,49 @@ it('serves operational overview workspace for Operations Manager and System Admi
             ->has('users')
             ->has('auditEvents')
         );
+});
+
+it('serves only the latest visible location per worker in the workspace feed', function () {
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $driver = User::factory()->create();
+    $driver->syncRoles([RoleName::Driver->value]);
+    $secondDriver = User::factory()->create();
+    $secondDriver->syncRoles([RoleName::Driver->value]);
+
+    LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(10),
+        'received_at' => now()->subMinutes(10),
+    ]);
+    $latestDriverLocation = LocationUpdate::query()->create([
+        'user_id' => $driver->id,
+        'latitude' => 14.6010,
+        'longitude' => 120.9850,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinute(),
+        'received_at' => now()->subMinute(),
+    ]);
+    $secondDriverLocation = LocationUpdate::query()->create([
+        'user_id' => $secondDriver->id,
+        'latitude' => 14.6020,
+        'longitude' => 120.9860,
+        'sharing_enabled' => true,
+        'captured_at' => now()->subMinutes(2),
+        'received_at' => now()->subMinutes(2),
+    ]);
+
+    $this->actingAs($dispatcher)->get('/')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('locations', 2)
+            ->where('locations', function ($locations) use ($latestDriverLocation, $secondDriverLocation): bool {
+                return collect($locations)->pluck('id')->sort()->values()->all() === collect([
+                    $latestDriverLocation->id,
+                    $secondDriverLocation->id,
+                ])->sort()->values()->all();
+            }));
 });

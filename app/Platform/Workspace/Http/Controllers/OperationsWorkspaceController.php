@@ -84,7 +84,7 @@ final class OperationsWorkspaceController extends Controller
             ->first(['received_at']);
         $latestOwnLocation = LocationUpdate::query()
             ->where('user_id', $user->id)
-            ->latest('captured_at')
+            ->latest('received_at')
             ->latest('id')
             ->first(['sharing_enabled', 'captured_at', 'received_at']);
 
@@ -107,10 +107,17 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
+        $latestLocationIds = LocationUpdate::query()
+            ->visibleTo($user)
+            ->selectRaw('MAX(id)')
+            ->groupBy('user_id', 'operational_asset_id');
+
         return LocationUpdate::query()
             ->visibleTo($user)
+            ->whereIn('id', $latestLocationIds)
             ->with(['user:id,name', 'asset:id,code,name,kind', 'job:id,reference,title'])
-            ->latest('captured_at')
+            ->latest('received_at')
+            ->latest('id')
             ->limit(100)
             ->get();
     }

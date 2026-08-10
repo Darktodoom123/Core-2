@@ -234,10 +234,20 @@ export function createCustomAssetIcon(
 
 export function OpenStreetMapTrackingMap({
     locations,
+    compact = false,
+    showLocationList = true,
+    selectedLocationId,
+    onSelectedLocationChange,
 }: {
     locations: LocationUpdateViewModel[];
+    compact?: boolean;
+    showLocationList?: boolean;
+    selectedLocationId?: number | null;
+    onSelectedLocationChange?: (id: number) => void;
 }) {
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [internalSelectedId, setInternalSelectedId] = useState<number | null>(
+        null,
+    );
     const [tileStyle, setTileStyle] = useState<TileStyle>('cartoLight');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -268,6 +278,11 @@ export function OpenStreetMapTrackingMap({
         [mappedLocations],
     );
 
+    const selectedId = selectedLocationId ?? internalSelectedId;
+    const selectLocation = (id: number) => {
+        setInternalSelectedId(id);
+        onSelectedLocationChange?.(id);
+    };
     const selected =
         (selectedId === null
             ? undefined
@@ -297,10 +312,13 @@ export function OpenStreetMapTrackingMap({
     return (
         <div
             className={cn(
-                'grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition-all duration-300 xl:grid-cols-[minmax(0,1fr)_22rem]',
+                'grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition-all duration-300',
+                showLocationList && 'xl:grid-cols-[minmax(0,1fr)_22rem]',
                 isFullscreen
                     ? 'fixed inset-4 z-[9999] h-[calc(100vh-2rem)] rounded-2xl shadow-2xl ring-1 ring-line/50'
-                    : 'h-[560px] lg:h-[620px]',
+                    : compact
+                      ? 'h-[360px] md:h-[420px]'
+                      : 'h-[560px] lg:h-[620px]',
             )}
         >
             <div className="relative h-full w-full overflow-hidden bg-surface-subtle">
@@ -381,7 +399,7 @@ export function OpenStreetMapTrackingMap({
                                 position={position}
                                 icon={markerIcon}
                                 eventHandlers={{
-                                    click: () => setSelectedId(location.id),
+                                    click: () => selectLocation(location.id),
                                 }}
                             >
                                 <Popup closeButton={true}>
@@ -510,157 +528,164 @@ export function OpenStreetMapTrackingMap({
             </div>
 
             {/* Sidebar list panel */}
-            <aside
-                className="flex h-full flex-col overflow-hidden border-t border-line bg-surface xl:border-t-0 xl:border-l"
-                aria-label="Mapped location list"
-            >
-                <div className="space-y-3 border-b border-line bg-surface p-3.5">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-semibold text-ink">
-                                Mapped locations
-                            </h3>
-                            <p className="text-xs text-ink-soft">
-                                {mappedLocations.length} of {locations.length}{' '}
-                                updates mapped
-                            </p>
+            {showLocationList && (
+                <aside
+                    className="flex h-full flex-col overflow-hidden border-t border-line bg-surface xl:border-t-0 xl:border-l"
+                    aria-label="Mapped location list"
+                >
+                    <div className="space-y-3 border-b border-line bg-surface p-3.5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-sm font-semibold text-ink">
+                                    Mapped locations
+                                </h3>
+                                <p className="text-xs text-ink-soft">
+                                    {mappedLocations.length} of{' '}
+                                    {locations.length} updates mapped
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Search bar */}
+                        <div className="relative">
+                            <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-ink-soft" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search worker or asset..."
+                                className="w-full rounded-lg border border-line bg-surface-subtle py-1.5 pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
+                            />
                         </div>
                     </div>
 
-                    {/* Search bar */}
-                    <div className="relative">
-                        <Search className="absolute top-2.5 left-2.5 h-3.5 w-3.5 text-ink-soft" />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search worker or asset..."
-                            className="w-full rounded-lg border border-line bg-surface-subtle py-1.5 pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
-                        />
-                    </div>
-                </div>
+                    <div className="flex-1 scrollbar-thin divide-y divide-line overflow-y-auto">
+                        {filteredLocations.length === 0 ? (
+                            <div className="p-6 text-center text-xs text-ink-soft">
+                                {searchQuery
+                                    ? `No locations match "${searchQuery}".`
+                                    : 'No location updates match the selected filter.'}
+                            </div>
+                        ) : (
+                            filteredLocations.map((location) => {
+                                const isMapped =
+                                    location.latitude !== null &&
+                                    location.longitude !== null;
+                                const isSelected = location.id === selected?.id;
+                                const kind = getAssetKind(location);
 
-                <div className="flex-1 scrollbar-thin divide-y divide-line overflow-y-auto">
-                    {filteredLocations.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-ink-soft">
-                            {searchQuery
-                                ? `No locations match "${searchQuery}".`
-                                : 'No location updates match the selected filter.'}
-                        </div>
-                    ) : (
-                        filteredLocations.map((location) => {
-                            const isMapped =
-                                location.latitude !== null &&
-                                location.longitude !== null;
-                            const isSelected = location.id === selected?.id;
-                            const kind = getAssetKind(location);
-
-                            return (
-                                <div
-                                    key={location.id}
-                                    className={cn(
-                                        'group relative flex items-start justify-between p-3.5 transition-all duration-150',
-                                        isSelected
-                                            ? 'bg-brand-soft/80 font-medium text-ink shadow-2xs ring-1 ring-brand-strong/20'
-                                            : 'text-ink-soft hover:bg-surface-subtle',
-                                        !isMapped && 'opacity-60',
-                                    )}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            isMapped &&
-                                            setSelectedId(location.id)
-                                        }
-                                        disabled={!isMapped}
-                                        aria-pressed={isSelected}
-                                        className="min-h-[44px] flex-1 text-left focus:outline-none"
+                                return (
+                                    <div
+                                        key={location.id}
+                                        className={cn(
+                                            'group relative flex items-start justify-between p-3.5 transition-all duration-150',
+                                            isSelected
+                                                ? 'bg-brand-soft/80 font-medium text-ink shadow-2xs ring-1 ring-brand-strong/20'
+                                                : 'text-ink-soft hover:bg-surface-subtle',
+                                            !isMapped && 'opacity-60',
+                                        )}
                                     >
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex items-center gap-2.5">
-                                                <div
-                                                    className={cn(
-                                                        'flex h-8 w-8 shrink-0 items-center justify-center text-xs font-semibold shadow-xs',
-                                                        kind === 'truck'
-                                                            ? 'rounded-lg'
-                                                            : kind === 'crane'
-                                                              ? 'rotate-45 rounded-md'
-                                                              : kind ===
-                                                                  'equipment'
-                                                                ? 'rounded-md'
-                                                                : 'rounded-full',
-                                                        isSelected
-                                                            ? 'bg-brand-strong text-white'
-                                                            : 'bg-surface-subtle text-ink-soft group-hover:bg-brand-soft group-hover:text-brand-strong',
-                                                    )}
-                                                >
-                                                    <span
-                                                        className={cn(
-                                                            'flex items-center justify-center',
-                                                            kind === 'crane' &&
-                                                                '-rotate-45',
-                                                        )}
-                                                    >
-                                                        {kind === 'truck' ? (
-                                                            <Truck className="h-4 w-4" />
-                                                        ) : kind === 'crane' ? (
-                                                            <Construction className="h-4 w-4" />
-                                                        ) : kind ===
-                                                          'equipment' ? (
-                                                            <Wrench className="h-4 w-4" />
-                                                        ) : (
-                                                            <UserRoundCog className="h-4 w-4" />
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm leading-tight font-semibold text-ink">
-                                                        {location.user.name}
-                                                    </p>
-                                                    <p className="mt-0.5 text-xs text-ink-soft">
-                                                        {location.asset?.code ??
-                                                            'Field worker'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <StatusBadge
-                                                status={
-                                                    location.freshness_status
-                                                }
-                                            />
-                                        </div>
-
-                                        <div className="mt-2.5 flex items-center justify-between font-mono text-xs text-ink-soft">
-                                            <span>
-                                                {isMapped
-                                                    ? `${location.latitude!.toFixed(5)}, ${location.longitude!.toFixed(5)}`
-                                                    : 'Coordinates unavailable'}
-                                            </span>
-                                        </div>
-                                    </button>
-
-                                    {isMapped && (
                                         <button
                                             type="button"
-                                            onClick={(e) =>
-                                                copyCoordinates(location, e)
+                                            onClick={() =>
+                                                isMapped &&
+                                                selectLocation(location.id)
                                             }
-                                            className="ml-2 rounded p-1 text-ink-soft transition-colors hover:text-ink focus:outline-none"
-                                            title="Copy coordinates"
+                                            disabled={!isMapped}
+                                            aria-pressed={isSelected}
+                                            className="min-h-[44px] flex-1 text-left focus:outline-none"
                                         >
-                                            {copiedId === location.id ? (
-                                                <Check className="h-3.5 w-3.5 text-success-strong" />
-                                            ) : (
-                                                <Copy className="h-3.5 w-3.5" />
-                                            )}
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div
+                                                        className={cn(
+                                                            'flex h-8 w-8 shrink-0 items-center justify-center text-xs font-semibold shadow-xs',
+                                                            kind === 'truck'
+                                                                ? 'rounded-lg'
+                                                                : kind ===
+                                                                    'crane'
+                                                                  ? 'rotate-45 rounded-md'
+                                                                  : kind ===
+                                                                      'equipment'
+                                                                    ? 'rounded-md'
+                                                                    : 'rounded-full',
+                                                            isSelected
+                                                                ? 'bg-brand-strong text-white'
+                                                                : 'bg-surface-subtle text-ink-soft group-hover:bg-brand-soft group-hover:text-brand-strong',
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                'flex items-center justify-center',
+                                                                kind ===
+                                                                    'crane' &&
+                                                                    '-rotate-45',
+                                                            )}
+                                                        >
+                                                            {kind ===
+                                                            'truck' ? (
+                                                                <Truck className="h-4 w-4" />
+                                                            ) : kind ===
+                                                              'crane' ? (
+                                                                <Construction className="h-4 w-4" />
+                                                            ) : kind ===
+                                                              'equipment' ? (
+                                                                <Wrench className="h-4 w-4" />
+                                                            ) : (
+                                                                <UserRoundCog className="h-4 w-4" />
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm leading-tight font-semibold text-ink">
+                                                            {location.user.name}
+                                                        </p>
+                                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                                            {location.asset
+                                                                ?.code ??
+                                                                'Field worker'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <StatusBadge
+                                                    status={
+                                                        location.freshness_status
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="mt-2.5 flex items-center justify-between font-mono text-xs text-ink-soft">
+                                                <span>
+                                                    {isMapped
+                                                        ? `${location.latitude!.toFixed(5)}, ${location.longitude!.toFixed(5)}`
+                                                        : 'Coordinates unavailable'}
+                                                </span>
+                                            </div>
                                         </button>
-                                    )}
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </aside>
+
+                                        {isMapped && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) =>
+                                                    copyCoordinates(location, e)
+                                                }
+                                                className="ml-2 rounded p-1 text-ink-soft transition-colors hover:text-ink focus:outline-none"
+                                                title="Copy coordinates"
+                                            >
+                                                {copiedId === location.id ? (
+                                                    <Check className="h-3.5 w-3.5 text-success-strong" />
+                                                ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </aside>
+            )}
         </div>
     );
 }

@@ -44,11 +44,15 @@ class LocationUpdate extends Model
 
     public function getFreshnessStatusAttribute(): string
     {
-        if (! $this->sharing_enabled || ! $this->captured_at) {
+        $freshnessTimestamp = $this->received_at ?? $this->captured_at;
+
+        if (! $this->sharing_enabled || ! $freshnessTimestamp) {
             return 'offline';
         }
 
-        $secondsAgo = (int) abs(now()->diffInSeconds($this->captured_at));
+        // Freshness is based on when the server received the update. The
+        // device-captured timestamp is still retained for audit and display.
+        $secondsAgo = (int) abs(now()->diffInSeconds($freshnessTimestamp));
 
         if ($secondsAgo <= 120) {
             return 'fresh';

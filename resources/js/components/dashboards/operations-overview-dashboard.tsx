@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-preview';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import type {
@@ -30,6 +31,7 @@ import type {
     FuelRequestViewModel,
     GptRecommendationViewModel,
     LocationUpdateViewModel,
+    ScopeRefreshState,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
@@ -73,6 +75,8 @@ export interface OperationsOverviewDashboardProps {
     gptRecommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
     availableSections: WorkspaceSection[];
+    refresh?: ScopeRefreshState;
+    realtimeConnected?: boolean;
     onSectionChange: (
         section: WorkspaceSection,
         options?: { serviceRequestId?: number },
@@ -239,6 +243,8 @@ function OperationsManagerDashboardView({
     gptRecommendations = [],
     capabilities,
     availableSections,
+    refresh,
+    realtimeConnected = false,
     onSectionChange,
 }: OperationsOverviewDashboardProps) {
     const [actionFilter, setActionFilter] = useState<
@@ -289,6 +295,7 @@ function OperationsManagerDashboardView({
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenAssets = availableSections.includes('assets');
     const canOpenApprovals = availableSections.includes('approvals');
+    const canOpenTracking = availableSections.includes('tracking');
 
     const categoriesInActions = Array.from(
         new Set(actions.map((a) => a.category)),
@@ -480,6 +487,15 @@ function OperationsManagerDashboardView({
                 </Panel>
             </section>
 
+            {canOpenTracking && (
+                <LiveTrackingPreview
+                    locations={locations}
+                    refresh={refresh}
+                    realtimeConnected={realtimeConnected}
+                    onOpenTracking={() => onSectionChange('tracking')}
+                />
+            )}
+
             {/* Grid Layout: Schedule & GPT Recommendations */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Work Schedule */}
@@ -652,6 +668,8 @@ function DispatcherDashboardView({
     gptRecommendations = [],
     capabilities,
     availableSections,
+    refresh,
+    realtimeConnected = false,
     onSectionChange,
 }: OperationsOverviewDashboardProps) {
     const [jobView, setJobView] = useState<'all' | 'active'>('all');
@@ -991,6 +1009,15 @@ function DispatcherDashboardView({
                 </section>
             )}
 
+            {canOpenTracking && (
+                <LiveTrackingPreview
+                    locations={locations}
+                    refresh={refresh}
+                    realtimeConnected={realtimeConnected}
+                    onOpenTracking={() => onSectionChange('tracking')}
+                />
+            )}
+
             {/* Work in Motion & Telemetry + GPT Grid */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Dispatch Schedule */}
@@ -1057,7 +1084,7 @@ function DispatcherDashboardView({
                     </Panel>
                 </section>
 
-                {/* Right sidebar: Telemetry + GPT Advisory */}
+                {/* Right sidebar: Telemetry summary + GPT Advisory */}
                 <div className="space-y-6">
                     {/* Telemetry Widget */}
                     <section aria-labelledby="dispatcher-telemetry-heading">
@@ -1066,7 +1093,7 @@ function DispatcherDashboardView({
                                 id="dispatcher-telemetry-heading"
                                 className="text-sm font-semibold tracking-wide text-ink uppercase"
                             >
-                                GPS Tracking Stream
+                                Telemetry summary
                             </h2>
                             {canOpenTracking && (
                                 <button
