@@ -27,11 +27,17 @@
     --color-warning: oklch(0.56 0.17 42);
     --color-warning-strong: oklch(0.38 0.12 38);
     --color-warning-soft: oklch(0.95 0.045 42);
-    --color-danger: oklch(0.57 0.2 27);
+    --color-danger: oklch(0.5 0.2 27);
+    --color-danger-strong: oklch(0.45 0.18 27);
     --color-danger-soft: oklch(0.96 0.035 27);
+    --color-danger-contrast: oklch(0.99 0.005 80);
     --color-info: oklch(0.55 0.14 250);
     --color-info-strong: oklch(0.38 0.105 250);
     --color-info-soft: oklch(0.95 0.035 250);
+    --color-success-on-dark: oklch(0.82 0.12 151);
+    --color-warning-on-dark: oklch(0.84 0.13 76);
+    --color-info-on-dark: oklch(0.82 0.12 250);
+    --color-ink-on-dark-muted: oklch(0.8 0.01 255);
 }
 
 :root {
@@ -138,9 +144,8 @@ textarea:focus-visible,
     *::before,
     *::after {
         scroll-behavior: auto !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        animation: none !important;
+        transition: none !important;
     }
 }
 
@@ -209,15 +214,18 @@ textarea:focus-visible,
 @keyframes map-marker-pulse {
     0% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        box-shadow: 0 0 0 0
+            color-mix(in oklch, var(--color-success) 70%, transparent);
     }
     70% {
         transform: scale(1.1);
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        box-shadow: 0 0 0 10px
+            color-mix(in oklch, var(--color-success) 0%, transparent);
     }
     100% {
         transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        box-shadow: 0 0 0 0
+            color-mix(in oklch, var(--color-success) 0%, transparent);
     }
 }
 

@@ -150,10 +150,12 @@ export function DateTimePicker({
     const [coords, setCoords] = useState<{
         top: number;
         left: number;
+        width: number;
         maxHeight: number;
     }>({
         top: 0,
         left: 0,
+        width: 330,
         maxHeight: 520,
     });
 
@@ -187,6 +189,7 @@ export function DateTimePicker({
 
     // Freeform manual time input string state
     const [manualTimeInput, setManualTimeInput] = useState('');
+    const errorId = id ? `${id}-error` : undefined;
 
     // Synchronize internal state when `value` changes externally
     useEffect(() => {
@@ -217,9 +220,9 @@ export function DateTimePicker({
         if (!triggerRef.current) return;
         const rect = triggerRef.current.getBoundingClientRect();
         const popoverHeight = popoverRef.current?.offsetHeight || 460;
-        const popoverWidth = 330;
         const viewportHeight = window.innerHeight;
         const viewportWidth = window.innerWidth;
+        const popoverWidth = Math.min(330, Math.max(0, viewportWidth - 24));
 
         const spaceBelow = viewportHeight - rect.bottom - 12;
         const spaceAbove = rect.top - 12;
@@ -237,14 +240,15 @@ export function DateTimePicker({
         }
 
         let computedLeft = rect.left;
-        if (computedLeft + popoverWidth > viewportWidth - 16) {
-            computedLeft = viewportWidth - popoverWidth - 16;
+        if (computedLeft + popoverWidth > viewportWidth - 12) {
+            computedLeft = viewportWidth - popoverWidth - 12;
         }
-        if (computedLeft < 16) computedLeft = 16;
+        if (computedLeft < 12) computedLeft = 12;
 
         setCoords({
             top: Math.max(12, computedTop),
             left: computedLeft,
+            width: popoverWidth,
             maxHeight: Math.min(popoverHeight, viewportHeight - 24),
         });
     };
@@ -448,10 +452,11 @@ export function DateTimePicker({
                         position: 'fixed',
                         top: `${coords.top}px`,
                         left: `${coords.left}px`,
+                        width: `${coords.width}px`,
                         maxHeight: `${coords.maxHeight}px`,
                         zIndex: 99999,
                     }}
-                    className="w-[330px] overflow-y-auto rounded-xl border border-line bg-surface p-3.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
+                    className="max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-surface p-3.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
                 >
                     {/* Quick Presets Bar */}
                     <div className="mb-2.5 flex flex-wrap items-center gap-1 border-b border-line pb-2.5 text-xs">
@@ -683,6 +688,8 @@ export function DateTimePicker({
                         if (!isOpen) updatePosition();
                         setIsOpen((prev) => !prev);
                     }}
+                    aria-invalid={error ? 'true' : undefined}
+                    aria-describedby={errorId}
                     className={cn(
                         'flex h-11 w-full items-center justify-between rounded-lg border bg-surface px-3.5 text-left text-sm font-normal transition-all focus:outline-none focus:ring-2 focus:ring-brand/30',
                         error
@@ -727,7 +734,17 @@ export function DateTimePicker({
                 </button>
             </div>
 
-            {error && <p className="text-xs text-danger">{error}</p>}
+            {error && (
+                <p
+                    id={errorId}
+                    role="alert"
+                    aria-live="assertive"
+                    aria-atomic="true"
+                    className="text-xs text-danger"
+                >
+                    {error}
+                </p>
+            )}
 
             {/* Portal popover to document.body to avoid parent container overflow clipping */}
             {isMounted && createPortal(popoverContent, document.body)}

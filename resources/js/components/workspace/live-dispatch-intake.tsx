@@ -759,7 +759,13 @@ function FieldError({ id, error }: { id: string; error?: string }) {
     }
 
     return (
-        <span id={id} className="mt-1 block text-xs text-danger">
+        <span
+            id={id}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            className="mt-1 block text-xs text-danger"
+        >
             {error}
         </span>
     );

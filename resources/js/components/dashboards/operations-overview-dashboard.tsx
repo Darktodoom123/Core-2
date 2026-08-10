@@ -499,8 +499,11 @@ function OperationsManagerDashboardView({
             {/* Grid Layout: Schedule & GPT Recommendations */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Work Schedule */}
-                <section aria-labelledby="manager-schedule-heading">
-                    <div className="mb-3 flex items-center justify-between">
+                <section
+                    className="min-w-0"
+                    aria-labelledby="manager-schedule-heading"
+                >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h2
                                 id="manager-schedule-heading"
@@ -1021,8 +1024,11 @@ function DispatcherDashboardView({
             {/* Work in Motion & Telemetry + GPT Grid */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Dispatch Schedule */}
-                <section aria-labelledby="dispatcher-jobs-heading">
-                    <div className="mb-3 flex items-center justify-between">
+                <section
+                    className="min-w-0"
+                    aria-labelledby="dispatcher-jobs-heading"
+                >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h2
                                 id="dispatcher-jobs-heading"
@@ -1383,8 +1389,11 @@ function SystemAdminDashboardView({
             {/* Audit Log Stream & Role Distribution Grid */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
                 {/* Audit Stream */}
-                <section aria-labelledby="admin-audit-heading">
-                    <div className="mb-3 flex items-center justify-between">
+                <section
+                    className="min-w-0"
+                    aria-labelledby="admin-audit-heading"
+                >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h2
                                 id="admin-audit-heading"

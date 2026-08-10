@@ -7,11 +7,9 @@ import {
     UserRoundCog,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import {
-    getAssetKind,
-    HeavyEquipmentIcon,
-} from '@/components/openstreetmap-tracking-map';
-import type { AssetKind } from '@/components/openstreetmap-tracking-map';
+import type { SVGProps } from 'react';
+import { getAssetKind } from '@/lib/asset-kind';
+import type { AssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import type { LocationUpdateViewModel } from '@/types/workspace';
 
@@ -250,4 +248,26 @@ function AssetTypeIcon({ type }: { type: AssetKind }) {
     }
 
     return <UserRoundCog className={className} aria-hidden="true" />;
+}
+
+function HeavyEquipmentIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={className}
+            {...props}
+        >
+            <rect x="2" y="16" width="13" height="4" rx="2" />
+            <path d="M4 16V10a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6" />
+            <path d="M6 10h4v3H6z" />
+            <path d="M10 11l4-5 5 4" />
+            <path d="M19 10l2 3h-3.5" />
+        </svg>
+    );
 }

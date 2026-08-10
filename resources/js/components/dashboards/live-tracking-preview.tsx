@@ -10,18 +10,35 @@ import {
     WifiOff,
     Wrench,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
-import {
-    getAssetKind,
-    OpenStreetMapTrackingMap,
-} from '@/components/openstreetmap-tracking-map';
-import type { AssetKind } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, Panel } from '@/components/ui';
+import type { AssetKind } from '@/lib/asset-kind';
+import { getAssetKind } from '@/lib/asset-kind';
 import type {
     LocationUpdateViewModel,
     ScopeRefreshState,
 } from '@/types/workspace';
+
+const OpenStreetMapTrackingMap = lazy(() =>
+    import('@/components/openstreetmap-tracking-map').then(
+        ({ OpenStreetMapTrackingMap: Map }) => ({ default: Map }),
+    ),
+);
+
+function MapLoadingFallback() {
+    return (
+        <div
+            className="flex h-[360px] min-h-[360px] items-center justify-center bg-surface-subtle p-6 text-center md:h-[420px]"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading live location map"
+        >
+            <p className="text-sm text-ink-soft">Loading live location map…</p>
+        </div>
+    );
+}
 
 const STATUS_ORDER: Record<
     LocationUpdateViewModel['freshness_status'],
@@ -157,13 +174,15 @@ export function LiveTrackingPreview({
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.8fr)]">
-                <OpenStreetMapTrackingMap
-                    locations={filteredLocations}
-                    compact
-                    showLocationList={false}
-                    selectedLocationId={effectiveSelectedLocationId}
-                    onSelectedLocationChange={setSelectedLocationId}
-                />
+                <Suspense fallback={<MapLoadingFallback />}>
+                    <OpenStreetMapTrackingMap
+                        locations={filteredLocations}
+                        compact
+                        showLocationList={false}
+                        selectedLocationId={effectiveSelectedLocationId}
+                        onSelectedLocationChange={setSelectedLocationId}
+                    />
+                </Suspense>
 
                 <Panel className="flex min-h-[360px] flex-col overflow-hidden p-0 md:min-h-[420px]">
                     <div className="flex items-center justify-between border-b border-line px-4 py-3">

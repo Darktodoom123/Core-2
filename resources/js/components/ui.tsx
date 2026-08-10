@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, Inbox, Info, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { HTMLMotionProps } from 'motion/react';
 import type {
     ButtonHTMLAttributes,
@@ -35,7 +35,8 @@ export function Button({
                     'border border-line-strong bg-surface text-ink hover:bg-surface-subtle',
                 variant === 'quiet' &&
                     'text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                variant === 'danger' && 'bg-danger text-white hover:bg-red-700',
+                variant === 'danger' &&
+                    'bg-danger text-brand-contrast hover:bg-danger-strong',
                 size === 'sm' && 'min-h-10 px-3 text-sm',
                 size === 'md' && 'px-4 text-sm',
                 size === 'icon' && 'h-11 w-11 p-0',
@@ -91,25 +92,25 @@ const statusClasses: Record<string, string> = {
     Scheduled: 'bg-brand-soft text-brand-strong',
     Dispatched: 'bg-brand-soft text-brand-strong',
     'En route': 'bg-brand-soft text-brand-strong',
-    Arrived: 'bg-success-soft text-green-800',
-    'In progress': 'bg-success-soft text-green-800',
+    Arrived: 'bg-success-soft text-success-strong',
+    'In progress': 'bg-success-soft text-success-strong',
     'On hold': 'bg-warning-soft text-warning-strong',
-    Completed: 'bg-success-soft text-green-800',
-    Cancelled: 'bg-danger-soft text-danger',
-    Live: 'bg-success-soft text-green-800',
+    Completed: 'bg-success-soft text-success-strong',
+    Cancelled: 'bg-danger-soft text-danger-strong',
+    Live: 'bg-success-soft text-success-strong',
     Delayed: 'bg-warning-soft text-warning-strong',
     Stale: 'bg-warning-soft text-warning-strong',
     Offline: 'bg-surface-subtle text-ink-soft',
-    Available: 'bg-success-soft text-green-800',
+    Available: 'bg-success-soft text-success-strong',
     Assigned: 'bg-brand-soft text-brand-strong',
-    Working: 'bg-success-soft text-green-800',
+    Working: 'bg-success-soft text-success-strong',
     Maintenance: 'bg-warning-soft text-warning-strong',
     Pending: 'bg-warning-soft text-warning-strong',
-    Approved: 'bg-success-soft text-green-800',
-    Rejected: 'bg-danger-soft text-danger',
+    Approved: 'bg-success-soft text-success-strong',
+    Rejected: 'bg-danger-soft text-danger-strong',
     Dispensed: 'bg-brand-soft text-brand-strong',
     Priority: 'bg-warning-soft text-warning-strong',
-    Emergency: 'bg-danger-soft text-danger',
+    Emergency: 'bg-danger-soft text-danger-strong',
     Routine: 'bg-surface-subtle text-ink-soft',
 };
 
@@ -197,7 +198,7 @@ export function InlineNotice({
                 'flex items-start gap-3 rounded-lg p-3 text-sm',
                 tone === 'info' && 'bg-brand-soft text-brand-strong',
                 tone === 'warning' && 'bg-warning-soft text-warning-strong',
-                tone === 'success' && 'bg-success-soft text-green-900',
+                tone === 'success' && 'bg-success-soft text-success-strong',
             )}
         >
             <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -269,6 +270,8 @@ export function ToastStack({
     }>;
     onDismiss: (id: number) => void;
 }) {
+    const prefersReducedMotion = useReducedMotion() ?? false;
+
     return (
         <div
             className="fixed right-4 bottom-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
@@ -279,26 +282,42 @@ export function ToastStack({
                 {toasts.map((toast) => (
                     <motion.div
                         key={toast.id}
-                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="flex items-start gap-3 rounded-xl bg-ink p-4 text-white shadow-lg"
+                        initial={
+                            prefersReducedMotion
+                                ? false
+                                : { opacity: 0, y: 12, scale: 0.95 }
+                        }
+                        animate={
+                            prefersReducedMotion
+                                ? false
+                                : { opacity: 1, y: 0, scale: 1 }
+                        }
+                        exit={
+                            prefersReducedMotion
+                                ? undefined
+                                : { opacity: 0, y: 8, scale: 0.95 }
+                        }
+                        transition={
+                            prefersReducedMotion
+                                ? undefined
+                                : { duration: 0.18, ease: 'easeOut' }
+                        }
+                        className="flex items-start gap-3 rounded-xl bg-ink p-4 text-brand-contrast shadow-lg"
                         role="status"
                     >
                         {toast.tone === 'success' ? (
                             <Check
-                                className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"
+                                className="mt-0.5 h-4 w-4 shrink-0 text-success-on-dark"
                                 aria-hidden="true"
                             />
                         ) : toast.tone === 'warning' ? (
                             <AlertTriangle
-                                className="mt-0.5 h-4 w-4 shrink-0 text-amber-300"
+                                className="mt-0.5 h-4 w-4 shrink-0 text-warning-on-dark"
                                 aria-hidden="true"
                             />
                         ) : (
                             <Info
-                                className="mt-0.5 h-4 w-4 shrink-0 text-blue-300"
+                                className="mt-0.5 h-4 w-4 shrink-0 text-info-on-dark"
                                 aria-hidden="true"
                             />
                         )}
@@ -306,14 +325,14 @@ export function ToastStack({
                             <p className="text-sm font-semibold">
                                 {toast.title}
                             </p>
-                            <p className="mt-0.5 text-sm leading-5 text-slate-300">
+                            <p className="mt-0.5 text-sm leading-5 text-ink-on-dark-muted">
                                 {toast.message}
                             </p>
                         </div>
                         <button
                             type="button"
                             onClick={() => onDismiss(toast.id)}
-                            className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 hover:bg-white/10 hover:text-white"
+                            className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-ink-on-dark-muted hover:bg-white/10 hover:text-brand-contrast"
                             aria-label={`Dismiss ${toast.title}`}
                         >
                             <X className="h-4 w-4" aria-hidden="true" />
@@ -335,15 +354,19 @@ export function Skeleton({
     width?: string | number;
     height?: string | number;
 }) {
+    const prefersReducedMotion = useReducedMotion() ?? false;
+
     return (
         <motion.div
-            initial={{ opacity: 0.4 }}
-            animate={{ opacity: [0.4, 0.85, 0.4] }}
-            transition={{
-                duration: 1.4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-            }}
+            initial={prefersReducedMotion ? false : { opacity: 0.4 }}
+            animate={
+                prefersReducedMotion ? false : { opacity: [0.4, 0.85, 0.4] }
+            }
+            transition={
+                prefersReducedMotion
+                    ? undefined
+                    : { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }
+            }
             className={cn('rounded-md bg-line-strong/50', className)}
             style={{ width, height, ...style }}
             aria-hidden="true"

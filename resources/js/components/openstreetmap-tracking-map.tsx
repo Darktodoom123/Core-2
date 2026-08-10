@@ -27,14 +27,18 @@ import {
 } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button, StatusBadge } from '@/components/ui';
+import type { AssetKind } from '@/lib/asset-kind';
+import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import type { LocationUpdateViewModel } from '@/types/workspace';
+
+export type { AssetKind } from '@/lib/asset-kind';
+export { getAssetKind } from '@/lib/asset-kind';
 
 const DEFAULT_CENTER: [number, number] = [14.64, 121.04];
 const DEFAULT_ZOOM = 11;
 
 type TileStyle = 'cartoLight' | 'cartoDark' | 'osm';
-export type AssetKind = 'truck' | 'crane' | 'equipment' | 'personnel';
 
 const TILE_LAYERS: Record<
     TileStyle,
@@ -119,60 +123,6 @@ const ASSET_SVG_ICONS: Record<AssetKind, string> = {
     personnel: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
 };
 
-export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
-    if (location.asset?.kind) {
-        return location.asset.kind === 'vehicle'
-            ? 'truck'
-            : location.asset.kind;
-    }
-
-    const text = [
-        location.asset?.code,
-        location.asset?.name,
-        location.user?.name,
-        location.job?.title,
-        location.remarks,
-    ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-    if (
-        text.includes('trk') ||
-        text.includes('truck') ||
-        text.includes('hauler') ||
-        text.includes('dump') ||
-        text.includes('driver')
-    ) {
-        return 'truck';
-    }
-
-    if (
-        text.includes('crn') ||
-        text.includes('crane') ||
-        text.includes('lift') ||
-        text.includes('hoist') ||
-        text.includes('operator')
-    ) {
-        return 'crane';
-    }
-
-    if (
-        text.includes('eqp') ||
-        text.includes('dozer') ||
-        text.includes('rig') ||
-        text.includes('gen') ||
-        text.includes('pump') ||
-        text.includes('tech') ||
-        text.includes('technician') ||
-        text.includes('mechanic')
-    ) {
-        return 'equipment';
-    }
-
-    return 'personnel';
-}
-
 export function createCustomAssetIcon(
     kind: AssetKind,
     freshness: string,
@@ -183,12 +133,12 @@ export function createCustomAssetIcon(
     const isStale = freshness === 'stale' || freshness === 'Stale';
 
     const bgStyle = isFresh
-        ? 'background: #059669; border-color: #34d399; color: white;'
+        ? 'background: var(--color-success-strong); border-color: var(--color-success); color: var(--color-brand-contrast);'
         : isDelayed
-          ? 'background: #d97706; border-color: #fcd34d; color: white;'
+          ? 'background: var(--color-warning-strong); border-color: var(--color-warning); color: var(--color-brand-contrast);'
           : isStale
-            ? 'background: #e11d48; border-color: #fda4af; color: white;'
-            : 'background: #64748b; border-color: #cbd5e1; color: white; opacity: 0.85;';
+            ? 'background: var(--color-danger-strong); border-color: var(--color-danger); color: var(--color-danger-contrast);'
+            : 'background: var(--color-ink-soft); border-color: var(--color-line-strong); color: var(--color-brand-contrast); opacity: 0.85;';
 
     const shapeStyle =
         kind === 'truck'
@@ -205,7 +155,7 @@ export function createCustomAssetIcon(
             : 'flex: none;';
 
     const pulseEffect = isFresh
-        ? `<div style="position: absolute; inset: -4px; border-radius: 9999px; background: rgba(16,185,129,0.35); animation: map-marker-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>`
+        ? `<div style="position: absolute; inset: -4px; border-radius: 9999px; background: color-mix(in oklch, var(--color-success) 35%, transparent); animation: map-marker-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>`
         : '';
 
     const selectRing = isSelected
@@ -485,25 +435,25 @@ export function OpenStreetMapTrackingMap({
                 {/* Map Asset Shapes Legend Overlay */}
                 <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex flex-wrap items-center gap-3 rounded-xl border border-line/70 bg-surface/90 px-3 py-2 text-[11px] text-ink shadow-sm backdrop-blur-md">
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-md bg-emerald-600 text-white">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-md bg-success-strong text-brand-contrast">
                             <Truck className="h-2.5 w-2.5" />
                         </span>
                         <span>Truck</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 rotate-45 items-center justify-center rounded-md bg-emerald-600 text-white">
+                        <span className="flex h-4 w-4 rotate-45 items-center justify-center rounded-md bg-success-strong text-brand-contrast">
                             <Construction className="h-2.5 w-2.5 -rotate-45" />
                         </span>
                         <span>Crane</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-emerald-600 text-white">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-success-strong text-brand-contrast">
                             <HeavyEquipmentIcon className="h-2.5 w-2.5" />
                         </span>
                         <span>Equipment</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-success-strong text-brand-contrast">
                             <UserRoundCog className="h-2.5 w-2.5" />
                         </span>
                         <span>Worker</span>
@@ -612,7 +562,7 @@ export function OpenStreetMapTrackingMap({
                                                                     ? 'rounded-md'
                                                                     : 'rounded-full',
                                                             isSelected
-                                                                ? 'bg-brand-strong text-white'
+                                                                ? 'bg-brand-strong text-brand-contrast'
                                                                 : 'bg-surface-subtle text-ink-soft group-hover:bg-brand-soft group-hover:text-brand-strong',
                                                         )}
                                                     >

@@ -92,7 +92,7 @@ export function GptRecommendationsSurface({
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="flex items-center gap-2 text-base font-semibold text-ink">
-                            <Sparkles className="h-5 w-5 text-amber-500" />
+                            <Sparkles className="h-5 w-5 text-brand-strong" />
                             Pending Human Review ({pending.length})
                         </h3>
                     </div>
@@ -110,12 +110,12 @@ export function GptRecommendationsSurface({
                             {pending.map((rec) => (
                                 <Panel
                                     key={rec.id}
-                                    className="space-y-4 border-amber-200 bg-amber-50/20 p-5 dark:border-amber-900/50 dark:bg-amber-950/10"
+                                    className="space-y-4 border-warning/30 bg-warning-soft/20 p-5"
                                 >
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                                                <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
                                                     {rec.purpose
                                                         .replace('_', ' ')
                                                         .toUpperCase()}
@@ -130,7 +130,7 @@ export function GptRecommendationsSurface({
                                             </h4>
                                         </div>
 
-                                        <div className="flex items-center gap-1 rounded bg-amber-100/80 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                                        <div className="flex items-center gap-1 rounded bg-warning-soft px-2 py-1 text-xs font-medium text-warning-strong">
                                             <Clock className="h-3.5 w-3.5" />
                                             <span>
                                                 {rec.expires_in_seconds
@@ -190,7 +190,7 @@ export function GptRecommendationsSurface({
 
                                     {rec.conflicts &&
                                         rec.conflicts.length > 0 && (
-                                            <div className="flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2.5 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300">
+                                            <div className="flex items-start gap-2 rounded border border-danger/30 bg-danger-soft p-2.5 text-xs text-danger-strong">
                                                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                                 <div>
                                                     <span className="font-semibold">
@@ -235,7 +235,7 @@ export function GptRecommendationsSurface({
                                                         )
                                                     }
                                                 >
-                                                    <XCircle className="mr-1 h-3.5 w-3.5 text-red-500" />
+                                                    <XCircle className="mr-1 h-3.5 w-3.5 text-danger-strong" />
                                                     Reject
                                                 </Button>
                                                 <Button
@@ -247,7 +247,7 @@ export function GptRecommendationsSurface({
                                                         )
                                                     }
                                                 >
-                                                    <CheckCircle className="mr-1 h-3.5 w-3.5 text-emerald-400" />
+                                                    <CheckCircle className="mr-1 h-3.5 w-3.5 text-success-strong" />
                                                     Accept Proposal
                                                 </Button>
                                             </div>
@@ -298,7 +298,7 @@ export function GptRecommendationsSurface({
                 )}
 
                 {pollingStopped && (
-                    <Panel className="flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50/40">
+                    <Panel className="flex flex-wrap items-center justify-between gap-3 border-warning/30 bg-warning-soft/40">
                         <p className="text-sm text-ink" role="status">
                             Automatic refresh stopped after one minute. Refresh
                             the workspace to check the recommendation status.
@@ -379,14 +379,14 @@ export function GptRecommendationsSurface({
                                                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                                                                 rec.status ===
                                                                 'accepted'
-                                                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
+                                                                    ? 'bg-success-soft text-success-strong'
                                                                     : rec.status ===
                                                                         'rejected'
-                                                                      ? 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200'
+                                                                      ? 'bg-danger-soft text-danger-strong'
                                                                       : rec.status ===
                                                                               'stale' ||
                                                                           rec.is_expired
-                                                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200'
+                                                                        ? 'bg-warning-soft text-warning-strong'
                                                                         : 'bg-surface-subtle text-ink-soft'
                                                             }`}
                                                         >
@@ -396,7 +396,7 @@ export function GptRecommendationsSurface({
                                                         </span>
                                                         {rec.error_message && (
                                                             <p
-                                                                className="max-w-xs text-xs text-danger"
+                                                                className="max-w-xs text-xs text-danger-strong"
                                                                 role="status"
                                                             >
                                                                 {
@@ -553,7 +553,7 @@ function RecommendationDetails({ rec }: { rec: GptRecommendationViewModel }) {
             )}
             {rec.error_message && (
                 <div
-                    className="rounded border border-red-200 bg-red-50 p-2 text-red-700 sm:col-span-2"
+                    className="rounded border border-danger/30 bg-danger-soft p-2 text-danger-strong sm:col-span-2"
                     role="alert"
                 >
                     {rec.error_message}
@@ -605,7 +605,7 @@ function AcceptGptModal({
                 aria-modal="true"
                 aria-labelledby={`accept-gpt-title-${rec.id}`}
             >
-                <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-3 text-success-strong">
                     <CheckCircle className="h-6 w-6" />
                     <h3
                         id={`accept-gpt-title-${rec.id}`}
@@ -705,7 +705,7 @@ function RejectGptModal({
                 aria-modal="true"
                 aria-labelledby={`reject-gpt-title-${rec.id}`}
             >
-                <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-3 text-danger">
                     <XCircle className="h-6 w-6" />
                     <h3
                         id={`reject-gpt-title-${rec.id}`}
@@ -728,7 +728,7 @@ function RejectGptModal({
                         <input
                             ref={reasonRef}
                             type="text"
-                            className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-amber-500 focus:outline-none"
+                            className="w-full rounded border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
                             placeholder="e.g. Driver requested off shift / Asset under inspection"
                             value={form.data.reason}
                             onChange={(e) =>
@@ -736,7 +736,7 @@ function RejectGptModal({
                             }
                         />
                         {form.errors.reason && (
-                            <p className="mt-1 text-xs text-red-500">
+                            <p className="mt-1 text-xs text-danger-strong">
                                 {form.errors.reason}
                             </p>
                         )}
@@ -754,7 +754,7 @@ function RejectGptModal({
                         <Button
                             type="submit"
                             variant="secondary"
-                            className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                            className="border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/70"
                             disabled={form.processing}
                         >
                             {form.processing

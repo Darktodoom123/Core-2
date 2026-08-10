@@ -641,6 +641,7 @@ export function LiveDispatchWorkspace({
                                     }
                                 />
                                 <DateTimePicker
+                                    id="dispatch-scheduled-start"
                                     label="Start"
                                     value={form.data.scheduled_start}
                                     error={form.errors.scheduled_start}
@@ -650,6 +651,7 @@ export function LiveDispatchWorkspace({
                                     required
                                 />
                                 <DateTimePicker
+                                    id="dispatch-scheduled-end"
                                     label="End"
                                     value={form.data.scheduled_end}
                                     error={form.errors.scheduled_end}
@@ -689,7 +691,10 @@ export function LiveDispatchWorkspace({
                                         </option>
                                     </select>
                                     {form.errors.priority && (
-                                        <span className="mt-1 block text-xs text-danger">
+                                        <span
+                                            role="alert"
+                                            className="mt-1 block text-xs text-danger"
+                                        >
                                             {form.errors.priority}
                                         </span>
                                     )}
@@ -760,7 +765,7 @@ export function LiveDispatchWorkspace({
                                         type="button"
                                         onClick={() => setBoardCategory(cat)}
                                         className={cn(
-                                            'rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                                            'inline-flex min-h-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                                             boardCategory === cat
                                                 ? 'bg-brand-soft font-semibold text-brand-strong'
                                                 : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -840,7 +845,7 @@ export function LiveDispatchWorkspace({
                                     type="button"
                                     onClick={() => setConflictFilter(filter)}
                                     className={cn(
-                                        'rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                                        'inline-flex min-h-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                                         conflictFilter === filter
                                             ? 'bg-brand-soft font-semibold text-brand-strong'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -1550,6 +1555,8 @@ function ApprovalConflictActions({ approvalId }: { approvalId: number }) {
                 <div
                     className="mb-3 rounded-lg border border-danger bg-danger-soft px-3 py-3 text-xs text-danger"
                     role="alert"
+                    aria-live="assertive"
+                    aria-atomic="true"
                 >
                     {approvalError}
                 </div>
@@ -1583,6 +1590,8 @@ function ApprovalConflictActions({ approvalId }: { approvalId: number }) {
                     id={errorId}
                     className="mt-1 text-xs text-danger"
                     role="alert"
+                    aria-live="assertive"
+                    aria-atomic="true"
                 >
                     {form.errors.reason}
                 </p>
@@ -1815,7 +1824,13 @@ function DispatchInput({
                 )}
             />
             {error && (
-                <span id={errorId} className="mt-1 block text-xs text-danger">
+                <span
+                    id={errorId}
+                    role="alert"
+                    aria-live="assertive"
+                    aria-atomic="true"
+                    className="mt-1 block text-xs text-danger"
+                >
                     {error}
                 </span>
             )}

@@ -6,14 +6,11 @@ import {
     PauseCircle,
     RefreshCw,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
-import {
-    getAssetKind,
-    OpenStreetMapTrackingMap,
-} from '@/components/openstreetmap-tracking-map';
-import type { AssetKind } from '@/components/openstreetmap-tracking-map';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import type { AssetKind } from '@/lib/asset-kind';
+import { getAssetKind } from '@/lib/asset-kind';
 import { removeOutboxItem } from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
@@ -22,6 +19,26 @@ import type {
     ScopeRefreshState,
     WorkspaceCapabilities,
 } from '@/types/workspace';
+
+const OpenStreetMapTrackingMap = lazy(() =>
+    import('@/components/openstreetmap-tracking-map').then(
+        ({ OpenStreetMapTrackingMap: Map }) => ({ default: Map }),
+    ),
+);
+
+function MapLoadingFallback() {
+    return (
+        <div
+            className="flex h-[560px] min-h-[360px] items-center justify-center bg-surface-subtle p-6 text-center lg:h-[620px]"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading live location map"
+        >
+            <p className="text-sm text-ink-soft">Loading live location map…</p>
+        </div>
+    );
+}
 
 export function TrackingSurface({
     locations,
@@ -312,7 +329,11 @@ export function TrackingSurface({
 
                 {/* Main Content Pane */}
                 {viewMode === 'visual' ? (
-                    <OpenStreetMapTrackingMap locations={filteredLocations} />
+                    <Suspense fallback={<MapLoadingFallback />}>
+                        <OpenStreetMapTrackingMap
+                            locations={filteredLocations}
+                        />
+                    </Suspense>
                 ) : filteredLocations.length === 0 ? (
                     <Panel>
                         <EmptyState

@@ -120,6 +120,12 @@ export default function DispatchDetail({
                 title={`${job.reference} ${capabilities.update_own_status ? 'assigned job' : 'assignment workspace'}`}
             />
             <div className="min-h-screen bg-canvas">
+                <a
+                    href="#dispatch-detail-main"
+                    className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink focus:ring-2 focus:ring-brand"
+                >
+                    Skip to main content
+                </a>
                 <header className="border-b border-line bg-surface">
                     <div className="mx-auto max-w-[96rem] px-4 py-4 md:px-6">
                         <Link
@@ -174,7 +180,11 @@ export default function DispatchDetail({
                     </div>
                 </header>
 
-                <main className="mx-auto max-w-[96rem] space-y-5 px-4 py-5 md:px-6">
+                <main
+                    id="dispatch-detail-main"
+                    tabIndex={-1}
+                    className="mx-auto max-w-[96rem] space-y-5 px-4 py-5 outline-none md:px-6"
+                >
                     {flash && (
                         <div
                             className={cn(
@@ -189,6 +199,8 @@ export default function DispatchDetail({
                                     'border-info bg-info-soft text-info-strong',
                             )}
                             role="status"
+                            aria-live="polite"
+                            aria-atomic="true"
                         >
                             <Check
                                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -202,6 +214,8 @@ export default function DispatchDetail({
                         <div
                             className="flex items-start gap-3 rounded-lg border border-danger bg-danger-soft px-4 py-3 text-sm text-danger"
                             role="alert"
+                            aria-live="assertive"
+                            aria-atomic="true"
                         >
                             <AlertTriangle
                                 className="mt-0.5 h-4 w-4 shrink-0"
@@ -532,6 +546,8 @@ function FieldProgressionPanel({
                     <div
                         className="rounded-lg border border-danger bg-danger-soft p-4 text-sm text-danger"
                         role="alert"
+                        aria-live="assertive"
+                        aria-atomic="true"
                     >
                         <div className="flex items-start gap-2">
                             <AlertTriangle
@@ -799,6 +815,8 @@ function ActivationPanel({
                     <div
                         className="rounded-lg border border-danger bg-danger-soft p-3 text-sm text-danger"
                         role="alert"
+                        aria-live="assertive"
+                        aria-atomic="true"
                     >
                         <p className="font-semibold">
                             {isStale
@@ -966,6 +984,8 @@ function LifecycleControlsPanel({
                             <div
                                 className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
                                 role="alert"
+                                aria-live="assertive"
+                                aria-atomic="true"
                             >
                                 <p>{cancelError}</p>
                                 {cancelErrors.version && (
@@ -1016,6 +1036,8 @@ function LifecycleControlsPanel({
                                     id="cancel-reason-error"
                                     className="mt-1 text-xs text-danger"
                                     role="alert"
+                                    aria-live="assertive"
+                                    aria-atomic="true"
                                 >
                                     {cancelForm.errors.reason}
                                 </p>
@@ -1058,6 +1080,8 @@ function LifecycleControlsPanel({
                             <div
                                 className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
                                 role="alert"
+                                aria-live="assertive"
+                                aria-atomic="true"
                             >
                                 <p>{reopenError}</p>
                                 {reopenErrors.version && (
@@ -1107,6 +1131,8 @@ function LifecycleControlsPanel({
                                     id="reopen-reason-error"
                                     className="mt-1 text-xs text-danger"
                                     role="alert"
+                                    aria-live="assertive"
+                                    aria-atomic="true"
                                 >
                                     {reopenForm.errors.reason}
                                 </p>
@@ -1145,6 +1171,8 @@ function LifecycleControlsPanel({
                             <div
                                 className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
                                 role="alert"
+                                aria-live="assertive"
+                                aria-atomic="true"
                             >
                                 {archiveError}
                             </div>
@@ -1182,6 +1210,8 @@ function LifecycleControlsPanel({
                                     id="archive-reason-error"
                                     className="mt-1 text-xs text-danger"
                                     role="alert"
+                                    aria-live="assertive"
+                                    aria-atomic="true"
                                 >
                                     {archiveForm.errors.reason}
                                 </p>
@@ -1448,41 +1478,50 @@ function CurrentAssignments({
                                 key={`personnel-${assignment.id}`}
                                 className="space-y-3 px-4 py-3"
                             >
-                                <div className="flex items-start gap-3">
-                                    <ResourceIcon icon="personnel" />
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium">
-                                            {assignment.name}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {humanize(assignment.type)} ·{' '}
-                                            <span
-                                                className={cn(
-                                                    assignment.response_status
-                                                        .value === 'accepted' &&
-                                                        'font-medium text-success-strong',
-                                                    assignment.response_status
-                                                        .value === 'rejected' &&
-                                                        'font-medium text-danger',
-                                                    assignment.response_status
-                                                        .value === 'pending' &&
-                                                        'text-ink-soft',
-                                                )}
-                                            >
-                                                {
-                                                    assignment.response_status
-                                                        .label
-                                                }
-                                            </span>
-                                        </p>
-                                        {assignment.response_reason && (
-                                            <p className="mt-1 text-xs text-ink-soft italic">
-                                                Reason:{' '}
-                                                {assignment.response_reason}
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                                    <div className="flex min-w-0 items-start gap-3 sm:flex-1">
+                                        <ResourceIcon icon="personnel" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-medium">
+                                                {assignment.name}
                                             </p>
-                                        )}
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                {humanize(assignment.type)} ·{' '}
+                                                <span
+                                                    className={cn(
+                                                        assignment
+                                                            .response_status
+                                                            .value ===
+                                                            'accepted' &&
+                                                            'font-medium text-success-strong',
+                                                        assignment
+                                                            .response_status
+                                                            .value ===
+                                                            'rejected' &&
+                                                            'font-medium text-danger',
+                                                        assignment
+                                                            .response_status
+                                                            .value ===
+                                                            'pending' &&
+                                                            'text-ink-soft',
+                                                    )}
+                                                >
+                                                    {
+                                                        assignment
+                                                            .response_status
+                                                            .label
+                                                    }
+                                                </span>
+                                            </p>
+                                            {assignment.response_reason && (
+                                                <p className="mt-1 text-xs text-ink-soft italic">
+                                                    Reason:{' '}
+                                                    {assignment.response_reason}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex shrink-0 items-center gap-2">
+                                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                                         {canRespond && !isRejectingThis && (
                                             <>
                                                 <Button
@@ -1546,6 +1585,8 @@ function CurrentAssignments({
                                         <p
                                             className="mt-2 text-xs text-danger"
                                             role="alert"
+                                            aria-live="assertive"
+                                            aria-atomic="true"
                                         >
                                             {responseError}
                                         </p>
@@ -1598,6 +1639,8 @@ function CurrentAssignments({
                                                     id={`rejection-reason-${assignment.id}-error`}
                                                     className="mt-1 text-xs text-danger"
                                                     role="alert"
+                                                    aria-live="assertive"
+                                                    aria-atomic="true"
                                                 >
                                                     {reasonError ||
                                                         errors.reason}
@@ -1609,12 +1652,14 @@ function CurrentAssignments({
                                                         id={`assignment-response-${assignment.id}-error`}
                                                         className="mt-1 text-xs text-danger"
                                                         role="alert"
+                                                        aria-live="assertive"
+                                                        aria-atomic="true"
                                                     >
                                                         {responseError}
                                                     </p>
                                                 )}
                                         </div>
-                                        <div className="flex items-center justify-end gap-2">
+                                        <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:justify-end">
                                             <Button
                                                 type="button"
                                                 size="md"
@@ -1651,7 +1696,7 @@ function CurrentAssignments({
                     {job.asset_assignments.map((assignment) => (
                         <li
                             key={`asset-${assignment.id}`}
-                            className="flex items-start gap-3 px-4 py-3"
+                            className="flex flex-wrap items-start gap-3 px-4 py-3"
                         >
                             <ResourceIcon icon="asset" />
                             <div className="min-w-0 flex-1">
@@ -1665,6 +1710,7 @@ function CurrentAssignments({
                             {capabilities?.reassign_resources && (
                                 <Button
                                     size="sm"
+                                    className="w-full max-w-full sm:ml-auto sm:w-auto"
                                     variant="quiet"
                                     disabled={submittingId === assignment.id}
                                     aria-busy={submittingId === assignment.id}

@@ -375,8 +375,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await page.setViewportSize({ width: 390, height: 844 });
+        await page.setViewportSize({ width: 320, height: 844 });
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        const documentWidth = await page.evaluate(
+            () => document.documentElement.scrollWidth,
+        );
+        expect(documentWidth).toBeLessThanOrEqual(320);
+
+        await page.setViewportSize({ width: 390, height: 844 });
         const openNavigation = page.getByRole('button', {
             name: 'Open navigation',
         });
@@ -387,6 +393,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 .locator('#workspace-navigation')
                 .getByRole('button', { name: 'Close navigation' }),
         ).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#workspace-navigation')).not.toHaveAttribute(
+            'aria-modal',
+            'true',
+        );
+        await expect(openNavigation).toBeFocused();
+
+        await openNavigation.click();
         await page.getByRole('button', { name: 'Job reports' }).click();
         await expect(
             page.getByRole('heading', { name: 'Job reports & attachments' }),
@@ -397,5 +411,26 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(skipLink).toBeVisible();
         const results = await new AxeBuilder({ page }).analyze();
         expect(results.violations).toEqual([]);
+    });
+
+    test('dispatch detail skip link targets the focusable main content', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+
+        const main = page.locator('#dispatch-detail-main');
+        await expect(main).toBeVisible();
+
+        const skipLink = page.getByRole('link', {
+            name: 'Skip to main content',
+        });
+        await skipLink.focus();
+        await expect(skipLink).toBeVisible();
+        await skipLink.click();
+        await expect(main).toBeFocused();
     });
 });
