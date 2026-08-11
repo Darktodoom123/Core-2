@@ -10,6 +10,12 @@ import {
     View,
 } from 'react-native';
 import type { DispatchJob, OutboxCommand } from '../types/index';
+import { FieldBottomNav, type FieldNavItem } from './field-bottom-nav';
+import { FieldHeader, type SyncTone } from './field-header';
+import { PlannedRoutePanel } from './planned-route-panel';
+import { NotificationsSheet } from './notifications-sheet';
+import { ProfileSheet } from './profile-sheet';
+import { SyncStatusPanel } from './sync-status-panel';
 import { colors, sharedStyles } from './nativeStyles';
 
 export interface AssignedJobsListScreenProps {
@@ -43,9 +49,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onRetryCommand,
     onDiscardCommand,
 }) => {
-    const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+    const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+    const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
+    const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
     const queuedCount = outboxCommands.filter(
@@ -92,7 +100,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 ? 'Needs review'
                 : queuedCount > 0 || syncingCount > 0
                   ? 'Syncing'
-                  : 'Synchronized';
+                  : 'Synced';
     const syncStatusMessage =
         isOnline === null
             ? 'Checking…'
@@ -101,104 +109,223 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
               : isOnline === false
                 ? 'Reconnect to sync'
                 : 'Action needed';
+    const syncTone: SyncTone =
+        isOnline === null
+            ? 'checking'
+            : isOnline === false
+              ? 'offline'
+              : syncAttentionCount > 0
+                ? 'attention'
+                : 'online';
     const workSummary =
         isLoading && jobs.length === 0
             ? 'Loading active assignments...'
-            : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'} • ${pendingResponseCount > 0 ? `${pendingResponseCount} need${pendingResponseCount === 1 ? 's' : ''} response` : 'No responses waiting'}`;
-    const navItems: ReadonlyArray<{
-        label: string;
-        icon: string;
-        active: boolean;
-    }> = [
-        { label: 'Today', icon: '▣', active: true },
-        { label: 'Assignments', icon: '□', active: false },
-        { label: 'Messages', icon: '▤', active: false },
-        { label: 'More', icon: '≡', active: false },
-    ];
+            : jobs.length === 0
+              ? 'No active assignments'
+              : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'}${pendingResponseCount > 0 ? ` · ${pendingResponseCount} response${pendingResponseCount === 1 ? '' : 's'} needed` : ''}`;
 
+    const handleOpenProfile = () => {
+        setProfileSheetOpen(true);
+        setSignOutConfirmationOpen(false);
+        setActiveNavItem('profile');
+    };
+    const handleCloseProfile = (nextItem: FieldNavItem = 'today') => {
+        setProfileSheetOpen(false);
+        setSignOutConfirmationOpen(false);
+        setActiveNavItem(nextItem);
+    };
+    const handleStartSignOut = () => setSignOutConfirmationOpen(true);
+    const handleCancelSignOut = () => setSignOutConfirmationOpen(false);
+    const handleLogout = () => {
+        setProfileSheetOpen(false);
+        setSignOutConfirmationOpen(false);
+        onLogout?.();
+    };
+    const handleNavSelect = (item: FieldNavItem) => {
+        if (item === 'profile') {
+            handleOpenProfile();
+
+            return;
+        }
+
+        handleCloseProfile(item);
+    };
     return (
-        <ScrollView
-            contentInsetAdjustmentBehavior="automatic"
-            contentContainerStyle={styles.content}
-            testID="refresh-control"
-            refreshControl={
-                <RefreshControl
-                    refreshing={isLoading}
-                    onRefresh={onRefresh}
-                    tintColor={colors.blue}
+        <View style={styles.screenRoot} testID="field-mobile-screen">
+            <ScrollView
+                contentInsetAdjustmentBehavior="automatic"
+                contentContainerStyle={styles.content}
+                style={styles.scrollView}
+                testID="refresh-control"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isLoading}
+                        onRefresh={onRefresh}
+                        tintColor={colors.blue}
+                    />
+                }
+                accessibilityLabel="Active field assignments"
+            >
+                <FieldHeader
+                    userName={userName}
+                    userRole={userRole}
+                    syncStatusLabel={syncStatusLabel}
+                    syncStatusMessage={syncStatusMessage}
+                    syncTone={syncTone}
+                    profileOpen={profileSheetOpen}
+                    onOpenProfile={handleOpenProfile}
+                    notificationCount={syncAttentionCount + pendingResponseCount}
+                    onOpenNotifications={() => setNotificationsSheetOpen(true)}
                 />
-            }
-            accessibilityLabel="Active field assignments"
-        >
-            <View style={styles.screenTopBar}>
-                <View style={styles.screenTopBarCopy}>
-                    <Text accessibilityRole="header" style={styles.screenTitle}>
-                        TODAY'S WORK
-                    </Text>
-                    {userName ? (
-                        <View style={styles.screenUserRow}>
-                            <Text selectable style={styles.screenUser}>
-                                {userName}
-                            </Text>
-                            <Text style={styles.screenRole}>
-                                · {userRole || 'Field worker'}
-                            </Text>
-                        </View>
-                    ) : null}
-                </View>
-                <View style={styles.topBarActions}>
-                    {onLogout ? (
-                        <View style={styles.accountMenuWrap}>
-                            <Pressable
-                                accessibilityLabel="Open account menu"
-                                accessibilityHint="Shows account actions"
-                                accessibilityRole="button"
-                                accessibilityState={{
-                                    expanded: accountMenuOpen,
-                                }}
-                                onPress={() => {
-                                    setAccountMenuOpen((open) => !open);
-                                    setSignOutConfirmationOpen(false);
-                                }}
-                                style={({ pressed }) => [
-                                    styles.accountButton,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="account-menu-button"
+                {false ? (
+                    <View style={styles.screenTopBar}>
+                        <View style={styles.screenTopBarCopy}>
+                            <Text
+                                accessibilityRole="header"
+                                style={styles.screenTitle}
                             >
-                                <Text style={styles.accountButtonText}>
-                                    Account
-                                </Text>
-                            </Pressable>
-                            {accountMenuOpen ? (
-                                <View
-                                    accessibilityViewIsModal
-                                    style={styles.accountMenu}
-                                    testID="account-menu"
-                                >
-                                    <Text style={styles.accountMenuName}>
-                                        {userName || 'Field account'}
+                                TODAY'S WORK
+                            </Text>
+                            {userName ? (
+                                <View style={styles.screenUserRow}>
+                                    <Text selectable style={styles.screenUser}>
+                                        {userName}
                                     </Text>
-                                    <Text style={styles.accountMenuRole}>
-                                        {userRole || 'Field worker'}
+                                    <Text style={styles.screenRole}>
+                                        · {userRole || 'Field worker'}
                                     </Text>
-                                    <View style={styles.accountMenuDivider} />
-                                    {signOutConfirmationOpen ? (
-                                        <View style={styles.signOutConfirm}>
-                                            <Text style={styles.signOutTitle}>
-                                                Sign out of the field app?
+                                </View>
+                            ) : null}
+                        </View>
+                        <View style={styles.topBarActions}>
+                            {onLogout ? (
+                                <View style={styles.accountMenuWrap}>
+                                    <Pressable
+                                        accessibilityLabel="Open account menu"
+                                        accessibilityHint="Shows account actions"
+                                        accessibilityRole="button"
+                                        accessibilityState={{
+                                            expanded: profileSheetOpen,
+                                        }}
+                                        onPress={() => {
+                                            handleOpenProfile();
+                                            setSignOutConfirmationOpen(false);
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.accountButton,
+                                            pressed && styles.pressed,
+                                        ]}
+                                        testID="account-menu-button"
+                                    >
+                                        <Text style={styles.accountButtonText}>
+                                            Account
+                                        </Text>
+                                    </Pressable>
+                                    {profileSheetOpen ? (
+                                        <View
+                                            accessibilityViewIsModal
+                                            style={styles.accountMenu}
+                                            testID="account-menu"
+                                        >
+                                            <Text
+                                                style={styles.accountMenuName}
+                                            >
+                                                {userName || 'Field account'}
                                             </Text>
-                                            <Text style={styles.signOutMessage}>
-                                                You can sign in again when you
-                                                need to access field work.
+                                            <Text
+                                                style={styles.accountMenuRole}
+                                            >
+                                                {userRole || 'Field worker'}
                                             </Text>
-                                            <View style={styles.signOutActions}>
+                                            <View
+                                                style={
+                                                    styles.accountMenuDivider
+                                                }
+                                            />
+                                            {signOutConfirmationOpen ? (
+                                                <View
+                                                    style={
+                                                        styles.signOutConfirm
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.signOutTitle
+                                                        }
+                                                    >
+                                                        Sign out of the field
+                                                        app?
+                                                    </Text>
+                                                    <Text
+                                                        style={
+                                                            styles.signOutMessage
+                                                        }
+                                                    >
+                                                        You can sign in again
+                                                        when you need to access
+                                                        field work.
+                                                    </Text>
+                                                    <View
+                                                        style={
+                                                            styles.signOutActions
+                                                        }
+                                                    >
+                                                        <Pressable
+                                                            accessibilityLabel="Cancel sign out"
+                                                            accessibilityRole="button"
+                                                            onPress={() =>
+                                                                setSignOutConfirmationOpen(
+                                                                    false,
+                                                                )
+                                                            }
+                                                            style={({
+                                                                pressed,
+                                                            }) => [
+                                                                styles.accountAction,
+                                                                pressed &&
+                                                                    styles.pressed,
+                                                            ]}
+                                                            testID="cancel-sign-out-button"
+                                                        >
+                                                            <Text
+                                                                style={
+                                                                    styles.accountActionText
+                                                                }
+                                                            >
+                                                                Cancel
+                                                            </Text>
+                                                        </Pressable>
+                                                        <Pressable
+                                                            accessibilityLabel="Confirm sign out"
+                                                            accessibilityRole="button"
+                                                            onPress={onLogout}
+                                                            style={({
+                                                                pressed,
+                                                            }) => [
+                                                                styles.accountAction,
+                                                                styles.signOutAction,
+                                                                pressed &&
+                                                                    styles.pressed,
+                                                            ]}
+                                                            testID="confirm-sign-out-button"
+                                                        >
+                                                            <Text
+                                                                style={
+                                                                    styles.signOutActionText
+                                                                }
+                                                            >
+                                                                Sign out
+                                                            </Text>
+                                                        </Pressable>
+                                                    </View>
+                                                </View>
+                                            ) : (
                                                 <Pressable
-                                                    accessibilityLabel="Cancel sign out"
+                                                    accessibilityLabel="Start sign out"
                                                     accessibilityRole="button"
                                                     onPress={() =>
                                                         setSignOutConfirmationOpen(
-                                                            false,
+                                                            true,
                                                         )
                                                     }
                                                     style={({ pressed }) => [
@@ -206,475 +333,487 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                                         pressed &&
                                                             styles.pressed,
                                                     ]}
-                                                    testID="cancel-sign-out-button"
+                                                    testID="account-sign-out-button"
                                                 >
                                                     <Text
                                                         style={
                                                             styles.accountActionText
                                                         }
                                                     >
-                                                        Cancel
-                                                    </Text>
-                                                </Pressable>
-                                                <Pressable
-                                                    accessibilityLabel="Confirm sign out"
-                                                    accessibilityRole="button"
-                                                    onPress={onLogout}
-                                                    style={({ pressed }) => [
-                                                        styles.accountAction,
-                                                        styles.signOutAction,
-                                                        pressed &&
-                                                            styles.pressed,
-                                                    ]}
-                                                    testID="confirm-sign-out-button"
-                                                >
-                                                    <Text
-                                                        style={
-                                                            styles.signOutActionText
-                                                        }
-                                                    >
                                                         Sign out
                                                     </Text>
                                                 </Pressable>
-                                            </View>
+                                            )}
                                         </View>
-                                    ) : (
-                                        <Pressable
-                                            accessibilityLabel="Start sign out"
-                                            accessibilityRole="button"
-                                            onPress={() =>
-                                                setSignOutConfirmationOpen(true)
-                                            }
-                                            style={({ pressed }) => [
-                                                styles.accountAction,
-                                                pressed && styles.pressed,
-                                            ]}
-                                            testID="account-sign-out-button"
-                                        >
-                                            <Text
-                                                style={styles.accountActionText}
-                                            >
-                                                Sign out
-                                            </Text>
-                                        </Pressable>
-                                    )}
+                                    ) : null}
                                 </View>
                             ) : null}
                         </View>
-                    ) : null}
-                </View>
-            </View>
-
-            <View style={[styles.header, isCompact && styles.headerCompact]}>
-                <View style={styles.headerCopy}>
-                    <Text style={styles.eyebrow}>ACTIVE ASSIGNMENTS</Text>
-                    <Text style={styles.title}>Active Field Assignments</Text>
-                    <Text style={styles.subtitle}>
-                        Today’s assigned work and next safe action.
-                    </Text>
-                    <Text style={styles.workSummary}>{workSummary}</Text>
-                </View>
-            </View>
-
-            <View
-                accessibilityLiveRegion="polite"
-                style={[
-                    styles.outboxBar,
-                    isOnline === true &&
-                        !hasSyncAttention &&
-                        styles.outboxSynchronized,
-                    conflictCount > 0 && styles.outboxConflict,
-                    isOnline === false && styles.outboxOffline,
-                ]}
-                testID="outbox-status-bar"
-            >
-                <View style={styles.syncStripRow}>
-                    <View
-                        style={[
-                            styles.connectionMark,
-                            isOnline === null
-                                ? styles.connectionChecking
-                                : isOnline
-                                  ? styles.connectionOnline
-                                  : styles.connectionOffline,
-                        ]}
-                    />
-                    <View
-                        style={styles.outboxHeaderCopy}
-                        accessible
-                        accessibilityRole="summary"
-                    >
-                        <Text style={styles.outboxHeading}>Sync status</Text>
-                        <Text
-                            style={[
-                                styles.connectivityValue,
-                                isOnline === true
-                                    ? styles.onlineValue
-                                    : styles.offlineValue,
-                            ]}
-                        >
-                            {syncStatusLabel}
-                        </Text>
                     </View>
-                    <Text style={styles.syncStatusMessage} selectable>
-                        {syncStatusMessage}
-                    </Text>
-                </View>
-                {syncDetailsExpanded ? (
-                    <View style={styles.syncDetails} testID="sync-details">
-                        <Text
-                            style={[
-                                styles.outboxSummary,
-                                syncAttentionCount > 0 &&
-                                    styles.outboxSummaryAttention,
-                            ]}
-                            testID="sync-guidance"
-                        >
-                            {syncGuidance}
+                ) : null}
+
+                <View
+                    style={[styles.header, isCompact && styles.headerCompact]}
+                >
+                    <View style={styles.headerCopy}>
+                        <Text style={styles.title}>Your assignments</Text>
+                        <Text style={styles.subtitle}>
+                            See today’s jobs and what to do next.
                         </Text>
-                        <View style={styles.outboxChipRow}>
+                        <Text style={styles.workSummary}>{workSummary}</Text>
+                    </View>
+                </View>
+
+                {activeNavItem === 'route' ? (
+                    <PlannedRoutePanel
+                        onBackToToday={() => setActiveNavItem('today')}
+                    />
+                ) : null}
+                <SyncStatusPanel
+                    showDetails={hasOutboxActivity}
+                    syncGuidance={syncGuidance}
+                    queuedCount={queuedCount}
+                    syncingCount={syncingCount}
+                    failedCount={failedCount}
+                    conflictCount={conflictCount}
+                    onSyncNow={onSyncNow}
+                    isOnline={isOnline}
+                />
+
+                {false ? (
+                    <View
+                        accessibilityLiveRegion="polite"
+                        style={[
+                            styles.outboxBar,
+                            syncDetailsExpanded
+                                ? styles.outboxExpanded
+                                : styles.outboxCompact,
+                            isOnline === true &&
+                                !hasSyncAttention &&
+                                styles.outboxSynchronized,
+                            conflictCount > 0 && styles.outboxConflict,
+                            isOnline === false && styles.outboxOffline,
+                        ]}
+                        testID="outbox-status-bar"
+                    >
+                        <View style={styles.syncStripRow}>
                             <View
                                 style={[
-                                    styles.outboxChip,
-                                    queuedCount > 0
-                                        ? styles.queuedChip
-                                        : styles.zeroChip,
+                                    styles.connectionMark,
+                                    isOnline === null
+                                        ? styles.connectionChecking
+                                        : isOnline
+                                          ? styles.connectionOnline
+                                          : styles.connectionOffline,
                                 ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.outboxChipText,
-                                        queuedCount > 0
-                                            ? styles.queuedChipText
-                                            : styles.zeroChipText,
-                                    ]}
-                                >
-                                    Queued: {queuedCount}
-                                </Text>
-                            </View>
+                            />
                             <View
-                                style={[
-                                    styles.outboxChip,
-                                    syncingCount > 0
-                                        ? styles.syncingChip
-                                        : styles.zeroChip,
-                                ]}
+                                style={styles.outboxHeaderCopy}
+                                accessible
+                                accessibilityRole="summary"
                             >
+                                <Text style={styles.outboxHeading}>
+                                    Sync status
+                                </Text>
                                 <Text
                                     style={[
-                                        styles.outboxChipText,
-                                        syncingCount > 0
-                                            ? styles.syncingChipText
-                                            : styles.zeroChipText,
+                                        styles.connectivityValue,
+                                        isOnline === true
+                                            ? styles.onlineValue
+                                            : styles.offlineValue,
                                     ]}
                                 >
-                                    Syncing: {syncingCount}
+                                    {syncStatusLabel}
                                 </Text>
                             </View>
-                            <View
-                                style={[
-                                    styles.outboxChip,
-                                    failedCount > 0
-                                        ? styles.failedChip
-                                        : styles.zeroChip,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.outboxChipText,
-                                        failedCount > 0
-                                            ? styles.failedChipText
-                                            : styles.zeroChipText,
-                                    ]}
-                                >
-                                    Failed: {failedCount}
-                                </Text>
-                            </View>
-                            <View
-                                style={[
-                                    styles.outboxChip,
-                                    conflictCount > 0
-                                        ? styles.conflictChip
-                                        : styles.zeroChip,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.outboxChipText,
-                                        conflictCount > 0
-                                            ? styles.conflictChipText
-                                            : styles.zeroChipText,
-                                    ]}
-                                >
-                                    Conflicts: {conflictCount}
-                                </Text>
-                            </View>
+                            <Text style={styles.syncStatusMessage} selectable>
+                                {syncStatusMessage}
+                            </Text>
                         </View>
-                        {onSyncNow &&
-                        isOnline === true &&
-                        (queuedCount > 0 || failedCount > 0) ? (
-                            <Pressable
-                                accessibilityLabel="Sync queued commands now"
-                                accessibilityRole="button"
-                                onPress={onSyncNow}
-                                style={({ pressed }) => [
-                                    sharedStyles.button,
-                                    styles.syncButton,
-                                    pressed && styles.pressed,
-                                ]}
+                        {syncDetailsExpanded ? (
+                            <View
+                                style={styles.syncDetails}
+                                testID="sync-details"
                             >
-                                <Text style={sharedStyles.buttonText}>
-                                    Sync now
+                                <Text
+                                    style={[
+                                        styles.outboxSummary,
+                                        syncAttentionCount > 0 &&
+                                            styles.outboxSummaryAttention,
+                                    ]}
+                                    testID="sync-guidance"
+                                >
+                                    {syncGuidance}
                                 </Text>
-                            </Pressable>
+                                <View style={styles.outboxChipRow}>
+                                    <View
+                                        style={[
+                                            styles.outboxChip,
+                                            queuedCount > 0
+                                                ? styles.queuedChip
+                                                : styles.zeroChip,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.outboxChipText,
+                                                queuedCount > 0
+                                                    ? styles.queuedChipText
+                                                    : styles.zeroChipText,
+                                            ]}
+                                        >
+                                            Queued: {queuedCount}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={[
+                                            styles.outboxChip,
+                                            syncingCount > 0
+                                                ? styles.syncingChip
+                                                : styles.zeroChip,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.outboxChipText,
+                                                syncingCount > 0
+                                                    ? styles.syncingChipText
+                                                    : styles.zeroChipText,
+                                            ]}
+                                        >
+                                            Syncing: {syncingCount}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={[
+                                            styles.outboxChip,
+                                            failedCount > 0
+                                                ? styles.failedChip
+                                                : styles.zeroChip,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.outboxChipText,
+                                                failedCount > 0
+                                                    ? styles.failedChipText
+                                                    : styles.zeroChipText,
+                                            ]}
+                                        >
+                                            Failed: {failedCount}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={[
+                                            styles.outboxChip,
+                                            conflictCount > 0
+                                                ? styles.conflictChip
+                                                : styles.zeroChip,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.outboxChipText,
+                                                conflictCount > 0
+                                                    ? styles.conflictChipText
+                                                    : styles.zeroChipText,
+                                            ]}
+                                        >
+                                            Conflicts: {conflictCount}
+                                        </Text>
+                                    </View>
+                                </View>
+                                {onSyncNow &&
+                                isOnline === true &&
+                                (queuedCount > 0 || failedCount > 0) ? (
+                                    <Pressable
+                                        accessibilityLabel="Sync queued commands now"
+                                        accessibilityRole="button"
+                                        onPress={onSyncNow}
+                                        style={({ pressed }) => [
+                                            sharedStyles.button,
+                                            styles.syncButton,
+                                            pressed && styles.pressed,
+                                        ]}
+                                    >
+                                        <Text style={sharedStyles.buttonText}>
+                                            Sync now
+                                        </Text>
+                                    </Pressable>
+                                ) : null}
+                            </View>
                         ) : null}
                     </View>
                 ) : null}
-            </View>
 
-            {failedCommands.map((command) => (
-                <View
-                    accessible
-                    accessibilityRole="alert"
-                    key={command.id}
-                    style={styles.failedCommand}
-                    testID={`failed-command-${command.id}`}
-                >
-                    <Text style={styles.failedTitle}>
-                        Action needs review: {command.type.replaceAll('_', ' ')}
-                    </Text>
-                    <Text style={styles.failedMessage}>
-                        {command.error?.message ||
-                            'This command could not be synchronized.'}
-                    </Text>
-                    <Text style={styles.failedMeta}>
-                        Attempts: {command.attempts}
-                    </Text>
-                    <View style={styles.failedActions}>
-                        {command.error?.retryable && onRetryCommand ? (
-                            <Pressable
-                                accessibilityLabel="Retry failed command"
-                                accessibilityRole="button"
-                                onPress={() => onRetryCommand(command.id)}
-                                style={({ pressed }) => [
-                                    sharedStyles.button,
-                                    styles.retryButton,
-                                    pressed && styles.pressed,
-                                ]}
-                            >
-                                <Text style={sharedStyles.buttonText}>
-                                    Retry
-                                </Text>
-                            </Pressable>
-                        ) : null}
-                        {onDiscardCommand ? (
-                            <Pressable
-                                accessibilityLabel="Discard failed command"
-                                accessibilityHint="Permanently removes this unsynchronized action from this device"
-                                accessibilityRole="button"
-                                onPress={() => onDiscardCommand(command.id)}
-                                style={({ pressed }) => [
-                                    sharedStyles.button,
-                                    styles.discardButton,
-                                    pressed && styles.pressed,
-                                ]}
-                            >
-                                <Text style={sharedStyles.buttonText}>
-                                    Discard
-                                </Text>
-                            </Pressable>
-                        ) : null}
-                    </View>
-                </View>
-            ))}
-
-            {error ? (
-                <View
-                    accessible
-                    accessibilityLiveRegion="assertive"
-                    accessibilityRole="alert"
-                    style={styles.errorBox}
-                >
-                    <Text style={styles.errorText}>{error}</Text>
-                </View>
-            ) : null}
-
-            {isLoading && jobs.length === 0 ? (
-                <View
-                    accessibilityLiveRegion="polite"
-                    style={styles.loadingBox}
-                >
-                    <ActivityIndicator color={colors.blue} />
-                    <Text style={sharedStyles.statusText}>
-                        Loading assignments…
-                    </Text>
-                </View>
-            ) : null}
-
-            {jobs.length === 0 && !isLoading ? (
-                <View style={styles.emptyBox} testID="empty-assignments-msg">
-                    <View style={styles.emptyMark}>
-                        <View style={styles.emptyMarkLine} />
-                    </View>
-                    <Text style={styles.emptyTitle}>No active assignments</Text>
-                    <Text style={styles.emptyText}>
-                        New work assigned to your account will appear here. Pull
-                        down to refresh and check again.
-                    </Text>
-                </View>
-            ) : null}
-
-            <View style={styles.jobList}>
-                {jobs.map((job) => {
-                    const isPending =
-                        job.my_assignment?.response_status === 'pending';
-                    const assignedAsset = job.asset_assignments?.[0] ?? null;
-                    const priorityStyle =
-                        job.priority.value === 'emergency'
-                            ? styles.emergencyBadge
-                            : job.priority.value === 'priority'
-                              ? styles.priorityBadge
-                              : styles.routineBadge;
-
-                    return (
-                        <Pressable
-                            accessibilityLabel={`Open assignment ${job.reference}`}
-                            accessibilityHint="Reviews the job, assignment response, progress, and safety context"
-                            accessibilityRole="button"
-                            key={job.id}
-                            onPress={() => onSelectJob(job.id)}
-                            style={({ pressed }) => [
-                                styles.jobCard,
-                                pressed && styles.cardPressed,
-                            ]}
-                            testID={`job-card-${job.id}`}
-                        >
-                            <View style={styles.cardTopRow}>
-                                <Text style={styles.reference}>
-                                    {job.reference}
-                                </Text>
-                                <View style={styles.badgeRow}>
-                                    <Text style={[styles.badge, priorityStyle]}>
-                                        {job.priority.label}
+                {failedCommands.map((command) => (
+                    <View
+                        accessible
+                        accessibilityRole="alert"
+                        key={command.id}
+                        style={styles.failedCommand}
+                        testID={`failed-command-${command.id}`}
+                    >
+                        <Text style={styles.failedTitle}>
+                            Action needs review:{' '}
+                            {command.type.replaceAll('_', ' ')}
+                        </Text>
+                        <Text style={styles.failedMessage}>
+                            {command.error?.message ||
+                                'This command could not be synced.'}
+                        </Text>
+                        <Text style={styles.failedMeta}>
+                            Attempts: {command.attempts}
+                        </Text>
+                        <View style={styles.failedActions}>
+                            {command.error?.retryable && onRetryCommand ? (
+                                <Pressable
+                                    accessibilityLabel="Retry failed command"
+                                    accessibilityRole="button"
+                                    onPress={() => onRetryCommand(command.id)}
+                                    style={({ pressed }) => [
+                                        sharedStyles.button,
+                                        styles.retryButton,
+                                        pressed && styles.pressed,
+                                    ]}
+                                >
+                                    <Text style={sharedStyles.buttonText}>
+                                        Retry
                                     </Text>
-                                    <Text
-                                        style={[
-                                            styles.badge,
-                                            styles.statusBadge,
-                                        ]}
-                                    >
-                                        {job.status.label} (v{job.version})
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <Text style={styles.jobTitle}>
-                                {job.title} — {job.client}
-                            </Text>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Site</Text>
-                                <Text selectable style={styles.detailValue}>
-                                    {job.site}
-                                </Text>
-                            </View>
-                            {job.scheduled_start ? (
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>
-                                        Starts
-                                    </Text>
-                                    <Text selectable style={styles.detailValue}>
-                                        {new Date(
-                                            job.scheduled_start,
-                                        ).toLocaleString()}
-                                    </Text>
-                                </View>
+                                </Pressable>
                             ) : null}
+                            {onDiscardCommand ? (
+                                <Pressable
+                                    accessibilityLabel="Discard failed command"
+                                    accessibilityHint="Permanently removes this unsynced action from this device"
+                                    accessibilityRole="button"
+                                    onPress={() => onDiscardCommand(command.id)}
+                                    style={({ pressed }) => [
+                                        sharedStyles.button,
+                                        styles.discardButton,
+                                        pressed && styles.pressed,
+                                    ]}
+                                >
+                                    <Text style={sharedStyles.buttonText}>
+                                        Discard
+                                    </Text>
+                                </Pressable>
+                            ) : null}
+                        </View>
+                    </View>
+                ))}
 
-                            {assignedAsset ? (
-                                <View style={styles.assetSummary}>
-                                    <View style={styles.assetIcon}>
-                                        <Text style={styles.assetIconText}>
-                                            CR
+                {error ? (
+                    <View
+                        accessible
+                        accessibilityLiveRegion="assertive"
+                        accessibilityRole="alert"
+                        style={styles.errorBox}
+                    >
+                        <Text style={styles.errorText}>{error}</Text>
+                    </View>
+                ) : null}
+
+                {isLoading && jobs.length === 0 ? (
+                    <View
+                        accessibilityLiveRegion="polite"
+                        style={styles.loadingBox}
+                    >
+                        <ActivityIndicator color={colors.blue} />
+                        <Text style={sharedStyles.statusText}>
+                            Loading assignments…
+                        </Text>
+                    </View>
+                ) : null}
+
+                {jobs.length === 0 && !isLoading ? (
+                    <View
+                        style={styles.emptyBox}
+                        testID="empty-assignments-msg"
+                    >
+                        <View style={styles.emptyMark}>
+                            <View style={styles.emptyMarkLine} />
+                        </View>
+                        <Text style={styles.emptyTitle}>
+                            No work assigned yet
+                        </Text>
+                        <Text style={styles.emptyText}>
+                            New assignments will appear here. Pull down to
+                            refresh and check again.
+                        </Text>
+                    </View>
+                ) : null}
+
+                <View style={styles.jobList}>
+                    {jobs.map((job) => {
+                        const isPending =
+                            job.my_assignment?.response_status === 'pending';
+                        const assignedAsset =
+                            job.asset_assignments?.[0] ?? null;
+                        const priorityStyle =
+                            job.priority.value === 'emergency'
+                                ? styles.emergencyBadge
+                                : job.priority.value === 'priority'
+                                  ? styles.priorityBadge
+                                  : styles.routineBadge;
+
+                        return (
+                            <Pressable
+                                accessibilityLabel={`Open assignment ${job.reference}`}
+                                accessibilityHint="Reviews the job, assignment response, progress, and safety context"
+                                accessibilityRole="button"
+                                key={job.id}
+                                onPress={() => onSelectJob(job.id)}
+                                style={({ pressed }) => [
+                                    styles.jobCard,
+                                    pressed && styles.cardPressed,
+                                ]}
+                                testID={`job-card-${job.id}`}
+                            >
+                                <View style={styles.cardTopRow}>
+                                    <Text style={styles.reference}>
+                                        {job.reference}
+                                    </Text>
+                                    <View style={styles.badgeRow}>
+                                        <Text
+                                            style={[
+                                                styles.badge,
+                                                priorityStyle,
+                                            ]}
+                                        >
+                                            {job.priority.label}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.badge,
+                                                styles.statusBadge,
+                                            ]}
+                                        >
+                                            {job.status.label} (v{job.version})
                                         </Text>
                                     </View>
-                                    <View style={styles.assetCopy}>
-                                        <Text style={styles.assetLabel}>
-                                            {assignedAsset.asset_kind ===
-                                            'crane'
-                                                ? 'Assigned crane'
-                                                : 'Assigned asset'}
+                                </View>
+
+                                <Text style={styles.jobTitle}>
+                                    {job.title} — {job.client}
+                                </Text>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Site</Text>
+                                    <Text selectable style={styles.detailValue}>
+                                        {job.site}
+                                    </Text>
+                                </View>
+                                {job.scheduled_start ? (
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>
+                                            Starts
                                         </Text>
                                         <Text
                                             selectable
-                                            style={styles.assetValue}
+                                            style={styles.detailValue}
                                         >
-                                            {assignedAsset.asset_code} ·{' '}
-                                            {assignedAsset.asset_name}
+                                            {new Date(
+                                                job.scheduled_start,
+                                            ).toLocaleString()}
                                         </Text>
                                     </View>
-                                </View>
-                            ) : null}
+                                ) : null}
 
-                            {isPending ? (
-                                <View
-                                    style={styles.pendingBadge}
-                                    testID={`pending-badge-${job.id}`}
-                                >
-                                    <Text style={styles.pendingText}>
-                                        Response pending
+                                {assignedAsset ? (
+                                    <View style={styles.assetSummary}>
+                                        <View style={styles.assetIcon}>
+                                            <Text style={styles.assetIconText}>
+                                                CR
+                                            </Text>
+                                        </View>
+                                        <View style={styles.assetCopy}>
+                                            <Text style={styles.assetLabel}>
+                                                {assignedAsset.asset_kind ===
+                                                'crane'
+                                                    ? 'Assigned crane'
+                                                    : 'Assigned asset'}
+                                            </Text>
+                                            <Text
+                                                selectable
+                                                style={styles.assetValue}
+                                            >
+                                                {assignedAsset.asset_code} ·{' '}
+                                                {assignedAsset.asset_name}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ) : null}
+
+                                {isPending ? (
+                                    <View
+                                        style={styles.pendingBadge}
+                                        testID={`pending-badge-${job.id}`}
+                                    >
+                                        <Text style={styles.pendingText}>
+                                            Response pending
+                                        </Text>
+                                    </View>
+                                ) : null}
+
+                                <View style={styles.cardActionRow}>
+                                    <Text style={styles.actionMeta}>
+                                        Tap to view job details
+                                    </Text>
+                                    <Text style={styles.actionBtnText}>
+                                        Open assignment
                                     </Text>
                                 </View>
-                            ) : null}
-
-                            <View style={styles.cardActionRow}>
-                                <Text style={styles.actionMeta}>
-                                    Tap to view job details
-                                </Text>
-                                <Text style={styles.actionBtnText}>
-                                    Open assignment
-                                </Text>
-                            </View>
-                        </Pressable>
-                    );
-                })}
-            </View>
-
-            <View
-                accessible
-                accessibilityLabel="Field mobile navigation"
-                style={styles.bottomNav}
-                testID="bottom-nav-bar"
-            >
-                {navItems.map(({ label, icon, active }) => (
-                    <View
-                        accessibilityLabel={`${label}${active ? ', selected' : ''}`}
-                        key={label}
-                        style={[styles.navItem, active && styles.navItemActive]}
-                    >
-                        <Text
-                            style={[
-                                styles.navIcon,
-                                active && styles.navIconActive,
-                            ]}
-                        >
-                            {icon}
-                        </Text>
-                        <Text
-                            style={[
-                                styles.navLabel,
-                                active && styles.navLabelActive,
-                            ]}
-                        >
-                            {label}
-                        </Text>
-                    </View>
-                ))}
-            </View>
-        </ScrollView>
+                            </Pressable>
+                        );
+                    })}
+                </View>
+            </ScrollView>
+            <FieldBottomNav
+                activeItem={activeNavItem}
+                onSelect={handleNavSelect}
+            />
+            <NotificationsSheet
+                visible={notificationsSheetOpen}
+                onClose={() => setNotificationsSheetOpen(false)}
+                queuedCount={queuedCount}
+                failedCount={failedCount}
+                conflictCount={conflictCount}
+                pendingResponseCount={pendingResponseCount}
+                failedCommands={failedCommands}
+                pendingJobs={jobs.filter((j) => j.my_assignment?.response_status === 'pending')}
+                onRetryCommand={onRetryCommand}
+                onSyncNow={onSyncNow}
+                isOnline={isOnline}
+            />
+            <ProfileSheet
+                visible={profileSheetOpen}
+                userName={userName}
+                userRole={userRole}
+                assignedAssetLabel={
+                    jobs.flatMap((j) => j.asset_assignments || [])[0]
+                        ?.asset_name || null
+                }
+                isOnline={isOnline}
+                queuedCount={queuedCount}
+                onSyncNow={onSyncNow}
+                signOutConfirmationOpen={signOutConfirmationOpen}
+                onClose={() => handleCloseProfile()}
+                onStartSignOut={handleStartSignOut}
+                onCancelSignOut={handleCancelSignOut}
+                onLogout={handleLogout}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
+    screenRoot: {
+        backgroundColor: colors.background,
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
     content: {
         alignSelf: 'center',
         maxWidth: 720,
@@ -826,13 +965,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingRight: 12,
     },
-    eyebrow: {
-        color: colors.amberDark,
-        fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 1,
-        marginBottom: 4,
-    },
     title: {
         color: colors.text,
         fontSize: 22,
@@ -871,19 +1003,31 @@ const styles = StyleSheet.create({
         opacity: 0.78,
     },
     outboxBar: {
+        marginBottom: 16,
+    },
+    outboxCompact: {
+        alignSelf: 'stretch',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 999,
+        borderWidth: 1,
+        minHeight: 44,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    outboxExpanded: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
         gap: 8,
-        marginBottom: 16,
         padding: 12,
     },
     syncStripRow: {
         alignItems: 'center',
         flexDirection: 'row',
         gap: 10,
-        minHeight: 36,
+        minHeight: 30,
     },
     outboxHeader: {
         alignItems: 'center',
@@ -1258,45 +1402,5 @@ const styles = StyleSheet.create({
         color: colors.amberDark,
         fontSize: 14,
         fontWeight: '800',
-    },
-    bottomNav: {
-        alignItems: 'stretch',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 12,
-        borderWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: 8,
-        minHeight: 72,
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-    },
-    navItem: {
-        alignItems: 'center',
-        flex: 1,
-        gap: 2,
-        justifyContent: 'center',
-        minHeight: 56,
-    },
-    navItemActive: {
-        backgroundColor: colors.blueLight,
-        borderRadius: 8,
-    },
-    navIcon: {
-        color: colors.secondary,
-        fontSize: 18,
-        lineHeight: 22,
-    },
-    navIconActive: {
-        color: colors.blue,
-    },
-    navLabel: {
-        color: colors.secondary,
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    navLabelActive: {
-        color: colors.blue,
     },
 });

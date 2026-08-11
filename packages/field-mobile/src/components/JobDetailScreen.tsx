@@ -208,7 +208,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                             ? 'Conflict-safe'
                             : jobPendingCommands.length > 0
                               ? 'Syncing'
-                              : 'Synchronized'}
+                              : 'Synced'}
                     </Text>
                     <Text style={styles.syncMeta}>
                         {jobConflicts.length > 0

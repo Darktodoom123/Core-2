@@ -185,7 +185,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
             <View style={styles.divider} />
             <View
                 accessible
-                accessibilityLabel="Synchronized route list alternative"
+                accessibilityLabel="Synced route list alternative"
                 style={styles.listAlternative}
             >
                 <View style={styles.listAlternativeMark}>
@@ -193,7 +193,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                 </View>
                 <View style={styles.listAlternativeCopy}>
                     <Text style={styles.listAlternativeHeading}>
-                        Synchronized assignment details
+                        Synced assignment details
                     </Text>
                     <Text style={styles.listAlternativeBody}>
                         Use the assignment details while route data is
@@ -564,7 +564,7 @@ const statusPresentation: Record<HeavyCraneRouteStatus, StatusPresentation> = {
     stale: {
         label: 'Route needs refresh',
         description:
-            'Review the last synchronized route before moving the crane.',
+            'Review the last synced route before moving the crane.',
         markStyle: styles.statusMarkStale,
         labelStyle: styles.statusLabelStale,
         panelStyle: styles.statusPanelStale,

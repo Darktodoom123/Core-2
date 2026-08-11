@@ -464,6 +464,7 @@ describe('native application component tree', () => {
         expect(
             await screen.findByTestId('empty-assignments-msg'),
         ).toBeVisible();
+        expect(screen.getByText('No work assigned yet')).toBeVisible();
         expect(tokenStorage.setCalls).toEqual([rawToken]);
         expect(screen.queryByText(rawToken)).toBeNull();
     });
@@ -636,7 +637,7 @@ describe('native application component tree', () => {
         await signIn();
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
-        await fireEvent.press(screen.getByLabelText('Open account menu'));
+        await fireEvent.press(screen.getByLabelText('Open profile'));
         await fireEvent.press(screen.getByLabelText('Start sign out'));
         await fireEvent.press(screen.getByLabelText('Confirm sign out'));
         expect(await screen.findByTestId('login-screen')).toBeVisible();
@@ -670,7 +671,7 @@ describe('native application component tree', () => {
         await signIn();
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
-        await fireEvent.press(screen.getByLabelText('Open account menu'));
+        await fireEvent.press(screen.getByLabelText('Open profile'));
         await fireEvent.press(screen.getByLabelText('Start sign out'));
         await fireEvent.press(screen.getByLabelText('Confirm sign out'));
 
@@ -1220,7 +1221,7 @@ describe('native application component tree', () => {
         ).toBeTruthy();
 
         await waitFor(() => {
-            expect(screen.getByLabelText('Open account menu')).toBeVisible();
+            expect(screen.getByLabelText('Open profile')).toBeVisible();
         });
     });
 
@@ -1236,8 +1237,18 @@ describe('native application component tree', () => {
         );
 
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
-        expect(screen.getByText('Synchronized')).toBeVisible();
+        expect(screen.getByText('Your assignments')).toBeVisible();
+        expect(
+            screen.getByText(/See today.?s jobs and what to do next\./),
+        ).toBeVisible();
+        expect(screen.getByText(/1 active assignment/)).toBeVisible();
+        expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
+        expect(
+            screen.getByTestId('bottom-nav-today').props.accessibilityState
+                .selected,
+        ).toBe(true);
+        expect(screen.getByLabelText('Route, planned')).toBeVisible();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
     });
@@ -1254,9 +1265,47 @@ describe('native application component tree', () => {
         );
 
         await screen.findByText(driverJob.reference);
-        expect(screen.getByText('Synchronized')).toBeVisible();
+        expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.queryByText('Queued: 0')).toBeNull();
         expect(screen.queryByTestId('sync-details-toggle')).toBeNull();
+    });
+
+    it('keeps Profile and planned Route navigation truthful', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        await screen.findByText(driverJob.reference);
+
+        expect(screen.queryByTestId('bottom-nav-sync')).toBeNull();
+
+        await fireEvent.press(screen.getByTestId('bottom-nav-route'));
+        expect(screen.getByTestId('planned-route-panel')).toBeVisible();
+        expect(
+            screen.getByText(
+                'Route planning is not available for this assignment yet.',
+            ),
+        ).toBeVisible();
+        expect(screen.queryByTestId('route-map')).toBeNull();
+
+        await fireEvent.press(screen.getByTestId('bottom-nav-profile'));
+        const profileSheet = screen.getByTestId('profile-sheet');
+        expect(profileSheet).toBeVisible();
+        expect(within(profileSheet).getByText('Profile')).toBeVisible();
+        expect(within(profileSheet).getByText('Sign out')).toBeVisible();
+
+        await fireEvent.press(screen.getByTestId('profile-sheet-close'));
+        expect(screen.queryByTestId('profile-sheet')).toBeNull();
+        expect(
+            screen.getByTestId('bottom-nav-today').props.accessibilityState
+                .selected,
+        ).toBe(true);
     });
 
     it('keeps offline status compact when no actions are waiting to sync', async () => {

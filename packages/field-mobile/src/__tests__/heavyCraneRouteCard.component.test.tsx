@@ -6,7 +6,7 @@ import {
 } from '../components/HeavyCraneRouteCard';
 
 describe('HeavyCraneRouteCard', () => {
-    it('renders the crane label, route details, and synchronized list alternative', async () => {
+    it('renders the crane label, route details, and synced list alternative', async () => {
         const onOpenRoute = jest.fn();
 
         const view = await render(
@@ -29,7 +29,7 @@ describe('HeavyCraneRouteCard', () => {
         expect(view.getByText('North Harbor depot')).toBeTruthy();
         expect(view.getByText('Pier 7 East Gate')).toBeTruthy();
         expect(view.getByText('Pier 7 staging area')).toBeTruthy();
-        expect(view.getByText('Synchronized assignment details')).toBeTruthy();
+        expect(view.getByText('Synced assignment details')).toBeTruthy();
 
         fireEvent.press(view.getByTestId('heavy-crane-route-card-open-route'));
         expect(onOpenRoute).toHaveBeenCalledTimes(1);
