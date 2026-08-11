@@ -30,7 +30,7 @@ export function Button({
             className={cn(
                 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50',
                 variant === 'primary' &&
-                    'bg-brand text-brand-contrast hover:bg-brand-strong active:bg-brand-strong',
+                    'bg-brand text-ink hover:bg-brand-strong hover:text-white active:bg-brand-strong active:text-white',
                 variant === 'secondary' &&
                     'border border-line-strong bg-surface text-ink hover:bg-surface-subtle',
                 variant === 'quiet' &&

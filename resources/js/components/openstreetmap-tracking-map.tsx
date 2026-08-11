@@ -562,7 +562,7 @@ export function OpenStreetMapTrackingMap({
                                                                     ? 'rounded-md'
                                                                     : 'rounded-full',
                                                             isSelected
-                                                                ? 'bg-brand-strong text-brand-contrast'
+                                                                ? 'bg-brand-strong text-white'
                                                                 : 'bg-surface-subtle text-ink-soft group-hover:bg-brand-soft group-hover:text-brand-strong',
                                                         )}
                                                     >
