@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
         overflow: 'visible',
     },
     hero: {
-        aspectRatio: 941 / 620,
+        aspectRatio: 3 / 2,
         width: '100%',
         backgroundColor: colors.surfaceMuted,
     },
