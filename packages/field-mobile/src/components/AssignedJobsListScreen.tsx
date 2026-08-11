@@ -54,6 +54,24 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const failedCommands = outboxCommands.filter(
         (command) => command.state === 'failed',
     );
+    const pendingResponseCount = jobs.filter(
+        (job) => job.my_assignment?.response_status === 'pending',
+    ).length;
+    const syncAttentionCount = failedCount + conflictCount;
+    const syncGuidance =
+        conflictCount > 0
+            ? `${conflictCount} saved action${conflictCount === 1 ? '' : 's'} need conflict review.`
+            : failedCount > 0
+              ? `${failedCount} saved action${failedCount === 1 ? '' : 's'} failed. Retry before leaving the app.`
+              : queuedCount > 0
+                ? `${queuedCount} action${queuedCount === 1 ? '' : 's'} saved on this device and waiting to sync.`
+                : syncingCount > 0
+                  ? 'Saved actions are syncing now.'
+                  : 'Actions sync automatically when the connection is available.';
+    const workSummary =
+        isLoading && jobs.length === 0
+            ? 'Loading active assignments...'
+            : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'} • ${pendingResponseCount > 0 ? `${pendingResponseCount} need${pendingResponseCount === 1 ? 's' : ''} response` : 'No responses waiting'}`;
 
     return (
         <ScrollView
@@ -70,10 +88,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         >
             <View style={[styles.header, isCompact && styles.headerCompact]}>
                 <View style={styles.headerCopy}>
+                    <Text style={styles.eyebrow}>TODAY'S WORK</Text>
                     <Text style={styles.title}>Active Field Assignments</Text>
                     <Text style={styles.subtitle}>
                         Today’s assigned work and next safe action.
                     </Text>
+                    <Text style={styles.workSummary}>{workSummary}</Text>
                 </View>
                 <Pressable
                     accessibilityLabel={
@@ -142,6 +162,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         </Text>
                     </View>
                 </View>
+                <Text
+                    style={[
+                        styles.outboxSummary,
+                        syncAttentionCount > 0 && styles.outboxSummaryAttention,
+                    ]}
+                    testID="sync-guidance"
+                >
+                    {syncGuidance}
+                </Text>
                 <View style={styles.outboxChipRow}>
                     <View
                         style={[
@@ -407,6 +436,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             ) : null}
 
                             <View style={styles.cardActionRow}>
+                                <Text style={styles.actionMeta}>
+                                    Tap to view job details
+                                </Text>
                                 <Text style={styles.actionBtnText}>
                                     Review assignment
                                 </Text>
@@ -442,6 +474,13 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingRight: 12,
     },
+    eyebrow: {
+        color: colors.amberDark,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
     title: {
         color: colors.text,
         fontSize: 22,
@@ -453,6 +492,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
         marginTop: 4,
+    },
+    workSummary: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        lineHeight: 19,
+        marginTop: 8,
     },
     refreshButton: {
         backgroundColor: colors.surface,
@@ -488,6 +534,15 @@ const styles = StyleSheet.create({
     },
     outboxHeaderCopy: {
         flex: 1,
+    },
+    outboxSummary: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 19,
+    },
+    outboxSummaryAttention: {
+        color: colors.warningDark,
+        fontWeight: '700',
     },
     connectionMark: {
         borderRadius: 6,
@@ -775,6 +830,11 @@ const styles = StyleSheet.create({
         marginTop: 16,
         minHeight: 48,
         paddingTop: 10,
+    },
+    actionMeta: {
+        color: colors.muted,
+        flex: 1,
+        fontSize: 12,
     },
     actionBtnText: {
         color: colors.amberDark,

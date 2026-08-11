@@ -35,6 +35,43 @@ export const FieldProgressionStepper: React.FC<
                 Job progress
             </Text>
 
+            {nextStep ? (
+                <View style={styles.nextCard} testID="next-step-card">
+                    <Text style={styles.nextEyebrow}>YOUR NEXT ACTION</Text>
+                    <Text style={styles.nextTitle}>
+                        {nextStep.confirmation_title}
+                    </Text>
+                    <Text style={styles.nextActionLabel}>
+                        Server will record: {nextStep.status.label}
+                    </Text>
+                    <Text style={styles.nextMessage}>
+                        {nextStep.confirmation_message}
+                    </Text>
+                    <Pressable
+                        accessibilityLabel={`${nextStep.action_label}, version ${job.version}`}
+                        accessibilityRole="button"
+                        onPress={() =>
+                            onTransitionStatus(
+                                job.id,
+                                nextStep.status.value,
+                                job.version,
+                            )
+                        }
+                        style={({ pressed }) => [
+                            sharedStyles.button,
+                            styles.advanceButton,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="advance-status-btn"
+                    >
+                        <Text style={sharedStyles.buttonText}>
+                            {nextStep.action_label}
+                        </Text>
+                    </Pressable>
+                </View>
+            ) : null}
+
+            <Text style={styles.progressLabel}>Progress history</Text>
             <View style={styles.steps}>
                 {progression.steps.map((step, index) => {
                     const isComplete = step.state === 'complete';
@@ -90,41 +127,11 @@ export const FieldProgressionStepper: React.FC<
                 })}
             </View>
 
-            {nextStep ? (
-                <View style={styles.nextCard} testID="next-step-card">
-                    <Text style={styles.nextTitle}>
-                        Next action: {nextStep.confirmation_title}
-                    </Text>
-                    <Text style={styles.nextMessage}>
-                        {nextStep.confirmation_message}
-                    </Text>
-                    <Pressable
-                        accessibilityLabel={`${nextStep.action_label}, version ${job.version}`}
-                        accessibilityRole="button"
-                        onPress={() =>
-                            onTransitionStatus(
-                                job.id,
-                                nextStep.status.value,
-                                job.version,
-                            )
-                        }
-                        style={({ pressed }) => [
-                            sharedStyles.button,
-                            styles.advanceButton,
-                            pressed && styles.pressed,
-                        ]}
-                        testID="advance-status-btn"
-                    >
-                        <Text style={sharedStyles.buttonText}>
-                            {nextStep.action_label}
-                        </Text>
-                    </Pressable>
-                </View>
-            ) : (
+            {!nextStep ? (
                 <Text style={styles.completeMessage}>
                     Completed — {progression.message}
                 </Text>
-            )}
+            ) : null}
         </View>
     );
 };
@@ -159,6 +166,14 @@ const styles = StyleSheet.create({
     },
     steps: {
         gap: 6,
+    },
+    progressLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+        marginBottom: 6,
+        textTransform: 'uppercase',
     },
     stepRow: {
         alignItems: 'center',
@@ -220,10 +235,25 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     nextCard: {
-        borderTopColor: colors.border,
-        borderTopWidth: 1,
-        marginTop: 16,
-        paddingTop: 16,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginBottom: 16,
+        padding: 14,
+    },
+    nextEyebrow: {
+        color: colors.amberDark,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+        marginBottom: 5,
+    },
+    nextActionLabel: {
+        color: colors.amberDark,
+        fontSize: 14,
+        fontWeight: '800',
+        marginTop: 5,
     },
     nextTitle: {
         color: colors.text,
@@ -235,7 +265,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 20,
         marginBottom: 12,
-        marginTop: 6,
+        marginTop: 4,
     },
     advanceButton: {
         backgroundColor: colors.amber,

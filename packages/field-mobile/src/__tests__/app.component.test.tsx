@@ -802,6 +802,9 @@ describe('native application component tree', () => {
         expect(screen.getByTestId('empty-assignments-msg')).toBeVisible();
         expect(screen.getByText('Queued: 1')).toBeVisible();
         expect(screen.getByText('Conflicts: 1')).toBeVisible();
+        expect(screen.getByTestId('sync-guidance')).toHaveTextContent(
+            '1 saved action need conflict review.',
+        );
     });
 
     it('restores an eight-hour-old command and replays it once after reconnect', async () => {
@@ -1235,6 +1238,10 @@ describe('native application component tree', () => {
             ),
         ).toBeVisible();
         expect(screen.getByText('Location sharing available')).toBeVisible();
+        expect(screen.getByText('Routine')).toBeVisible();
+        expect(screen.getByText('Record version 3')).toBeVisible();
+        expect(screen.getByText('YOUR NEXT ACTION')).toBeVisible();
+        expect(screen.getByText('Server will record: Accepted')).toBeVisible();
         expect(screen.queryByText(/Lift and set HVAC/i)).toBeNull();
         expect(screen.queryByText(/ETA 7:28/i)).toBeNull();
         expect(screen.getByText('Accept job responsibility')).toBeVisible();

@@ -191,14 +191,13 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     row: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+        alignItems: 'stretch',
+        flexDirection: 'column',
         gap: 12,
     },
     shareButton: {
         backgroundColor: colors.amber,
-        flexGrow: 1,
+        width: '100%',
     },
     unavailableButton: {
         backgroundColor: colors.surfaceMuted,

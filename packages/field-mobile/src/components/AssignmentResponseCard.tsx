@@ -51,6 +51,10 @@ export const AssignmentResponseCard: React.FC<AssignmentResponseCardProps> = ({
                 You have been assigned to {job.reference} ({job.title}). Please
                 accept or reject this assignment.
             </Text>
+            <Text style={styles.consequenceText}>
+                Accepting starts your field workflow. Rejecting requires a
+                reason so dispatch can review the assignment.
+            </Text>
 
             {!showRejectInput ? (
                 <View style={styles.actions}>
@@ -181,27 +185,33 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 14,
         lineHeight: 21,
+        marginTop: 8,
+    },
+    consequenceText: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 19,
         marginBottom: 14,
         marginTop: 8,
     },
     actions: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+        alignItems: 'stretch',
+        flexDirection: 'column',
         gap: 10,
     },
     acceptButton: {
         backgroundColor: colors.amber,
-        flexGrow: 1,
+        width: '100%',
     },
     rejectButton: {
         backgroundColor: colors.surface,
         borderColor: colors.borderStrong,
         borderWidth: 1,
-        flexGrow: 1,
+        width: '100%',
     },
     confirmRejectButton: {
         backgroundColor: colors.red,
-        flexGrow: 1,
+        width: '100%',
     },
     secondaryButtonText: {
         color: colors.text,
@@ -211,7 +221,7 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         backgroundColor: colors.surfaceMuted,
-        flexGrow: 1,
+        width: '100%',
     },
     cancelButtonText: {
         color: colors.text,

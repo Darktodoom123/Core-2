@@ -134,6 +134,12 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                   requirement.trim().length > 0,
           )
         : [];
+    const priorityStyle =
+        job.priority.value === 'emergency'
+            ? styles.emergencyPriority
+            : job.priority.value === 'priority'
+              ? styles.priorityPriority
+              : styles.routinePriority;
 
     return (
         <ScrollView
@@ -162,14 +168,24 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
             <View style={styles.headerCard}>
                 <View style={styles.headerRow}>
-                    <Text selectable style={styles.reference}>
-                        {job.reference}
-                    </Text>
-                    <View style={styles.statusBadge}>
-                        <View style={styles.statusMark} />
-                        <Text style={styles.statusText}>
-                            {job.status.label}
+                    <View style={styles.referenceBlock}>
+                        <Text selectable style={styles.reference}>
+                            {job.reference}
                         </Text>
+                        <Text selectable style={styles.versionText}>
+                            Record version {job.version}
+                        </Text>
+                    </View>
+                    <View style={styles.badgeGroup}>
+                        <Text style={[styles.priorityBadge, priorityStyle]}>
+                            {job.priority.label}
+                        </Text>
+                        <View style={styles.statusBadge}>
+                            <View style={styles.statusMark} />
+                            <Text style={styles.statusText}>
+                                {job.status.label}
+                            </Text>
+                        </View>
                     </View>
                 </View>
                 <Text style={styles.title}>
@@ -190,12 +206,6 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                             </Text>
                         </View>
                     ) : null}
-                    <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>Version</Text>
-                        <Text selectable style={styles.metaValue}>
-                            {job.version}
-                        </Text>
-                    </View>
                 </View>
                 {job.site_notes ? (
                     <View style={styles.siteNotes}>
@@ -347,14 +357,53 @@ const styles = StyleSheet.create({
     headerRow: {
         alignItems: 'flex-start',
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 8,
         justifyContent: 'space-between',
+    },
+    referenceBlock: {
+        flex: 1,
+        minWidth: 140,
     },
     reference: {
         color: colors.blueDark,
         flexShrink: 1,
         fontSize: 21,
         fontWeight: '800',
+    },
+    versionText: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
+        marginTop: 3,
+    },
+    badgeGroup: {
+        alignItems: 'flex-end',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        justifyContent: 'flex-end',
+    },
+    priorityBadge: {
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: '800',
+        overflow: 'hidden',
+        paddingHorizontal: 9,
+        paddingVertical: 6,
+        textTransform: 'uppercase',
+    },
+    emergencyPriority: {
+        backgroundColor: colors.redSoft,
+        color: colors.redDark,
+    },
+    priorityPriority: {
+        backgroundColor: colors.warningSoft,
+        color: colors.warningDark,
+    },
+    routinePriority: {
+        backgroundColor: colors.surfaceMuted,
+        color: colors.secondary,
     },
     statusBadge: {
         alignItems: 'center',
