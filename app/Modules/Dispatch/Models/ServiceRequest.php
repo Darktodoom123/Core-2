@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dispatch\Models;
 
+use App\Modules\Dispatch\Enums\BusinessLine;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\ServiceRequestStatus;
 use App\Platform\Identity\Models\User;
@@ -21,12 +22,13 @@ class ServiceRequest extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['reference', 'client_id', 'created_by', 'project_name', 'service_type', 'location', 'site_notes', 'scheduled_date', 'priority', 'status', 'requirements'];
+    protected $fillable = ['reference', 'client_id', 'created_by', 'business_line', 'project_name', 'service_type', 'location', 'site_notes', 'scheduled_date', 'priority', 'status', 'requirements'];
 
     protected function casts(): array
     {
         return [
             'scheduled_date' => 'datetime',
+            'business_line' => BusinessLine::class,
             'priority' => DispatchPriority::class,
             'status' => ServiceRequestStatus::class,
             'requirements' => 'array',

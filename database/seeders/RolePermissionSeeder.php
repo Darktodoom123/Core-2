@@ -46,6 +46,8 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::EquipmentViewAll, PermissionName::EquipmentRegister, PermissionName::EquipmentUpdateStatus, PermissionName::FuelViewAll,
                 PermissionName::FuelForward, PermissionName::FuelMonitor, PermissionName::TrackingViewAll,
                 PermissionName::GptUseDispatch, PermissionName::ReportsViewDispatch,
+                PermissionName::RentalView, PermissionName::RentalCreate, PermissionName::RentalCheckout,
+                PermissionName::RentalReturn, PermissionName::SalesView, PermissionName::SalesCreateQuote,
             ]),
             RoleName::OperationsManager->value => self::values([
                 PermissionName::DispatchViewAll, PermissionName::DispatchApprovePriority, PermissionName::DispatchApproveChange,
@@ -54,6 +56,10 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::FuelViewAll, PermissionName::FuelApprove, PermissionName::FuelMonitor,
                 PermissionName::FuelReport, PermissionName::TrackingViewAll, PermissionName::GptUseOperations,
                 PermissionName::ReportsViewAll, PermissionName::ReportsExport,
+                PermissionName::RentalView, PermissionName::RentalApprove, PermissionName::RentalCheckout,
+                PermissionName::RentalReturn, PermissionName::SalesView, PermissionName::SalesCatalogManage,
+                PermissionName::SalesCreateQuote,
+                PermissionName::SalesApproveOrder, PermissionName::SalesFulfill, PermissionName::SalesTransferOwnership,
             ]),
             RoleName::Driver->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus,

@@ -3,6 +3,7 @@
 namespace App\Modules\Dispatch\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Dispatch\Enums\BusinessLine;
 use App\Modules\Dispatch\Enums\ServiceRequestStatus;
 use App\Modules\Dispatch\Http\Requests\StoreServiceRequest;
 use App\Modules\Dispatch\Models\ServiceRequest;
@@ -25,6 +26,7 @@ final class ServiceRequestController extends Controller
     {
         $serviceRequest = ServiceRequest::query()->create([
             ...$request->validated(),
+            'business_line' => $request->validated('business_line', BusinessLine::Service->value),
             'created_by' => $request->user()->id,
             'status' => ServiceRequestStatus::Submitted,
         ]);

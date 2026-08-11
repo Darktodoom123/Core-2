@@ -237,6 +237,7 @@ function ServiceRequestIntakeForm({
     const form = useForm({
         reference: '',
         client_id: '',
+        business_line: 'service',
         project_name: '',
         service_type: '',
         location: '',
@@ -303,6 +304,18 @@ function ServiceRequestIntakeForm({
                         </option>
                     ))}
                 </SelectField>
+                <SelectField
+                    id="request-business-line"
+                    label="Business line"
+                    value={form.data.business_line}
+                    error={form.errors.business_line}
+                    onChange={(value) => form.setData('business_line', value)}
+                    required
+                >
+                    <option value="service">Service / dispatch</option>
+                    <option value="rental">Rental reservation (API)</option>
+                    <option value="sales">Sales quote (API)</option>
+                </SelectField>
                 <IntakeInput
                     id="request-project"
                     label="Project or job name"
@@ -367,11 +380,15 @@ function ServiceRequestIntakeForm({
                     processing={form.processing}
                     processingLabel="Recording request…"
                     submitLabel="Record service request"
-                    disabled={!complete}
+                    disabled={
+                        !complete || form.data.business_line !== 'service'
+                    }
                     help={
-                        complete
-                            ? undefined
-                            : 'Complete the client, request, service, and location fields.'
+                        form.data.business_line !== 'service'
+                            ? 'Rental and sales use the dedicated API workflows for now.'
+                            : complete
+                              ? undefined
+                              : 'Complete the client, request, service, and location fields.'
                     }
                 />
             </form>

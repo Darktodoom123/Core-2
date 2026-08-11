@@ -2,6 +2,8 @@
 
 require app_path('Platform/Identity/Routes/web.php');
 require app_path('Modules/Dispatch/Routes/web.php');
+require app_path('Modules/Rental/Routes/web.php');
+require app_path('Modules/Sales/Routes/web.php');
 require app_path('Modules/Assignment/Routes/web.php');
 require app_path('Modules/Fleet/Routes/web.php');
 require app_path('Modules/CraneEquipment/Routes/web.php');

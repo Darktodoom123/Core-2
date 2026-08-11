@@ -2,8 +2,10 @@
 
 namespace App\Modules\Dispatch\Http\Requests;
 
+use App\Modules\Dispatch\Enums\BusinessLine;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Platform\Identity\Enums\PermissionName;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -29,6 +31,7 @@ final class StoreServiceRequest extends FormRequest
                         ->whereNull('deleted_at'),
                 ),
             ],
+            'business_line' => ['nullable', Rule::enum(BusinessLine::class)],
             'project_name' => ['required', 'string', 'max:255'],
             'service_type' => ['required', 'string', 'max:64'],
             'location' => ['required', 'string', 'max:2000'],
@@ -38,5 +41,15 @@ final class StoreServiceRequest extends FormRequest
             'requirements' => ['sometimes', 'array'],
             'requirements.*' => ['string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $line = $this->input('business_line', BusinessLine::Service->value);
+            if ($line !== BusinessLine::Service->value) {
+                $validator->errors()->add('business_line', 'Rental and sales intake use their dedicated reservation or quote endpoints.');
+            }
+        });
     }
 }

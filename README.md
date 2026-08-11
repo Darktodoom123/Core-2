@@ -4,9 +4,10 @@ A modern full-stack web application for Alibaton's heavy-equipment rental and
 service operations, built with **Laravel 13**, **Inertia 3**, **React 19**,
 **TypeScript**, **Vite**,
 and **Tailwind CSS v4**, paired with a **React Native / Expo** mobile application
-for field operations. Alibaton also sells heavy equipment; sales and commercial
-rental workflows are documented as future scope and are not yet implemented in
-this repository.
+for field operations. Alibaton also sells heavy equipment. The repository now
+contains partial, API-first rental and sales workflows; customer-facing
+commercial screens, contracts, payments, billing, and complete dispatch
+handoffs remain roadmap work.
 
 See the [Alibaton business context and CT2 capstone scope](Docs/alibaton-business-scope.md)
 for the current rental, sales, and service boundary.

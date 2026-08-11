@@ -58,4 +58,15 @@ enum PermissionName: string
     case SystemConfigure = 'system.configure';
     case AuditView = 'audit.view';
     case ArchiveManage = 'archive.manage';
+    case RentalView = 'rental.view';
+    case RentalCreate = 'rental.create';
+    case RentalApprove = 'rental.approve';
+    case RentalCheckout = 'rental.checkout';
+    case RentalReturn = 'rental.return';
+    case SalesView = 'sales.view';
+    case SalesCatalogManage = 'sales.catalog_manage';
+    case SalesCreateQuote = 'sales.create_quote';
+    case SalesApproveOrder = 'sales.approve_order';
+    case SalesFulfill = 'sales.fulfill';
+    case SalesTransferOwnership = 'sales.transfer_ownership';
 }
