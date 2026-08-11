@@ -1200,7 +1200,7 @@ describe('native application component tree', () => {
 
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
         expect(screen.getByText('Synchronized')).toBeVisible();
-        expect(screen.queryByTestId('bottom-nav-bar')).toBeNull();
+        expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
     });

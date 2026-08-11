@@ -25,6 +25,7 @@ import type {
 import { AssignmentResponseCard } from './AssignmentResponseCard';
 import { CommandConflictBanner } from './CommandConflictBanner';
 import { FieldProgressionStepper } from './FieldProgressionStepper';
+import { HeavyCraneRouteCard } from './HeavyCraneRouteCard';
 import { LocationSharingCard } from './LocationSharingCard';
 import { colors, sharedStyles } from './nativeStyles';
 
@@ -127,6 +128,13 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     const jobConflicts = outboxCommands.filter(
         (command) => command.state === 'conflict' && command.jobId === job.id,
     );
+    const jobPendingCommands = outboxCommands.filter(
+        (command) =>
+            command.jobId === job.id &&
+            (command.state === 'queued' || command.state === 'syncing'),
+    );
+    const primaryAsset = job.asset_assignments?.[0] ?? null;
+    const isResponsePending = job.my_assignment?.response_status === 'pending';
     const requirements = Array.isArray(job.requirements)
         ? job.requirements.filter(
               (requirement): requirement is string =>
@@ -147,24 +155,70 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             contentContainerStyle={styles.content}
             accessibilityLabel={`Assignment ${job.reference}`}
         >
-            <Pressable
-                accessibilityLabel="Back to assigned jobs"
-                accessibilityRole="button"
-                onPress={onBackToList}
-                style={({ pressed }) => [
-                    sharedStyles.button,
-                    styles.backButton,
-                    pressed && styles.pressed,
-                ]}
-            >
-                <Text style={styles.backButtonText}>Back to assignments</Text>
-            </Pressable>
+            <View style={styles.screenHeader}>
+                <Pressable
+                    accessibilityLabel="Back to assigned jobs"
+                    accessibilityRole="button"
+                    onPress={onBackToList}
+                    style={({ pressed }) => [
+                        styles.backButton,
+                        pressed && styles.pressed,
+                    ]}
+                >
+                    <Text style={styles.backIcon}>‹</Text>
+                    <Text style={styles.backButtonText}>Back</Text>
+                </Pressable>
+                <Text accessibilityRole="header" style={styles.screenTitle}>
+                    {isResponsePending ? 'RESPOND' : 'PROGRESS'}
+                </Text>
+                <View style={styles.headerSpacer} />
+            </View>
 
             <CommandConflictBanner
                 conflictedCommands={jobConflicts}
                 onAcceptServerState={onAcceptServerState}
                 onRetryNewVersion={onRetryNewVersion}
             />
+
+            <View
+                accessible
+                accessibilityLiveRegion="polite"
+                accessibilityRole="summary"
+                style={[
+                    styles.syncBanner,
+                    jobConflicts.length > 0 && styles.syncBannerConflict,
+                    jobPendingCommands.length > 0 && styles.syncBannerPending,
+                ]}
+                testID="job-sync-banner"
+            >
+                <View
+                    style={[
+                        styles.syncMark,
+                        jobConflicts.length > 0 && styles.syncMarkConflict,
+                        jobPendingCommands.length > 0 && styles.syncMarkPending,
+                    ]}
+                >
+                    <Text style={styles.syncMarkText}>
+                        {jobConflicts.length > 0 ? '!' : '✓'}
+                    </Text>
+                </View>
+                <View style={styles.syncCopy}>
+                    <Text style={styles.syncLabel}>
+                        {jobConflicts.length > 0
+                            ? 'Conflict-safe'
+                            : jobPendingCommands.length > 0
+                              ? 'Syncing'
+                              : 'Synchronized'}
+                    </Text>
+                    <Text style={styles.syncMeta}>
+                        {jobConflicts.length > 0
+                            ? 'Review the server state before saving.'
+                            : jobPendingCommands.length > 0
+                              ? 'Saved action is waiting for server confirmation.'
+                              : 'Current assignment data is up to date.'}
+                    </Text>
+                </View>
+            </View>
 
             <View style={styles.headerCard}>
                 <View style={styles.headerRow}>
@@ -217,6 +271,28 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 ) : null}
             </View>
 
+            {primaryAsset ? (
+                <View style={styles.assetCard} testID="assigned-asset-card">
+                    <View style={styles.assetIcon}>
+                        <Text style={styles.assetIconText}>CR</Text>
+                    </View>
+                    <View style={styles.assetCopy}>
+                        <Text style={styles.assetLabel}>
+                            {primaryAsset.asset_kind === 'crane'
+                                ? 'Assigned crane'
+                                : 'Assigned asset'}
+                        </Text>
+                        <Text selectable style={styles.assetName}>
+                            {primaryAsset.asset_code}
+                        </Text>
+                        <Text selectable style={styles.assetDetail}>
+                            {primaryAsset.asset_name} ·{' '}
+                            {primaryAsset.asset_kind}
+                        </Text>
+                    </View>
+                </View>
+            ) : null}
+
             {requirements.length > 0 ? (
                 <View style={styles.requirementsCard}>
                     <Text
@@ -248,6 +324,13 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 job={job}
                 onTransitionStatus={onTransitionStatus}
             />
+            {primaryAsset?.asset_kind === 'crane' ? (
+                <HeavyCraneRouteCard
+                    assetLabel={`${primaryAsset.asset_code} · ${primaryAsset.asset_name}`}
+                    destinationLabel={job.site}
+                    status="unavailable"
+                />
+            ) : null}
             <LocationSharingCard
                 user={user}
                 job={job}
@@ -305,19 +388,93 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
         width: '100%',
     },
+    screenHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        minHeight: 44,
+    },
     backButton: {
-        alignSelf: 'flex-start',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderWidth: 1,
-        borderRadius: 8,
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
         minHeight: 48,
-        marginBottom: 16,
+        minWidth: 72,
+        paddingHorizontal: 4,
+    },
+    backIcon: {
+        color: colors.text,
+        fontSize: 30,
+        fontWeight: '400',
+        lineHeight: 34,
     },
     backButtonText: {
-        color: colors.amberDark,
+        color: colors.text,
         fontSize: 14,
         fontWeight: '700',
+    },
+    screenTitle: {
+        color: colors.text,
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    headerSpacer: {
+        minWidth: 72,
+    },
+    syncBanner: {
+        alignItems: 'center',
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    syncBannerPending: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+    },
+    syncBannerConflict: {
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
+    },
+    syncMark: {
+        alignItems: 'center',
+        backgroundColor: colors.green,
+        borderRadius: 10,
+        height: 20,
+        justifyContent: 'center',
+        width: 20,
+    },
+    syncMarkPending: {
+        backgroundColor: colors.amber,
+    },
+    syncMarkConflict: {
+        backgroundColor: colors.warning,
+    },
+    syncMarkText: {
+        color: colors.white,
+        fontSize: 12,
+        fontWeight: '900',
+    },
+    syncCopy: {
+        flex: 1,
+        gap: 1,
+    },
+    syncLabel: {
+        color: colors.greenDark,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    syncMeta: {
+        color: colors.secondary,
+        fontSize: 12,
+        lineHeight: 17,
     },
     headerCard: {
         backgroundColor: colors.surface,
@@ -326,6 +483,49 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
+    },
+    assetCard: {
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 16,
+        padding: 14,
+    },
+    assetIcon: {
+        alignItems: 'center',
+        backgroundColor: colors.amberSoft,
+        borderRadius: 24,
+        height: 48,
+        justifyContent: 'center',
+        width: 48,
+    },
+    assetIconText: {
+        color: colors.amberDark,
+        fontSize: 12,
+        fontWeight: '900',
+    },
+    assetCopy: {
+        flex: 1,
+        gap: 2,
+    },
+    assetLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    assetName: {
+        color: colors.text,
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    assetDetail: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 18,
     },
     requirementsCard: {
         backgroundColor: colors.surface,

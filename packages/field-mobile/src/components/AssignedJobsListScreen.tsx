@@ -72,6 +72,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         isLoading && jobs.length === 0
             ? 'Loading active assignments...'
             : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'} • ${pendingResponseCount > 0 ? `${pendingResponseCount} need${pendingResponseCount === 1 ? 's' : ''} response` : 'No responses waiting'}`;
+    const navItems: ReadonlyArray<{
+        label: string;
+        icon: string;
+        active: boolean;
+    }> = [
+        { label: 'Today', icon: '▣', active: true },
+        { label: 'Assignments', icon: '□', active: false },
+        { label: 'Messages', icon: '▤', active: false },
+        { label: 'More', icon: '≡', active: false },
+    ];
 
     return (
         <ScrollView
@@ -129,6 +139,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 accessibilityRole="summary"
                 style={[
                     styles.outboxBar,
+                    isOnline === true &&
+                        syncAttentionCount === 0 &&
+                        styles.outboxSynchronized,
                     conflictCount > 0 && styles.outboxConflict,
                 ]}
                 testID="outbox-status-bar"
@@ -363,6 +376,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 {jobs.map((job) => {
                     const isPending =
                         job.my_assignment?.response_status === 'pending';
+                    const assignedAsset = job.asset_assignments?.[0] ?? null;
                     const priorityStyle =
                         job.priority.value === 'emergency'
                             ? styles.emergencyBadge
@@ -424,6 +438,31 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 </View>
                             ) : null}
 
+                            {assignedAsset ? (
+                                <View style={styles.assetSummary}>
+                                    <View style={styles.assetIcon}>
+                                        <Text style={styles.assetIconText}>
+                                            CR
+                                        </Text>
+                                    </View>
+                                    <View style={styles.assetCopy}>
+                                        <Text style={styles.assetLabel}>
+                                            {assignedAsset.asset_kind ===
+                                            'crane'
+                                                ? 'Assigned crane'
+                                                : 'Assigned asset'}
+                                        </Text>
+                                        <Text
+                                            selectable
+                                            style={styles.assetValue}
+                                        >
+                                            {assignedAsset.asset_code} ·{' '}
+                                            {assignedAsset.asset_name}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ) : null}
+
                             {isPending ? (
                                 <View
                                     style={styles.pendingBadge}
@@ -446,6 +485,38 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         </Pressable>
                     );
                 })}
+            </View>
+
+            <View
+                accessible
+                accessibilityLabel="Field mobile navigation"
+                style={styles.bottomNav}
+                testID="bottom-nav-bar"
+            >
+                {navItems.map(({ label, icon, active }) => (
+                    <View
+                        accessibilityLabel={`${label}${active ? ', selected' : ''}`}
+                        key={label}
+                        style={[styles.navItem, active && styles.navItemActive]}
+                    >
+                        <Text
+                            style={[
+                                styles.navIcon,
+                                active && styles.navIconActive,
+                            ]}
+                        >
+                            {icon}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.navLabel,
+                                active && styles.navLabelActive,
+                            ]}
+                        >
+                            {label}
+                        </Text>
+                    </View>
+                ))}
             </View>
         </ScrollView>
     );
@@ -607,6 +678,10 @@ const styles = StyleSheet.create({
     outboxConflict: {
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,
+    },
+    outboxSynchronized: {
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
     },
     outboxHeading: {
         color: colors.text,
@@ -788,6 +863,45 @@ const styles = StyleSheet.create({
         lineHeight: 21,
         marginTop: 12,
     },
+    assetSummary: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 12,
+        padding: 10,
+    },
+    assetIcon: {
+        alignItems: 'center',
+        backgroundColor: colors.amberSoft,
+        borderRadius: 20,
+        height: 40,
+        justifyContent: 'center',
+        width: 40,
+    },
+    assetIconText: {
+        color: colors.amberDark,
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    assetCopy: {
+        flex: 1,
+        gap: 2,
+    },
+    assetLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    assetValue: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '700',
+        lineHeight: 19,
+    },
     detailRow: {
         alignItems: 'flex-start',
         flexDirection: 'row',
@@ -840,5 +954,45 @@ const styles = StyleSheet.create({
         color: colors.amberDark,
         fontSize: 14,
         fontWeight: '800',
+    },
+    bottomNav: {
+        alignItems: 'stretch',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginTop: 8,
+        minHeight: 72,
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+    },
+    navItem: {
+        alignItems: 'center',
+        flex: 1,
+        gap: 2,
+        justifyContent: 'center',
+        minHeight: 56,
+    },
+    navItemActive: {
+        backgroundColor: colors.blueLight,
+        borderRadius: 8,
+    },
+    navIcon: {
+        color: colors.secondary,
+        fontSize: 18,
+        lineHeight: 22,
+    },
+    navIconActive: {
+        color: colors.blue,
+    },
+    navLabel: {
+        color: colors.secondary,
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    navLabelActive: {
+        color: colors.blue,
     },
 });
