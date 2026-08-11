@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from './nativeStyles';
 
@@ -43,9 +43,59 @@ export const SyncStatusPill: React.FC<SyncStatusPillProps> = ({
     </View>
 );
 
+export interface BellIconProps {
+    color?: string;
+    size?: number;
+}
+
+export const BellIcon: React.FC<BellIconProps> = ({
+    color = colors.text,
+    size = 20,
+}) => (
+    <View
+        style={{
+            alignItems: 'center',
+            height: size,
+            justifyContent: 'center',
+            width: size,
+        }}
+    >
+        <View
+            style={{
+                borderColor: color,
+                borderTopLeftRadius: size * 0.35,
+                borderTopRightRadius: size * 0.35,
+                borderWidth: 1.8,
+                height: size * 0.58,
+                width: size * 0.68,
+            }}
+        />
+        <View
+            style={{
+                backgroundColor: color,
+                borderRadius: 1,
+                height: 2,
+                marginTop: -1,
+                width: size * 0.86,
+            }}
+        />
+        <View
+            style={{
+                backgroundColor: color,
+                borderBottomLeftRadius: size * 0.12,
+                borderBottomRightRadius: size * 0.12,
+                height: size * 0.18,
+                marginTop: 1,
+                width: size * 0.26,
+            }}
+        />
+    </View>
+);
+
 export interface ProfileSummaryProps {
     userName?: string | null;
     userRole?: string | null;
+    syncTone?: SyncTone;
     profileOpen: boolean;
     onOpenProfile: () => void;
     notificationCount?: number;
@@ -67,6 +117,7 @@ const initialsFor = (userName?: string | null): string => {
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
     userRole,
+    syncTone = 'online',
     profileOpen,
     onOpenProfile,
     notificationCount = 0,
@@ -89,9 +140,22 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                 <Text style={styles.avatarInitials}>{initialsFor(userName)}</Text>
             </View>
             <View style={styles.profileCopy}>
-                <Text style={styles.profileName} selectable>
-                    {userName || 'Field worker'}
-                </Text>
+                <View style={styles.profileNameRow}>
+                    <Text style={styles.profileName} selectable>
+                        {userName || 'Field worker'}
+                    </Text>
+                    <View
+                        accessibilityLabel={`Status dot: ${syncTone}`}
+                        style={[
+                            styles.nameStatusDot,
+                            syncTone === 'checking' && styles.syncMarkChecking,
+                            syncTone === 'online' && styles.syncMarkOnline,
+                            syncTone === 'offline' && styles.syncMarkOffline,
+                            syncTone === 'attention' && styles.syncMarkAttention,
+                        ]}
+                        testID="profile-status-dot"
+                    />
+                </View>
                 <Text style={styles.profileRole}>{userRole || 'Field worker'}</Text>
             </View>
         </Pressable>
@@ -111,7 +175,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
             ]}
             testID="notification-button"
         >
-            <Text style={styles.bellIcon}>🔔</Text>
+            <BellIcon color={colors.text} size={20} />
             {notificationCount > 0 ? (
                 <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -145,32 +209,51 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     onOpenProfile,
     notificationCount,
     onOpenNotifications,
-}) => (
-    <View style={styles.header} testID="field-header">
-        <SyncStatusPill
-            label={syncStatusLabel}
-            message={syncStatusMessage}
-            tone={syncTone}
-        />
+}) => {
+    const [isPillVisible, setIsPillVisible] = useState(true);
 
-        {userName || userRole ? (
-            <ProfileSummary
-                userName={userName}
-                userRole={userRole}
-                profileOpen={profileOpen}
-                onOpenProfile={onOpenProfile}
-                notificationCount={notificationCount}
-                onOpenNotifications={onOpenNotifications}
-            />
-        ) : null}
+    useEffect(() => {
+        setIsPillVisible(true);
 
-        <View style={styles.appBar}>
-            <Text accessibilityRole="header" style={styles.screenTitle}>
-                TODAY'S WORK
-            </Text>
+        if (syncTone === 'online') {
+            const timer = setTimeout(() => {
+                setIsPillVisible(false);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [syncTone, syncStatusLabel, syncStatusMessage]);
+
+    return (
+        <View style={styles.header} testID="field-header">
+            {isPillVisible ? (
+                <SyncStatusPill
+                    label={syncStatusLabel}
+                    message={syncStatusMessage}
+                    tone={syncTone}
+                />
+            ) : null}
+
+            {userName || userRole ? (
+                <ProfileSummary
+                    userName={userName}
+                    userRole={userRole}
+                    syncTone={syncTone}
+                    profileOpen={profileOpen}
+                    onOpenProfile={onOpenProfile}
+                    notificationCount={notificationCount}
+                    onOpenNotifications={onOpenNotifications}
+                />
+            ) : null}
+
+            <View style={styles.appBar}>
+                <Text accessibilityRole="header" style={styles.screenTitle}>
+                    TODAY'S WORK
+                </Text>
+            </View>
         </View>
-    </View>
-);
+    );
+};
 
 const styles = StyleSheet.create({
     header: {
@@ -280,10 +363,20 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
     },
+    profileNameRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
     profileName: {
         color: colors.text,
         fontSize: 15,
         fontWeight: '800',
+    },
+    nameStatusDot: {
+        borderRadius: 4,
+        height: 8,
+        width: 8,
     },
     profileRole: {
         color: colors.secondary,
