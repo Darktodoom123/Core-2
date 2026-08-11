@@ -147,12 +147,6 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     onOpenNotifications,
 }) => (
     <View style={styles.header} testID="field-header">
-        <View style={styles.appBar}>
-            <Text accessibilityRole="header" style={styles.screenTitle}>
-                TODAY'S WORK
-            </Text>
-        </View>
-
         <SyncStatusPill
             label={syncStatusLabel}
             message={syncStatusMessage}
@@ -169,6 +163,12 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
                 onOpenNotifications={onOpenNotifications}
             />
         ) : null}
+
+        <View style={styles.appBar}>
+            <Text accessibilityRole="header" style={styles.screenTitle}>
+                TODAY'S WORK
+            </Text>
+        </View>
     </View>
 );
 
@@ -179,11 +179,11 @@ const styles = StyleSheet.create({
     },
     appBar: {
         alignItems: 'center',
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
         minHeight: 52,
         justifyContent: 'center',
-        paddingBottom: 12,
+        paddingTop: 12,
     },
     screenTitle: {
         alignSelf: 'flex-start',
