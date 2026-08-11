@@ -175,7 +175,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
             ]}
             testID="notification-button"
         >
-            <BellIcon color={colors.text} size={20} />
+            <BellIcon color={colors.amberDark} size={20} />
             {notificationCount > 0 ? (
                 <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -262,10 +262,10 @@ const styles = StyleSheet.create({
     },
     appBar: {
         alignItems: 'center',
-        borderTopColor: colors.border,
-        borderTopWidth: 1,
-        minHeight: 52,
+        borderTopColor: colors.amberBorder,
+        borderTopWidth: 1.5,
         justifyContent: 'center',
+        minHeight: 52,
         paddingTop: 12,
     },
     screenTitle: {
@@ -349,7 +349,9 @@ const styles = StyleSheet.create({
     avatarCircle: {
         alignItems: 'center',
         backgroundColor: colors.amberSoft,
+        borderColor: colors.amberBorder,
         borderRadius: 22,
+        borderWidth: 1.5,
         height: 44,
         justifyContent: 'center',
         width: 44,
@@ -391,10 +393,10 @@ const styles = StyleSheet.create({
     },
     notificationButton: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
-        borderRadius: 8,
-        borderWidth: 1,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+        borderRadius: 10,
+        borderWidth: 1.5,
         height: 44,
         justifyContent: 'center',
         position: 'relative',
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
     },
     notificationBadge: {
         alignItems: 'center',
-        backgroundColor: colors.warning,
+        backgroundColor: colors.amber,
         borderRadius: 9,
         height: 18,
         justifyContent: 'center',
