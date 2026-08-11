@@ -8,6 +8,7 @@ use App\Modules\Sales\Models\SalesQuote;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final class CreateSalesQuote
 {
@@ -27,9 +28,21 @@ final class CreateSalesQuote
                 'notes' => $attributes['notes'] ?? null,
             ]);
             $total = 0;
+            $catalogIds = [];
             foreach ((array) $attributes['items'] as $item) {
-                $catalog = SalesCatalogItem::query()->lockForUpdate()->findOrFail((int) $item['sales_catalog_item_id']);
+                $catalogId = (int) $item['sales_catalog_item_id'];
+                if (isset($catalogIds[$catalogId])) {
+                    throw ValidationException::withMessages(['items' => 'Each catalog item may appear only once on a quote.']);
+                }
+                $catalogIds[$catalogId] = true;
+                $catalog = SalesCatalogItem::query()->lockForUpdate()->findOrFail($catalogId);
+                if ($catalog->status !== 'active') {
+                    throw ValidationException::withMessages(['items' => "Catalog item {$catalog->sku} is no longer active."]);
+                }
                 $quantity = (int) $item['quantity'];
+                if ($catalog->operational_asset_id !== null && $quantity !== 1) {
+                    throw ValidationException::withMessages(['items' => "Saleable unit {$catalog->sku} can only be quoted once."]);
+                }
                 $line = $catalog->unit_price_cents * $quantity;
                 $total += $line;
                 $quote->items()->create([

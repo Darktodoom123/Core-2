@@ -27,7 +27,9 @@ final class StoreRentalReservationRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.operational_asset_id' => ['required', 'integer', Rule::exists('operational_assets', 'id')->where(fn ($q) => $q->whereIn('status', [AssetStatus::Available->value, AssetStatus::ReadyForService->value])->whereNull('deleted_at'))],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            // Each line references one physical operational unit. Multiple units
+            // must use separate catalog records so availability cannot be overstated.
+            'items.*.quantity' => ['required', 'integer', 'size:1'],
             'items.*.rate_cents' => ['required', 'integer', 'min:0'],
         ];
     }

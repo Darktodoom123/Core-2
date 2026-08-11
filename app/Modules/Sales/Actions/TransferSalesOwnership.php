@@ -28,7 +28,10 @@ final class TransferSalesOwnership
                     throw ValidationException::withMessages(['status' => 'Ownership has already been transferred for this order.']);
                 }
                 $catalog = $item->catalogItem;
-                $asset = $catalog?->asset;
+                $asset = $catalog?->asset()->lockForUpdate()->first();
+                if ($asset !== null && DB::table('ownership_transfers')->where('operational_asset_id', $asset->id)->exists()) {
+                    throw ValidationException::withMessages(['status' => "Equipment {$asset->code} already has an ownership transfer."]);
+                }
                 DB::table('ownership_transfers')->insert([
                     'sales_order_id' => $locked->id,
                     'sales_order_item_id' => $item->id,

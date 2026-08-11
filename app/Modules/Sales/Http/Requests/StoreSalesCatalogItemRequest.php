@@ -3,6 +3,8 @@
 namespace App\Modules\Sales\Http\Requests;
 
 use App\Platform\Identity\Enums\PermissionName;
+use App\Shared\Assets\Enums\AssetStatus;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +24,16 @@ final class StoreSalesCatalogItemRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'unit_price_cents' => ['required', 'integer', 'min:0'],
             'quantity_on_hand' => ['required', 'integer', 'min:0'],
-            'operational_asset_id' => ['nullable', 'integer', Rule::exists('operational_assets', 'id')->whereNull('deleted_at')],
+            'operational_asset_id' => ['nullable', 'integer', Rule::exists('operational_assets', 'id')->where(fn ($query) => $query->whereIn('status', [AssetStatus::Available->value, AssetStatus::ReadyForService->value])->whereNull('deleted_at'))],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->filled('operational_asset_id') && (int) $this->input('quantity_on_hand') !== 1) {
+                $validator->errors()->add('quantity_on_hand', 'A catalog entry linked to a physical unit must have exactly one unit in stock.');
+            }
+        });
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Modules\Sales\Actions;
 
+use App\Modules\Rental\Enums\RentalReservationStatus;
+use App\Modules\Rental\Models\RentalReservationItem;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Enums\SalesQuoteStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
@@ -39,6 +41,20 @@ final class AcceptSalesQuote
             ]);
             foreach ($locked->items as $quoteItem) {
                 $catalog = SalesCatalogItem::query()->lockForUpdate()->findOrFail($quoteItem->sales_catalog_item_id);
+                $asset = $catalog->asset()->lockForUpdate()->first();
+                if ($catalog->status !== 'active' || ($asset !== null && ! $asset->status->dispatchable())) {
+                    throw ValidationException::withMessages(['items' => "Saleable inventory {$catalog->sku} is no longer available."]);
+                }
+                if ($asset !== null && RentalReservationItem::query()
+                    ->where('operational_asset_id', $asset->id)
+                    ->whereHas('reservation', fn ($query) => $query->whereIn('status', [
+                        RentalReservationStatus::Requested->value,
+                        RentalReservationStatus::Reserved->value,
+                        RentalReservationStatus::CheckedOut->value,
+                    ]))
+                    ->exists()) {
+                    throw ValidationException::withMessages(['items' => "Equipment {$catalog->sku} is reserved for a rental."]);
+                }
                 $available = $catalog->quantity_on_hand - $catalog->quantity_reserved;
                 if ($available < $quoteItem->quantity) {
                     throw ValidationException::withMessages(['items' => "Insufficient inventory for {$catalog->sku}."]);

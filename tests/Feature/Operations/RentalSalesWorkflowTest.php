@@ -3,20 +3,25 @@
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Rental\Models\RentalReservationItem;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuote;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    $this->withoutMiddleware(ValidateCsrfToken::class);
     $this->seed(RolePermissionSeeder::class);
 });
 
@@ -106,4 +111,73 @@ it('keeps rental and sales writes behind their dedicated permissions', function 
             'quantity_on_hand' => 1,
         ])
         ->assertForbidden();
+});
+
+it('rechecks asset availability and quantity when approving a rental', function (): void {
+    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $manager = workflowUser(RoleName::OperationsManager);
+    $client = workflowClient();
+    $asset = OperationalAsset::query()->create(['code' => 'EQ-RECHECK-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $payload = [
+        'reference' => 'REN-RECHECK-1', 'client_id' => $client->id,
+        'start_date' => now()->addDays(2)->toDateString(), 'end_date' => now()->addDays(3)->toDateString(),
+        'fulfillment_mode' => 'delivery', 'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100]],
+    ];
+    $this->actingAs($dispatcher)->postJson('/operations/rental-reservations', [...$payload, 'reference' => 'REN-RECHECK-2', 'items' => [['operational_asset_id' => $asset->id, 'quantity' => 2, 'rate_cents' => 100]]])->assertUnprocessable()->assertJsonValidationErrors('items.0.quantity');
+    $this->actingAs($dispatcher)->postJson('/operations/rental-reservations', $payload)->assertCreated();
+    $reservation = RentalReservation::query()->where('reference', 'REN-RECHECK-1')->sole();
+    $asset->update(['status' => AssetStatus::Unavailable]);
+    $this->actingAs($manager)->postJson("/operations/rental-reservations/{$reservation->id}/approve")->assertUnprocessable()->assertJsonValidationErrors('status');
+});
+
+it('rejects an approval when another reservation conflicts with the same unit', function (): void {
+    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $manager = workflowUser(RoleName::OperationsManager);
+    $client = workflowClient();
+    $asset = OperationalAsset::query()->create(['code' => 'EQ-CONFLICT-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $start = now()->addDays(4)->toDateString();
+    $end = now()->addDays(5)->toDateString();
+    $this->actingAs($dispatcher)->postJson('/operations/rental-reservations', [
+        'reference' => 'REN-CONFLICT-1', 'client_id' => $client->id, 'start_date' => $start, 'end_date' => $end,
+        'fulfillment_mode' => 'delivery', 'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100]],
+    ])->assertCreated();
+    $reservation = RentalReservation::query()->where('reference', 'REN-CONFLICT-1')->sole();
+    $other = RentalReservation::query()->create(['reference' => 'REN-CONFLICT-2', 'client_id' => $client->id, 'created_by' => $dispatcher->id, 'status' => RentalReservationStatus::Requested, 'start_date' => $start, 'end_date' => $end, 'fulfillment_mode' => 'delivery', 'total_cents' => 100]);
+    RentalReservationItem::query()->create(['rental_reservation_id' => $other->id, 'operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100, 'line_total_cents' => 100]);
+    $this->actingAs($manager)->postJson("/operations/rental-reservations/{$reservation->id}/approve")->assertUnprocessable()->assertJsonValidationErrors('status');
+});
+
+it('prevents serialized catalog overstock and records catalog creation audit', function (): void {
+    $manager = workflowUser(RoleName::OperationsManager);
+    $asset = OperationalAsset::query()->create(['code' => 'EQ-CATALOG-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $this->actingAs($manager)->postJson('/operations/sales/catalog', ['sku' => 'SERIAL-OVER', 'name' => 'Crane', 'unit_price_cents' => 100, 'quantity_on_hand' => 2, 'operational_asset_id' => $asset->id])->assertUnprocessable()->assertJsonValidationErrors('quantity_on_hand');
+    $this->actingAs($manager)->postJson('/operations/sales/catalog', ['sku' => 'SERIAL-OK', 'name' => 'Crane', 'unit_price_cents' => 100, 'quantity_on_hand' => 1, 'operational_asset_id' => $asset->id])->assertCreated();
+    expect(AuditEvent::query()->where('action', 'sales_catalog_item.created')->count())->toBe(1);
+    expect(DB::table('sales_inventory_ledger')->where('entry_type', 'initial_stock')->where('quantity_delta', 1)->count())->toBe(1);
+});
+
+it('rejects a quote when its linked unit becomes unavailable and rejects duplicate lines', function (): void {
+    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $manager = workflowUser(RoleName::OperationsManager);
+    $client = workflowClient();
+    $asset = OperationalAsset::query()->create(['code' => 'EQ-QUOTE-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $catalog = SalesCatalogItem::query()->create(['sku' => 'QUOTE-SERIAL', 'name' => 'Crane', 'unit_price_cents' => 100, 'quantity_on_hand' => 1, 'quantity_reserved' => 0, 'operational_asset_id' => $asset->id, 'status' => 'active']);
+    $this->actingAs($dispatcher)->postJson('/operations/sales/quotes', ['reference' => 'QUO-DUP', 'client_id' => $client->id, 'items' => [['sales_catalog_item_id' => $catalog->id, 'quantity' => 1], ['sales_catalog_item_id' => $catalog->id, 'quantity' => 1]]])->assertUnprocessable()->assertJsonValidationErrors('items');
+    $this->actingAs($dispatcher)->postJson('/operations/sales/quotes', ['reference' => 'QUO-UNAVAILABLE', 'client_id' => $client->id, 'items' => [['sales_catalog_item_id' => $catalog->id, 'quantity' => 1]]])->assertCreated();
+    $quote = SalesQuote::query()->where('reference', 'QUO-UNAVAILABLE')->sole();
+    $asset->update(['status' => AssetStatus::Unavailable]);
+    $this->actingAs($manager)->postJson("/operations/sales/quotes/{$quote->id}/accept")->assertUnprocessable()->assertJsonValidationErrors('items');
+});
+
+it('prevents duplicate ownership transfers for one physical unit', function (): void {
+    $manager = workflowUser(RoleName::OperationsManager);
+    $client = workflowClient();
+    $asset = OperationalAsset::query()->create(['code' => 'EQ-TRANSFER-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $catalog = SalesCatalogItem::query()->create(['sku' => 'TRANSFER-SERIAL', 'name' => 'Crane', 'unit_price_cents' => 100, 'quantity_on_hand' => 0, 'quantity_reserved' => 0, 'operational_asset_id' => $asset->id, 'status' => 'active']);
+    $order = SalesOrder::query()->create(['reference' => 'SO-DUP-TRANSFER', 'client_id' => $client->id, 'created_by' => $manager->id, 'status' => SalesOrderStatus::Fulfilled, 'currency' => 'PHP', 'total_cents' => 200]);
+    $order->items()->createMany([
+        ['sales_catalog_item_id' => $catalog->id, 'quantity' => 1, 'unit_price_cents' => 100, 'line_total_cents' => 100],
+        ['sales_catalog_item_id' => $catalog->id, 'quantity' => 1, 'unit_price_cents' => 100, 'line_total_cents' => 100],
+    ]);
+    $this->actingAs($manager)->postJson("/operations/sales/orders/{$order->id}/transfer-ownership")->assertUnprocessable()->assertJsonValidationErrors('status');
 });
