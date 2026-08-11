@@ -10,7 +10,7 @@ import '@testing-library/react-native/matchers';
 import React from 'react';
 import { App } from '../../App';
 import type { TokenStorageProvider } from '../auth/tokenStorage';
-import { AssignedJobsListScreen } from '../components/AssignedJobsListScreen';
+import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { MemoryOutboxRepository } from '../storage/outboxRepository';
 import type { PayloadHasher } from '../storage/outboxRepository';

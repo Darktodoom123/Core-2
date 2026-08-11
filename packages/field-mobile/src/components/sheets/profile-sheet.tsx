@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { Animated, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { colors } from './nativeStyles';
+import { colors } from '../nativeStyles';
 
 export interface ProfileSheetProps {
     visible: boolean;

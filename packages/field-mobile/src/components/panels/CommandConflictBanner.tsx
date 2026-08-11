@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { OutboxCommand } from '../types/index';
-import { colors, sharedStyles } from './nativeStyles';
+import type { OutboxCommand } from '../../types/index';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export interface CommandConflictBannerProps {
     conflictedCommands: OutboxCommand[];

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from './nativeStyles';
+import { colors } from '../nativeStyles';
 
 export type SyncTone = 'checking' | 'online' | 'attention' | 'offline';
 

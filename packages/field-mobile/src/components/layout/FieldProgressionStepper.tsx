@@ -1,7 +1,7 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { DispatchJob, DispatchStatus } from '../types/index';
-import { colors, sharedStyles } from './nativeStyles';
+import type { DispatchJob, DispatchStatus } from '../../types/index';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export interface FieldProgressionStepperProps {
     job: DispatchJob;

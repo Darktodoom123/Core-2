@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, sharedStyles } from './nativeStyles';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export type HeavyCraneRouteStatus =
     'available' | 'cached' | 'stale' | 'unavailable';

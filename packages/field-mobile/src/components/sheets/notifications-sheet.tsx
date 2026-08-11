@@ -1,8 +1,8 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import type { OutboxCommand, DispatchJob } from '../types/index';
-import { colors, sharedStyles } from './nativeStyles';
+import type { OutboxCommand, DispatchJob } from '../../types/index';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export interface FieldNotificationItem {
     id: string;

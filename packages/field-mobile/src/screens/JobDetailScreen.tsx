@@ -22,12 +22,12 @@ import type {
     OutboxCommand,
     User,
 } from '../types/index';
-import { AssignmentResponseCard } from './AssignmentResponseCard';
-import { CommandConflictBanner } from './CommandConflictBanner';
-import { FieldProgressionStepper } from './FieldProgressionStepper';
-import { HeavyCraneRouteCard } from './HeavyCraneRouteCard';
-import { LocationSharingCard } from './LocationSharingCard';
-import { colors, sharedStyles } from './nativeStyles';
+import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
+import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
+import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
+import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
+import { LocationSharingCard } from '../components/cards/LocationSharingCard';
+import { colors, sharedStyles } from '../components/nativeStyles';
 
 export interface JobDetailScreenProps {
     job: DispatchJob;

@@ -9,9 +9,9 @@ import {
 import type {
     LocationCoordinates,
     LocationSharingService,
-} from '../services/locationService';
-import type { DispatchJob, User } from '../types/index';
-import { colors, sharedStyles } from './nativeStyles';
+} from '../../services/locationService';
+import type { DispatchJob, User } from '../../types/index';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export interface LocationSharingCardProps {
     user: User;

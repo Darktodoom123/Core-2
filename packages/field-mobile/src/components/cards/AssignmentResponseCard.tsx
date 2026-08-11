@@ -1,7 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { DispatchJob } from '../types/index';
-import { colors, sharedStyles } from './nativeStyles';
+import type { DispatchJob } from '../../types/index';
+import { colors, sharedStyles } from '../nativeStyles';
 
 export interface AssignmentResponseCardProps {
     job: DispatchJob;

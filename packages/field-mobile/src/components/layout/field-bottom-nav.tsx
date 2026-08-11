@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { colors } from './nativeStyles';
+import { colors } from '../nativeStyles';
 
 export type FieldNavItem = 'today' | 'route' | 'profile';
 

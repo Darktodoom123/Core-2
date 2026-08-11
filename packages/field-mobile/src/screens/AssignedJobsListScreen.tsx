@@ -10,13 +10,13 @@ import {
     View,
 } from 'react-native';
 import type { DispatchJob, OutboxCommand } from '../types/index';
-import { FieldBottomNav, type FieldNavItem } from './field-bottom-nav';
-import { FieldHeader, type SyncTone } from './field-header';
-import { PlannedRoutePanel } from './planned-route-panel';
-import { NotificationsSheet } from './notifications-sheet';
-import { ProfileSheet } from './profile-sheet';
-import { SyncStatusPanel } from './sync-status-panel';
-import { colors, sharedStyles } from './nativeStyles';
+import { FieldBottomNav, type FieldNavItem } from '../components/layout/field-bottom-nav';
+import { FieldHeader, type SyncTone } from '../components/layout/field-header';
+import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
+import { NotificationsSheet } from '../components/sheets/notifications-sheet';
+import { ProfileSheet } from '../components/sheets/profile-sheet';
+import { SyncStatusPanel } from '../components/panels/sync-status-panel';
+import { colors, sharedStyles } from '../components/nativeStyles';
 
 export interface AssignedJobsListScreenProps {
     jobs: DispatchJob[];

@@ -3,7 +3,7 @@ import React from 'react';
 import {
     HeavyCraneRouteCard,
     type HeavyCraneRouteStatus,
-} from '../components/HeavyCraneRouteCard';
+} from '../components/cards/HeavyCraneRouteCard';
 
 describe('HeavyCraneRouteCard', () => {
     it('renders the crane label, route details, and synced list alternative', async () => {
