@@ -131,6 +131,19 @@ npm --prefix packages/field-mobile install
 npm run mobile:start
 ```
 
+When testing on a physical Android device, start Laravel on the local network
+instead of the loopback-only development address:
+
+```powershell
+npm run mobile:api
+```
+
+Keep the phone and development computer on the same Wi-Fi network. The mobile
+API origin is configured in `packages/field-mobile/.env.local` (for example,
+`http://192.168.254.110:8000`). If Windows Firewall prompts for PHP, allow it
+on the private network. A physical device cannot reach `127.0.0.1` on the
+development computer.
+
 To run on an Android emulator:
 
 ```bash

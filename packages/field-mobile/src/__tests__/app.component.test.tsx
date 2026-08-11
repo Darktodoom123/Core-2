@@ -487,6 +487,36 @@ describe('native application component tree', () => {
         expect(tokenStorage.setCalls).toHaveLength(0);
     });
 
+    it('turns a device-to-API connection failure into actionable sign-in guidance', async () => {
+        const tokenStorage = new TestTokenStorage();
+        const fetchFn = jest.fn(async (input: RequestInfo | URL) => {
+            if (input.toString().endsWith('/api/v1/auth/login')) {
+                throw new TypeError(
+                    'fetch failed: java.net.ConnectException: Failed to connect',
+                );
+            }
+
+            return jsonResponse({ message: 'Not found.' }, { status: 404 });
+        }) as typeof fetch;
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={tokenStorage}
+            />,
+        );
+        await signIn();
+
+        expect(
+            await screen.findByText(
+                /Unable to reach the field API\. Check that the phone and computer are on the same Wi-Fi network/,
+            ),
+        ).toBeVisible();
+        expect(screen.queryByText(/java\.net\.ConnectException/)).toBeNull();
+        expect(tokenStorage.setCalls).toHaveLength(0);
+    });
+
     it('fails closed for a suspended account and clears stored credentials', async () => {
         const tokenStorage = new TestTokenStorage(rawToken);
         const { fetchFn } = createApi({ meStatus: 403 });
@@ -581,7 +611,9 @@ describe('native application component tree', () => {
         expect(
             await screen.findByText('Dispatch service unavailable.'),
         ).toBeVisible();
-        await fireEvent.press(screen.getByTestId('refresh-jobs-btn'));
+        await screen
+            .getByTestId('refresh-control')
+            .props.refreshControl.props.onRefresh();
 
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
         expect(screen.queryByText('Dispatch service unavailable.')).toBeNull();
@@ -604,7 +636,9 @@ describe('native application component tree', () => {
         await signIn();
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
-        await fireEvent.press(screen.getByLabelText('Sign out of field app'));
+        await fireEvent.press(screen.getByLabelText('Open account menu'));
+        await fireEvent.press(screen.getByLabelText('Start sign out'));
+        await fireEvent.press(screen.getByLabelText('Confirm sign out'));
         expect(await screen.findByTestId('login-screen')).toBeVisible();
         activeJobs = [secondDriverJob];
         await signIn();
@@ -636,7 +670,9 @@ describe('native application component tree', () => {
         await signIn();
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
 
-        await fireEvent.press(screen.getByLabelText('Sign out of field app'));
+        await fireEvent.press(screen.getByLabelText('Open account menu'));
+        await fireEvent.press(screen.getByLabelText('Start sign out'));
+        await fireEvent.press(screen.getByLabelText('Confirm sign out'));
 
         expect(await screen.findByTestId('login-screen')).toBeVisible();
         expect(
@@ -783,7 +819,10 @@ describe('native application component tree', () => {
         expect(screen.getByRole('alert')).toHaveTextContent(
             'Network unavailable.',
         );
-        expect(screen.getByTestId('refresh-jobs-btn')).toBeDisabled();
+        expect(
+            screen.getByTestId('refresh-control').props.refreshControl.props
+                .refreshing,
+        ).toBe(true);
 
         await rerender(
             <AssignedJobsListScreen
@@ -1181,9 +1220,7 @@ describe('native application component tree', () => {
         ).toBeTruthy();
 
         await waitFor(() => {
-            expect(
-                screen.getByLabelText('Sign out of field app'),
-            ).toBeVisible();
+            expect(screen.getByLabelText('Open account menu')).toBeVisible();
         });
     });
 
@@ -1203,6 +1240,46 @@ describe('native application component tree', () => {
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
+    });
+
+    it('keeps healthy sync details hidden until an attention state exists', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        await screen.findByText(driverJob.reference);
+        expect(screen.getByText('Synchronized')).toBeVisible();
+        expect(screen.queryByText('Queued: 0')).toBeNull();
+        expect(screen.queryByTestId('sync-details-toggle')).toBeNull();
+    });
+
+    it('keeps offline status compact when no actions are waiting to sync', async () => {
+        await renderScreen(
+            <AssignedJobsListScreen
+                isLoading={false}
+                isOnline={false}
+                jobs={[]}
+                onRefresh={jest.fn()}
+                onSelectJob={jest.fn()}
+                outboxCommands={[]}
+            />,
+        );
+
+        expect(screen.getByText('Offline')).toBeVisible();
+        expect(screen.getByText('Reconnect to sync')).toBeVisible();
+        expect(screen.queryByTestId('sync-details')).toBeNull();
+        expect(screen.queryByText('Queued: 0')).toBeNull();
+        expect(
+            screen.queryByText(
+                'Commands stay on this device until the connection returns.',
+            ),
+        ).toBeNull();
     });
 
     it('shows only server-provided job requirements and honest location availability', async () => {

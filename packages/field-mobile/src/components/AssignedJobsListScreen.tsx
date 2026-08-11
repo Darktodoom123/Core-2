@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -17,9 +17,12 @@ export interface AssignedJobsListScreenProps {
     outboxCommands: OutboxCommand[];
     isLoading: boolean;
     isOnline?: boolean | null;
+    userName?: string | null;
+    userRole?: string | null;
     error?: string | null;
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
+    onLogout?: () => void;
     onSyncNow?: () => void;
     onRetryCommand?: (commandId: string) => void;
     onDiscardCommand?: (commandId: string) => void;
@@ -30,13 +33,19 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     outboxCommands,
     isLoading,
     isOnline = null,
+    userName,
+    userRole,
     error,
     onRefresh,
     onSelectJob,
+    onLogout,
     onSyncNow,
     onRetryCommand,
     onDiscardCommand,
 }) => {
+    const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+    const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
+        useState(false);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
     const queuedCount = outboxCommands.filter(
@@ -58,16 +67,40 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         (job) => job.my_assignment?.response_status === 'pending',
     ).length;
     const syncAttentionCount = failedCount + conflictCount;
+    const hasOutboxActivity =
+        syncAttentionCount > 0 || queuedCount > 0 || syncingCount > 0;
+    const hasSyncAttention = isOnline === false || hasOutboxActivity;
+    const syncDetailsExpanded = hasOutboxActivity;
     const syncGuidance =
         conflictCount > 0
             ? `${conflictCount} saved action${conflictCount === 1 ? '' : 's'} need conflict review.`
             : failedCount > 0
               ? `${failedCount} saved action${failedCount === 1 ? '' : 's'} failed. Retry before leaving the app.`
-              : queuedCount > 0
-                ? `${queuedCount} action${queuedCount === 1 ? '' : 's'} saved on this device and waiting to sync.`
-                : syncingCount > 0
-                  ? 'Saved actions are syncing now.'
-                  : 'Actions sync automatically when the connection is available.';
+              : isOnline === false
+                ? 'Commands stay on this device until the connection returns.'
+                : queuedCount > 0
+                  ? `${queuedCount} action${queuedCount === 1 ? '' : 's'} saved on this device and waiting to sync.`
+                  : syncingCount > 0
+                    ? 'Saved actions are syncing now.'
+                    : 'Actions sync automatically when the connection is available.';
+    const syncStatusLabel =
+        isOnline === null
+            ? 'Checking connection'
+            : isOnline === false
+              ? 'Offline'
+              : syncAttentionCount > 0
+                ? 'Needs review'
+                : queuedCount > 0 || syncingCount > 0
+                  ? 'Syncing'
+                  : 'Synchronized';
+    const syncStatusMessage =
+        isOnline === null
+            ? 'Checking…'
+            : isOnline === true && !hasOutboxActivity
+              ? 'Just now'
+              : isOnline === false
+                ? 'Reconnect to sync'
+                : 'Action needed';
     const workSummary =
         isLoading && jobs.length === 0
             ? 'Loading active assignments...'
@@ -87,6 +120,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         <ScrollView
             contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
+            testID="refresh-control"
             refreshControl={
                 <RefreshControl
                     refreshing={isLoading}
@@ -96,57 +130,165 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             }
             accessibilityLabel="Active field assignments"
         >
+            <View style={styles.screenTopBar}>
+                <View style={styles.screenTopBarCopy}>
+                    <Text accessibilityRole="header" style={styles.screenTitle}>
+                        TODAY'S WORK
+                    </Text>
+                    {userName ? (
+                        <View style={styles.screenUserRow}>
+                            <Text selectable style={styles.screenUser}>
+                                {userName}
+                            </Text>
+                            <Text style={styles.screenRole}>
+                                · {userRole || 'Field worker'}
+                            </Text>
+                        </View>
+                    ) : null}
+                </View>
+                <View style={styles.topBarActions}>
+                    {onLogout ? (
+                        <View style={styles.accountMenuWrap}>
+                            <Pressable
+                                accessibilityLabel="Open account menu"
+                                accessibilityHint="Shows account actions"
+                                accessibilityRole="button"
+                                accessibilityState={{
+                                    expanded: accountMenuOpen,
+                                }}
+                                onPress={() => {
+                                    setAccountMenuOpen((open) => !open);
+                                    setSignOutConfirmationOpen(false);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.accountButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="account-menu-button"
+                            >
+                                <Text style={styles.accountButtonText}>
+                                    Account
+                                </Text>
+                            </Pressable>
+                            {accountMenuOpen ? (
+                                <View
+                                    accessibilityViewIsModal
+                                    style={styles.accountMenu}
+                                    testID="account-menu"
+                                >
+                                    <Text style={styles.accountMenuName}>
+                                        {userName || 'Field account'}
+                                    </Text>
+                                    <Text style={styles.accountMenuRole}>
+                                        {userRole || 'Field worker'}
+                                    </Text>
+                                    <View style={styles.accountMenuDivider} />
+                                    {signOutConfirmationOpen ? (
+                                        <View style={styles.signOutConfirm}>
+                                            <Text style={styles.signOutTitle}>
+                                                Sign out of the field app?
+                                            </Text>
+                                            <Text style={styles.signOutMessage}>
+                                                You can sign in again when you
+                                                need to access field work.
+                                            </Text>
+                                            <View style={styles.signOutActions}>
+                                                <Pressable
+                                                    accessibilityLabel="Cancel sign out"
+                                                    accessibilityRole="button"
+                                                    onPress={() =>
+                                                        setSignOutConfirmationOpen(
+                                                            false,
+                                                        )
+                                                    }
+                                                    style={({ pressed }) => [
+                                                        styles.accountAction,
+                                                        pressed &&
+                                                            styles.pressed,
+                                                    ]}
+                                                    testID="cancel-sign-out-button"
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.accountActionText
+                                                        }
+                                                    >
+                                                        Cancel
+                                                    </Text>
+                                                </Pressable>
+                                                <Pressable
+                                                    accessibilityLabel="Confirm sign out"
+                                                    accessibilityRole="button"
+                                                    onPress={onLogout}
+                                                    style={({ pressed }) => [
+                                                        styles.accountAction,
+                                                        styles.signOutAction,
+                                                        pressed &&
+                                                            styles.pressed,
+                                                    ]}
+                                                    testID="confirm-sign-out-button"
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.signOutActionText
+                                                        }
+                                                    >
+                                                        Sign out
+                                                    </Text>
+                                                </Pressable>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <Pressable
+                                            accessibilityLabel="Start sign out"
+                                            accessibilityRole="button"
+                                            onPress={() =>
+                                                setSignOutConfirmationOpen(true)
+                                            }
+                                            style={({ pressed }) => [
+                                                styles.accountAction,
+                                                pressed && styles.pressed,
+                                            ]}
+                                            testID="account-sign-out-button"
+                                        >
+                                            <Text
+                                                style={styles.accountActionText}
+                                            >
+                                                Sign out
+                                            </Text>
+                                        </Pressable>
+                                    )}
+                                </View>
+                            ) : null}
+                        </View>
+                    ) : null}
+                </View>
+            </View>
+
             <View style={[styles.header, isCompact && styles.headerCompact]}>
                 <View style={styles.headerCopy}>
-                    <Text style={styles.eyebrow}>TODAY'S WORK</Text>
+                    <Text style={styles.eyebrow}>ACTIVE ASSIGNMENTS</Text>
                     <Text style={styles.title}>Active Field Assignments</Text>
                     <Text style={styles.subtitle}>
                         Today’s assigned work and next safe action.
                     </Text>
                     <Text style={styles.workSummary}>{workSummary}</Text>
                 </View>
-                <Pressable
-                    accessibilityLabel={
-                        isLoading
-                            ? 'Refreshing assignments'
-                            : 'Refresh assignments'
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{
-                        busy: isLoading,
-                        disabled: isLoading,
-                    }}
-                    disabled={isLoading}
-                    onPress={onRefresh}
-                    style={({ pressed }) => [
-                        sharedStyles.button,
-                        styles.refreshButton,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="refresh-jobs-btn"
-                >
-                    {isLoading ? (
-                        <ActivityIndicator color={colors.amber} size="small" />
-                    ) : (
-                        <Text style={styles.refreshButtonText}>Refresh</Text>
-                    )}
-                </Pressable>
             </View>
 
             <View
-                accessible
                 accessibilityLiveRegion="polite"
-                accessibilityRole="summary"
                 style={[
                     styles.outboxBar,
                     isOnline === true &&
-                        syncAttentionCount === 0 &&
+                        !hasSyncAttention &&
                         styles.outboxSynchronized,
                     conflictCount > 0 && styles.outboxConflict,
+                    isOnline === false && styles.outboxOffline,
                 ]}
                 testID="outbox-status-bar"
             >
-                <View style={styles.outboxHeader}>
+                <View style={styles.syncStripRow}>
                     <View
                         style={[
                             styles.connectionMark,
@@ -157,7 +299,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                   : styles.connectionOffline,
                         ]}
                     />
-                    <View style={styles.outboxHeaderCopy}>
+                    <View
+                        style={styles.outboxHeaderCopy}
+                        accessible
+                        accessibilityRole="summary"
+                    >
                         <Text style={styles.outboxHeading}>Sync status</Text>
                         <Text
                             style={[
@@ -167,116 +313,122 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     : styles.offlineValue,
                             ]}
                         >
-                            {isOnline === null
-                                ? 'Checking connection'
-                                : isOnline
-                                  ? 'Online'
-                                  : 'Offline — commands stay on this device'}
+                            {syncStatusLabel}
                         </Text>
                     </View>
+                    <Text style={styles.syncStatusMessage} selectable>
+                        {syncStatusMessage}
+                    </Text>
                 </View>
-                <Text
-                    style={[
-                        styles.outboxSummary,
-                        syncAttentionCount > 0 && styles.outboxSummaryAttention,
-                    ]}
-                    testID="sync-guidance"
-                >
-                    {syncGuidance}
-                </Text>
-                <View style={styles.outboxChipRow}>
-                    <View
-                        style={[
-                            styles.outboxChip,
-                            queuedCount > 0
-                                ? styles.queuedChip
-                                : styles.zeroChip,
-                        ]}
-                    >
+                {syncDetailsExpanded ? (
+                    <View style={styles.syncDetails} testID="sync-details">
                         <Text
                             style={[
-                                styles.outboxChipText,
-                                queuedCount > 0
-                                    ? styles.queuedChipText
-                                    : styles.zeroChipText,
+                                styles.outboxSummary,
+                                syncAttentionCount > 0 &&
+                                    styles.outboxSummaryAttention,
                             ]}
+                            testID="sync-guidance"
                         >
-                            Queued: {queuedCount}
+                            {syncGuidance}
                         </Text>
+                        <View style={styles.outboxChipRow}>
+                            <View
+                                style={[
+                                    styles.outboxChip,
+                                    queuedCount > 0
+                                        ? styles.queuedChip
+                                        : styles.zeroChip,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.outboxChipText,
+                                        queuedCount > 0
+                                            ? styles.queuedChipText
+                                            : styles.zeroChipText,
+                                    ]}
+                                >
+                                    Queued: {queuedCount}
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.outboxChip,
+                                    syncingCount > 0
+                                        ? styles.syncingChip
+                                        : styles.zeroChip,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.outboxChipText,
+                                        syncingCount > 0
+                                            ? styles.syncingChipText
+                                            : styles.zeroChipText,
+                                    ]}
+                                >
+                                    Syncing: {syncingCount}
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.outboxChip,
+                                    failedCount > 0
+                                        ? styles.failedChip
+                                        : styles.zeroChip,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.outboxChipText,
+                                        failedCount > 0
+                                            ? styles.failedChipText
+                                            : styles.zeroChipText,
+                                    ]}
+                                >
+                                    Failed: {failedCount}
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.outboxChip,
+                                    conflictCount > 0
+                                        ? styles.conflictChip
+                                        : styles.zeroChip,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.outboxChipText,
+                                        conflictCount > 0
+                                            ? styles.conflictChipText
+                                            : styles.zeroChipText,
+                                    ]}
+                                >
+                                    Conflicts: {conflictCount}
+                                </Text>
+                            </View>
+                        </View>
+                        {onSyncNow &&
+                        isOnline === true &&
+                        (queuedCount > 0 || failedCount > 0) ? (
+                            <Pressable
+                                accessibilityLabel="Sync queued commands now"
+                                accessibilityRole="button"
+                                onPress={onSyncNow}
+                                style={({ pressed }) => [
+                                    sharedStyles.button,
+                                    styles.syncButton,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text style={sharedStyles.buttonText}>
+                                    Sync now
+                                </Text>
+                            </Pressable>
+                        ) : null}
                     </View>
-                    <View
-                        style={[
-                            styles.outboxChip,
-                            syncingCount > 0
-                                ? styles.syncingChip
-                                : styles.zeroChip,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.outboxChipText,
-                                syncingCount > 0
-                                    ? styles.syncingChipText
-                                    : styles.zeroChipText,
-                            ]}
-                        >
-                            Syncing: {syncingCount}
-                        </Text>
-                    </View>
-                    <View
-                        style={[
-                            styles.outboxChip,
-                            failedCount > 0
-                                ? styles.failedChip
-                                : styles.zeroChip,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.outboxChipText,
-                                failedCount > 0
-                                    ? styles.failedChipText
-                                    : styles.zeroChipText,
-                            ]}
-                        >
-                            Failed: {failedCount}
-                        </Text>
-                    </View>
-                    <View
-                        style={[
-                            styles.outboxChip,
-                            conflictCount > 0
-                                ? styles.conflictChip
-                                : styles.zeroChip,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.outboxChipText,
-                                conflictCount > 0
-                                    ? styles.conflictChipText
-                                    : styles.zeroChipText,
-                            ]}
-                        >
-                            Conflicts: {conflictCount}
-                        </Text>
-                    </View>
-                </View>
-                {onSyncNow &&
-                isOnline === true &&
-                (queuedCount > 0 || failedCount > 0) ? (
-                    <Pressable
-                        accessibilityLabel="Sync queued commands now"
-                        accessibilityRole="button"
-                        onPress={onSyncNow}
-                        style={({ pressed }) => [
-                            sharedStyles.button,
-                            styles.syncButton,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text style={sharedStyles.buttonText}>Sync now</Text>
-                    </Pressable>
                 ) : null}
             </View>
 
@@ -367,7 +519,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     <Text style={styles.emptyTitle}>No active assignments</Text>
                     <Text style={styles.emptyText}>
                         New work assigned to your account will appear here. Pull
-                        down or use Refresh to check again.
+                        down to refresh and check again.
                     </Text>
                 </View>
             ) : null}
@@ -479,7 +631,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     Tap to view job details
                                 </Text>
                                 <Text style={styles.actionBtnText}>
-                                    Review assignment
+                                    Open assignment
                                 </Text>
                             </View>
                         </Pressable>
@@ -529,6 +681,135 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingBottom: 32,
         width: '100%',
+    },
+    screenTopBar: {
+        alignItems: 'center',
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+        minHeight: 52,
+        paddingBottom: 12,
+    },
+    screenTopBarCopy: {
+        flex: 1,
+        minWidth: 0,
+    },
+    screenUserRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
+        marginTop: 3,
+    },
+    screenTitle: {
+        color: colors.text,
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: 0.2,
+    },
+    screenUser: {
+        color: colors.secondary,
+        fontSize: 12,
+        textTransform: 'capitalize',
+    },
+    screenRole: {
+        color: colors.muted,
+        fontSize: 12,
+        textTransform: 'capitalize',
+    },
+    topBarActions: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
+    accountMenuWrap: {
+        position: 'relative',
+        zIndex: 3,
+    },
+    accountButton: {
+        alignItems: 'center',
+        borderColor: colors.borderStrong,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 44,
+        paddingHorizontal: 12,
+    },
+    accountButtonText: {
+        color: colors.text,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    accountMenu: {
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
+        borderRadius: 12,
+        borderWidth: 1,
+        minWidth: 220,
+        padding: 12,
+        position: 'absolute',
+        right: 0,
+        top: 52,
+        zIndex: 4,
+    },
+    accountMenuName: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    accountMenuRole: {
+        color: colors.muted,
+        fontSize: 12,
+        marginTop: 2,
+        textTransform: 'capitalize',
+    },
+    accountMenuDivider: {
+        backgroundColor: colors.border,
+        height: 1,
+        marginVertical: 10,
+    },
+    accountAction: {
+        alignItems: 'center',
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 44,
+        paddingHorizontal: 12,
+    },
+    accountActionText: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    signOutConfirm: {
+        gap: 8,
+    },
+    signOutTitle: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    signOutMessage: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    signOutActions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 4,
+    },
+    signOutAction: {
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        flex: 1,
+    },
+    signOutActionText: {
+        color: colors.redDark,
+        fontSize: 14,
+        fontWeight: '800',
     },
     headerCompact: {
         alignItems: 'stretch',
@@ -594,9 +875,15 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
-        gap: 10,
+        gap: 8,
         marginBottom: 16,
-        padding: 16,
+        padding: 12,
+    },
+    syncStripRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
+        minHeight: 36,
     },
     outboxHeader: {
         alignItems: 'center',
@@ -614,6 +901,19 @@ const styles = StyleSheet.create({
     outboxSummaryAttention: {
         color: colors.warningDark,
         fontWeight: '700',
+    },
+    syncStatusMessage: {
+        color: colors.muted,
+        flex: 1,
+        fontSize: 12,
+        lineHeight: 17,
+        textAlign: 'right',
+    },
+    syncDetails: {
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        gap: 8,
+        paddingTop: 8,
     },
     connectionMark: {
         borderRadius: 6,
@@ -676,6 +976,10 @@ const styles = StyleSheet.create({
         color: colors.secondary,
     },
     outboxConflict: {
+        backgroundColor: colors.warningLight,
+        borderColor: colors.warningBorder,
+    },
+    outboxOffline: {
         backgroundColor: colors.warningLight,
         borderColor: colors.warningBorder,
     },

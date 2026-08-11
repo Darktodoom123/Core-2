@@ -136,28 +136,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
-    const queuedSyncCount = outboxCommands.filter(
-        (command) => command.state === 'queued',
-    ).length;
-    const reviewSyncCount = outboxCommands.filter(
-        (command) => command.state === 'failed' || command.state === 'conflict',
-    ).length;
-    const pendingSyncCount = queuedSyncCount + reviewSyncCount;
-    const isSyncing = outboxCommands.some(
-        (command) => command.state === 'syncing',
-    );
-    const connectivityLabel =
-        isOnline === null
-            ? 'Checking connection'
-            : !isOnline
-              ? 'Offline'
-              : isSyncing
-                ? 'Syncing'
-                : reviewSyncCount > 0
-                  ? `${reviewSyncCount} need review`
-                  : queuedSyncCount > 0
-                    ? `${queuedSyncCount} queued`
-                    : 'Synchronized';
 
     const commandOutbox = useMemo(
         () =>
@@ -632,79 +610,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 >
                     <View
                         style={[
-                            styles.header,
-                            isCompact && styles.headerCompact,
-                        ]}
-                    >
-                        <View style={styles.headerBrand}>
-                            <View style={styles.brandMark} />
-                            <Text style={styles.headerTitle}>Core 2 Field</Text>
-                            <View
-                                accessible
-                                accessibilityLabel={`Connection status: ${connectivityLabel}`}
-                                accessibilityLiveRegion="polite"
-                                accessibilityRole="summary"
-                                style={styles.connectivityPill}
-                            >
-                                <View
-                                    style={[
-                                        styles.connectivityDot,
-                                        isOnline === null
-                                            ? styles.connectivityChecking
-                                            : isOnline
-                                              ? isSyncing ||
-                                                pendingSyncCount > 0
-                                                  ? styles.connectivityPending
-                                                  : styles.connectivityOnline
-                                              : styles.connectivityOffline,
-                                    ]}
-                                />
-                                <Text style={styles.connectivityText}>
-                                    {connectivityLabel}
-                                </Text>
-                            </View>
-                        </View>
-                        <View
-                            style={[
-                                styles.userProfile,
-                                isCompact && styles.userProfileCompact,
-                            ]}
-                        >
-                            <View style={styles.avatarPill}>
-                                <View style={styles.avatarCircle}>
-                                    <Text style={styles.avatarInitials}>
-                                        {user?.name
-                                            ? user.name
-                                                  .split(' ')
-                                                  .map((n) => n[0])
-                                                  .join('')
-                                                  .toUpperCase()
-                                                  .slice(0, 2)
-                                            : 'FM'}
-                                    </Text>
-                                </View>
-                                <View style={styles.userInfo}>
-                                    <Text selectable style={styles.userName}>
-                                        {user?.name}
-                                    </Text>
-                                    <Text style={styles.roleBadge}>
-                                        {user?.role.replaceAll('_', ' ')}
-                                    </Text>
-                                </View>
-                            </View>
-                            <Pressable
-                                accessibilityLabel="Sign out of field app"
-                                accessibilityRole="button"
-                                onPress={() => void logout()}
-                                style={styles.logoutButton}
-                                testID="logout-button"
-                            >
-                                <Text style={styles.logoutText}>Sign out</Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                    <View
-                        style={[
                             styles.mainContent,
                             !isCompact && styles.mainContentExpanded,
                         ]}
@@ -728,12 +633,15 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 outboxCommands={outboxCommands}
                                 isLoading={isLoadingJobs}
                                 isOnline={isOnline}
+                                userName={user?.name}
+                                userRole={user?.role.replaceAll('_', ' ')}
                                 error={jobsError}
                                 onRefresh={() => void fetchJobs()}
                                 onSyncNow={() => void syncQueue()}
                                 onRetryCommand={handleRetryCommand}
                                 onDiscardCommand={handleDiscardCommand}
                                 onSelectJob={handleSelectJob}
+                                onLogout={() => void logout()}
                             />
                         ) : (
                             <JobDetailScreen

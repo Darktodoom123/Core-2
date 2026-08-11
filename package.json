@@ -20,6 +20,7 @@
         "test:mobile": "npm --prefix packages/field-mobile run test",
         "mobile:doctor": "npm --prefix packages/field-mobile run doctor",
         "mobile:start": "npm --prefix packages/field-mobile run start -- --dev-client",
+        "mobile:api": "php artisan serve --host=0.0.0.0 --port=8000",
         "mobile:android": "npm --prefix packages/field-mobile run android",
         "mobile:export:android": "npm --prefix packages/field-mobile run export:android",
         "mobile:build:android:debug": "npm --prefix packages/field-mobile run build:android:debug",
