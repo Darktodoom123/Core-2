@@ -67,7 +67,7 @@ async function launchFreshApp() {
     await device.launchApp(
         createDevClientLaunchOptions({ resetAppData: true }),
     );
-    await waitFor(element(by.text('Sign in to your account')))
+    await waitFor(element(by.id('login-username-input')))
         .toExist()
         .withTimeout(30000);
 }
