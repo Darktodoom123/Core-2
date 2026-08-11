@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useContext, useEffect, useRef } from 'react';
+import { Animated, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from './nativeStyles';
 
@@ -51,6 +51,44 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
         ? userRole.replaceAll('_', ' ')
         : 'Field worker';
 
+    const panY = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) {
+            panY.setValue(0);
+        }
+    }, [visible, panY]);
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    panY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+                    Animated.timing(panY, {
+                        duration: 150,
+                        toValue: 500,
+                        useNativeDriver: true,
+                    }).start(() => {
+                        onClose();
+                        panY.setValue(0);
+                    });
+                } else {
+                    Animated.spring(panY, {
+                        bounciness: 4,
+                        toValue: 0,
+                        useNativeDriver: true,
+                    }).start();
+                }
+            },
+        }),
+    ).current;
+
     return (
         <Modal
             animationType="slide"
@@ -71,29 +109,34 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                     style={styles.scrim}
                     testID="profile-sheet-dismiss"
                 />
-                <View
+                <Animated.View
                     style={[
                         styles.sheet,
-                        { paddingBottom: Math.max(24, bottomInset + 16) },
+                        {
+                            paddingBottom: Math.max(24, bottomInset + 16),
+                            transform: [{ translateY: panY }],
+                        },
                     ]}
                 >
-                    <View style={styles.handle} />
-                    <View style={styles.sheetHeader}>
-                        <Text accessibilityRole="header" style={styles.title}>
-                            Profile
-                        </Text>
-                        <Pressable
-                            accessibilityLabel="Close profile"
-                            accessibilityRole="button"
-                            onPress={onClose}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed && styles.pressed,
-                            ]}
-                            testID="profile-sheet-close"
-                        >
-                            <Text style={styles.closeButtonText}>Close</Text>
-                        </Pressable>
+                    <View {...panResponder.panHandlers} style={styles.dragZone}>
+                        <View style={styles.handle} />
+                        <View style={styles.sheetHeader}>
+                            <Text accessibilityRole="header" style={styles.title}>
+                                Profile
+                            </Text>
+                            <Pressable
+                                accessibilityLabel="Close profile"
+                                accessibilityRole="button"
+                                onPress={onClose}
+                                style={({ pressed }) => [
+                                    styles.closeButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="profile-sheet-close"
+                            >
+                                <Text style={styles.closeButtonText}>Close</Text>
+                            </Pressable>
+                        </View>
                     </View>
 
                     <View style={styles.identityRow}>
@@ -255,7 +298,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                             <Text style={styles.chevron}>›</Text>
                         </Pressable>
                     )}
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     );
@@ -281,6 +324,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingTop: 10,
         boxShadow: '0 -4px 16px rgba(15, 23, 42, 0.12)',
+    },
+    dragZone: {
+        gap: 12,
+        paddingBottom: 4,
     },
     handle: {
         alignSelf: 'center',

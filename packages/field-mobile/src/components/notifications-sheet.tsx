@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useContext, useEffect, useRef } from 'react';
+import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import type { OutboxCommand, DispatchJob } from '../types/index';
 import { colors, sharedStyles } from './nativeStyles';
@@ -46,6 +46,44 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
 
     const totalAttention = failedCount + conflictCount + pendingResponseCount;
 
+    const panY = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (visible) {
+            panY.setValue(0);
+        }
+    }, [visible, panY]);
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    panY.setValue(gestureState.dy);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+                    Animated.timing(panY, {
+                        duration: 150,
+                        toValue: 500,
+                        useNativeDriver: true,
+                    }).start(() => {
+                        onClose();
+                        panY.setValue(0);
+                    });
+                } else {
+                    Animated.spring(panY, {
+                        bounciness: 4,
+                        toValue: 0,
+                        useNativeDriver: true,
+                    }).start();
+                }
+            },
+        }),
+    ).current;
+
     return (
         <Modal
             animationType="slide"
@@ -66,38 +104,43 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                     style={styles.scrim}
                     testID="notifications-sheet-dismiss"
                 />
-                <View
+                <Animated.View
                     style={[
                         styles.sheet,
-                        { paddingBottom: Math.max(24, bottomInset + 16) },
+                        {
+                            paddingBottom: Math.max(24, bottomInset + 16),
+                            transform: [{ translateY: panY }],
+                        },
                     ]}
                 >
-                    <View style={styles.handle} />
-                    <View style={styles.sheetHeader}>
-                        <View style={styles.titleRow}>
-                            <Text accessibilityRole="header" style={styles.title}>
-                                Notifications & Alerts
-                            </Text>
-                            {totalAttention > 0 ? (
-                                <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>
-                                        {totalAttention} Action{totalAttention > 1 ? 's' : ''}
-                                    </Text>
-                                </View>
-                            ) : null}
+                    <View {...panResponder.panHandlers} style={styles.dragZone}>
+                        <View style={styles.handle} />
+                        <View style={styles.sheetHeader}>
+                            <View style={styles.titleRow}>
+                                <Text accessibilityRole="header" style={styles.title}>
+                                    Notifications & Alerts
+                                </Text>
+                                {totalAttention > 0 ? (
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>
+                                            {totalAttention} Action{totalAttention > 1 ? 's' : ''}
+                                        </Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                            <Pressable
+                                accessibilityLabel="Close notifications"
+                                accessibilityRole="button"
+                                onPress={onClose}
+                                style={({ pressed }) => [
+                                    styles.closeButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="notifications-sheet-close"
+                            >
+                                <Text style={styles.closeButtonText}>Close</Text>
+                            </Pressable>
                         </View>
-                        <Pressable
-                            accessibilityLabel="Close notifications"
-                            accessibilityRole="button"
-                            onPress={onClose}
-                            style={({ pressed }) => [
-                                styles.closeButton,
-                                pressed && styles.pressed,
-                            ]}
-                            testID="notifications-sheet-close"
-                        >
-                            <Text style={styles.closeButtonText}>Close</Text>
-                        </Pressable>
                     </View>
 
                     <ScrollView
@@ -222,7 +265,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                             </View>
                         ) : null}
                     </ScrollView>
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     );
@@ -248,6 +291,10 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         paddingHorizontal: 20,
         paddingTop: 10,
+    },
+    dragZone: {
+        gap: 12,
+        paddingBottom: 4,
     },
     handle: {
         alignSelf: 'center',
