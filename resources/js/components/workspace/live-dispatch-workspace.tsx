@@ -458,7 +458,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'list'
-                                            ? 'bg-brand text-white shadow-xs'
+                                            ? 'bg-brand text-ink shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -475,7 +475,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'board'
-                                            ? 'bg-brand text-white shadow-xs'
+                                            ? 'bg-brand text-ink shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -492,7 +492,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'conflicts'
-                                            ? 'bg-brand text-white shadow-xs'
+                                            ? 'bg-brand text-ink shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >

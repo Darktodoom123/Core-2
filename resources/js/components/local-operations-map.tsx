@@ -298,7 +298,7 @@ export function LocalOperationsMap({
                         );
                     })}
                 </ul>
-                <div className="m-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-xs leading-5 text-amber-950">
+                <div className="m-4 flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-xs leading-5 text-warning-strong">
                     <AlertTriangle
                         className="mt-0.5 h-4 w-4 shrink-0"
                         aria-hidden="true"

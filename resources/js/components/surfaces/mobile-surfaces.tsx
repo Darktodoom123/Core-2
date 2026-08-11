@@ -123,7 +123,7 @@ function MobileFrame({
                 </header>
 
                 {connectivity === 'offline' && (
-                    <div className="flex items-center gap-3 bg-warning-soft px-4 py-3 text-sm text-amber-950">
+                    <div className="flex items-center gap-3 bg-warning-soft px-4 py-3 text-sm text-warning-strong">
                         <CloudOff
                             className="h-4 w-4 shrink-0"
                             aria-hidden="true"
@@ -135,7 +135,7 @@ function MobileFrame({
                         <button
                             type="button"
                             onClick={onSync}
-                            className="min-h-9 rounded-lg px-2 font-semibold hover:bg-amber-100"
+                            className="min-h-9 rounded-lg px-2 font-semibold hover:bg-warning-soft"
                         >
                             Reconnect
                         </button>

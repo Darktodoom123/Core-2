@@ -73,7 +73,7 @@ export default function ResetPassword({
                 </label>
                 <button
                     disabled={form.processing}
-                    className="h-11 w-full rounded-lg bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60"
+                    className="h-11 w-full rounded-lg bg-brand px-4 text-sm font-semibold text-ink disabled:opacity-60"
                 >
                     Update password
                 </button>

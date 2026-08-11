@@ -395,7 +395,7 @@ export function AppShell({
                                 connectivity === 'online' &&
                                     'bg-success-soft text-green-800',
                                 connectivity === 'offline' &&
-                                    'bg-warning-soft text-amber-900',
+                                    'bg-warning-soft text-warning-strong',
                                 connectivity === 'syncing' &&
                                     'bg-brand-soft text-brand-strong',
                             )}

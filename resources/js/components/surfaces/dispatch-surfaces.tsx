@@ -729,7 +729,7 @@ export function DispatchBoard({
                                                                     ? 'border-brand bg-brand-soft ring-2 ring-brand/20'
                                                                     : 'border-blue-200 bg-blue-50 hover:border-brand',
                                                                 conflict &&
-                                                                    'border-amber-400 bg-warning-soft',
+                                                                    'border-warning bg-warning-soft',
                                                             )}
                                                             aria-label={`${job.reference}, ${job.title}, ${job.startTime} to ${job.endTime}`}
                                                         >
@@ -755,7 +755,7 @@ export function DispatchBoard({
                             Assigned
                         </span>
                         <span className="flex items-center gap-1.5">
-                            <span className="h-2.5 w-2.5 rounded-sm border border-amber-400 bg-warning-soft" />
+                            <span className="h-2.5 w-2.5 rounded-sm border border-warning bg-warning-soft" />
                             Conflict
                         </span>
                         <span className="ml-auto">

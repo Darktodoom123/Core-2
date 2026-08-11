@@ -28,7 +28,7 @@ export default function VerifyEmail({ status }: { status?: string }) {
                         form.post('/email/verification-notification')
                     }
                     disabled={form.processing}
-                    className="min-h-11 flex-1 rounded-lg bg-brand px-4 text-sm font-semibold text-white disabled:opacity-60"
+                    className="min-h-11 flex-1 rounded-lg bg-brand px-4 text-sm font-semibold text-ink disabled:opacity-60"
                 >
                     Resend verification
                 </button>

@@ -133,12 +133,12 @@ export function createCustomAssetIcon(
     const isStale = freshness === 'stale' || freshness === 'Stale';
 
     const bgStyle = isFresh
-        ? 'background: var(--color-success-strong); border-color: var(--color-success); color: var(--color-brand-contrast);'
+        ? 'background: var(--color-success-strong); border-color: var(--color-success); color: white;'
         : isDelayed
-          ? 'background: var(--color-warning-strong); border-color: var(--color-warning); color: var(--color-brand-contrast);'
+          ? 'background: var(--color-warning-strong); border-color: var(--color-warning); color: white;'
           : isStale
             ? 'background: var(--color-danger-strong); border-color: var(--color-danger); color: var(--color-danger-contrast);'
-            : 'background: var(--color-ink-soft); border-color: var(--color-line-strong); color: var(--color-brand-contrast); opacity: 0.85;';
+            : 'background: var(--color-ink-soft); border-color: var(--color-line-strong); color: white; opacity: 0.85;';
 
     const shapeStyle =
         kind === 'truck'
@@ -435,25 +435,25 @@ export function OpenStreetMapTrackingMap({
                 {/* Map Asset Shapes Legend Overlay */}
                 <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex flex-wrap items-center gap-3 rounded-xl border border-line/70 bg-surface/90 px-3 py-2 text-[11px] text-ink shadow-sm backdrop-blur-md">
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-md bg-success-strong text-brand-contrast">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-md bg-success-strong text-white">
                             <Truck className="h-2.5 w-2.5" />
                         </span>
                         <span>Truck</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 rotate-45 items-center justify-center rounded-md bg-success-strong text-brand-contrast">
+                        <span className="flex h-4 w-4 rotate-45 items-center justify-center rounded-md bg-success-strong text-white">
                             <Construction className="h-2.5 w-2.5 -rotate-45" />
                         </span>
                         <span>Crane</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-success-strong text-brand-contrast">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-success-strong text-white">
                             <HeavyEquipmentIcon className="h-2.5 w-2.5" />
                         </span>
                         <span>Equipment</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-medium">
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-success-strong text-brand-contrast">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-success-strong text-white">
                             <UserRoundCog className="h-2.5 w-2.5" />
                         </span>
                         <span>Worker</span>

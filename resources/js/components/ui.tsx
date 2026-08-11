@@ -36,7 +36,7 @@ export function Button({
                 variant === 'quiet' &&
                     'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                 variant === 'danger' &&
-                    'bg-danger text-brand-contrast hover:bg-danger-strong',
+                    'bg-danger text-danger-contrast hover:bg-danger-strong',
                 size === 'sm' && 'min-h-10 px-3 text-sm',
                 size === 'md' && 'px-4 text-sm',
                 size === 'icon' && 'h-11 w-11 p-0',
@@ -302,7 +302,7 @@ export function ToastStack({
                                 ? undefined
                                 : { duration: 0.18, ease: 'easeOut' }
                         }
-                        className="flex items-start gap-3 rounded-xl bg-ink p-4 text-brand-contrast shadow-lg"
+                        className="flex items-start gap-3 rounded-xl bg-ink p-4 text-white shadow-lg"
                         role="status"
                     >
                         {toast.tone === 'success' ? (
@@ -332,7 +332,7 @@ export function ToastStack({
                         <button
                             type="button"
                             onClick={() => onDismiss(toast.id)}
-                            className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-ink-on-dark-muted hover:bg-white/10 hover:text-brand-contrast"
+                            className="-m-2 flex h-10 w-10 items-center justify-center rounded-lg text-ink-on-dark-muted hover:bg-white/10 hover:text-white"
                             aria-label={`Dismiss ${toast.title}`}
                         >
                             <X className="h-4 w-4" aria-hidden="true" />
