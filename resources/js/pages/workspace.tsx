@@ -261,6 +261,10 @@ export default function Workspace(props: WorkspacePageProps) {
         }
 
         let previousState = echo.connectionStatus();
+        const initialStateSync = window.setTimeout(
+            () => setWsState(echo.connectionStatus()),
+            0,
+        );
         const handleStateChange = (current: ConnectionStatus) => {
             setWsState(current);
 
@@ -281,6 +285,7 @@ export default function Workspace(props: WorkspacePageProps) {
             });
 
         return () => {
+            window.clearTimeout(initialStateSync);
             unsubscribeConnection();
             echo.leave('operations.workspace');
         };
@@ -711,11 +716,10 @@ function locationErrorMessage(code: number) {
 }
 
 function getInitialWsState(): ConnectionStatus {
-    if (typeof window === 'undefined') {
-        return 'connected';
-    }
-
-    return getEcho()?.connectionStatus() ?? 'disconnected';
+    // Keep the server render and the first client render deterministic. The
+    // realtime connection state is synchronized after hydration in the effect
+    // above, so reading Echo during initial render can cause a mismatch.
+    return 'disconnected';
 }
 
 function createInitialRefreshState(

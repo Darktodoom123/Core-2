@@ -932,32 +932,18 @@ function averagePosition(locations: LocationUpdateViewModel[]): LngLat {
     ];
 }
 
+const MAP_FRESHNESS_COLORS: Record<
+    LocationUpdateViewModel['freshness_status'],
+    string
+> = {
+    fresh: '#15803d',
+    delayed: '#b45309',
+    stale: '#dc2626',
+    offline: '#64748b',
+};
+
 function freshnessColor(
     status: LocationUpdateViewModel['freshness_status'],
 ): string {
-    const cssVariable =
-        status === 'fresh'
-            ? '--color-success-strong'
-            : status === 'delayed'
-              ? '--color-warning-strong'
-              : status === 'stale'
-                ? '--color-danger'
-                : '--color-muted';
-    const resolved =
-        typeof document === 'undefined'
-            ? ''
-            : getComputedStyle(document.documentElement)
-                  .getPropertyValue(cssVariable)
-                  .trim();
-
-    return (
-        resolved ||
-        (status === 'fresh'
-            ? '#15803d'
-            : status === 'delayed'
-              ? '#b45309'
-              : status === 'stale'
-                ? '#dc2626'
-                : '#64748b')
-    );
+    return MAP_FRESHNESS_COLORS[status];
 }

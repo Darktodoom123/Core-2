@@ -1,5 +1,6 @@
 import type * as MapLibreModule from 'maplibre-gl';
 import type { Map as MapLibreInstance } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -85,6 +86,8 @@ export function MapLibreMap({
                 if (disposed || !containerRef.current) {
                     return;
                 }
+
+                maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
                 map = new maplibregl.Map({
                     container: containerRef.current,

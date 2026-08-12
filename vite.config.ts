@@ -23,6 +23,13 @@ export default defineConfig(({ mode }) => {
     }
 
     return {
+        optimizeDeps: {
+            // MapLibre's worker is an ESM asset that Vite's dependency
+            // optimizer can separate from the pre-bundled module. Keep the
+            // package in source form during dev; maplibre-map.tsx provides
+            // the worker URL explicitly for both dev and production builds.
+            exclude: ['maplibre-gl'],
+        },
         plugins: [
             laravel({
                 input: ['resources/css/app.css', 'resources/js/app.tsx'],

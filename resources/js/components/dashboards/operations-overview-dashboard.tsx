@@ -926,6 +926,16 @@ function DispatcherDashboardView({
                 />
             </div>
 
+            {/* Primary tracking surface: map first, synchronized unit list beside it */}
+            {canOpenTracking && (
+                <LiveTrackingPreview
+                    locations={locations}
+                    refresh={refresh}
+                    realtimeConnected={realtimeConnected}
+                    onOpenTracking={() => onSectionChange('tracking')}
+                />
+            )}
+
             {/* Service Requests Queue for Dispatchers */}
             {serviceRequests.length > 0 && (
                 <section aria-labelledby="service-requests-heading">
@@ -1237,15 +1247,6 @@ function DispatcherDashboardView({
                     )}
                 </div>
             </div>
-
-            {canOpenTracking && (
-                <LiveTrackingPreview
-                    locations={locations}
-                    refresh={refresh}
-                    realtimeConnected={realtimeConnected}
-                    onOpenTracking={() => onSectionChange('tracking')}
-                />
-            )}
         </div>
     );
 }
