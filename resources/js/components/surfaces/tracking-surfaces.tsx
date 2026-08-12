@@ -20,9 +20,9 @@ import type {
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
-const OpenStreetMapTrackingMap = lazy(() =>
-    import('@/components/openstreetmap-tracking-map').then(
-        ({ OpenStreetMapTrackingMap: Map }) => ({ default: Map }),
+const LiveTrackingMap = lazy(() =>
+    import('@/components/live-tracking-map').then(
+        ({ LiveTrackingMap: Map }) => ({ default: Map }),
     ),
 );
 
@@ -330,9 +330,7 @@ export function TrackingSurface({
                 {/* Main Content Pane */}
                 {viewMode === 'visual' ? (
                     <Suspense fallback={<MapLoadingFallback />}>
-                        <OpenStreetMapTrackingMap
-                            locations={filteredLocations}
-                        />
+                        <LiveTrackingMap locations={filteredLocations} />
                     </Suspense>
                 ) : filteredLocations.length === 0 ? (
                     <Panel>

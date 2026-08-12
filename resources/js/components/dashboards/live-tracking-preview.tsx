@@ -20,9 +20,9 @@ import type {
     ScopeRefreshState,
 } from '@/types/workspace';
 
-const OpenStreetMapTrackingMap = lazy(() =>
-    import('@/components/openstreetmap-tracking-map').then(
-        ({ OpenStreetMapTrackingMap: Map }) => ({ default: Map }),
+const LiveTrackingMap = lazy(() =>
+    import('@/components/live-tracking-map').then(
+        ({ LiveTrackingMap: Map }) => ({ default: Map }),
     ),
 );
 
@@ -175,7 +175,7 @@ export function LiveTrackingPreview({
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.8fr)]">
                 <Suspense fallback={<MapLoadingFallback />}>
-                    <OpenStreetMapTrackingMap
+                    <LiveTrackingMap
                         locations={filteredLocations}
                         compact
                         showLocationList={false}
