@@ -14,6 +14,7 @@ use App\Shared\Assets\Data\AssetUsageSource;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
+use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +25,7 @@ final class CheckoutRental
     public function __construct(
         private readonly RecordAuditEvent $audit,
         private readonly OperationalAssetAvailability $availability,
+        private readonly OperationalAssetStatusGuard $statusGuard,
     ) {}
 
     /** @param array<string, mixed> $attributes */
@@ -66,7 +68,13 @@ final class CheckoutRental
             foreach ($items as $item) {
                 $asset = $assets->get($item->operational_asset_id);
                 if ($asset !== null) {
-                    $asset->update(['status' => AssetStatus::Assigned]);
+                    $this->statusGuard->transition($asset, AssetStatus::Assigned, new AssetUsageRequest(
+                        assetId: (int) $asset->id,
+                        usageType: AssetUsageType::RentalCheckout,
+                        windowStart: CarbonImmutable::parse($locked->getAttribute('start_date'))->startOfDay(),
+                        windowEnd: CarbonImmutable::parse($locked->getAttribute('end_date'))->startOfDay()->addDay(),
+                        source: new AssetUsageSource('rental_reservation', (int) $locked->id),
+                    ));
                 }
             }
             $locked->update(['status' => RentalReservationStatus::CheckedOut]);

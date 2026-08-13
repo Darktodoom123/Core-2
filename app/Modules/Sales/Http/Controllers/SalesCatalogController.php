@@ -23,6 +23,7 @@ final class SalesCatalogController extends Controller
     public function store(StoreSalesCatalogItemRequest $request, RecordAuditEvent $audit): JsonResponse
     {
         $item = DB::transaction(function () use ($request, $audit): SalesCatalogItem {
+            Gate::forUser($request->user())->authorize(PermissionName::SalesCatalogManage->value);
             $item = SalesCatalogItem::query()->create([...$request->validated(), 'status' => 'active']);
             $quantity = (int) $item->quantity_on_hand;
             if ($quantity > 0) {

@@ -81,8 +81,14 @@ it('derives sales totals, reserves inventory, and makes sold equipment unavailab
     $this->actingAs($manager)->postJson("/operations/sales/quotes/{$quote->id}/accept")->assertCreated();
     $order = SalesOrder::query()->where('sales_quote_id', $quote->id)->sole();
     expect($catalog->fresh()->quantity_reserved)->toBe(1)->and($order->status)->toBe(SalesOrderStatus::Confirmed);
+    expect(DB::table('sales_inventory_ledger')->where('sales_order_id', $order->id)->where('entry_type', 'reserve')->value('quantity_delta'))->toBe(1);
     $this->actingAs($manager)->postJson("/operations/sales/orders/{$order->id}/fulfill")->assertOk();
+    expect(DB::table('sales_inventory_ledger')->where('sales_order_id', $order->id)->where('entry_type', 'sale')->value('quantity_delta'))->toBe(-1);
     $this->actingAs($manager)->postJson("/operations/sales/orders/{$order->id}/transfer-ownership")->assertOk();
+    $this->actingAs($manager)
+        ->postJson("/operations/sales/orders/{$order->id}/transfer-ownership")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
     expect($order->fresh()->status)->toBe(SalesOrderStatus::Transferred)
         ->and($catalog->fresh()->quantity_on_hand)->toBe(0)
         ->and($asset->fresh()->status)->toBe(AssetStatus::Unavailable);

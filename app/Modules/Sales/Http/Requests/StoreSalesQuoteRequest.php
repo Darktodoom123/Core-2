@@ -3,6 +3,7 @@
 namespace App\Modules\Sales\Http\Requests;
 
 use App\Platform\Identity\Enums\PermissionName;
+use App\Shared\Support\PersistedInteger;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,9 +23,9 @@ final class StoreSalesQuoteRequest extends FormRequest
             'currency' => ['sometimes', 'string', 'size:3'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.sales_catalog_item_id' => ['required', 'integer', Rule::exists('sales_catalog_items', 'id')->where(fn ($q) => $q->where('status', 'active'))],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:'.PersistedInteger::MAX],
         ];
     }
 }

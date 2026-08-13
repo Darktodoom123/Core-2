@@ -15,6 +15,7 @@ use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
+use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +25,7 @@ final class ReturnRental
     public function __construct(
         private readonly RecordAuditEvent $audit,
         private readonly OperationalAssetAvailability $availability,
+        private readonly OperationalAssetStatusGuard $statusGuard,
     ) {}
 
     /** @param array<string, mixed> $attributes */
@@ -63,8 +65,13 @@ final class ReturnRental
             ]);
             foreach ($items as $item) {
                 $asset = $assets->get($item->operational_asset_id);
-                if ($asset instanceof OperationalAsset && $asset->status === AssetStatus::Assigned && $this->canRestoreAssignedAsset($asset, $locked)) {
-                    $asset->update(['status' => AssetStatus::Available]);
+                if ($asset instanceof OperationalAsset && $asset->status === AssetStatus::Assigned) {
+                    $this->statusGuard->tryTransition($asset, AssetStatus::Available, new AssetUsageRequest(
+                        assetId: (int) $asset->id,
+                        usageType: AssetUsageType::RentalReturn,
+                        targetStatus: AssetStatus::Available,
+                        source: new AssetUsageSource('rental_reservation', (int) $locked->id),
+                    ));
                 }
             }
             $locked->update(['status' => RentalReservationStatus::Returned]);
@@ -72,15 +79,5 @@ final class ReturnRental
 
             return $locked->fresh(['items.asset', 'returnRecord', 'client']);
         });
-    }
-
-    private function canRestoreAssignedAsset(OperationalAsset $asset, RentalReservation $reservation): bool
-    {
-        return $this->availability->assess(new AssetUsageRequest(
-            assetId: (int) $asset->id,
-            usageType: AssetUsageType::RentalReturn,
-            targetStatus: AssetStatus::Available,
-            source: new AssetUsageSource('rental_reservation', (int) $reservation->id),
-        ))->allowed();
     }
 }

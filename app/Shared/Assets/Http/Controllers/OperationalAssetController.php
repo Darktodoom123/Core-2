@@ -9,7 +9,7 @@ use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
-use App\Shared\Assets\Services\OperationalAssetAvailability;
+use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +60,7 @@ final class OperationalAssetController extends Controller
         ]);
     }
 
-    public function status(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit, OperationalAssetAvailability $availability): JsonResponse|RedirectResponse
+    public function status(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit, OperationalAssetStatusGuard $statusGuard): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(AssetStatus::class)],
@@ -68,20 +68,19 @@ final class OperationalAssetController extends Controller
         ]);
 
         $next = AssetStatus::from($validated['status']);
-        $operationalAsset = DB::transaction(function () use ($request, $operationalAsset, $audit, $availability, $next, $validated): OperationalAsset {
+        $operationalAsset = DB::transaction(function () use ($request, $operationalAsset, $audit, $statusGuard, $next, $validated): OperationalAsset {
             $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($operationalAsset->id);
             $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
             $allowed = $request->user()->can(($isFleet ? PermissionName::FleetUpdateStatus : PermissionName::EquipmentUpdateStatus)->value);
             if (! $allowed) {
                 abort(403);
             }
-            $availability->assertNoConflict(new AssetUsageRequest(
+            $before = ['status' => $asset->status->value];
+            $statusGuard->transition($asset, $next, new AssetUsageRequest(
                 assetId: (int) $asset->id,
                 usageType: AssetUsageType::AssetStatusChange,
                 targetStatus: $next,
-            ), 'status');
-            $before = ['status' => $asset->status->value];
-            $asset->update(['status' => $next]);
+            ));
             $audit->handle($request->user(), $asset, 'asset.status_updated', $before, ['status' => $next->value], $validated['reason']);
 
             return $asset;

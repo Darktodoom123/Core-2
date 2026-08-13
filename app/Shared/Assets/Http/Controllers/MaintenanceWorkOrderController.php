@@ -5,9 +5,12 @@ namespace App\Shared\Assets\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +20,7 @@ use Illuminate\Validation\ValidationException;
 
 final class MaintenanceWorkOrderController extends Controller
 {
-    public function store(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit): JsonResponse|RedirectResponse
+    public function store(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit, OperationalAssetStatusGuard $statusGuard): JsonResponse|RedirectResponse
     {
         $isFleet = in_array($operationalAsset->kind, ['truck', 'vehicle'], true);
         Gate::authorize(($isFleet ? PermissionName::FleetMaintain : PermissionName::EquipmentMaintain)->value);
@@ -30,14 +33,20 @@ final class MaintenanceWorkOrderController extends Controller
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $work = DB::transaction(function () use ($request, $operationalAsset, $validated, $audit): MaintenanceWorkOrder {
+        $work = DB::transaction(function () use ($request, $operationalAsset, $validated, $audit, $statusGuard): MaintenanceWorkOrder {
             $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($operationalAsset->id);
+            $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
+            Gate::forUser($request->user())->authorize(($isFleet ? PermissionName::FleetMaintain : PermissionName::EquipmentMaintain)->value);
             $work = $asset->maintenanceWorkOrders()->create([
                 ...$validated,
                 'technician_id' => $request->user()->id,
                 'status' => AssetStatus::UnderMaintenance->value,
             ]);
-            $asset->update(['status' => AssetStatus::UnderMaintenance]);
+            $statusGuard->transition($asset, AssetStatus::UnderMaintenance, new AssetUsageRequest(
+                assetId: (int) $asset->id,
+                usageType: AssetUsageType::AssetStatusChange,
+                targetStatus: AssetStatus::UnderMaintenance,
+            ));
             $audit->handle($request->user(), $work, 'maintenance.opened', null, $work->toArray());
 
             return $work;
@@ -53,7 +62,7 @@ final class MaintenanceWorkOrderController extends Controller
         ]);
     }
 
-    public function release(Request $request, MaintenanceWorkOrder $maintenanceWorkOrder, RecordAuditEvent $audit): JsonResponse|RedirectResponse
+    public function release(Request $request, MaintenanceWorkOrder $maintenanceWorkOrder, RecordAuditEvent $audit, OperationalAssetStatusGuard $statusGuard): JsonResponse|RedirectResponse
     {
         $asset = $maintenanceWorkOrder->asset;
         $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
@@ -67,9 +76,11 @@ final class MaintenanceWorkOrderController extends Controller
             'next_due_at' => ['nullable', 'date'],
         ]);
 
-        DB::transaction(function () use ($request, $maintenanceWorkOrder, $validated, $audit): void {
+        DB::transaction(function () use ($request, $maintenanceWorkOrder, $validated, $audit, $statusGuard): void {
             $work = MaintenanceWorkOrder::query()->lockForUpdate()->findOrFail($maintenanceWorkOrder->id);
             $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($work->operational_asset_id);
+            $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
+            Gate::forUser($request->user())->authorize(($isFleet ? PermissionName::FleetMaintain : PermissionName::EquipmentMaintain)->value);
             if (! $asset->inspections()->where('result', 'passed')->where('completed_at', '>=', $work->created_at)->exists()) {
                 throw ValidationException::withMessages([
                     'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
@@ -97,7 +108,11 @@ final class MaintenanceWorkOrderController extends Controller
             $work->update($updateData);
 
             if (! $asset->maintenanceWorkOrders()->where('dispatch_blocking', true)->whereNull('released_at')->exists()) {
-                $asset->update(['status' => AssetStatus::ReadyForService]);
+                $statusGuard->transition($asset, AssetStatus::ReadyForService, new AssetUsageRequest(
+                    assetId: (int) $asset->id,
+                    usageType: AssetUsageType::AssetStatusChange,
+                    targetStatus: AssetStatus::ReadyForService,
+                ));
             }
 
             $audit->handle($request->user(), $work, 'maintenance.released', null, [

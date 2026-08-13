@@ -14,6 +14,7 @@ use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuote;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -24,6 +25,7 @@ use Carbon\CarbonImmutable;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -479,6 +481,98 @@ it('rejects generic operational restoration after ownership transfer', function 
     expect($asset->fresh()->status)->toBe(AssetStatus::Unavailable);
 });
 
+it('rejects transferred asset restoration through inspection and maintenance status writers', function (): void {
+    $manager = r0StateUser(RoleName::OperationsManager);
+    $technician = r0StateUser(RoleName::FieldTechnician);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-TERMINAL-WRITERS-'.fake()->unique()->numerify('###'), AssetStatus::Unavailable);
+    $catalog = SalesCatalogItem::query()->create([
+        'sku' => 'SKU-R0-TERMINAL-WRITERS',
+        'name' => 'Terminal writer item',
+        'unit_price_cents' => 100,
+        'quantity_on_hand' => 0,
+        'quantity_reserved' => 0,
+        'operational_asset_id' => $asset->id,
+        'status' => 'active',
+    ]);
+    $order = SalesOrder::query()->create([
+        'reference' => 'SO-R0-TERMINAL-WRITERS',
+        'client_id' => $client->id,
+        'created_by' => $manager->id,
+        'status' => SalesOrderStatus::Transferred,
+        'currency' => 'PHP',
+        'total_cents' => 100,
+    ]);
+    $item = $order->items()->create([
+        'sales_catalog_item_id' => $catalog->id,
+        'quantity' => 1,
+        'unit_price_cents' => 100,
+        'line_total_cents' => 100,
+    ]);
+    DB::table('ownership_transfers')->insert([
+        'sales_order_id' => $order->id,
+        'sales_order_item_id' => $item->id,
+        'sales_catalog_item_id' => $catalog->id,
+        'operational_asset_id' => $asset->id,
+        'transferred_by' => $manager->id,
+        'transferred_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson("/operations/assets/{$asset->id}/status", [
+            'status' => AssetStatus::Available->value,
+            'reason' => 'Attempted terminal restoration',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    $this->actingAs($technician)
+        ->postJson("/operations/assets/{$asset->id}/inspections", [
+            'type' => 'safety',
+            'result' => 'failed',
+            'checklist' => ['terminal' => false],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    $this->actingAs($technician)
+        ->postJson("/operations/assets/{$asset->id}/maintenance", [
+            'defect' => 'Attempted terminal maintenance restoration',
+            'dispatch_blocking' => true,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    $work = MaintenanceWorkOrder::query()->create([
+        'operational_asset_id' => $asset->id,
+        'technician_id' => $technician->id,
+        'status' => AssetStatus::UnderMaintenance,
+        'defect' => 'Existing terminal work order',
+        'dispatch_blocking' => true,
+    ]);
+    Inspection::query()->create([
+        'operational_asset_id' => $asset->id,
+        'technician_id' => $technician->id,
+        'type' => 'maintenance',
+        'result' => 'passed',
+        'checklist' => ['terminal' => true],
+        'completed_at' => now()->addSecond(),
+    ]);
+
+    $this->actingAs($technician)
+        ->postJson("/operations/maintenance/{$work->id}/release", [
+            'work_performed' => ['Verified terminal asset remains unavailable'],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    expect($asset->fresh()->status)->toBe(AssetStatus::Unavailable)
+        ->and($work->fresh()->released_at)->toBeNull()
+        ->and($work->fresh()->status)->toBe(AssetStatus::UnderMaintenance->value);
+});
+
 it('rejects a persisted value above the signed integer maximum', function (): void {
     $manager = r0StateUser(RoleName::OperationsManager);
 
@@ -544,6 +638,70 @@ it('accepts a 48-character quote reference and derives its order reference', fun
     $this->actingAs($manager)->postJson("/operations/sales/quotes/{$quote->id}/accept")->assertCreated();
 
     expect(SalesOrder::query()->where('reference', 'SO-'.$reference)->exists())->toBeTrue();
+});
+
+it('rejects quote line multiplication overflow before any quote or audit is written', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $catalog = SalesCatalogItem::query()->create([
+        'sku' => 'SKU-R0-LINE-OVERFLOW',
+        'name' => 'Line overflow item',
+        'unit_price_cents' => 2_147_483_647,
+        'quantity_on_hand' => 2,
+        'quantity_reserved' => 0,
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->postJson('/operations/sales/quotes', [
+            'reference' => 'QUO-R0-LINE-OVERFLOW',
+            'client_id' => $client->id,
+            'items' => [['sales_catalog_item_id' => $catalog->id, 'quantity' => 2]],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    expect(SalesQuote::query()->where('reference', 'QUO-R0-LINE-OVERFLOW')->exists())->toBeFalse()
+        ->and(AuditEvent::query()->where('action', 'sales_quote.created')->exists())->toBeFalse();
+});
+
+it('rejects an expired quote before reservation, order, or success audit mutation', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $manager = r0StateUser(RoleName::OperationsManager);
+    $client = r0StateClient();
+    $catalog = SalesCatalogItem::query()->create([
+        'sku' => 'SKU-R0-EXPIRED',
+        'name' => 'Expired quote item',
+        'unit_price_cents' => 100,
+        'quantity_on_hand' => 1,
+        'quantity_reserved' => 0,
+        'status' => 'active',
+    ]);
+    $quote = SalesQuote::query()->create([
+        'reference' => 'QUO-R0-EXPIRED',
+        'client_id' => $client->id,
+        'created_by' => $dispatcher->id,
+        'status' => 'draft',
+        'currency' => 'PHP',
+        'total_cents' => 100,
+        'valid_until' => now()->subDay()->toDateString(),
+    ]);
+    $quote->items()->create([
+        'sales_catalog_item_id' => $catalog->id,
+        'quantity' => 1,
+        'unit_price_cents' => 100,
+        'line_total_cents' => 100,
+    ]);
+
+    $this->actingAs($manager)
+        ->postJson("/operations/sales/quotes/{$quote->id}/accept")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('valid_until');
+
+    expect($quote->fresh()->status->value)->toBe('draft')
+        ->and(SalesOrder::query()->where('sales_quote_id', $quote->id)->exists())->toBeFalse()
+        ->and($catalog->fresh()->quantity_reserved)->toBe(0)
+        ->and(AuditEvent::query()->whereIn('action', ['sales_quote.accepted', 'sales_order.created'])->exists())->toBeFalse();
 });
 
 it('rejects rental line multiplication overflow before persistence', function (): void {

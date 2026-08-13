@@ -89,7 +89,13 @@ final class OperationalAssetAvailability
         }
 
         $conflicts = [];
-        if (! $asset->status->dispatchable()) {
+        $statusRecheckCanRestore = $request->usageType === AssetUsageType::AssetStatusChange
+            && in_array($asset->status, [
+                AssetStatus::UnderInspection,
+                AssetStatus::UnderMaintenance,
+                AssetStatus::AwaitingParts,
+            ], true);
+        if (! $asset->status->dispatchable() && ! $statusRecheckCanRestore) {
             $conflicts[] = new AssetUsageConflict('asset.not_dispatchable', 'The asset is not currently dispatchable.');
         }
 
