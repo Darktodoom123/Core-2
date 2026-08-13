@@ -31,12 +31,13 @@ final class MaintenanceWorkOrderController extends Controller
         ]);
 
         $work = DB::transaction(function () use ($request, $operationalAsset, $validated, $audit): MaintenanceWorkOrder {
-            $work = $operationalAsset->maintenanceWorkOrders()->create([
+            $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($operationalAsset->id);
+            $work = $asset->maintenanceWorkOrders()->create([
                 ...$validated,
                 'technician_id' => $request->user()->id,
                 'status' => AssetStatus::UnderMaintenance->value,
             ]);
-            $operationalAsset->update(['status' => AssetStatus::UnderMaintenance]);
+            $asset->update(['status' => AssetStatus::UnderMaintenance]);
             $audit->handle($request->user(), $work, 'maintenance.opened', null, $work->toArray());
 
             return $work;
@@ -66,13 +67,14 @@ final class MaintenanceWorkOrderController extends Controller
             'next_due_at' => ['nullable', 'date'],
         ]);
 
-        if (! $asset->inspections()->where('result', 'passed')->where('completed_at', '>=', $maintenanceWorkOrder->created_at)->exists()) {
-            throw ValidationException::withMessages([
-                'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
-            ]);
-        }
-
-        DB::transaction(function () use ($request, $maintenanceWorkOrder, $asset, $validated, $audit): void {
+        DB::transaction(function () use ($request, $maintenanceWorkOrder, $validated, $audit): void {
+            $work = MaintenanceWorkOrder::query()->lockForUpdate()->findOrFail($maintenanceWorkOrder->id);
+            $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($work->operational_asset_id);
+            if (! $asset->inspections()->where('result', 'passed')->where('completed_at', '>=', $work->created_at)->exists()) {
+                throw ValidationException::withMessages([
+                    'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
+                ]);
+            }
             $updateData = [
                 'work_performed' => $validated['work_performed'],
                 'parts' => $validated['parts'] ?? [],
@@ -92,13 +94,13 @@ final class MaintenanceWorkOrderController extends Controller
                 $updateData['next_due_at'] = $validated['next_due_at'];
             }
 
-            $maintenanceWorkOrder->update($updateData);
+            $work->update($updateData);
 
             if (! $asset->maintenanceWorkOrders()->where('dispatch_blocking', true)->whereNull('released_at')->exists()) {
                 $asset->update(['status' => AssetStatus::ReadyForService]);
             }
 
-            $audit->handle($request->user(), $maintenanceWorkOrder, 'maintenance.released', null, [
+            $audit->handle($request->user(), $work, 'maintenance.released', null, [
                 'status' => AssetStatus::ReadyForService->value,
                 'released_at' => now()->toIso8601String(),
                 'release_verified_by' => $request->user()->id,

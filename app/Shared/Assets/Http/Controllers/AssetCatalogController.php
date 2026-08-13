@@ -58,8 +58,6 @@ abstract class AssetCatalogController extends Controller
             return $assets;
         }
 
-        return $assets->whereHas('assignments.job.personnelAssignments', fn (Builder $assignments): Builder => $assignments
-            ->where('user_id', $user->id)
-            ->whereNull('active_until'));
+        return $assets->visibleTo($user);
     }
 }

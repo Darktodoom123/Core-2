@@ -2,7 +2,6 @@
 
 namespace App\Shared\Assets\Models;
 
-use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -28,12 +27,6 @@ class OperationalAsset extends Model
         return ['status' => AssetStatus::class, 'specifications' => 'array', 'rated_capacity' => 'decimal:2', 'meter_value' => 'decimal:2'];
     }
 
-    /** @return HasMany<DispatchAssetAssignment, $this> */
-    public function assignments(): HasMany
-    {
-        return $this->hasMany(DispatchAssetAssignment::class);
-    }
-
     /** @return HasMany<MaintenanceWorkOrder, $this> */
     public function maintenanceWorkOrders(): HasMany
     {
@@ -56,7 +49,14 @@ class OperationalAsset extends Model
             return $query;
         }
 
-        return $query->whereHas('assignments.job.personnelAssignments', fn (Builder $assignment): Builder => $assignment
-            ->where('user_id', $user->id)->whereNull('active_until'));
+        return $query->whereExists(function ($assignment) use ($user): void {
+            $assignment->selectRaw('1')
+                ->from('dispatch_asset_assignments as asset_assignments')
+                ->join('dispatch_personnel_assignments as personnel_assignments', 'personnel_assignments.dispatch_job_id', '=', 'asset_assignments.dispatch_job_id')
+                ->whereColumn('asset_assignments.operational_asset_id', 'operational_assets.id')
+                ->whereNull('asset_assignments.active_until')
+                ->where('personnel_assignments.user_id', $user->id)
+                ->whereNull('personnel_assignments.active_until');
+        });
     }
 }

@@ -43,7 +43,7 @@ final class BoundedContextBuilder
             ->get();
 
         $candidateAssets = OperationalAsset::query()
-            ->with(['maintenanceWorkOrders', 'assignments.job', 'inspections'])
+            ->with(['maintenanceWorkOrders', 'inspections'])
             ->orderBy('id')
             ->get();
 

@@ -5,14 +5,17 @@ namespace App\Shared\Assets\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 final class OperationalAssetController extends Controller
 {
@@ -57,7 +60,7 @@ final class OperationalAssetController extends Controller
         ]);
     }
 
-    public function status(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit): JsonResponse|RedirectResponse
+    public function status(Request $request, OperationalAsset $operationalAsset, RecordAuditEvent $audit, OperationalAssetAvailability $availability): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(AssetStatus::class)],
@@ -65,27 +68,24 @@ final class OperationalAssetController extends Controller
         ]);
 
         $next = AssetStatus::from($validated['status']);
-        $isFleet = in_array($operationalAsset->kind, ['truck', 'vehicle'], true);
-        $allowed = $request->user()->can(($isFleet ? PermissionName::FleetUpdateStatus : PermissionName::EquipmentUpdateStatus)->value);
-
-        if (! $allowed) {
-            abort(403);
-        }
-
-        if (in_array($next, [AssetStatus::ReadyForService, AssetStatus::Available], true)) {
-            $hasBlockingMaintenance = $operationalAsset->maintenanceWorkOrders()->where('dispatch_blocking', true)->whereNull('released_at')->exists();
-            $hasPassingInspection = $operationalAsset->inspections()->where('result', 'passed')->whereNotNull('completed_at')->exists();
-
-            if ($hasBlockingMaintenance || ! $hasPassingInspection) {
-                throw ValidationException::withMessages([
-                    'status' => 'A completed passing inspection and released blocking maintenance orders are required before setting status to ready or available.',
-                ]);
+        $operationalAsset = DB::transaction(function () use ($request, $operationalAsset, $audit, $availability, $next, $validated): OperationalAsset {
+            $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($operationalAsset->id);
+            $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
+            $allowed = $request->user()->can(($isFleet ? PermissionName::FleetUpdateStatus : PermissionName::EquipmentUpdateStatus)->value);
+            if (! $allowed) {
+                abort(403);
             }
-        }
+            $availability->assertNoConflict(new AssetUsageRequest(
+                assetId: (int) $asset->id,
+                usageType: AssetUsageType::AssetStatusChange,
+                targetStatus: $next,
+            ), 'status');
+            $before = ['status' => $asset->status->value];
+            $asset->update(['status' => $next]);
+            $audit->handle($request->user(), $asset, 'asset.status_updated', $before, ['status' => $next->value], $validated['reason']);
 
-        $before = ['status' => $operationalAsset->status->value];
-        $operationalAsset->update(['status' => $next]);
-        $audit->handle($request->user(), $operationalAsset, 'asset.status_updated', $before, ['status' => $next->value], $validated['reason']);
+            return $asset;
+        });
 
         if ($request->expectsJson()) {
             return response()->json(['data' => $operationalAsset->refresh()]);

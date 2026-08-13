@@ -145,14 +145,6 @@ final class DispatchJobController extends Controller
         $assets = $canViewCandidates
             ? OperationalAsset::query()
                 ->whereIn('kind', ['truck', 'crane', 'equipment'])
-                ->with([
-                    'maintenanceWorkOrders' => fn ($query) => $query
-                        ->where('dispatch_blocking', true)
-                        ->whereNull('released_at'),
-                    'assignments' => fn ($query) => $query
-                        ->whereNull('active_until')
-                        ->with('job'),
-                ])
                 ->orderBy('code')
                 ->limit(200)
                 ->get()

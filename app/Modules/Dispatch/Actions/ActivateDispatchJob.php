@@ -8,8 +8,11 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
-use App\Shared\Assets\Models\MaintenanceWorkOrder;
+use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Data\AssetUsageSource;
+use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -19,6 +22,7 @@ final class ActivateDispatchJob
     public function __construct(
         private RecordAuditEvent $audit,
         private DispatchResourceEligibility $eligibility,
+        private OperationalAssetAvailability $availability,
     ) {}
 
     public function handle(User $actor, DispatchJob $job, int $version): DispatchJob
@@ -114,34 +118,25 @@ final class ActivateDispatchJob
                 }
             }
 
-            $assets = OperationalAsset::query()
-                ->withTrashed()
-                ->whereIn('id', $assetIds)
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-            $blockedAssetIds = MaintenanceWorkOrder::query()
-                ->whereIn('operational_asset_id', $assetIds)
-                ->where('dispatch_blocking', true)
-                ->whereNull('released_at')
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->pluck('operational_asset_id')
-                ->map(static fn (mixed $assetId): int => (int) $assetId)
-                ->all();
+            $assets = $this->availability->lockAssetsForUpdate($assetIds);
 
             foreach ($assetIds as $assetId) {
                 $asset = $assets->get($assetId);
 
                 if (! $asset instanceof OperationalAsset
                     || $asset->trashed()
-                    || ! $asset->status->dispatchable()
-                    || in_array($assetId, $blockedAssetIds, true)) {
+                ) {
                     $code = $asset instanceof OperationalAsset ? $asset->code : "Asset #{$assetId}";
 
                     throw ValidationException::withMessages(['assets' => "{$code} is not safe for dispatch."]);
                 }
+                $this->availability->assertNoConflict(new AssetUsageRequest(
+                    assetId: $assetId,
+                    usageType: AssetUsageType::DispatchActivate,
+                    windowStart: $job->scheduled_start?->toImmutable(),
+                    windowEnd: $job->scheduled_end?->toImmutable(),
+                    source: new AssetUsageSource('dispatch_job', (int) $job->id),
+                ), 'assets');
             }
 
             $before = $job->only(['status', 'version']);

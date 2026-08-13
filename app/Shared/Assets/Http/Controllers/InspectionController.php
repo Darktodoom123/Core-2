@@ -29,14 +29,15 @@ final class InspectionController extends Controller
         ]);
 
         $inspection = DB::transaction(function () use ($request, $operationalAsset, $validated, $audit): Inspection {
-            $inspection = $operationalAsset->inspections()->create([
+            $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($operationalAsset->id);
+            $inspection = $asset->inspections()->create([
                 ...$validated,
                 'technician_id' => $request->user()->id,
                 'completed_at' => now(),
             ]);
 
             if ($validated['result'] !== 'passed') {
-                $operationalAsset->update(['status' => AssetStatus::UnderInspection]);
+                $asset->update(['status' => AssetStatus::UnderInspection]);
             }
 
             $audit->handle($request->user(), $inspection, 'asset.inspected', null, $inspection->toArray());

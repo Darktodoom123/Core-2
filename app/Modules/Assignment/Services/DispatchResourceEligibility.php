@@ -9,11 +9,17 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Data\AssetUsageSource;
+use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Collection;
 
 final class DispatchResourceEligibility
 {
+    public function __construct(private readonly OperationalAssetAvailability $availability) {}
+
     /**
      * @return array{
      *     eligible: bool,
@@ -100,6 +106,7 @@ final class DispatchResourceEligibility
     }
 
     /**
+     * @param  list<int>  $excludedAssignmentIds
      * @return array{
      *     eligible: bool,
      *     reasons: list<string>,
@@ -109,7 +116,7 @@ final class DispatchResourceEligibility
      *     already_assigned: bool
      * }
      */
-    public function asset(OperationalAsset $asset, string $assignmentType, DispatchJob $job): array
+    public function asset(OperationalAsset $asset, string $assignmentType, DispatchJob $job, array $excludedAssignmentIds = [], bool $excludeCurrentJob = false): array
     {
         $reasons = [];
 
@@ -117,30 +124,46 @@ final class DispatchResourceEligibility
             $reasons[] = "Asset kind {$asset->kind} does not match {$assignmentType}.";
         }
 
-        if (! $asset->status->dispatchable()) {
-            $reasons[] = "Readiness is {$asset->status->label()}.";
-        }
-
-        $blockingMaintenanceCount = $this->blockingMaintenanceCount($asset);
-        if ($blockingMaintenanceCount > 0) {
-            $reasons[] = $blockingMaintenanceCount === 1
-                ? 'One open maintenance item blocks dispatch.'
-                : "{$blockingMaintenanceCount} open maintenance items block dispatch.";
-        }
-
-        $conflicts = $this->assetScheduleConflicts($asset, $job);
-        $alreadyAssigned = collect($conflicts)->contains(
-            static fn (array $conflict): bool => $conflict['id'] === $job->id,
-        );
-
-        foreach ($conflicts as $conflict) {
-            $reasons[] = $conflict['id'] === $job->id
-                ? 'Asset is already assigned to this dispatch.'
-                : "Schedule overlaps dispatch {$conflict['reference']}.";
+        $assessment = $this->availability->assess(new AssetUsageRequest(
+            assetId: (int) $asset->id,
+            usageType: $excludeCurrentJob
+                ? AssetUsageType::DispatchActivate
+                : ($excludedAssignmentIds === [] ? AssetUsageType::DispatchAssign : AssetUsageType::DispatchReassign),
+            windowStart: $job->scheduled_start?->toImmutable(),
+            windowEnd: $job->scheduled_end?->toImmutable(),
+            source: $excludeCurrentJob ? new AssetUsageSource('dispatch_job', (int) $job->id) : null,
+            excludedAssignmentIds: $excludedAssignmentIds,
+        ));
+        $conflicts = [];
+        $alreadyAssigned = false;
+        $blockingMaintenanceCount = 0;
+        foreach ($assessment->conflicts as $conflict) {
+            if ($conflict->code === 'asset.not_dispatchable') {
+                $reasons[] = "Readiness is {$asset->status->label()}.";
+            } elseif ($conflict->code === 'asset.maintenance_block') {
+                $count = (int) ($conflict->details['count'] ?? 1);
+                $blockingMaintenanceCount = $count;
+                $reasons[] = $count === 1 ? 'One open maintenance item blocks dispatch.' : "{$count} open maintenance items block dispatch.";
+            } elseif ($conflict->code === 'dispatch.assignment_overlap') {
+                $details = $conflict->details;
+                $sourceId = $conflict->source === null ? 0 : $conflict->source->aggregateId;
+                $scheduledStart = isset($details['scheduled_start']) ? (string) $details['scheduled_start'] : null;
+                $scheduledEnd = isset($details['scheduled_end']) ? (string) $details['scheduled_end'] : null;
+                $conflicts[] = [
+                    'id' => $sourceId,
+                    'reference' => (string) ($details['reference'] ?? 'another dispatch'),
+                    'scheduled_start' => $scheduledStart,
+                    'scheduled_end' => $scheduledEnd,
+                ];
+                $alreadyAssigned = $sourceId === $job->id;
+                $reasons[] = $alreadyAssigned ? 'Asset is already assigned to this dispatch.' : "Schedule overlaps dispatch {$details['reference']}.";
+            } else {
+                $reasons[] = $conflict->message;
+            }
         }
 
         return [
-            'eligible' => $reasons === [],
+            'eligible' => $reasons === [] && $conflicts === [],
             'reasons' => $reasons,
             'readiness' => [
                 'value' => $asset->status->value,
@@ -280,24 +303,6 @@ final class DispatchResourceEligibility
     }
 
     /**
-     * @return list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>
-     */
-    private function assetScheduleConflicts(OperationalAsset $asset, DispatchJob $job): array
-    {
-        if ($asset->relationLoaded('assignments')) {
-            /** @var Collection<int, DispatchAssetAssignment> $assignments */
-            $assignments = $asset->getRelation('assignments');
-        } else {
-            $assignments = $asset->assignments()
-                ->whereNull('active_until')
-                ->with('job')
-                ->get();
-        }
-
-        return $this->scheduleConflicts($assignments, $job);
-    }
-
-    /**
      * @param  iterable<DispatchPersonnelAssignment|DispatchAssetAssignment>  $assignments
      * @return list<array{id: int, reference: string, scheduled_start: string|null, scheduled_end: string|null}>
      */
@@ -335,21 +340,6 @@ final class DispatchResourceEligibility
 
         return $right->scheduled_start->lt($left->scheduled_end)
             && $right->scheduled_end->gt($left->scheduled_start);
-    }
-
-    private function blockingMaintenanceCount(OperationalAsset $asset): int
-    {
-        if ($asset->relationLoaded('maintenanceWorkOrders')) {
-            return $asset->maintenanceWorkOrders
-                ->where('dispatch_blocking', true)
-                ->whereNull('released_at')
-                ->count();
-        }
-
-        return $asset->maintenanceWorkOrders()
-            ->where('dispatch_blocking', true)
-            ->whereNull('released_at')
-            ->count();
     }
 
     private function availabilityLabel(string $status): string

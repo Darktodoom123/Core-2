@@ -16,6 +16,6 @@ final class OperationalAssetPolicy
     public function view(User $user, OperationalAsset $asset): bool
     {
         return $user->can(PermissionName::FleetViewAll->value) || $user->can(PermissionName::EquipmentViewAll->value)
-            || $asset->assignments()->whereNull('active_until')->whereHas('job.personnelAssignments', fn ($query) => $query->where('user_id', $user->id)->whereNull('active_until'))->exists();
+            || OperationalAsset::query()->visibleTo($user)->whereKey($asset->id)->exists();
     }
 }

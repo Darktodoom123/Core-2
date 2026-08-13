@@ -65,11 +65,9 @@ final class DispatchActivationWorkspaceViewModel
         foreach ($assetAssignments as $assignment) {
             $asset = $assignment->asset;
 
-            if (! $asset->status->dispatchable()
-                || $asset->maintenanceWorkOrders->contains(
-                    static fn ($work): bool => $work->dispatch_blocking && $work->released_at === null,
-                )) {
-                $blockers[] = "{$asset->code} is not currently safe for dispatch.";
+            $assessment = $eligibility->asset($asset, $assignment->assignment_type, $job, [], true);
+            if (! $assessment['eligible']) {
+                $blockers[] = "{$asset->code} is not currently safe for dispatch: ".implode(' ', $assessment['reasons']);
             }
         }
 

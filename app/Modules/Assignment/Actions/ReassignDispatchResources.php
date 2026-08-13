@@ -256,7 +256,7 @@ final class ReassignDispatchResources
         $this->loadEligibilityRelations($candidateUsers, $candidateAssets, $endPersonnelIds, $endAssetIds);
 
         $personnelConflicts = $this->personnelConflicts($candidateUsers, $newPersonnel, $job);
-        $assetConflicts = $this->assetConflicts($candidateAssets, $newAssets, $job);
+        $assetConflicts = $this->assetConflicts($candidateAssets, $newAssets, $job, $endAssetIds);
         if ($personnelConflicts !== [] || $assetConflicts !== []) {
             throw ValidationException::withMessages([
                 'personnel' => $personnelConflicts,
@@ -609,15 +609,6 @@ final class ReassignDispatchResources
                 ->with('job'),
         ]);
 
-        $assets->load([
-            'maintenanceWorkOrders' => fn ($query) => $query
-                ->where('dispatch_blocking', true)
-                ->whereNull('released_at'),
-            'assignments' => fn ($query) => $query
-                ->whereNull('active_until')
-                ->when($endAssetIds !== [], fn ($q) => $q->whereNotIn('id', $endAssetIds))
-                ->with('job'),
-        ]);
     }
 
     /**
@@ -648,9 +639,10 @@ final class ReassignDispatchResources
     /**
      * @param  Collection<int, OperationalAsset>  $assets
      * @param  list<array{operational_asset_id: int, assignment_type: string}>  $assignments
+     * @param  list<int>  $excludedAssignmentIds
      * @return list<string>
      */
-    private function assetConflicts(Collection $assets, array $assignments, DispatchJob $job): array
+    private function assetConflicts(Collection $assets, array $assignments, DispatchJob $job, array $excludedAssignmentIds = []): array
     {
         $conflicts = [];
 
@@ -660,7 +652,7 @@ final class ReassignDispatchResources
                 throw ValidationException::withMessages(['assets' => 'Selected assets no longer exist.']);
             }
 
-            $assessment = $this->eligibility->asset($asset, $assignment['assignment_type'], $job);
+            $assessment = $this->eligibility->asset($asset, $assignment['assignment_type'], $job, $excludedAssignmentIds);
             if (! $assessment['eligible']) {
                 $label = $this->eligibility->assetAssignmentLabel($assignment['assignment_type']);
                 $conflicts[] = "{$asset->code} cannot be assigned as {$label}: ".implode(' ', $assessment['reasons']);

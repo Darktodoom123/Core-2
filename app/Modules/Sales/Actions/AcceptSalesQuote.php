@@ -2,34 +2,71 @@
 
 namespace App\Modules\Sales\Actions;
 
-use App\Modules\Rental\Enums\RentalReservationStatus;
-use App\Modules\Rental\Models\RentalReservationItem;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Enums\SalesQuoteStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuote;
+use App\Modules\Sales\Models\SalesQuoteItem;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Enums\AssetUsageType;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class AcceptSalesQuote
 {
-    public function __construct(private readonly RecordAuditEvent $audit) {}
+    public function __construct(
+        private readonly RecordAuditEvent $audit,
+        private readonly OperationalAssetAvailability $availability,
+    ) {}
 
     public function handle(SalesQuote $quote, User $actor): SalesOrder
     {
         return DB::transaction(function () use ($quote, $actor): SalesOrder {
-            $locked = SalesQuote::query()->with('items')->lockForUpdate()->findOrFail($quote->id);
+            $locked = SalesQuote::query()->lockForUpdate()->findOrFail($quote->id);
+            $quoteItems = SalesQuoteItem::query()
+                ->where('sales_quote_id', $locked->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+            $locked->setRelation('items', $quoteItems);
             if ($locked->status !== SalesQuoteStatus::Draft) {
                 throw ValidationException::withMessages(['status' => 'Only draft quotes can be accepted.']);
             }
-            $before = $locked->toArray();
             $orderReference = 'SO-'.$locked->reference;
             if (SalesOrder::query()->where('reference', $orderReference)->exists()) {
                 throw ValidationException::withMessages(['reference' => 'An order has already been created for this quote.']);
             }
+            $catalogIds = $quoteItems->pluck('sales_catalog_item_id')->map(static fn (mixed $id): int => (int) $id)->unique()->sort()->values()->all();
+            $catalogs = SalesCatalogItem::query()->whereIn('id', $catalogIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $assetIds = $catalogs->pluck('operational_asset_id')->filter()->map(static fn (mixed $id): int => (int) $id)->all();
+            $assets = $this->availability->lockAssetsForUpdate($assetIds);
+
+            foreach ($quoteItems as $quoteItem) {
+                $catalog = $catalogs->get($quoteItem->sales_catalog_item_id);
+                if (! $catalog instanceof SalesCatalogItem) {
+                    throw ValidationException::withMessages(['items' => 'One or more quoted inventory items no longer exist.']);
+                }
+                $assetId = $catalog->operational_asset_id;
+                if ($assetId !== null) {
+                    if (! $assets->has($assetId)) {
+                        throw ValidationException::withMessages(['items' => "Saleable inventory {$catalog->sku} is no longer available."]);
+                    }
+                    $this->availability->assertNoConflict(new AssetUsageRequest(
+                        assetId: (int) $assetId,
+                        usageType: AssetUsageType::SalesAccept,
+                    ), 'items');
+                }
+                $available = $catalog->quantity_on_hand - $catalog->quantity_reserved;
+                if ($catalog->status !== 'active' || $available < $quoteItem->quantity) {
+                    throw ValidationException::withMessages(['items' => "Saleable inventory {$catalog->sku} is no longer available."]);
+                }
+            }
+
+            $before = $locked->toArray();
             $order = SalesOrder::query()->create([
                 'reference' => $orderReference,
                 'client_id' => $locked->client_id,
@@ -39,26 +76,8 @@ final class AcceptSalesQuote
                 'currency' => $locked->currency,
                 'total_cents' => $locked->total_cents,
             ]);
-            foreach ($locked->items as $quoteItem) {
-                $catalog = SalesCatalogItem::query()->lockForUpdate()->findOrFail($quoteItem->sales_catalog_item_id);
-                $asset = $catalog->asset()->lockForUpdate()->first();
-                if ($catalog->status !== 'active' || ($asset !== null && ! $asset->status->dispatchable())) {
-                    throw ValidationException::withMessages(['items' => "Saleable inventory {$catalog->sku} is no longer available."]);
-                }
-                if ($asset !== null && RentalReservationItem::query()
-                    ->where('operational_asset_id', $asset->id)
-                    ->whereHas('reservation', fn ($query) => $query->whereIn('status', [
-                        RentalReservationStatus::Requested->value,
-                        RentalReservationStatus::Reserved->value,
-                        RentalReservationStatus::CheckedOut->value,
-                    ]))
-                    ->exists()) {
-                    throw ValidationException::withMessages(['items' => "Equipment {$catalog->sku} is reserved for a rental."]);
-                }
-                $available = $catalog->quantity_on_hand - $catalog->quantity_reserved;
-                if ($available < $quoteItem->quantity) {
-                    throw ValidationException::withMessages(['items' => "Insufficient inventory for {$catalog->sku}."]);
-                }
+            foreach ($quoteItems as $quoteItem) {
+                $catalog = $catalogs->get($quoteItem->sales_catalog_item_id);
                 $orderItem = $order->items()->create([
                     'sales_catalog_item_id' => $catalog->id,
                     'quantity' => $quoteItem->quantity,
