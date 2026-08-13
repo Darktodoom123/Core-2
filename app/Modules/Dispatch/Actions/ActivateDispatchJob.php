@@ -8,9 +8,6 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
-use App\Shared\Assets\Data\AssetUsageRequest;
-use App\Shared\Assets\Data\AssetUsageSource;
-use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Support\Facades\DB;
@@ -56,10 +53,12 @@ final class ActivateDispatchJob
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
-            $assetIds = $job->assetAssignments()
+            $assetAssignments = $job->assetAssignments()
                 ->whereNull('active_until')
                 ->orderBy('id')
                 ->lockForUpdate()
+                ->get();
+            $assetIds = $assetAssignments
                 ->pluck('operational_asset_id')
                 ->map(static fn (mixed $assetId): int => (int) $assetId)
                 ->all();
@@ -119,8 +118,10 @@ final class ActivateDispatchJob
             }
 
             $assets = $this->availability->lockAssetsForUpdate($assetIds);
+            Gate::forUser($actor)->authorize('activate', $job);
 
-            foreach ($assetIds as $assetId) {
+            foreach ($assetAssignments as $assignment) {
+                $assetId = (int) $assignment->operational_asset_id;
                 $asset = $assets->get($assetId);
 
                 if (! $asset instanceof OperationalAsset
@@ -130,13 +131,19 @@ final class ActivateDispatchJob
 
                     throw ValidationException::withMessages(['assets' => "{$code} is not safe for dispatch."]);
                 }
-                $this->availability->assertNoConflict(new AssetUsageRequest(
-                    assetId: $assetId,
-                    usageType: AssetUsageType::DispatchActivate,
-                    windowStart: $job->scheduled_start?->toImmutable(),
-                    windowEnd: $job->scheduled_end?->toImmutable(),
-                    source: new AssetUsageSource('dispatch_job', (int) $job->id),
-                ), 'assets');
+
+                $assessment = $this->eligibility->asset(
+                    $asset,
+                    $assignment->assignment_type,
+                    $job,
+                    [],
+                    true,
+                );
+                if (! $assessment['eligible']) {
+                    throw ValidationException::withMessages([
+                        'assets' => "{$asset->code} is not currently safe for dispatch: ".implode(' ', $assessment['reasons']),
+                    ]);
+                }
             }
 
             $before = $job->only(['status', 'version']);

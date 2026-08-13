@@ -13,6 +13,7 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -23,6 +24,7 @@ final class ReassignDispatchResources
     public function __construct(
         private RecordAuditEvent $audit,
         private DispatchResourceEligibility $eligibility,
+        private OperationalAssetAvailability $availability,
     ) {}
 
     /**
@@ -67,6 +69,7 @@ final class ReassignDispatchResources
                 $newPersonnel,
                 $newAssets,
             );
+            Gate::forUser($actor)->authorize('reassignResources', $job);
 
             $isPostActivation = in_array($job->status, [
                 DispatchStatus::Dispatched,
@@ -185,6 +188,7 @@ final class ReassignDispatchResources
             $changes['new_personnel'],
             $changes['new_assets'],
         );
+        Gate::forUser($approver)->authorize('decide', $approval);
         $this->writeChanges(
             $job,
             $prepared['personnel_assignments'],
@@ -251,12 +255,19 @@ final class ReassignDispatchResources
         $this->assertNoDuplicateResources($newPersonnelIds, $newAssetIds);
 
         $candidateUsers = $this->lockPersonnel($newPersonnelIds);
-        $candidateAssets = $this->lockAssets($newAssetIds);
-        $this->assertResourcesExist($candidateUsers, $newPersonnelIds, $candidateAssets, $newAssetIds);
-        $this->loadEligibilityRelations($candidateUsers, $candidateAssets, $endPersonnelIds, $endAssetIds);
+        $affectedAssetIds = [
+            ...$assetAssignmentsToEnd
+                ->pluck('operational_asset_id')
+                ->map(static fn (mixed $assetId): int => (int) $assetId)
+                ->all(),
+            ...$newAssetIds,
+        ];
+        $lockedAssets = $this->availability->lockAssetsForUpdate($affectedAssetIds);
+        $this->assertResourcesExist($candidateUsers, $newPersonnelIds, $lockedAssets, $newAssetIds);
+        $this->loadEligibilityRelations($candidateUsers, $lockedAssets, $endPersonnelIds, $endAssetIds);
 
         $personnelConflicts = $this->personnelConflicts($candidateUsers, $newPersonnel, $job);
-        $assetConflicts = $this->assetConflicts($candidateAssets, $newAssets, $job, $endAssetIds);
+        $assetConflicts = $this->assetConflicts($lockedAssets, $newAssets, $job, $endAssetIds);
         if ($personnelConflicts !== [] || $assetConflicts !== []) {
             throw ValidationException::withMessages([
                 'personnel' => $personnelConflicts,
@@ -557,24 +568,6 @@ final class ReassignDispatchResources
     }
 
     /**
-     * @param  list<int>  $assetIds
-     * @return Collection<int, OperationalAsset>
-     */
-    private function lockAssets(array $assetIds): Collection
-    {
-        if ($assetIds === []) {
-            return new Collection;
-        }
-
-        return OperationalAsset::query()
-            ->whereIn('id', $assetIds)
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-    }
-
-    /**
      * @param  Collection<int, User>  $users
      * @param  list<int>  $personnelIds
      * @param  Collection<int, OperationalAsset>  $assets
@@ -582,11 +575,11 @@ final class ReassignDispatchResources
      */
     private function assertResourcesExist(Collection $users, array $personnelIds, Collection $assets, array $assetIds): void
     {
-        if ($users->count() !== count($personnelIds)) {
+        if (collect($personnelIds)->contains(static fn (int $id): bool => ! $users->has($id))) {
             throw ValidationException::withMessages(['personnel' => 'One or more selected personnel records no longer exist.']);
         }
 
-        if ($assets->count() !== count($assetIds)) {
+        if (collect($assetIds)->contains(static fn (int $id): bool => ! $assets->has($id))) {
             throw ValidationException::withMessages(['assets' => 'One or more selected asset records no longer exist.']);
         }
     }

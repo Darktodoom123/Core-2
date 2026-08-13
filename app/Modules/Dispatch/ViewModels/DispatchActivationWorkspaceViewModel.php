@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Models\OperationalAsset;
 
 final class DispatchActivationWorkspaceViewModel
 {
@@ -63,7 +64,13 @@ final class DispatchActivationWorkspaceViewModel
         }
 
         foreach ($assetAssignments as $assignment) {
-            $asset = $assignment->asset;
+            $asset = $assignment->getRelationValue('asset');
+
+            if (! $asset instanceof OperationalAsset) {
+                $blockers[] = "Asset #{$assignment->operational_asset_id} is not safe for dispatch.";
+
+                continue;
+            }
 
             $assessment = $eligibility->asset($asset, $assignment->assignment_type, $job, [], true);
             if (! $assessment['eligible']) {

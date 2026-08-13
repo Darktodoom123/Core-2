@@ -10,6 +10,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +21,7 @@ final class AssignDispatchResources
     public function __construct(
         private RecordAuditEvent $audit,
         private DispatchResourceEligibility $eligibility,
+        private OperationalAssetAvailability $availability,
     ) {}
 
     /**
@@ -32,6 +34,7 @@ final class AssignDispatchResources
 
         return DB::transaction(function () use ($actor, $job, $personnel, $assets): DispatchJob {
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
+            Gate::forUser($actor)->authorize('assignResources', $job);
             $this->assertJobAcceptsAssignments($job, $personnel, $assets);
 
             $personnelIds = array_column($personnel, 'user_id');
@@ -39,7 +42,8 @@ final class AssignDispatchResources
             $this->assertNoDuplicateResources($personnelIds, $assetIds);
 
             $users = $this->lockPersonnel($personnelIds);
-            $lockedAssets = $this->lockAssets($assetIds);
+            $lockedAssets = $this->availability->lockAssetsForUpdate($assetIds);
+            Gate::forUser($actor)->authorize('assignResources', $job);
             $this->assertResourcesExist($users, $personnelIds, $lockedAssets, $assetIds);
             $this->loadEligibilityRelations($users, $lockedAssets);
 
@@ -113,20 +117,6 @@ final class AssignDispatchResources
     {
         return User::query()
             ->whereIn('id', $personnelIds)
-            ->orderBy('id')
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-    }
-
-    /**
-     * @param  list<int>  $assetIds
-     * @return Collection<int, OperationalAsset>
-     */
-    private function lockAssets(array $assetIds): Collection
-    {
-        return OperationalAsset::query()
-            ->whereIn('id', $assetIds)
             ->orderBy('id')
             ->lockForUpdate()
             ->get()
