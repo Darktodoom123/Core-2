@@ -16,8 +16,8 @@ final class RentalConditionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'condition' => ['nullable', 'array'],
-            'condition.*' => ['string', 'max:255'],
+            'condition' => ['required', 'array', 'min:1', 'max:50'],
+            'condition.*' => ['required', 'string', 'not_regex:/^\s*$/', 'max:255'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'damage_notes' => ['nullable', 'string', 'max:5000'],
         ];

@@ -14,7 +14,7 @@ final class SalesAssetUsageConflictChecker implements AssetUsageConflictChecker
 {
     public function conflicts(AssetUsageRequest $request): iterable
     {
-        if ($request->usageType === AssetUsageType::RentalReturn
+        if (($request->usageType === AssetUsageType::RentalReturn && ! $request->targetStatus?->dispatchable())
             || ($request->usageType === AssetUsageType::AssetStatusChange && ! $request->targetStatus?->dispatchable())) {
             return [];
         }

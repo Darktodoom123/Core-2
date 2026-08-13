@@ -5,7 +5,9 @@ namespace App\Modules\Rental\Actions;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\Models\RentalReservationItem;
+use App\Modules\Rental\Support\RentalAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Data\AssetUsageSource;
@@ -13,6 +15,7 @@ use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class ApproveRentalReservation
@@ -36,7 +39,11 @@ final class ApproveRentalReservation
             if (! $status->canApprove()) {
                 throw ValidationException::withMessages(['status' => 'Only requested reservations can be approved.']);
             }
-            $assets = $this->availability->lockAssetsForUpdate($items->pluck('operational_asset_id')->all());
+            $assetIds = $items->pluck('operational_asset_id')->map(static fn (mixed $id): int => (int) $id)->all();
+            if (count($assetIds) !== count(array_unique($assetIds))) {
+                throw ValidationException::withMessages(['status' => 'Each equipment unit may appear only once on a rental reservation.']);
+            }
+            $assets = $this->availability->lockAssetsForUpdate($assetIds);
             foreach ($items as $item) {
                 if (! $assets->has($item->operational_asset_id)) {
                     throw ValidationException::withMessages(['status' => 'One or more reserved equipment units are no longer available.']);
@@ -49,9 +56,11 @@ final class ApproveRentalReservation
                     source: new AssetUsageSource('rental_reservation', (int) $locked->id),
                 ), 'status');
             }
-            $before = $locked->toArray();
+            Gate::forUser($actor)->authorize(PermissionName::RentalApprove->value);
+
+            $before = RentalAuditSnapshot::fromReservation($locked);
             $locked->update(['status' => RentalReservationStatus::Reserved, 'approved_by' => $actor->id]);
-            $this->audit->handle($actor, $locked, 'rental_reservation.approved', $before, $locked->fresh()->toArray());
+            $this->audit->handle($actor, $locked, 'rental_reservation.approved', $before, RentalAuditSnapshot::fromReservation($locked->fresh()));
 
             return $locked->fresh(['items.asset', 'client']);
         });

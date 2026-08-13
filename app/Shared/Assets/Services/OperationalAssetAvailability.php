@@ -6,6 +6,8 @@ use App\Shared\Assets\Contracts\AssetUsageConflictChecker;
 use App\Shared\Assets\Data\AssetUsageAssessment;
 use App\Shared\Assets\Data\AssetUsageConflict;
 use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -77,6 +79,10 @@ final class OperationalAssetAvailability
     /** @return list<AssetUsageConflict> */
     private function safetyConflicts(OperationalAsset $asset, AssetUsageRequest $request): array
     {
+        if ($request->usageType === AssetUsageType::RentalReturn && $request->targetStatus?->dispatchable()) {
+            return $this->rentalReturnRestoreConflicts($asset);
+        }
+
         $targetRequiresReadiness = $request->targetStatus?->dispatchable() ?? false;
         if (! $request->usageType->requiresDispatchableAsset() && ! $targetRequiresReadiness) {
             return [];
@@ -103,6 +109,30 @@ final class OperationalAssetAvailability
         $hasPassingInspection = $asset->inspections()->where('result', 'passed')->whereNotNull('completed_at')->exists();
         if (($targetRequiresReadiness || $hasInspection) && ! $hasPassingInspection) {
             $conflicts[] = new AssetUsageConflict('asset.inspection_required', 'A completed passing inspection is required before using the asset.');
+        }
+
+        return $conflicts;
+    }
+
+    /** @return list<AssetUsageConflict> */
+    private function rentalReturnRestoreConflicts(OperationalAsset $asset): array
+    {
+        $conflicts = [];
+
+        if (! in_array($asset->status, [AssetStatus::Assigned, AssetStatus::Available, AssetStatus::ReadyForService], true)) {
+            $conflicts[] = new AssetUsageConflict('asset.not_dispatchable', 'The asset is not currently dispatchable.');
+        }
+
+        $blockingMaintenanceCount = $asset->maintenanceWorkOrders()
+            ->where('dispatch_blocking', true)
+            ->whereNull('released_at')
+            ->count();
+        if ($blockingMaintenanceCount > 0) {
+            $conflicts[] = new AssetUsageConflict(
+                'asset.maintenance_block',
+                'A blocking maintenance item prevents use of the asset.',
+                details: ['count' => $blockingMaintenanceCount],
+            );
         }
 
         return $conflicts;

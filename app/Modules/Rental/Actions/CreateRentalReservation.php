@@ -4,14 +4,18 @@ namespace App\Modules\Rental\Actions;
 
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Rental\Support\RentalAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\OperationalAsset;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
+use App\Shared\Support\PersistedInteger;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class CreateRentalReservation
@@ -31,7 +35,12 @@ final class CreateRentalReservation
             $total = 0;
             $items = (array) $attributes['items'];
             $assetIds = array_map(static fn (array $item): int => (int) $item['operational_asset_id'], $items);
+            if (count($assetIds) !== count(array_unique($assetIds))) {
+                throw ValidationException::withMessages(['items' => 'Each equipment unit may appear only once on a rental reservation.']);
+            }
             $assets = $this->availability->lockAssetsForUpdate($assetIds);
+
+            Gate::forUser($actor)->authorize(PermissionName::RentalCreate->value);
 
             $reservation = RentalReservation::query()->create([
                 'reference' => $attributes['reference'],
@@ -60,8 +69,9 @@ final class CreateRentalReservation
 
                 $quantity = (int) $item['quantity'];
                 $rate = (int) $item['rate_cents'];
-                $line = $quantity * $rate * $days;
-                $total += $line;
+                $line = PersistedInteger::checkedMultiply($quantity, $rate, 'items');
+                $line = PersistedInteger::checkedMultiply($line, (int) $days, 'items');
+                $total = PersistedInteger::checkedAdd($total, $line, 'items');
                 $reservation->items()->create([
                     'operational_asset_id' => $asset->id,
                     'quantity' => $quantity,
@@ -71,7 +81,7 @@ final class CreateRentalReservation
             }
 
             $reservation->update(['total_cents' => $total]);
-            $this->audit->handle($actor, $reservation, 'rental_reservation.created', null, $reservation->fresh()->toArray());
+            $this->audit->handle($actor, $reservation, 'rental_reservation.created', null, RentalAuditSnapshot::fromReservation($reservation->fresh()));
 
             return $reservation->fresh(['items.asset', 'client']);
         });

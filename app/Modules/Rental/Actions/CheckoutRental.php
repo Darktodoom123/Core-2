@@ -5,7 +5,9 @@ namespace App\Modules\Rental\Actions;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalCheckout;
 use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Rental\Support\RentalAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Data\AssetUsageRequest;
 use App\Shared\Assets\Data\AssetUsageSource;
@@ -14,6 +16,7 @@ use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class CheckoutRental
@@ -33,7 +36,11 @@ final class CheckoutRental
             if (! $locked->status->canCheckout() || $locked->checkout()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Only reserved rentals can be checked out once.']);
             }
-            $assets = $this->availability->lockAssetsForUpdate($items->pluck('operational_asset_id')->all());
+            $assetIds = $items->pluck('operational_asset_id')->map(static fn (mixed $id): int => (int) $id)->all();
+            if (count($assetIds) !== count(array_unique($assetIds))) {
+                throw ValidationException::withMessages(['status' => 'Each equipment unit may appear only once on a rental reservation.']);
+            }
+            $assets = $this->availability->lockAssetsForUpdate($assetIds);
             foreach ($items as $item) {
                 if (! $assets->has($item->operational_asset_id)) {
                     throw ValidationException::withMessages(['status' => 'One or more reserved equipment units are no longer available.']);
@@ -46,12 +53,14 @@ final class CheckoutRental
                     source: new AssetUsageSource('rental_reservation', (int) $locked->id),
                 ), 'status');
             }
-            $before = $locked->toArray();
+            Gate::forUser($actor)->authorize(PermissionName::RentalCheckout->value);
+
+            $before = RentalAuditSnapshot::fromReservation($locked);
             RentalCheckout::query()->create([
                 'rental_reservation_id' => $locked->id,
                 'checked_out_by' => $actor->id,
                 'checked_out_at' => now(),
-                'condition_before' => $attributes['condition'] ?? null,
+                'condition_before' => $attributes['condition'],
                 'notes' => $attributes['notes'] ?? null,
             ]);
             foreach ($items as $item) {
@@ -61,7 +70,7 @@ final class CheckoutRental
                 }
             }
             $locked->update(['status' => RentalReservationStatus::CheckedOut]);
-            $this->audit->handle($actor, $locked, 'rental_reservation.checked_out', $before, $locked->fresh()->toArray());
+            $this->audit->handle($actor, $locked, 'rental_reservation.checked_out', $before, RentalAuditSnapshot::fromReservation($locked->fresh()));
 
             return $locked->fresh(['items.asset', 'checkout', 'client']);
         });

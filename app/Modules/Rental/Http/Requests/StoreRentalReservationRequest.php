@@ -4,6 +4,7 @@ namespace App\Modules\Rental\Http\Requests;
 
 use App\Platform\Identity\Enums\PermissionName;
 use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Support\PersistedInteger;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,12 +26,12 @@ final class StoreRentalReservationRequest extends FormRequest
             'delivery_location' => ['nullable', 'string', 'max:2000'],
             'fulfillment_mode' => ['required', Rule::in(['delivery', 'pickup'])],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.operational_asset_id' => ['required', 'integer', Rule::exists('operational_assets', 'id')->where(fn ($q) => $q->whereIn('status', [AssetStatus::Available->value, AssetStatus::ReadyForService->value])->whereNull('deleted_at'))],
+            'items' => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.operational_asset_id' => ['required', 'integer', 'distinct', Rule::exists('operational_assets', 'id')->where(fn ($q) => $q->whereIn('status', [AssetStatus::Available->value, AssetStatus::ReadyForService->value])->whereNull('deleted_at'))],
             // Each line references one physical operational unit. Multiple units
             // must use separate catalog records so availability cannot be overstated.
             'items.*.quantity' => ['required', 'integer', 'size:1'],
-            'items.*.rate_cents' => ['required', 'integer', 'min:0'],
+            'items.*.rate_cents' => ['required', 'integer', 'min:0', 'max:'.PersistedInteger::MAX],
         ];
     }
 }

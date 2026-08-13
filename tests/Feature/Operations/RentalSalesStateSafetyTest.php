@@ -165,6 +165,7 @@ it('requires non-empty bounded condition evidence for checkout and return', func
         'nested' => ['condition' => ['engine' => ['nested']]],
         'blank' => ['condition' => ['engine' => '   ']],
         'oversize' => ['condition' => ['engine' => str_repeat('x', 256)]],
+        'too_many_entries' => ['condition' => array_fill_keys(array_map(static fn (int $index): string => "item_{$index}", range(1, 51)), 'good')],
     };
     $url = $operation === 'checkout'
         ? "/operations/rental-reservations/{$reservation->id}/checkout"
@@ -187,12 +188,14 @@ it('requires non-empty bounded condition evidence for checkout and return', func
     ['checkout', 'nested'],
     ['checkout', 'blank'],
     ['checkout', 'oversize'],
+    ['checkout', 'too_many_entries'],
     ['return', 'missing'],
     ['return', 'null'],
     ['return', 'empty'],
     ['return', 'nested'],
     ['return', 'blank'],
     ['return', 'oversize'],
+    ['return', 'too_many_entries'],
 ]);
 
 it('revalidates rental checkout after each operational blocker appears', function (string $blocker): void {
@@ -313,6 +316,83 @@ it('keeps dispatch assignments out of rental creation', function (): void {
         ->assertJsonValidationErrors('items');
 
     expect(RentalReservation::query()->where('reference', 'REN-R0-DISPATCH-CONFLICT')->exists())->toBeFalse();
+});
+
+it('rejects duplicate rental asset IDs before creating a reservation', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-DUPLICATE-'.fake()->unique()->numerify('###'));
+    $start = CarbonImmutable::now()->addDays(2)->startOfDay();
+
+    $this->actingAs($dispatcher)
+        ->postJson('/operations/rental-reservations', [
+            'reference' => 'REN-R0-DUPLICATE',
+            'client_id' => $client->id,
+            'start_date' => $start->toDateString(),
+            'end_date' => $start->toDateString(),
+            'fulfillment_mode' => 'delivery',
+            'items' => [
+                ['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100],
+                ['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100],
+            ],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items.1.operational_asset_id');
+
+    expect(RentalReservation::query()->where('reference', 'REN-R0-DUPLICATE')->exists())->toBeFalse();
+});
+
+it('persists valid rental checkout and return condition evidence as JSON', function (): void {
+    $actor = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-EVIDENCE-'.fake()->unique()->numerify('###'));
+    $reservation = r0StateReservation($actor, $client, $asset, RentalReservationStatus::Reserved);
+
+    $this->actingAs($actor)
+        ->postJson("/operations/rental-reservations/{$reservation->id}/checkout", [
+            'condition' => ['engine' => 'good', 'hydraulics' => 'normal'],
+        ])
+        ->assertOk();
+
+    $this->actingAs($actor)
+        ->postJson("/operations/rental-reservations/{$reservation->id}/return", [
+            'condition' => ['engine' => 'good', 'hydraulics' => 'normal'],
+            'damage_notes' => 'No new damage observed.',
+        ])
+        ->assertOk();
+
+    expect($reservation->fresh()->checkout->condition_before)->toBe([
+        'engine' => 'good',
+        'hydraulics' => 'normal',
+    ])->and($reservation->fresh()->returnRecord->condition_after)->toBe([
+        'engine' => 'good',
+        'hydraulics' => 'normal',
+    ]);
+});
+
+it('does not restore a returned rental asset that became committed to a terminal sale', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $manager = r0StateUser(RoleName::OperationsManager);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-RETURN-SALE-'.fake()->unique()->numerify('###'), AssetStatus::Assigned);
+    $reservation = r0StateReservation($dispatcher, $client, $asset, RentalReservationStatus::CheckedOut);
+    RentalCheckout::query()->create([
+        'rental_reservation_id' => $reservation->id,
+        'checked_out_by' => $dispatcher->id,
+        'checked_out_at' => now(),
+        'condition_before' => ['engine' => 'good'],
+    ]);
+    r0StateCommitment($manager, $client, $asset, SalesOrderStatus::Transferred);
+
+    $this->actingAs($dispatcher)
+        ->postJson("/operations/rental-reservations/{$reservation->id}/return", [
+            'condition' => ['engine' => 'good'],
+        ])
+        ->assertOk();
+
+    expect($reservation->fresh()->status)->toBe(RentalReservationStatus::Returned)
+        ->and($asset->fresh()->status)->toBe(AssetStatus::Assigned)
+        ->and($reservation->fresh()->returnRecord->condition_after)->toBe(['engine' => 'good']);
 });
 
 it('allows an exact dispatch end to rental start boundary', function (): void {
@@ -483,6 +563,74 @@ it('rejects rental line multiplication overflow before persistence', function ()
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('items');
+});
+
+it('accepts the maximum safe rental line total', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-RENTAL-MAX');
+    $start = CarbonImmutable::now()->addDays(2);
+
+    $this->actingAs($dispatcher)
+        ->postJson('/operations/rental-reservations', [
+            'reference' => 'REN-R0-RENTAL-MAX',
+            'client_id' => $client->id,
+            'start_date' => $start->toDateString(),
+            'end_date' => $start->toDateString(),
+            'fulfillment_mode' => 'delivery',
+            'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 2_147_483_647]],
+        ])
+        ->assertCreated();
+
+    $reservation = RentalReservation::query()->where('reference', 'REN-R0-RENTAL-MAX')->sole();
+    expect($reservation->total_cents)->toBe(2_147_483_647)
+        ->and($reservation->items()->sole()->line_total_cents)->toBe(2_147_483_647);
+});
+
+it('rejects a rental rate above the signed integer maximum', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $asset = r0StateAsset('EQ-R0-RENTAL-OVER-MAX');
+    $start = CarbonImmutable::now()->addDays(2);
+
+    $this->actingAs($dispatcher)
+        ->postJson('/operations/rental-reservations', [
+            'reference' => 'REN-R0-RENTAL-OVER-MAX',
+            'client_id' => $client->id,
+            'start_date' => $start->toDateString(),
+            'end_date' => $start->toDateString(),
+            'fulfillment_mode' => 'delivery',
+            'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 2_147_483_648]],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items.0.rate_cents');
+
+    expect(RentalReservation::query()->where('reference', 'REN-R0-RENTAL-OVER-MAX')->exists())->toBeFalse();
+});
+
+it('rejects rental aggregate overflow before persistence', function (): void {
+    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $client = r0StateClient();
+    $first = r0StateAsset('EQ-R0-RENTAL-AGG-1');
+    $second = r0StateAsset('EQ-R0-RENTAL-AGG-2');
+    $start = CarbonImmutable::now()->addDays(2);
+
+    $this->actingAs($dispatcher)
+        ->postJson('/operations/rental-reservations', [
+            'reference' => 'REN-R0-RENTAL-AGG-OVERFLOW',
+            'client_id' => $client->id,
+            'start_date' => $start->toDateString(),
+            'end_date' => $start->toDateString(),
+            'fulfillment_mode' => 'delivery',
+            'items' => [
+                ['operational_asset_id' => $first->id, 'quantity' => 1, 'rate_cents' => 2_147_483_647],
+                ['operational_asset_id' => $second->id, 'quantity' => 1, 'rate_cents' => 1],
+            ],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    expect(RentalReservation::query()->where('reference', 'REN-R0-RENTAL-AGG-OVERFLOW')->exists())->toBeFalse();
 });
 
 it('rejects multi-line aggregate overflow before quote persistence', function (): void {
