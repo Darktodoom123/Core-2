@@ -428,6 +428,85 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
     });
 
+    test('schedule board identifies the selected day and filters navigation', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Schedule board' }).click();
+
+        const board = page.getByRole('region', {
+            name: 'Schedule board section',
+        });
+        const dateHeading = board.getByRole('heading', { level: 2 });
+
+        await expect(board.getByText('Day view')).toBeVisible();
+        await expect(dateHeading).toContainText('Today');
+        await expect(
+            board.getByRole('button', { name: 'Show previous day' }),
+        ).toBeVisible();
+        await expect(
+            board.getByRole('button', { name: 'Show next day' }),
+        ).toBeVisible();
+        await expect(
+            board.getByRole('button', { name: 'Show today' }),
+        ).toBeVisible();
+        await expect(board.getByRole('status')).toHaveText('0 scheduled jobs');
+
+        await board.getByRole('button', { name: 'Show next day' }).click();
+
+        await expect(dateHeading).not.toContainText('Today');
+        await expect(board.getByRole('status')).toHaveText('2 scheduled jobs');
+
+        await board.getByRole('button', { name: 'Show today' }).click();
+        await expect(dateHeading).toContainText('Today');
+        await expect(board.getByRole('status')).toHaveText('0 scheduled jobs');
+    });
+
+    test('schedule board provides week and month planning views', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: 'Schedule board' }).click();
+
+        const board = page.getByRole('region', {
+            name: 'Schedule board section',
+        });
+
+        await board.getByRole('button', { name: 'week', exact: true }).click();
+        await expect(board.getByText('Week view')).toBeVisible();
+        await expect(
+            board.getByRole('button', { name: 'Show current week' }),
+        ).toBeVisible();
+        await expect(
+            board.getByRole('grid', { name: 'Weekly resource schedule' }),
+        ).toBeVisible();
+
+        await board.getByRole('button', { name: 'Show next week' }).click();
+        await expect(
+            board.getByRole('button', { name: 'Show previous week' }),
+        ).toBeVisible();
+
+        await board.getByRole('button', { name: 'month', exact: true }).click();
+        await expect(board.getByText('Month view')).toBeVisible();
+        await expect(
+            board.getByRole('button', { name: 'Show current month' }),
+        ).toBeVisible();
+        await expect(
+            board.getByRole('grid', { name: /dispatch schedule/ }),
+        ).toBeVisible();
+
+        await board.getByRole('button', { name: 'Show next month' }).click();
+        await expect(
+            board.getByRole('button', { name: 'Show previous month' }),
+        ).toBeVisible();
+    });
+
     test('responsive navigation and skip-link focus remain accessible', async ({
         page,
     }) => {
@@ -520,9 +599,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             }),
         ).toBeDisabled();
         await expect(page.locator('#dispatch-activation')).toBeVisible();
-        await expect(
-            page.locator('#dispatch-activation'),
-        ).not.toHaveAttribute('open');
+        await expect(page.locator('#dispatch-activation')).not.toHaveAttribute(
+            'open',
+        );
         await expect(
             page.locator('#dispatch-activation').getByRole('button', {
                 name: 'Activate dispatch',
@@ -548,18 +627,19 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).not.toHaveAttribute('open');
 
         await page.locator('#dispatch-activation > summary').click();
-        await expect(
-            page.locator('#dispatch-activation'),
-        ).toHaveAttribute('open', '');
+        await expect(page.locator('#dispatch-activation')).toHaveAttribute(
+            'open',
+            '',
+        );
         await expect(
             page.locator('#dispatch-activation').getByRole('button', {
                 name: 'Activate dispatch',
             }),
         ).toBeVisible();
         await page.locator('#dispatch-activation > summary').click();
-        await expect(
-            page.locator('#dispatch-activation'),
-        ).not.toHaveAttribute('open');
+        await expect(page.locator('#dispatch-activation')).not.toHaveAttribute(
+            'open',
+        );
 
         await page.locator('#administrative-actions > summary').click();
         await expect(

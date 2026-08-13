@@ -2,19 +2,57 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { browserFixtures, signIn } from './browser-fixtures';
 
-const EMPTY_MAPLIBRE_STYLE = JSON.stringify({
+const STADIA_ATTRIBUTION =
+    '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+const STADIA_ATTRIBUTION_LINKS = [
+    ['Stadia Maps', 'https://stadiamaps.com/'],
+    ['OpenMapTiles', 'https://openmaptiles.org/'],
+    ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'],
+] as const;
+
+const STADIA_STYLE_WITH_ATTRIBUTION = JSON.stringify({
     version: 8,
-    sources: {},
-    layers: [],
+    sources: {
+        fixture: {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [],
+            },
+            attribution: STADIA_ATTRIBUTION,
+        },
+    },
+    layers: [
+        {
+            id: 'fixture-points',
+            type: 'circle',
+            source: 'fixture',
+            paint: {
+                'circle-color': '#cbd5e1',
+            },
+        },
+    ],
 });
 
-async function stubStadiaStyle(page: Page) {
+async function stubStadiaStyle(
+    page: Page,
+    style = STADIA_STYLE_WITH_ATTRIBUTION,
+): Promise<string[]> {
+    const tileRequests: string[] = [];
+
+    await page.route('https://tiles.stadiamaps.com/data/**', async (route) => {
+        tileRequests.push(route.request().url());
+        await route.abort();
+    });
     await page.route('https://tiles.stadiamaps.com/styles/**', (route) =>
         route.fulfill({
             contentType: 'application/json',
-            body: EMPTY_MAPLIBRE_STYLE,
+            body: style,
         }),
     );
+
+    return tileRequests;
 }
 
 async function openTracking(page: Page) {
@@ -24,28 +62,65 @@ async function openTracking(page: Page) {
     await page.goto('/?view=tracking');
 }
 
-test('loads the configured MapLibre surface with attribution and accessible controls', async ({
-    page,
-}) => {
-    await stubStadiaStyle(page);
-    await openTracking(page);
-
+async function expectMapReady(page: Page) {
     await expect(page.getByTestId('live-tracking-map')).toBeVisible();
     await expect(
         page.getByRole('application', {
             name: /Interactive live field location map/i,
         }),
     ).toBeVisible();
-    await expect(
-        page.getByText('Stadia Maps', { exact: false }).first(),
-    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
     await expect(
         page.getByRole('button', { name: 'Fit all locations on map' }),
     ).toBeVisible();
+}
+
+async function expectSynchronizedList(page: Page) {
+    const list = page.getByRole('complementary', {
+        name: 'Synchronized mapped location list',
+    });
+
+    await expect(list).toBeVisible();
     await expect(
-        page.getByRole('heading', { name: 'Mapped locations' }),
+        list.getByRole('heading', { name: 'Mapped locations' }),
     ).toBeVisible();
+}
+
+test('loads the configured MapLibre surface with attribution and accessible controls', async ({
+    page,
+}) => {
+    const tileRequests = await stubStadiaStyle(page);
+    await openTracking(page);
+
+    await expectMapReady(page);
+    const attribution = page.locator('.maplibregl-ctrl-attrib');
+
+    await expect(attribution).toBeVisible();
+
+    for (const [name, href] of STADIA_ATTRIBUTION_LINKS) {
+        await expect(
+            attribution.getByRole('link', { name, exact: true }),
+        ).toHaveAttribute('href', href);
+    }
+
+    expect(tileRequests).toHaveLength(0);
+    await expectSynchronizedList(page);
+});
+
+test('uses the configured attribution fallback when a style has no metadata', async ({
+    page,
+}) => {
+    await stubStadiaStyle(
+        page,
+        JSON.stringify({ version: 8, sources: {}, layers: [] }),
+    );
+    await openTracking(page);
+
+    const attribution = page.locator('.maplibregl-ctrl-attrib');
+
+    await expectMapReady(page);
+    await expect(attribution).toContainText('Stadia Maps');
+    await expectSynchronizedList(page);
 });
 
 test('keeps the synchronized list available when the style fails', async ({
@@ -57,9 +132,7 @@ test('keeps the synchronized list available when the style fails', async ({
     await openTracking(page);
 
     await expect(page.getByRole('alert')).toContainText('Map unavailable');
-    await expect(
-        page.getByRole('heading', { name: 'Mapped locations' }),
-    ).toBeVisible();
+    await expectSynchronizedList(page);
 });
 
 test('keeps the synchronized list available when WebGL is unavailable', async ({
@@ -80,9 +153,7 @@ test('keeps the synchronized list available when WebGL is unavailable', async ({
     await openTracking(page);
 
     await expect(page.getByRole('alert')).toContainText('Map unavailable');
-    await expect(
-        page.getByRole('heading', { name: 'Mapped locations' }),
-    ).toBeVisible();
+    await expectSynchronizedList(page);
 });
 
 test('keeps controls usable at a 390px viewport with reduced motion', async ({
@@ -93,7 +164,7 @@ test('keeps controls usable at a 390px viewport with reduced motion', async ({
     await stubStadiaStyle(page);
     await openTracking(page);
 
-    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
+    await expectMapReady(page);
     await page.getByRole('button', { name: 'Zoom in' }).focus();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeFocused();
     expect(

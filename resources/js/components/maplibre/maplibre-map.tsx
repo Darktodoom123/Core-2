@@ -19,6 +19,52 @@ type ReadyMapContext = Omit<MapLibreContextValue, 'prefersReducedMotion'>;
 
 const MapLibreContext = createContext<MapLibreContextValue | null>(null);
 
+function supportsWebGL2(): boolean {
+    try {
+        return Boolean(document.createElement('canvas').getContext('webgl2'));
+    } catch {
+        return false;
+    }
+}
+
+function mapHasSourceAttribution(map: MapLibreInstance): boolean {
+    const style = map.getStyle();
+    const usedSourceIds = new Set(
+        style.layers.flatMap((layer) =>
+            'source' in layer && typeof layer.source === 'string'
+                ? [layer.source]
+                : [],
+        ),
+    );
+
+    if (style.terrain?.source) {
+        usedSourceIds.add(style.terrain.source);
+    }
+
+    return [...usedSourceIds].some((sourceId) =>
+        Boolean(map.getSource(sourceId)?.attribution?.trim()),
+    );
+}
+
+function addMapAttributionControl(
+    map: MapLibreInstance,
+    maplibregl: MapLibreRuntime,
+    styleVariant: 'light' | 'dark',
+): void {
+    const fallbackAttribution = getMapAttribution(styleVariant).trim();
+    const hasSourceAttribution = mapHasSourceAttribution(map);
+    const attributionOptions = hasSourceAttribution
+        ? { customAttribution: [] }
+        : fallbackAttribution
+          ? { customAttribution: fallbackAttribution }
+          : undefined;
+
+    map.addControl(
+        new maplibregl.AttributionControl(attributionOptions),
+        'bottom-right',
+    );
+}
+
 export function useMapLibre(): MapLibreContextValue {
     const context = useContext(MapLibreContext);
 
@@ -89,6 +135,15 @@ export function MapLibreMap({
 
                 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
+                if (!supportsWebGL2()) {
+                    setStatus('error');
+                    setErrorMessage(
+                        'Map graphics are unavailable in this browser.',
+                    );
+
+                    return;
+                }
+
                 map = new maplibregl.Map({
                     container: containerRef.current,
                     style: styleUrl,
@@ -102,13 +157,6 @@ export function MapLibreMap({
                     maxPitch: 0,
                 });
 
-                map.addControl(
-                    new maplibregl.AttributionControl({
-                        customAttribution: getMapAttribution(styleVariant),
-                    }),
-                    'bottom-right',
-                );
-
                 resizeObserver = new ResizeObserver(() => map?.resize());
                 resizeObserver.observe(containerRef.current);
 
@@ -116,6 +164,16 @@ export function MapLibreMap({
                     if (disposed || !map) {
                         return;
                     }
+
+                    map.once('idle', () => {
+                        if (!disposed && map) {
+                            addMapAttributionControl(
+                                map,
+                                maplibregl,
+                                styleVariant,
+                            );
+                        }
+                    });
 
                     mapLoadedRef.current = true;
                     setStatus('ready');

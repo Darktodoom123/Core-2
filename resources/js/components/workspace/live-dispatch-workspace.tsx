@@ -3,6 +3,7 @@ import {
     AlertTriangle,
     CalendarDays,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     ChevronUp,
     Clock,
@@ -37,6 +38,8 @@ import {
     RejectGptModal,
 } from '@/components/workspace/gpt-workspace-section';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
+import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
+import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
@@ -50,6 +53,7 @@ import type {
 } from '@/types/workspace';
 
 type ViewMode = 'list' | 'board' | 'conflicts';
+type BoardPeriod = 'day' | 'week' | 'month';
 type BoardCategory = 'all' | 'cranes' | 'trucks' | 'equipment' | 'personnel';
 type ConflictTypeFilter =
     | 'all'
@@ -138,8 +142,12 @@ export function LiveDispatchWorkspace({
     }, [initialServiceRequestId, showIntake]);
 
     const [viewMode, setViewMode] = useState<ViewMode>('list');
+    const [boardPeriod, setBoardPeriod] = useState<BoardPeriod>('day');
     const [conflictsOnly, setConflictsOnly] = useState(false);
     const [boardCategory, setBoardCategory] = useState<BoardCategory>('all');
+    const [selectedBoardDate, setSelectedBoardDate] = useState(() =>
+        localDateKey(new Date()),
+    );
     const [conflictFilter, setConflictFilter] =
         useState<ConflictTypeFilter>('all');
 
@@ -398,6 +406,14 @@ export function LiveDispatchWorkspace({
                 .includes(normalized),
         );
     }, [jobs, query]);
+
+    const boardJobs = useMemo(
+        () =>
+            filteredJobs.filter((job) =>
+                jobOverlapsLocalDate(job, selectedBoardDate),
+            ),
+        [filteredJobs, selectedBoardDate],
+    );
 
     const selectedJob =
         jobs.find((job) => job.id === selectedJobId) ?? jobs[0] ?? null;
@@ -752,6 +768,121 @@ export function LiveDispatchWorkspace({
                     className="p-4 md:p-6"
                     aria-label="Schedule board section"
                 >
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                        <div>
+                            <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                {boardPeriod === 'day'
+                                    ? 'Day view'
+                                    : boardPeriod === 'week'
+                                      ? 'Week view'
+                                      : 'Month view'}
+                            </p>
+                            <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-ink">
+                                {boardPeriod === 'day'
+                                    ? formatBoardDate(selectedBoardDate)
+                                    : boardPeriod === 'week'
+                                      ? formatBoardWeek(selectedBoardDate)
+                                      : formatBoardMonth(selectedBoardDate)}
+                            </h2>
+                            <p
+                                className="mt-1 text-xs text-ink-soft"
+                                role="status"
+                            >
+                                {boardPeriod === 'day' ? (
+                                    <>
+                                        {boardJobs.length} scheduled job
+                                        {boardJobs.length === 1 ? '' : 's'}
+                                    </>
+                                ) : (
+                                    `Use the ${boardPeriod} planning view to review scheduled work`
+                                )}
+                            </p>
+                        </div>
+                        {boardPeriod === 'day' && (
+                            <div
+                                className="flex min-h-11 items-center gap-1"
+                                role="group"
+                                aria-label="Schedule board day navigation"
+                            >
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    aria-label="Show previous day"
+                                    onClick={() =>
+                                        setSelectedBoardDate(
+                                            shiftLocalDate(
+                                                selectedBoardDate,
+                                                -1,
+                                            ),
+                                        )
+                                    }
+                                >
+                                    <ChevronLeft
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                    Previous day
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    aria-label="Show today"
+                                    onClick={() =>
+                                        setSelectedBoardDate(
+                                            localDateKey(new Date()),
+                                        )
+                                    }
+                                >
+                                    Today
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    aria-label="Show next day"
+                                    onClick={() =>
+                                        setSelectedBoardDate(
+                                            shiftLocalDate(
+                                                selectedBoardDate,
+                                                1,
+                                            ),
+                                        )
+                                    }
+                                >
+                                    Next day
+                                    <ChevronRight
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                        <div
+                            className="flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1"
+                            role="group"
+                            aria-label="Schedule board period"
+                        >
+                            {(['day', 'week', 'month'] as BoardPeriod[]).map(
+                                (period) => (
+                                    <button
+                                        key={period}
+                                        type="button"
+                                        aria-pressed={boardPeriod === period}
+                                        onClick={() => setBoardPeriod(period)}
+                                        className={cn(
+                                            'inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                            boardPeriod === period
+                                                ? 'bg-brand-soft font-semibold text-brand-strong'
+                                                : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                        )}
+                                    >
+                                        {period}
+                                    </button>
+                                ),
+                            )}
+                        </div>
+                    </div>
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-2">
                             <label className="relative block">
@@ -818,18 +949,51 @@ export function LiveDispatchWorkspace({
                         </div>
                     </div>
 
-                    <ScheduleBoardTable
-                        jobs={filteredJobs}
-                        assets={assets}
-                        users={users}
-                        derivedConflicts={derivedConflicts}
-                        category={boardCategory}
-                        conflictsOnly={conflictsOnly}
-                        onSelectJob={(id) => {
-                            setSelectedJobId(id);
-                            setViewMode('list');
-                        }}
-                    />
+                    {boardPeriod === 'day' ? (
+                        <ScheduleBoardTable
+                            jobs={boardJobs}
+                            assets={assets}
+                            users={users}
+                            derivedConflicts={derivedConflicts}
+                            category={boardCategory}
+                            conflictsOnly={conflictsOnly}
+                            selectedDate={selectedBoardDate}
+                            onSelectJob={(id) => {
+                                setSelectedJobId(id);
+                                setViewMode('list');
+                            }}
+                        />
+                    ) : boardPeriod === 'week' ? (
+                        <ScheduleBoardWeekView
+                            jobs={filteredJobs}
+                            assets={assets}
+                            users={users}
+                            derivedConflicts={derivedConflicts}
+                            category={boardCategory}
+                            conflictsOnly={conflictsOnly}
+                            selectedDate={selectedBoardDate}
+                            onSelectDate={setSelectedBoardDate}
+                            onSelectJob={(id) => {
+                                setSelectedJobId(id);
+                                setViewMode('list');
+                            }}
+                        />
+                    ) : (
+                        <ScheduleBoardMonthView
+                            jobs={filteredJobs}
+                            assets={assets}
+                            users={users}
+                            derivedConflicts={derivedConflicts}
+                            category={boardCategory}
+                            conflictsOnly={conflictsOnly}
+                            selectedDate={selectedBoardDate}
+                            onSelectDate={setSelectedBoardDate}
+                            onSelectJob={(id) => {
+                                setSelectedJobId(id);
+                                setViewMode('list');
+                            }}
+                        />
+                    )}
                 </section>
             )}
 
@@ -1126,6 +1290,7 @@ function ScheduleBoardTable({
     derivedConflicts,
     category,
     conflictsOnly,
+    selectedDate,
     onSelectJob,
 }: {
     jobs: DispatchJobViewModel[];
@@ -1134,6 +1299,7 @@ function ScheduleBoardTable({
     derivedConflicts: DerivedConflict[];
     category: BoardCategory;
     conflictsOnly: boolean;
+    selectedDate: string;
     onSelectJob: (jobId: number) => void;
 }) {
     const hours = Array.from({ length: 11 }, (_, i) => i + 7); // 7 AM to 5 PM
@@ -1190,8 +1356,12 @@ function ScheduleBoardTable({
                     const span = calculateTimeSpan(
                         job.scheduled_start,
                         job.scheduled_end,
+                        selectedDate,
                     );
-                    assignedJobsForAsset.push({ job, ...span });
+
+                    if (span !== null) {
+                        assignedJobsForAsset.push({ job, ...span });
+                    }
                 }
             }
 
@@ -1241,8 +1411,12 @@ function ScheduleBoardTable({
                         const span = calculateTimeSpan(
                             job.scheduled_start,
                             job.scheduled_end,
+                            selectedDate,
                         );
-                        assignedJobsForUser.push({ job, ...span });
+
+                        if (span !== null) {
+                            assignedJobsForUser.push({ job, ...span });
+                        }
                     }
                 }
 
@@ -1276,7 +1450,15 @@ function ScheduleBoardTable({
         }
 
         return resourceRows;
-    }, [assets, users, jobs, category, conflictsOnly, derivedConflicts]);
+    }, [
+        assets,
+        users,
+        jobs,
+        category,
+        conflictsOnly,
+        derivedConflicts,
+        selectedDate,
+    ]);
 
     return (
         <Panel className="overflow-hidden">
@@ -2253,15 +2435,149 @@ function DispatchListSkeleton() {
     );
 }
 
-function calculateTimeSpan(startIso: string | null, endIso: string | null) {
+function localDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function dateFromLocalKey(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+
+    return new Date(year, month - 1, day);
+}
+
+function shiftLocalDate(value: string, days: number): string {
+    const date = dateFromLocalKey(value);
+    date.setDate(date.getDate() + days);
+
+    return localDateKey(date);
+}
+
+function startOfLocalWeek(value: string): Date {
+    const date = dateFromLocalKey(value);
+    const day = date.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + offset);
+
+    return date;
+}
+
+function formatBoardWeek(value: string): string {
+    const start = startOfLocalWeek(value);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const startLabel = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+    }).format(start);
+    const endLabel = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(end);
+
+    return `${startLabel} – ${endLabel}`;
+}
+
+function formatBoardMonth(value: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'long',
+        year: 'numeric',
+    }).format(dateFromLocalKey(value));
+}
+
+function formatBoardDate(value: string): string {
+    const label = new Intl.DateTimeFormat(undefined, {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(dateFromLocalKey(value));
+
+    return value === localDateKey(new Date()) ? `Today · ${label}` : label;
+}
+
+function localDayWindow(value: string) {
+    const date = dateFromLocalKey(value);
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+    return {
+        start,
+        end: new Date(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate() + 1,
+        ),
+        boardStart: new Date(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate(),
+            7,
+        ),
+        boardEnd: new Date(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate(),
+            17,
+        ),
+    };
+}
+
+function jobOverlapsLocalDate(
+    job: DispatchJobViewModel,
+    selectedDate: string,
+): boolean {
+    if (!job.scheduled_start || !job.scheduled_end) {
+        return false;
+    }
+
+    const start = new Date(job.scheduled_start);
+    const end = new Date(job.scheduled_end);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return false;
+    }
+
+    const { start: dayStart, end: dayEnd } = localDayWindow(selectedDate);
+
+    return start < dayEnd && end > dayStart;
+}
+
+function calculateTimeSpan(
+    startIso: string | null,
+    endIso: string | null,
+    selectedDate: string,
+) {
     if (!startIso || !endIso) {
-        return { startCol: 1, colSpan: 3 };
+        return null;
     }
 
     const start = new Date(startIso);
     const end = new Date(endIso);
-    const startHour = start.getHours() + start.getMinutes() / 60;
-    const endHour = end.getHours() + end.getMinutes() / 60;
+
+    if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        end <= start
+    ) {
+        return null;
+    }
+
+    const { boardStart, boardEnd } = localDayWindow(selectedDate);
+    const visibleStart = new Date(
+        Math.max(start.getTime(), boardStart.getTime()),
+    );
+    const visibleEnd = new Date(Math.min(end.getTime(), boardEnd.getTime()));
+
+    if (visibleEnd <= visibleStart) {
+        return null;
+    }
+
+    const startHour = visibleStart.getHours() + visibleStart.getMinutes() / 60;
+    const endHour = visibleEnd.getHours() + visibleEnd.getMinutes() / 60;
 
     let startCol = Math.max(1, Math.floor(startHour - 7) + 1);
     let endCol = Math.min(12, Math.ceil(endHour - 7) + 1);
