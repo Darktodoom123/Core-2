@@ -32,8 +32,6 @@ final class RentalReservationController extends Controller
 
     public function approve(RentalReservation $rentalReservation, ApproveRentalReservation $action): JsonResponse
     {
-        Gate::authorize(PermissionName::RentalApprove->value);
-
         return response()->json(['data' => $action->handle($rentalReservation, request()->user())]);
     }
 

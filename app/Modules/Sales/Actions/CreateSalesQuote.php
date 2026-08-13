@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Actions;
 use App\Modules\Sales\Enums\SalesQuoteStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesQuote;
+use App\Modules\Sales\Support\SalesAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -90,7 +91,7 @@ final class CreateSalesQuote
                 ]);
             }
             $quote->update(['total_cents' => $total]);
-            $this->audit->handle($actor, $quote, 'sales_quote.created', null, $quote->fresh()->toArray());
+            $this->audit->handle($actor, $quote, 'sales_quote.created', null, SalesAuditSnapshot::fromQuote($quote->fresh()));
 
             return $quote->fresh(['items.catalogItem', 'client']);
         });

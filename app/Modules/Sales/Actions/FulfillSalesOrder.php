@@ -6,6 +6,7 @@ use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesOrderItem;
+use App\Modules\Sales\Support\SalesAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -120,7 +121,7 @@ final class FulfillSalesOrder
 
             Gate::forUser($actor)->authorize(PermissionName::SalesFulfill->value);
 
-            $before = $locked->toArray();
+            $before = SalesAuditSnapshot::fromOrder($locked);
             foreach ($lines as $line) {
                 /** @var SalesOrderItem $item */
                 $item = $line['item'];
@@ -152,7 +153,7 @@ final class FulfillSalesOrder
             }
 
             $locked->update(['status' => SalesOrderStatus::Fulfilled, 'fulfilled_at' => now()]);
-            $this->audit->handle($actor, $locked, 'sales_order.fulfilled', $before, $locked->fresh()->toArray());
+            $this->audit->handle($actor, $locked, 'sales_order.fulfilled', $before, SalesAuditSnapshot::fromOrder($locked->fresh()));
 
             return $locked->fresh(['items.catalogItem', 'client']);
         });

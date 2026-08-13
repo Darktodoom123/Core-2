@@ -27,8 +27,6 @@ final class SalesQuoteController extends Controller
 
     public function accept(SalesQuote $salesQuote, AcceptSalesQuote $action): JsonResponse
     {
-        Gate::authorize(PermissionName::SalesApproveOrder->value);
-
         return response()->json(['data' => $action->handle($salesQuote, request()->user())], 201);
     }
 }

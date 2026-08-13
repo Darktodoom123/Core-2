@@ -21,15 +21,11 @@ final class SalesOrderController extends Controller
 
     public function fulfill(SalesOrder $salesOrder, FulfillSalesOrder $action): JsonResponse
     {
-        Gate::authorize(PermissionName::SalesFulfill->value);
-
         return response()->json(['data' => $action->handle($salesOrder, request()->user())]);
     }
 
     public function transferOwnership(SalesOrder $salesOrder, TransferSalesOwnership $action): JsonResponse
     {
-        Gate::authorize(PermissionName::SalesTransferOwnership->value);
-
         return response()->json(['data' => $action->handle($salesOrder, request()->user())]);
     }
 }

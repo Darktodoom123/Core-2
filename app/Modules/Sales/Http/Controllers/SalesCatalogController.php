@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Http\Requests\StoreSalesCatalogItemRequest;
 use App\Modules\Sales\Models\SalesCatalogItem;
+use App\Modules\Sales\Support\SalesAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +38,8 @@ final class SalesCatalogController extends Controller
                     'updated_at' => now(),
                 ]);
             }
-            $audit->handle($request->user(), $item, 'sales_catalog_item.created', null, $item->toArray());
+            $item->refresh();
+            $audit->handle($request->user(), $item, 'sales_catalog_item.created', null, SalesAuditSnapshot::fromCatalogItem($item));
 
             return $item;
         });

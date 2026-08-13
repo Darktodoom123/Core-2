@@ -9,6 +9,7 @@ use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
 use App\Modules\Sales\Models\SalesQuote;
 use App\Modules\Sales\Models\SalesQuoteItem;
+use App\Modules\Sales\Support\SalesAuditSnapshot;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -136,7 +137,7 @@ final class AcceptSalesQuote
 
             Gate::forUser($actor)->authorize(PermissionName::SalesApproveOrder->value);
 
-            $before = $locked->toArray();
+            $before = SalesAuditSnapshot::fromQuote($locked);
             $order = SalesOrder::query()->create([
                 'reference' => $orderReference,
                 'client_id' => $locked->client_id,
@@ -172,8 +173,8 @@ final class AcceptSalesQuote
             }
 
             $locked->update(['status' => SalesQuoteStatus::Accepted]);
-            $this->audit->handle($actor, $locked, 'sales_quote.accepted', $before, $locked->fresh()->toArray());
-            $this->audit->handle($actor, $order, 'sales_order.created', null, $order->toArray());
+            $this->audit->handle($actor, $locked, 'sales_quote.accepted', $before, SalesAuditSnapshot::fromQuote($locked->fresh()));
+            $this->audit->handle($actor, $order, 'sales_order.created', null, SalesAuditSnapshot::fromOrder($order));
 
             return $order->fresh(['items.catalogItem', 'client']);
         });
