@@ -24,13 +24,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: core2_concurrency_test
-          POSTGRES_USER: core2_test
-          POSTGRES_PASSWORD: core2_test
+          POSTGRES_DB: postgres
+          POSTGRES_USER: core2_bootstrap
+          POSTGRES_PASSWORD: core2_bootstrap
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U core2_test -d core2_concurrency_test"
+          --health-cmd "pg_isready -U core2_bootstrap -d postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -70,6 +70,34 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      - name: Prepare isolated PostgreSQL test roles and databases
+        env:
+          PGPASSWORD: core2_bootstrap
+        run: |
+          psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+              CREATE ROLE anon NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'core2_app') THEN
+              CREATE ROLE core2_app LOGIN PASSWORD 'core2_app' NOSUPERUSER NOBYPASSRLS;
+            ELSE
+              ALTER ROLE core2_app WITH LOGIN PASSWORD 'core2_app' NOSUPERUSER NOBYPASSRLS;
+            END IF;
+          END $$;
+          SQL
+          for database in core2_rental_sales_test core2_concurrency_test; do
+            if ! psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres --tuples-only --no-align --command="SELECT 1 FROM pg_database WHERE datname = '$database'" | grep -q 1; then
+              psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres --command="CREATE DATABASE $database OWNER core2_app;"
+            else
+              psql --host=127.0.0.1 --port=5432 --username=core2_bootstrap --dbname=postgres --command="ALTER DATABASE $database OWNER TO core2_app;"
+            fi
+          done
+
       - name: Build Assets
         run: npm run build
 
@@ -106,10 +134,20 @@ jobs:
       - name: Tests
         run: php artisan test
 
-      - name: PostgreSQL GPT row-lock concurrency tests
+      - name: PostgreSQL row-lock and server-only security gates
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
-          DB_USERNAME: core2_test
-          DB_PASSWORD: core2_test
-        run: php artisan test --configuration=phpunit.concurrency.xml --testsuite=Concurrency
+          DB_USERNAME: core2_app
+          DB_PASSWORD: core2_app
+        run: vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency
+
+      - name: PostgreSQL Rental and Sales RLS/grant tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: core2_rental_sales_test
+          DB_USERNAME: core2_app
+          DB_PASSWORD: core2_app
+          DB_SSLMODE: disable
+        run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL
