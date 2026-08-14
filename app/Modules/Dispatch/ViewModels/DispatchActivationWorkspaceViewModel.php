@@ -84,11 +84,21 @@ final class DispatchActivationWorkspaceViewModel
                 : 'Independent Operations Manager approval is still required.';
         }
 
+        $user = request()?->user();
+        $canDecideApproval = $latestApproval !== null
+            && $user !== null
+            && \Illuminate\Support\Facades\Gate::forUser($user)->allows('decide', $latestApproval);
+
         return [
             'ready' => $blockers === [],
             'blockers' => $blockers,
             'approval_required' => $job->priority->requiresApproval(),
             'approval_status' => $latestApproval?->status->value,
+            'approval_request_id' => $latestApproval?->id,
+            'approval_kind' => $latestApproval?->kind,
+            'approval_reason' => $latestApproval?->reason,
+            'approval_notes' => $latestApproval?->notes,
+            'can_decide_approval' => $canDecideApproval,
         ];
     }
 }
