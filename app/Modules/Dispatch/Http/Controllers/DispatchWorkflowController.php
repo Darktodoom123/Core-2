@@ -257,8 +257,8 @@ final class DispatchWorkflowController extends Controller
         }
 
         return to_route('dispatch-jobs.show', $job)->with('flash', [
-            'tone' => 'info',
-            'message' => "Dispatch {$job->reference} is now {$job->status->label()}.",
+            'tone' => 'success',
+            'message' => "{$job->reference} is now {$job->status->label()}.",
         ]);
     }
 
