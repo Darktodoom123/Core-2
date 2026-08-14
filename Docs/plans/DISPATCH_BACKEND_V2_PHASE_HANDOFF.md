@@ -2,7 +2,7 @@
 
 ## Phase 5 Closeout — 2026-08-14
 
-Phase 5 is complete on `codex/dispatch-backend-v2-phase-5`, starting exactly from `9ffcee5d766556b7060b0bc308ac7a3bfadc89b5` (the Phase 4 handoff commit). All web, API, and mobile client adapter migrations have been implemented and verified. No push, deployment, PR, or Phase 6 work has been started.
+Phase 5 is complete on `codex/dispatch-backend-v2-phase-5`, starting exactly from `9ffcee5d766556b7060b0bc308ac7a3bfadc89b5` (the Phase 4 handoff commit). The implementation commit is `IMPLEMENTATION_SHA=867c4e32df5343d303e3949197f8e79b8ed59069`. All web, API, and mobile client adapter migrations have been implemented and verified. No push, deployment, PR, or Phase 6 work has been started.
 
 ### Implemented Phase 5 Scope
 
