@@ -39,7 +39,7 @@ See [DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md](DISPATCH_BACKEND_V2_PHASE_1_
 - `app/Modules/Dispatch/DispatchServiceProvider.php` command registration
 - Characterization and persistence tests under `tests/Feature/Operations/DispatchV2*`
 - `Docs/plans/DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md`
-- Updated execution plan, executor prompts, and this durable handoff; `.ai-reports/ai-verification-questions.md` is updated in the closeout checkpoint.
+- Updated execution plan, executor prompts, this durable handoff, and `.ai-reports/ai-verification-questions.md`.
 
 ## Verification completed
 
@@ -54,7 +54,7 @@ See [DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md](DISPATCH_BACKEND_V2_PHASE_1_
 - `npm run build`: PASS; existing Vite large-chunk warnings only. Frontend source was not changed in Phase 1.
 - Fresh/rollback/reapply SQLite migration rehearsal: PASS. All migrations applied; Phase 1 rolled back with `dispatch_jobs` preserved and canonical tables absent; reapply restored both legacy and canonical tables. Temporary database removed.
 - PostgreSQL suite attempt: BLOCKED by external dependency; all 4 configured tests failed before execution because `127.0.0.1:5432` refused connections for `core2_rental_sales_test`. The migration defers PostgreSQL-only checks safely behind the `pgsql` driver.
-- `git diff --check`: PASS before final commit; rerun at commit gate.
+- `git diff --check`: PASS at implementation and documentation closeout.
 
 ## Review and security checkpoint
 
@@ -76,8 +76,8 @@ See [DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md](DISPATCH_BACKEND_V2_PHASE_1_
 - `READY_FOR_PHASE_7=no` (Phase 6 is still required)
 - `READY_GRAPH_COMPLETE=no` (Phase 7 remains after Phase 6)
 - `CONTEXT_SPLIT_REQUIRED=no`
-- Phase 1 implementation SHA: pending the implementation commit; this field and the machine-readable plan record must be updated with the exact SHA before the durable handoff commit.
+- Phase 1 implementation SHA: `19ce0da4c7b4ab09ddaa66309827dfc7c1fcd3d0` (`feat(dispatch): add v2 persistence foundation`).
 
 ## Next action
 
-Phase 2 may begin from the clean Phase 1 implementation commit after the exact SHA is recorded in this handoff and the execution plan. Phase 7 remains dependency-gated on Phase 6 and must use the approved UI/UX prompt.
+Phase 2 may begin from the clean Phase 1 implementation commit `19ce0da4c7b4ab09ddaa66309827dfc7c1fcd3d0`. Phase 7 remains dependency-gated on Phase 6 and must use the approved UI/UX prompt.

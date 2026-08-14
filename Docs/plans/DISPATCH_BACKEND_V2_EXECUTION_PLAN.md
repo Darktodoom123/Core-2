@@ -405,7 +405,7 @@ phases:
       commit_gate: complete
   phase_1:
     status: complete
-    commit_sha: null # populated with the Phase 1 implementation SHA at commit closeout
+    commit_sha: 19ce0da4c7b4ab09ddaa66309827dfc7c1fcd3d0
     depends_on: [phase_0]
   phase_2:
     status: ready
@@ -467,4 +467,4 @@ Historical Phase 0 handoff verified for this phase: branch `codex/dispatch-backe
 
 ## Phase 1 execution record
 
-The machine-readable status and [Phase 1 handoff](DISPATCH_BACKEND_V2_PHASE_HANDOFF.md) contain the exact Phase 1 commands, results, review findings, PostgreSQL dependency, and closeout fields. Populate `phases.phase_1.commit_sha` with the implementation commit before publishing the durable handoff checkpoint.
+The machine-readable status and [Phase 1 handoff](DISPATCH_BACKEND_V2_PHASE_HANDOFF.md) contain the exact Phase 1 commands, results, review findings, PostgreSQL dependency, and closeout fields. The Phase 1 implementation commit is `19ce0da4c7b4ab09ddaa66309827dfc7c1fcd3d0`; the handoff checkpoint records that SHA.
