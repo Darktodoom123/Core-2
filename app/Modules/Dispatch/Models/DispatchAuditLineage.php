@@ -14,7 +14,7 @@ class DispatchAuditLineage extends Model
 
     protected $fillable = [
         'audit_event_id', 'workspace_key', 'handoff_id', 'attempt_id', 'plan_version_id', 'offer_id',
-        'idempotency_key_id', 'lineage_type', 'legacy_subject_type', 'legacy_subject_id', 'created_at',
+        'idempotency_key_id', 'emergency_override_id', 'lineage_type', 'legacy_subject_type', 'legacy_subject_id', 'created_at',
     ];
 
     protected function casts(): array
@@ -56,5 +56,11 @@ class DispatchAuditLineage extends Model
     public function idempotencyKey(): BelongsTo
     {
         return $this->belongsTo(DispatchIdempotencyKey::class, 'idempotency_key_id');
+    }
+
+    /** @return BelongsTo<DispatchEmergencyOverride, $this> */
+    public function emergencyOverride(): BelongsTo
+    {
+        return $this->belongsTo(DispatchEmergencyOverride::class, 'emergency_override_id');
     }
 }

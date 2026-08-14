@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DispatchPlanApproval extends Model
 {
     protected $fillable = [
-        'plan_version_id', 'approval_request_id', 'kind', 'status', 'requested_by', 'decided_by', 'reason', 'decided_at',
+        'plan_version_id', 'approval_request_id', 'kind', 'status', 'requested_by', 'request_reason', 'decided_by', 'reason', 'decided_at',
     ];
 
     protected function casts(): array

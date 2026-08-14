@@ -64,6 +64,18 @@ class DispatchPlanVersion extends Model
         return $this->hasMany(DispatchAssignmentOffer::class, 'plan_version_id');
     }
 
+    /** @return HasMany<DispatchPlanRequirementSlot, $this> */
+    public function requirementSlots(): HasMany
+    {
+        return $this->hasMany(DispatchPlanRequirementSlot::class, 'plan_version_id');
+    }
+
+    /** @return HasMany<DispatchEmergencyOverride, $this> */
+    public function emergencyOverrides(): HasMany
+    {
+        return $this->hasMany(DispatchEmergencyOverride::class, 'plan_version_id');
+    }
+
     /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {

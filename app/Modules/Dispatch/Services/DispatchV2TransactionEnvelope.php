@@ -121,8 +121,10 @@ final class DispatchV2TransactionEnvelope
         ?int $planVersionId = null,
         ?int $offerId = null,
         ?int $idempotencyKeyId = null,
+        ?Model $auditSubject = null,
+        ?int $emergencyOverrideId = null,
     ): void {
-        $audit = $this->audit->handle($actor, $attempt, $action, $before, $after, $reason);
+        $audit = $this->audit->handle($actor, $auditSubject ?? $attempt, $action, $before, $after, $reason);
 
         DispatchAuditLineage::query()->create([
             'audit_event_id' => $audit->id,
@@ -132,6 +134,7 @@ final class DispatchV2TransactionEnvelope
             'plan_version_id' => $planVersionId,
             'offer_id' => $offerId,
             'idempotency_key_id' => $idempotencyKeyId ?? $attempt->v2IdempotencyKeyId,
+            'emergency_override_id' => $emergencyOverrideId,
             'lineage_type' => 'dispatch_v2_command',
             'legacy_subject_type' => DispatchJob::class,
             'legacy_subject_id' => $attempt->legacy_dispatch_job_id,
@@ -145,6 +148,19 @@ final class DispatchV2TransactionEnvelope
             $after,
             $actor->id,
         ));
+    }
+
+    public function assertPhase3Enabled(): void
+    {
+        $this->assertEnabled();
+
+        if (! (bool) config('dispatch.phase3_commands_enabled', true)) {
+            throw new DispatchV2CommandException(
+                DispatchV2CommandCode::FeatureDisabled,
+                'The Phase 3 dispatch command path is not enabled.',
+                status: 409,
+            );
+        }
     }
 
     private function lockAttemptAggregate(int $attemptId, string $workspaceKey): DispatchExecutionAttempt

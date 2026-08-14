@@ -10,4 +10,10 @@ enum DispatchAssignmentOfferStatus: string
     case Rejected = 'rejected';
     case Withdrawn = 'withdrawn';
     case Expired = 'expired';
+    case Ended = 'ended';
+
+    public function terminal(): bool
+    {
+        return in_array($this, [self::Rejected, self::Withdrawn, self::Expired, self::Ended], true);
+    }
 }

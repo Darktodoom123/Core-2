@@ -57,6 +57,22 @@ final class DispatchV2Authorization
             'archive' => $actor->can(PermissionName::ArchiveManage->value),
             'progress' => $this->isDesignatedLead($actor, $attempt)
                 || $this->canOverrideProgress($actor),
+            'offer_respond' => $actor->can(PermissionName::DispatchRespondOwn->value),
+            'offer_manage' => $actor->can(PermissionName::AssignmentsCreate->value)
+                || $actor->can(PermissionName::AssignmentsReassign->value)
+                || $actor->can(PermissionName::AssignmentsOverride->value),
+            'designate_lead', 'replace_lead' => $actor->can(PermissionName::AssignmentsCreate->value)
+                || $actor->can(PermissionName::AssignmentsReassign->value)
+                || $actor->can(PermissionName::AssignmentsApprove->value)
+                || $actor->can(PermissionName::DispatchApproveChange->value),
+            'emergency_propose' => $actor->can(PermissionName::AssignmentsOverride->value)
+                || $actor->can(PermissionName::AssignmentsCreate->value)
+                || $actor->can(PermissionName::DispatchActivate->value)
+                || $actor->can(PermissionName::DispatchApproveChange->value)
+                || $actor->can(PermissionName::DispatchApprovePriority->value),
+            'emergency_decide' => $actor->can(PermissionName::AssignmentsApprove->value)
+                || $actor->can(PermissionName::DispatchApproveChange->value)
+                || $actor->can(PermissionName::DispatchApprovePriority->value),
             default => false,
         };
 
@@ -75,6 +91,8 @@ final class DispatchV2Authorization
 
         return $attempt->assignmentOffers()
             ->whereKey((int) $offerId)
+            ->where('workspace_key', $attempt->workspace_key)
+            ->where('plan_version_id', $attempt->planVersions()->orderByDesc('version')->value('id'))
             ->where('user_id', $actor->id)
             ->where('status', 'accepted')
             ->exists();
@@ -88,7 +106,7 @@ final class DispatchV2Authorization
 
     private function assertActive(User $actor): void
     {
-        if ($actor->getAttribute('is_active') === false) {
+        if ($actor->getAttribute('is_active') === false || $actor->getAttribute('suspended_at') !== null) {
             $this->deny();
         }
     }

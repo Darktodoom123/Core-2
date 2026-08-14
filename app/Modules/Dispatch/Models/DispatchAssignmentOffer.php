@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property bool $is_mandatory
  * @property DispatchAssignmentOfferStatus $status
  * @property Carbon|null $accepted_at
+ * @property Carbon|null $response_deadline
+ * @property Carbon|null $ended_at
  */
 class DispatchAssignmentOffer extends Model
 {
@@ -24,7 +26,7 @@ class DispatchAssignmentOffer extends Model
         'attempt_id', 'plan_version_id', 'workspace_key', 'user_id', 'legacy_assignment_id', 'assignment_type',
         'is_mandatory', 'status', 'offered_at', 'response_deadline', 'responded_at', 'response_reason',
         'accepted_at', 'rejected_at', 'withdrawn_at', 'expired_at', 'created_by', 'approved_by',
-        'legacy_response_status', 'compatibility_state',
+        'legacy_response_status', 'compatibility_state', 'ended_at', 'ended_by', 'ended_reason',
     ];
 
     protected function casts(): array
@@ -39,6 +41,7 @@ class DispatchAssignmentOffer extends Model
             'rejected_at' => 'datetime',
             'withdrawn_at' => 'datetime',
             'expired_at' => 'datetime',
+            'ended_at' => 'datetime',
         ];
     }
 

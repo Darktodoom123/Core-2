@@ -93,6 +93,18 @@ class DispatchExecutionAttempt extends Model
         return $this->belongsTo(DispatchAssignmentOffer::class, 'designated_lead_offer_id');
     }
 
+    /** @return HasMany<DispatchPlanRequirementSlot, $this> */
+    public function requirementSlots(): HasMany
+    {
+        return $this->hasMany(DispatchPlanRequirementSlot::class, 'attempt_id');
+    }
+
+    /** @return HasMany<DispatchEmergencyOverride, $this> */
+    public function emergencyOverrides(): HasMany
+    {
+        return $this->hasMany(DispatchEmergencyOverride::class, 'attempt_id');
+    }
+
     /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {

@@ -16,6 +16,15 @@ enum DispatchReadinessBlockerCode: string
     case SourceNotReady = 'source_not_ready';
     case ArchivedRecord = 'archived_record';
     case ConcurrencyConflict = 'concurrency_conflict';
+    case LeadIneligible = 'lead_ineligible';
+    case PersonnelRoleIneligible = 'personnel_role_ineligible';
+    case PersonnelAccountInactive = 'personnel_account_inactive';
+    case PersonnelSuspended = 'personnel_suspended';
+    case PersonnelUnavailable = 'personnel_unavailable';
+    case PersonnelCredentialMissing = 'personnel_credential_missing';
+    case PersonnelCredentialInvalid = 'personnel_credential_invalid';
+    case PersonnelConflict = 'personnel_conflict';
+    case AssetConflict = 'asset_conflict';
 
     public function order(): int
     {
@@ -32,6 +41,15 @@ enum DispatchReadinessBlockerCode: string
             self::SourceNotReady => 100,
             self::ArchivedRecord => 110,
             self::ConcurrencyConflict => 120,
+            self::LeadIneligible => 130,
+            self::PersonnelRoleIneligible => 140,
+            self::PersonnelAccountInactive => 150,
+            self::PersonnelSuspended => 160,
+            self::PersonnelUnavailable => 170,
+            self::PersonnelCredentialMissing => 180,
+            self::PersonnelCredentialInvalid => 190,
+            self::PersonnelConflict => 200,
+            self::AssetConflict => 210,
         };
     }
 }

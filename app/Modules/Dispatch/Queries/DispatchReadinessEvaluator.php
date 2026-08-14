@@ -15,6 +15,8 @@ use App\Modules\Dispatch\Models\DispatchPlanVersion;
 
 final class DispatchReadinessEvaluator
 {
+    public function __construct(private readonly DispatchReadinessResourceEvaluator $resources) {}
+
     public function evaluate(
         DispatchExecutionAttempt $attempt,
         ?int $expectedVersion = null,
@@ -89,14 +91,14 @@ final class DispatchReadinessEvaluator
         $mandatoryOffers = $offers->where('is_mandatory', true)->values();
         $requiredAssignments = $this->requiredAssignments($snapshot);
 
-        if ($mandatoryOffers->isEmpty() && $requiredAssignments > 0) {
+        if (! (bool) config('dispatch.phase3_commands_enabled', true) && $mandatoryOffers->isEmpty() && $requiredAssignments > 0) {
             $blockers[] = $this->blocking(
                 DispatchReadinessBlockerCode::MissingMandatoryAssignment,
                 ['required_count' => $requiredAssignments, 'current_count' => 0],
                 $planVersion,
                 $attempt->version,
             );
-        } elseif ($mandatoryOffers->contains(static fn (DispatchAssignmentOffer $offer): bool => $offer->status !== DispatchAssignmentOfferStatus::Accepted)) {
+        } elseif (! (bool) config('dispatch.phase3_commands_enabled', true) && $mandatoryOffers->contains(static fn (DispatchAssignmentOffer $offer): bool => $offer->status !== DispatchAssignmentOfferStatus::Accepted)) {
             $pendingCount = $mandatoryOffers->reject(
                 static fn (DispatchAssignmentOffer $offer): bool => $offer->status === DispatchAssignmentOfferStatus::Accepted,
             )->count();
@@ -129,8 +131,12 @@ final class DispatchReadinessEvaluator
             }
         }
 
-        $assetBlockers = $this->assetBlockers($snapshot, $planVersion, $attempt->version);
+        $assetBlockers = (bool) config('dispatch.phase3_commands_enabled', true)
+            ? []
+            : $this->assetBlockers($snapshot, $planVersion, $attempt->version);
         array_push($blockers, ...$assetBlockers);
+
+        array_push($blockers, ...$this->resources->evaluate($attempt, $plan, $offers, $lock));
 
         $compatibilityState = (string) ($attempt->handoff->compatibility_state ?? '');
         if (in_array($compatibilityState, ['legacy_pending_reconciliation', 'source_not_ready', 'invalid_source'], true)) {
