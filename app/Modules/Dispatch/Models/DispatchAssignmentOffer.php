@@ -13,12 +13,29 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $attempt_id
  * @property int $plan_version_id
+ * @property string $workspace_key
  * @property int $user_id
+ * @property int|null $legacy_assignment_id
+ * @property string $assignment_type
  * @property bool $is_mandatory
  * @property DispatchAssignmentOfferStatus $status
- * @property Carbon|null $accepted_at
+ * @property Carbon|null $offered_at
  * @property Carbon|null $response_deadline
+ * @property Carbon|null $responded_at
+ * @property string|null $response_reason
+ * @property Carbon|null $accepted_at
+ * @property Carbon|null $rejected_at
+ * @property Carbon|null $withdrawn_at
+ * @property Carbon|null $expired_at
+ * @property int|null $created_by
+ * @property int|null $approved_by
+ * @property string|null $legacy_response_status
+ * @property string|null $compatibility_state
  * @property Carbon|null $ended_at
+ * @property int|null $ended_by
+ * @property string|null $ended_reason
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class DispatchAssignmentOffer extends Model
 {
@@ -60,7 +77,7 @@ class DispatchAssignmentOffer extends Model
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /** @return BelongsTo<DispatchPersonnelAssignment, $this> */

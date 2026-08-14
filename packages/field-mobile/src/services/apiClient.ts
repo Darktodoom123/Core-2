@@ -1,4 +1,4 @@
-﻿import type {
+import type {
     ApiErrorResponse,
     DispatchJob,
     LocationSharePayload,
@@ -231,5 +231,262 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<unknown>(response);
+    }
+
+    // ==========================================
+    // Dispatch V2 API Adapter Methods
+    // ==========================================
+
+    public async fetchAssignedJobsV2(): Promise<any[]> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<any[]>(response);
+    }
+
+    public async fetchJobDetailV2(jobId: number): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async fetchReadinessV2(jobId: number): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/readiness`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async dispatchJobV2(
+        jobId: number,
+        version: number,
+        commandId?: string,
+        reason?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/dispatch`;
+        const payload: Record<string, unknown> = { version };
+
+        if (reason !== undefined) {
+            payload.reason = reason;
+        }
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async progressJobV2(
+        jobId: number,
+        status: string,
+        version: number,
+        commandId?: string,
+        reason?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/progress`;
+        const payload: Record<string, unknown> = { status, version };
+
+        if (reason !== undefined) {
+            payload.reason = reason;
+        }
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async cancelJobV2(
+        jobId: number,
+        version: number,
+        reason: string,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/cancel`;
+        const payload: Record<string, unknown> = { version, reason };
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async reopenJobV2(
+        jobId: number,
+        version: number,
+        reason: string,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/reopen`;
+        const payload: Record<string, unknown> = { version, reason };
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async archiveJobV2(
+        jobId: number,
+        version: number,
+        reason?: string,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/archive`;
+        const payload: Record<string, unknown> = { version };
+
+        if (reason !== undefined) {
+            payload.reason = reason;
+        }
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async acceptOfferV2(
+        jobId: number,
+        offerId: number,
+        version: number,
+        commandId?: string,
+        reason?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/offers/${offerId}/accept`;
+        const payload: Record<string, unknown> = { version };
+
+        if (reason !== undefined) {
+            payload.reason = reason;
+        }
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async rejectOfferV2(
+        jobId: number,
+        offerId: number,
+        version: number,
+        reason: string,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/offers/${offerId}/reject`;
+        const payload: Record<string, unknown> = { version, reason };
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async withdrawOfferV2(
+        jobId: number,
+        offerId: number,
+        version: number,
+        reason: string,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/offers/${offerId}/withdraw`;
+        const payload: Record<string, unknown> = { version, reason };
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async designateLeadV2(
+        jobId: number,
+        offerId: number,
+        version: number,
+        commandId?: string,
+        reason?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v2/dispatch-jobs/${jobId}/lead`;
+        const payload: Record<string, unknown> = { offer_id: offerId, version };
+
+        if (reason !== undefined) {
+            payload.reason = reason;
+        }
+
+        if (commandId !== undefined) {
+            payload.command_id = commandId;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
     }
 }

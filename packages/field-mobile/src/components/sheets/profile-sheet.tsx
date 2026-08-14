@@ -1,5 +1,13 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { Animated, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+    Animated,
+    Modal,
+    PanResponder,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from '../nativeStyles';
 
@@ -62,7 +70,8 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+            onMoveShouldSetPanResponder: (_, gestureState) =>
+                gestureState.dy > 5,
             onPanResponderMove: (_, gestureState) => {
                 if (gestureState.dy > 0) {
                     panY.setValue(gestureState.dy);
@@ -121,7 +130,10 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                     <View {...panResponder.panHandlers} style={styles.dragZone}>
                         <View style={styles.handle} />
                         <View style={styles.sheetHeader}>
-                            <Text accessibilityRole="header" style={styles.title}>
+                            <Text
+                                accessibilityRole="header"
+                                style={styles.title}
+                            >
                                 Profile
                             </Text>
                             <Pressable
@@ -134,7 +146,9 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 ]}
                                 testID="profile-sheet-close"
                             >
-                                <Text style={styles.closeButtonText}>Close</Text>
+                                <Text style={styles.closeButtonText}>
+                                    Close
+                                </Text>
                             </Pressable>
                         </View>
                     </View>
@@ -163,10 +177,14 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                     <View style={styles.divider} />
 
                     <View style={styles.systemSection}>
-                        <Text style={styles.sectionLabel}>System & Sync Health</Text>
+                        <Text style={styles.sectionLabel}>
+                            System & Sync Health
+                        </Text>
                         <View style={styles.healthCard}>
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>Connection:</Text>
+                                <Text style={styles.healthLabel}>
+                                    Connection:
+                                </Text>
                                 <View style={styles.statusPill}>
                                     <View
                                         style={[
@@ -184,11 +202,14 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 </View>
                             </View>
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>Outbox Data:</Text>
+                                <Text style={styles.healthLabel}>
+                                    Outbox Data:
+                                </Text>
                                 <Text
                                     style={[
                                         styles.healthValue,
-                                        queuedCount > 0 && styles.healthValueWarning,
+                                        queuedCount > 0 &&
+                                            styles.healthValueWarning,
                                     ]}
                                 >
                                     {queuedCount > 0
@@ -199,12 +220,16 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 </Text>
                             </View>
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>Field App:</Text>
+                                <Text style={styles.healthLabel}>
+                                    Field App:
+                                </Text>
                                 <Text style={styles.healthValueMuted}>
                                     v1.0.0 (Core-2 Field Mobile)
                                 </Text>
                             </View>
-                            {queuedCount > 0 && isOnline !== false && onSyncNow ? (
+                            {queuedCount > 0 &&
+                            isOnline !== false &&
+                            onSyncNow ? (
                                 <Pressable
                                     accessibilityLabel="Sync queued outbox items"
                                     accessibilityRole="button"
@@ -233,13 +258,16 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                             {queuedCount > 0 ? (
                                 <View style={styles.warningCallout}>
                                     <Text style={styles.warningCalloutText}>
-                                        ⚠️ You have {queuedCount} unsynced action(s) stored on this device. Signing out will pause syncing until you log back in.
+                                        ⚠️ You have {queuedCount} unsynced
+                                        action(s) stored on this device. Signing
+                                        out will pause syncing until you log
+                                        back in.
                                     </Text>
                                 </View>
                             ) : (
                                 <Text style={styles.confirmationMessage}>
-                                    You can sign in again when you need to access
-                                    field work.
+                                    You can sign in again when you need to
+                                    access field work.
                                 </Text>
                             )}
                             <View style={styles.confirmationActions}>

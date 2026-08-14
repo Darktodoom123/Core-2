@@ -16,8 +16,15 @@ use Illuminate\Support\Carbon;
  * @property int $version
  * @property DispatchPlanVersionStatus $status
  * @property array<string, mixed> $snapshot
+ * @property string|null $content_hash
  * @property Carbon|null $scheduled_start
  * @property Carbon|null $scheduled_end
+ * @property int|null $created_by
+ * @property int|null $submitted_by
+ * @property Carbon|null $submitted_at
+ * @property Carbon|null $sealed_at
+ * @property Carbon|null $superseded_at
+ * @property Carbon|null $created_at
  */
 class DispatchPlanVersion extends Model
 {
@@ -80,5 +87,11 @@ class DispatchPlanVersion extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function submitter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
     }
 }

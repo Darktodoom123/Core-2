@@ -10,7 +10,10 @@ import {
     View,
 } from 'react-native';
 import type { DispatchJob, OutboxCommand } from '../types/index';
-import { FieldBottomNav, type FieldNavItem } from '../components/layout/field-bottom-nav';
+import {
+    FieldBottomNav,
+    type FieldNavItem,
+} from '../components/layout/field-bottom-nav';
 import { FieldHeader, type SyncTone } from '../components/layout/field-header';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
@@ -174,7 +177,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     syncTone={syncTone}
                     profileOpen={profileSheetOpen}
                     onOpenProfile={handleOpenProfile}
-                    notificationCount={syncAttentionCount + pendingResponseCount}
+                    notificationCount={
+                        syncAttentionCount + pendingResponseCount
+                    }
                     onOpenNotifications={() => setNotificationsSheetOpen(true)}
                 />
                 {false ? (
@@ -780,7 +785,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 conflictCount={conflictCount}
                 pendingResponseCount={pendingResponseCount}
                 failedCommands={failedCommands}
-                pendingJobs={jobs.filter((j) => j.my_assignment?.response_status === 'pending')}
+                pendingJobs={jobs.filter(
+                    (j) => j.my_assignment?.response_status === 'pending',
+                )}
                 onRetryCommand={onRetryCommand}
                 onSyncNow={onSyncNow}
                 isOnline={isOnline}

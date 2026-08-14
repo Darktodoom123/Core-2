@@ -1,5 +1,14 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    Animated,
+    Modal,
+    PanResponder,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import type { OutboxCommand, DispatchJob } from '../../types/index';
 import { colors, sharedStyles } from '../nativeStyles';
@@ -57,7 +66,8 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+            onMoveShouldSetPanResponder: (_, gestureState) =>
+                gestureState.dy > 5,
             onPanResponderMove: (_, gestureState) => {
                 if (gestureState.dy > 0) {
                     panY.setValue(gestureState.dy);
@@ -117,13 +127,17 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                         <View style={styles.handle} />
                         <View style={styles.sheetHeader}>
                             <View style={styles.titleRow}>
-                                <Text accessibilityRole="header" style={styles.title}>
+                                <Text
+                                    accessibilityRole="header"
+                                    style={styles.title}
+                                >
                                     Notifications & Alerts
                                 </Text>
                                 {totalAttention > 0 ? (
                                     <View style={styles.badge}>
                                         <Text style={styles.badgeText}>
-                                            {totalAttention} Action{totalAttention > 1 ? 's' : ''}
+                                            {totalAttention} Action
+                                            {totalAttention > 1 ? 's' : ''}
                                         </Text>
                                     </View>
                                 ) : null}
@@ -138,7 +152,9 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                 ]}
                                 testID="notifications-sheet-close"
                             >
-                                <Text style={styles.closeButtonText}>Close</Text>
+                                <Text style={styles.closeButtonText}>
+                                    Close
+                                </Text>
                             </Pressable>
                         </View>
                     </View>
@@ -149,7 +165,9 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                     >
                         {/* 1. Connection & Outbox Sync Banner */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>System Status</Text>
+                            <Text style={styles.sectionLabel}>
+                                System Status
+                            </Text>
                             <View style={styles.statusCard}>
                                 <View style={styles.statusRow}>
                                     <View style={styles.statusLeft}>
@@ -177,7 +195,9 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                 {queuedCount > 0 ? (
                                     <View style={styles.outboxNotice}>
                                         <Text style={styles.outboxNoticeText}>
-                                            ⏳ {queuedCount} action{queuedCount > 1 ? 's' : ''} queued for upload
+                                            ⏳ {queuedCount} action
+                                            {queuedCount > 1 ? 's' : ''} queued
+                                            for upload
                                         </Text>
                                         {isOnline !== false && onSyncNow ? (
                                             <Pressable
@@ -189,7 +209,11 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                                     pressed && styles.pressed,
                                                 ]}
                                             >
-                                                <Text style={styles.syncNowBtnText}>
+                                                <Text
+                                                    style={
+                                                        styles.syncNowBtnText
+                                                    }
+                                                >
                                                     Sync now
                                                 </Text>
                                             </Pressable>
@@ -203,10 +227,14 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                         {pendingJobs.length > 0 ? (
                             <View style={styles.section}>
                                 <Text style={styles.sectionLabel}>
-                                    New Assignment Invites ({pendingJobs.length})
+                                    New Assignment Invites ({pendingJobs.length}
+                                    )
                                 </Text>
                                 {pendingJobs.map((job) => (
-                                    <View key={job.id} style={styles.alertCardNotice}>
+                                    <View
+                                        key={job.id}
+                                        style={styles.alertCardNotice}
+                                    >
                                         <Text style={styles.alertCardTitle}>
                                             📋 {job.reference} · {job.title}
                                         </Text>
@@ -225,26 +253,41 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                     Failed Commands ({failedCommands.length})
                                 </Text>
                                 {failedCommands.map((cmd) => (
-                                    <View key={cmd.id} style={styles.alertCardWarning}>
-                                        <Text style={styles.alertCardTitleWarning}>
-                                            ⚠️ Action Failed: {cmd.type.replaceAll('_', ' ')}
+                                    <View
+                                        key={cmd.id}
+                                        style={styles.alertCardWarning}
+                                    >
+                                        <Text
+                                            style={styles.alertCardTitleWarning}
+                                        >
+                                            ⚠️ Action Failed:{' '}
+                                            {cmd.type.replaceAll('_', ' ')}
                                         </Text>
-                                        <Text style={styles.alertCardBodyWarning}>
+                                        <Text
+                                            style={styles.alertCardBodyWarning}
+                                        >
                                             {cmd.error?.message ||
                                                 'Could not sync this action with dispatch.'}
                                         </Text>
-                                        {cmd.error?.retryable && onRetryCommand ? (
+                                        {cmd.error?.retryable &&
+                                        onRetryCommand ? (
                                             <Pressable
                                                 accessibilityLabel="Retry command"
                                                 accessibilityRole="button"
-                                                onPress={() => onRetryCommand(cmd.id)}
+                                                onPress={() =>
+                                                    onRetryCommand(cmd.id)
+                                                }
                                                 style={({ pressed }) => [
                                                     sharedStyles.button,
                                                     styles.retryButton,
                                                     pressed && styles.pressed,
                                                 ]}
                                             >
-                                                <Text style={sharedStyles.buttonText}>
+                                                <Text
+                                                    style={
+                                                        sharedStyles.buttonText
+                                                    }
+                                                >
                                                     Retry sync
                                                 </Text>
                                             </Pressable>
@@ -258,9 +301,12 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                         {totalAttention === 0 && queuedCount === 0 ? (
                             <View style={styles.emptyCard}>
                                 <Text style={styles.emptyIcon}>🔔</Text>
-                                <Text style={styles.emptyTitle}>You're all caught up!</Text>
+                                <Text style={styles.emptyTitle}>
+                                    You're all caught up!
+                                </Text>
                                 <Text style={styles.emptyBody}>
-                                    No pending alerts or unsynced actions. All field operations are up to date.
+                                    No pending alerts or unsynced actions. All
+                                    field operations are up to date.
                                 </Text>
                             </View>
                         ) : null}

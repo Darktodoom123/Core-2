@@ -19,6 +19,7 @@ final class ApprovalRequestPolicy
             'assignment_override' => PermissionName::AssignmentsApprove,
             'reassignment_override' => PermissionName::AssignmentsApprove,
             'dispatch_activation' => PermissionName::DispatchApprovePriority,
+            'plan_version', 'plan_approval' => PermissionName::DispatchApproveChange,
             default => null,
         };
 

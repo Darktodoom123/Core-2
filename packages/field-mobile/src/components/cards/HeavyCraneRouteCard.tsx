@@ -563,8 +563,7 @@ const statusPresentation: Record<HeavyCraneRouteStatus, StatusPresentation> = {
     },
     stale: {
         label: 'Route needs refresh',
-        description:
-            'Review the last synced route before moving the crane.',
+        description: 'Review the last synced route before moving the crane.',
         markStyle: styles.statusMarkStale,
         labelStyle: styles.statusLabelStale,
         panelStyle: styles.statusPanelStale,

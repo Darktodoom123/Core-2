@@ -137,7 +137,9 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
             testID="profile-button"
         >
             <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>{initialsFor(userName)}</Text>
+                <Text style={styles.avatarInitials}>
+                    {initialsFor(userName)}
+                </Text>
             </View>
             <View style={styles.profileCopy}>
                 <View style={styles.profileNameRow}>
@@ -151,12 +153,15 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                             syncTone === 'checking' && styles.syncMarkChecking,
                             syncTone === 'online' && styles.syncMarkOnline,
                             syncTone === 'offline' && styles.syncMarkOffline,
-                            syncTone === 'attention' && styles.syncMarkAttention,
+                            syncTone === 'attention' &&
+                                styles.syncMarkAttention,
                         ]}
                         testID="profile-status-dot"
                     />
                 </View>
-                <Text style={styles.profileRole}>{userRole || 'Field worker'}</Text>
+                <Text style={styles.profileRole}>
+                    {userRole || 'Field worker'}
+                </Text>
             </View>
         </Pressable>
 

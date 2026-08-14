@@ -7,6 +7,7 @@ use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -15,13 +16,31 @@ use Illuminate\Support\Carbon;
  * @property string $workspace_key
  * @property string|null $correlation_id
  * @property int $attempt_number
+ * @property int|null $replaces_attempt_id
+ * @property string|null $replacement_policy
+ * @property string|null $replacement_reason
  * @property DispatchAttemptStatus $status
+ * @property string|null $legacy_status
+ * @property string|null $compatibility_state
  * @property Carbon|null $scheduled_start
  * @property Carbon|null $scheduled_end
  * @property int $version
+ * @property array<string, mixed>|null $legacy_snapshot
+ * @property Carbon|null $legacy_deleted_at
  * @property Carbon|null $archived_at
+ * @property int|null $archived_by
+ * @property string|null $archive_reason
  * @property int|null $legacy_dispatch_job_id
  * @property int|null $created_by
+ * @property int|null $activated_by
+ * @property int|null $cancelled_by
+ * @property string|null $cancellation_reason
+ * @property int|null $designated_lead_offer_id
+ * @property int|null $lead_designated_by
+ * @property Carbon|null $lead_designated_at
+ * @property string|null $lead_designation_reason
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property DispatchHandoff $handoff
  */
 class DispatchExecutionAttempt extends Model
@@ -58,28 +77,24 @@ class DispatchExecutionAttempt extends Model
         return $this->belongsTo(DispatchHandoff::class, 'handoff_id');
     }
 
-    /** @return BelongsTo<self, $this> */
-    public function replacedAttempt(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'replaces_attempt_id');
-    }
-
-    /** @return HasMany<self, $this> */
-    public function replacementAttempts(): HasMany
-    {
-        return $this->hasMany(self::class, 'replaces_attempt_id');
-    }
-
-    /** @return BelongsTo<DispatchJob, $this> */
-    public function legacyDispatchJob(): BelongsTo
-    {
-        return $this->belongsTo(DispatchJob::class, 'legacy_dispatch_job_id');
-    }
-
     /** @return HasMany<DispatchPlanVersion, $this> */
     public function planVersions(): HasMany
     {
         return $this->hasMany(DispatchPlanVersion::class, 'attempt_id');
+    }
+
+    /** @return HasOne<DispatchPlanVersion, $this> */
+    public function activePlanVersion(): HasOne
+    {
+        return $this->hasOne(DispatchPlanVersion::class, 'attempt_id')
+            ->whereIn('status', ['approved', 'submitted'])
+            ->latestOfMany('version');
+    }
+
+    /** @return HasMany<DispatchAssignmentOffer, $this> */
+    public function offers(): HasMany
+    {
+        return $this->hasMany(DispatchAssignmentOffer::class, 'attempt_id');
     }
 
     /** @return HasMany<DispatchAssignmentOffer, $this> */
@@ -88,16 +103,10 @@ class DispatchExecutionAttempt extends Model
         return $this->hasMany(DispatchAssignmentOffer::class, 'attempt_id');
     }
 
-    /** @return BelongsTo<DispatchAssignmentOffer, $this> */
-    public function designatedLeadOffer(): BelongsTo
+    /** @return HasMany<DispatchPlanApproval, $this> */
+    public function planApprovals(): HasMany
     {
-        return $this->belongsTo(DispatchAssignmentOffer::class, 'designated_lead_offer_id');
-    }
-
-    /** @return HasMany<DispatchPlanRequirementSlot, $this> */
-    public function requirementSlots(): HasMany
-    {
-        return $this->hasMany(DispatchPlanRequirementSlot::class, 'attempt_id');
+        return $this->hasMany(DispatchPlanApproval::class, 'attempt_id');
     }
 
     /** @return HasMany<DispatchEmergencyOverride, $this> */
@@ -110,5 +119,17 @@ class DispatchExecutionAttempt extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function leadDesignator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'lead_designated_by');
+    }
+
+    /** @return BelongsTo<DispatchAssignmentOffer, $this> */
+    public function designatedLeadOffer(): BelongsTo
+    {
+        return $this->belongsTo(DispatchAssignmentOffer::class, 'designated_lead_offer_id');
     }
 }

@@ -9,9 +9,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * @property DispatchEmergencyOverrideStatus $status
+ * @property int $id
+ * @property int $attempt_id
+ * @property int|null $plan_version_id
+ * @property string $workspace_key
+ * @property string $kind
  * @property array<string, mixed> $scope
- * @property Carbon $expires_at
+ * @property DispatchEmergencyOverrideStatus $status
+ * @property int $requested_by
+ * @property int|null $decided_by
+ * @property string $request_reason
+ * @property string|null $decision_reason
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $decided_at
+ * @property Carbon|null $consumed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class DispatchEmergencyOverride extends Model
 {

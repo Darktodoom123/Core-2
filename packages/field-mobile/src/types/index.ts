@@ -165,3 +165,66 @@ export interface ApiErrorResponse {
     data?: DispatchJob;
     errors?: Record<string, string[]>;
 }
+
+export interface DispatchAssignmentOfferV2 {
+    id: number;
+    attempt_id: number;
+    plan_version_id: number;
+    workspace_key: string;
+    user_id: number;
+    assignment_type: string;
+    is_mandatory: boolean;
+    status: string;
+    offered_at?: string | null;
+    responded_at?: string | null;
+    response_reason?: string | null;
+    user?: User;
+}
+
+export interface DispatchPlanVersionV2 {
+    id: number;
+    attempt_id: number;
+    version: number;
+    status: string;
+    snapshot: Record<string, unknown>;
+    submitted_at?: string | null;
+    scheduled_start?: string | null;
+    scheduled_end?: string | null;
+}
+
+export interface DispatchReadinessV2 {
+    is_ready: boolean;
+    attempt_version?: number | null;
+    blockers: Array<{
+        code: string;
+        severity: string;
+        details?: Record<string, unknown>;
+    }>;
+}
+
+export interface DispatchJobV2 {
+    id: number;
+    reference: string;
+    client: string;
+    title: string;
+    site: string;
+    site_notes?: string | null;
+    priority: string;
+    status: string;
+    version: number;
+    scheduled_start?: string | null;
+    scheduled_end?: string | null;
+    attempt_number?: number;
+    is_archived?: boolean;
+    designated_lead?: {
+        offer_id: number;
+        user_id: number;
+        name: string;
+        username: string;
+    } | null;
+    is_designated_lead?: boolean;
+    my_offer?: DispatchAssignmentOfferV2 | null;
+    offers?: DispatchAssignmentOfferV2[];
+    active_plan?: DispatchPlanVersionV2 | null;
+    readiness?: DispatchReadinessV2 | null;
+}

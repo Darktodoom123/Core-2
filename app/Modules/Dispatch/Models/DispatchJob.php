@@ -71,6 +71,18 @@ class DispatchJob extends Model
         return $this->hasOne(DispatchHandoff::class, 'legacy_dispatch_job_id');
     }
 
+    /** @return HasMany<DispatchExecutionAttempt, $this> */
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(DispatchExecutionAttempt::class, 'legacy_dispatch_job_id');
+    }
+
+    /** @return HasOne<DispatchExecutionAttempt, $this> */
+    public function currentAttempt(): HasOne
+    {
+        return $this->hasOne(DispatchExecutionAttempt::class, 'legacy_dispatch_job_id')->latestOfMany('attempt_number');
+    }
+
     /** @return HasMany<DispatchPersonnelAssignment, $this> */
     public function personnelAssignments(): HasMany
     {

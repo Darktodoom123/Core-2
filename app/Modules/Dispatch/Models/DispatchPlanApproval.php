@@ -6,7 +6,22 @@ use App\Modules\Dispatch\Enums\DispatchPlanApprovalStatus;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $plan_version_id
+ * @property int|null $approval_request_id
+ * @property string $kind
+ * @property DispatchPlanApprovalStatus $status
+ * @property int $requested_by
+ * @property string|null $request_reason
+ * @property int|null $decided_by
+ * @property string|null $reason
+ * @property Carbon|null $decided_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class DispatchPlanApproval extends Model
 {
     protected $fillable = [
