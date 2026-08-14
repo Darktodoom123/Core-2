@@ -2,7 +2,7 @@
 
 ## Phase 6 Closeout — 2026-08-14
 
-Phase 6 is complete on `codex/dispatch-backend-v2-phase-6`, starting from `bd459d1af4de8871f86d4f1b762d6d9a7c002f55` (the Phase 5 handoff commit). Rollout controls, observability metrics, operational reconciliation commands, runbooks, and rollback safeguards have been verified. Phase 7 (UX/UI cutover) is unblocked.
+Phase 6 is complete on `codex/dispatch-backend-v2-phase-6`, starting from `bd459d1af4de8871f86d4f1b762d6d9a7c002f55` (the Phase 5 handoff commit). The implementation commit is `IMPLEMENTATION_SHA=deee160f34667bbb3cb25152ac2fb6560d7e7d0e`. Rollout controls, observability metrics, operational reconciliation commands, runbooks, and rollback safeguards have been verified. Phase 7 (UX/UI cutover) is unblocked.
 
 ### Implemented Phase 6 Scope
 

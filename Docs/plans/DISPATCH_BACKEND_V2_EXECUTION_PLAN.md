@@ -439,7 +439,7 @@ phases:
     depends_on: [phase_4]
   phase_6:
     status: complete
-    commit_sha: null
+    commit_sha: deee160f34667bbb3cb25152ac2fb6560d7e7d0e
     depends_on: [phase_5]
   phase_7:
     status: ready
