@@ -4,6 +4,16 @@
 
 This is the implementation-ready, dependency-gated plan for Dispatch Backend V2 in the Core-2 Laravel modular monolith. It preserves existing user data, authorization, eligibility, asset safety, audit history, optimistic concurrency, and mobile idempotency while moving web and mobile adapters onto shared domain commands. The backend graph is followed by an approved Phase 7 UI/UX cutover and validation phase.
 
+## Phase 4 execution record — complete
+
+Phase 4 was executed on `codex/dispatch-backend-v2-phase-4` from exact `START_SHA=55ad79f620aab2cd9bc806f30f7c85d68f8b41e7` after ancestry verification. The implementation commit is `IMPLEMENTATION_SHA=bc4014fd67c4c222de8ed2a1e94f73aa50785db8`. No push, deployment, PR, or external-system mutation occurred.
+
+Implemented surfaces: canonical workspace/source handoff identity and payload hash; service, Rental, Sales, and manual source command integration; one-handoff-per-attempt lineage and monotonic policy replacement; owner/action/payload idempotency conflict handling; atomic state/audit/lineage/receipt/outbox persistence; durable after-commit outbox delivery with deterministic dedupe and retry; canonical Rental/Sales delivery fulfillment enforcement; and bounded idempotent reconciliation for orphan, mismatch, hash/reference, duplicate, and terminal-delivery findings. Legacy links, source pointers, public routes, and mobile outbox/conflict evidence remain preserved; Phase 5 owns external adapter/API cutover.
+
+Exact gates: focused Phase 4 `6 tests, 46 assertions`; affected source/command suite `33 tests, 294 assertions`; affected Rental/Sales regression set `174 tests, 815 assertions`; full backend `563 tests, 7,387 assertions`; Pint/lint PASS; PHPStan/types PASS with 0 errors; locked Composer audit PASS with no advisories; `git diff --check` PASS; isolated file-backed SQLite forward migration PASS with all migrations Ran; PostgreSQL suite BLOCKED before assertions because `127.0.0.1:5432/core2_rental_sales_test` refused connections; `npm run build` and TypeScript PASS, with no frontend/mobile source touched. Full untouched mobile lint/format retains the known baseline of 39 ESLint errors and 5 Prettier warnings.
+
+Review found no critical or high-confidence unresolved implementation issue. Known external/pre-existing blockers are unavailable PostgreSQL and untouched mobile quality debt. `PHASE_STATUS=complete`, `READY_FOR_PHASE_5=yes`, `READY_FOR_PHASE_7=no`, and `CONTEXT_SPLIT_REQUIRED=no`. The detailed evidence and final `HANDOFF_SHA` are recorded in [the Phase 4 handoff](DISPATCH_BACKEND_V2_PHASE_HANDOFF.md).
+
 Phase 0 establishes the contract, graph, and seeder security preflight. It does not implement V2 schema, lifecycle commands, API versioning, or runtime behavior. The target design is described in [the domain contract ADR](../architecture/ADR-DISPATCH-BACKEND-V2-DOMAIN-CONTRACT.md); existing runtime values that conflict with that target remain legacy compatibility behavior until the relevant phase is completed.
 
 ## Non-negotiable target semantics
@@ -381,13 +391,14 @@ For every phase:
 
 ```yaml
 schema: dispatch-backend-v2-phase-status/v1
-branch: codex/dispatch-backend-v2-phase-3
-baseline_commit: 1b96db43be0c05abfa938631179240bf25abe783
-current_phase: phase_3
+branch: codex/dispatch-backend-v2-phase-4
+baseline_commit: 55ad79f620aab2cd9bc806f30f7c85d68f8b41e7
+current_phase: phase_4
 ready_for_phase_1: false
 ready_for_phase_2: false
 ready_for_phase_3: false
 ready_for_phase_4: true
+ready_for_phase_5: true
 ready_for_phase_7: false
 phases:
   phase_0:
@@ -418,11 +429,11 @@ phases:
     commit_sha: a2834099ba55792109b621abae9e2b6215733175
     depends_on: [phase_2]
   phase_4:
-    status: ready
-    commit_sha: null
+    status: complete
+    commit_sha: bc4014fd67c4c222de8ed2a1e94f73aa50785db8
     depends_on: [phase_2, phase_3]
   phase_5:
-    status: blocked_on_phase_4
+    status: ready
     commit_sha: null
     depends_on: [phase_4]
   phase_6:
@@ -454,12 +465,19 @@ execution_record:
     - "Isolated file-backed SQLite forward migration rehearsal: PASS; all migrations and Phase 3 schema present; rollback refused by repository environment guard"
     - "php artisan test --compact -c phpunit.postgresql.xml: BLOCKED; 4 tests could not connect to 127.0.0.1:5432/core2_rental_sales_test"
     - "git diff --check: PASS"
+    - "Phase 4 focused: PASS, 6 tests, 46 assertions"
+    - "Phase 4 affected source/command/handoff suite: PASS, 33 tests, 294 assertions"
+    - "Phase 4 affected Rental/Sales regression suite: PASS, 174 tests, 815 assertions"
+    - "Phase 4 full backend: PASS, 563 tests, 7,387 assertions"
+    - "Phase 4 isolated file-backed SQLite forward migration rehearsal: PASS; all migrations Ran"
+    - "Phase 4 PostgreSQL recheck: BLOCKED; all 4 configured tests refused connection to 127.0.0.1:5432/core2_rental_sales_test"
   review_findings:
     - "Fixed optional asset conflicts incorrectly blocking readiness and added command-time lead schedule-conflict revalidation under lock."
     - "Code/security review found no critical or high-confidence unresolved issue across IDOR, lead spoofing, confused deputy, maker/checker, replay, override, safety, audit, duplicate-event, and lock-ordering paths."
-    - "Phase 4 is unlocked; Phase 7 remains blocked on Phase 6."
+    - "Phase 4 handoff/attempt/retry/idempotency/audit/outbox review found no critical or high-confidence unresolved issue; Phase 5 is unblocked and Phase 7 remains blocked on Phase 6."
   rollback_check: forward_complete_rollback_refused_by_environment_guard
   ready_for_phase_4: true
+  ready_for_phase_5: true
   ready_for_phase_7: false
   ready_graph_complete: false
 

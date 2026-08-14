@@ -1,4 +1,38 @@
-# Dispatch Backend V2 Phase 3 Handoff
+# Dispatch Backend V2 Phase 4 Handoff
+
+## Phase 4 closeout — 2026-08-14
+
+Phase 4 is complete on `codex/dispatch-backend-v2-phase-4`, starting exactly at `55ad79f620aab2cd9bc806f30f7c85d68f8b41e7` (the Phase 3 handoff commit). Ancestry was verified before implementation. The implementation/test commit is `bc4014fd67c4c222de8ed2a1e94f73aa50785db8`; this closeout is the documentation/verification handoff commit. No push, deployment, PR, or external-system mutation has occurred.
+
+### Objective and decisions recorded so far
+
+- Canonical handoffs now carry workspace, source-system/type/id, external reference, payload hash, inbound owner/key, timestamps, snapshot, and a composite workspace/source identity constraint. Legacy service, polymorphic source, Rental, Sales, and manual links are retained.
+- Every new V2 attempt is created through the shared transaction envelope and links to one handoff. Source creation uses a transaction-aware command path so source locks, legacy compatibility rows, canonical state, audit lineage, idempotency receipt, and outbox intent share one transaction.
+- Source retries use stable owner-scoped keys; payload, owner, action, workspace, and reference conflicts are rejected before operation writes. Service re-planning is explicit; cancelled replacement attempts are monotonic, linked to immutable predecessors, and completed attempts remain terminal.
+- Durable outbox rows are deduplicated by command receipt/audit, queued through an explicit after-commit callback, and delivered with claim/process/fail/retry/delivered states. Delivery failure cannot roll back committed execution state or duplicate a delivered row.
+- Rental/Sales delivery fulfillment now requires a linked, non-archived completed canonical attempt; pickup/non-delivery remains unaffected. Reconciliation includes orphan, workspace mismatch, asymmetric link, source hash/reference, duplicate attempt/handoff, and terminal delivery checks without deleting unexplained data.
+- Manual canonical source resolution and source payload-hash drift detection were added during review. Service source retry lookup is conditional on an explicit idempotency key so the existing duplicate-conversion compatibility response remains intact.
+
+### Files changed
+
+Application changes are in `app/Modules/Dispatch/Actions/{ConvertServiceRequestToDispatch,CreateDispatchFromSource,CreateManualDispatchHandoff}.php`, `app/Modules/Dispatch/Contracts/{DispatchOutboxDeliveryHandler,DispatchOutboxRecorder}.php`, `app/Modules/Dispatch/DispatchServiceProvider.php`, `app/Modules/Dispatch/Data/DispatchV2Mutation.php`, `app/Modules/Dispatch/Enums/{DispatchSourceType,DispatchV2CommandCode}.php`, `app/Modules/Dispatch/Events/DispatchOutboxMessageDelivered.php`, `app/Modules/Dispatch/Http/Controllers/DispatchJobController.php`, `app/Modules/Dispatch/Jobs/DeliverDispatchOutboxMessage.php`, `app/Modules/Dispatch/Models/{DispatchExecutionAttempt,DispatchHandoff,DispatchOutboxMessage}.php`, `app/Modules/Dispatch/Services/{DispatchDeliveryAttemptGuard,DispatchOutboxDeliveryService,DispatchOutboxIntentRecorder,DispatchV2CommandService,DispatchV2Reconciliation,DispatchV2TransactionEnvelope,NullDispatchOutboxDeliveryHandler}.php`, `app/Modules/Rental/Actions/{CheckoutRental,CreateRentalDispatchHandoff}.php`, and `app/Modules/Sales/Actions/{CreateSalesDispatchHandoff,FulfillSalesOrder}.php`.
+
+The schema change is `database/migrations/2026_08_14_150000_add_dispatch_v2_phase4_contract.php`. Tests changed/added include the Phase 4 focused suite, persistence foundation, source handoff, delivery, and stale delivery-fixture compatibility updates in the implementation commit. `vendor/` and generated build output are ignored dependency/build artifacts and are not committed.
+
+### Exact verification state
+
+- PASS: `php artisan test --compact tests/Feature/Operations/DispatchV2Phase4Test.php` — 6 tests, 46 assertions.
+- PASS: `php artisan test --compact tests/Feature/Operations/DispatchV2CommandLayerTest.php tests/Feature/Operations/DispatchV2Phase4Test.php tests/Feature/Operations/DispatchSourceIntegrationTest.php tests/Feature/Operations/ClientServiceRequestWorkflowTest.php tests/Feature/Operations/RentalSalesDispatchHandoffTest.php` — 33 tests, 294 assertions.
+- PASS: `php artisan test --compact tests/Feature/Operations/RentalSalesAuditTest.php tests/Feature/Operations/RentalSalesR6AuthorizationMatrixTest.php tests/Feature/Operations/RentalSalesR6StateAuditRollbackTest.php tests/Feature/Operations/RentalSalesStateSafetyTest.php tests/Feature/Operations/RentalSalesWorkflowTest.php` — 174 tests, 815 assertions.
+- PASS: full backend `php artisan test --compact` — 563 tests, 7,387 assertions.
+- PASS: PHP syntax checks for all changed PHP files; `composer run lint:check`; `composer run types:check` with 0 PHPStan errors; `composer audit --locked --no-interaction` with no security vulnerability advisories; `git diff --check`.
+- PASS: `npm run build` and `npm run types:check`. No frontend/mobile source was changed. Full untouched repository mobile checks reproduce the known baseline: 39 ESLint errors and 5 Prettier format warnings in `packages/field-mobile`; these are not Phase 4 changes.
+- PASS: isolated file-backed SQLite forward migration rehearsal; all migrations, including `2026_08_14_150000_add_dispatch_v2_phase4_contract`, applied and `migrate:status` reported all Ran. The temporary database was removed. Rollback is not claimed; the repository environment guard previously refused `migrate:rollback --step=1 --force` with `This command is prohibited from running in this environment`.
+- BLOCKED exactly: `php artisan test --compact -c phpunit.postgresql.xml` — all 4 configured tests failed before assertions because PostgreSQL at `127.0.0.1:5432`, database `core2_rental_sales_test`, refused the connection. No PostgreSQL pass is claimed.
+
+### Review, blockers, and next action
+
+Architecture and security review covered source spoofing/IDOR and workspace isolation, idempotency owner/action/payload replay, canonical hash/reference preservation, duplicate/orphan attempts, deterministic lock ordering, audit payload minimization, outbox deduplication/retry/poison handling, terminal mutation, callback timing, and Rental/Sales fulfillment bypasses. No critical or high-confidence unresolved implementation issue remains. Known external/pre-existing blockers are the unavailable PostgreSQL service and untouched mobile quality debt recorded above. Phase 5 is unblocked for adapter work; it owns `/api/v2`, web/mobile cutover, and the existing mobile debt. `PHASE_STATUS=complete`, `READY_FOR_PHASE_5=yes`, and `CONTEXT_SPLIT_REQUIRED=no`.
 
 ## Phase 3 closeout
 
