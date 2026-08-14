@@ -141,6 +141,37 @@ final class BrowserAcceptanceSeeder extends Seeder
             'rejected' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
         ];
 
+        $truck = \App\Shared\Assets\Models\OperationalAsset::query()->firstOrCreate(
+            ['code' => 'TRK-01'],
+            ['name' => 'Heavy Rig Truck', 'type' => 'truck', 'status' => \App\Shared\Assets\Enums\AssetStatus::Ready]
+        );
+        $crane = \App\Shared\Assets\Models\OperationalAsset::query()->firstOrCreate(
+            ['code' => 'CRN-01'],
+            ['name' => '50T Mobile Crane', 'type' => 'crane', 'status' => \App\Shared\Assets\Enums\AssetStatus::Ready]
+        );
+
+        $approvalJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-003',
+            'client' => 'Emergency Approval Client',
+            'title' => 'Emergency lift requiring manager approval',
+            'site' => 'Emergency fixture site',
+            'scheduled_start' => now()->addDay(),
+            'scheduled_end' => now()->addDay()->addHours(4),
+            'priority' => DispatchPriority::Emergency,
+            'status' => DispatchStatus::Draft,
+            'requirements' => ['Urgent crane lift'],
+            'created_by' => $dispatcher->id,
+        ]);
+
+        $approvalRequest = \App\Modules\Dispatch\Models\ApprovalRequest::query()->create([
+            'dispatch_job_id' => $approvalJob->id,
+            'requested_by' => $dispatcher->id,
+            'kind' => 'dispatch_activation',
+            'status' => \App\Modules\Dispatch\Enums\ApprovalStatus::Pending,
+            'reason' => 'Emergency priority activation requires manager authorization.',
+            'notes' => 'Site crane ready, priority response needed.',
+        ]);
+
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
@@ -151,6 +182,10 @@ final class BrowserAcceptanceSeeder extends Seeder
             'password' => 'password',
             'job_id' => $job->id,
             'assigned_job_id' => $assignedJob->id,
+            'approval_job_id' => $approvalJob->id,
+            'approval_request_id' => $approvalRequest->id,
+            'truck_id' => $truck->id,
+            'crane_id' => $crane->id,
             'report_id' => $report->id,
             'attachment_id' => $attachment->id,
             'export_ids' => [$export->id, $pdfExport->id],

@@ -7,6 +7,10 @@ export type BrowserFixtures = {
     password: string;
     job_id: number;
     assigned_job_id: number;
+    approval_job_id?: number;
+    approval_request_id?: number;
+    truck_id?: number;
+    crane_id?: number;
     report_id: number;
     attachment_id: number;
     export_ids: string[];

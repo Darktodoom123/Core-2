@@ -12,15 +12,15 @@ import {
     ClipboardList,
     Clock3,
     HardHat,
+    ListChecks,
     MapPin,
     Navigation,
-    ListChecks,
     RefreshCw,
     ShieldCheck,
     Sparkles,
     Truck,
-    Users,
     UserRound,
+    Users,
     Wrench,
     X,
 } from 'lucide-react';
@@ -358,18 +358,21 @@ export default function DispatchDetail({
                         </div>
                     )}
 
+                    <ApprovalDecisionBanner job={job} activation={activation} />
+
                     {capabilities.update_own_status && progression !== null ? (
                         <FieldJobWorkspace
                             job={job}
                             progression={progression}
                             capabilities={capabilities}
+                            personnelCandidates={personnelCandidates}
+                            assetCandidates={assetCandidates}
                         />
                     ) : (
                         <>
                             <AssignmentFlowHeader
                                 job={job}
                                 activation={activation}
-                                selectedCount={selectedCount}
                                 selectedPersonnelCount={
                                     form.data.personnel.length
                                 }
@@ -377,6 +380,7 @@ export default function DispatchDetail({
                                 canActivate={capabilities.activate}
                                 hasPendingSelections={hasPendingSelections}
                                 returnTo={returnTo}
+                                confirmLeave={confirmLeave}
                             />
 
                             <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
@@ -578,6 +582,10 @@ export default function DispatchDetail({
                                     <CurrentAssignments
                                         job={job}
                                         capabilities={capabilities}
+                                        personnelCandidates={
+                                            personnelCandidates
+                                        }
+                                        assetCandidates={assetCandidates}
                                     />
                                     {capabilities.activate && (
                                         <ActivationPanel
@@ -605,72 +613,248 @@ export default function DispatchDetail({
     );
 }
 
+function ApprovalDecisionBanner({
+    job,
+    activation,
+}: {
+    job: DispatchDetailPageProps['job'];
+    activation: DispatchDetailPageProps['activation'];
+}) {
+    const [deciding, setDeciding] = useState<'approve' | 'reject' | null>(null);
+    const [reason, setReason] = useState('');
+    const [reasonError, setReasonError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+
+    if (!activation.approval_required && !activation.approval_request_id) {
+        return null;
+    }
+
+    const isPending = activation.approval_status === 'pending';
+    const isApproved = activation.approval_status === 'approved';
+    const isRejected = activation.approval_status === 'rejected';
+    const canDecide = Boolean(
+        activation.can_decide_approval && activation.approval_request_id,
+    );
+
+    const handleDecision = (status: 'approved' | 'rejected') => {
+        if (!activation.approval_request_id) {
+            return;
+        }
+
+        const finalReason =
+            reason.trim() ||
+            (status === 'approved' ? 'Approved by Operations Manager' : '');
+
+        if (status === 'rejected' && !finalReason) {
+            setReasonError(
+                'A rejection reason is required to reject this approval request.',
+            );
+
+            return;
+        }
+
+        setSubmitting(true);
+        setReasonError(null);
+        router.post(
+            `/operations/approval-requests/${activation.approval_request_id}/decision`,
+            {
+                status,
+                reason: finalReason,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setDeciding(null);
+                    setReason('');
+                },
+                onError: (errs) => {
+                    if (errs.reason) {
+                        setReasonError(errs.reason);
+                    }
+                },
+                onFinish: () => setSubmitting(false),
+            },
+        );
+    };
+
+    return (
+        <div
+            className={cn(
+                'rounded-xl border p-4 transition-colors',
+                isPending &&
+                    'border-warning bg-warning-soft text-warning-strong',
+                isApproved &&
+                    'border-success bg-success-soft text-success-strong',
+                isRejected && 'border-danger bg-danger-soft text-danger',
+            )}
+            role="region"
+            aria-label="Approval status and decision banner"
+        >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                    {isApproved ? (
+                        <CheckCircle2
+                            className="mt-0.5 h-5 w-5 shrink-0"
+                            aria-hidden="true"
+                        />
+                    ) : isRejected ? (
+                        <X
+                            className="mt-0.5 h-5 w-5 shrink-0"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <Clock3
+                            className="mt-0.5 h-5 w-5 shrink-0"
+                            aria-hidden="true"
+                        />
+                    )}
+                    <div>
+                        <h3 className="text-sm font-semibold">
+                            {isApproved
+                                ? 'Independent approval granted'
+                                : isRejected
+                                  ? 'Approval request rejected'
+                                  : 'Independent Operations Manager approval pending'}
+                        </h3>
+                        <p className="mt-0.5 text-xs">
+                            {isApproved
+                                ? 'The exceptional priority or assignment override has been authorized. Activation is unblocked.'
+                                : isRejected
+                                  ? `The approval request was rejected: ${activation.approval_reason || 'Revise the assignment plan and request a new review.'}`
+                                  : `${job.priority.label} priority requires independent manager approval before activation.`}
+                        </p>
+                        {activation.approval_notes && (
+                            <p className="mt-1 text-xs italic">
+                                Note: {activation.approval_notes}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {canDecide && isPending && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        {deciding === null && (
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="primary"
+                                    disabled={submitting}
+                                    onClick={() => handleDecision('approved')}
+                                >
+                                    <Check className="h-4 w-4" />
+                                    {submitting
+                                        ? 'Approving…'
+                                        : 'Approve priority'}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={submitting}
+                                    onClick={() => setDeciding('reject')}
+                                >
+                                    <X className="h-4 w-4" />
+                                    Reject request
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {deciding === 'reject' && (
+                <div className="mt-3 border-t border-danger/30 pt-3">
+                    <label
+                        htmlFor="rejection-decision-reason"
+                        className="block text-xs font-semibold text-danger"
+                    >
+                        Rejection reason (required)
+                    </label>
+                    <textarea
+                        id="rejection-decision-reason"
+                        rows={2}
+                        value={reason}
+                        onChange={(e) => {
+                            setReason(e.target.value);
+                            setReasonError(null);
+                        }}
+                        className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink focus:border-danger focus:outline-none"
+                        placeholder="Explain why this approval request cannot be granted..."
+                        required
+                    />
+                    {reasonError && (
+                        <p className="mt-1 text-xs text-danger" role="alert">
+                            {reasonError}
+                        </p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                        <Button
+                            size="sm"
+                            variant="primary"
+                            className="bg-danger text-white hover:bg-danger/90"
+                            disabled={submitting || !reason.trim()}
+                            onClick={() => handleDecision('rejected')}
+                        >
+                            {submitting ? 'Rejecting…' : 'Confirm rejection'}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="quiet"
+                            disabled={submitting}
+                            onClick={() => {
+                                setDeciding(null);
+                                setReason('');
+                                setReasonError(null);
+                            }}
+                        >
+                            Dismiss
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function AssignmentFlowHeader({
     job,
     activation,
-    selectedCount,
     selectedPersonnelCount,
     selectedAssetCount,
     canActivate,
     hasPendingSelections,
     returnTo,
+    confirmLeave,
 }: {
     job: DispatchDetailPageProps['job'];
     activation: DispatchDetailPageProps['activation'];
-    selectedCount: number;
     selectedPersonnelCount: number;
     selectedAssetCount: number;
     canActivate: boolean;
     hasPendingSelections: boolean;
     returnTo: string;
+    confirmLeave: (event: MouseEvent<Element>) => void;
 }) {
-    const personnelCount = job.personnel_assignments.length;
-    const assetCount = job.asset_assignments.length;
-    const hasAssignments = personnelCount + assetCount > 0;
-    const assignmentStepLabel = hasAssignments
-        ? formatResourceCounts(personnelCount, assetCount)
-        : selectedCount > 0
-          ? formatResourceCounts(selectedPersonnelCount, selectedAssetCount)
-          : 'Not started';
-
-    const confirmLeave = (event: MouseEvent<Element>) => {
-        if (
-            hasPendingSelections &&
-            !window.confirm(
-                'You have unsaved resource selections. Leave without assigning them?',
-            )
-        ) {
-            event.preventDefault();
-        }
-    };
+    const hasAssignments =
+        job.personnel_assignments.length + job.asset_assignments.length > 0;
+    const hasSavedAssignments = hasAssignments && !hasPendingSelections;
+    const assignmentStepLabel = hasPendingSelections
+        ? `${formatResourceCounts(selectedPersonnelCount, selectedAssetCount)} selected`
+        : hasSavedAssignments
+          ? `${formatResourceCounts(job.personnel_assignments.length, job.asset_assignments.length)} assigned`
+          : 'Select eligible personnel and assets';
 
     return (
-        <section
-            aria-labelledby="assignment-flow-heading"
-            className="space-y-4"
-        >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <p className="text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
-                        Dispatch setup
-                    </p>
-                    <h2
-                        id="assignment-flow-heading"
-                        className="mt-1 text-xl font-semibold tracking-[-0.01em]"
-                    >
-                        Prepare this dispatch for activation
-                    </h2>
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Review the job, confirm eligible resources, then
-                        activate only when the server checklist is clear.
-                    </p>
-                </div>
-                <p className="text-sm text-ink-soft">
-                    {!canActivate
-                        ? 'Activation unavailable'
-                        : activation.ready
-                          ? 'Ready to activate'
-                          : 'Review needed'}
+        <section aria-label="Dispatch setup progress" className="space-y-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h2 className="text-xl font-semibold">
+                    Prepare this dispatch for activation
+                </h2>
+                <p className="text-xs text-ink-soft">
+                    {hasSavedAssignments
+                        ? activation.ready
+                            ? 'Ready to activate'
+                            : 'Review needed'
+                        : 'Assignments pending'}
                 </p>
             </div>
 
@@ -887,20 +1071,23 @@ function AssignmentRequirementRow({
     const ready = count > 0;
 
     return (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2.5">
-            <span className="font-medium">{label}</span>
+        <div className="flex items-center justify-between text-xs">
+            <span className="text-ink-soft">{label}</span>
             <span
                 className={cn(
-                    'inline-flex items-center gap-1.5 text-xs font-medium',
+                    'inline-flex items-center gap-1 font-medium',
                     ready ? 'text-success-strong' : 'text-warning-strong',
                 )}
             >
                 {ready ? (
-                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
-                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                    <Circle
+                        className="h-3.5 w-3.5 opacity-60"
+                        aria-hidden="true"
+                    />
                 )}
-                {ready ? `${count} ready` : 'Needs one'}
+                {count} assigned
             </span>
         </div>
     );
@@ -915,47 +1102,23 @@ function AssignmentNextAction({
     canActivate: boolean;
     assignmentSaved: boolean;
 }) {
-    const blockerCount = activation.blockers.length;
-    const actionLabel =
-        canActivate && activation.ready
-            ? 'Continue to activation'
-            : blockerCount > 0
-              ? `Review ${blockerCount} activation blocker${blockerCount === 1 ? '' : 's'}`
-              : 'Review activation';
-
     return (
-        <Panel className="border-success/50 bg-success-soft">
-            <div className="flex items-start gap-3 px-4 py-4">
-                <CheckCircle2
-                    className="mt-0.5 h-5 w-5 shrink-0 text-success-strong"
-                    aria-hidden="true"
-                />
+        <Panel className="border-brand/40 bg-brand-soft/20 p-4">
+            <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-ink">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                </div>
                 <div className="min-w-0">
-                    <h2 className="font-semibold text-success-strong">
+                    <p className="text-sm font-semibold text-ink">
                         {assignmentSaved
-                            ? 'Assignments saved'
-                            : 'Resources assigned'}
-                    </h2>
-                    <p className="mt-1 text-sm leading-5 text-ink-soft">
-                        {canActivate && activation.ready
-                            ? 'The dispatch passed its readiness check and can be activated.'
-                            : blockerCount > 0
-                              ? 'Review the readiness blockers before activation.'
-                              : 'Review the latest readiness and approval state before activation.'}
+                            ? 'Assignments recorded'
+                            : 'Ready for next step'}
                     </p>
-                    <a
-                        href="#dispatch-activation"
-                        onClick={() => {
-                            const activationPanel = document.getElementById(
-                                'dispatch-activation',
-                            ) as HTMLDetailsElement | null;
-                            activationPanel?.setAttribute('open', '');
-                        }}
-                        className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-brand-strong hover:bg-surface"
-                    >
-                        {actionLabel}
-                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </a>
+                    <p className="mt-0.5 text-xs leading-5 text-ink-soft">
+                        {activation.ready && canActivate
+                            ? 'All prerequisites met. You can now activate this dispatch.'
+                            : 'Review the latest readiness and approval state before activation.'}
+                    </p>
                 </div>
             </div>
         </Panel>
@@ -1148,22 +1311,15 @@ function SelectionGroup({
 }) {
     return (
         <div>
-            <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{label}</span>
-                <span className="text-xs text-ink-soft">{items.length}</span>
-            </div>
+            <p className="text-xs font-medium text-ink-soft">{label}</p>
             {items.length > 0 ? (
-                <ul className="mt-2 space-y-1.5">
+                <ul className="mt-1 space-y-1">
                     {items.map((item) => (
                         <li
                             key={item}
-                            className="flex items-start gap-2 text-ink-soft"
+                            className="truncate text-xs font-medium text-ink"
                         >
-                            <CheckCircle2
-                                className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
-                                aria-hidden="true"
-                            />
-                            <span className="min-w-0 break-words">{item}</span>
+                            • {item}
                         </li>
                     ))}
                 </ul>
@@ -1178,10 +1334,14 @@ function FieldJobWorkspace({
     job,
     progression,
     capabilities,
+    personnelCandidates,
+    assetCandidates,
 }: {
     job: DispatchDetailPageProps['job'];
     progression: NonNullable<DispatchDetailPageProps['progression']>;
     capabilities: DispatchDetailPageProps['capabilities'];
+    personnelCandidates: PersonnelCandidateViewModel[];
+    assetCandidates: AssetCandidateViewModel[];
 }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]">
@@ -1191,7 +1351,12 @@ function FieldJobWorkspace({
             </div>
             <div className="space-y-5">
                 <DispatchContext job={job} />
-                <CurrentAssignments job={job} capabilities={capabilities} />
+                <CurrentAssignments
+                    job={job}
+                    capabilities={capabilities}
+                    personnelCandidates={personnelCandidates}
+                    assetCandidates={assetCandidates}
+                />
             </div>
         </div>
     );
@@ -1620,34 +1785,32 @@ function ActivationPanel({
                         approval and asset safety.
                     </p>
                 </div>
-                {activation.approval_required && (
-                    <div className="rounded-lg bg-surface-subtle p-3 text-sm">
-                        <p className="font-medium">Independent approval</p>
-                        <p className="mt-1 text-ink-soft">
-                            {activation.approval_status === 'approved'
-                                ? 'The latest exceptional request is approved.'
-                                : activation.approval_status === 'rejected'
-                                  ? 'The latest exceptional request was rejected.'
-                                  : 'An Operations Manager decision is pending.'}
-                        </p>
-                    </div>
-                )}
+
+                <ActivationPrerequisiteChecklist
+                    job={job}
+                    activation={activation}
+                />
 
                 {activation.blockers.length > 0 && (
-                    <ul className="space-y-2 text-sm text-warning-strong">
-                        {activation.blockers.map((blocker) => (
-                            <li
-                                key={blocker}
-                                className="flex items-start gap-2"
-                            >
-                                <AlertTriangle
-                                    className="mt-0.5 h-4 w-4 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                {blocker}
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="space-y-1.5 rounded-lg border border-warning/40 bg-warning-soft/30 p-3">
+                        <p className="text-xs font-semibold text-warning-strong">
+                            Blocking activation reasons
+                        </p>
+                        <ul className="space-y-1 text-xs text-warning-strong">
+                            {activation.blockers.map((blocker) => (
+                                <li
+                                    key={blocker}
+                                    className="flex items-start gap-2"
+                                >
+                                    <AlertTriangle
+                                        className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    <span>{blocker}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
 
                 {error && (
@@ -1706,6 +1869,106 @@ function ActivationPanel({
     );
 }
 
+function ActivationPrerequisiteChecklist({
+    job,
+    activation,
+}: {
+    job: DispatchDetailPageProps['job'];
+    activation: DispatchDetailPageProps['activation'];
+}) {
+    const isActivatableStatus = [
+        'draft',
+        'pending_approval',
+        'scheduled',
+    ].includes(job.status.value);
+    const hasPersonnel = job.personnel_assignments.length > 0;
+    const hasAssets = job.asset_assignments.length > 0;
+    const approvalPassed =
+        !activation.approval_required ||
+        activation.approval_status === 'approved';
+
+    const items = [
+        {
+            title: 'Lifecycle status',
+            desc: isActivatableStatus
+                ? `Job is currently in ${job.status.label} status.`
+                : `Job is in ${job.status.label} status (activation unavailable).`,
+            ready: isActivatableStatus,
+        },
+        {
+            title: 'Personnel assignment',
+            desc: hasPersonnel
+                ? `${job.personnel_assignments.length} field worker(s) assigned.`
+                : 'At least one active eligible field worker is required.',
+            ready:
+                hasPersonnel &&
+                !activation.blockers.some(
+                    (b) => b.includes('worker') || b.includes('eligible'),
+                ),
+        },
+        {
+            title: 'Asset assignment & safety',
+            desc: hasAssets
+                ? `${job.asset_assignments.length} asset(s) assigned.`
+                : 'At least one active safe asset (crane/truck) is required.',
+            ready:
+                hasAssets &&
+                !activation.blockers.some(
+                    (b) => b.includes('Asset') || b.includes('safe'),
+                ),
+        },
+        {
+            title: 'Manager approval',
+            desc: !activation.approval_required
+                ? 'Standard priority — no exceptional approval required.'
+                : activation.approval_status === 'approved'
+                  ? 'Independent manager approval granted.'
+                  : activation.approval_status === 'rejected'
+                    ? 'Approval request was rejected.'
+                    : 'Awaiting independent manager approval decision.',
+            ready: approvalPassed,
+        },
+    ];
+
+    return (
+        <div className="space-y-2 rounded-lg border border-line bg-surface-subtle/50 p-3">
+            <p className="text-xs font-semibold text-ink">
+                Activation prerequisites
+            </p>
+            <ul className="space-y-2 text-xs">
+                {items.map((item) => (
+                    <li key={item.title} className="flex items-start gap-2">
+                        {item.ready ? (
+                            <CheckCircle2
+                                className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <AlertTriangle
+                                className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
+                                aria-hidden="true"
+                            />
+                        )}
+                        <div>
+                            <span
+                                className={cn(
+                                    'font-medium',
+                                    item.ready
+                                        ? 'text-ink'
+                                        : 'text-warning-strong',
+                                )}
+                            >
+                                {item.title}:
+                            </span>{' '}
+                            <span className="text-ink-soft">{item.desc}</span>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 function LifecycleControlsPanel({
     job,
     capabilities,
@@ -1716,6 +1979,7 @@ function LifecycleControlsPanel({
     const [cancelling, setCancelling] = useState(false);
     const [reopening, setReopening] = useState(false);
     const [archiving, setArchiving] = useState(false);
+    const [restoring, setRestoring] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     const cancelForm = useForm({
@@ -1732,6 +1996,10 @@ function LifecycleControlsPanel({
         reason: '',
     });
 
+    const restoreForm = useForm({
+        reason: '',
+    });
+
     const cancelErrors = cancelForm.errors as Record<
         string,
         string | undefined
@@ -1744,9 +2012,14 @@ function LifecycleControlsPanel({
         string,
         string | undefined
     >;
+    const restoreErrors = restoreForm.errors as Record<
+        string,
+        string | undefined
+    >;
     const cancelError = cancelErrors.version ?? cancelErrors.status ?? null;
     const reopenError = reopenErrors.version ?? reopenErrors.status ?? null;
     const archiveError = archiveErrors.status ?? null;
+    const restoreError = restoreErrors.status ?? null;
     const archiveBlocked = [
         'dispatched',
         'accepted',
@@ -1756,7 +2029,10 @@ function LifecycleControlsPanel({
     ].includes(job.status.value);
 
     const hasControls =
-        capabilities.cancel || capabilities.reopen || capabilities.archive;
+        capabilities.cancel ||
+        capabilities.reopen ||
+        capabilities.archive ||
+        capabilities.restore;
 
     if (!hasControls) {
         return null;
@@ -1786,6 +2062,14 @@ function LifecycleControlsPanel({
         });
     };
 
+    const handleRestore = (e: FormEvent) => {
+        e.preventDefault();
+        restoreForm.post(`/operations/dispatch-jobs/${job.id}/restore`, {
+            preserveScroll: true,
+            onSuccess: () => setRestoring(false),
+        });
+    };
+
     const refresh = () => {
         setRefreshing(true);
         router.reload({
@@ -1801,6 +2085,7 @@ function LifecycleControlsPanel({
                 cancelForm.processing ||
                 reopenForm.processing ||
                 archiveForm.processing ||
+                restoreForm.processing ||
                 refreshing
             }
         >
@@ -1810,7 +2095,7 @@ function LifecycleControlsPanel({
                         Administrative actions
                     </span>
                     <span className="mt-0.5 block text-xs text-ink-soft">
-                        Cancellation, reopening, and archive controls.
+                        Cancellation, reopening, archive, and restore controls.
                     </span>
                 </span>
                 <span className="text-sm text-ink-soft">Show</span>
@@ -2083,6 +2368,66 @@ function LifecycleControlsPanel({
                             </Button>
                         </div>
                     </form>
+                ) : restoring ? (
+                    <form onSubmit={handleRestore} className="space-y-3">
+                        <h3 className="text-sm font-semibold text-brand-strong">
+                            Restore dispatch job
+                        </h3>
+                        <p className="text-xs text-ink-soft">
+                            Restoring will recover this archived dispatch back
+                            into active operational views as a draft.
+                        </p>
+                        {restoreError && (
+                            <div
+                                className="rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
+                                role="alert"
+                                aria-live="assertive"
+                                aria-atomic="true"
+                            >
+                                {restoreError}
+                            </div>
+                        )}
+                        <div>
+                            <label
+                                htmlFor="restore-reason"
+                                className="block text-xs font-medium text-ink"
+                            >
+                                Restore reason (optional)
+                            </label>
+                            <textarea
+                                id="restore-reason"
+                                rows={2}
+                                className="mt-1 block w-full rounded-md border-line text-sm shadow-sm"
+                                value={restoreForm.data.reason}
+                                onChange={(e) =>
+                                    restoreForm.setData(
+                                        'reason',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="Reason for restoring this dispatch..."
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                disabled={restoreForm.processing}
+                            >
+                                {restoreForm.processing
+                                    ? 'Restoring…'
+                                    : 'Confirm restore'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="quiet"
+                                onClick={() => setRestoring(false)}
+                                disabled={restoreForm.processing}
+                            >
+                                Dismiss
+                            </Button>
+                        </div>
+                    </form>
                 ) : (
                     <div className="flex flex-wrap gap-2">
                         {capabilities.cancel &&
@@ -2115,6 +2460,15 @@ function LifecycleControlsPanel({
                                 onClick={() => setArchiving(true)}
                             >
                                 Archive job
+                            </Button>
+                        )}
+                        {capabilities.restore && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setRestoring(true)}
+                            >
+                                Restore archived job
                             </Button>
                         )}
                         {capabilities.archive && archiveBlocked && (
@@ -2193,9 +2547,13 @@ function DispatchContext({ job }: { job: DispatchDetailPageProps['job'] }) {
 function CurrentAssignments({
     job,
     capabilities,
+    personnelCandidates,
+    assetCandidates,
 }: {
     job: DispatchDetailPageProps['job'];
     capabilities: DispatchDetailPageProps['capabilities'];
+    personnelCandidates: PersonnelCandidateViewModel[];
+    assetCandidates: AssetCandidateViewModel[];
 }) {
     const { auth, errors } = usePage().props;
     const authUser = auth?.user;
@@ -2207,6 +2565,12 @@ function CurrentAssignments({
     const [reason, setReason] = useState('');
     const [reasonError, setReasonError] = useState<string | null>(null);
     const [submittingId, setSubmittingId] = useState<number | null>(null);
+    const [reassignmentTarget, setReassignmentTarget] = useState<{
+        kind: 'personnel' | 'asset';
+        id: number;
+        name: string;
+        type: string;
+    } | null>(null);
 
     const handleAccept = (assignmentId: number) => {
         setSubmittingId(assignmentId);
@@ -2418,22 +2782,45 @@ function CurrentAssignments({
                                         )}
                                         {capabilities?.reassign_resources &&
                                             !isRejectingThis && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="quiet"
-                                                    disabled={isSubmittingThis}
-                                                    aria-busy={isSubmittingThis}
-                                                    onClick={() =>
-                                                        handleEndPersonnel(
-                                                            assignment.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <X className="h-3.5 w-3.5 text-danger" />
-                                                    {isSubmittingThis
-                                                        ? 'Ending…'
-                                                        : 'End assignment'}
-                                                </Button>
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        disabled={
+                                                            isSubmittingThis
+                                                        }
+                                                        onClick={() =>
+                                                            setReassignmentTarget(
+                                                                {
+                                                                    kind: 'personnel',
+                                                                    id: assignment.id,
+                                                                    name: assignment.name,
+                                                                    type: assignment.type,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        Reassign
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="quiet"
+                                                        disabled={
+                                                            isSubmittingThis
+                                                        }
+                                                        aria-busy={
+                                                            isSubmittingThis
+                                                        }
+                                                        onClick={() =>
+                                                            handleEndPersonnel(
+                                                                assignment.id,
+                                                            )
+                                                        }
+                                                    >
+                                                        <X className="h-3.5 w-3.5 text-danger" />
+                                                        End
+                                                    </Button>
+                                                </div>
                                             )}
                                     </div>
                                 </div>
@@ -2505,23 +2892,21 @@ function CurrentAssignments({
                                                         errors.reason}
                                                 </p>
                                             )}
-                                            {responseError &&
-                                                isUserAssignment && (
-                                                    <p
-                                                        id={`assignment-response-${assignment.id}-error`}
-                                                        className="mt-1 text-xs text-danger"
-                                                        role="alert"
-                                                        aria-live="assertive"
-                                                        aria-atomic="true"
-                                                    >
-                                                        {responseError}
-                                                    </p>
-                                                )}
                                         </div>
-                                        <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:justify-end">
+                                        <div className="flex gap-2">
                                             <Button
-                                                type="button"
-                                                size="md"
+                                                size="sm"
+                                                variant="primary"
+                                                className="bg-danger text-white hover:bg-danger/90"
+                                                disabled={isSubmittingThis}
+                                                type="submit"
+                                            >
+                                                {isSubmittingThis
+                                                    ? 'Rejecting…'
+                                                    : 'Confirm rejection'}
+                                            </Button>
+                                            <Button
+                                                size="sm"
                                                 variant="quiet"
                                                 disabled={isSubmittingThis}
                                                 onClick={() => {
@@ -2529,22 +2914,9 @@ function CurrentAssignments({
                                                     setReason('');
                                                     setReasonError(null);
                                                 }}
+                                                type="button"
                                             >
                                                 Cancel
-                                            </Button>
-                                            <Button
-                                                type="submit"
-                                                size="md"
-                                                variant="danger"
-                                                disabled={
-                                                    isSubmittingThis ||
-                                                    !reason.trim()
-                                                }
-                                                aria-busy={isSubmittingThis}
-                                            >
-                                                {isSubmittingThis
-                                                    ? 'Rejecting…'
-                                                    : 'Confirm rejection'}
                                             </Button>
                                         </div>
                                     </form>
@@ -2552,42 +2924,312 @@ function CurrentAssignments({
                             </li>
                         );
                     })}
-                    {job.asset_assignments.map((assignment) => (
-                        <li
-                            key={`asset-${assignment.id}`}
-                            className="flex flex-wrap items-start gap-3 px-4 py-3"
-                        >
-                            <ResourceIcon icon="asset" />
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium">
-                                    {assignment.code} · {assignment.name}
-                                </p>
-                                <p className="mt-0.5 text-xs text-ink-soft">
-                                    {humanize(assignment.type)}
-                                </p>
-                            </div>
-                            {capabilities?.reassign_resources && (
-                                <Button
-                                    size="sm"
-                                    className="w-full max-w-full sm:ml-auto sm:w-auto"
-                                    variant="quiet"
-                                    disabled={submittingId === assignment.id}
-                                    aria-busy={submittingId === assignment.id}
-                                    onClick={() =>
-                                        handleEndAsset(assignment.id)
-                                    }
-                                >
-                                    <X className="h-3.5 w-3.5 text-danger" />
-                                    {submittingId === assignment.id
-                                        ? 'Ending…'
-                                        : 'End assignment'}
-                                </Button>
-                            )}
-                        </li>
-                    ))}
+
+                    {job.asset_assignments.map((assignment) => {
+                        const isSubmittingThis = submittingId === assignment.id;
+
+                        return (
+                            <li
+                                key={`asset-${assignment.id}`}
+                                className="flex items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <ResourceIcon icon="asset" />
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-medium">
+                                            {assignment.code}
+                                        </p>
+                                        <p className="mt-0.5 truncate text-xs text-ink-soft">
+                                            {assignment.name ||
+                                                humanize(assignment.type)}
+                                        </p>
+                                    </div>
+                                </div>
+                                {capabilities?.reassign_resources && (
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            disabled={isSubmittingThis}
+                                            onClick={() =>
+                                                setReassignmentTarget({
+                                                    kind: 'asset',
+                                                    id: assignment.id,
+                                                    name: assignment.code,
+                                                    type: assignment.type,
+                                                })
+                                            }
+                                        >
+                                            Reassign
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="quiet"
+                                            disabled={isSubmittingThis}
+                                            aria-busy={isSubmittingThis}
+                                            onClick={() =>
+                                                handleEndAsset(assignment.id)
+                                            }
+                                        >
+                                            <X className="h-3.5 w-3.5 text-danger" />
+                                            End
+                                        </Button>
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
+
+            {reassignmentTarget && (
+                <ReassignmentModal
+                    job={job}
+                    target={reassignmentTarget}
+                    personnelCandidates={personnelCandidates}
+                    assetCandidates={assetCandidates}
+                    onClose={() => setReassignmentTarget(null)}
+                />
+            )}
         </Panel>
+    );
+}
+
+function ReassignmentModal({
+    job,
+    target,
+    personnelCandidates,
+    assetCandidates,
+    onClose,
+}: {
+    job: DispatchDetailPageProps['job'];
+    target: {
+        kind: 'personnel' | 'asset';
+        id: number;
+        name: string;
+        type: string;
+    };
+    personnelCandidates: PersonnelCandidateViewModel[];
+    assetCandidates: AssetCandidateViewModel[];
+    onClose: () => void;
+}) {
+    const [selectedCandidateId, setSelectedCandidateId] = useState<number | ''>(
+        '',
+    );
+    const [reason, setReason] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const eligiblePersonnel = personnelCandidates.filter(
+        (c) =>
+            c.eligible &&
+            c.assignment_type === target.type &&
+            !job.personnel_assignments.some((p) => p.user_id === c.id),
+    );
+    const eligibleAssets = assetCandidates.filter(
+        (c) =>
+            c.eligible &&
+            c.assignment_type === target.type &&
+            !job.asset_assignments.some((a) => a.operational_asset_id === c.id),
+    );
+
+    const handleSubmit = (e: FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setError(null);
+
+        const payload: Record<string, unknown> = {
+            version: job.version,
+            reason: reason.trim() || undefined,
+        };
+
+        if (target.kind === 'personnel') {
+            payload.end_personnel_assignment_ids = [target.id];
+
+            if (selectedCandidateId !== '') {
+                const candidate = personnelCandidates.find(
+                    (c) => c.id === selectedCandidateId,
+                );
+
+                if (candidate) {
+                    payload.personnel = [
+                        {
+                            user_id: candidate.id,
+                            assignment_type: candidate.assignment_type,
+                        },
+                    ];
+                }
+            }
+        } else {
+            payload.end_asset_assignment_ids = [target.id];
+
+            if (selectedCandidateId !== '') {
+                const candidate = assetCandidates.find(
+                    (c) => c.id === selectedCandidateId,
+                );
+
+                if (candidate) {
+                    payload.assets = [
+                        {
+                            operational_asset_id: candidate.id,
+                            assignment_type: candidate.assignment_type,
+                        },
+                    ];
+                }
+            }
+        }
+
+        router.post(
+            `/operations/dispatch-jobs/${job.id}/reassign`,
+            payload as any,
+            {
+                preserveScroll: true,
+                onSuccess: () => onClose(),
+                onError: (errs) => {
+                    setError(
+                        errs.reassignment ||
+                            errs.resources ||
+                            errs.version ||
+                            'Reassignment could not be saved.',
+                    );
+                },
+                onFinish: () => setSubmitting(false),
+            },
+        );
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reassignment-modal-title"
+        >
+            <div className="w-full max-w-lg rounded-xl border border-line bg-surface p-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-line pb-3">
+                    <h3
+                        id="reassignment-modal-title"
+                        className="text-base font-semibold text-ink"
+                    >
+                        Reassign {target.name}
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded p-1 text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    >
+                        <X className="h-5 w-5" aria-hidden="true" />
+                        <span className="sr-only">
+                            Close reassignment modal
+                        </span>
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                    <p className="text-xs text-ink-soft">
+                        Ending active {target.kind} assignment for{' '}
+                        <span className="font-semibold text-ink">
+                            {target.name}
+                        </span>{' '}
+                        ({humanize(target.type)}). You can optionally assign an
+                        eligible replacement.
+                    </p>
+
+                    {error && (
+                        <div
+                            className="rounded-md border border-danger bg-danger-soft p-3 text-xs text-danger"
+                            role="alert"
+                        >
+                            {error}
+                        </div>
+                    )}
+
+                    <div>
+                        <label
+                            htmlFor="replacement-candidate"
+                            className="block text-xs font-semibold text-ink"
+                        >
+                            Replacement{' '}
+                            {target.kind === 'personnel'
+                                ? 'personnel'
+                                : 'asset'}{' '}
+                            (optional)
+                        </label>
+                        <select
+                            id="replacement-candidate"
+                            value={selectedCandidateId}
+                            onChange={(e) =>
+                                setSelectedCandidateId(
+                                    e.target.value === ''
+                                        ? ''
+                                        : Number(e.target.value),
+                                )
+                            }
+                            className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+                        >
+                            <option value="">
+                                No replacement (end assignment only)
+                            </option>
+                            {target.kind === 'personnel'
+                                ? eligiblePersonnel.map((c) => (
+                                      <option key={c.id} value={c.id}>
+                                          {c.name} ({c.account_status.label})
+                                      </option>
+                                  ))
+                                : eligibleAssets.map((c) => (
+                                      <option key={c.id} value={c.id}>
+                                          {c.code} · {c.name} (
+                                          {c.readiness.label})
+                                      </option>
+                                  ))}
+                        </select>
+                        {(target.kind === 'personnel'
+                            ? eligiblePersonnel.length === 0
+                            : eligibleAssets.length === 0) && (
+                            <p className="mt-1 text-xs text-ink-soft">
+                                No other eligible {humanize(target.type)}{' '}
+                                resources available for this scheduled window.
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="reassignment-reason"
+                            className="block text-xs font-semibold text-ink"
+                        >
+                            Reassignment reason / notes
+                        </label>
+                        <textarea
+                            id="reassignment-reason"
+                            rows={2}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="State the reason for reassigning this resource..."
+                            className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-brand focus:outline-none"
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2 border-t border-line pt-3">
+                        <Button
+                            type="button"
+                            variant="quiet"
+                            onClick={onClose}
+                            disabled={submitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={submitting}
+                        >
+                            {submitting ? 'Saving…' : 'Confirm reassignment'}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
 
@@ -2978,70 +3620,56 @@ function ResourceIcon({ icon }: { icon: 'personnel' | 'asset' }) {
 }
 
 function credentialSummary(candidate: PersonnelCandidateViewModel) {
-    if (candidate.credential.status === 'not_required') {
-        return 'Credential: no additional credential required';
+    if (
+        !candidate.credential.kind ||
+        candidate.credential.status === 'not_required'
+    ) {
+        return 'Standard operational qualification checked';
     }
 
     const expiry = candidate.credential.expires_at
-        ? ` · Expires ${formatDate(candidate.credential.expires_at)}`
+        ? ` · Expires ${candidate.credential.expires_at}`
         : '';
 
-    return `Credential: ${candidate.credential.label} · ${humanize(candidate.credential.status)}${expiry}`;
-}
-
-function formatDate(value: string) {
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeZone: 'UTC',
-    }).format(new Date(`${value}T00:00:00Z`));
+    return `Credential: ${candidate.credential.label} (${humanize(candidate.credential.status)})${expiry}`;
 }
 
 function formatResourceCounts(personnelCount: number, assetCount: number) {
-    return `${personnelCount} ${personnelCount === 1 ? 'person' : 'people'} · ${assetCount} ${assetCount === 1 ? 'asset' : 'assets'}`;
+    return `${personnelCount} ${personnelCount === 1 ? 'person' : 'people'}, ${assetCount} asset${assetCount === 1 ? '' : 's'}`;
 }
 
 function isAssignmentSuccessFlash(flash: WorkspaceFlash | null) {
+    if (!flash || flash.tone !== 'success') {
+        return false;
+    }
+
     return (
-        flash?.tone === 'success' &&
-        flash.message.startsWith('Resources were assigned to ')
+        flash.message.includes('Resources were assigned') ||
+        flash.message.includes('Assignments were updated')
     );
 }
 
 function getSafeReturnTo() {
     if (typeof window === 'undefined') {
-        return '/?view=dispatch';
+        return '/';
     }
 
-    const value = new URLSearchParams(window.location.search).get('return_to');
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('return_to');
 
-    if (value && value.startsWith('/') && !value.startsWith('//')) {
-        return value;
+    if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
+        return '/';
     }
 
-    return '/?view=dispatch';
+    return returnTo;
 }
 
 export function CandidateListSkeleton() {
     return (
-        <div
-            className="grid gap-3 sm:grid-cols-2"
-            aria-label="Loading candidate options"
-        >
-            {[1, 2, 3, 4].map((item) => (
-                <div
-                    key={item}
-                    className="flex flex-col justify-between rounded-xl border border-line p-3.5"
-                >
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1.5">
-                            <Skeleton className="h-4 w-28" />
-                            <Skeleton className="h-3 w-20" />
-                        </div>
-                        <Skeleton className="h-5 w-20 rounded-full" />
-                    </div>
-                    <Skeleton className="mt-3 h-3 w-36" />
-                </div>
-            ))}
+        <div className="space-y-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
         </div>
     );
 }

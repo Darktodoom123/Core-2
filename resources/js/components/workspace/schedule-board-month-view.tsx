@@ -29,7 +29,7 @@ export interface ScheduleBoardMonthViewProps {
     onSelectJob: (jobId: number) => void;
     category: ScheduleBoardCategory;
     conflictsOnly: boolean;
-    derivedConflicts: ScheduleBoardConflict[];
+    derivedConflicts: readonly ScheduleBoardConflict[];
     assets?: AssetViewModel[];
     users?: WorkspaceUserViewModel[];
 }
@@ -565,7 +565,7 @@ function conflictAppliesToJob(
 
 function countConflictsForJobs(
     jobs: DispatchJobViewModel[],
-    conflicts: ScheduleBoardConflict[],
+    conflicts: readonly ScheduleBoardConflict[],
 ): number {
     return conflicts.filter((conflict) =>
         jobs.some((job) => conflictAppliesToJob(conflict, job)),

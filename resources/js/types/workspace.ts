@@ -723,6 +723,11 @@ export interface DispatchDetailPageProps {
         blockers: string[];
         approval_required: boolean;
         approval_status: ApprovalStatusValue | null;
+        approval_request_id?: number | null;
+        approval_kind?: string | null;
+        approval_reason?: string | null;
+        approval_notes?: string | null;
+        can_decide_approval?: boolean;
     };
     progression: {
         current: StatusViewModel<DispatchStatusValue>;
