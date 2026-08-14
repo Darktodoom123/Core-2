@@ -5,6 +5,7 @@ namespace App\Modules\Rental\Models;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RentalReservationItem extends Model
 {
@@ -25,5 +26,11 @@ class RentalReservationItem extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(OperationalAsset::class, 'operational_asset_id');
+    }
+
+    /** @return HasMany<RentalOperatorAssignment, $this> */
+    public function operatorAssignments(): HasMany
+    {
+        return $this->hasMany(RentalOperatorAssignment::class);
     }
 }

@@ -20,7 +20,7 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('proves the thirteen server-owned tables have RLS, no policies, and no Data API grants', function (): void {
+it('proves the fourteen server-owned tables have RLS, no policies, and no Data API grants', function (): void {
     $tables = rentalSalesServerOnlyTables();
     $roles = ['anon', 'authenticated'];
     $tablePrivileges = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'];
@@ -117,10 +117,10 @@ it('reapplies the server-only hardening on upgrade and never restores grants on 
     $roles = ['anon', 'authenticated'];
     $migration = require base_path('database/migrations/2026_08_12_100001_harden_rental_sales_server_only_tables.php');
 
-    foreach (rentalSalesServerOnlyTables() as $table) {
+    foreach (rentalSalesLegacyServerOnlyTables() as $table) {
         DB::statement('grant all privileges on table "public"."'.$table.'" to "anon", "authenticated"');
     }
-    foreach (rentalSalesExpectedSequences() as $sequence) {
+    foreach (rentalSalesLegacyExpectedSequences() as $sequence) {
         DB::statement('grant all privileges on sequence '.$sequence.' to "anon", "authenticated"');
     }
 
@@ -135,7 +135,7 @@ it('reapplies the server-only hardening on upgrade and never restores grants on 
 
         $migration->down();
 
-        foreach (rentalSalesServerOnlyTables() as $table) {
+        foreach (rentalSalesLegacyServerOnlyTables() as $table) {
             $rls = DB::selectOne(
                 'select c.relrowsecurity as enabled from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = current_schema() and c.relname = ?',
                 [$table],
@@ -146,7 +146,7 @@ it('reapplies the server-only hardening on upgrade and never restores grants on 
             expect((bool) DB::selectOne('select has_table_privilege(?, ?, ?) as allowed', [$role, 'public.sales_orders', 'SELECT'])->allowed)
                 ->toBeFalse("Rollback restored {$role} table access.");
         }
-        foreach (rentalSalesExpectedSequences() as $sequence) {
+        foreach (rentalSalesLegacyExpectedSequences() as $sequence) {
             foreach ($roles as $role) {
                 expect((bool) DB::selectOne('select has_sequence_privilege(?, ?, ?) as allowed', [$role, $sequence, 'USAGE'])->allowed)
                     ->toBeFalse("Rollback restored {$role} sequence access.");
@@ -182,12 +182,41 @@ function rentalSalesServerOnlyTables(): array
         'rental_reservations', 'rental_reservation_items', 'rental_checkouts', 'rental_returns',
         'sales_catalog_items', 'sales_quotes', 'sales_quote_items', 'sales_orders',
         'sales_order_items', 'sales_inventory_ledger', 'ownership_transfers',
+        'report_exports', 'gpt_recommendation_metrics', 'rental_operator_assignments',
+    ];
+}
+
+/** @return list<string> */
+function rentalSalesLegacyServerOnlyTables(): array
+{
+    return [
+        'rental_reservations', 'rental_reservation_items', 'rental_checkouts', 'rental_returns',
+        'sales_catalog_items', 'sales_quotes', 'sales_quote_items', 'sales_orders',
+        'sales_order_items', 'sales_inventory_ledger', 'ownership_transfers',
         'report_exports', 'gpt_recommendation_metrics',
     ];
 }
 
 /** @return list<string> */
 function rentalSalesExpectedSequences(): array
+{
+    $tables = [
+        'rental_reservations', 'rental_reservation_items', 'rental_checkouts', 'rental_returns',
+        'sales_catalog_items', 'sales_quotes', 'sales_quote_items', 'sales_orders',
+        'sales_order_items', 'sales_inventory_ledger', 'ownership_transfers',
+        'gpt_recommendation_metrics', 'rental_operator_assignments',
+    ];
+
+    return array_map(
+        static fn (string $table): string => (string) DB::selectOne(
+            "select pg_get_serial_sequence('public.{$table}', 'id') as qualified_name",
+        )->qualified_name,
+        $tables,
+    );
+}
+
+/** @return list<string> */
+function rentalSalesLegacyExpectedSequences(): array
 {
     $tables = [
         'rental_reservations', 'rental_reservation_items', 'rental_checkouts', 'rental_returns',

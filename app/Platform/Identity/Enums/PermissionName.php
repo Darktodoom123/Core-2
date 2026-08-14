@@ -61,7 +61,9 @@ enum PermissionName: string
     case RentalView = 'rental.view';
     case RentalCreate = 'rental.create';
     case RentalApprove = 'rental.approve';
+    case RentalAssignOperator = 'rental.assign_operator';
     case RentalCheckout = 'rental.checkout';
+    case RentalOperate = 'rental.operate';
     case RentalReturn = 'rental.return';
     case SalesView = 'sales.view';
     case SalesCatalogManage = 'sales.catalog_manage';

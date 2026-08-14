@@ -33,6 +33,7 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         'attachments',
         'rental_reservations',
         'rental_reservation_items',
+        'rental_operator_assignments',
         'rental_checkouts',
         'rental_returns',
         'sales_catalog_items',
@@ -53,6 +54,7 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
         ->and(Schema::hasColumns('maintenance_work_orders', ['scheduled_at', 'next_due_at', 'release_verified_by', 'release_checklist']))->toBeTrue()
         ->and(Schema::hasColumns('rental_reservations', ['reference', 'client_id', 'created_by', 'approved_by', 'dispatch_job_id', 'status', 'start_date', 'end_date', 'delivery_location', 'fulfillment_mode', 'notes', 'total_cents', 'deleted_at']))->toBeTrue()
         ->and(Schema::hasColumns('rental_reservation_items', ['rental_reservation_id', 'operational_asset_id', 'quantity', 'rate_cents', 'line_total_cents']))->toBeTrue()
+        ->and(Schema::hasColumns('rental_operator_assignments', ['rental_reservation_id', 'rental_reservation_item_id', 'user_id', 'operator_type', 'assigned_by', 'active_from', 'active_until']))->toBeTrue()
         ->and(Schema::hasColumns('rental_checkouts', ['rental_reservation_id', 'checked_out_by', 'checked_out_at', 'condition_before', 'notes']))->toBeTrue()
         ->and(Schema::hasColumns('rental_returns', ['rental_reservation_id', 'returned_by', 'returned_at', 'condition_after', 'damage_notes']))->toBeTrue()
         ->and(Schema::hasColumns('sales_catalog_items', ['sku', 'name', 'description', 'unit_price_cents', 'quantity_on_hand', 'quantity_reserved', 'operational_asset_id', 'status']))->toBeTrue()
@@ -65,6 +67,8 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
 
     expect(collect(Schema::getIndexes('rental_reservations'))->pluck('name'))
         ->toContain('rental_reservations_reference_unique')
+        ->and(collect(Schema::getIndexes('rental_operator_assignments'))->pluck('name'))
+        ->toContain('rental_operator_assignments_rental_reservation_item_id_user_id_unique')
         ->and(collect(Schema::getIndexes('rental_checkouts'))->pluck('name'))
         ->toContain('rental_checkouts_rental_reservation_id_unique')
         ->and(collect(Schema::getIndexes('rental_returns'))->pluck('name'))

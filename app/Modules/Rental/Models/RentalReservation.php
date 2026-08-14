@@ -43,6 +43,12 @@ class RentalReservation extends Model
         return $this->hasMany(RentalReservationItem::class);
     }
 
+    /** @return HasMany<RentalOperatorAssignment, $this> */
+    public function operatorAssignments(): HasMany
+    {
+        return $this->hasMany(RentalOperatorAssignment::class);
+    }
+
     /** @return HasOne<RentalCheckout, $this> */
     public function checkout(): HasOne
     {
