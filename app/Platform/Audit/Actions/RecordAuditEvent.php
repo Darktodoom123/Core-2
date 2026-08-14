@@ -2,12 +2,13 @@
 
 namespace App\Platform\Audit\Actions;
 
+use App\Platform\Audit\Contracts\AuditEventRecorder;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-final class RecordAuditEvent
+final class RecordAuditEvent implements AuditEventRecorder
 {
     /**
      * @param  array<string, mixed>|null  $before

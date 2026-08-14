@@ -7,7 +7,18 @@ use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $attempt_id
+ * @property string $workspace_key
+ * @property int $version
+ * @property DispatchPlanVersionStatus $status
+ * @property array<string, mixed> $snapshot
+ * @property Carbon|null $scheduled_start
+ * @property Carbon|null $scheduled_end
+ */
 class DispatchPlanVersion extends Model
 {
     public const CREATED_AT = 'created_at';

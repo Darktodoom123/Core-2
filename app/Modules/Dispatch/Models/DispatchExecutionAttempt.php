@@ -7,9 +7,27 @@ use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $handoff_id
+ * @property string $workspace_key
+ * @property int $attempt_number
+ * @property DispatchAttemptStatus $status
+ * @property Carbon|null $scheduled_start
+ * @property Carbon|null $scheduled_end
+ * @property int $version
+ * @property Carbon|null $archived_at
+ * @property int|null $legacy_dispatch_job_id
+ * @property int|null $created_by
+ * @property DispatchHandoff $handoff
+ */
 class DispatchExecutionAttempt extends Model
 {
+    /** The active command envelope's idempotency claim; never persisted as an Eloquent attribute. */
+    public ?int $v2IdempotencyKeyId = null;
+
     protected $fillable = [
         'handoff_id', 'workspace_key', 'attempt_number', 'replaces_attempt_id', 'legacy_dispatch_job_id',
         'status', 'legacy_status', 'compatibility_state', 'scheduled_start', 'scheduled_end', 'version',

@@ -6,6 +6,12 @@ use App\Platform\Idempotency\Models\CommandLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $action_name
+ * @property string $payload_hash
+ * @property string $status
+ * @property array<string, mixed>|null $response_payload
+ */
 class DispatchIdempotencyKey extends Model
 {
     protected $fillable = [

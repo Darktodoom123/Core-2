@@ -7,7 +7,17 @@ use App\Modules\Dispatch\Enums\DispatchAssignmentOfferStatus;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $attempt_id
+ * @property int $plan_version_id
+ * @property int $user_id
+ * @property bool $is_mandatory
+ * @property DispatchAssignmentOfferStatus $status
+ * @property Carbon|null $accepted_at
+ */
 class DispatchAssignmentOffer extends Model
 {
     protected $fillable = [
