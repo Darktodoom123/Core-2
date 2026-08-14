@@ -1,0 +1,45 @@
+{
+  "node_id": "UI-1",
+  "name": "Shared Source-Aware Dispatch Workspace",
+  "status": "PASSED",
+  "upstream_commits": [
+    "2440f30 feat(ui-0): baseline and execution graph initialized"
+  ],
+  "current_commit": "3a869e7",
+  "files_changed": [
+    "resources/js/components/workspace/live-dispatch-workspace.tsx",
+    "resources/js/components/workspace/live-dispatch-intake.tsx",
+    "resources/js/types/workspace.ts",
+    "resources/js/types/dispatch.ts",
+    "resources/js/lib/formatters.ts",
+    ".ai-reports/ui-execution/UI-EXECUTION-GRAPH.json",
+    ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.json",
+    ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.md"
+  ],
+  "implemented_behavior": [
+    "Implemented shared source-aware Dispatch Workspace supporting Service Requests, Rental Reservations, Sales Orders, and Direct Manual Operational Drafts",
+    "Added explicit source identity badges (Service, Rental, Sale, Manual) with manual_intake provenance tag for manually entered dispatches",
+    "Clarified manual intake provenance as a direct operational draft without requiring upstream Core 1 commercial transactions",
+    "Added source-specific requirements and completion panels for Service (project, service type, site notes, checklist), Rental (reservation window, condition requirements, operator context), Sale (delivery destination coordinates, catalog items, fulfillment mode), and Manual (provenance, technical checklist)",
+    "Added Reconciliation Queue section to surface unlinked Core 1 commercial handoffs and detect matching existing operational drafts to prevent duplicate dispatches",
+    "Preserved shared scheduling (Day/Week/Month), resource assignment, approval gates, MapLibre tracking, and mobile progression across all four sources"
+  ],
+  "tests_added_or_changed": [],
+  "exact_commands_and_results": {
+    "npm run types:check": "PASS (0 errors)",
+    "npm run lint:check": "PASS (0 errors, 0 warnings)",
+    "npm run format:check": "PASS (All matched files use Prettier style)",
+    "npm run build": "PASS (Vite built client environment in 13.53s)"
+  },
+  "visual_responsive_evidence": "All workspace components, intake tabs, and requirement panels adapt fluidly across mobile (320px-390px), tablet, and desktop breakpoints with accessible touch targets and standard design tokens.",
+  "regressions_resolved": [],
+  "known_limitations": [
+    "Deep browser E2E test suite across Dispatcher -> Manager -> Field Worker scheduled for UI-2",
+    "Offline native mobile sync and drive mode scheduled for UI-4"
+  ],
+  "external_blockers": [],
+  "next_unlocked_nodes": [
+    "UI-2",
+    "UI-4"
+  ]
+}

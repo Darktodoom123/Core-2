@@ -3,13 +3,13 @@
   "project": "Core Transaction 2",
   "name": "UI Execution Dependency Graph",
   "version": "1.0.0",
-  "updated_at": "2026-08-15T00:38:00+08:00",
-  "active_node": "UI-0",
+  "updated_at": "2026-08-14T16:54:29.481Z",
+  "active_node": "UI-2",
   "nodes": [
     {
       "id": "UI-0",
       "title": "Baseline and Execution Graph",
-      "state": "RUNNING",
+      "state": "PASSED",
       "dependencies": [],
       "ownership": [
         ".ai-reports/ui-execution/UI-EXECUTION-GRAPH.json",
@@ -44,8 +44,10 @@
     {
       "id": "UI-1",
       "title": "Shared Source-Aware Dispatch Workspace",
-      "state": "PENDING",
-      "dependencies": ["UI-0"],
+      "state": "PASSED",
+      "dependencies": [
+        "UI-0"
+      ],
       "ownership": [
         "resources/js/pages/workspace.tsx",
         "resources/js/components/workspace/live-dispatch-workspace.tsx",
@@ -70,13 +72,15 @@
       ],
       "handoff_json": ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.json",
       "handoff_md": ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.md",
-      "commit": null
+      "commit": "3a869e7"
     },
     {
       "id": "UI-2",
       "title": "Dispatch Lifecycle & Scheduling",
-      "state": "PENDING",
-      "dependencies": ["UI-1"],
+      "state": "READY",
+      "dependencies": [
+        "UI-1"
+      ],
       "ownership": [
         "resources/js/pages/dispatch-detail.tsx",
         "resources/js/components/workspace/schedule-board-week-view.tsx",
@@ -106,7 +110,9 @@
       "id": "UI-3",
       "title": "Shared Platform Surfaces",
       "state": "PENDING",
-      "dependencies": ["UI-2"],
+      "dependencies": [
+        "UI-2"
+      ],
       "ownership": [
         "resources/js/components/workspace/reports-workspace-section.tsx",
         "resources/js/components/workspace/notifications-workspace-section.tsx",
@@ -136,8 +142,10 @@
     {
       "id": "UI-4",
       "title": "Native Field Workflows",
-      "state": "PENDING",
-      "dependencies": ["UI-1"],
+      "state": "READY",
+      "dependencies": [
+        "UI-1"
+      ],
       "ownership": [
         "packages/field-mobile/"
       ],
@@ -166,7 +174,10 @@
       "id": "UI-5",
       "title": "Prototype/Live UI Convergence",
       "state": "PENDING",
-      "dependencies": ["UI-3", "UI-4"],
+      "dependencies": [
+        "UI-3",
+        "UI-4"
+      ],
       "ownership": [
         "resources/js/pages/operations.tsx",
         "resources/js/components/surfaces/",
@@ -192,7 +203,9 @@
       "id": "UI-6",
       "title": "Responsive, Accessibility & Performance Hardening",
       "state": "PENDING",
-      "dependencies": ["UI-5"],
+      "dependencies": [
+        "UI-5"
+      ],
       "ownership": [
         "resources/css/app.css",
         "resources/js/components/ui/",
@@ -220,7 +233,9 @@
       "id": "UI-7",
       "title": "Final Verification and Release Readiness",
       "state": "PENDING",
-      "dependencies": ["UI-6"],
+      "dependencies": [
+        "UI-6"
+      ],
       "ownership": [
         "Docs/",
         ".ai-reports/"

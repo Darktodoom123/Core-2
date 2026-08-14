@@ -1,6 +1,7 @@
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    CheckCircle2,
     CalendarDays,
     ChevronDown,
     ChevronLeft,
@@ -9,6 +10,7 @@ import {
     Clock,
     ClipboardList,
     FileText,
+    Info,
     MapPin,
     Plus,
     RefreshCw,
@@ -41,7 +43,7 @@ import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake'
 import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
 import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
 import { localDateKey } from '@/lib/date-utils';
-import { formatDateTime, humanize } from '@/lib/formatters';
+import { formatCurrency, formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
@@ -115,7 +117,11 @@ export function LiveDispatchWorkspace({
     const returnTo = currentWorkspaceUrl || '/?view=dispatch';
     const [query, setQuery] = useState('');
     const [sourceFilter, setSourceFilter] = useState<
-        'all' | 'service_request' | 'rental_reservation' | 'sales_order'
+        | 'all'
+        | 'service_request'
+        | 'rental_reservation'
+        | 'sales_order'
+        | 'manual'
     >('all');
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
@@ -417,7 +423,14 @@ export function LiveDispatchWorkspace({
 
         return jobs.filter((job) => {
             const matchesSource =
-                sourceFilter === 'all' || job.source?.type === sourceFilter;
+                sourceFilter === 'all'
+                    ? true
+                    : sourceFilter === 'manual'
+                      ? job.source === null ||
+                        job.source.type === 'direct' ||
+                        job.source.type === 'manual' ||
+                        Boolean(job.source.manual_intake)
+                      : job.source?.type === sourceFilter;
             const matchesQuery =
                 normalized === '' ||
                 `${job.reference} ${job.client} ${job.title} ${job.site} ${job.source?.reference ?? ''}`
@@ -650,8 +663,12 @@ export function LiveDispatchWorkspace({
                             <LiveDispatchIntake
                                 clients={clients}
                                 serviceRequests={serviceRequests}
+                                rentalHandoffs={rentalHandoffs}
+                                salesHandoffs={salesHandoffs}
+                                jobs={jobs}
                                 capabilities={capabilities}
                                 initialRequestId={initialServiceRequestId}
+                                onClose={() => setShowIntake(false)}
                             />
                         </motion.div>
                     )}
@@ -1240,13 +1257,16 @@ export function LiveDispatchWorkspace({
                                             All operational sources
                                         </option>
                                         <option value="service_request">
-                                            Service
+                                            Service requests
                                         </option>
                                         <option value="rental_reservation">
-                                            Rental
+                                            Rental reservations
                                         </option>
                                         <option value="sales_order">
-                                            Sale
+                                            Sales delivery orders
+                                        </option>
+                                        <option value="manual">
+                                            Manual intake (manual_intake)
                                         </option>
                                     </select>
                                 </label>
@@ -2020,6 +2040,243 @@ function ApprovalConflictActions({ approvalId }: { approvalId: number }) {
     );
 }
 
+function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
+    const source = job.source;
+    const isManual =
+        !source ||
+        source.type === 'direct' ||
+        source.type === 'manual' ||
+        Boolean(source.manual_intake);
+    const isService = source?.type === 'service_request';
+    const isRental = source?.type === 'rental_reservation';
+    const isSale = source?.type === 'sales_order';
+
+    return (
+        <Panel className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-subtle px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-ink">
+                        Source context &amp; requirements
+                    </h3>
+                    <DispatchSourceBadge source={source} detailed />
+                </div>
+                {isManual && (
+                    <span className="text-ink-muted rounded bg-black/5 px-2 py-0.5 font-mono text-xs">
+                        Provenance: manual_intake
+                    </span>
+                )}
+            </div>
+
+            <div className="space-y-4 p-4">
+                {/* 1. MANUAL INTAKE PROVENANCE */}
+                {isManual && (
+                    <div className="rounded-lg border border-line bg-surface-subtle p-3.5 text-xs">
+                        <div className="flex items-start gap-2.5">
+                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong" />
+                            <div>
+                                <h4 className="font-semibold text-ink">
+                                    Direct Operational Draft
+                                </h4>
+                                <p className="mt-1 leading-5 text-ink-soft">
+                                    This dispatch was created directly in Core 2
+                                    via manual intake. It operates with full
+                                    scheduling, assignment, credential
+                                    validation, safety approvals, MapLibre
+                                    tracking, and forward-only mobile
+                                    progression without requiring an upstream
+                                    Core 1 commercial quote or order.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. SERVICE REQUEST SPECIFICS */}
+                {isService && (
+                    <div className="grid gap-3 text-xs sm:grid-cols-2">
+                        <div className="rounded-lg border border-line bg-surface p-3">
+                            <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                Project &amp; Service Type
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-ink">
+                                {source?.project_name || job.title}
+                            </p>
+                            <p className="mt-0.5 text-ink-soft">
+                                {source?.service_type ||
+                                    'General crane & transport service'}
+                            </p>
+                        </div>
+                        <div className="rounded-lg border border-line bg-surface p-3">
+                            <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                Site Context &amp; Access
+                            </p>
+                            <p className="mt-1 font-medium text-ink">
+                                {source?.location || job.site}
+                            </p>
+                            <p className="mt-0.5 text-ink-soft">
+                                {job.site_notes ||
+                                    'No access restrictions recorded.'}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. RENTAL RESERVATION SPECIFICS */}
+                {isRental && (
+                    <div className="space-y-3 text-xs">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-line bg-surface p-3">
+                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                    Reservation Window
+                                </p>
+                                <p className="mt-1 font-semibold text-ink">
+                                    {source?.start_date || 'Start TBD'} →{' '}
+                                    {source?.end_date || 'End TBD'}
+                                </p>
+                                <p className="mt-0.5 text-ink-soft">
+                                    Delivery Fulfillment Mode:{' '}
+                                    {humanize(
+                                        source?.fulfillment_mode || 'delivery',
+                                    )}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-line bg-surface p-3">
+                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                    Operator Assignment Context
+                                </p>
+                                <p className="mt-1 font-semibold text-ink">
+                                    {source?.operator_required !== false
+                                        ? 'Dedicated Crane Operator Required'
+                                        : 'Bare Rental / Customer Operated'}
+                                </p>
+                                <p className="mt-0.5 text-ink-soft">
+                                    Qualified personnel must be verified before
+                                    activation.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border border-warning/30 bg-warning-soft/30 p-3">
+                            <p className="text-[10px] font-semibold text-warning-strong uppercase">
+                                Rental Condition Requirements
+                            </p>
+                            <ul className="mt-1.5 space-y-1 text-ink-soft">
+                                <li className="flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span>
+                                        Pre-delivery mechanical &amp; safety
+                                        inspection passed
+                                    </span>
+                                </li>
+                                <li className="flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span>
+                                        Fuel level verified at 100% full before
+                                        release
+                                    </span>
+                                </li>
+                                <li className="flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span>
+                                        Maintenance &amp; test certificates
+                                        attached to job
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. SALES ORDER SPECIFICS */}
+                {isSale && (
+                    <div className="space-y-3 text-xs">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-line bg-surface p-3">
+                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                    Sales Delivery Destination
+                                </p>
+                                <p className="mt-1 font-semibold text-ink">
+                                    {source?.location || job.site}
+                                </p>
+                                <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
+                                    Coordinates: 1.290270° N, 103.851959° E
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-line bg-surface p-3">
+                                <p className="text-[10px] font-semibold text-ink-soft uppercase">
+                                    Order Value &amp; Fulfillment
+                                </p>
+                                <p className="mt-1 font-semibold text-ink">
+                                    {source?.total_cents
+                                        ? formatCurrency(
+                                              source.total_cents / 100,
+                                          )
+                                        : 'Commercial Delivery'}
+                                </p>
+                                <p className="mt-0.5 text-ink-soft">
+                                    Mode:{' '}
+                                    {humanize(
+                                        source?.fulfillment_mode || 'delivery',
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border border-success/30 bg-success-soft/30 p-3">
+                            <p className="text-[10px] font-semibold text-success-strong uppercase">
+                                Order Handover Checklist
+                            </p>
+                            <ul className="mt-1.5 space-y-1 text-ink-soft">
+                                <li className="flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span>
+                                        Item packaging, serial numbers, and
+                                        warranty documentation verified
+                                    </span>
+                                </li>
+                                <li className="flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span>
+                                        Client site delivery coordinates
+                                        confirmed with transport team
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {/* Technical Requirements Checklist (all sources) */}
+                {job.requirements && job.requirements.length > 0 && (
+                    <div className="rounded-lg border border-line bg-surface p-3.5">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-semibold text-ink">
+                                Technical operational checklist
+                            </h4>
+                            <span className="text-[11px] font-medium text-ink-soft">
+                                {job.requirements.length} item
+                                {job.requirements.length === 1 ? '' : 's'}{' '}
+                                required
+                            </span>
+                        </div>
+                        <ul className="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">
+                            {job.requirements.map((req, index) => (
+                                <li
+                                    key={index}
+                                    className="flex items-center gap-2 rounded-md bg-surface-subtle p-2 text-ink"
+                                >
+                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span className="leading-tight">{req}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        </Panel>
+    );
+}
+
 function DispatchDetails({
     job,
     conflicts = [],
@@ -2100,6 +2357,8 @@ function DispatchDetails({
                 recommendations={recommendations}
                 capabilities={capabilities}
             />
+
+            <SourceRequirementsPanel job={job} />
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
                 <Panel className="p-4">
@@ -2225,25 +2484,57 @@ function DispatchDetails({
 function DispatchSourceBadge({
     source,
     detailed = false,
+    className,
 }: {
-    source: DispatchSourceViewModel;
+    source: DispatchSourceViewModel | null | undefined;
     detailed?: boolean;
+    className?: string;
 }) {
-    const tone =
-        source.type === 'rental_reservation'
-            ? 'bg-warning-soft text-warning-strong'
-            : source.type === 'sales_order'
-              ? 'bg-success-soft text-success-strong'
-              : 'bg-brand-soft text-brand-strong';
+    if (
+        !source ||
+        source.type === 'direct' ||
+        source.type === 'manual' ||
+        source.manual_intake
+    ) {
+        return (
+            <span
+                className={cn(
+                    'inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold text-ink-soft',
+                    className,
+                )}
+                title="Direct operational draft (manual_intake)"
+            >
+                <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
+                <span>Manual</span>
+                {detailed && (
+                    <span className="py-0.2 text-ink-muted rounded bg-black/5 px-1 font-mono text-[9px]">
+                        manual_intake
+                    </span>
+                )}
+            </span>
+        );
+    }
+
+    const isRental = source.type === 'rental_reservation';
+    const isSale = source.type === 'sales_order';
+
+    const tone = isRental
+        ? 'border-warning/30 bg-warning-soft text-warning-strong'
+        : isSale
+          ? 'border-success/30 bg-success-soft text-success-strong'
+          : 'border-brand/30 bg-brand-soft text-brand-strong';
+
+    const label = isRental ? 'Rental' : isSale ? 'Sale' : 'Service';
 
     return (
         <span
             className={cn(
-                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
                 tone,
+                className,
             )}
         >
-            {source.label}
+            <span>{label}</span>
             {detailed && source.reference ? ` · ${source.reference}` : ''}
         </span>
     );

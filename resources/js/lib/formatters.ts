@@ -15,3 +15,10 @@ export function formatDateTime(
 export function humanize(value: string): string {
     return value.replaceAll('_', ' ');
 }
+
+export function formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    }).format(amount);
+}
