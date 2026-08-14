@@ -1,26 +1,26 @@
-# Phase 1 AI Verification Responses
+# Phase 2 AI Verification Responses
 
 ## 1. What was changed, and was the scope respected?
 
-Phase 1 added an additive canonical persistence foundation: handoffs, execution attempts, immutable plan versions and approval bindings, assignment offers and lead metadata, idempotency ownership, audit lineage, reconciliation runs/findings, target enums, Eloquent relationships/casts, and a bounded `dispatch:reconcile` command. It also added legacy characterization tests, persistence/retry/finding/constraint coverage, and an explicit legacy-to-target mapping. Legacy tables, columns, runtime reads/writes, and legacy lifecycle values remain active. No V2 command handlers, adapters, API/mobile cutover, UI work, or lifecycle switch was introduced. The approved Phase 7 UI/UX graph amendment was recorded only in the plan, prompts, and handoff.
+Phase 2 added the adapter-facing shared V2 command/query layer on top of the Phase 1 canonical persistence foundation. It includes typed mutation/error/readiness objects; one transaction envelope for workspace-scoped aggregate lock/reload, actor authorization, expected-version validation, idempotency claim/replay/mismatch handling, mutation, audit plus lineage, idempotency completion, and after-commit domain event dispatch; plan submit/approve commands; execution dispatch/progress/cancel/reopen/archive commands; and a read-only deterministic readiness evaluator. The execution enum remains only `draft`, `dispatched`, `en_route`, `arrived`, `working`, `completed`, and `cancelled`; assignment `accepted` remains separate. Existing web/mobile adapters, legacy writes, API routes, and frontend behavior were not cut over. No `on_hold` or job-level `accepted` was added. Scope was respected.
 
 ## 2. What verification was run, and what were the exact results?
 
-- Red-first focused tests failed before implementation on missing canonical tables/command and invalid target status representation.
-- `php artisan test --compact tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php`: PASS, 7 tests, 79 assertions.
-- Relevant Dispatch/source/Rental/Sales/idempotency suite: PASS, 109 tests, 794 assertions.
-- `php artisan test --compact`: PASS, 540 tests, 6,805 assertions.
-- `composer run lint:check`: PASS; `composer run types:check`: PASS, 0 PHPStan errors.
+- `php artisan test --compact tests/Feature/Operations/DispatchV2CommandLayerTest.php`: PASS, 10 tests, 64 assertions.
+- `php artisan test --compact tests/Feature/Operations/DispatchV2CommandLayerTest.php tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php`: PASS, 16 tests, 135 assertions.
+- Full backend `php artisan test --compact`: PASS, 550 tests, 7,061 assertions.
+- `composer run lint:check`: PASS.
+- `composer run types:check`: PASS, 0 PHPStan errors.
 - `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
-- `npm ci --no-audit --no-fund`: PASS; `npm run build`: PASS with existing Vite chunk-size warnings.
-- Isolated SQLite fresh/rollback/reapply migration rehearsal: PASS; legacy `dispatch_jobs` survived rollback and canonical tables were restored on reapply.
-- `git diff --check`: PASS at the verification checkpoint and rerun at commit closeout.
-- PostgreSQL suite: BLOCKED before test execution because `127.0.0.1:5432` refused connections to `core2_rental_sales_test` (4 configured tests). PostgreSQL-only migration checks are driver-guarded.
+- `npm ci --no-audit --no-fund`: PASS; existing dependency deprecation warnings only.
+- `npm run build`: PASS; existing Vite plugin timing and large-chunk warnings only. Frontend source was untouched.
+- `git diff --check`: PASS.
+- `php artisan test --compact -c phpunit.postgresql.xml`: BLOCKED before execution; all 4 configured tests failed because `127.0.0.1:5432` refused connections to `core2_rental_sales_test`. PostgreSQL-only checks remain safely driver-deferred, not claimed as passed.
 
 ## 3. What security and review conclusions are supported by evidence?
 
-The full diff was reviewed read-only for additive compatibility, FK/index/cardinality constraints, source-link symmetry, long Sales references, interval handling, approval-history preservation, offer/lead inference, idempotency owner scoping, audit lineage, archive terminality, raw SQL safety, and retry/resume behavior. Reconciliation writes only canonical/reconciliation tables and does not mutate legacy runtime data. The invalid initial constraint fixture was corrected to satisfy the required preserved legacy-job FK. No critical or high-confidence unresolved issue remains; `composer audit --locked` reports no advisories.
+No critical or high-confidence unresolved issue remains. Authorization is rechecked inside the transaction after a workspace-scoped reload; cross-workspace and missing objects produce the same safe not-found response. Idempotency ownership is workspace/actor/key scoped and its hash covers action, aggregate, expected version, reason, and payload, preventing cross-owner replay and payload substitution. The lock order is handoff, attempt, then plan/approval/offer readiness rows. State, audit, canonical lineage, and idempotency completion roll back together. Audit payloads contain only lifecycle/version and safe lineage identifiers. Successful non-replay commands produce one aggregate audit row and one `ShouldDispatchAfterCommit` domain event; replays produce neither a second mutation nor event. Progress requires the designated accepted lead or an authorized reason-bearing override. The feature flag leaves the legacy path available, and no adapter was switched.
 
-## 4. What remains blocked, and is the graph ready for Phase 2/7?
+## 4. What remains blocked, and is the graph ready for Phase 3/7?
 
-Phase 1 starts at `1b96db43be0c05abfa938631179240bf25abe783` on `codex/dispatch-backend-v2-phase-1` and is implemented in `19ce0da480661ee3a12d85e4f61a51fa56864db8`; it is ready for Phase 2. Phase 7 is not ready because it remains dependency-gated on Phase 6; `READY_GRAPH_COMPLETE=no`. The only external verification blocker is the unavailable configured PostgreSQL server. Existing untouched mobile quality debt remains documented: full `npm run lint:check` reports 39 errors and full `npm run format:check` reports 5 untouched `packages/field-mobile` files. `READY_FOR_PHASE_2=yes`, `READY_FOR_PHASE_7=no`, and `CONTEXT_SPLIT_REQUIRED=no`.
+Phase 2 implementation SHA is `b8a80257cc9751f83303e47a7651efb18c71e425`, from `START_SHA=3f70d9c501c5c0bfbb4f445b286e08a1cbf4f63b` on branch `codex/dispatch-backend-v2-phase-2`. Phase 3 is unblocked: `READY_FOR_PHASE_3=yes`. Phase 4 remains blocked on Phase 3, and Phase 7 remains blocked on Phase 6: `READY_FOR_PHASE_7=no`, `READY_GRAPH_COMPLETE=no`. The external PostgreSQL service is unavailable, and untouched mobile quality debt remains from Phase 1 (39 lint errors and 5 format failures in `packages/field-mobile`). There is no Phase 2-caused blocker. `CONTEXT_SPLIT_REQUIRED=no`. The specifically named Laravel pattern/TDD/security/verification skills were not installed; official Laravel 13 Context7 guidance plus repository tests and static/security review were used instead.

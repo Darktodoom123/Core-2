@@ -381,11 +381,12 @@ For every phase:
 
 ```yaml
 schema: dispatch-backend-v2-phase-status/v1
-branch: codex/dispatch-backend-v2-phase-1
+branch: codex/dispatch-backend-v2-phase-2
 baseline_commit: 1b96db43be0c05abfa938631179240bf25abe783
-current_phase: phase_1
+current_phase: phase_2
 ready_for_phase_1: false
-ready_for_phase_2: true
+ready_for_phase_2: false
+ready_for_phase_3: true
 ready_for_phase_7: false
 phases:
   phase_0:
@@ -408,11 +409,11 @@ phases:
     commit_sha: 19ce0da480661ee3a12d85e4f61a51fa56864db8
     depends_on: [phase_0]
   phase_2:
-    status: ready
-    commit_sha: null
+    status: complete
+    commit_sha: b8a80257cc9751f83303e47a7651efb18c71e425
     depends_on: [phase_1]
   phase_3:
-    status: blocked_on_phase_2
+    status: ready
     commit_sha: null
     depends_on: [phase_2]
   phase_4:
@@ -459,6 +460,35 @@ execution_record:
   ready_for_phase_2: true
   ready_for_phase_7: false
   ready_graph_complete: false
+
+## Phase 2 execution record
+
+Phase 2 implementation starts from the exact Phase 1 session head `3f70d9c501c5c0bfbb4f445b286e08a1cbf4f63b` on `codex/dispatch-backend-v2-phase-1` and is implemented on `codex/dispatch-backend-v2-phase-2`.
+
+- `START_SHA`: `3f70d9c501c5c0bfbb4f445b286e08a1cbf4f63b`
+- `IMPLEMENTATION_SHA`: `b8a80257cc9751f83303e47a7651efb18c71e425` (`feat(dispatch): add v2 lifecycle commands and readiness`)
+- `PHASE_STATUS`: `complete`
+- `READY_FOR_PHASE_3`: `yes`
+- `READY_FOR_PHASE_4_PREREQUISITE`: `yes` (Phase 4 remains dependency-blocked on Phase 3.)
+
+The implementation adds the adapter-facing typed command boundary, one transaction envelope with aggregate lock/reload, authorization, expected-version and idempotency handling, state/audit/lineage atomicity, after-commit domain events, target execution transitions, plan submit/approve commands, deterministic readiness blockers/projections, archive/reopen semantics, feature flags, and focused Phase 2 tests. Existing web/mobile adapters and legacy lifecycle writes were not switched.
+
+Phase 2 verification:
+
+- `php artisan test --compact tests/Feature/Operations/DispatchV2CommandLayerTest.php`: PASS, 10 tests, 64 assertions.
+- `php artisan test --compact tests/Feature/Operations/DispatchV2CommandLayerTest.php tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php`: PASS, 16 tests, 135 assertions.
+- `php artisan test --compact`: PASS, 550 tests, 7,061 assertions.
+- `composer run lint:check`: PASS.
+- `composer run types:check`: PASS, 0 PHPStan errors.
+- `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
+- `npm ci --no-audit --no-fund`: PASS; existing deprecation warnings only.
+- `npm run build`: PASS; existing Vite plugin timing and large-chunk warnings only. Frontend source was not changed.
+- `git diff --check`: PASS.
+- `php artisan test --compact -c phpunit.postgresql.xml`: BLOCKED before execution; all 4 configured tests received connection refused from `127.0.0.1:5432` for `core2_rental_sales_test`. PostgreSQL-specific enforcement remains safely driver-deferred.
+
+Review/security conclusion: no critical or high-confidence unresolved issue. The command boundary rechecks authorization after workspace-scoped reload, uses generic not-found behavior for cross-workspace objects, scopes replay ownership by workspace/owner/key and hashes action/aggregate/version/payload, locks handoff before attempt and readiness children, minimizes audit payloads, writes audit/lineage with state in the same transaction, and dispatches exactly one `ShouldDispatchAfterCommit` aggregate event per successful non-replay mutation. No job-level `accepted`, `on_hold`, adapter cutover, or premature slow effect was added.
+
+Known external/pre-existing blockers remain the unavailable PostgreSQL service and untouched mobile quality debt from Phase 1 (39 lint errors and 5 format failures in `packages/field-mobile`). `CONTEXT_SPLIT_REQUIRED=no`.
 ```
 
 ## Phase 0 execution record
