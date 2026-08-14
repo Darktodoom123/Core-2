@@ -58,6 +58,6 @@ PRODUCT.md
 PENCIL_PROMPTS.md
 skills-lock.json
 storage/framework/testing/
-Docs
+/Docs
 .ai-reports/
 /test-results/
