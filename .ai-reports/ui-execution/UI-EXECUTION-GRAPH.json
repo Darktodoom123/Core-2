@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": "Core Transaction 2",
+  "name": "UI Execution Dependency Graph",
+  "version": "1.0.0",
+  "updated_at": "2026-08-15T00:38:00+08:00",
+  "active_node": "UI-0",
+  "nodes": [
+    {
+      "id": "UI-0",
+      "title": "Baseline and Execution Graph",
+      "state": "RUNNING",
+      "dependencies": [],
+      "ownership": [
+        ".ai-reports/ui-execution/UI-EXECUTION-GRAPH.json",
+        ".ai-reports/ui-execution/UI-EXECUTION-GRAPH.md",
+        ".ai-reports/ui-execution/UI-INVENTORY.md",
+        ".ai-reports/ui-execution/handoffs/UI-0-HANDOFF.json",
+        ".ai-reports/ui-execution/handoffs/UI-0-HANDOFF.md"
+      ],
+      "required_documents": [
+        "AGENTS.md",
+        "Docs/README.md",
+        "Docs/Design.md",
+        "Docs/features.md",
+        "Docs/modules.md",
+        "Docs/phase-0-baseline.md",
+        "Docs/consolidated/01_PRD_Core_Transaction_2.md",
+        "Docs/consolidated/05_Design_System_Specification.md",
+        "Docs/plans/DISPATCH_BACKEND_V2_PHASE_HANDOFF.md",
+        ".ai-reports/ai-verification-questions.md"
+      ],
+      "exit_criteria": [
+        "Comprehensive UI inventory documented for live, partial, prototype, and planned surfaces",
+        "Canonical routes and permissions verified",
+        "Durable graph structure and handoffs directory initialized",
+        "Zero modifications to product code",
+        "Baseline verification suite passes"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-0-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-0-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-1",
+      "title": "Shared Source-Aware Dispatch Workspace",
+      "state": "PENDING",
+      "dependencies": ["UI-0"],
+      "ownership": [
+        "resources/js/pages/workspace.tsx",
+        "resources/js/components/workspace/live-dispatch-workspace.tsx",
+        "resources/js/components/workspace/live-dispatch-intake.tsx",
+        "resources/js/types/workspace.ts",
+        "resources/js/types/dispatch.ts"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/features.md",
+        "Docs/modules.md",
+        "Docs/consolidated/01_PRD_Core_Transaction_2.md",
+        "Docs/consolidated/05_Design_System_Specification.md"
+      ],
+      "exit_criteria": [
+        "Implement shared source-aware Dispatch Workspace",
+        "Support Service, Rental, Sale, and Manual Intake",
+        "Add source identity and manual_intake provenance badge/labels",
+        "Add source-specific requirements and completion panels",
+        "Add reconciliation/linking states for matching Core 1 handoffs",
+        "Preserve shared scheduling, assignment, approval, activation, tracking, and progression"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-1-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-2",
+      "title": "Dispatch Lifecycle & Scheduling",
+      "state": "PENDING",
+      "dependencies": ["UI-1"],
+      "ownership": [
+        "resources/js/pages/dispatch-detail.tsx",
+        "resources/js/components/workspace/schedule-board-week-view.tsx",
+        "resources/js/components/workspace/schedule-board-month-view.tsx",
+        "resources/js/components/surfaces/dispatch-surfaces.tsx",
+        "resources/js/components/surfaces/resource-surfaces.tsx"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/features.md",
+        "Docs/modules.md",
+        "Docs/plans/DISPATCH_BACKEND_V2_PHASE_HANDOFF.md"
+      ],
+      "exit_criteria": [
+        "Complete Day, Week, and Month schedule views",
+        "Complete assignment and conflict review workflows",
+        "Complete approval and activation readiness gates",
+        "Complete reassignment, cancellation, reopen, archive, and restore workflows",
+        "Complete assigned-worker progression interfaces",
+        "Add Dispatcher -> Manager -> Field Worker browser E2E coverage"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-2-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-2-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-3",
+      "title": "Shared Platform Surfaces",
+      "state": "PENDING",
+      "dependencies": ["UI-2"],
+      "ownership": [
+        "resources/js/components/workspace/reports-workspace-section.tsx",
+        "resources/js/components/workspace/notifications-workspace-section.tsx",
+        "resources/js/components/workspace/notification-center-popover.tsx",
+        "resources/js/components/workspace/exports-workspace-section.tsx",
+        "resources/js/components/workspace/gpt-workspace-section.tsx",
+        "resources/js/components/workspace/archive-workspace-section.tsx",
+        "resources/js/components/workspace/live-workspace-sections.tsx"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/features.md",
+        "Docs/modules.md",
+        "Docs/phase-0-baseline.md"
+      ],
+      "exit_criteria": [
+        "Complete reports submission, review, and attachment management",
+        "Complete notifications and read-state controls",
+        "Complete export progress, failure, retry, expiry, and download UX",
+        "Complete GPT pending, review, expired, accepted, rejected, and failed states",
+        "Complete users, roles, credentials, and audit surfaces"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-3-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-3-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-4",
+      "title": "Native Field Workflows",
+      "state": "PENDING",
+      "dependencies": ["UI-1"],
+      "ownership": [
+        "packages/field-mobile/"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/features.md",
+        "Docs/phase-0-baseline.md",
+        "packages/field-mobile/README.md"
+      ],
+      "exit_criteria": [
+        "Complete Today's Work view",
+        "Complete assignment accept/reject workflow",
+        "Complete forward-only progression",
+        "Complete location sharing and sync states",
+        "Implement Route workflow",
+        "Implement heavy-crane Drive mode",
+        "Implement parked-and-secured confirmation",
+        "Implement crane setup safety prerequisites",
+        "Implement technician inspection, maintenance, safe-release, fuel-verification, and handover"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-4-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-4-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-5",
+      "title": "Prototype/Live UI Convergence",
+      "state": "PENDING",
+      "dependencies": ["UI-3", "UI-4"],
+      "ownership": [
+        "resources/js/pages/operations.tsx",
+        "resources/js/components/surfaces/",
+        "resources/js/data/fixtures/"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/phase-0-baseline.md",
+        "Docs/consolidated/05_Design_System_Specification.md"
+      ],
+      "exit_criteria": [
+        "Migrate useful prototype behavior into live UI",
+        "Remove duplicate status vocabularies",
+        "Remove fixture-only writes from production routes",
+        "Retire or clearly label obsolete prototype screens",
+        "Ensure live and prototype screens cannot be confused"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-5-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-5-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-6",
+      "title": "Responsive, Accessibility & Performance Hardening",
+      "state": "PENDING",
+      "dependencies": ["UI-5"],
+      "ownership": [
+        "resources/css/app.css",
+        "resources/js/components/ui/",
+        "resources/js/components/maplibre/",
+        "resources/js/components/live-tracking-map.tsx"
+      ],
+      "required_documents": [
+        "Docs/Design.md",
+        "Docs/consolidated/05_Design_System_Specification.md"
+      ],
+      "exit_criteria": [
+        "Test 320px, 390px, tablet, and desktop layouts",
+        "Verify keyboard navigation, visible focus, 200% zoom, and 44px touch targets",
+        "Verify reduced motion",
+        "Verify statuses do not rely on color alone",
+        "Improve loading, empty, map, error, stale, and blocked-action states",
+        "Optimize large MapLibre and workspace bundles",
+        "Run UI detector and resolve verified findings"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-6-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-6-HANDOFF.md",
+      "commit": null
+    },
+    {
+      "id": "UI-7",
+      "title": "Final Verification and Release Readiness",
+      "state": "PENDING",
+      "dependencies": ["UI-6"],
+      "ownership": [
+        "Docs/",
+        ".ai-reports/"
+      ],
+      "required_documents": [
+        "AGENTS.md",
+        "Docs/README.md",
+        "Docs/features.md",
+        ".ai-reports/ai-verification-questions.md"
+      ],
+      "exit_criteria": [
+        "Run all final tests: composer ci:check, npm run build, npm run types:check, npm run lint:check, npm run test:a11y, npm run test:e2e, npm run test:mobile, npm run types:check:mobile, npm run mobile:doctor, npm run mobile:export:android",
+        "Perform final visual review",
+        "Synchronize canonical documentation",
+        "Complete all AI verification questions",
+        "Produce final UI completion report with required summary fields"
+      ],
+      "handoff_json": ".ai-reports/ui-execution/handoffs/UI-7-HANDOFF.json",
+      "handoff_md": ".ai-reports/ui-execution/handoffs/UI-7-HANDOFF.md",
+      "commit": null
+    }
+  ]
+}

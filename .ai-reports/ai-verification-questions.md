@@ -96,3 +96,43 @@
 - **Additional Pre-Ship Checks for Phase 6**:
   - Operational cutover runbook rehearsals and migration telemetry monitoring.
   - End-to-end multi-device staging verification with real mobile clients on Expo SDK 52.
+
+---
+
+# Documentation Update — Shared Source-Aware Dispatch Model (2026-08-14)
+
+## 1. Did you build this the most secure way?
+
+- This documentation change preserves the existing boundary: Core 2 receives source-aware operational handoffs from Core 1, while Laravel remains authoritative for source-specific authorization, resource eligibility, conflicts, lifecycle transitions, and audit behavior. It does not grant new capabilities or expose Core 1 commercial data.
+
+## 2. Did you build this the most efficient way?
+
+- The Core 1 handoff boundary and shared dispatch backbone are now documented once and reused conceptually across service, rental, and sale workflows, reducing the risk of three conflicting UI implementations or duplicated workflow assumptions.
+
+## 3. What regressions could this introduce?
+
+- Readers could interpret the shared dispatch lifecycle as identical source behavior. The updated wording explicitly preserves rental- and sale-specific requirements and completion evidence, including checkout/return, condition, fulfillment, and ownership transfer.
+
+## 4. What tests do we need to write before we ship this?
+
+- Add or maintain browser/API acceptance coverage proving service, rental, and sale dispatches independently enforce asset availability/readiness, personnel availability/qualification, schedule conflicts, assignment, activation, and their source-specific completion steps.
+
+---
+
+# Documentation Update — Manual Source Intake Fallback (2026-08-14)
+
+## 1. Did you build this the most secure way?
+
+- Manual intake is documented as an authorized operational fallback only. It creates a draft dispatch with explicit provenance, does not create Core 1 commercial records, and requires the same server-side authorization, validation, conflict, and audit controls.
+
+## 2. Did you build this the most efficient way?
+
+- One source-aware intake pattern covers Service, Rental, and Sale while reusing the shared dispatch eligibility and activation workflow instead of creating three separate forms and execution paths.
+
+## 3. What regressions could this introduce?
+
+- Manual records could be duplicated when the matching Core 1 handoff arrives. The documented reconciliation/linking requirement and `manual_intake` provenance make that risk explicit.
+
+## 4. What tests do we need to write before we ship this?
+
+- Add coverage for manual Service/Rental/Sale draft creation, permission and validation failures, source-specific fields, provenance, readiness gating, and linking/reconciliation with a later Core 1 handoff.
