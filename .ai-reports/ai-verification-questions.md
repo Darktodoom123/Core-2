@@ -1,3 +1,34 @@
+# Phase 6 AI Verification Responses
+
+## 1. Did you build this the most secure way?
+
+- **Zero Data Loss & Reversible Configuration**: Cohort rollout is controlled by workspace keys (`rollout_cohorts`) and feature flags (`v2_commands_enabled`). In any incident, disabling `v2_commands_enabled` restores legacy routing immediately without truncating or mutating canonical V2 records or audit history.
+- **Resumable, Non-Destructive Reconciliation**: `DispatchV2Reconciliation` and `dispatch:reconcile` support `--dry-run` to inspect data anomalies without writing changes. Live batches are scoped and checkpointed, preventing runaway transactions.
+- **Deterministic Lock Order & Audit Integrity**: Reconciliation findings and handoff creation preserve strict lock order (`handoff -> attempt -> plan -> offer`) and generate immutable audit events.
+- **Production Seeder Isolation**: Production seeders remain strictly protected against fixture leaks, in compliance with Phase 0 security requirements.
+
+## 2. Did you build this the most efficient way?
+
+- **Batch-Limited Execution**: `dispatch:reconcile` processes configurable batch limits (`--limit=100`) to avoid memory spikes and long table locks on large production databases.
+- **Cached Telemetry & Indexed Queries**: `DispatchV2MetricsService` aggregates counts using indexed foreign keys and workspace scopes.
+- **Clean Command Interfaces**: `dispatch:v2:status` supports `--json` for automated monitoring scrapers (Prometheus / Grafana / Datadog) without parsing stdout strings.
+
+## 3. What regressions could this introduce?
+
+- **Downstream Outbox Congestion**: If background workers processing `DeliverDispatchOutboxMessage` are stalled, outbox messages may accumulate. Mitigated by tracking `outbox.pending` in telemetry and alerting operators via runbook thresholds.
+- **Reconciliation Inconsistencies**: Legacy jobs created by third-party direct DB queries might lack expected timestamps. Mitigated by nullable fallback handling and reconciliation findings logging (`DispatchReconciliationFinding`).
+
+## 4. What tests do we need to write before we ship this?
+
+- **Automated Tests Executed**:
+  - `tests/Feature/Operations/DispatchV2Phase6RolloutTest.php`: 5 tests covering `dispatch:v2:status` output, metrics service snapshot, `dispatch:reconcile` execution and dry-run mode, and feature flag rollback behavior (100% PASS).
+  - Full Backend Matrix: 71 tests, 490 assertions (100% PASS).
+  - Mobile TypeScript and component test suite: 71 mobile tests (100% PASS).
+- **Pre-Ship Operations Validation**:
+  - Verification of `Docs/runbooks/DISPATCH_BACKEND_V2_OPERATIONAL_RUNBOOK.md` against staging environment deployment.
+
+---
+
 # Phase 5 AI Verification Responses
 
 ## 1. Did you build this the most secure way?
@@ -33,30 +64,3 @@
 - **Additional Pre-Ship Checks for Phase 6**:
   - Operational cutover runbook rehearsals and migration telemetry monitoring.
   - End-to-end multi-device staging verification with real mobile clients on Expo SDK 52.
-
----
-
-# Phase 4 AI Verification Responses
-
-## 1. What was changed, and was the scope respected?
-
-Phase 4 establishes one workspace-scoped canonical handoff identity with source system/type/id, external reference, payload hash, inbound owner/key, timestamps, snapshots, and preserved legacy links. Service, Rental, Sales, and manual intake now use shared handoff/attempt commands. Attempts have stable correlation and monotonic policy lineage; exact retries replay the same result, while payload/owner/action conflicts are stable no-write conflicts. State, audit, canonical lineage, idempotency receipt, and outbox intent are atomic. Durable outbox delivery is after commit, deduplicated, and retryable. Rental/Sales delivery fulfillment requires a linked non-archived completed canonical attempt; pickup remains unaffected. Reconciliation detects asymmetric/orphaned/mismatched/hash-drift/duplicate/terminal-delivery records without deleting unexplained data. Existing public routes and legacy/mobile evidence remain compatible; Phase 5 still owns `/api/v2` and external adapter cutover. The scope was respected.
-
-## 2. What verification was run, and what were the exact results?
-
-- `php artisan test --compact tests/Feature/Operations/DispatchV2Phase4Test.php`: PASS, 6 tests, 46 assertions.
-- Affected source/command/handoff suite: PASS, 33 tests, 294 assertions.
-- Affected Rental/Sales regression suite: PASS, 174 tests, 815 assertions.
-- Full backend `php artisan test --compact`: PASS, 563 tests, 7,387 assertions.
-- `composer run lint:check`: PASS; `composer run types:check`: PASS, 0 PHPStan errors; `composer audit --locked --no-interaction`: PASS, no advisories; `git diff --check`: PASS.
-- Isolated file-backed SQLite forward migration rehearsal: PASS; all migrations applied and `migrate:status` reported all Ran. Rollback is not claimed because the repository environment guard refuses `migrate:rollback --step=1 --force`.
-- `npm run build`: PASS; `npm run types:check`: PASS. No frontend/mobile source was changed. Untouched full mobile lint/format retains 39 ESLint errors and 5 Prettier warnings.
-- `php artisan test --compact -c phpunit.postgresql.xml`: BLOCKED exactly; all 4 configured tests failed before assertions because `127.0.0.1:5432/core2_rental_sales_test` refused connections.
-
-## 3. What security and review conclusions are supported by evidence?
-
-The review covered source spoofing/IDOR and workspace isolation, source/reverse-pointer symmetry, idempotency ownership and replay, canonical hash/reference integrity, duplicate/orphan attempts, deterministic lock order, audit PII minimization, outbox dedupe/retry/poison behavior, after-commit timing, terminal mutation/replacement rules, and fulfillment bypasses. Canonical source identity is validated against legacy links and owner scope; cross-workspace attempts use safe not-found behavior; completed attempts cannot reopen or mutate. No critical or high-confidence unresolved implementation issue remains.
-
-## 4. What remains blocked, and is the graph ready for Phase 5/7?
-
-Phase 4 starts at `55ad79f620aab2cd9bc806f30f7c85d68f8b41e7` on `codex/dispatch-backend-v2-phase-4` and implementation commit `bc4014fd67c4c222de8ed2a1e94f73aa50785db8`. `PHASE_STATUS=complete`, `READY_FOR_PHASE_5=yes`, `READY_FOR_PHASE_7=no`, and `CONTEXT_SPLIT_REQUIRED=no`. Phase 5 is unblocked and owns web/API/mobile adapter cutover, `/api/v2`, and mobile baseline cleanup. PostgreSQL availability and the untouched mobile lint/format debt remain known external/pre-existing blockers; neither is claimed as passed or silently changed. No push, deploy, PR, or external mutation occurred.

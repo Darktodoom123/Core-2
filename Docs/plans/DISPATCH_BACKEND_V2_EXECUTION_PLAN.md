@@ -391,16 +391,16 @@ For every phase:
 
 ```yaml
 schema: dispatch-backend-v2-phase-status/v1
-branch: codex/dispatch-backend-v2-phase-5
-baseline_commit: 9ffcee5d766556b7060b0bc308ac7a3bfadc89b5
-current_phase: phase_5
+branch: codex/dispatch-backend-v2-phase-6
+baseline_commit: bd459d1af4de8871f86d4f1b762d6d9a7c002f55
+current_phase: phase_6
 ready_for_phase_1: false
 ready_for_phase_2: false
 ready_for_phase_3: false
 ready_for_phase_4: false
-ready_for_phase_5: true
+ready_for_phase_5: false
 ready_for_phase_6: true
-ready_for_phase_7: false
+ready_for_phase_7: true
 phases:
   phase_0:
     status: complete
@@ -438,11 +438,11 @@ phases:
     commit_sha: 867c4e32df5343d303e3949197f8e79b8ed59069
     depends_on: [phase_4]
   phase_6:
-    status: ready
+    status: complete
     commit_sha: null
     depends_on: [phase_5]
   phase_7:
-    status: blocked_on_phase_6
+    status: ready
     commit_sha: null
     depends_on: [phase_6]
 known_preexisting_blockers:

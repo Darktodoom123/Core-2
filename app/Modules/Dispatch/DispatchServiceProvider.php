@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dispatch;
 
+use App\Modules\Dispatch\Console\Commands\DispatchV2RolloutStatusCommand;
 use App\Modules\Dispatch\Console\Commands\ReconcileDispatchV2Command;
 use App\Modules\Dispatch\Contracts\DispatchOutboxDeliveryHandler;
 use App\Modules\Dispatch\Contracts\DispatchOutboxRecorder;
@@ -32,7 +33,10 @@ final class DispatchServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->commands([ReconcileDispatchV2Command::class]);
+        $this->commands([
+            ReconcileDispatchV2Command::class,
+            DispatchV2RolloutStatusCommand::class,
+        ]);
         Gate::policy(ApprovalRequest::class, ApprovalRequestPolicy::class);
         Gate::policy(DispatchExecutionAttempt::class, DispatchExecutionAttemptPolicy::class);
         Gate::policy(DispatchJob::class, DispatchJobPolicy::class);
