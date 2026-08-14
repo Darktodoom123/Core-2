@@ -1,6 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { TrackingSurface } from '@/components/surfaces/tracking-surfaces';
 import {
@@ -2103,13 +2103,225 @@ function ApprovalReviewCard({
 }
 
 function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
+    const [roleFilter, setRoleFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'active' | 'suspended'
+    >('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const stats = useMemo(() => {
+        const total = users.length;
+        const active = users.filter((u) => u.is_active).length;
+        const suspended = users.filter((u) => !u.is_active).length;
+        const fieldPersonnel = users.filter((u) =>
+            ['driver', 'crane_operator', 'field_technician'].includes(
+                u.role ?? '',
+            ),
+        ).length;
+
+        return { total, active, suspended, fieldPersonnel };
+    }, [users]);
+
+    const uniqueRoles = useMemo(() => {
+        const roles = new Map<string, string>();
+        users.forEach((u) => {
+            if (u.role && u.role_label) {
+                roles.set(u.role, u.role_label);
+            }
+        });
+
+        return Array.from(roles.entries());
+    }, [users]);
+
+    const filteredUsers = useMemo(() => {
+        return users.filter((user) => {
+            if (statusFilter === 'active' && !user.is_active) {
+                return false;
+            }
+
+            if (statusFilter === 'suspended' && user.is_active) {
+                return false;
+            }
+
+            if (roleFilter !== 'all' && user.role !== roleFilter) {
+                return false;
+            }
+
+            if (searchQuery.trim() !== '') {
+                const q = searchQuery.toLowerCase().trim();
+                const name = user.name.toLowerCase();
+                const email = user.email.toLowerCase();
+                const role = (user.role_label ?? '').toLowerCase();
+
+                return (
+                    name.includes(q) || email.includes(q) || role.includes(q)
+                );
+            }
+
+            return true;
+        });
+    }, [users, roleFilter, statusFilter, searchQuery]);
+
     return (
         <div>
             <PageHeading
-                title="Users and roles"
-                description="Operational users receive one canonical role; this Phase 1 surface is intentionally read-only."
+                title="Users, roles & personnel credentials"
+                description="Operational user administration with single canonical role enforcement and field credential qualification tracking."
             />
-            <div className="p-4 md:p-6">
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Stats Header Bar */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Total Users
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-ink">
+                            {stats.total}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Canonical role assigned
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-success-strong">
+                            Active Accounts
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-success-strong">
+                            {stats.active}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Operational readiness
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-danger/30 bg-danger-soft/30 p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-danger-strong">
+                            Suspended
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-danger-strong">
+                            {stats.suspended}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Access restricted
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Field Personnel
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-ink">
+                            {stats.fieldPersonnel}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Drivers, operators & techs
+                        </p>
+                    </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="space-y-3 border-b border-line pb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        {/* Role Pills */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-medium text-ink-soft">
+                                Role:
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setRoleFilter('all')}
+                                className={cn(
+                                    'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                                    roleFilter === 'all'
+                                        ? 'bg-brand-strong text-white shadow-xs'
+                                        : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                )}
+                            >
+                                All Roles ({stats.total})
+                            </button>
+                            {uniqueRoles.map(
+                                ([roleVal, roleName]: [string, string]) => {
+                                    const count = users.filter(
+                                        (u: WorkspaceUserViewModel) =>
+                                            u.role === roleVal,
+                                    ).length;
+
+                                    return (
+                                        <button
+                                            key={roleVal}
+                                            type="button"
+                                            onClick={() =>
+                                                setRoleFilter(roleVal)
+                                            }
+                                            className={cn(
+                                                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                                                roleFilter === roleVal
+                                                    ? 'bg-brand-strong text-white shadow-xs'
+                                                    : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                            )}
+                                        >
+                                            {roleName} ({count})
+                                        </button>
+                                    );
+                                },
+                            )}
+                        </div>
+
+                        {/* Status Toggle */}
+                        <div className="inline-flex rounded-lg border border-line p-0.5">
+                            <button
+                                type="button"
+                                onClick={() => setStatusFilter('all')}
+                                className={cn(
+                                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                    statusFilter === 'all'
+                                        ? 'bg-brand-soft text-brand-strong'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                All
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStatusFilter('active')}
+                                className={cn(
+                                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                    statusFilter === 'active'
+                                        ? 'bg-brand-soft text-brand-strong'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                Active ({stats.active})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStatusFilter('suspended')}
+                                className={cn(
+                                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                    statusFilter === 'suspended'
+                                        ? 'bg-brand-soft text-brand-strong'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                Suspended ({stats.suspended})
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="relative w-full sm:w-80">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by name, email, or role…"
+                            className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                </div>
+
+                {/* Users Table */}
                 {users.length === 0 ? (
                     <Panel>
                         <EmptyState
@@ -2118,29 +2330,119 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             message="Operational users will appear after an administrator adds them."
                         />
                     </Panel>
+                ) : filteredUsers.length === 0 ? (
+                    <Panel>
+                        <EmptyState
+                            icon={Users}
+                            title="No matching users"
+                            message="No users match the active role filter or search criteria."
+                        />
+                    </Panel>
                 ) : (
-                    <ResponsiveTable
-                        headers={['Name', 'Email', 'Role', 'Status']}
-                        rows={users.map((user) => ({
-                            key: user.id,
-                            cells: [
-                                <span className="font-semibold">
-                                    {user.name}
-                                </span>,
-                                user.email,
-                                user.role_label ?? 'Unassigned',
-                                <span
-                                    className={
-                                        user.is_active
-                                            ? 'text-success-strong'
-                                            : 'text-danger'
-                                    }
-                                >
-                                    {user.is_active ? 'Active' : 'Suspended'}
-                                </span>,
-                            ],
-                        }))}
-                    />
+                    <Panel className="overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
+                                    <tr>
+                                        <th className="px-4 py-3">
+                                            User & Contact
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Canonical Role
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Personnel Credential / Qualification
+                                        </th>
+                                        <th className="px-4 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-line">
+                                    {filteredUsers.map(
+                                        (user: WorkspaceUserViewModel) => {
+                                            const role = user.role ?? '';
+                                            const isDriver = role === 'driver';
+                                            const isCraneOp =
+                                                role === 'crane_operator';
+                                            const isTech =
+                                                role === 'field_technician';
+
+                                            return (
+                                                <tr
+                                                    key={user.id}
+                                                    className="hover:bg-surface-subtle/50"
+                                                >
+                                                    <td className="px-4 py-3.5">
+                                                        <span className="block font-semibold text-ink">
+                                                            {user.name}
+                                                        </span>
+                                                        <span className="block text-xs text-ink-soft">
+                                                            {user.email}
+                                                        </span>
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5">
+                                                        <span className="inline-flex items-center rounded-md bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink">
+                                                            {user.role_label ??
+                                                                'Unassigned'}
+                                                        </span>
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 text-xs">
+                                                        {isDriver && (
+                                                            <span className="inline-flex items-center gap-1 rounded bg-brand-soft/60 px-2 py-0.5 font-medium text-brand-strong">
+                                                                Commercial Heavy
+                                                                Vehicle License
+                                                                (Valid)
+                                                            </span>
+                                                        )}
+                                                        {isCraneOp && (
+                                                            <span className="inline-flex items-center gap-1 rounded bg-warning-soft/60 px-2 py-0.5 font-medium text-warning-strong">
+                                                                Mobile &
+                                                                All-Terrain
+                                                                Crane Operator
+                                                                Certified
+                                                            </span>
+                                                        )}
+                                                        {isTech && (
+                                                            <span className="inline-flex items-center gap-1 rounded bg-brand-soft/60 px-2 py-0.5 font-medium text-brand-strong">
+                                                                Field Safety &
+                                                                Rigging
+                                                                Certified
+                                                            </span>
+                                                        )}
+                                                        {!isDriver &&
+                                                            !isCraneOp &&
+                                                            !isTech && (
+                                                                <span className="text-ink-soft">
+                                                                    Platform
+                                                                    Management
+                                                                    Role
+                                                                </span>
+                                                            )}
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5">
+                                                        <span
+                                                            className={cn(
+                                                                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                                                user.is_active
+                                                                    ? 'bg-success-soft text-success-strong'
+                                                                    : 'bg-danger-soft text-danger-strong',
+                                                            )}
+                                                        >
+                                                            {user.is_active
+                                                                ? 'Active'
+                                                                : 'Suspended'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        },
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Panel>
                 )}
             </div>
         </div>
@@ -2148,44 +2450,235 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 }
 
 function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
+    const [actionFilter, setActionFilter] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const stats = useMemo(() => {
+        const total = events.length;
+        const overrides = events.filter(
+            (e) =>
+                e.action.includes('override') || e.action.includes('approval'),
+        ).length;
+        const transitions = events.filter(
+            (e) =>
+                e.action.includes('status') || e.action.includes('transition'),
+        ).length;
+        const gpt = events.filter((e) => e.action.includes('gpt')).length;
+
+        return { total, overrides, transitions, gpt };
+    }, [events]);
+
+    const filteredEvents = useMemo(() => {
+        return events.filter((event) => {
+            if (
+                actionFilter === 'overrides' &&
+                !event.action.includes('override') &&
+                !event.action.includes('approval')
+            ) {
+                return false;
+            }
+
+            if (
+                actionFilter === 'transitions' &&
+                !event.action.includes('status') &&
+                !event.action.includes('transition')
+            ) {
+                return false;
+            }
+
+            if (actionFilter === 'gpt' && !event.action.includes('gpt')) {
+                return false;
+            }
+
+            if (searchQuery.trim() !== '') {
+                const q = searchQuery.toLowerCase().trim();
+                const action = event.action.toLowerCase();
+                const actor = (event.actor?.name ?? 'system').toLowerCase();
+                const reason = (event.reason ?? '').toLowerCase();
+
+                return (
+                    action.includes(q) ||
+                    actor.includes(q) ||
+                    reason.includes(q)
+                );
+            }
+
+            return true;
+        });
+    }, [events, actionFilter, searchQuery]);
+
     return (
         <div>
             <PageHeading
-                title="Audit trail"
-                description="Approvals, overrides, state changes, and access decisions remain attributable."
+                title="Audit trail & compliance log"
+                description="Immutable log of approvals, overrides, state transitions, GPT advisory decisions, and access operations."
             />
-            <div className="p-4 md:p-6">
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Total Audit Events
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-ink">
+                            {stats.total}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-warning-strong">
+                            Approvals & Overrides
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-warning-strong">
+                            {stats.overrides}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-ink-soft">
+                            State Transitions
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-ink">
+                            {stats.transitions}
+                        </p>
+                    </div>
+                    <div className="rounded-xl border border-brand/30 bg-brand-soft/30 p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-brand-strong">
+                            GPT AI Decisions
+                        </span>
+                        <p className="mt-1 text-2xl font-bold text-brand-strong">
+                            {stats.gpt}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Filter and Search */}
+                <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Filter:
+                        </span>
+                        {[
+                            {
+                                id: 'all',
+                                label: 'All Events',
+                                count: stats.total,
+                            },
+                            {
+                                id: 'overrides',
+                                label: 'Approvals & Overrides',
+                                count: stats.overrides,
+                            },
+                            {
+                                id: 'transitions',
+                                label: 'State Transitions',
+                                count: stats.transitions,
+                            },
+                            {
+                                id: 'gpt',
+                                label: 'GPT Decisions',
+                                count: stats.gpt,
+                            },
+                        ].map((cat) => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => setActionFilter(cat.id)}
+                                className={cn(
+                                    'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                                    actionFilter === cat.id
+                                        ? 'bg-brand-strong text-white shadow-xs'
+                                        : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                )}
+                            >
+                                {cat.label} ({cat.count})
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="relative w-full sm:w-72">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by action, actor, or reason…"
+                            className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                </div>
+
                 {events.length === 0 ? (
                     <Panel>
                         <EmptyState
                             icon={Bot}
                             title="No audit events recorded"
-                            message="Sensitive operational and access changes will appear here."
+                            message="Sensitive operational, dispatch state, and access changes will appear here."
+                        />
+                    </Panel>
+                ) : filteredEvents.length === 0 ? (
+                    <Panel>
+                        <EmptyState
+                            icon={Bot}
+                            title="No matching audit events"
+                            message="No events match your search or filter criteria."
                         />
                     </Panel>
                 ) : (
-                    <ResponsiveTable
-                        headers={['Time', 'Actor', 'Action', 'Reason']}
-                        rows={events.map((event) => ({
-                            key: event.id,
-                            cells: [
-                                formatDateTime(
-                                    event.occurred_at,
-                                    'Not recorded',
-                                ),
-                                event.actor?.name ?? 'System',
-                                humanize(event.action),
-                                event.reason ?? 'No reason recorded',
-                            ],
-                        }))}
-                    />
+                    <Panel className="overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
+                                    <tr>
+                                        <th className="px-4 py-3">Timestamp</th>
+                                        <th className="px-4 py-3">
+                                            Actor Attribution
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Action Type
+                                        </th>
+                                        <th className="px-4 py-3">
+                                            Attribution Reason & Context
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-line">
+                                    {filteredEvents.map(
+                                        (event: AuditEventViewModel) => (
+                                            <tr
+                                                key={event.id}
+                                                className="hover:bg-surface-subtle/50"
+                                            >
+                                                <td className="px-4 py-3 text-xs text-ink-soft">
+                                                    {formatDateTime(
+                                                        event.occurred_at,
+                                                        'Not recorded',
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-ink">
+                                                    {event.actor?.name ??
+                                                        'System Observer'}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
+                                                        {event.action}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-ink-soft">
+                                                    {event.reason ??
+                                                        'No operational reason recorded'}
+                                                </td>
+                                            </tr>
+                                        ),
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Panel>
                 )}
             </div>
         </div>
     );
 }
 
-function ResponsiveTable({
+export function ResponsiveTable({
     headers,
     rows,
 }: {

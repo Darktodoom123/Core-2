@@ -1,15 +1,39 @@
 import { router, useForm } from '@inertiajs/react';
-import { Download, FileText, Plus, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import {
+    AlertCircle,
+    Check,
+    CheckCircle2,
+    Clock,
+    Copy,
+    Download,
+    FileCheck,
+    FileImage,
+    FileText,
+    FileX,
+    Filter,
+    Paperclip,
+    Plus,
+    Search,
+    ShieldAlert,
+    ShieldCheck,
+    Trash2,
+    X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
+import { formatDateTime } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 import type {
+    AttachmentViewModel,
     JobReportViewModel,
     ReportExportViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
+
+type ReportFilterStatus = 'all' | 'submitted' | 'approved' | 'rejected';
 
 export function ReportsSurface({
     reports = [],
@@ -21,20 +45,168 @@ export function ReportsSurface({
     capabilities: WorkspaceCapabilities;
 }) {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
-    const [selectedReport, setSelectedReport] =
-        useState<JobReportViewModel | null>(
-            reports.length > 0 ? reports[0] : null,
+    const [statusFilter, setStatusFilter] = useState<ReportFilterStatus>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedReportId, setSelectedReportId] = useState<number | null>(
+        reports.length > 0 ? reports[0].id : null,
+    );
+
+    // Summary statistics
+    const stats = useMemo(() => {
+        const total = reports.length;
+        const submitted = reports.filter(
+            (r) => r.status.value === 'submitted',
+        ).length;
+        const approved = reports.filter(
+            (r) => r.status.value === 'approved',
+        ).length;
+        const rejected = reports.filter(
+            (r) => r.status.value === 'rejected',
+        ).length;
+        const totalAttachments = reports.reduce(
+            (acc, r) => acc + (r.attachments?.length ?? 0),
+            0,
         );
+
+        return { total, submitted, approved, rejected, totalAttachments };
+    }, [reports]);
+
+    // Filtered reports
+    const filteredReports = useMemo(() => {
+        return reports.filter((report) => {
+            if (
+                statusFilter !== 'all' &&
+                report.status.value !== statusFilter
+            ) {
+                return false;
+            }
+
+            if (searchQuery.trim() !== '') {
+                const query = searchQuery.toLowerCase().trim();
+                const reference = report.job?.reference?.toLowerCase() ?? '';
+                const title = report.job?.title?.toLowerCase() ?? '';
+                const author = report.author?.name?.toLowerCase() ?? '';
+                const summary = report.work_summary?.toLowerCase() ?? '';
+                const remarks = report.remarks?.toLowerCase() ?? '';
+                const jobId = String(report.dispatch_job_id);
+
+                return (
+                    reference.includes(query) ||
+                    title.includes(query) ||
+                    author.includes(query) ||
+                    summary.includes(query) ||
+                    remarks.includes(query) ||
+                    jobId.includes(query)
+                );
+            }
+
+            return true;
+        });
+    }, [reports, statusFilter, searchQuery]);
+
+    const selectedReport = useMemo(() => {
+        if (selectedReportId === null) {
+            return filteredReports.length > 0 ? filteredReports[0] : null;
+        }
+
+        return (
+            reports.find((r) => r.id === selectedReportId) ??
+            (filteredReports.length > 0 ? filteredReports[0] : null)
+        );
+    }, [reports, filteredReports, selectedReportId]);
 
     return (
         <div>
             <PageHeading
                 title="Job reports & attachments"
-                description="Review field progress, submitted completion summaries, work logs, and secure attachments."
+                description="Review field progress, submitted completion summaries, work logs, SHA-256 validated attachments, and operational records."
             />
             <div className="space-y-6 p-4 md:p-6">
+                {/* Operational Summary Statistics Cards */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-ink-soft">
+                                Total Reports
+                            </span>
+                            <FileText className="h-4 w-4 text-brand-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-ink">
+                            {stats.total}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Logged across fleet
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-warning-strong">
+                                Pending Review
+                            </span>
+                            <Clock className="h-4 w-4 text-warning-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-warning-strong">
+                            {stats.submitted}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Requires manager review
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-success-strong">
+                                Approved
+                            </span>
+                            <FileCheck className="h-4 w-4 text-success-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-success-strong">
+                            {stats.approved}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Verified & closed
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-danger/30 bg-danger-soft/30 p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-danger-strong">
+                                Rejected
+                            </span>
+                            <FileX className="h-4 w-4 text-danger-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-danger-strong">
+                            {stats.rejected}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Returned for rework
+                        </p>
+                    </div>
+
+                    <div className="col-span-2 rounded-xl border border-line bg-surface p-3.5 shadow-sm sm:col-span-2 lg:col-span-1">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-ink-soft">
+                                Attachments
+                            </span>
+                            <Paperclip className="h-4 w-4 text-brand-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-ink">
+                            {stats.totalAttachments}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            SHA-256 secure files
+                        </p>
+                    </div>
+                </div>
+
+                {/* Submit Action Bar */}
                 {capabilities.create_job_report && (
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-ink-soft">
+                            Submit field completion reports and evidence
+                            attachments for active or completed dispatches.
+                        </p>
                         <Button
                             id="report-submit-toggle"
                             variant={showSubmitModal ? 'secondary' : 'primary'}
@@ -50,6 +222,7 @@ export function ReportsSurface({
                     </div>
                 )}
 
+                {/* Submit Job Report Modal / Drawer Form */}
                 {showSubmitModal && capabilities.create_job_report && (
                     <SubmitJobReportForm
                         capabilities={capabilities}
@@ -64,6 +237,81 @@ export function ReportsSurface({
                     />
                 )}
 
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="mr-1 flex items-center text-xs font-medium text-ink-soft">
+                            <Filter className="mr-1 h-3.5 w-3.5" />
+                            Filter:
+                        </span>
+                        {(
+                            [
+                                { id: 'all', label: 'All', count: stats.total },
+                                {
+                                    id: 'submitted',
+                                    label: 'Pending Review',
+                                    count: stats.submitted,
+                                },
+                                {
+                                    id: 'approved',
+                                    label: 'Approved',
+                                    count: stats.approved,
+                                },
+                                {
+                                    id: 'rejected',
+                                    label: 'Rejected',
+                                    count: stats.rejected,
+                                },
+                            ] as const
+                        ).map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setStatusFilter(tab.id)}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                    statusFilter === tab.id
+                                        ? 'bg-brand-strong text-white shadow-sm'
+                                        : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                )}
+                            >
+                                <span>{tab.label}</span>
+                                <span
+                                    className={cn(
+                                        'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                                        statusFilter === tab.id
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-surface text-ink-soft',
+                                    )}
+                                >
+                                    {tab.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-soft" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search reports or author…"
+                            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-soft hover:text-ink"
+                                aria-label="Clear search"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {reports.length === 0 ? (
                     <Panel>
                         <EmptyState
@@ -72,15 +320,31 @@ export function ReportsSurface({
                             message="Submitted job reports and attached documents will appear here once filed by field technicians or dispatchers."
                         />
                     </Panel>
+                ) : filteredReports.length === 0 ? (
+                    <Panel>
+                        <EmptyState
+                            icon={Filter}
+                            title="No matching reports"
+                            message="No job reports match the active filter or search query. Try clearing your filters."
+                        />
+                    </Panel>
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-12">
+                        {/* Reports List Column */}
                         <div className="lg:col-span-5 xl:col-span-4">
                             <Panel className="overflow-hidden">
-                                <div className="border-b border-line px-4 py-3 font-semibold text-ink">
-                                    Reports ({reports.length})
+                                <div className="flex items-center justify-between border-b border-line px-4 py-3 font-semibold text-ink">
+                                    <span>
+                                        Reports ({filteredReports.length})
+                                    </span>
+                                    {statusFilter !== 'all' && (
+                                        <span className="text-xs font-normal text-ink-soft capitalize">
+                                            {statusFilter}
+                                        </span>
+                                    )}
                                 </div>
-                                <ul className="divide-y divide-line">
-                                    {reports.map((report) => {
+                                <ul className="max-h-[640px] divide-y divide-line overflow-y-auto">
+                                    {filteredReports.map((report) => {
                                         const isSelected =
                                             selectedReport?.id === report.id;
 
@@ -89,15 +353,15 @@ export function ReportsSurface({
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        setSelectedReport(
-                                                            report,
+                                                        setSelectedReportId(
+                                                            report.id,
                                                         )
                                                     }
-                                                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle ${
-                                                        isSelected
-                                                            ? 'bg-brand-soft/60'
-                                                            : ''
-                                                    }`}
+                                                    className={cn(
+                                                        'w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-subtle',
+                                                        isSelected &&
+                                                            'border-l-4 border-brand-strong bg-brand-soft/60 pl-3',
+                                                    )}
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
                                                         <span className="font-semibold text-ink">
@@ -111,17 +375,25 @@ export function ReportsSurface({
                                                             }
                                                         />
                                                     </div>
-                                                    <p className="mt-1 line-clamp-1 text-sm text-ink-soft">
+                                                    {report.job?.title && (
+                                                        <p className="mt-0.5 truncate text-xs font-medium text-ink-soft">
+                                                            {report.job.title}
+                                                        </p>
+                                                    )}
+                                                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink">
                                                         {report.work_summary}
                                                     </p>
-                                                    <div className="mt-1.5 flex items-center justify-between text-xs text-ink-soft">
+                                                    <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
                                                         <span>
                                                             By{' '}
-                                                            {report.author
-                                                                ?.name ??
-                                                                'Unknown'}
+                                                            <strong className="font-medium text-ink">
+                                                                {report.author
+                                                                    ?.name ??
+                                                                    'Unknown'}
+                                                            </strong>
                                                         </span>
-                                                        <span>
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <Paperclip className="h-3 w-3" />
                                                             {
                                                                 report
                                                                     .attachments
@@ -138,6 +410,7 @@ export function ReportsSurface({
                             </Panel>
                         </div>
 
+                        {/* Report Details Column */}
                         <div className="lg:col-span-7 xl:col-span-8">
                             {selectedReport && (
                                 <ReportDetailPane
@@ -149,6 +422,7 @@ export function ReportsSurface({
                     </div>
                 )}
 
+                {/* Asynchronous Data Exports Surface */}
                 <ExportsSurface exports={exports} capabilities={capabilities} />
             </div>
         </div>
@@ -162,6 +436,21 @@ function SubmitJobReportForm({
     capabilities: WorkspaceCapabilities;
     onDone: () => void;
 }) {
+    const maxBytes = capabilities.attachment_policy?.max_bytes || 15728640; // 15 MiB default
+    const maxCount = capabilities.attachment_policy?.max_count || 10;
+    const acceptedMimeTypes = capabilities.attachment_policy
+        ?.accepted_mime_types || [
+        'image/jpeg',
+        'image/png',
+        'image/heic',
+        'image/heif',
+        'application/pdf',
+    ];
+
+    const [fileValidationError, setFileValidationError] = useState<
+        string | null
+    >(null);
+
     const form = useForm({
         dispatch_job_id: '',
         work_summary: '',
@@ -171,8 +460,45 @@ function SubmitJobReportForm({
         attachments: [] as File[],
     });
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFileValidationError(null);
+        const incomingFiles = Array.from(e.target.files ?? []);
+
+        if (incomingFiles.length + form.data.attachments.length > maxCount) {
+            setFileValidationError(
+                `You cannot attach more than ${maxCount} files per job report.`,
+            );
+
+            return;
+        }
+
+        for (const file of incomingFiles) {
+            if (file.size > maxBytes) {
+                setFileValidationError(
+                    `File "${file.name}" exceeds the maximum allowed size of ${(maxBytes / 1024 / 1024).toFixed(0)} MiB.`,
+                );
+
+                return;
+            }
+        }
+
+        form.setData('attachments', [
+            ...form.data.attachments,
+            ...incomingFiles,
+        ]);
+    };
+
+    const removeAttachment = (indexToRemove: number) => {
+        form.setData(
+            'attachments',
+            form.data.attachments.filter((_, idx) => idx !== indexToRemove),
+        );
+    };
+
     const submit = (e: FormEvent) => {
         e.preventDefault();
+        setFileValidationError(null);
+
         form.post('/operations/job-reports', {
             preserveScroll: true,
             forceFormData: true,
@@ -196,9 +522,26 @@ function SubmitJobReportForm({
 
     return (
         <Panel id="report-submit-form" className="p-4 md:p-6">
-            <h3 className="text-base font-semibold text-ink">
-                Submit Job Report
-            </h3>
+            <div className="flex items-center justify-between border-b border-line pb-3">
+                <div>
+                    <h3 className="text-base font-semibold text-ink">
+                        Submit Job Completion Report
+                    </h3>
+                    <p className="text-xs text-ink-soft">
+                        Record field progress, operational details, and attach
+                        verified proof documents.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onDone}
+                    className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    aria-label="Close form"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+            </div>
+
             <form
                 onSubmit={submit}
                 className="mt-4 space-y-4"
@@ -207,8 +550,8 @@ function SubmitJobReportForm({
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="block text-sm font-medium text-ink">
-                            Dispatch job ID *
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Dispatch Job ID *
                         </label>
                         <input
                             type="number"
@@ -216,7 +559,7 @@ function SubmitJobReportForm({
                             onChange={(e) =>
                                 form.setData('dispatch_job_id', e.target.value)
                             }
-                            className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
                             placeholder="e.g. 101"
                             required
                         />
@@ -226,9 +569,10 @@ function SubmitJobReportForm({
                             </p>
                         )}
                     </div>
+
                     <div>
-                        <label className="block text-sm font-medium text-ink">
-                            Work summary *
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Work Summary *
                         </label>
                         <input
                             type="text"
@@ -236,7 +580,7 @@ function SubmitJobReportForm({
                             onChange={(e) =>
                                 form.setData('work_summary', e.target.value)
                             }
-                            className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
                             placeholder="Brief description of work executed"
                             required
                         />
@@ -248,72 +592,129 @@ function SubmitJobReportForm({
                     </div>
                 </div>
 
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Started At (Optional)
+                        </label>
+                        <input
+                            type="datetime-local"
+                            value={form.data.started_at}
+                            onChange={(e) =>
+                                form.setData('started_at', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Ended At (Optional)
+                        </label>
+                        <input
+                            type="datetime-local"
+                            value={form.data.ended_at}
+                            onChange={(e) =>
+                                form.setData('ended_at', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                </div>
+
                 <div>
-                    <label className="block text-sm font-medium text-ink">
-                        Remarks / Details
+                    <label className="block text-xs font-semibold text-ink uppercase">
+                        Remarks / Operational Notes
                     </label>
                     <textarea
                         value={form.data.remarks}
                         onChange={(e) =>
                             form.setData('remarks', e.target.value)
                         }
-                        className="mt-1 h-24 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm"
-                        placeholder="Additional operational observations or notes"
+                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                        placeholder="Additional operational observations, delays, equipment condition, or site notes"
                     />
                 </div>
 
                 {capabilities.attachment_upload && (
-                    <div>
+                    <div className="rounded-lg border border-line bg-surface-subtle p-3.5">
                         <label
                             htmlFor="report-attachments"
-                            className="block text-sm font-medium text-ink"
+                            className="block text-xs font-semibold text-ink uppercase"
                         >
-                            Evidence attachments
+                            Validated Proof Attachments (Max {maxCount} files,{' '}
+                            {Math.round(maxBytes / 1024 / 1024)} MiB each)
                         </label>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Accepted formats: JPEG, PNG, HEIC/HEIF, PDF. Files
+                            are stored privately with SHA-256 integrity
+                            validation.
+                        </p>
+
                         <input
                             id="report-attachments"
                             type="file"
                             multiple
-                            accept={capabilities.attachment_policy.accepted_mime_types.join(
-                                ',',
-                            )}
-                            onChange={(event) =>
-                                form.setData(
-                                    'attachments',
-                                    Array.from(event.target.files ?? []),
-                                )
-                            }
-                            className="mt-1 block w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:font-semibold file:text-ink"
+                            accept={acceptedMimeTypes.join(',')}
+                            onChange={handleFileChange}
+                            className="mt-2 block w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:font-semibold file:text-ink"
                         />
-                        <p className="mt-1 text-xs text-ink-soft">
-                            Up to {capabilities.attachment_policy.max_count}{' '}
-                            files,{' '}
-                            {Math.round(
-                                capabilities.attachment_policy.max_bytes /
-                                    1024 /
-                                    1024,
-                            )}{' '}
-                            MiB each. Files stay private and are checked by
-                            content.
-                        </p>
-                        <p className="mt-1 text-xs text-ink-soft">
-                            Files are linked to this report by the server after
-                            submission.
-                        </p>
-                        {form.data.attachments.length > 0 && (
-                            <ul
-                                className="mt-2 space-y-1 text-xs text-ink-soft"
-                                aria-label="Selected attachments"
+
+                        {fileValidationError && (
+                            <div
+                                className="mt-2 flex items-center gap-1.5 text-xs text-danger"
+                                role="alert"
                             >
-                                {form.data.attachments.map((file) => (
-                                    <li
-                                        key={`${file.name}-${file.lastModified}`}
-                                    >
-                                        {file.name}
-                                    </li>
-                                ))}
-                            </ul>
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                <span>{fileValidationError}</span>
+                            </div>
                         )}
+
+                        {form.data.attachments.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                                <span className="text-xs font-medium text-ink">
+                                    Staged Files ({form.data.attachments.length}
+                                    /{maxCount}):
+                                </span>
+                                <ul
+                                    className="space-y-1 text-xs"
+                                    aria-label="Selected attachments"
+                                >
+                                    {form.data.attachments.map((file, idx) => (
+                                        <li
+                                            key={`${file.name}-${idx}`}
+                                            className="flex items-center justify-between rounded border border-line bg-surface px-3 py-1.5"
+                                        >
+                                            <div className="flex items-center gap-2 truncate">
+                                                <FileText className="h-3.5 w-3.5 text-brand-strong" />
+                                                <span className="truncate font-medium text-ink">
+                                                    {file.name}
+                                                </span>
+                                                <span className="text-[11px] text-ink-soft">
+                                                    (
+                                                    {(
+                                                        file.size /
+                                                        1024 /
+                                                        1024
+                                                    ).toFixed(2)}{' '}
+                                                    MB)
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeAttachment(idx)
+                                                }
+                                                className="ml-2 text-danger hover:text-danger-strong"
+                                                aria-label={`Remove ${file.name}`}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         {form.errors.attachments && (
                             <p
                                 className="mt-1 text-xs text-danger"
@@ -342,16 +743,16 @@ function SubmitJobReportForm({
 
                 {Object.keys(form.errors).length > 0 && (
                     <div
-                        className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger"
+                        className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-xs text-danger"
                         role="alert"
                     >
-                        <p>
-                            We could not submit the report. Check the
+                        <p className="font-semibold">
+                            Unable to submit job report. Please check the
                             highlighted fields and try again.
                         </p>
                         <button
                             type="button"
-                            className="mt-2 font-semibold underline"
+                            className="mt-1.5 font-semibold underline hover:text-danger-strong"
                             onClick={retry}
                         >
                             Retry submission
@@ -366,9 +767,13 @@ function SubmitJobReportForm({
                     <Button
                         type="submit"
                         variant="primary"
-                        disabled={form.processing}
+                        disabled={
+                            form.processing ||
+                            !form.data.dispatch_job_id ||
+                            !form.data.work_summary.trim()
+                        }
                     >
-                        {form.processing ? 'Submitting…' : 'Submit report'}
+                        {form.processing ? 'Submitting…' : 'Submit Job Report'}
                     </Button>
                 </div>
             </form>
@@ -383,107 +788,254 @@ function ReportDetailPane({
     report: JobReportViewModel;
     capabilities: WorkspaceCapabilities;
 }) {
+    const [copiedChecksumId, setCopiedChecksumId] = useState<number | null>(
+        null,
+    );
+    const [reviewStatus, setReviewStatus] = useState<
+        'approved' | 'rejected' | null
+    >(null);
+
     const reviewForm = useForm({
         status: 'approved',
         reason: '',
     });
 
     const handleReview = (status: 'approved' | 'rejected') => {
+        setReviewStatus(status);
         reviewForm.setData('status', status);
         router.post(
             `/operations/job-reports/${report.id}/review`,
             {
                 status,
-                reason: reviewForm.data.reason || undefined,
+                reason: reviewForm.data.reason.trim() || undefined,
             },
             {
                 preserveScroll: true,
+                onFinish: () => setReviewStatus(null),
             },
         );
     };
 
+    const copyChecksum = (attachment: AttachmentViewModel) => {
+        navigator.clipboard?.writeText(attachment.checksum_sha256);
+        setCopiedChecksumId(attachment.id);
+        setTimeout(() => setCopiedChecksumId(null), 2000);
+    };
+
     return (
         <Panel className="space-y-6 p-4 md:p-6">
+            {/* Header / Meta */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
                 <div>
                     <div className="flex items-center gap-2">
                         <h2 className="text-xl font-bold text-ink">
-                            {report.job?.reference ?? `Report #${report.id}`}
+                            {report.job?.reference ??
+                                `Dispatch #${report.dispatch_job_id}`}
                         </h2>
                         <CanonicalStatusBadge status={report.status} />
                     </div>
-                    <p className="mt-1 text-sm text-ink-soft">
-                        Submitted by{' '}
-                        <span className="font-medium text-ink">
-                            {report.author?.name ?? 'Unknown'}
-                        </span>{' '}
-                        {report.submitted_at
-                            ? `on ${new Date(report.submitted_at).toLocaleString()}`
-                            : ''}
-                    </p>
+                    {report.job?.title && (
+                        <p className="mt-0.5 text-sm font-medium text-ink-soft">
+                            {report.job.title}
+                        </p>
+                    )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
+                        <span>
+                            Filed by:{' '}
+                            <strong className="font-semibold text-ink">
+                                {report.author?.name ?? 'Unknown Author'}
+                            </strong>
+                        </span>
+                        {report.submitted_at && (
+                            <>
+                                <span>•</span>
+                                <span>
+                                    Submitted:{' '}
+                                    {formatDateTime(report.submitted_at)}
+                                </span>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className="text-right text-xs text-ink-soft">
+                    <span className="rounded bg-surface-subtle px-2 py-1 font-mono">
+                        Report ID: #{report.id}
+                    </span>
                 </div>
             </div>
 
-            <div>
-                <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                    Work Summary
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink">
-                    {report.work_summary}
-                </p>
-                {report.remarks && (
-                    <div className="mt-4 rounded-lg bg-surface-subtle p-3 text-sm text-ink-soft">
-                        <span className="font-semibold text-ink">Remarks:</span>{' '}
-                        {report.remarks}
+            {/* Execution Timing */}
+            {(report.started_at || report.ended_at) && (
+                <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-2">
+                    <div>
+                        <span className="font-semibold text-ink">
+                            Started Work:
+                        </span>{' '}
+                        <span className="text-ink-soft">
+                            {report.started_at
+                                ? formatDateTime(report.started_at)
+                                : 'Not recorded'}
+                        </span>
                     </div>
-                )}
-            </div>
-
-            {report.attachments.length > 0 && (
-                <div className="border-t border-line pt-4">
-                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                        Attachments ({report.attachments.length})
-                    </h3>
-                    <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
-                        {report.attachments.map((file) => (
-                            <li
-                                key={file.id}
-                                className="flex items-center justify-between p-3"
-                            >
-                                <div className="flex min-w-0 items-center gap-3">
-                                    <FileText className="h-5 w-5 shrink-0 text-brand-strong" />
-                                    <div className="min-w-0">
-                                        <p className="truncate text-sm font-medium text-ink">
-                                            {file.original_filename}
-                                        </p>
-                                        <p className="text-xs text-ink-soft">
-                                            {(file.size_bytes / 1024).toFixed(
-                                                1,
-                                            )}{' '}
-                                            KB · {file.mime_type}
-                                        </p>
-                                    </div>
-                                </div>
-                                <a
-                                    href={file.download_url}
-                                    download
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink hover:bg-surface-subtle"
-                                >
-                                    <Download className="h-3.5 w-3.5" />
-                                    Download
-                                </a>
-                            </li>
-                        ))}
-                    </ul>
+                    <div>
+                        <span className="font-semibold text-ink">
+                            Ended Work:
+                        </span>{' '}
+                        <span className="text-ink-soft">
+                            {report.ended_at
+                                ? formatDateTime(report.ended_at)
+                                : 'Not recorded'}
+                        </span>
+                    </div>
                 </div>
             )}
 
+            {/* Work Summary */}
+            <div>
+                <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                    Work Summary & Progress
+                </h3>
+                <div className="mt-2 rounded-lg border border-line bg-surface p-3.5 text-sm leading-relaxed text-ink">
+                    {report.work_summary}
+                </div>
+            </div>
+
+            {/* Remarks */}
+            {report.remarks && (
+                <div>
+                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        Remarks & Site Observations
+                    </h3>
+                    <div className="mt-2 rounded-lg bg-surface-subtle p-3.5 text-sm text-ink">
+                        {report.remarks}
+                    </div>
+                </div>
+            )}
+
+            {/* Verified Attachments Section */}
+            <div className="border-t border-line pt-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        <Paperclip className="h-3.5 w-3.5 text-brand-strong" />
+                        Private Attachments ({report.attachments.length})
+                    </h3>
+                    <span className="text-[11px] text-ink-soft">
+                        SHA-256 Checksums Validated
+                    </span>
+                </div>
+
+                {report.attachments.length === 0 ? (
+                    <p className="mt-2 text-xs text-ink-soft italic">
+                        No files or evidence documents attached to this report.
+                    </p>
+                ) : (
+                    <ul className="mt-3 space-y-2.5">
+                        {report.attachments.map((file) => {
+                            const isPdf = file.mime_type === 'application/pdf';
+                            const isImage = file.mime_type.startsWith('image/');
+                            const FileIcon = isPdf
+                                ? FileText
+                                : isImage
+                                  ? FileImage
+                                  : Paperclip;
+                            const isCopied = copiedChecksumId === file.id;
+
+                            return (
+                                <li
+                                    key={file.id}
+                                    className="flex flex-col justify-between gap-3 rounded-lg border border-line bg-surface p-3 sm:flex-row sm:items-center"
+                                >
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                                            <FileIcon className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-ink">
+                                                {file.original_filename}
+                                            </p>
+                                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+                                                <span>
+                                                    {(
+                                                        file.size_bytes / 1024
+                                                    ).toFixed(1)}{' '}
+                                                    KB
+                                                </span>
+                                                <span>•</span>
+                                                <span className="font-mono text-[11px]">
+                                                    {file.mime_type}
+                                                </span>
+                                            </div>
+                                            {/* SHA-256 Checksum Badge */}
+                                            {file.checksum_sha256 && (
+                                                <div className="mt-1.5 flex items-center gap-1.5">
+                                                    <span
+                                                        className="inline-flex items-center gap-1 rounded bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] text-ink-soft"
+                                                        title={`Full SHA-256: ${file.checksum_sha256}`}
+                                                    >
+                                                        <ShieldCheck className="h-3 w-3 text-success-strong" />
+                                                        SHA-256:{' '}
+                                                        {file.checksum_sha256.substring(
+                                                            0,
+                                                            12,
+                                                        )}
+                                                        …
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            copyChecksum(file)
+                                                        }
+                                                        className="text-[10px] text-ink-soft hover:text-brand-strong"
+                                                        title="Copy full SHA-256 hash"
+                                                    >
+                                                        {isCopied ? (
+                                                            <span className="flex items-center gap-0.5 text-success-strong">
+                                                                <Check className="h-3 w-3" />{' '}
+                                                                Copied
+                                                            </span>
+                                                        ) : (
+                                                            <Copy className="h-3 w-3" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 sm:self-center">
+                                        <a
+                                            href={file.download_url}
+                                            download
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
+                                        >
+                                            <Download className="h-3.5 w-3.5" />
+                                            Download
+                                        </a>
+                                    </div>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
+
+            {/* Review Controls (Manager Authorization) */}
             {capabilities.review_job_report &&
                 report.status.value === 'submitted' && (
                     <div className="border-t border-line pt-4">
-                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                            Review Action
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <ShieldAlert className="h-4 w-4 text-warning-strong" />
+                            <h3 className="text-xs font-semibold tracking-wider text-ink uppercase">
+                                Manager Review Decision
+                            </h3>
+                        </div>
+                        <p className="mt-1 text-xs text-ink-soft">
+                            Record an authoritative decision on this report.
+                            Approved reports complete the operational validation
+                            cycle.
+                        </p>
+
                         <div className="mt-3 space-y-3">
                             <input
                                 type="text"
@@ -491,24 +1043,30 @@ function ReportDetailPane({
                                 onChange={(e) =>
                                     reviewForm.setData('reason', e.target.value)
                                 }
-                                placeholder="Optional review notes or decision reason"
-                                className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm"
+                                placeholder="Optional decision notes, quality checks, or rejection reason"
+                                className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
                             />
-                            <div className="flex gap-3">
+                            <div className="flex flex-wrap gap-3">
                                 <Button
                                     variant="primary"
                                     onClick={() => handleReview('approved')}
                                     disabled={reviewForm.processing}
                                 >
-                                    <ShieldCheck className="mr-1.5 h-4 w-4" />
-                                    Approve report
+                                    <CheckCircle2 className="mr-1.5 h-4 w-4 text-success-strong" />
+                                    {reviewStatus === 'approved'
+                                        ? 'Approving…'
+                                        : 'Approve Report'}
                                 </Button>
                                 <Button
                                     variant="secondary"
+                                    className="border-danger/30 text-danger-strong hover:bg-danger-soft/50"
                                     onClick={() => handleReview('rejected')}
                                     disabled={reviewForm.processing}
                                 >
-                                    Reject report
+                                    <FileX className="mr-1.5 h-4 w-4 text-danger-strong" />
+                                    {reviewStatus === 'rejected'
+                                        ? 'Rejecting…'
+                                        : 'Reject Report'}
                                 </Button>
                             </div>
                         </div>

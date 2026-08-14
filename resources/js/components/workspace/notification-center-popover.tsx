@@ -4,7 +4,11 @@ import {
     Bell,
     CheckCircle2,
     ClipboardList,
+    Fuel,
     Inbox,
+    ShieldAlert,
+    UserCheck,
+    Wrench,
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -12,6 +16,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { NotificationViewModel } from '@/types/workspace';
 
+export type NotificationCategory =
+    'all' | 'dispatch' | 'safety' | 'fuel' | 'system';
 type NotificationFilter = 'all' | 'unread';
 export type NotificationTone = 'info' | 'warning' | 'success' | 'critical';
 
@@ -19,6 +25,7 @@ export type NotificationPresentation = {
     title: string;
     message: string;
     tone: NotificationTone;
+    category: 'dispatch' | 'safety' | 'fuel' | 'system';
     Icon: LucideIcon;
 };
 
@@ -370,47 +377,128 @@ export function NotificationCenterPopover({
     );
 }
 
+export function categorizeNotification(
+    notification: NotificationViewModel,
+): 'dispatch' | 'safety' | 'fuel' | 'system' {
+    const rawCategory = stringValue(notification.data.category);
+
+    if (
+        rawCategory === 'dispatch' ||
+        rawCategory === 'safety' ||
+        rawCategory === 'fuel' ||
+        rawCategory === 'system'
+    ) {
+        return rawCategory;
+    }
+
+    const event =
+        stringValue(notification.data.event) ?? notification.type ?? '';
+
+    if (
+        event.startsWith('dispatch.') ||
+        event.startsWith('assignment.') ||
+        event.startsWith('schedule.')
+    ) {
+        return 'dispatch';
+    }
+
+    if (
+        event.startsWith('safety.') ||
+        event.startsWith('inspection.') ||
+        event.startsWith('maintenance.') ||
+        event.startsWith('incident.')
+    ) {
+        return 'safety';
+    }
+
+    if (event.startsWith('fuel.')) {
+        return 'fuel';
+    }
+
+    return 'system';
+}
+
 export function presentNotification(
     notification: NotificationViewModel,
 ): NotificationPresentation {
-    const event = stringValue(notification.data.event);
+    const event =
+        stringValue(notification.data.event) ?? notification.type ?? '';
     const reference = notification.dispatch_job?.reference ?? 'the dispatch';
     const message =
         stringValue(notification.data.message) ??
         stringValue(notification.data.reason) ??
         `There is an update for ${reference}.`;
 
+    const category = categorizeNotification(notification);
+
     if (event === 'dispatch.delayed') {
         return {
-            title: 'Dispatch delayed',
+            title: 'Dispatch Delayed',
             message,
             tone: 'warning',
+            category: 'dispatch',
             Icon: AlertTriangle,
         };
     }
 
     if (event === 'dispatch.completed') {
         return {
-            title: 'Dispatch completed',
+            title: 'Dispatch Completed',
             message,
             tone: 'success',
+            category: 'dispatch',
             Icon: CheckCircle2,
         };
     }
 
     if (event === 'dispatch.assigned') {
         return {
-            title: 'New dispatch assignment',
+            title: 'New Dispatch Assignment',
             message,
             tone: 'info',
+            category: 'dispatch',
             Icon: ClipboardList,
         };
     }
 
+    if (category === 'fuel') {
+        return {
+            title: 'Fuel Request Update',
+            message,
+            tone: 'info',
+            category: 'fuel',
+            Icon: Fuel,
+        };
+    }
+
+    if (category === 'safety') {
+        return {
+            title: 'Safety & Inspection Alert',
+            message,
+            tone:
+                event.includes('fail') || event.includes('block')
+                    ? 'critical'
+                    : 'warning',
+            category: 'safety',
+            Icon: event.includes('maintenance') ? Wrench : ShieldAlert,
+        };
+    }
+
+    if (event.includes('user') || event.includes('access')) {
+        return {
+            title: 'User & Access Event',
+            message,
+            tone: 'info',
+            category: 'system',
+            Icon: UserCheck,
+        };
+    }
+
     return {
-        title: 'Operations update',
+        title: 'Operations Update',
         message,
         tone: 'info',
+        category,
         Icon: Bell,
     };
 }
