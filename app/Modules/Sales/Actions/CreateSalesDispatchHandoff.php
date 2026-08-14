@@ -41,7 +41,20 @@ final class CreateSalesDispatchHandoff
                 throw ValidationException::withMessages(['fulfillment_mode' => 'Pickup orders do not create dispatch work.']);
             }
             if ($locked->dispatch_job_id !== null) {
-                return $locked->dispatchJob()->firstOrFail();
+                $existingJob = $locked->dispatchJob()->firstOrFail();
+                $this->dispatch->ensureCanonicalWithinTransaction($actor, $existingJob, $locked, DispatchSourceType::SalesOrder, [
+                    'reference' => 'SALE-DSP-'.$locked->id,
+                    'client' => (string) $locked->client->company_name,
+                    'title' => 'Sales delivery '.$locked->reference,
+                    'site' => trim((string) $locked->delivery_location),
+                    'site_notes' => $attributes['site_notes'] ?? null,
+                    'scheduled_start' => $attributes['scheduled_start'],
+                    'scheduled_end' => $attributes['scheduled_end'],
+                    'priority' => $attributes['priority'] ?? DispatchPriority::Routine,
+                    'requirements' => $attributes['requirements'] ?? [],
+                ]);
+
+                return $existingJob;
             }
             if ($locked->status !== SalesOrderStatus::Confirmed) {
                 throw ValidationException::withMessages(['status' => 'Only confirmed orders can create delivery dispatch work.']);
@@ -83,7 +96,7 @@ final class CreateSalesDispatchHandoff
             }
 
             $before = SalesAuditSnapshot::fromOrder($locked);
-            $job = $this->dispatch->handle($actor, $locked, DispatchSourceType::SalesOrder, [
+            $job = $this->dispatch->handleWithinTransaction($actor, $locked, DispatchSourceType::SalesOrder, [
                 'reference' => 'SALE-DSP-'.$locked->id,
                 'client' => (string) $locked->client->company_name,
                 'title' => 'Sales delivery '.$locked->reference,

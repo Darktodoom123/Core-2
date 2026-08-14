@@ -46,7 +46,7 @@ it('completes an authorized rental reservation checkout and return with conflict
     $dates = ['start_date' => now()->addDays(2)->toDateString(), 'end_date' => now()->addDays(3)->toDateString()];
     $payload = [
         'reference' => 'REN-1001', 'client_id' => $client->id, ...$dates,
-        'fulfillment_mode' => 'delivery', 'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 250000]],
+        'fulfillment_mode' => 'pickup', 'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 250000]],
     ];
 
     $created = $this->actingAs($dispatcher)->postJson('/operations/rental-reservations', $payload)->assertCreated();

@@ -96,7 +96,7 @@ function r6AuthorizationContext(string $route): array
             'status' => $status,
             'start_date' => CarbonImmutable::tomorrow()->toDateString(),
             'end_date' => CarbonImmutable::tomorrow()->addDay()->toDateString(),
-            'fulfillment_mode' => 'delivery',
+            'fulfillment_mode' => $route === 'rental.checkout' ? 'pickup' : 'delivery',
             'total_cents' => 100,
         ]);
         RentalReservationItem::query()->create([

@@ -13,6 +13,7 @@ enum DispatchV2CommandCode: string
     case StaleVersion = 'stale_version';
     case MissingExpectedVersion = 'missing_expected_version';
     case IdempotencyPayloadMismatch = 'idempotency_payload_mismatch';
+    case IdempotencyConflict = 'idempotency_conflict';
     case IdempotencyInProgress = 'idempotency_in_progress';
     case NotReady = 'not_ready';
     case InvalidReason = 'invalid_reason';

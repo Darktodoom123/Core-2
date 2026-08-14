@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $handoff_id
  * @property string $workspace_key
+ * @property string|null $correlation_id
  * @property int $attempt_number
  * @property DispatchAttemptStatus $status
  * @property Carbon|null $scheduled_start
@@ -29,7 +30,7 @@ class DispatchExecutionAttempt extends Model
     public ?int $v2IdempotencyKeyId = null;
 
     protected $fillable = [
-        'handoff_id', 'workspace_key', 'attempt_number', 'replaces_attempt_id', 'legacy_dispatch_job_id',
+        'handoff_id', 'workspace_key', 'correlation_id', 'attempt_number', 'replaces_attempt_id', 'replacement_policy', 'replacement_reason', 'legacy_dispatch_job_id',
         'status', 'legacy_status', 'compatibility_state', 'scheduled_start', 'scheduled_end', 'version',
         'legacy_snapshot', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason',
         'legacy_deleted_at', 'archived_at', 'archived_by', 'archive_reason', 'designated_lead_offer_id',

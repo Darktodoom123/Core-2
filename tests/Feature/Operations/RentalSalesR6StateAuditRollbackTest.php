@@ -277,7 +277,7 @@ it('records the exact safe audit matrix with actor, subject, UUID, IP, and bound
         'client_id' => $rentalClient->id,
         'start_date' => $start->toDateString(),
         'end_date' => $start->addDay()->toDateString(),
-        'fulfillment_mode' => 'delivery',
+        'fulfillment_mode' => 'pickup',
         'delivery_location' => 'private location/contact data',
         'notes' => 'private rental notes/contact data',
         'items' => [['operational_asset_id' => $rentalAsset->id, 'quantity' => 1, 'rate_cents' => 100]],

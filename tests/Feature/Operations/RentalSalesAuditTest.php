@@ -57,7 +57,7 @@ it('does not expose private Rental notes in transition audit snapshots', functio
         'client_id' => $client->id,
         'start_date' => now()->addDay()->toDateString(),
         'end_date' => now()->addDays(2)->toDateString(),
-        'fulfillment_mode' => 'delivery',
+        'fulfillment_mode' => 'pickup',
         'notes' => 'private customer contact detail',
         'items' => [['operational_asset_id' => $asset->id, 'quantity' => 1, 'rate_cents' => 100]],
     ])->assertCreated();

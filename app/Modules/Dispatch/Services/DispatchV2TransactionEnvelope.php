@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dispatch\Services;
 
+use App\Modules\Dispatch\Contracts\DispatchOutboxRecorder;
 use App\Modules\Dispatch\Data\DispatchV2Mutation;
 use App\Modules\Dispatch\Enums\DispatchV2CommandCode;
 use App\Modules\Dispatch\Events\DispatchExecutionTransitioned;
@@ -22,6 +23,7 @@ final class DispatchV2TransactionEnvelope
     public function __construct(
         private readonly DispatchV2Authorization $authorization,
         private readonly AuditEventRecorder $audit,
+        private readonly DispatchOutboxRecorder $outbox,
     ) {}
 
     /**
@@ -81,28 +83,69 @@ final class DispatchV2TransactionEnvelope
         $this->assertEnabled();
         $jobId = $job instanceof DispatchJob ? (int) $job->getKey() : $job;
 
-        return DB::transaction(function () use ($actor, $jobId, $mutation, $action, $operation, $replay): Model {
-            $legacyJob = DispatchJob::query()->withTrashed()->lockForUpdate()->find($jobId);
-            if (! $legacyJob instanceof DispatchJob) {
-                throw $this->notFound();
-            }
+        return DB::transaction(fn (): Model => $this->runForCreateWithinTransaction($actor, $jobId, $mutation, $action, $operation, $replay));
+    }
 
-            $this->authorization->authorizeCreate($actor);
+    /**
+     * Run a canonical source handoff while the caller owns the surrounding transaction.
+     * This prevents source aggregate locks and canonical attempt writes from being split
+     * across nested transaction envelopes.
+     *
+     * @template TResult of Model
+     *
+     * @param  Closure(DispatchJob): TResult  $operation
+     * @param  Closure(array<string, mixed>): TResult  $replay
+     * @return TResult
+     */
+    public function runForCreateWithinTransaction(
+        User $actor,
+        DispatchJob|int $job,
+        DispatchV2Mutation $mutation,
+        string $action,
+        Closure $operation,
+        Closure $replay,
+    ): Model {
+        $this->assertEnabled();
+        $jobId = $job instanceof DispatchJob ? (int) $job->getKey() : $job;
 
-            $claim = $this->claimIdempotency($actor, $mutation, $action, $jobId, null);
-            if ($claim['replay']) {
-                return $replay($claim['payload']);
-            }
-            if ($claim['record'] instanceof DispatchIdempotencyKey) {
-                $legacyJob->setAttribute('_dispatch_v2_idempotency_key_id', $claim['record']->id);
-            }
-            $this->assertExpectedVersion((int) $legacyJob->version, $mutation->expectedVersion);
+        return $this->runForCreateBody($actor, $jobId, $mutation, $action, $operation, $replay);
+    }
 
-            $result = $operation($legacyJob);
-            $this->completeIdempotency($claim['record'], $result);
+    /**
+     * @template TResult of Model
+     *
+     * @param  Closure(DispatchJob): TResult  $operation
+     * @param  Closure(array<string, mixed>): TResult  $replay
+     * @return TResult
+     */
+    private function runForCreateBody(
+        User $actor,
+        int $jobId,
+        DispatchV2Mutation $mutation,
+        string $action,
+        Closure $operation,
+        Closure $replay,
+    ): Model {
+        $legacyJob = DispatchJob::query()->withTrashed()->lockForUpdate()->find($jobId);
+        if (! $legacyJob instanceof DispatchJob) {
+            throw $this->notFound();
+        }
 
-            return $result;
-        });
+        $this->authorization->authorizeCreate($actor);
+
+        $claim = $this->claimIdempotency($actor, $mutation, $action, $jobId, null);
+        if ($claim['replay']) {
+            return $replay($claim['payload']);
+        }
+        if ($claim['record'] instanceof DispatchIdempotencyKey) {
+            $legacyJob->setAttribute('_dispatch_v2_idempotency_key_id', $claim['record']->id);
+        }
+        $this->assertExpectedVersion((int) $legacyJob->version, $mutation->expectedVersion);
+
+        $result = $operation($legacyJob);
+        $this->completeIdempotency($claim['record'], $result);
+
+        return $result;
     }
 
     /**
@@ -140,6 +183,8 @@ final class DispatchV2TransactionEnvelope
             'legacy_subject_id' => $attempt->legacy_dispatch_job_id,
             'created_at' => now(),
         ]);
+
+        $this->outbox->record($actor, $attempt, $action, $before, $after, $audit, $idempotencyKeyId ?? $attempt->v2IdempotencyKeyId);
 
         event(new DispatchExecutionTransitioned(
             (int) $attempt->id,
@@ -211,21 +256,29 @@ final class DispatchV2TransactionEnvelope
             return ['replay' => false, 'payload' => [], 'record' => null];
         }
 
-        $ownerType = User::class;
+        $ownerType = $mutation->idempotencyOwnerType;
+        $ownerId = $mutation->idempotencyOwnerId ?? $actor->id;
         $payloadHash = $mutation->payloadHash($action, $aggregateId);
         $query = DispatchIdempotencyKey::query()
             ->where('workspace_key', $mutation->workspaceKey)
-            ->where('owner_type', $ownerType)
-            ->where('owner_id', $actor->id)
             ->where('idempotency_key', $mutation->idempotencyKey)
             ->lockForUpdate();
         $record = $query->first();
 
         if ($record instanceof DispatchIdempotencyKey) {
-            if ($record->action_name !== $action || $record->payload_hash !== $payloadHash) {
+            if ($record->owner_type !== $ownerType
+                || (int) $record->owner_id !== $ownerId
+                || $record->action_name !== $action) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::IdempotencyConflict,
+                    'The idempotency key was already used by a different owner or operation.',
+                );
+            }
+
+            if ($record->payload_hash !== $payloadHash) {
                 throw new DispatchV2CommandException(
                     DispatchV2CommandCode::IdempotencyPayloadMismatch,
-                    'The idempotency key was already used for a different operation.',
+                    'The idempotency key was already used for a different payload.',
                 );
             }
 
@@ -242,7 +295,7 @@ final class DispatchV2TransactionEnvelope
         $record = DispatchIdempotencyKey::query()->create([
             'workspace_key' => $mutation->workspaceKey,
             'owner_type' => $ownerType,
-            'owner_id' => $actor->id,
+            'owner_id' => $ownerId,
             'idempotency_key' => $mutation->idempotencyKey,
             'action_name' => $action,
             'payload_hash' => $payloadHash,

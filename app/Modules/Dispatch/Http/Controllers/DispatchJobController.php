@@ -7,12 +7,12 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Assignment\ViewModels\DispatchAssignmentWorkspaceViewModel;
 use App\Modules\Dispatch\Actions\ConvertServiceRequestToDispatch;
+use App\Modules\Dispatch\Actions\CreateManualDispatchHandoff;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Http\Requests\StoreDispatchJobRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\ViewModels\DispatchActivationWorkspaceViewModel;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
-use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
@@ -57,7 +57,7 @@ final class DispatchJobController extends Controller
     public function store(
         StoreDispatchJobRequest $request,
         ConvertServiceRequestToDispatch $convert,
-        RecordAuditEvent $audit,
+        CreateManualDispatchHandoff $manual,
     ): RedirectResponse {
         $validated = $request->validated();
 
@@ -72,12 +72,7 @@ final class DispatchJobController extends Controller
                 ],
             );
         } else {
-            $job = DispatchJob::query()->create([
-                ...$validated,
-                'status' => DispatchStatus::Draft,
-                'created_by' => $request->user()->id,
-            ]);
-            $audit->handle($request->user(), $job, 'dispatch.created', null, $job->toArray());
+            $job = $manual->handle($request->user(), $validated);
         }
 
         return to_route('home')->with('flash', [

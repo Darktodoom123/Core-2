@@ -40,7 +40,19 @@ final class CreateRentalDispatchHandoff
                 throw ValidationException::withMessages(['fulfillment_mode' => 'Pickup rentals do not create dispatch work.']);
             }
             if ($locked->dispatch_job_id !== null) {
-                return $locked->dispatchJob()->firstOrFail();
+                $existingJob = $locked->dispatchJob()->firstOrFail();
+                $this->dispatch->ensureCanonicalWithinTransaction($actor, $existingJob, $locked, DispatchSourceType::RentalReservation, [
+                    'reference' => 'REN-DSP-'.$locked->id,
+                    'client' => (string) $locked->client->company_name,
+                    'title' => 'Rental delivery '.$locked->reference,
+                    'site' => trim((string) $locked->delivery_location),
+                    'scheduled_start' => CarbonImmutable::parse($locked->getAttribute('start_date'))->startOfDay(),
+                    'scheduled_end' => CarbonImmutable::parse($locked->getAttribute('end_date'))->endOfDay(),
+                    'priority' => DispatchPriority::Routine,
+                    'requirements' => ['Rental delivery'],
+                ]);
+
+                return $existingJob;
             }
             if ($locked->status !== RentalReservationStatus::Reserved) {
                 throw ValidationException::withMessages(['status' => 'Only approved rentals can create dispatch work.']);
@@ -70,7 +82,7 @@ final class CreateRentalDispatchHandoff
             }
 
             $before = RentalAuditSnapshot::fromReservation($locked);
-            $job = $this->dispatch->handle($actor, $locked, DispatchSourceType::RentalReservation, [
+            $job = $this->dispatch->handleWithinTransaction($actor, $locked, DispatchSourceType::RentalReservation, [
                 'reference' => 'REN-DSP-'.$locked->id,
                 'client' => (string) $locked->client->company_name,
                 'title' => 'Rental delivery '.$locked->reference,

@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Dispatch\Enums\DispatchAttemptStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
@@ -291,6 +292,7 @@ it('requires a completed rental delivery dispatch before checkout', function ():
     expect($reservation->fresh()->status)->toBe(RentalReservationStatus::Reserved);
 
     $job->update(['status' => DispatchStatus::Completed]);
+    $job->canonicalHandoff->attempts()->sole()->update(['status' => DispatchAttemptStatus::Completed, 'version' => 2]);
     $this->actingAs($dispatcher)
         ->postJson("/operations/rental-reservations/{$reservation->id}/checkout", ['condition' => ['engine' => 'good']])
         ->assertOk();
@@ -335,6 +337,7 @@ it('requires a completed sales delivery dispatch before fulfillment', function (
     expect($order->fresh()->status)->toBe(SalesOrderStatus::Confirmed);
 
     $job->update(['status' => DispatchStatus::Completed]);
+    $job->canonicalHandoff->attempts()->sole()->update(['status' => DispatchAttemptStatus::Completed, 'version' => 2]);
     $this->actingAs($manager)->postJson("/operations/sales/orders/{$order->id}/fulfill")->assertOk();
     expect($order->fresh()->status)->toBe(SalesOrderStatus::Fulfilled);
 });

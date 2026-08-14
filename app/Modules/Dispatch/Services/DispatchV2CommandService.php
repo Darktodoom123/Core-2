@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Data\DispatchV2Mutation;
 use App\Modules\Dispatch\Enums\DispatchAttemptStatus;
 use App\Modules\Dispatch\Enums\DispatchPlanApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchPlanVersionStatus;
+use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\DispatchV2CommandCode;
 use App\Modules\Dispatch\Exceptions\DispatchV2CommandException;
 use App\Modules\Dispatch\Models\DispatchEmergencyOverride;
@@ -20,6 +21,7 @@ use App\Modules\Dispatch\Queries\DispatchReadinessEvaluator;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 final class DispatchV2CommandService
 {
@@ -36,76 +38,175 @@ final class DispatchV2CommandService
         DispatchJob|int $job,
         DispatchV2Mutation $mutation,
     ): DispatchExecutionAttempt {
-        $result = $this->transactions->runForCreate(
-            $actor,
-            $job,
-            $mutation,
-            'dispatch.v2.attempt.create',
-            function (DispatchJob $legacyJob) use ($actor, $mutation): DispatchExecutionAttempt {
-                if ($legacyJob->canonicalHandoff()->exists()) {
+        return $this->createInternal($actor, $job, $mutation, false);
+    }
+
+    public function createWithinTransaction(
+        User $actor,
+        DispatchJob|int $job,
+        DispatchV2Mutation $mutation,
+    ): DispatchExecutionAttempt {
+        return $this->createInternal($actor, $job, $mutation, true);
+    }
+
+    private function createInternal(
+        User $actor,
+        DispatchJob|int $job,
+        DispatchV2Mutation $mutation,
+        bool $withinTransaction,
+    ): DispatchExecutionAttempt {
+        $operation = function (DispatchJob $legacyJob) use ($actor, $mutation): DispatchExecutionAttempt {
+            $canonical = is_array($mutation->payload['canonical_handoff'] ?? null)
+                ? $mutation->payload['canonical_handoff']
+                : [];
+            if ($legacyJob->canonicalHandoff()->exists() && (($canonical['allow_new_attempt'] ?? false) !== true)) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The dispatch already has a canonical execution attempt.',
+                );
+            }
+
+            $scheduleStart = $legacyJob->scheduled_start;
+            $scheduleEnd = $legacyJob->scheduled_end;
+            $snapshot = $this->snapshot($mutation->payload['plan_snapshot'] ?? [], [
+                'scheduled_start' => $scheduleStart?->toIso8601String(),
+                'scheduled_end' => $scheduleEnd?->toIso8601String(),
+            ]);
+            $sourceType = (string) ($canonical['source_type'] ?? $legacyJob->source_type ?: 'manual');
+            $sourceId = (int) ($canonical['source_id'] ?? $legacyJob->source_id ?: $legacyJob->id);
+            $sourceReference = (string) ($canonical['external_reference'] ?? $canonical['source_reference'] ?? $legacyJob->source_reference ?: $legacyJob->reference);
+            $sourceSystem = (string) ($canonical['source_system'] ?? 'core2');
+            $sourcePayload = is_array($canonical['payload'] ?? null)
+                ? $canonical['payload']
+                : ['legacy_dispatch_job_id' => $legacyJob->id, 'reference' => $legacyJob->reference];
+            $sourcePayloadHash = hash('sha256', (string) json_encode($this->canonicalize($sourcePayload), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $claimId = $legacyJob->getAttribute('_dispatch_v2_idempotency_key_id');
+
+            $sourceTypeEnum = DispatchSourceType::tryFrom($sourceType);
+            if (! $sourceTypeEnum instanceof DispatchSourceType || $sourceId < 1 || $sourceSystem === '' || strlen($sourceSystem) > 64) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The canonical source identity is invalid.',
+                );
+            }
+            if ($sourceReference === '' || strlen($sourceReference) > 128) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The canonical source reference is invalid.',
+                );
+            }
+            if ($legacyJob->source_type !== null && (string) $legacyJob->source_type !== $sourceType) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The canonical source type does not match the legacy source link.',
+                );
+            }
+            if ($legacyJob->source_id !== null && (int) $legacyJob->source_id !== $sourceId) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The canonical source identifier does not match the legacy source link.',
+                );
+            }
+            if ($sourceTypeEnum === DispatchSourceType::Manual && $sourceId !== (int) $legacyJob->id) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'A manual canonical source must belong to its legacy dispatch.',
+                );
+            }
+            if ($mutation->idempotencyKey !== null) {
+                $expectedOwner = $sourceTypeEnum === DispatchSourceType::Manual
+                    ? [User::class, $actor->id]
+                    : [$sourceTypeEnum->value, $sourceId];
+                $actualOwner = [$mutation->idempotencyOwnerType, $mutation->idempotencyOwnerId ?? $actor->id];
+                if ($actualOwner !== $expectedOwner) {
                     throw new DispatchV2CommandException(
-                        DispatchV2CommandCode::InvalidCommand,
-                        'The dispatch already has a canonical execution attempt.',
+                        DispatchV2CommandCode::Forbidden,
+                        'The idempotency owner is not authorized for this canonical source.',
+                        status: 403,
                     );
                 }
+            }
 
-                $scheduleStart = $legacyJob->scheduled_start;
-                $scheduleEnd = $legacyJob->scheduled_end;
-                $snapshot = $this->snapshot($mutation->payload['plan_snapshot'] ?? [], [
-                    'scheduled_start' => $scheduleStart?->toIso8601String(),
-                    'scheduled_end' => $scheduleEnd?->toIso8601String(),
-                ]);
-                $sourceType = (string) ($legacyJob->source_type ?: 'legacy_dispatch_job');
-                $sourceId = (int) ($legacyJob->source_id ?: $legacyJob->id);
-                $sourceReference = (string) ($legacyJob->source_reference ?: $legacyJob->reference);
-
+            $allowNewAttempt = ($canonical['allow_new_attempt'] ?? false) === true;
+            $handoff = DispatchHandoff::query()
+                ->where('workspace_key', $mutation->workspaceKey)
+                ->where('source_system', $sourceSystem)
+                ->where('source_type', $sourceType)
+                ->where('source_id', $sourceId)
+                ->lockForUpdate()
+                ->first();
+            if ($handoff instanceof DispatchHandoff && ! $allowNewAttempt) {
+                throw new DispatchV2CommandException(
+                    DispatchV2CommandCode::InvalidCommand,
+                    'The canonical source already has an execution attempt.',
+                );
+            }
+            if (! $handoff instanceof DispatchHandoff) {
                 $handoff = DispatchHandoff::query()->create([
                     'workspace_key' => $mutation->workspaceKey,
+                    'source_system' => $sourceSystem,
                     'source_type' => $sourceType,
                     'source_id' => $sourceId,
                     'source_reference' => $sourceReference,
+                    'external_reference' => $sourceReference,
+                    'payload_hash' => $sourcePayloadHash,
+                    'inbound_owner_type' => $mutation->idempotencyKey !== null ? $mutation->idempotencyOwnerType : null,
+                    'inbound_owner_id' => $mutation->idempotencyKey !== null ? ($mutation->idempotencyOwnerId ?? $actor->id) : null,
+                    'inbound_idempotency_key' => $mutation->idempotencyKey,
+                    'inbound_idempotency_key_id' => is_numeric($claimId) ? (int) $claimId : null,
+                    'received_at' => now(),
+                    'snapshot_at' => now(),
                     'legacy_dispatch_job_id' => $legacyJob->id,
                     'created_by' => $actor->id,
-                    'compatibility_state' => 'v2_command',
+                    'compatibility_state' => $canonical !== [] ? 'v2_source_command' : 'v2_command',
                     'legacy_snapshot' => [
                         'reference' => $legacyJob->reference,
                         'legacy_status' => (string) $legacyJob->getRawOriginal('status'),
+                        'canonical_source_payload' => $sourcePayload,
                     ],
                 ]);
+            }
 
-                $attempt = DispatchExecutionAttempt::query()->create([
-                    'handoff_id' => $handoff->id,
-                    'workspace_key' => $mutation->workspaceKey,
-                    'attempt_number' => 1,
-                    'legacy_dispatch_job_id' => $legacyJob->id,
-                    'status' => DispatchAttemptStatus::Draft,
-                    'legacy_status' => (string) $legacyJob->getRawOriginal('status'),
-                    'compatibility_state' => 'v2_command',
-                    'scheduled_start' => $scheduleStart,
-                    'scheduled_end' => $scheduleEnd,
-                    'version' => 1,
-                    'legacy_snapshot' => ['reference' => $legacyJob->reference],
-                    'created_by' => $actor->id,
-                ]);
-                $claimId = $legacyJob->getAttribute('_dispatch_v2_idempotency_key_id');
-                $attempt->v2IdempotencyKeyId = is_numeric($claimId) ? (int) $claimId : null;
+            $attemptNumber = ((int) $handoff->attempts()->lockForUpdate()->max('attempt_number')) + 1;
 
-                $plan = $this->createPlan($attempt, $actor, $snapshot, DispatchPlanVersionStatus::Draft);
-                $attempt->setRelation('handoff', $handoff);
-                $this->transactions->recordMutation(
-                    $actor,
-                    $attempt,
-                    'dispatch.v2.attempt.created',
-                    [],
-                    ['status' => DispatchAttemptStatus::Draft->value, 'version' => 1, 'plan_version' => $plan->version],
-                    $mutation->reason,
-                    $plan->id,
-                );
+            $attempt = DispatchExecutionAttempt::query()->create([
+                'handoff_id' => $handoff->id,
+                'workspace_key' => $mutation->workspaceKey,
+                'correlation_id' => (string) ($canonical['correlation_id'] ?? $mutation->payload['correlation_id'] ?? Str::uuid()),
+                'attempt_number' => $attemptNumber,
+                'replaces_attempt_id' => null,
+                'replacement_policy' => $handoff->wasRecentlyCreated ? null : ($canonical['replacement_policy'] ?? 'source_replan'),
+                'replacement_reason' => $handoff->wasRecentlyCreated ? null : $mutation->reason,
+                'legacy_dispatch_job_id' => $legacyJob->id,
+                'status' => DispatchAttemptStatus::Draft,
+                'legacy_status' => (string) $legacyJob->getRawOriginal('status'),
+                'compatibility_state' => 'v2_command',
+                'scheduled_start' => $scheduleStart,
+                'scheduled_end' => $scheduleEnd,
+                'version' => 1,
+                'legacy_snapshot' => ['reference' => $legacyJob->reference],
+                'created_by' => $actor->id,
+            ]);
+            $attempt->v2IdempotencyKeyId = is_numeric($claimId) ? (int) $claimId : null;
 
-                return $attempt->refresh()->setRelation('handoff', $handoff);
-            },
-            fn (array $payload): DispatchExecutionAttempt => $this->replayAttempt($payload, $mutation->workspaceKey),
-        );
+            $plan = $this->createPlan($attempt, $actor, $snapshot, DispatchPlanVersionStatus::Draft);
+            $attempt->setRelation('handoff', $handoff);
+            $this->transactions->recordMutation(
+                $actor,
+                $attempt,
+                'dispatch.v2.attempt.created',
+                [],
+                ['status' => DispatchAttemptStatus::Draft->value, 'version' => 1, 'plan_version' => $plan->version],
+                $mutation->reason,
+                $plan->id,
+            );
+
+            return $attempt->refresh()->setRelation('handoff', $handoff);
+        };
+        $replay = fn (array $payload): DispatchExecutionAttempt => $this->replayAttempt($payload, $mutation->workspaceKey);
+        $result = $withinTransaction
+            ? $this->transactions->runForCreateWithinTransaction($actor, $job, $mutation, 'dispatch.v2.attempt.create', $operation, $replay)
+            : $this->transactions->runForCreate($actor, $job, $mutation, 'dispatch.v2.attempt.create', $operation, $replay);
 
         return $this->asAttempt($result);
     }
@@ -471,13 +572,31 @@ final class DispatchV2CommandService
                     throw $this->invalidTransition('Only a cancelled execution can be reopened as a replacement attempt.');
                 }
 
+                $replacementPolicy = is_string($mutation->payload['replacement_policy'] ?? null)
+                    ? trim((string) $mutation->payload['replacement_policy'])
+                    : 'cancelled_replacement';
+                if ($replacementPolicy !== 'cancelled_replacement') {
+                    throw new DispatchV2CommandException(
+                        DispatchV2CommandCode::InvalidCommand,
+                        'The replacement policy is not authorized for this execution.',
+                    );
+                }
+
                 $handoff = $lockedAttempt->handoff;
-                $nextNumber = ((int) DispatchExecutionAttempt::query()->where('handoff_id', $handoff->id)->max('attempt_number')) + 1;
+                $handoffAttempts = DispatchExecutionAttempt::query()
+                    ->where('handoff_id', $handoff->id)
+                    ->where('workspace_key', $lockedAttempt->workspace_key)
+                    ->lockForUpdate()
+                    ->get();
+                $nextNumber = ((int) $handoffAttempts->max('attempt_number')) + 1;
                 $replacement = DispatchExecutionAttempt::query()->create([
                     'handoff_id' => $handoff->id,
                     'workspace_key' => $lockedAttempt->workspace_key,
+                    'correlation_id' => (string) Str::uuid(),
                     'attempt_number' => $nextNumber,
                     'replaces_attempt_id' => $lockedAttempt->id,
+                    'replacement_policy' => $replacementPolicy,
+                    'replacement_reason' => trim((string) $mutation->reason),
                     'legacy_dispatch_job_id' => null,
                     'status' => DispatchAttemptStatus::Draft,
                     'compatibility_state' => 'v2_command',
@@ -745,6 +864,24 @@ final class DispatchV2CommandService
     private function contentHash(array $snapshot): string
     {
         return hash('sha256', (string) json_encode($snapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    private function canonicalize(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $normalized = [];
+        foreach ($value as $key => $child) {
+            $normalized[$key] = $this->canonicalize($child);
+        }
+
+        if (array_keys($normalized) !== range(0, count($normalized) - 1)) {
+            ksort($normalized);
+        }
+
+        return $normalized;
     }
 
     private function incrementAttempt(DispatchExecutionAttempt $attempt): void

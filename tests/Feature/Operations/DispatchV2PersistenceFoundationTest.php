@@ -230,7 +230,7 @@ it('reconciles a long Sales reference and preserves source, plan, offer, approva
         ->and(DispatchPlanApproval::query()->where('plan_version_id', $plan->id)->count())->toBe(2)
         ->and(DispatchIdempotencyKey::query()->where('legacy_command_log_id', $command->id)->count())->toBe(1)
         ->and(DispatchAuditLineage::query()->where('audit_event_id', $audit->id)->count())->toBe(1)
-        ->and(DispatchReconciliationFinding::query()->where('severity', 'blocker')->count())->toBe(0);
+        ->and(DispatchReconciliationFinding::query()->where('severity', 'blocker')->where('code', 'terminal_delivery_violation')->count())->toBe(1);
 });
 
 it('resumes a bounded reconciliation run idempotently and does not write during dry-run', function (): void {

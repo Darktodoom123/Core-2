@@ -2,7 +2,7 @@
 
 namespace App\Modules\Dispatch\Actions;
 
-use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\ServiceRequestStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
@@ -13,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 final class ConvertServiceRequestToDispatch
 {
-    public function __construct(private readonly RecordAuditEvent $audit) {}
+    public function __construct(
+        private readonly RecordAuditEvent $audit,
+        private readonly CreateDispatchFromSource $dispatch,
+    ) {}
 
     /**
      * @param  array{
@@ -50,17 +53,7 @@ final class ConvertServiceRequestToDispatch
                 ]);
             }
 
-            if (DispatchJob::query()->withTrashed()->where('reference', $attributes['reference'])->exists()) {
-                throw ValidationException::withMessages([
-                    'reference' => 'The dispatch reference has already been taken.',
-                ]);
-            }
-
-            $job = DispatchJob::query()->create([
-                'service_request_id' => $serviceRequest->id,
-                'source_type' => 'service_request',
-                'source_id' => $serviceRequest->id,
-                'source_reference' => $serviceRequest->reference,
+            $job = $this->dispatch->handleWithinTransaction($actor, $serviceRequest, DispatchSourceType::ServiceRequest, [
                 'reference' => $attributes['reference'],
                 'client' => $serviceRequest->client->company_name,
                 'title' => $serviceRequest->project_name,
@@ -69,13 +62,8 @@ final class ConvertServiceRequestToDispatch
                 'scheduled_start' => $attributes['scheduled_start'],
                 'scheduled_end' => $attributes['scheduled_end'],
                 'priority' => $serviceRequest->priority,
-                'status' => DispatchStatus::Draft,
                 'requirements' => $serviceRequest->requirements,
-                'created_by' => $actor->id,
-                'version' => 1,
             ]);
-
-            $this->audit->handle($actor, $job, 'dispatch.created', null, $job->toArray());
 
             if ($status === ServiceRequestStatus::Submitted) {
                 $before = $serviceRequest->toArray();

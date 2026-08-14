@@ -11,24 +11,34 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property string $workspace_key
+ * @property string $source_system
+ * @property string $source_type
+ * @property int $source_id
+ * @property string $external_reference
+ * @property string|null $payload_hash
+ * @property string|null $inbound_owner_type
+ * @property int|null $inbound_owner_id
+ * @property string|null $inbound_idempotency_key
  * @property string $compatibility_state
  */
 class DispatchHandoff extends Model
 {
     protected $fillable = [
-        'workspace_key',
-        'source_type',
-        'source_id',
-        'source_reference',
-        'legacy_dispatch_job_id',
-        'created_by',
-        'compatibility_state',
-        'legacy_snapshot',
+        'workspace_key', 'source_system', 'source_type', 'source_id', 'source_reference', 'external_reference',
+        'payload_hash', 'inbound_owner_type', 'inbound_owner_id', 'inbound_idempotency_key',
+        'inbound_idempotency_key_id', 'received_at', 'snapshot_at', 'legacy_dispatch_job_id', 'created_by',
+        'compatibility_state', 'legacy_snapshot',
     ];
 
     protected function casts(): array
     {
-        return ['source_id' => 'integer', 'legacy_snapshot' => 'array'];
+        return [
+            'source_id' => 'integer',
+            'inbound_owner_id' => 'integer',
+            'legacy_snapshot' => 'array',
+            'received_at' => 'datetime',
+            'snapshot_at' => 'datetime',
+        ];
     }
 
     public function sourceType(): ?DispatchSourceType
@@ -52,5 +62,11 @@ class DispatchHandoff extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return BelongsTo<DispatchIdempotencyKey, $this> */
+    public function inboundIdempotencyKey(): BelongsTo
+    {
+        return $this->belongsTo(DispatchIdempotencyKey::class, 'inbound_idempotency_key_id');
     }
 }

@@ -74,6 +74,7 @@ final class DispatchV2Reconciliation
             $jobBatchComplete = $this->reconcileJobs($run, $checkpoint, $limit);
             $commandBatchComplete = $this->reconcileCommandLogs($run, $checkpoint, $limit);
             $auditBatchComplete = $this->reconcileAuditEvents($run, $checkpoint, $limit);
+            $this->reconcileCanonicalIntegrity($run, $limit);
 
             $complete = $jobBatchComplete && $commandBatchComplete && $auditBatchComplete;
             $run->update([
@@ -212,6 +213,8 @@ final class DispatchV2Reconciliation
             $handoff = $existingHandoff;
         } else {
             $sourceCollision = DispatchHandoff::query()
+                ->where('workspace_key', self::WORKSPACE_KEY)
+                ->where('source_system', 'core2')
                 ->where('source_type', $handoffAttributes['source_type'])
                 ->where('source_id', $handoffAttributes['source_id'])
                 ->exists();
@@ -275,7 +278,26 @@ final class DispatchV2Reconciliation
             $rawId = $serviceRequestId;
         }
 
+        if ($rawType === null && $rawId === null) {
+            return [
+                'type' => DispatchSourceType::Manual->value,
+                'id' => $job->id,
+                'reference' => (string) ($this->raw($job, 'source_reference') ?: $this->raw($job, 'reference')),
+                'state' => 'manual_source',
+            ];
+        }
+
         $sourceType = is_string($rawType) ? DispatchSourceType::tryFrom($rawType) : null;
+
+        if ($sourceType === DispatchSourceType::Manual && $rawId === $job->id) {
+            return [
+                'type' => DispatchSourceType::Manual->value,
+                'id' => $job->id,
+                'reference' => (string) ($this->raw($job, 'source_reference') ?: $this->raw($job, 'reference')),
+                'state' => 'manual_source',
+            ];
+        }
+
         $source = $sourceType !== null && $rawId !== null ? $this->sourceQuery($sourceType, $rawId) : null;
 
         if (! $source instanceof Model) {
@@ -319,10 +341,133 @@ final class DispatchV2Reconciliation
     private function sourceQuery(DispatchSourceType $sourceType, int $sourceId): ?Model
     {
         return match ($sourceType) {
+            DispatchSourceType::Manual => null,
             DispatchSourceType::ServiceRequest => ServiceRequest::query()->withTrashed()->find($sourceId),
             DispatchSourceType::RentalReservation => RentalReservation::query()->withTrashed()->find($sourceId),
             DispatchSourceType::SalesOrder => SalesOrder::query()->find($sourceId),
         };
+    }
+
+    private function reconcileCanonicalIntegrity(DispatchReconciliationRun $run, int $limit): void
+    {
+        DispatchExecutionAttempt::query()->orderBy('id')->limit($limit)->get()->each(function (DispatchExecutionAttempt $attempt) use ($run): void {
+            $handoff = DispatchHandoff::query()->find($attempt->handoff_id);
+            if (! $handoff instanceof DispatchHandoff) {
+                $this->finding($run, 'dispatch_attempt', $attempt->id, 'orphan_attempt', DispatchReconciliationFindingSeverity::Blocker, [
+                    'handoff_id' => $attempt->handoff_id,
+                ]);
+
+                return;
+            }
+
+            if ($handoff->workspace_key !== $attempt->workspace_key) {
+                $this->finding($run, 'dispatch_attempt', $attempt->id, 'workspace_mismatch', DispatchReconciliationFindingSeverity::Blocker, [
+                    'attempt_workspace' => $attempt->workspace_key,
+                    'handoff_workspace' => $handoff->workspace_key,
+                ]);
+            }
+
+            if ($attempt->legacy_dispatch_job_id !== null && (int) $attempt->legacy_dispatch_job_id !== (int) $handoff->legacy_dispatch_job_id) {
+                $this->finding($run, 'dispatch_attempt', $attempt->id, 'attempt_handoff_mismatch', DispatchReconciliationFindingSeverity::Blocker, [
+                    'attempt_legacy_dispatch_job_id' => $attempt->legacy_dispatch_job_id,
+                    'handoff_legacy_dispatch_job_id' => $handoff->legacy_dispatch_job_id,
+                ]);
+            }
+        });
+
+        DispatchHandoff::query()->orderBy('id')->limit($limit)->get()->each(function (DispatchHandoff $handoff) use ($run): void {
+            $sourceType = DispatchSourceType::tryFrom((string) $handoff->source_type);
+            $source = $sourceType !== null ? $this->sourceQuery($sourceType, (int) $handoff->source_id) : null;
+
+            if ($sourceType === DispatchSourceType::Manual) {
+                return;
+            }
+
+            if (! $source instanceof Model) {
+                $this->finding($run, 'dispatch_handoff', $handoff->id, 'orphaned_source', DispatchReconciliationFindingSeverity::Blocker, [
+                    'source_type' => $handoff->source_type,
+                    'source_id' => $handoff->source_id,
+                ]);
+
+                return;
+            }
+
+            $sourceReference = (string) ($source->getAttribute('reference') ?? '');
+            $externalReference = (string) ($handoff->external_reference ?: $handoff->source_reference);
+            if ($sourceReference !== '' && $externalReference !== '' && $sourceReference !== $externalReference) {
+                $longReference = $sourceType === DispatchSourceType::SalesOrder
+                    && strlen($externalReference) < strlen($sourceReference)
+                    && str_starts_with($sourceReference, $externalReference);
+                $this->finding(
+                    $run,
+                    'dispatch_handoff',
+                    $handoff->id,
+                    $longReference ? 'long_sales_reference_truncated' : 'source_hash_mismatch',
+                    $longReference ? DispatchReconciliationFindingSeverity::Warning : DispatchReconciliationFindingSeverity::Blocker,
+                    ['canonical_reference' => $externalReference, 'source_reference' => $sourceReference],
+                );
+            }
+
+            $storedSourcePayload = data_get($handoff->legacy_snapshot, 'canonical_source_payload.source');
+            if (is_array($storedSourcePayload)) {
+                $currentSourcePayload = $source->getAttributes();
+                unset($currentSourcePayload['dispatch_job_id'], $currentSourcePayload['created_at'], $currentSourcePayload['updated_at']);
+                if ($this->hashPayload($storedSourcePayload) !== $this->hashPayload($currentSourcePayload)) {
+                    $this->finding($run, 'dispatch_handoff', $handoff->id, 'source_hash_mismatch', DispatchReconciliationFindingSeverity::Blocker, [
+                        'stored_source_hash' => $this->hashPayload($storedSourcePayload),
+                        'current_source_hash' => $this->hashPayload($currentSourcePayload),
+                    ]);
+                }
+            }
+
+            if (in_array($sourceType, [DispatchSourceType::RentalReservation, DispatchSourceType::SalesOrder], true)
+                && (int) $source->getAttribute('dispatch_job_id') !== (int) $handoff->legacy_dispatch_job_id) {
+                $this->finding($run, 'dispatch_handoff', $handoff->id, 'asymmetric_reverse_pointer', DispatchReconciliationFindingSeverity::Blocker, [
+                    'source_dispatch_job_id' => $source->getAttribute('dispatch_job_id'),
+                    'handoff_legacy_dispatch_job_id' => $handoff->legacy_dispatch_job_id,
+                ]);
+            }
+
+            if (method_exists($source, 'requiresDispatch') && $source->requiresDispatch() && $source->getAttribute('dispatch_job_id') !== null) {
+                $completed = $handoff->attempts()
+                    ->where('workspace_key', $handoff->workspace_key)
+                    ->where('status', DispatchAttemptStatus::Completed)
+                    ->whereNull('archived_at')
+                    ->exists();
+                if (! $completed) {
+                    $this->finding($run, 'dispatch_handoff', $handoff->id, 'terminal_delivery_violation', DispatchReconciliationFindingSeverity::Blocker, [
+                        'source_type' => $handoff->source_type,
+                        'source_id' => $handoff->source_id,
+                    ]);
+                }
+            }
+
+            $duplicateHandoffs = DispatchHandoff::query()
+                ->where('id', '!=', $handoff->id)
+                ->where('workspace_key', $handoff->workspace_key)
+                ->where('source_system', $handoff->source_system)
+                ->where('source_type', $handoff->source_type)
+                ->where('source_id', $handoff->source_id)
+                ->exists();
+            if ($duplicateHandoffs) {
+                $this->finding($run, 'dispatch_handoff', $handoff->id, 'duplicate_source_handoff', DispatchReconciliationFindingSeverity::Blocker, [
+                    'source_type' => $handoff->source_type,
+                    'source_id' => $handoff->source_id,
+                ]);
+            }
+        });
+
+        DB::table('dispatch_execution_attempts')
+            ->select('handoff_id', 'attempt_number')
+            ->groupBy('handoff_id', 'attempt_number')
+            ->havingRaw('count(*) > 1')
+            ->limit($limit)
+            ->get()
+            ->each(function (object $duplicate) use ($run): void {
+                $this->finding($run, 'dispatch_handoff', (int) $duplicate->handoff_id, 'duplicate_attempt_number', DispatchReconciliationFindingSeverity::Blocker, [
+                    'attempt_number' => (int) $duplicate->attempt_number,
+                ]);
+            });
     }
 
     private function checkSourceSymmetry(DispatchReconciliationRun $run, DispatchJob $job, ?DispatchSourceType $sourceType, Model $source): void

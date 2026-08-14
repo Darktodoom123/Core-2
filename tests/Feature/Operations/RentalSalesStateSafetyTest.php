@@ -66,6 +66,7 @@ function r0StateReservation(
     Client $client,
     OperationalAsset $asset,
     RentalReservationStatus $status = RentalReservationStatus::Reserved,
+    string $fulfillmentMode = 'delivery',
 ): RentalReservation {
     $start = CarbonImmutable::now()->addDays(2)->startOfDay();
     $end = $start->addDay();
@@ -76,7 +77,7 @@ function r0StateReservation(
         'status' => $status,
         'start_date' => $start,
         'end_date' => $end,
-        'fulfillment_mode' => 'delivery',
+        'fulfillment_mode' => $fulfillmentMode,
         'total_cents' => 100,
     ]);
 
@@ -348,7 +349,7 @@ it('persists valid rental checkout and return condition evidence as JSON', funct
     $actor = r0StateUser(RoleName::Dispatcher);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-EVIDENCE-'.fake()->unique()->numerify('###'));
-    $reservation = r0StateReservation($actor, $client, $asset, RentalReservationStatus::Reserved);
+    $reservation = r0StateReservation($actor, $client, $asset, RentalReservationStatus::Reserved, 'pickup');
 
     $this->actingAs($actor)
         ->postJson("/operations/rental-reservations/{$reservation->id}/checkout", [
