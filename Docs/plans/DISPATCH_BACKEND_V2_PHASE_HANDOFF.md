@@ -1,4 +1,44 @@
-# Dispatch Backend V2 Phase 2 Handoff
+# Dispatch Backend V2 Phase 3 Handoff
+
+## Phase 3 closeout
+
+Phase 3 implementation is committed on `codex/dispatch-backend-v2-phase-3`, starting exactly from `c99c0c08b5fb2da920dfdeaaf9da879888f064be`. Focused, regression, affected, full-backend, static, audit, and diff checks are complete. No push, deployment, PR, adapter cutover, Phase 4 source-attempt integration, or external mutation has been performed.
+
+### Implemented contract
+
+- Typed offers implement `proposed -> offered -> accepted | rejected | withdrawn | expired`, with accepted history ending as `ended` where applicable. Responses are workspace/actor/object scoped, expected-version aware, idempotent, audited, and never infer acceptance from job status or cancel attempts.
+- Mandatory/optional requirement slots, explicit lead designation/replacement, accepted-lead authorization, typed personnel/credential/account/availability blockers, and shared-asset status/inspection/maintenance/conflict checks are enforced under deterministic aggregate/personnel/asset lock ordering.
+- Plan materiality is versioned; material changes supersede prior pending/approved approvals atomically. Approval request reason is distinct from decision reason and maker/checker separation is enforced.
+- Emergency overrides are typed, scoped, plan-version bound, requester/decider separated, bounded, expiring, consumable, replay-owned, and audited. They may waive only approved soft blockers and never lead or hard safety blockers.
+- `DISPATCH_V2_PHASE3_COMMANDS_ENABLED` preserves rollback. Existing web/mobile routes and adapters remain unchanged.
+
+### Verification checkpoint
+
+- `composer run lint:check`: PASS.
+- `composer run types:check`: PASS, 0 PHPStan errors.
+- Focused Phase 3 suite: PASS, 7 tests, 40 assertions.
+- Phase 2 command/legacy/persistence plus Phase 3 regression suites: PASS, 24 tests, 183 assertions.
+- Affected assignment/dispatch/asset/maintenance/shared-asset suites: PASS, 67 tests, 646 assertions.
+- Full backend `php artisan test --compact`: PASS, 557 tests, 7,221 assertions.
+- `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
+- `git diff --check`: PASS.
+- `npm ci --no-audit --no-fund` and `npm run build`: PASS; frontend source untouched. Existing dependency/Vite/chunk warnings are informational.
+- `php artisan test --compact -c phpunit.postgresql.xml`: BLOCKED exactly by connection refusal to `127.0.0.1:5432`, database `core2_rental_sales_test`; no PostgreSQL pass is claimed.
+- Forward migration rehearsal on an isolated file-backed SQLite database: PASS; all migrations, including `2026_08_14_140000_add_dispatch_v2_phase3_contract`, applied and `migrate:status` reported all Ran. Required Phase 3 tables/columns were present. `migrate:rollback --step=1 --force` was refused by the repository environment guard (`This command is prohibited from running in this environment`), so rollback was not claimed as passed; the temporary database was removed.
+
+### Review checkpoint and next action
+
+IDOR/workspace scoping, lead spoofing, confused deputy paths, maker/checker separation, emergency scope/expiry, replay ownership/payload mismatch, audit minimization, duplicate events, rollback, optional-resource behavior, command-time eligibility, and deterministic lock ordering were reviewed. Two review findings were fixed before the final green run: optional asset conflicts no longer block readiness, and lead designation rechecks schedule conflicts under lock. No critical/high-confidence unresolved issue remains.
+
+- `PHASE_STATUS=complete`
+- `READY_FOR_PHASE_4=yes`
+- `BRANCH=codex/dispatch-backend-v2-phase-3`
+- `START_SHA=c99c0c08b5fb2da920dfdeaaf9da879888f064be`
+- `IMPLEMENTATION_SHA=a2834099ba55792109b621abae9e2b6215733175`
+- `HANDOFF_SHA=pending closeout commit`
+- `CONTEXT_SPLIT_REQUIRED=no`
+
+## Prior Phase 2 baseline
 
 ## Objective
 
@@ -69,7 +109,7 @@ Complete Phase 2 from the exact Phase 1 session head by adding the shared, typed
 - Existing untouched mobile quality debt remains outside Phase 2: Phase 1 recorded 39 `packages/field-mobile` lint errors and 5 format failures.
 - No Phase 2-caused blocker remains.
 
-## Closeout fields
+## Prior Phase 2 closeout fields
 
 - `PHASE_STATUS=complete`
 - `READY_FOR_PHASE_3=yes`
@@ -82,6 +122,6 @@ Complete Phase 2 from the exact Phase 1 session head by adding the shared, typed
 - `IMPLEMENTATION_SHA=b8a80257cc9751f83303e47a7651efb18c71e425`
 - `HANDOFF_SHA=closeout commit for this handoff`
 
-## Next action
+## Prior Phase 2 next action
 
 Phase 3 may begin from the clean Phase 2 implementation plus handoff closeout on `codex/dispatch-backend-v2-phase-2`. Phase 4 remains dependency-gated on Phase 3. Do not switch web/mobile adapters until the Phase 3 offer/lead/eligibility/approval gates are complete.

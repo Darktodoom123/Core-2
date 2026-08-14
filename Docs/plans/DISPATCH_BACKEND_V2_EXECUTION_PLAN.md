@@ -381,12 +381,13 @@ For every phase:
 
 ```yaml
 schema: dispatch-backend-v2-phase-status/v1
-branch: codex/dispatch-backend-v2-phase-2
+branch: codex/dispatch-backend-v2-phase-3
 baseline_commit: 1b96db43be0c05abfa938631179240bf25abe783
-current_phase: phase_2
+current_phase: phase_3
 ready_for_phase_1: false
 ready_for_phase_2: false
-ready_for_phase_3: true
+ready_for_phase_3: false
+ready_for_phase_4: true
 ready_for_phase_7: false
 phases:
   phase_0:
@@ -413,11 +414,11 @@ phases:
     commit_sha: b8a80257cc9751f83303e47a7651efb18c71e425
     depends_on: [phase_1]
   phase_3:
-    status: ready
-    commit_sha: null
+    status: complete
+    commit_sha: a2834099ba55792109b621abae9e2b6215733175
     depends_on: [phase_2]
   phase_4:
-    status: blocked_on_phase_3
+    status: ready
     commit_sha: null
     depends_on: [phase_2, phase_3]
   phase_5:
@@ -441,23 +442,24 @@ known_preexisting_blockers:
     detail: Full npm run format:check reports 5 untouched packages/field-mobile files.
 execution_record:
   commands:
-    - "php artisan test --compact tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php: PASS, 7 tests, 79 assertions"
-    - "php artisan test --compact relevant Dispatch/source/Rental/Sales/idempotency files: PASS, 109 tests, 794 assertions"
-    - "php artisan test --compact: PASS, 540 tests, 6,805 assertions"
+    - "php artisan test --compact tests/Feature/Operations/DispatchV2Phase3Test.php: PASS, 7 tests, 40 assertions"
+    - "php artisan test --compact Phase 2 command/legacy/persistence plus Phase 3 regression suites: PASS, 24 tests, 183 assertions"
+    - "php artisan test --compact affected assignment/dispatch/asset/maintenance/shared-asset suites: PASS, 67 tests, 646 assertions"
+    - "php artisan test --compact: PASS, 557 tests, 7,221 assertions"
     - "composer run lint:check: PASS"
     - "composer run types:check: PASS, 0 PHPStan errors"
     - "composer audit --locked --no-interaction: PASS, no security vulnerability advisories"
-    - "npm ci --no-audit --no-fund: PASS"
-    - "npm run build: PASS; existing Vite large-chunk warnings"
-    - "SQLite fresh/rollback/reapply migration rehearsal: PASS; legacy dispatch_jobs preserved across rollback"
+    - "npm ci --no-audit --no-fund: PASS; existing dependency deprecation warnings"
+    - "npm run build: PASS; existing Vite timing and large-chunk warnings"
+    - "Isolated file-backed SQLite forward migration rehearsal: PASS; all migrations and Phase 3 schema present; rollback refused by repository environment guard"
     - "php artisan test --compact -c phpunit.postgresql.xml: BLOCKED; 4 tests could not connect to 127.0.0.1:5432/core2_rental_sales_test"
     - "git diff --check: PASS"
   review_findings:
-    - "Resolved the invalid constraint-test fixture by supplying the required preserved legacy dispatch job FK."
-    - "Read-only code/security review found no critical or high-confidence unresolved issue; reconciliation remains additive, bounded, resumable, idempotent, and non-destructive."
-    - "Approved Phase 7 graph amendment recorded in the plan and executor prompts; Phase 7 remains blocked on Phase 6."
-  rollback_check: complete
-  ready_for_phase_2: true
+    - "Fixed optional asset conflicts incorrectly blocking readiness and added command-time lead schedule-conflict revalidation under lock."
+    - "Code/security review found no critical or high-confidence unresolved issue across IDOR, lead spoofing, confused deputy, maker/checker, replay, override, safety, audit, duplicate-event, and lock-ordering paths."
+    - "Phase 4 is unlocked; Phase 7 remains blocked on Phase 6."
+  rollback_check: forward_complete_rollback_refused_by_environment_guard
+  ready_for_phase_4: true
   ready_for_phase_7: false
   ready_graph_complete: false
 
@@ -490,6 +492,36 @@ Review/security conclusion: no critical or high-confidence unresolved issue. The
 
 Known external/pre-existing blockers remain the unavailable PostgreSQL service and untouched mobile quality debt from Phase 1 (39 lint errors and 5 format failures in `packages/field-mobile`). `CONTEXT_SPLIT_REQUIRED=no`.
 ```
+
+## Phase 3 execution record
+
+Phase 3 implementation starts from the exact Phase 2 session head `c99c0c08b5fb2da920dfdeaaf9da879888f064be` on `codex/dispatch-backend-v2-phase-2` and is implemented on `codex/dispatch-backend-v2-phase-3`.
+
+- `START_SHA`: `c99c0c08b5fb2da920dfdeaaf9da879888f064be`
+- `IMPLEMENTATION_SHA`: `a2834099ba55792109b621abae9e2b6215733175` (`feat(dispatch): enforce phase 3 offers and readiness`)
+- `PHASE_STATUS`: `complete`
+- `READY_FOR_PHASE_4`: `yes`
+- `READY_FOR_PHASE_7`: `no`
+- `CONTEXT_SPLIT_REQUIRED`: `no`
+
+The implementation adds typed assignment offers and terminal history, mandatory/optional requirement slots, explicit lead designation/replacement and lead-owned progression, authoritative personnel/credential/account/availability/conflict checks, authoritative shared-asset safety/conflict checks, immutable plan materiality and approval supersession, maker/checker reasons, scoped emergency overrides, deterministic resource locking, and a Phase 3 rollback flag. Existing adapters/routes and legacy rows remain compatibility paths; Phase 4 source-attempt integration and Phase 5 API cutover were not performed.
+
+Phase 3 verification:
+
+- `php artisan test --compact tests/Feature/Operations/DispatchV2Phase3Test.php`: PASS, 7 tests, 40 assertions.
+- Phase 2 command/legacy/persistence plus Phase 3 regression suites: PASS, 24 tests, 183 assertions.
+- Affected assignment/dispatch/asset/maintenance/shared-asset suites: PASS, 67 tests, 646 assertions.
+- Full backend `php artisan test --compact`: PASS, 557 tests, 7,221 assertions.
+- `composer run lint:check`: PASS.
+- `composer run types:check`: PASS, 0 PHPStan errors.
+- `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
+- `git diff --check`: PASS.
+- `npm ci --no-audit --no-fund`: PASS; existing dependency deprecation warnings only.
+- `npm run build`: PASS; existing Vite timing and large-chunk warnings only; no frontend source changed.
+- Isolated file-backed SQLite forward migration rehearsal: PASS; all migrations applied, Phase 3 tables/columns present, and `migrate:status` reported all Ran. The repository environment guard refused `migrate:rollback --step=1 --force` with `This command is prohibited from running in this environment`; rollback is not claimed as passed and the temporary database was removed.
+- `php artisan test --compact -c phpunit.postgresql.xml`: BLOCKED; all 4 configured tests failed with connection refused from `127.0.0.1:5432` for `core2_rental_sales_test`. No PostgreSQL pass is claimed.
+
+Review conclusion: IDOR/workspace leakage, lead spoofing, confused deputy, maker/checker self-decision, credential/eligibility TOCTOU, lock ordering, replay ownership, override abuse, safety bypass, audit minimization, duplicate events, optional-resource behavior, and transaction rollback were reviewed. Two findings were fixed before the final green run: optional asset conflicts no longer block readiness, and lead designation rechecks schedule conflicts under lock. No critical/high-confidence unresolved issue remains. Untouched Phase 1 mobile debt remains documented in `known_preexisting_blockers`.
 
 ## Phase 0 execution record
 
