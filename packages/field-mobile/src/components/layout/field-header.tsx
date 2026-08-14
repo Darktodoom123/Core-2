@@ -215,19 +215,20 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     notificationCount,
     onOpenNotifications,
 }) => {
-    const [isPillVisible, setIsPillVisible] = useState(true);
+    const [dismissedOnline, setDismissedOnline] = useState<string | null>(null);
+    const onlineKey = `${syncStatusLabel}-${syncStatusMessage}`;
+    const isPillVisible =
+        syncTone !== 'online' || dismissedOnline !== onlineKey;
 
     useEffect(() => {
-        setIsPillVisible(true);
-
         if (syncTone === 'online') {
             const timer = setTimeout(() => {
-                setIsPillVisible(false);
+                setDismissedOnline(onlineKey);
             }, 5000);
 
             return () => clearTimeout(timer);
         }
-    }, [syncTone, syncStatusLabel, syncStatusMessage]);
+    }, [syncTone, onlineKey]);
 
     return (
         <View style={styles.header} testID="field-header">

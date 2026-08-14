@@ -19,22 +19,23 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../auth/AuthContext';
-import { offlineSessionVerificationError } from '../auth/AuthContext';
+import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
-import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
-import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { nativeLocationAdapter } from '../native/locationAdapter';
+import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
+import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { ApiClientError } from '../services/apiClient';
 import { CommandOutboxManager } from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
-import type { OutboxRepository } from '../storage/outboxRepository';
-import type { PayloadHasher } from '../storage/outboxRepository';
+import type {
+    OutboxRepository,
+    PayloadHasher,
+} from '../storage/outboxRepository';
 import type {
     DispatchJob,
     DispatchStatus,

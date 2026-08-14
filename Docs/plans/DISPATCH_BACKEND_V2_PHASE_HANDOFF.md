@@ -1,3 +1,56 @@
+# Dispatch Backend V2 Phase 7 Handoff
+
+## Phase 7 Closeout — 2026-08-14
+
+Phase 7 is complete on `codex/dispatch-backend-v2-phase-7`, starting from `681b2d3856b3e55fe35ea4ff8a385f0ef3fa920e` (the Phase 6 handoff commit). UI/UX cutover, web office surface alignment, field mobile lifecycle consistency, mobile code quality remediation (all 39 pre-existing ESLint errors and format debt resolved), Playwright accessibility, and full regression verification have been verified. The entire Dispatch Backend V2 execution graph (Phases 0–7) is complete.
+
+### Implemented Phase 7 Scope
+
+1. **Subphase 7A — UX Audit & Design Alignment**:
+   - Audited web and mobile interfaces against canonical design tokens (`Docs/Design.md`, `impeccable`, and `expo-native-ui`).
+   - Verified that assignment acceptance (`accepted`) is presented strictly as an assignment offer response, and operational execution follows the canonical sequence `draft -> dispatched -> en_route -> arrived -> working -> completed / cancelled`.
+
+2. **Subphase 7B — Web Office Surfaces Cutover**:
+   - `resources/js/pages/workspace.tsx` & `live-dispatch-workspace.tsx`: Schedule boards (day/week/month), conflicts list, and live tracking map aligned with canonical execution statuses.
+   - `resources/js/pages/dispatch-detail.tsx`: Resource assignment forms, candidate toggles, approval decision banners, and override affordances verified.
+   - `resources/js/components/workspace/canonical-status-badge.tsx`: Canonical semantic color tokens and icons for all lifecycle states.
+
+3. **Subphase 7C — Field-Mobile Surfaces Cutover & Quality Remediation**:
+   - `packages/field-mobile/src/screens/AssignedJobsListScreen.tsx` & `JobDetailScreen.tsx`: Modern native panel integration (`FieldHeader`, `SyncStatusPanel`, `FieldBottomNav`, `HeavyCraneRouteCard`, `AssignmentResponseCard`, `CommandConflictBanner`), 44px minimum touch targets, and offline sync indicators.
+   - Resolved all 39 pre-existing ESLint errors in `packages/field-mobile` (React 19 hook ref rules in `profile-sheet.tsx` and `notifications-sheet.tsx`, import sorting, consistent type specifiers, and dead code cleanup).
+
+4. **Subphase 7D — Integrated QA & Full Regression**:
+   - Full Pest backend test suite: **591/591 tests passing** (7,807 assertions).
+   - Mobile test suite: **71/71 tests passing** (34 unit + 37 Jest component tests).
+   - Playwright E2E accessibility suite: **1/1 tests passing** (WCAG 2.2 AA compliant).
+   - Pint & PHPStan: **0 errors**.
+   - ESLint & Prettier: **0 errors, 0 warnings**.
+   - TypeScript: **0 errors** across both web (`tsc --noEmit`) and mobile (`npm --prefix packages/field-mobile run types:check`).
+   - Production bundle: `npm run build` cleanly compiled with Vite.
+
+### Exact Verification State
+
+- **Backend Pest Matrix**:
+  - `php artisan test --compact` — PASS (591/591 tests, 7,807 assertions).
+- **Mobile Matrix**:
+  - `npm --prefix packages/field-mobile run test` — PASS (71/71 tests).
+- **Playwright Accessibility**:
+  - `npx playwright test tests/Browser/accessibility.spec.ts` — PASS (1/1 tests).
+- **Static Analysis & Linters**:
+  - `composer lint:check` (Pint) — PASS (0 errors).
+  - `composer types:check` (PHPStan 512M) — PASS (0 errors).
+  - `npm run lint:check` (ESLint) — PASS (0 errors, 0 warnings).
+  - `npm run format:check` (Prettier) — PASS (Clean).
+  - `npm run types:check` (Frontend TypeScript) — PASS (0 errors).
+  - `npm run types:check:mobile` (Mobile TypeScript) — PASS (0 errors).
+  - `npm run build` (Vite production build) — PASS (Clean).
+
+`PHASE_STATUS=complete`
+`READY_GRAPH_COMPLETE=yes`
+`CONTEXT_SPLIT_REQUIRED=no`
+
+---
+
 # Dispatch Backend V2 Phase 6 Handoff
 
 ## Phase 6 Closeout — 2026-08-14

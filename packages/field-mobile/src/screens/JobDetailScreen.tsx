@@ -8,6 +8,12 @@ import {
     View,
 } from 'react-native';
 import type { AppStateStatus } from 'react-native';
+import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
+import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
+import { LocationSharingCard } from '../components/cards/LocationSharingCard';
+import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
+import { colors } from '../components/nativeStyles';
+import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -22,12 +28,6 @@ import type {
     OutboxCommand,
     User,
 } from '../types/index';
-import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
-import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
-import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
-import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
-import { LocationSharingCard } from '../components/cards/LocationSharingCard';
-import { colors, sharedStyles } from '../components/nativeStyles';
 
 export interface JobDetailScreenProps {
     job: DispatchJob;

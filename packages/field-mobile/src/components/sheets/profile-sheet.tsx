@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useMemo } from 'react';
 import {
     Animated,
     Modal,
@@ -59,7 +59,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
         ? userRole.replaceAll('_', ' ')
         : 'Field worker';
 
-    const panY = useRef(new Animated.Value(0)).current;
+    const panY = useMemo(() => new Animated.Value(0), []);
 
     useEffect(() => {
         if (visible) {
@@ -67,36 +67,38 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
         }
     }, [visible, panY]);
 
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) =>
-                gestureState.dy > 5,
-            onPanResponderMove: (_, gestureState) => {
-                if (gestureState.dy > 0) {
-                    panY.setValue(gestureState.dy);
-                }
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (gestureState.dy > 80 || gestureState.vy > 0.5) {
-                    Animated.timing(panY, {
-                        duration: 150,
-                        toValue: 500,
-                        useNativeDriver: true,
-                    }).start(() => {
-                        onClose();
-                        panY.setValue(0);
-                    });
-                } else {
-                    Animated.spring(panY, {
-                        bounciness: 4,
-                        toValue: 0,
-                        useNativeDriver: true,
-                    }).start();
-                }
-            },
-        }),
-    ).current;
+    const panResponder = useMemo(
+        () =>
+            PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: (_, gestureState) =>
+                    gestureState.dy > 5,
+                onPanResponderMove: (_, gestureState) => {
+                    if (gestureState.dy > 0) {
+                        panY.setValue(gestureState.dy);
+                    }
+                },
+                onPanResponderRelease: (_, gestureState) => {
+                    if (gestureState.dy > 80 || gestureState.vy > 0.5) {
+                        Animated.timing(panY, {
+                            duration: 150,
+                            toValue: 500,
+                            useNativeDriver: true,
+                        }).start(() => {
+                            onClose();
+                            panY.setValue(0);
+                        });
+                    } else {
+                        Animated.spring(panY, {
+                            bounciness: 4,
+                            toValue: 0,
+                            useNativeDriver: true,
+                        }).start();
+                    }
+                },
+            }),
+        [onClose, panY],
+    );
 
     return (
         <Modal
