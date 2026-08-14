@@ -76,7 +76,7 @@ See [DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md](DISPATCH_BACKEND_V2_PHASE_1_
 - `READY_FOR_PHASE_7=no` (Phase 6 is still required)
 - `READY_GRAPH_COMPLETE=no` (Phase 7 remains after Phase 6)
 - `CONTEXT_SPLIT_REQUIRED=no`
-- Phase 1 implementation SHA: `19ce0da4c7b4ab09ddaa66309827dfc7c1fcd3d0` (`feat(dispatch): add v2 persistence foundation`).
+- Phase 1 implementation SHA: `19ce0da480661ee3a12d85e4f61a51fa56864db8` (`feat(dispatch): add v2 persistence foundation`).
 
 ## Next action
 
