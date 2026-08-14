@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sales\Actions;
 
+use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
@@ -42,6 +43,12 @@ final class FulfillSalesOrder
 
             if ($locked->status !== SalesOrderStatus::Confirmed) {
                 throw ValidationException::withMessages(['status' => 'Only confirmed orders can be fulfilled.']);
+            }
+            if ($locked->requiresDispatch() && $locked->dispatch_job_id !== null) {
+                $dispatch = $locked->dispatchJob()->lockForUpdate()->first();
+                if ($dispatch === null || $dispatch->status !== DispatchStatus::Completed) {
+                    throw ValidationException::withMessages(['status' => 'A delivery order requires a completed dispatch before fulfillment.']);
+                }
             }
             if ($items->isEmpty() || $items->count() > 100) {
                 throw ValidationException::withMessages(['items' => 'An order must contain between one and 100 items.']);

@@ -7,6 +7,7 @@ use App\Modules\Rental\Actions\ApproveRentalReservation;
 use App\Modules\Rental\Actions\AssignRentalOperator;
 use App\Modules\Rental\Actions\AuthorizeRentalOperation;
 use App\Modules\Rental\Actions\CheckoutRental;
+use App\Modules\Rental\Actions\CreateRentalDispatchHandoff;
 use App\Modules\Rental\Actions\CreateRentalReservation;
 use App\Modules\Rental\Actions\ReturnRental;
 use App\Modules\Rental\Http\Requests\AssignRentalOperatorRequest;
@@ -16,6 +17,8 @@ use App\Modules\Rental\Http\Requests\StoreRentalReservationRequest;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Platform\Identity\Enums\PermissionName;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 final class RentalReservationController extends Controller
@@ -37,6 +40,20 @@ final class RentalReservationController extends Controller
     public function approve(RentalReservation $rentalReservation, ApproveRentalReservation $action): JsonResponse
     {
         return response()->json(['data' => $action->handle($rentalReservation, request()->user())]);
+    }
+
+    public function createDispatch(Request $request, RentalReservation $rentalReservation, CreateRentalDispatchHandoff $action): JsonResponse|RedirectResponse
+    {
+        $job = $action->handle($rentalReservation, $request->user());
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => $job], 201);
+        }
+
+        return to_route('home')->with('flash', [
+            'tone' => 'success',
+            'message' => "Rental {$rentalReservation->reference} was linked to dispatch {$job->reference}.",
+        ]);
     }
 
     public function assignOperator(RentalReservation $rentalReservation, AssignRentalOperatorRequest $request, AssignRentalOperator $action): JsonResponse

@@ -58,6 +58,9 @@ final class ConvertServiceRequestToDispatch
 
             $job = DispatchJob::query()->create([
                 'service_request_id' => $serviceRequest->id,
+                'source_type' => 'service_request',
+                'source_id' => $serviceRequest->id,
+                'source_reference' => $serviceRequest->reference,
                 'reference' => $attributes['reference'],
                 'client' => $serviceRequest->client->company_name,
                 'title' => $serviceRequest->project_name,

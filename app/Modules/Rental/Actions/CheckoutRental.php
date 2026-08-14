@@ -2,6 +2,7 @@
 
 namespace App\Modules\Rental\Actions;
 
+use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalCheckout;
 use App\Modules\Rental\Models\RentalReservation;
@@ -37,6 +38,12 @@ final class CheckoutRental
             $locked->setRelation('items', $items);
             if (! $locked->status->canCheckout() || $locked->checkout()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Only reserved rentals can be checked out once.']);
+            }
+            if ($locked->requiresDispatch() && $locked->dispatch_job_id !== null) {
+                $dispatch = $locked->dispatchJob()->lockForUpdate()->first();
+                if ($dispatch === null || $dispatch->status !== DispatchStatus::Completed) {
+                    throw ValidationException::withMessages(['status' => 'A delivery rental requires a completed dispatch before checkout.']);
+                }
             }
             $assetIds = $items->pluck('operational_asset_id')->map(static fn (mixed $id): int => (int) $id)->all();
             if (count($assetIds) !== count(array_unique($assetIds))) {

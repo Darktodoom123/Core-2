@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent, MouseEvent } from 'react';
 import { Button, DataPair, EmptyState, Panel, Skeleton } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     AssetCandidateViewModel,
@@ -2135,6 +2136,20 @@ function DispatchContext({ job }: { job: DispatchDetailPageProps['job'] }) {
             <h2 className="font-semibold">Dispatch context</h2>
             <dl className="mt-3 divide-y divide-line">
                 <DataPair
+                    label="Source"
+                    value={
+                        job.source
+                            ? `${job.source.label}${job.source.reference ? ` · ${job.source.reference}` : ''}`
+                            : 'Direct dispatch'
+                    }
+                />
+                {job.source?.fulfillment_mode && (
+                    <DataPair
+                        label="Fulfillment"
+                        value={humanize(job.source.fulfillment_mode)}
+                    />
+                )}
+                <DataPair
                     label="Schedule"
                     value={
                         <span className="inline-flex items-start gap-2">
@@ -2974,17 +2989,6 @@ function credentialSummary(candidate: PersonnelCandidateViewModel) {
     return `Credential: ${candidate.credential.label} · ${humanize(candidate.credential.status)}${expiry}`;
 }
 
-function formatDateTime(value: string | null) {
-    if (value === null) {
-        return 'Not scheduled';
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
 function formatDate(value: string) {
     return new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
@@ -3015,10 +3019,6 @@ function getSafeReturnTo() {
     }
 
     return '/?view=dispatch';
-}
-
-function humanize(value: string) {
-    return value.replaceAll('_', ' ');
 }
 
 export function CandidateListSkeleton() {

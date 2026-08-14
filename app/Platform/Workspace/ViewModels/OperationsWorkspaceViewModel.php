@@ -4,12 +4,15 @@ namespace App\Platform\Workspace\ViewModels;
 
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
@@ -22,6 +25,7 @@ use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Models\OperationalAsset;
+use BackedEnum;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -76,6 +80,61 @@ final class OperationsWorkspaceViewModel
     }
 
     /**
+     * @param  Collection<int, RentalReservation>  $reservations
+     * @return array<int, array<string, mixed>>
+     */
+    public static function rentalHandoffs(Collection $reservations): array
+    {
+        return $reservations->map(static fn (RentalReservation $reservation): array => [
+            ...self::commercialHandoff($reservation),
+            'start_date' => self::dateOnly($reservation->getAttribute('start_date')),
+            'end_date' => self::dateOnly($reservation->getAttribute('end_date')),
+        ])->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, SalesOrder>  $orders
+     * @return array<int, array<string, mixed>>
+     */
+    public static function salesHandoffs(Collection $orders): array
+    {
+        return $orders->map(static fn (SalesOrder $order): array => [
+            ...self::commercialHandoff($order),
+            'total_cents' => $order->total_cents,
+        ])->values()->all();
+    }
+
+    /** @return array<string, mixed> */
+    private static function commercialHandoff(RentalReservation|SalesOrder $handoff): array
+    {
+        $status = $handoff->getAttribute('status');
+        $statusValue = $status instanceof BackedEnum ? (string) $status->value : (string) $status;
+
+        return [
+            'id' => (int) $handoff->getKey(),
+            'reference' => $handoff->reference,
+            'client' => [
+                'id' => (int) $handoff->client->getKey(),
+                'code' => $handoff->client->code,
+                'company_name' => $handoff->client->company_name,
+            ],
+            'status' => [
+                'value' => $statusValue,
+                'label' => self::humanizeStatus($statusValue),
+            ],
+            'fulfillment_mode' => $handoff->fulfillmentMode()->value,
+            'location' => $handoff->delivery_location,
+            'dispatch_job_id' => $handoff->dispatch_job_id,
+            'ready' => $handoff->isReadyForDispatchHandoff(),
+        ];
+    }
+
+    private static function dateOnly(mixed $value): ?string
+    {
+        return $value === null ? null : Carbon::parse((string) $value)->toDateString();
+    }
+
+    /**
      * @param  Collection<int, DispatchJob>  $jobs
      * @return array<int, array<string, mixed>>
      */
@@ -94,6 +153,7 @@ final class OperationsWorkspaceViewModel
             'title' => $job->title,
             'site' => $job->site,
             'site_notes' => $job->site_notes,
+            'source' => self::dispatchSource($job),
             'priority' => [
                 'value' => $job->priority->value,
                 'label' => $job->priority->label(),
@@ -129,6 +189,56 @@ final class OperationsWorkspaceViewModel
                     'type' => $assignment->assignment_type,
                 ])->values()->all(),
         ];
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function dispatchSource(DispatchJob $job): ?array
+    {
+        $sourceType = $job->sourceType();
+        $source = $job->relationLoaded('source') ? $job->getRelationValue('source') : null;
+
+        if ($sourceType === null && $job->service_request_id !== null) {
+            $sourceType = DispatchSourceType::ServiceRequest;
+            $source ??= $job->relationLoaded('serviceRequest') ? $job->getRelationValue('serviceRequest') : null;
+        }
+
+        if ($sourceType === null && $job->source_reference === null) {
+            return null;
+        }
+
+        $status = $source?->getAttribute('status');
+        $statusValue = $status instanceof BackedEnum ? (string) $status->value : null;
+
+        return [
+            'type' => $sourceType === null ? 'direct' : $sourceType->value,
+            'label' => $sourceType === null ? 'Direct dispatch' : $sourceType->label(),
+            'reference' => $job->source_reference
+                ?? ($source?->getAttribute('reference') !== null ? (string) $source->getAttribute('reference') : null),
+            'status' => $statusValue === null ? null : [
+                'value' => $statusValue,
+                'label' => self::humanizeStatus($statusValue),
+            ],
+            'fulfillment_mode' => self::nullableStringAttribute($source, 'fulfillment_mode'),
+            'location' => self::nullableStringAttribute($source, 'delivery_location'),
+        ];
+    }
+
+    private static function humanizeStatus(string $value): string
+    {
+        return str($value)->replace('_', ' ')->title()->toString();
+    }
+
+    private static function nullableStringAttribute(mixed $model, string $attribute): ?string
+    {
+        $value = is_object($model) && method_exists($model, 'getAttribute')
+            ? $model->getAttribute($attribute)
+            : null;
+
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
+        }
+
+        return is_string($value) && trim($value) !== '' ? $value : null;
     }
 
     /**
@@ -523,6 +633,10 @@ final class OperationsWorkspaceViewModel
             'create_client' => $user->can(PermissionName::DispatchCreate->value),
             'create_service_request' => $user->can(PermissionName::DispatchCreate->value),
             'convert_service_request' => $user->can(PermissionName::DispatchCreate->value),
+            'create_rental_dispatch' => $user->can(PermissionName::DispatchCreate->value)
+                && $user->can(PermissionName::RentalView->value),
+            'create_sales_dispatch' => $user->can(PermissionName::DispatchCreate->value)
+                && $user->can(PermissionName::SalesView->value),
             'share_location' => $user->can(PermissionName::TrackingShareOwn->value),
             'view_tracking' => $user->can(PermissionName::TrackingViewAll->value) || $user->can(PermissionName::TrackingShareOwn->value),
             'request_fuel' => $user->can(PermissionName::FuelRequest->value),

@@ -3,6 +3,7 @@
 namespace App\Modules\Sales\Actions;
 
 use App\Modules\Sales\Data\SalesOrderReference;
+use App\Modules\Sales\Enums\SalesFulfillmentMode;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Enums\SalesQuoteStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
@@ -29,9 +30,29 @@ final class AcceptSalesQuote
         private readonly OperationalAssetAvailability $availability,
     ) {}
 
-    public function handle(SalesQuote $quote, User $actor): SalesOrder
+    /** @param array<string, mixed> $attributes */
+    public function handle(SalesQuote $quote, User $actor, array $attributes = []): SalesOrder
     {
-        return DB::transaction(function () use ($quote, $actor): SalesOrder {
+        return DB::transaction(function () use ($quote, $actor, $attributes): SalesOrder {
+            $fulfillmentMode = SalesFulfillmentMode::tryFrom((string) ($attributes['fulfillment_mode'] ?? SalesFulfillmentMode::Pickup->value));
+            if ($fulfillmentMode === null) {
+                throw ValidationException::withMessages(['fulfillment_mode' => 'The fulfillment mode is invalid.']);
+            }
+
+            $deliveryLocation = $attributes['delivery_location'] ?? null;
+            if ($deliveryLocation !== null && ! is_string($deliveryLocation)) {
+                throw ValidationException::withMessages(['delivery_location' => 'The delivery location must be text.']);
+            }
+            if ($fulfillmentMode->requiresDispatch() && trim((string) $deliveryLocation) === '') {
+                throw ValidationException::withMessages(['delivery_location' => 'A delivery location is required for delivery orders.']);
+            }
+            if (! $fulfillmentMode->requiresDispatch() && trim((string) $deliveryLocation) !== '') {
+                throw ValidationException::withMessages(['delivery_location' => 'A pickup order cannot include a delivery location.']);
+            }
+            if (is_string($deliveryLocation) && mb_strlen($deliveryLocation) > 2000) {
+                throw ValidationException::withMessages(['delivery_location' => 'The delivery location is too long.']);
+            }
+
             $locked = SalesQuote::query()->lockForUpdate()->findOrFail($quote->id);
             $quoteItems = SalesQuoteItem::query()
                 ->where('sales_quote_id', $locked->id)
@@ -143,6 +164,8 @@ final class AcceptSalesQuote
                 'client_id' => $locked->client_id,
                 'sales_quote_id' => $locked->id,
                 'created_by' => $actor->id,
+                'fulfillment_mode' => $fulfillmentMode,
+                'delivery_location' => $fulfillmentMode->requiresDispatch() ? trim((string) $deliveryLocation) : null,
                 'status' => SalesOrderStatus::Confirmed,
                 'currency' => $locked->currency,
                 'total_cents' => $total,

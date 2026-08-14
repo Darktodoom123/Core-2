@@ -589,6 +589,8 @@ export default function Workspace(props: WorkspacePageProps) {
                         jobs={props.jobs}
                         clients={props.clients}
                         serviceRequests={props.serviceRequests}
+                        rentalHandoffs={props.rentalHandoffs}
+                        salesHandoffs={props.salesHandoffs}
                         assets={props.assets}
                         approvals={props.approvals}
                         users={props.users}

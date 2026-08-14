@@ -64,6 +64,18 @@ export interface DispatchAssetAssignmentViewModel {
     type: string;
 }
 
+export type DispatchSourceType =
+    'direct' | 'service_request' | 'rental_reservation' | 'sales_order';
+
+export interface DispatchSourceViewModel {
+    type: DispatchSourceType;
+    label: string;
+    reference: string | null;
+    status: StatusViewModel<string> | null;
+    fulfillment_mode: string | null;
+    location: string | null;
+}
+
 export interface DispatchJobViewModel {
     id: number;
     reference: string;
@@ -71,6 +83,7 @@ export interface DispatchJobViewModel {
     title: string;
     site: string;
     site_notes: string | null;
+    source: DispatchSourceViewModel | null;
     priority: StatusViewModel<DispatchPriorityValue>;
     status: StatusViewModel<DispatchStatusValue>;
     scheduled_start: string | null;
@@ -106,6 +119,30 @@ export interface ServiceRequestViewModel {
     status: StatusViewModel<ServiceRequestStatusValue>;
     requirements: string[];
     dispatch_jobs_count: number;
+}
+
+export interface CommercialDispatchHandoffViewModel {
+    id: number;
+    reference: string;
+    client: {
+        id: number;
+        code: string;
+        company_name: string;
+    };
+    status: StatusViewModel<string>;
+    fulfillment_mode: 'delivery' | 'pickup';
+    location: string | null;
+    dispatch_job_id: number | null;
+    ready: boolean;
+}
+
+export interface RentalDispatchHandoffViewModel extends CommercialDispatchHandoffViewModel {
+    start_date: string | null;
+    end_date: string | null;
+}
+
+export interface SalesDispatchHandoffViewModel extends CommercialDispatchHandoffViewModel {
+    total_cents: number;
 }
 
 export interface InspectionViewModel {
@@ -397,6 +434,8 @@ export interface WorkspaceCapabilities {
     create_client: boolean;
     create_service_request: boolean;
     convert_service_request: boolean;
+    create_rental_dispatch: boolean;
+    create_sales_dispatch: boolean;
     share_location: boolean;
     view_tracking: boolean;
     request_fuel: boolean;
@@ -530,6 +569,8 @@ export interface WorkspacePageProps {
     jobs: DispatchJobViewModel[];
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
+    rentalHandoffs: RentalDispatchHandoffViewModel[];
+    salesHandoffs: SalesDispatchHandoffViewModel[];
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
     locations: LocationUpdateViewModel[];

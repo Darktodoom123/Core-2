@@ -40,13 +40,18 @@ import {
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
 import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
+import { localDateKey } from '@/lib/date-utils';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
     AssetViewModel,
     ClientViewModel,
     DispatchJobViewModel,
+    DispatchSourceViewModel,
     GptRecommendationViewModel,
+    RentalDispatchHandoffViewModel,
+    SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
     WorkspaceUserViewModel,
@@ -81,6 +86,8 @@ export function LiveDispatchWorkspace({
     jobs,
     clients,
     serviceRequests,
+    rentalHandoffs,
+    salesHandoffs,
     assets = [],
     approvals = [],
     users = [],
@@ -93,6 +100,8 @@ export function LiveDispatchWorkspace({
     jobs: DispatchJobViewModel[];
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
+    rentalHandoffs: RentalDispatchHandoffViewModel[];
+    salesHandoffs: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
     users?: WorkspaceUserViewModel[];
@@ -105,12 +114,22 @@ export function LiveDispatchWorkspace({
     const { url: currentWorkspaceUrl } = usePage();
     const returnTo = currentWorkspaceUrl || '/?view=dispatch';
     const [query, setQuery] = useState('');
+    const [sourceFilter, setSourceFilter] = useState<
+        'all' | 'service_request' | 'rental_reservation' | 'sales_order'
+    >('all');
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
     const [showCreate, setShowCreate] = useState(false);
     const [showIntake, setShowIntake] = useState(
         Boolean(initialServiceRequestId),
+    );
+    const [handoffPending, setHandoffPending] = useState<string | null>(null);
+    const [salesScheduledStart, setSalesScheduledStart] = useState(() =>
+        localDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)),
+    );
+    const [salesScheduledEnd, setSalesScheduledEnd] = useState(() =>
+        localDateTimeInput(new Date(Date.now() + 3 * 60 * 60 * 1000)),
     );
     const [prevInitialRequestId, setPrevInitialRequestId] = useState(
         initialServiceRequestId,
@@ -396,16 +415,18 @@ export function LiveDispatchWorkspace({
     const filteredJobs = useMemo(() => {
         const normalized = query.trim().toLowerCase();
 
-        if (normalized === '') {
-            return jobs;
-        }
+        return jobs.filter((job) => {
+            const matchesSource =
+                sourceFilter === 'all' || job.source?.type === sourceFilter;
+            const matchesQuery =
+                normalized === '' ||
+                `${job.reference} ${job.client} ${job.title} ${job.site} ${job.source?.reference ?? ''}`
+                    .toLowerCase()
+                    .includes(normalized);
 
-        return jobs.filter((job) =>
-            `${job.reference} ${job.client} ${job.title} ${job.site}`
-                .toLowerCase()
-                .includes(normalized),
-        );
-    }, [jobs, query]);
+            return matchesSource && matchesQuery;
+        });
+    }, [jobs, query, sourceFilter]);
 
     const boardJobs = useMemo(
         () =>
@@ -446,6 +467,27 @@ export function LiveDispatchWorkspace({
                 setShowCreate(false);
             },
         });
+    };
+
+    const createHandoff = (kind: 'rental' | 'sale', id: number) => {
+        const key = `${kind}-${id}`;
+        setHandoffPending(key);
+
+        router.post(
+            kind === 'rental'
+                ? `/operations/rental-reservations/${id}/dispatch`
+                : `/operations/sales/orders/${id}/dispatch`,
+            kind === 'sale'
+                ? {
+                      scheduled_start: salesScheduledStart,
+                      scheduled_end: salesScheduledEnd,
+                  }
+                : {},
+            {
+                preserveScroll: true,
+                onFinish: () => setHandoffPending(null),
+            },
+        );
     };
 
     return (
@@ -614,6 +656,93 @@ export function LiveDispatchWorkspace({
                         </motion.div>
                     )}
             </AnimatePresence>
+
+            {!fieldMode &&
+                (rentalHandoffs.length > 0 || salesHandoffs.length > 0) &&
+                (capabilities.create_rental_dispatch ||
+                    capabilities.create_sales_dispatch) && (
+                    <section
+                        className="border-b border-line bg-surface-subtle px-4 py-5 md:px-6"
+                        aria-labelledby="commercial-handoffs-title"
+                    >
+                        <div className="mx-auto max-w-6xl">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                        Commercial handoffs
+                                    </p>
+                                    <h2
+                                        id="commercial-handoffs-title"
+                                        className="mt-1 text-lg font-semibold text-ink"
+                                    >
+                                        Rental &amp; sale deliveries ready for
+                                        dispatch
+                                    </h2>
+                                    <p className="mt-1 text-sm text-ink-soft">
+                                        Turn an approved rental or confirmed
+                                        sale into a linked dispatch job. The
+                                        source remains visible on the job after
+                                        handoff.
+                                    </p>
+                                </div>
+                                {salesHandoffs.length > 0 &&
+                                    capabilities.create_sales_dispatch && (
+                                        <div className="grid gap-2 sm:min-w-96 sm:grid-cols-2">
+                                            <HandoffDateInput
+                                                label="Sale delivery start"
+                                                value={salesScheduledStart}
+                                                onChange={
+                                                    setSalesScheduledStart
+                                                }
+                                            />
+                                            <HandoffDateInput
+                                                label="Sale delivery end"
+                                                value={salesScheduledEnd}
+                                                onChange={setSalesScheduledEnd}
+                                            />
+                                        </div>
+                                    )}
+                            </div>
+
+                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                {rentalHandoffs.map((handoff) => (
+                                    <CommercialHandoffCard
+                                        key={`rental-${handoff.id}`}
+                                        kind="rental"
+                                        handoff={handoff}
+                                        pending={
+                                            handoffPending ===
+                                            `rental-${handoff.id}`
+                                        }
+                                        canCreate={
+                                            capabilities.create_rental_dispatch
+                                        }
+                                        onCreate={() =>
+                                            createHandoff('rental', handoff.id)
+                                        }
+                                    />
+                                ))}
+                                {salesHandoffs.map((handoff) => (
+                                    <CommercialHandoffCard
+                                        key={`sale-${handoff.id}`}
+                                        kind="sale"
+                                        handoff={handoff}
+                                        pending={
+                                            handoffPending ===
+                                            `sale-${handoff.id}`
+                                        }
+                                        canCreate={
+                                            capabilities.create_sales_dispatch
+                                        }
+                                        onCreate={() =>
+                                            createHandoff('sale', handoff.id)
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
 
             <AnimatePresence>
                 {showCreate && canCreate && (
@@ -1092,6 +1221,36 @@ export function LiveDispatchWorkspace({
                                     className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm placeholder:text-ink-soft"
                                 />
                             </label>
+                            {!fieldMode && (
+                                <label className="mt-3 block">
+                                    <span className="sr-only">
+                                        Filter dispatch source
+                                    </span>
+                                    <select
+                                        value={sourceFilter}
+                                        onChange={(event) =>
+                                            setSourceFilter(
+                                                event.target
+                                                    .value as typeof sourceFilter,
+                                            )
+                                        }
+                                        className="h-10 w-full rounded-lg border border-line-strong bg-surface-subtle px-3 text-xs font-medium text-ink"
+                                    >
+                                        <option value="all">
+                                            All operational sources
+                                        </option>
+                                        <option value="service_request">
+                                            Service
+                                        </option>
+                                        <option value="rental_reservation">
+                                            Rental
+                                        </option>
+                                        <option value="sales_order">
+                                            Sale
+                                        </option>
+                                    </select>
+                                </label>
+                            )}
                             <p
                                 className="mt-2 text-xs text-ink-soft"
                                 role="status"
@@ -1105,7 +1264,7 @@ export function LiveDispatchWorkspace({
                         {refreshing ? (
                             <DispatchListSkeleton />
                         ) : filteredJobs.length === 0 ? (
-                            query.trim() === '' ? (
+                            query.trim() === '' && sourceFilter === 'all' ? (
                                 <EmptyState
                                     compact
                                     icon={ClipboardList}
@@ -1137,13 +1296,16 @@ export function LiveDispatchWorkspace({
                                     compact
                                     icon={SearchX}
                                     title="No matching dispatches"
-                                    message="Try a reference, client, title, or site."
+                                    message="Try another reference, client, site, or operational source."
                                     primaryAction={
                                         <Button
                                             variant="secondary"
-                                            onClick={() => setQuery('')}
+                                            onClick={() => {
+                                                setQuery('');
+                                                setSourceFilter('all');
+                                            }}
                                         >
-                                            Clear search
+                                            Clear filters
                                         </Button>
                                     }
                                 />
@@ -1166,9 +1328,20 @@ export function LiveDispatchWorkspace({
                                                 >
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-start justify-between gap-2">
-                                                            <p className="font-semibold">
-                                                                {job.reference}
-                                                            </p>
+                                                            <div className="flex min-w-0 items-center gap-1.5">
+                                                                <p className="font-semibold">
+                                                                    {
+                                                                        job.reference
+                                                                    }
+                                                                </p>
+                                                                {job.source && (
+                                                                    <DispatchSourceBadge
+                                                                        source={
+                                                                            job.source
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </div>
                                                             <CanonicalStatusBadge
                                                                 status={
                                                                     job.priority
@@ -1218,6 +1391,13 @@ export function LiveDispatchWorkspace({
                                                                         job.reference
                                                                     }
                                                                 </p>
+                                                                {job.source && (
+                                                                    <DispatchSourceBadge
+                                                                        source={
+                                                                            job.source
+                                                                        }
+                                                                    />
+                                                                )}
                                                                 {hasConflict && (
                                                                     <AlertTriangle
                                                                         className="h-3.5 w-3.5 shrink-0 text-danger"
@@ -1926,6 +2106,32 @@ function DispatchDetails({
                     <h3 className="font-semibold">Dispatch context</h3>
                     <dl className="mt-3 divide-y divide-line">
                         <DataPair
+                            label="Source"
+                            value={
+                                job.source ? (
+                                    <span className="inline-flex flex-wrap items-center gap-2">
+                                        <DispatchSourceBadge
+                                            source={job.source}
+                                            detailed
+                                        />
+                                        {job.source.status && (
+                                            <span className="text-xs text-ink-soft">
+                                                {job.source.status.label}
+                                            </span>
+                                        )}
+                                    </span>
+                                ) : (
+                                    'Direct dispatch'
+                                )
+                            }
+                        />
+                        {job.source?.fulfillment_mode && (
+                            <DataPair
+                                label="Fulfillment"
+                                value={humanize(job.source.fulfillment_mode)}
+                            />
+                        )}
+                        <DataPair
                             label="Schedule"
                             value={`${formatDateTime(job.scheduled_start)} – ${formatDateTime(job.scheduled_end)}`}
                         />
@@ -2013,6 +2219,33 @@ function DispatchDetails({
                 </p>
             </div>
         </div>
+    );
+}
+
+function DispatchSourceBadge({
+    source,
+    detailed = false,
+}: {
+    source: DispatchSourceViewModel;
+    detailed?: boolean;
+}) {
+    const tone =
+        source.type === 'rental_reservation'
+            ? 'bg-warning-soft text-warning-strong'
+            : source.type === 'sales_order'
+              ? 'bg-success-soft text-success-strong'
+              : 'bg-brand-soft text-brand-strong';
+
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                tone,
+            )}
+        >
+            {source.label}
+            {detailed && source.reference ? ` · ${source.reference}` : ''}
+        </span>
     );
 }
 
@@ -2435,12 +2668,114 @@ function DispatchListSkeleton() {
     );
 }
 
-function localDateKey(date: Date): string {
+type CommercialHandoffCardProps = {
+    kind: 'rental' | 'sale';
+    handoff: RentalDispatchHandoffViewModel | SalesDispatchHandoffViewModel;
+    pending: boolean;
+    canCreate: boolean;
+    onCreate: () => void;
+};
+
+function CommercialHandoffCard({
+    kind,
+    handoff,
+    pending,
+    canCreate,
+    onCreate,
+}: CommercialHandoffCardProps) {
+    const isRental = kind === 'rental';
+    const rental = isRental
+        ? (handoff as RentalDispatchHandoffViewModel)
+        : null;
+
+    return (
+        <article className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span
+                            className={cn(
+                                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase',
+                                isRental
+                                    ? 'bg-warning-soft text-warning-strong'
+                                    : 'bg-success-soft text-success-strong',
+                            )}
+                        >
+                            {isRental ? 'Rental delivery' : 'Sale delivery'}
+                        </span>
+                        <span className="text-xs font-medium text-ink-soft">
+                            {handoff.status.label}
+                        </span>
+                    </div>
+                    <h3 className="mt-2 truncate text-sm font-semibold text-ink">
+                        {handoff.reference}
+                    </h3>
+                    <p className="mt-1 truncate text-sm text-ink-soft">
+                        {handoff.client.company_name} · {handoff.client.code}
+                    </p>
+                    <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-soft">
+                        <span className="font-semibold text-ink">
+                            Deliver to:
+                        </span>
+                        <span className="min-w-0 break-words">
+                            {handoff.location || 'Location required'}
+                        </span>
+                    </p>
+                    {rental && (
+                        <p className="mt-1 text-xs text-ink-soft">
+                            Rental window: {rental.start_date || '—'} to{' '}
+                            {rental.end_date || '—'}
+                        </p>
+                    )}
+                </div>
+                <Button
+                    size="sm"
+                    variant="primary"
+                    type="button"
+                    disabled={!canCreate || pending}
+                    onClick={onCreate}
+                >
+                    {pending
+                        ? 'Creating…'
+                        : isRental
+                          ? 'Create rental dispatch'
+                          : 'Create sale dispatch'}
+                </Button>
+            </div>
+        </article>
+    );
+}
+
+function HandoffDateInput({
+    label,
+    value,
+    onChange,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <label className="text-xs font-semibold text-ink-soft">
+            {label}
+            <input
+                type="datetime-local"
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-2.5 text-sm font-normal text-ink focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
+            />
+        </label>
+    );
+}
+
+function localDateTimeInput(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
 
-    return `${year}-${month}-${day}`;
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 function dateFromLocalKey(value: string): Date {
@@ -2611,21 +2946,6 @@ function isOverlapping(
     const end2 = new Date(e2).getTime();
 
     return start1 < end2 && start2 < end1;
-}
-
-function formatDateTime(value: string | null) {
-    if (value === null) {
-        return 'Not scheduled';
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
-function humanize(value: string) {
-    return value.replaceAll('_', ' ');
 }
 
 function assignmentWorkspaceUrl(jobId: number, returnTo: string) {

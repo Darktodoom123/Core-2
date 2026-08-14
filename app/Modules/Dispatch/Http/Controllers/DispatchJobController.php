@@ -44,6 +44,8 @@ final class DispatchJobController extends Controller
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
                     ->with('asset:id,code,name'),
+                'source',
+                'serviceRequest:id,reference',
             ])
             ->latest('scheduled_start')
             ->paginate(25)
@@ -108,6 +110,8 @@ final class DispatchJobController extends Controller
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
                     ->with('asset.maintenanceWorkOrders'),
+                'source',
+                'serviceRequest:id,reference',
                 'approvals',
             ])
             ->findOrFail($dispatchJob);

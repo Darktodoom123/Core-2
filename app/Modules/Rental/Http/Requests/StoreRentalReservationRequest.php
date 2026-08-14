@@ -2,6 +2,7 @@
 
 namespace App\Modules\Rental\Http\Requests;
 
+use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Support\PersistedInteger;
@@ -24,7 +25,7 @@ final class StoreRentalReservationRequest extends FormRequest
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'delivery_location' => ['nullable', 'string', 'max:2000'],
-            'fulfillment_mode' => ['required', Rule::in(['delivery', 'pickup'])],
+            'fulfillment_mode' => ['required', Rule::enum(RentalFulfillmentMode::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.operational_asset_id' => ['required', 'integer', 'distinct', Rule::exists('operational_assets', 'id')->where(fn ($q) => $q->whereIn('status', [AssetStatus::Available->value, AssetStatus::ReadyForService->value])->whereNull('deleted_at'))],

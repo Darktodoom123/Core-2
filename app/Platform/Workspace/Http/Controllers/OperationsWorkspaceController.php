@@ -8,6 +8,10 @@ use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Rental\Enums\RentalFulfillmentMode;
+use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Sales\Enums\SalesFulfillmentMode;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
@@ -33,6 +37,8 @@ final class OperationsWorkspaceController extends Controller
     {
         $user = $request->user();
         $canCreateDispatch = $user->can(PermissionName::DispatchCreate->value);
+        $canViewRentalHandoffs = $canCreateDispatch && $user->can(PermissionName::RentalView->value);
+        $canViewSalesHandoffs = $canCreateDispatch && $user->can(PermissionName::SalesView->value);
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
         $refreshedAt = now();
         $locations = $this->fetchLocations($user);
@@ -41,6 +47,8 @@ final class OperationsWorkspaceController extends Controller
             'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
             'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+            'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
+            'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
             'locations' => OperationsWorkspaceViewModel::locations($locations),
@@ -142,6 +150,8 @@ final class OperationsWorkspaceController extends Controller
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
                     ->with('asset:id,code,name'),
+                'source',
+                'serviceRequest:id,reference',
             ])
             ->orderBy('scheduled_start')
             ->limit(100)
@@ -265,6 +275,41 @@ final class OperationsWorkspaceController extends Controller
             ->whereIn('status', ['submitted', 'dispatching'])
             ->orderByRaw('scheduled_date is null')
             ->orderBy('scheduled_date')
+            ->latest('created_at')
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, RentalReservation> */
+    private function fetchRentalHandoffs(bool $canView): Collection
+    {
+        if (! $canView) {
+            return collect();
+        }
+
+        return RentalReservation::query()
+            ->with('client:id,code,company_name')
+            ->where('status', 'reserved')
+            ->where('fulfillment_mode', RentalFulfillmentMode::Delivery->value)
+            ->whereNull('dispatch_job_id')
+            ->orderBy('start_date')
+            ->latest('id')
+            ->limit(100)
+            ->get();
+    }
+
+    /** @return Collection<int, SalesOrder> */
+    private function fetchSalesHandoffs(bool $canView): Collection
+    {
+        if (! $canView) {
+            return collect();
+        }
+
+        return SalesOrder::query()
+            ->with('client:id,code,company_name')
+            ->where('status', 'confirmed')
+            ->where('fulfillment_mode', SalesFulfillmentMode::Delivery->value)
+            ->whereNull('dispatch_job_id')
             ->latest('created_at')
             ->limit(100)
             ->get();

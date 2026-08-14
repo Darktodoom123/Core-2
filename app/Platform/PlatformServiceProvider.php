@@ -10,6 +10,8 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Attachments\Policies\AttachmentPolicy;
 use App\Platform\Audit\Models\AuditEvent;
@@ -50,6 +52,9 @@ final class PlatformServiceProvider extends ServiceProvider
 
         // Preserve polymorphic rows created before model namespaces became module-oriented.
         Relation::morphMap([
+            'rental_reservation' => RentalReservation::class,
+            'sales_order' => SalesOrder::class,
+            'service_request' => ServiceRequest::class,
             'App\\Models\\ApprovalRequest' => ApprovalRequest::class,
             'App\\Models\\Attachment' => Attachment::class,
             'App\\Models\\AuditEvent' => AuditEvent::class,

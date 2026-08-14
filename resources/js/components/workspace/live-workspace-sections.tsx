@@ -15,6 +15,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
@@ -890,7 +891,11 @@ function AssetInspectionsSection({
                                 </span>
                             </div>
                             <p className="mt-1 text-xs text-ink-soft">
-                                Completed: {formatDateTime(ins.completed_at)}
+                                Completed:{' '}
+                                {formatDateTime(
+                                    ins.completed_at,
+                                    'Not recorded',
+                                )}
                             </p>
                             {ins.findings && (
                                 <p className="mt-1 text-sm text-ink-soft">
@@ -1056,7 +1061,7 @@ function AssetMaintenanceSection({
                                     </div>
                                     <span className="text-xs text-ink-soft">
                                         {order.released_at
-                                            ? `Released: ${formatDateTime(order.released_at)}`
+                                            ? `Released: ${formatDateTime(order.released_at, 'Not recorded')}`
                                             : 'Open / In progress'}
                                     </span>
                                 </div>
@@ -1849,8 +1854,15 @@ function ApprovalReviewCard({
                             Schedule
                         </dt>
                         <dd className="mt-1 font-medium">
-                            {formatDateTime(approval.subject.scheduled_start)} –{' '}
-                            {formatDateTime(approval.subject.scheduled_end)}
+                            {formatDateTime(
+                                approval.subject.scheduled_start,
+                                'Not recorded',
+                            )}{' '}
+                            –{' '}
+                            {formatDateTime(
+                                approval.subject.scheduled_end,
+                                'Not recorded',
+                            )}
                         </dd>
                     </div>
                     <div>
@@ -1883,7 +1895,10 @@ function ApprovalReviewCard({
                             Requested
                         </dt>
                         <dd className="mt-1 font-medium">
-                            {formatDateTime(approval.created_at)}
+                            {formatDateTime(
+                                approval.created_at,
+                                'Not recorded',
+                            )}
                         </dd>
                     </div>
                 </dl>
@@ -2154,7 +2169,10 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         rows={events.map((event) => ({
                             key: event.id,
                             cells: [
-                                formatDateTime(event.occurred_at),
+                                formatDateTime(
+                                    event.occurred_at,
+                                    'Not recorded',
+                                ),
                                 event.actor?.name ?? 'System',
                                 humanize(event.action),
                                 event.reason ?? 'No reason recorded',
@@ -2284,21 +2302,6 @@ function getFuelAction(
     }
 
     return null;
-}
-
-function humanize(value: string) {
-    return value.replaceAll('_', ' ');
-}
-
-function formatDateTime(value: string | null) {
-    if (value === null) {
-        return 'Not recorded';
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
 }
 
 export function AssetListSkeleton() {

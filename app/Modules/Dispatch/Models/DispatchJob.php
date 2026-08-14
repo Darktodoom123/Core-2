@@ -5,6 +5,7 @@ namespace App\Modules\Dispatch\Models;
 use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
+use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -22,6 +24,9 @@ use Illuminate\Support\Carbon;
  * @property DispatchPriority $priority
  * @property DispatchStatus $status
  * @property int $version
+ * @property string|null $source_type
+ * @property int|null $source_id
+ * @property string|null $source_reference
  * @property Carbon|null $scheduled_start
  * @property Carbon|null $scheduled_end
  */
@@ -29,7 +34,7 @@ class DispatchJob extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['service_request_id', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
+    protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
 
     protected function casts(): array
     {
@@ -46,6 +51,17 @@ class DispatchJob extends Model
     public function serviceRequest(): BelongsTo
     {
         return $this->belongsTo(ServiceRequest::class);
+    }
+
+    /** @return MorphTo<Model, $this> */
+    public function source(): MorphTo
+    {
+        return $this->morphTo(__FUNCTION__, 'source_type', 'source_id');
+    }
+
+    public function sourceType(): ?DispatchSourceType
+    {
+        return DispatchSourceType::tryFrom((string) $this->source_type);
     }
 
     /** @return HasMany<DispatchPersonnelAssignment, $this> */

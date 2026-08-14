@@ -2,6 +2,7 @@
 
 namespace App\Modules\Rental\Actions;
 
+use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Modules\Rental\Enums\RentalReservationStatus;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\Support\RentalAuditSnapshot;
@@ -39,6 +40,7 @@ final class CreateRentalReservation
                 throw ValidationException::withMessages(['items' => 'Each equipment unit may appear only once on a rental reservation.']);
             }
             $assets = $this->availability->lockAssetsForUpdate($assetIds);
+            $fulfillmentMode = RentalFulfillmentMode::from((string) ($attributes['fulfillment_mode'] ?? RentalFulfillmentMode::Delivery->value));
 
             Gate::forUser($actor)->authorize(PermissionName::RentalCreate->value);
 
@@ -50,7 +52,7 @@ final class CreateRentalReservation
                 'start_date' => $start,
                 'end_date' => $end,
                 'delivery_location' => $attributes['delivery_location'] ?? null,
-                'fulfillment_mode' => $attributes['fulfillment_mode'] ?? 'delivery',
+                'fulfillment_mode' => $fulfillmentMode,
                 'notes' => $attributes['notes'] ?? null,
             ]);
 

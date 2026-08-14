@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Sales\Actions\AcceptSalesQuote;
 use App\Modules\Sales\Actions\CreateSalesQuote;
+use App\Modules\Sales\Http\Requests\AcceptSalesQuoteRequest;
 use App\Modules\Sales\Http\Requests\StoreSalesQuoteRequest;
 use App\Modules\Sales\Models\SalesQuote;
 use App\Platform\Identity\Enums\PermissionName;
@@ -25,8 +26,8 @@ final class SalesQuoteController extends Controller
         return response()->json(['data' => $action->handle($request->user(), $request->validated())], 201);
     }
 
-    public function accept(SalesQuote $salesQuote, AcceptSalesQuote $action): JsonResponse
+    public function accept(AcceptSalesQuoteRequest $request, SalesQuote $salesQuote, AcceptSalesQuote $action): JsonResponse
     {
-        return response()->json(['data' => $action->handle($salesQuote, request()->user())], 201);
+        return response()->json(['data' => $action->handle($salesQuote, $request->user(), $request->fulfillmentAttributes())], 201);
     }
 }

@@ -58,6 +58,8 @@ final class SalesAuditSnapshot
             'client_id',
             'sales_quote_id',
             'created_by',
+            'dispatch_job_id',
+            'fulfillment_mode',
             'status',
             'currency',
             'total_cents',
@@ -65,7 +67,7 @@ final class SalesAuditSnapshot
             'created_at',
             'updated_at',
         ], null), Arr::only($order->toArray(), [
-            'id', 'reference', 'client_id', 'sales_quote_id', 'created_by', 'status', 'currency',
+            'id', 'reference', 'client_id', 'sales_quote_id', 'created_by', 'dispatch_job_id', 'fulfillment_mode', 'status', 'currency',
             'total_cents', 'fulfilled_at', 'created_at', 'updated_at',
         ]));
     }
