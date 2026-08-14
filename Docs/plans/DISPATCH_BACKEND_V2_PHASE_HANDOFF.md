@@ -16,7 +16,7 @@ Complete Phase 0 of the Dispatch Backend V2 redesign: establish the executable p
 ## Files changed so far
 
 - Baseline commit: the pre-existing Rental/Sales/Dispatch handoff and workspace files.
-- Phase 0 working tree: `Docs/README.md`, the domain contract ADR, execution plan, executor prompts, this checkpoint, the three seeder classes, and `tests/Feature/Security/DatabaseSeederSecurityTest.php`.
+- Phase 0 commit: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`, containing the Docs plan/ADR/prompts/checkpoint, AI report, README clarification, three seeder guards, and focused security test.
 
 ## Verification completed
 
@@ -43,8 +43,8 @@ Complete Phase 0 of the Dispatch Backend V2 redesign: establish the executable p
 
 - Full frontend lint/format blockers listed above remain outside Phase 0 scope.
 - Phase 0 code review and security review are complete with no critical/high findings open.
-- Phase 0 commit SHA is not yet assigned.
+- Phase 0 commit SHA: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`.
 
 ## Next action
 
-Commit the reviewed Phase 0 scope separately, then record the final Phase 0 SHA and `READY_FOR_PHASE_1` decision in this checkpoint and the machine-readable plan.
+Phase 0 is complete. The next executor may begin Phase 1 from commit `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`; `READY_FOR_PHASE_1=yes`.

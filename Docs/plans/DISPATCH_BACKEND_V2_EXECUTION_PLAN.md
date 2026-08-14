@@ -356,11 +356,11 @@ schema: dispatch-backend-v2-phase-status/v1
 branch: codex/dispatch-backend-v2-phase-0
 baseline_commit: 7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e
 current_phase: phase_0
-ready_for_phase_1: false
+ready_for_phase_1: true
 phases:
   phase_0:
-    status: in_progress
-    commit_sha: null
+    status: complete
+    commit_sha: 2054c13412cdb6db062a9c6e5994f9c166ecb5f5
     depends_on: []
     checklist:
       baseline_inventory: complete
@@ -372,9 +372,9 @@ phases:
       production_seeder_gate: complete
       focused_seeder_tests: complete
       review_gate: complete
-      commit_gate: pending
+      commit_gate: complete
   phase_1:
-    status: blocked_on_phase_0
+    status: ready
     commit_sha: null
     depends_on: [phase_0]
   phase_2:
@@ -428,7 +428,7 @@ This section is updated before the Phase 0 commit. It must contain the exact bra
 
 - Branch: `codex/dispatch-backend-v2-phase-0`
 - Baseline commit: `7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e`
-- Phase 0 commit: pending commit gate
+- Phase 0 commit: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`
 - Review: complete; no critical/high findings open. The Pint finding and ignored-required-file packaging issue were fixed.
 - Rollback: complete; seeder-only runtime changes are reversible and do not mutate schema or user data during rollback.
 - Remaining blockers: untouched mobile lint/format failures documented in `known_preexisting_blockers`.
