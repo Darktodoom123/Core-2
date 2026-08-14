@@ -1,24 +1,26 @@
-# Phase 0 AI Verification Responses
+# Phase 1 AI Verification Responses
 
 ## 1. What was changed, and was the scope respected?
 
-Phase 0 created the Dispatch Backend V2 execution plan, reusable Phase 1–6 executor prompts, domain-contract ADR, Docs index, and durable handoff checkpoint. It hardened `DatabaseSeeder` so production validates `ADMIN_PASSWORD` before writes and invokes local fixtures only in `local`; both `LocalDevelopmentSeeder` and `BrowserAcceptanceSeeder` reject non-`local`/`testing` execution, including direct production seeder invocation. Focused Pest coverage proves production rejection, safe admin bootstrap, no predictable fixture-account creation/re-enablement, and idempotent local developer seeding. No V2 schema, lifecycle command, adapter, API, mobile, or frontend runtime behavior was implemented.
+Phase 1 added an additive canonical persistence foundation: handoffs, execution attempts, immutable plan versions and approval bindings, assignment offers and lead metadata, idempotency ownership, audit lineage, reconciliation runs/findings, target enums, Eloquent relationships/casts, and a bounded `dispatch:reconcile` command. It also added legacy characterization tests, persistence/retry/finding/constraint coverage, and an explicit legacy-to-target mapping. Legacy tables, columns, runtime reads/writes, and legacy lifecycle values remain active. No V2 command handlers, adapters, API/mobile cutover, UI work, or lifecycle switch was introduced. The approved Phase 7 UI/UX graph amendment was recorded only in the plan, prompts, and handoff.
 
 ## 2. What verification was run, and what were the exact results?
 
-- `composer run lint:check`: PASS after the focused test was formatted with Pint.
-- `composer run types:check`: PASS, 0 PHPStan errors.
-- `php artisan test --compact tests/Feature/Security/DatabaseSeederSecurityTest.php`: PASS, 4 tests, 18 assertions.
-- Affected Dispatch/Rental/Sales handoff suite: PASS, 258 tests, 1,577 assertions.
-- Full backend suite: PASS, 533 tests, 6,520 assertions.
-- `composer audit --locked`: PASS, no security vulnerability advisories.
-- `git diff --check`: PASS.
-- Baseline frontend build and changed-surface checks: PASS (`npm run build`, changed `resources/js` ESLint/Prettier, and TypeScript). Phase 0 itself does not touch frontend files.
+- Red-first focused tests failed before implementation on missing canonical tables/command and invalid target status representation.
+- `php artisan test --compact tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php`: PASS, 7 tests, 79 assertions.
+- Relevant Dispatch/source/Rental/Sales/idempotency suite: PASS, 109 tests, 794 assertions.
+- `php artisan test --compact`: PASS, 540 tests, 6,805 assertions.
+- `composer run lint:check`: PASS; `composer run types:check`: PASS, 0 PHPStan errors.
+- `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
+- `npm ci --no-audit --no-fund`: PASS; `npm run build`: PASS with existing Vite chunk-size warnings.
+- Isolated SQLite fresh/rollback/reapply migration rehearsal: PASS; legacy `dispatch_jobs` survived rollback and canonical tables were restored on reapply.
+- `git diff --check`: PASS at the verification checkpoint and rerun at commit closeout.
+- PostgreSQL suite: BLOCKED before test execution because `127.0.0.1:5432` refused connections to `core2_rental_sales_test` (4 configured tests). PostgreSQL-only migration checks are driver-guarded.
 
 ## 3. What security and review conclusions are supported by evidence?
 
-Production with a strong configured bootstrap password creates the system administrator only; it does not create or re-enable local/browser fixture accounts. Production with a short/missing password throws before role/user writes. Direct local/browser fixture seeders throw outside `local`/`testing`. An existing inactive/suspended predictable-email fixture remains inactive/suspended with its password hash unchanged. The cached Phase 0 diff contains only the required docs, README clarification, three seeder changes, focused security test, and this report; no critical/high finding is currently open.
+The full diff was reviewed read-only for additive compatibility, FK/index/cardinality constraints, source-link symmetry, long Sales references, interval handling, approval-history preservation, offer/lead inference, idempotency owner scoping, audit lineage, archive terminality, raw SQL safety, and retry/resume behavior. Reconciliation writes only canonical/reconciliation tables and does not mutate legacy runtime data. The invalid initial constraint fixture was corrected to satisfy the required preserved legacy-job FK. No critical or high-confidence unresolved issue remains; `composer audit --locked` reports no advisories.
 
-## 4. What remains blocked, and is the graph ready for Phase 1?
+## 4. What remains blocked, and is the graph ready for Phase 2/7?
 
-Phase 0 is committed separately after baseline commit `7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e` as `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`. Full `npm run lint:check` remains blocked by 39 pre-existing errors in untouched `packages/field-mobile` files, and full `npm run format:check` reports 5 untouched mobile files; changed `resources/js` checks passed and no Phase 0 frontend files were changed. Review found no critical/high issues, and `READY_FOR_PHASE_1=yes`.
+Phase 1 starts at `1b96db43be0c05abfa938631179240bf25abe783` on `codex/dispatch-backend-v2-phase-1` and is ready for Phase 2 after the implementation SHA is recorded in the durable handoff. Phase 7 is not ready because it remains dependency-gated on Phase 6; `READY_GRAPH_COMPLETE=no`. The only external verification blocker is the unavailable configured PostgreSQL server. Existing untouched mobile quality debt remains documented: full `npm run lint:check` reports 39 errors and full `npm run format:check` reports 5 untouched `packages/field-mobile` files. `READY_FOR_PHASE_2=yes`, `READY_FOR_PHASE_7=no`, and `CONTEXT_SPLIT_REQUIRED=no`.

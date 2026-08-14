@@ -149,7 +149,7 @@ For the assigned phase, prove red with focused tests, implement green, then refa
 
 **Dependency:** Phase 5 adapters and compatibility evidence are complete.
 
-**Objective:** Roll out by bounded cohort, reconcile legacy and V2 records, verify rollback, and close the graph only with operational evidence.
+**Objective:** Roll out by bounded cohort, reconcile legacy and V2 records, verify rollback, and hand the stable backend contract to the approved Phase 7 UX/UI cutover.
 
 **Scope:**
 
@@ -167,4 +167,29 @@ For the assigned phase, prove red with focused tests, implement green, then refa
 
 **Rollback:** every cohort has a verified owner, backup, flag, restore/reconcile path, and preserved audit/attempt lineage. Predictable fixture seeders remain blocked in production.
 
-**Handoff:** record final SHA, rollout evidence, unresolved low-risk issues, compatibility sunset, and set `ready_for_phase_1` to `no` because the graph is complete; mark all phases complete only when the closeout review passes.
+**Handoff:** record final SHA, rollout evidence, unresolved low-risk issues, compatibility sunset, and set `READY_FOR_PHASE_7=yes`. Phase 6 does not close the graph; mark `READY_GRAPH_COMPLETE=yes` only after the Phase 7 closeout review passes.
+
+## Phase 7 prompt — dispatch UX/UI cutover and validation
+
+**Dependency:** Phase 6 backend rollout, reconciliation, compatibility, and rollback gates are complete with `READY_FOR_PHASE_7=yes`.
+
+**Objective:** Redesign and implement the dispatch experience for office web and field-mobile against the stable V2 contract, eliminating semantic confusion without inventing backend state.
+
+**Required scope:**
+
+- Start with an evidence-based UX audit/brief using the repository `impeccable` skill and canonical `Docs/Design.md`. For React Native use `expo-native-ui` guidance. Preserve CT2 visual direction: Instrument Sans, amber action/focus, distinct warning palette, and a calm dense operations instrument.
+- Web surfaces include `resources/js/pages/workspace.tsx`, `resources/js/pages/dispatch-detail.tsx`, `resources/js/components/workspace/*`, and related typed view models.
+- Native surfaces include AssignedJobsListScreen, JobDetailScreen, assignment response, progression, readiness/conflict/offline/sync panels, and related navigation/components.
+- Assignment acceptance is the only “accepted” UI concept. Execution is `draft -> dispatched -> en_route -> arrived -> working -> completed/cancelled`; scheduled, awaiting approval, and ready are derived conditions.
+- Show designated lead, mandatory versus optional offers, explicit readiness blockers/evidence, plan-version/staleness, approval supersession, source/attempt lineage, emergency-override scope, and terminal-only archive affordances according to actor capability.
+- Office flow is request/source context -> plan/revise -> resource offers -> acceptance/readiness -> dispatch/monitor -> complete/cancel, with a persistent review rail and clear safe next action.
+- Field flow is offer response -> assigned work -> lead-owned progression with one-hand/touch-safe 44px targets, explicit heavy-crane drive/park/setup modes where supported, and no unauthorized controls.
+- Handle loading, empty, validation, forbidden, stale version, conflict, success, disabled/safety blocked, offline, queued, syncing, failed, synchronized, delayed/stale telemetry, and retry/idempotency outcomes.
+- Meet WCAG 2.2 AA, keyboard/focus/announcements, 200% zoom, reduced motion, status not color-only, map/list equivalence, responsive breakpoints, and native safe areas.
+- Preserve Laravel authority and shared commands. UI/adapters may not mutate lifecycle directly or recreate backend business rules. Update canonical UX copy and remove obsolete job-level “accepted” wording only after compatibility evidence.
+
+**Verification:** Focused React/TypeScript component and integration tests; web route/browser E2E for dispatcher, manager, lead worker, non-lead worker, stale/conflict, empty/error, and accessibility-critical flows; mobile unit/integration/outbox/offline tests; Expo Go first and custom dev build only when existing native dependencies require it; affected npm lint/format/types/build; backend contract regression; visual inspection at desktop/tablet/mobile and supported light/dark modes; accessibility audit; and `git diff --check`.
+
+**Review and commit:** Complete code, TypeScript, accessibility, UX, and security review; resolve all critical/high findings; update all four AI verification responses; commit only after all gates pass with a clean tree; set `READY_GRAPH_COMPLETE=yes`.
+
+**Context budget:** Treat Phase 7 as the internal subgraph 7A UX audit/brief, 7B web, 7C field-mobile, and 7D integrated QA. If context approaches saturation, stop only at a clean committed checkpoint with `CONTEXT_SPLIT_REQUIRED=yes` so a fresh Luna/xhigh continuation can resume.

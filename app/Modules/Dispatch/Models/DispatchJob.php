@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -62,6 +63,12 @@ class DispatchJob extends Model
     public function sourceType(): ?DispatchSourceType
     {
         return DispatchSourceType::tryFrom((string) $this->source_type);
+    }
+
+    /** @return HasOne<DispatchHandoff, $this> */
+    public function canonicalHandoff(): HasOne
+    {
+        return $this->hasOne(DispatchHandoff::class, 'legacy_dispatch_job_id');
     }
 
     /** @return HasMany<DispatchPersonnelAssignment, $this> */

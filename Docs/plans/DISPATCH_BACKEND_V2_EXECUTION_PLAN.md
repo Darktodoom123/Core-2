@@ -2,7 +2,7 @@
 
 ## Purpose and implementation boundary
 
-This is the implementation-ready, dependency-gated plan for Dispatch Backend V2 in the Core-2 Laravel modular monolith. It preserves existing user data, authorization, eligibility, asset safety, audit history, optimistic concurrency, and mobile idempotency while moving web and mobile adapters onto shared domain commands.
+This is the implementation-ready, dependency-gated plan for Dispatch Backend V2 in the Core-2 Laravel modular monolith. It preserves existing user data, authorization, eligibility, asset safety, audit history, optimistic concurrency, and mobile idempotency while moving web and mobile adapters onto shared domain commands. The backend graph is followed by an approved Phase 7 UI/UX cutover and validation phase.
 
 Phase 0 establishes the contract, graph, and seeder security preflight. It does not implement V2 schema, lifecycle commands, API versioning, or runtime behavior. The target design is described in [the domain contract ADR](../architecture/ADR-DISPATCH-BACKEND-V2-DOMAIN-CONTRACT.md); existing runtime values that conflict with that target remain legacy compatibility behavior until the relevant phase is completed.
 
@@ -30,6 +30,7 @@ flowchart LR
     P4["Phase 4\nHandoffs, attempts, idempotency, audit"]
     P5["Phase 5\nWeb/API/mobile adapters and compatibility"]
     P6["Phase 6\nMigration rollout, hardening, closeout"]
+    P7["Phase 7\nDispatch UX/UI cutover and validation"]
 
     P0 --> P1
     P1 --> P2
@@ -38,6 +39,7 @@ flowchart LR
     P3 --> P4
     P4 --> P5
     P5 --> P6
+    P6 --> P7
 ```
 
 No phase may begin until all dependency phases have their commit gate recorded as complete and their rollback gate is still available. A phase may add characterization tests for legacy behavior, but it may not silently widen its scope to the next phase.
@@ -52,7 +54,8 @@ No phase may begin until all dependency phases have their commit gate recorded a
 | 3 | Assignment offers, designated lead, mandatory acceptance, eligibility/assets, plan approvals | 2 | Readiness and authorization policy proven under concurrency and override cases |
 | 4 | Canonical handoffs, execution attempts, retry/replacement policy, idempotency, audit and after-commit effects | 2, 3 | Source adapters use commands; atomic/audit/idempotency/concurrency gates pass |
 | 5 | Web/API/mobile adapter migration and `/api/v1` compatibility path | 4 | Shared command adapters, contract tests, mobile retry/compatibility evidence |
-| 6 | Controlled rollout, reconciliation, observability, deprecation, closeout | 5 | Migration report, rollback rehearsal, operational runbook, final review |
+| 6 | Controlled rollout, reconciliation, observability, deprecation, backend closeout | 5 | Migration report, rollback rehearsal, operational runbook, `READY_FOR_PHASE_7=yes` |
+| 7 | Dispatch UX/UI cutover and validation for office web and field-mobile | 6 | Accessible, contract-backed UI cutover, integrated QA, `READY_GRAPH_COMPLETE=yes` |
 
 ## Phase 0 — execution contract, security preflight, and graph
 
@@ -335,7 +338,32 @@ Depends on Phase 5. Operate the migration safely, reconcile legacy data, and clo
 
 - Final code, security, data, and operations reviews have no critical/high findings.
 - Commit rollout/runbook/deprecation changes separately from any final removal.
-- Mark the plan complete only after the graph handoff records evidence and the next consumer can start from a clean commit.
+- Mark the backend phase complete only after the graph handoff records evidence and the Phase 7 consumer can start from a clean commit. Phase 6 does not close the graph.
+
+## Phase 7 — dispatch UX/UI cutover and validation
+
+### Scope and dependencies
+
+Depends on Phase 6 backend rollout, reconciliation, compatibility, and rollback gates. This phase is approved as a follow-on UI/UX phase and is not part of the Phase 1 backend implementation.
+
+### Objective and required behavior
+
+- Begin with an evidence-based UX audit/brief using the repository `impeccable` skill and canonical `Docs/Design.md`; use `expo-native-ui` guidance for React Native and preserve the CT2 visual direction (Instrument Sans, amber action/focus, distinct warning palette, calm dense operations instrument).
+- Redesign the office web surfaces in `resources/js/pages/workspace.tsx`, `resources/js/pages/dispatch-detail.tsx`, `resources/js/components/workspace/*`, and related typed view models.
+- Redesign the field-mobile Assigned Jobs, Job Detail, assignment response, progression, readiness/conflict/offline/sync, navigation, and related component surfaces.
+- Make assignment acceptance the only UI concept named “accepted”. Present execution as `draft -> dispatched -> en_route -> arrived -> working -> completed/cancelled`; show scheduled, awaiting approval, and ready as derived conditions.
+- Show designated lead, mandatory versus optional offers, readiness blockers/evidence, plan-version staleness, approval supersession, source/attempt lineage, emergency-override scope, and terminal-only archive affordances according to actor capability.
+- Keep office and field flows safe and explicit, including touch-safe controls, 44px targets, heavy-crane drive/park/setup modes where supported, and no controls beyond server authorization.
+- Handle loading, empty, validation, forbidden, stale/conflict, success, disabled/safety blocked, offline, queued, syncing, failed, synchronized, delayed telemetry, and retry/idempotency states.
+- Meet WCAG 2.2 AA, keyboard/focus/announcements, 200% zoom, reduced motion, non-color-only status, map/list equivalence, responsive breakpoints, and native safe-area requirements.
+- Preserve Laravel authority and shared commands; UI/adapters must not mutate lifecycle directly or recreate backend rules. Remove obsolete job-level “accepted” copy only after compatibility evidence.
+
+### Verification, rollback, and handoff
+
+- Run focused React/TypeScript tests, web/browser E2E, mobile unit/integration/outbox/offline tests, affected npm lint/format/types/build checks, backend contract regression, visual inspection, accessibility audit, and `git diff --check`.
+- Review code, TypeScript, accessibility, UX, and security changes; resolve every critical/high finding and update all four AI verification responses.
+- Treat Phase 7 as clean subphases 7A UX audit/brief, 7B web, 7C field-mobile, and 7D integrated QA. A context split is permitted only at a clean committed checkpoint.
+- Commit only with a clean tree after all gates pass and set `READY_GRAPH_COMPLETE=yes`.
 
 ## Execution protocol
 
@@ -353,14 +381,16 @@ For every phase:
 
 ```yaml
 schema: dispatch-backend-v2-phase-status/v1
-branch: codex/dispatch-backend-v2-phase-0
-baseline_commit: 7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e
-current_phase: phase_0
-ready_for_phase_1: true
+branch: codex/dispatch-backend-v2-phase-1
+baseline_commit: 1b96db43be0c05abfa938631179240bf25abe783
+current_phase: phase_1
+ready_for_phase_1: false
+ready_for_phase_2: true
+ready_for_phase_7: false
 phases:
   phase_0:
     status: complete
-    commit_sha: 2054c13412cdb6db062a9c6e5994f9c166ecb5f5
+    commit_sha: 1b96db43be0c05abfa938631179240bf25abe783
     depends_on: []
     checklist:
       baseline_inventory: complete
@@ -374,11 +404,11 @@ phases:
       review_gate: complete
       commit_gate: complete
   phase_1:
-    status: ready
-    commit_sha: null
+    status: complete
+    commit_sha: null # populated with the Phase 1 implementation SHA at commit closeout
     depends_on: [phase_0]
   phase_2:
-    status: blocked_on_phase_1
+    status: ready
     commit_sha: null
     depends_on: [phase_1]
   phase_3:
@@ -397,6 +427,10 @@ phases:
     status: blocked_on_phase_5
     commit_sha: null
     depends_on: [phase_5]
+  phase_7:
+    status: blocked_on_phase_6
+    commit_sha: null
+    depends_on: [phase_6]
 known_preexisting_blockers:
   - id: mobile-eslint
     status: open
@@ -406,29 +440,31 @@ known_preexisting_blockers:
     detail: Full npm run format:check reports 5 untouched packages/field-mobile files.
 execution_record:
   commands:
+    - "php artisan test --compact tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php: PASS, 7 tests, 79 assertions"
+    - "php artisan test --compact relevant Dispatch/source/Rental/Sales/idempotency files: PASS, 109 tests, 794 assertions"
+    - "php artisan test --compact: PASS, 540 tests, 6,805 assertions"
     - "composer run lint:check: PASS"
     - "composer run types:check: PASS, 0 PHPStan errors"
-    - "php artisan test --compact tests/Feature/Security/DatabaseSeederSecurityTest.php: PASS, 4 tests, 20 assertions"
-    - "php artisan test --compact affected Dispatch/Rental/Sales handoff files: PASS, 258 tests, 1,577 assertions"
-    - "php artisan test --compact: PASS, 533 tests, 6,520 assertions"
-    - "npm run build: PASS"
-    - "changed resources/js ESLint and Prettier checks: PASS"
-    - "npm run types:check: PASS"
-    - "composer audit --locked: PASS, no security vulnerability advisories"
+    - "composer audit --locked --no-interaction: PASS, no security vulnerability advisories"
+    - "npm ci --no-audit --no-fund: PASS"
+    - "npm run build: PASS; existing Vite large-chunk warnings"
+    - "SQLite fresh/rollback/reapply migration rehearsal: PASS; legacy dispatch_jobs preserved across rollback"
+    - "php artisan test --compact -c phpunit.postgresql.xml: BLOCKED; 4 tests could not connect to 127.0.0.1:5432/core2_rental_sales_test"
     - "git diff --check: PASS"
   review_findings:
-    - "Resolved Pint fully_qualified_strict_types finding in the new security test."
-    - "Resolved ignored Docs and .ai-reports packaging issue by force-adding only required artifacts."
+    - "Resolved the invalid constraint-test fixture by supplying the required preserved legacy dispatch job FK."
+    - "Read-only code/security review found no critical or high-confidence unresolved issue; reconciliation remains additive, bounded, resumable, idempotent, and non-destructive."
+    - "Approved Phase 7 graph amendment recorded in the plan and executor prompts; Phase 7 remains blocked on Phase 6."
   rollback_check: complete
+  ready_for_phase_2: true
+  ready_for_phase_7: false
+  ready_graph_complete: false
 ```
 
 ## Phase 0 execution record
 
-This section is updated before the Phase 0 commit. It must contain the exact branch, baseline SHA, Phase 0 SHA, commands, results, review findings/fixes, and remaining blockers. Do not mark `ready_for_phase_1` true until every Phase 0 gate is complete.
+Historical Phase 0 handoff verified for this phase: branch `codex/dispatch-backend-v2-phase-0`, commit `1b96db43be0c05abfa938631179240bf25abe783`. Its review and rollback gates were complete; untouched mobile lint/format failures remain documented in `known_preexisting_blockers`.
 
-- Branch: `codex/dispatch-backend-v2-phase-0`
-- Baseline commit: `7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e`
-- Phase 0 commit: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`
-- Review: complete; no critical/high findings open. The Pint finding and ignored-required-file packaging issue were fixed.
-- Rollback: complete; seeder-only runtime changes are reversible and do not mutate schema or user data during rollback.
-- Remaining blockers: untouched mobile lint/format failures documented in `known_preexisting_blockers`.
+## Phase 1 execution record
+
+The machine-readable status and [Phase 1 handoff](DISPATCH_BACKEND_V2_PHASE_HANDOFF.md) contain the exact Phase 1 commands, results, review findings, PostgreSQL dependency, and closeout fields. Populate `phases.phase_1.commit_sha` with the implementation commit before publishing the durable handoff checkpoint.

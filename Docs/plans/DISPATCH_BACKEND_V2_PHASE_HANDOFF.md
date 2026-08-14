@@ -1,50 +1,83 @@
-# Dispatch Backend V2 Phase 0 Handoff
+# Dispatch Backend V2 Phase 1 Handoff
 
 ## Objective
 
-Complete Phase 0 of the Dispatch Backend V2 redesign: establish the executable plan and domain contract, harden production/bootstrap seeding, add focused security coverage, and commit the phase without implementing V2 schema or lifecycle behavior.
+Complete Phase 1 from the Phase 0 branch by adding the additive canonical persistence foundation for handoffs, execution attempts, immutable plan versions, assignment offers and lead metadata, idempotency ownership, audit lineage, and resumable reconciliation. Legacy rows, columns, runtime reads/writes, and lifecycle values remain preserved and active.
+
+## Dependency and branch
+
+- Required Phase 0 starting point: branch `codex/dispatch-backend-v2-phase-0`, commit `1b96db43be0c05abfa938631179240bf25abe783`.
+- Phase 1 branch: `codex/dispatch-backend-v2-phase-1`.
+- `START_SHA`: `1b96db43be0c05abfa938631179240bf25abe783`.
+- Phase 7 is approved in the graph after Phase 6; Phase 1 does not implement UI/UX and does not unlock Phase 7.
 
 ## Decisions and boundaries
 
-- The dirty Rental/Sales/Dispatch handoff was coherent and was committed separately before Phase 0 work.
-- The working branch is `codex/dispatch-backend-v2-phase-0`.
-- Baseline commit: `7e9dd0cdccd08666d20bdde713aa25f9cacf1d6e`.
-- `Docs/` did not exist in the checkout even though README.md references it; Phase 0 will create the required plan and contract docs.
-- Current runtime remains legacy. The target contract must not be represented as implemented behavior.
-- No V2 tables, migrations, enums, lifecycle commands, API version changes, or frontend behavior are in Phase 0 scope.
+- Added only new canonical tables and relationships; legacy tables and runtime behavior remain unchanged.
+- One canonical handoff is linked to one preserved legacy dispatch job and has one initial execution attempt. Replacement attempts are represented by an explicit `replaces_attempt_id` lineage.
+- Target attempt status is limited to `draft`, `dispatched`, `en_route`, `arrived`, `working`, `completed`, and `cancelled`. `accepted` exists only on assignment offers; `pending_approval`, `scheduled`, and `ready` remain compatibility/derived concepts. No `on_hold` was added.
+- Plan versions are immutable by schema shape (`created_at` only), content-hashed, and approval history is preserved without a same-kind uniqueness constraint.
+- Mandatory/optional offer and lead designation fields are persisted, but reconciliation never infers either property from legacy data.
+- `workspace_key=operations` is an explicit compatibility scope for this single-workspace application; it is not treated as a new authorization boundary.
+- Source links preserve the canonical source type/id/reference, use the full Sales reference where available, and record findings for asymmetry, duplicates, invalid sources, and invalid intervals. Legacy values are never silently coerced or deleted.
+- Idempotency ownership is scoped by workspace, owner type/id, and key. Legacy command logs remain in place; audit events and command logs receive canonical lineage links when resolvable.
+- Reconciliation is bounded, resumable, idempotent, observable, dry-run capable, and non-destructive. Findings use stable fingerprints and warning/blocker severity.
+- PostgreSQL-only status/interval checks are guarded in the migration because the local environment has no PostgreSQL server; SQLite coverage verifies the portable schema and relationships.
+- No V2 command handlers, adapters, API cutover, mobile changes, or lifecycle read/write switches were introduced.
+- The approved graph amendment is documentation-only in this phase: the plan and executor prompts now include `P6 -> P7`, the Phase 7 prompt, and `READY_FOR_PHASE_7`/`READY_GRAPH_COMPLETE` handoff fields.
 
-## Files changed so far
+## Explicit legacy-to-target mapping
 
-- Baseline commit: the pre-existing Rental/Sales/Dispatch handoff and workspace files.
-- Phase 0 commit: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`, containing the Docs plan/ADR/prompts/checkpoint, AI report, README clarification, three seeder guards, and focused security test.
+See [DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md](DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md). It covers dispatch jobs, source links and reverse links, long Sales references, schedule intervals, personnel assignments, approvals, audit events, command logs/idempotency, archive semantics, workspace scope, and invalid-row findings.
+
+## Files changed
+
+- `database/migrations/2026_08_14_130000_create_dispatch_v2_persistence_foundation.php`
+- `app/Modules/Dispatch/Enums/DispatchAttemptStatus.php`, `DispatchAssignmentOfferStatus.php`, `DispatchPlanApprovalStatus.php`, `DispatchPlanVersionStatus.php`, `DispatchReconciliationFindingSeverity.php`, `DispatchReconciliationRunStatus.php`
+- Canonical models under `app/Modules/Dispatch/Models/` plus the `DispatchJob::canonicalHandoff()` relationship
+- `app/Modules/Dispatch/Services/DispatchV2Reconciliation.php` and `app/Modules/Dispatch/Console/Commands/ReconcileDispatchV2Command.php`
+- `app/Modules/Dispatch/DispatchServiceProvider.php` command registration
+- Characterization and persistence tests under `tests/Feature/Operations/DispatchV2*`
+- `Docs/plans/DISPATCH_BACKEND_V2_PHASE_1_LEGACY_MAPPING.md`
+- Updated execution plan, executor prompts, and this durable handoff; `.ai-reports/ai-verification-questions.md` is updated in the closeout checkpoint.
 
 ## Verification completed
 
-- `composer install --no-interaction --prefer-dist`: PASS; lockfile dependencies installed. Existing PSR-4 warnings concern helper classes embedded in `tests/Feature/Operations/ReportExportWorkflowTest.php`.
-- `npm ci --no-audit --no-fund`: PASS; lockfile dependencies installed. Existing npm deprecation notices were emitted.
+- Red-first evidence: focused tests initially failed on missing canonical tables/command and invalid target status representation before implementation.
+- `php artisan test --compact tests/Feature/Operations/DispatchV2LegacySchemaCharacterizationTest.php tests/Feature/Operations/DispatchV2PersistenceFoundationTest.php`: PASS, 7 tests, 79 assertions.
+- Relevant dispatch/source/rental/sales/idempotency suite: PASS, 109 tests, 794 assertions.
+- Full backend suite `php artisan test --compact`: PASS, 540 tests, 6,805 assertions.
 - `composer run lint:check`: PASS.
 - `composer run types:check`: PASS, 0 PHPStan errors.
-- `php artisan test` over all affected Dispatch/Rental/Sales handoff files: PASS, 258 tests, 1,577 assertions.
-- `npm run build`: PASS; Vite manifest generated. Existing large-chunk warnings were emitted.
-- Changed `resources/js` ESLint check: PASS.
-- Changed `resources/js` Prettier check: PASS.
-- `npm run types:check`: PASS.
-- `composer audit --locked`: PASS, no security vulnerability advisories.
-- `git diff --check`: PASS.
-- `php artisan test tests/Feature/Security/DatabaseSeederSecurityTest.php`: PASS, 4 tests, 18 assertions.
+- `composer audit --locked --no-interaction`: PASS, no security vulnerability advisories.
+- `npm ci --no-audit --no-fund`: PASS; existing npm deprecation notices only.
+- `npm run build`: PASS; existing Vite large-chunk warnings only. Frontend source was not changed in Phase 1.
+- Fresh/rollback/reapply SQLite migration rehearsal: PASS. All migrations applied; Phase 1 rolled back with `dispatch_jobs` preserved and canonical tables absent; reapply restored both legacy and canonical tables. Temporary database removed.
+- PostgreSQL suite attempt: BLOCKED by external dependency; all 4 configured tests failed before execution because `127.0.0.1:5432` refused connections for `core2_rental_sales_test`. The migration defers PostgreSQL-only checks safely behind the `pgsql` driver.
+- `git diff --check`: PASS before final commit; rerun at commit gate.
 
-## Known pre-existing blockers
+## Review and security checkpoint
 
-- Full `npm run lint:check` fails in untouched `packages/field-mobile` files with 39 existing errors (React ref access, import ordering, constant conditions, and one unused variable).
-- Full `npm run format:check` reports 5 untouched `packages/field-mobile` files: `HeavyCraneRouteCard.tsx`, `field-header.tsx`, `notifications-sheet.tsx`, `profile-sheet.tsx`, and `AssignedJobsListScreen.tsx`.
-- These mobile issues are outside the baseline handoff diff and must not be mixed into Phase 0.
+- Read-only review covers the full phase diff for additive compatibility, FK/index/cardinality protections, owner scoping, raw SQL safety, reconciliation retry behavior, source symmetry, approval history, lead/mandatory inference, archive terminality, and absence of lifecycle command cutover.
+- The review fixture initially violated the required legacy-job FK; it was corrected while retaining the constraint. No critical or high-confidence unresolved issue remains.
+- Security review confirms no new authorization bypass or external write path: reconciliation only writes canonical/reconciliation tables, leaves legacy runtime paths active, and treats `workspace_key` as compatibility scope rather than authorization.
+- Rollback is additive: the migration down path removes only Phase 1 tables/lead columns and leaves all legacy tables and data intact.
 
-## Unresolved findings
+## Known blockers and unresolved findings
 
-- Full frontend lint/format blockers listed above remain outside Phase 0 scope.
-- Phase 0 code review and security review are complete with no critical/high findings open.
-- Phase 0 commit SHA: `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`.
+- PostgreSQL verification requires an available PostgreSQL server/database with the configured `core2_app` credentials; exact failure is recorded above.
+- Existing untouched mobile quality debt remains outside Phase 1: full `npm run lint:check` reports 39 errors in `packages/field-mobile`; full `npm run format:check` reports 5 files (`HeavyCraneRouteCard.tsx`, `field-header.tsx`, `notifications-sheet.tsx`, `profile-sheet.tsx`, `AssignedJobsListScreen.tsx`).
+- No phase-caused blocker remains for Phase 2.
+
+## Closeout fields
+
+- `PHASE_STATUS=complete`
+- `READY_FOR_PHASE_2=yes`
+- `READY_FOR_PHASE_7=no` (Phase 6 is still required)
+- `READY_GRAPH_COMPLETE=no` (Phase 7 remains after Phase 6)
+- `CONTEXT_SPLIT_REQUIRED=no`
+- Phase 1 implementation SHA: pending the implementation commit; this field and the machine-readable plan record must be updated with the exact SHA before the durable handoff commit.
 
 ## Next action
 
-Phase 0 is complete. The next executor may begin Phase 1 from commit `2054c13412cdb6db062a9c6e5994f9c166ecb5f5`; `READY_FOR_PHASE_1=yes`.
+Phase 2 may begin from the clean Phase 1 implementation commit after the exact SHA is recorded in this handoff and the execution plan. Phase 7 remains dependency-gated on Phase 6 and must use the approved UI/UX prompt.

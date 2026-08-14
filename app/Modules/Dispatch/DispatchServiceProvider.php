@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dispatch;
 
+use App\Modules\Dispatch\Console\Commands\ReconcileDispatchV2Command;
 use App\Modules\Dispatch\Contracts\DispatchScheduleReader;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
@@ -20,6 +21,7 @@ final class DispatchServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->commands([ReconcileDispatchV2Command::class]);
         Gate::policy(ApprovalRequest::class, ApprovalRequestPolicy::class);
         Gate::policy(DispatchJob::class, DispatchJobPolicy::class);
     }
