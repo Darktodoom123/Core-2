@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+﻿import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from '../nativeStyles';

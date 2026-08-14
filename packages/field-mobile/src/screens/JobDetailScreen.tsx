@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
     AppState,
     Pressable,
@@ -9,8 +9,11 @@ import {
 } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
+import { CraneSetupSafetyCard } from '../components/cards/CraneSetupSafetyCard';
+import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
 import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
 import { LocationSharingCard } from '../components/cards/LocationSharingCard';
+import { ParkedSecuredCard } from '../components/cards/ParkedSecuredCard';
 import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
 import { colors } from '../components/nativeStyles';
 import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
@@ -23,9 +26,14 @@ import type {
     LocationSharingService,
 } from '../services/locationService';
 import type {
+    CraneHazardItem,
+    CraneSetupSafetyChecklist,
+    CraneSetupState,
     DispatchJob,
     DispatchStatus,
     OutboxCommand,
+    ParkedSecuredChecklist,
+    ParkedSecuredState,
     User,
 } from '../types/index';
 
@@ -71,6 +79,12 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     onRetryNewVersion,
     onLocationQueued,
 }) => {
+    const [driveModeOpen, setDriveModeOpen] = useState(false);
+    const [parkedSecuredState, setParkedSecuredState] =
+        useState<ParkedSecuredState | null>(null);
+    const [craneSetupState, setCraneSetupState] =
+        useState<CraneSetupState | null>(null);
+
     useEffect(() => {
         if (
             !getCurrentLocation ||
@@ -133,8 +147,18 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             command.jobId === job.id &&
             (command.state === 'queued' || command.state === 'syncing'),
     );
+    const isProcessingTransition = jobPendingCommands.some(
+        (command) => command.type === 'transition_status',
+    );
+
     const primaryAsset = job.asset_assignments?.[0] ?? null;
+    const isCrane = primaryAsset?.asset_kind === 'crane';
     const isResponsePending = job.my_assignment?.response_status === 'pending';
+    const isArrived =
+        job.status.value === 'arrived' ||
+        job.status.value === 'working' ||
+        job.status.value === 'completed';
+
     const requirements = Array.isArray(job.requirements)
         ? job.requirements.filter(
               (requirement): requirement is string =>
@@ -142,6 +166,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                   requirement.trim().length > 0,
           )
         : [];
+
     const priorityStyle =
         job.priority.value === 'emergency'
             ? styles.emergencyPriority
@@ -149,12 +174,36 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
               ? styles.priorityPriority
               : styles.routinePriority;
 
+    const handleConfirmParkedSecured = (checklist: ParkedSecuredChecklist) => {
+        setParkedSecuredState({
+            isConfirmed: true,
+            confirmedAt: new Date().toISOString(),
+            confirmedBy: user.name,
+            checklist,
+        });
+    };
+
+    const handleVerifyCraneSetup = (
+        checklist: CraneSetupSafetyChecklist,
+        hazards: CraneHazardItem[],
+    ) => {
+        setCraneSetupState({
+            isSetupComplete: true,
+            verifiedAt: new Date().toISOString(),
+            verifiedBy: user.name,
+            exclusionRadiusMetres: 15.0,
+            checklist,
+            hazards,
+        });
+    };
+
     return (
         <ScrollView
             contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={styles.content}
             accessibilityLabel={`Assignment ${job.reference}`}
         >
+            {/* Screen Header */}
             <View style={styles.screenHeader}>
                 <Pressable
                     accessibilityLabel="Back to assigned jobs"
@@ -174,12 +223,14 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 <View style={styles.headerSpacer} />
             </View>
 
+            {/* Conflict Resolution Banner */}
             <CommandConflictBanner
                 conflictedCommands={jobConflicts}
                 onAcceptServerState={onAcceptServerState}
                 onRetryNewVersion={onRetryNewVersion}
             />
 
+            {/* Sync State Banner */}
             <View
                 accessible
                 accessibilityLiveRegion="polite"
@@ -220,6 +271,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 </View>
             </View>
 
+            {/* Job Header Card */}
             <View style={styles.headerCard}>
                 <View style={styles.headerRow}>
                     <View style={styles.referenceBlock}>
@@ -271,6 +323,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 ) : null}
             </View>
 
+            {/* Assigned Crane Card */}
             {primaryAsset ? (
                 <View style={styles.assetCard} testID="assigned-asset-card">
                     <View style={styles.assetIcon}>
@@ -293,6 +346,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 </View>
             ) : null}
 
+            {/* Job Requirements */}
             {requirements.length > 0 ? (
                 <View style={styles.requirementsCard}>
                     <Text
@@ -315,30 +369,57 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 </View>
             ) : null}
 
+            {/* 1. Assignment Offer Response Card */}
             <AssignmentResponseCard
                 job={job}
                 onAccept={onAcceptAssignment}
                 onReject={onRejectAssignment}
             />
+
+            {/* 2. Forward-Only Progression Stepper */}
             <FieldProgressionStepper
+                isCraneSetupComplete={craneSetupState?.isSetupComplete ?? false}
+                isParkedAndSecured={parkedSecuredState?.isConfirmed ?? false}
+                isProcessing={isProcessingTransition}
                 job={job}
                 onTransitionStatus={onTransitionStatus}
             />
-            {primaryAsset?.asset_kind === 'crane' ? (
+
+            {/* 3. Heavy Crane Route Preview & Drive Mode */}
+            {isCrane ? (
                 <HeavyCraneRouteCard
                     assetLabel={`${primaryAsset.asset_code} · ${primaryAsset.asset_name}`}
                     destinationLabel={job.site}
-                    status="unavailable"
+                    onOpenDriveMode={() => setDriveModeOpen(true)}
+                    status="available"
                 />
             ) : null}
-            <LocationSharingCard
-                user={user}
-                job={job}
-                locationService={locationService}
-                getCurrentLocation={getCurrentLocation}
-                onLocationQueued={onLocationQueued}
+
+            {/* 4. Parked & Secured Confirmation Gate (Upon Arrival) */}
+            <ParkedSecuredCard
+                isArrived={isArrived}
+                onConfirm={handleConfirmParkedSecured}
+                state={parkedSecuredState}
             />
 
+            {/* 5. Crane Setup Safety Mode Card (After Parked & Secured) */}
+            <CraneSetupSafetyCard
+                isCraneAsset={isCrane}
+                isParkedAndSecured={parkedSecuredState?.isConfirmed ?? false}
+                onVerifySetup={handleVerifyCraneSetup}
+                state={craneSetupState}
+            />
+
+            {/* 6. Location Sharing Card */}
+            <LocationSharingCard
+                getCurrentLocation={getCurrentLocation}
+                job={job}
+                locationService={locationService}
+                onLocationQueued={onLocationQueued}
+                user={user}
+            />
+
+            {/* Team & Personnel */}
             <View style={styles.teamCard}>
                 <Text accessibilityRole="header" style={styles.sectionHeading}>
                     Team and asset assignments
@@ -376,6 +457,26 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                     <Text style={styles.emptyText}>None assigned</Text>
                 )}
             </View>
+
+            {/* Heavy-Crane Drive Mode Modal */}
+            <HeavyCraneDriveModeModal
+                assetLabel={
+                    primaryAsset
+                        ? `${primaryAsset.asset_code} · ${primaryAsset.asset_name}`
+                        : 'Crane'
+                }
+                destination={job.site}
+                jobReference={job.reference}
+                onArrived={() => {
+                    setDriveModeOpen(false);
+
+                    if (job.status.value === 'en_route') {
+                        onTransitionStatus(job.id, 'arrived', job.version);
+                    }
+                }}
+                onClose={() => setDriveModeOpen(false)}
+                visible={driveModeOpen}
+            />
         </ScrollView>
     );
 };

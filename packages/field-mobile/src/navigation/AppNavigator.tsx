@@ -1,4 +1,4 @@
-import type { ErrorInfo, ReactNode } from 'react';
+﻿import type { ErrorInfo, ReactNode } from 'react';
 import React, {
     Component,
     useCallback,
@@ -40,6 +40,8 @@ import type {
     DispatchJob,
     DispatchStatus,
     OutboxCommand,
+    ShiftInfo,
+    ShiftStatus,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -134,6 +136,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isLoadingJobs, setIsLoadingJobs] = useState(false);
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
+    const [locationSharingActive, setLocationSharingActive] = useState(true);
+    const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
+        status: 'on_shift',
+        startedAt: '08:00 AM',
+        hoursElapsed: 4,
+    });
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
@@ -368,6 +376,17 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [],
     );
     const handleBackToList = useCallback(() => setSelectedJobId(null), []);
+
+    const handleToggleShift = useCallback((nextStatus: ShiftStatus) => {
+        setShiftInfo((prev) => ({
+            ...prev,
+            status: nextStatus,
+        }));
+    }, []);
+
+    const handleToggleLocationSharing = useCallback(() => {
+        setLocationSharingActive((prev) => !prev);
+    }, []);
 
     const handleAcceptAssignment = useCallback(
         async (jobId: number, assignmentId: number, version: number) => {
@@ -630,34 +649,40 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ) : null}
                         {selectedJobId === null || !activeJob || !user ? (
                             <AssignedJobsListScreen
-                                jobs={jobs}
-                                outboxCommands={outboxCommands}
+                                error={jobsError}
                                 isLoading={isLoadingJobs}
                                 isOnline={isOnline}
+                                jobs={jobs}
+                                locationSharingActive={locationSharingActive}
+                                onDiscardCommand={handleDiscardCommand}
+                                onLogout={() => void logout()}
+                                onRefresh={() => void fetchJobs()}
+                                onRetryCommand={handleRetryCommand}
+                                onSelectJob={handleSelectJob}
+                                onSyncNow={() => void syncQueue()}
+                                onToggleLocationSharing={
+                                    handleToggleLocationSharing
+                                }
+                                onToggleShift={handleToggleShift}
+                                outboxCommands={outboxCommands}
+                                shiftInfo={shiftInfo}
                                 userName={user?.name}
                                 userRole={user?.role.replaceAll('_', ' ')}
-                                error={jobsError}
-                                onRefresh={() => void fetchJobs()}
-                                onSyncNow={() => void syncQueue()}
-                                onRetryCommand={handleRetryCommand}
-                                onDiscardCommand={handleDiscardCommand}
-                                onSelectJob={handleSelectJob}
-                                onLogout={() => void logout()}
                             />
                         ) : (
                             <JobDetailScreen
-                                job={activeJob}
-                                user={user}
-                                outboxCommands={outboxCommands}
-                                locationService={locationService}
                                 getCurrentLocation={getCurrentLocation}
-                                onBackToList={handleBackToList}
+                                job={activeJob}
+                                locationService={locationService}
                                 onAcceptAssignment={handleAcceptAssignment}
-                                onRejectAssignment={handleRejectAssignment}
-                                onTransitionStatus={handleTransitionStatus}
                                 onAcceptServerState={handleAcceptServerState}
-                                onRetryNewVersion={handleRetryNewVersion}
+                                onBackToList={handleBackToList}
                                 onLocationQueued={() => void syncQueue()}
+                                onRejectAssignment={handleRejectAssignment}
+                                onRetryNewVersion={handleRetryNewVersion}
+                                onTransitionStatus={handleTransitionStatus}
+                                outboxCommands={outboxCommands}
+                                user={user}
                             />
                         )}
                     </View>
@@ -675,6 +700,14 @@ const styles = StyleSheet.create({
     appShell: {
         flex: 1,
     },
+    mainContent: {
+        flex: 1,
+    },
+    mainContentExpanded: {
+        alignSelf: 'center',
+        maxWidth: 1040,
+        width: '100%',
+    },
     loadingState: {
         alignItems: 'center',
         flex: 1,
@@ -687,187 +720,44 @@ const styles = StyleSheet.create({
         marginTop: 16,
         textAlign: 'center',
     },
-    header: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        minHeight: 72,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    headerCompact: {
-        alignItems: 'stretch',
-        flexDirection: 'column',
-        gap: 10,
-    },
-    headerBrand: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexShrink: 1,
-        gap: 10,
-    },
-    brandMark: {
-        backgroundColor: colors.amber,
-        borderRadius: 2,
-        height: 28,
-        width: 7,
-    },
-    headerTitle: {
-        color: colors.text,
-        fontSize: 18,
-        fontWeight: '800',
-    },
-    connectivityPill: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: 999,
-        flexDirection: 'row',
-        gap: 6,
-        justifyContent: 'center',
-        minHeight: 32,
-        paddingHorizontal: 10,
-    },
-    connectivityDot: {
-        borderRadius: 5,
-        height: 10,
-        width: 10,
-    },
-    connectivityChecking: {
-        backgroundColor: colors.muted,
-    },
-    connectivityOnline: {
-        backgroundColor: colors.green,
-    },
-    connectivityPending: {
-        backgroundColor: colors.warning,
-    },
-    connectivityOffline: {
-        backgroundColor: colors.red,
-    },
-    connectivityText: {
-        color: colors.secondary,
-        fontSize: 12,
-        fontWeight: '700',
-        fontVariant: ['tabular-nums'],
-    },
-    userProfile: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        flexShrink: 1,
-        gap: 10,
-    },
-    userProfileCompact: {
-        alignItems: 'stretch',
-        justifyContent: 'space-between',
-    },
-    userInfo: {
-        alignItems: 'flex-start',
-        flexShrink: 1,
-    },
-    userName: {
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '700',
-        maxWidth: 220,
-    },
-    roleBadge: {
-        color: colors.secondary,
-        fontSize: 11,
-        fontWeight: '600',
-        marginTop: 2,
-        textTransform: 'capitalize',
-    },
-    avatarPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    avatarCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: colors.amberSoft,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    avatarInitials: {
-        color: colors.amberDark,
-        fontSize: 12,
-        fontWeight: '800',
-    },
-    logoutButton: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
-        borderWidth: 1,
-        borderRadius: 8,
-        justifyContent: 'center',
-        minHeight: 48,
-        minWidth: 76,
-        paddingHorizontal: 12,
-    },
-    logoutText: {
-        color: colors.text,
-        fontSize: 13,
-        fontWeight: '800',
-    },
-    mainContent: {
-        backgroundColor: colors.background,
-        flex: 1,
-    },
-    mainContentExpanded: {
-        alignSelf: 'center',
-        maxWidth: 720,
-        width: '100%',
-    },
-    commandError: {
-        backgroundColor: colors.redSoft,
-        borderColor: colors.redBorder,
-        borderRadius: 10,
-        borderWidth: 1,
-        marginHorizontal: 16,
-        marginTop: 16,
-        padding: 12,
-    },
-    commandErrorText: {
-        color: colors.red,
-        fontSize: 14,
-        fontWeight: '700',
-        lineHeight: 20,
-    },
     centerCard: {
-        alignSelf: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderWidth: 1,
         borderRadius: 12,
-        margin: 24,
-        maxWidth: 440,
+        borderWidth: 1,
+        margin: 16,
         padding: 24,
-        width: '90%',
     },
     errorTitle: {
-        color: colors.red,
-        fontSize: 21,
+        color: colors.text,
+        fontSize: 20,
         fontWeight: '800',
-        marginBottom: 10,
+        marginBottom: 8,
     },
     bodyText: {
         color: colors.secondary,
         fontSize: 15,
         lineHeight: 22,
+        marginBottom: 16,
     },
     actionButton: {
-        alignSelf: 'flex-start',
         backgroundColor: colors.amber,
-        borderRadius: 7,
-        marginTop: 18,
         minHeight: 48,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        width: '100%',
+    },
+    commandError: {
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        borderRadius: 8,
+        borderWidth: 1,
+        margin: 16,
+        marginBottom: 0,
+        padding: 12,
+    },
+    commandErrorText: {
+        color: colors.redDark,
+        fontSize: 14,
+        fontWeight: '700',
     },
     pressed: {
         opacity: 0.78,

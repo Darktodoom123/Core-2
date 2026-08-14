@@ -1,10 +1,19 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+﻿import React from 'react';
+import {
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 import type { DispatchJob, DispatchStatus } from '../../types/index';
 import { colors, sharedStyles } from '../nativeStyles';
 
 export interface FieldProgressionStepperProps {
     job: DispatchJob;
+    isProcessing?: boolean;
+    isParkedAndSecured?: boolean;
+    isCraneSetupComplete?: boolean;
     onTransitionStatus: (
         jobId: number,
         nextStatus: DispatchStatus,
@@ -14,7 +23,13 @@ export interface FieldProgressionStepperProps {
 
 export const FieldProgressionStepper: React.FC<
     FieldProgressionStepperProps
-> = ({ job, onTransitionStatus }) => {
+> = ({
+    job,
+    isProcessing = false,
+    isParkedAndSecured = false,
+    isCraneSetupComplete = false,
+    onTransitionStatus,
+}) => {
     const progression = job.progression;
 
     if (!progression || !job.capabilities.can_update_status) {
@@ -28,6 +43,30 @@ export const FieldProgressionStepper: React.FC<
     }
 
     const nextStep = progression.next;
+    const isCrane = job.asset_assignments?.some(
+        (a) => a.asset_kind === 'crane',
+    );
+
+    // Safety Gating Logic
+    let isGated = false;
+    let gateReason: string | null = null;
+
+    if (
+        job.status.value === 'arrived' &&
+        nextStep?.status.value === 'working'
+    ) {
+        if (!isParkedAndSecured) {
+            isGated = true;
+            gateReason =
+                'Parked & Secured verification is required before initiating crane setup or operation.';
+        } else if (isCrane && !isCraneSetupComplete) {
+            isGated = true;
+            gateReason =
+                'Crane Setup Safety Checklist & Exclusion Zone checks must be verified before starting work.';
+        }
+    }
+
+    const isDisabled = isProcessing || isGated;
 
     return (
         <View style={styles.card} testID="field-progression-stepper">
@@ -47,9 +86,25 @@ export const FieldProgressionStepper: React.FC<
                     <Text style={styles.nextMessage}>
                         {nextStep.confirmation_message}
                     </Text>
+
+                    {gateReason ? (
+                        <View
+                            style={styles.gatedBanner}
+                            testID="progression-gate-banner"
+                        >
+                            <Text style={styles.gatedIcon}>⛔</Text>
+                            <Text style={styles.gatedText}>{gateReason}</Text>
+                        </View>
+                    ) : null}
+
                     <Pressable
                         accessibilityLabel={`${nextStep.action_label}, version ${job.version}`}
                         accessibilityRole="button"
+                        accessibilityState={{
+                            busy: isProcessing,
+                            disabled: isDisabled,
+                        }}
+                        disabled={isDisabled}
                         onPress={() =>
                             onTransitionStatus(
                                 job.id,
@@ -60,13 +115,32 @@ export const FieldProgressionStepper: React.FC<
                         style={({ pressed }) => [
                             sharedStyles.button,
                             styles.advanceButton,
-                            pressed && styles.pressed,
+                            isDisabled && styles.advanceButtonDisabled,
+                            pressed && !isDisabled && styles.pressed,
                         ]}
                         testID="advance-status-btn"
                     >
-                        <Text style={sharedStyles.buttonText}>
-                            {nextStep.action_label}
-                        </Text>
+                        {isProcessing ? (
+                            <View style={styles.processingRow}>
+                                <ActivityIndicator
+                                    color={colors.text}
+                                    size="small"
+                                />
+                                <Text style={styles.processingText}>
+                                    Processing transition…
+                                </Text>
+                            </View>
+                        ) : (
+                            <Text
+                                style={[
+                                    sharedStyles.buttonText,
+                                    isDisabled &&
+                                        styles.advanceButtonTextDisabled,
+                                ]}
+                            >
+                                {nextStep.action_label}
+                            </Text>
+                        )}
                     </Pressable>
                 </View>
             ) : null}
@@ -267,8 +341,48 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         marginTop: 4,
     },
+    gatedBanner: {
+        alignItems: 'flex-start',
+        backgroundColor: colors.redLight,
+        borderColor: colors.redBorder,
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+        padding: 10,
+    },
+    gatedIcon: {
+        fontSize: 16,
+    },
+    gatedText: {
+        color: colors.redDark,
+        flex: 1,
+        fontSize: 12,
+        fontWeight: '700',
+        lineHeight: 17,
+    },
     advanceButton: {
         backgroundColor: colors.amber,
+        minHeight: 48,
+    },
+    advanceButtonDisabled: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderWidth: 1,
+    },
+    advanceButtonTextDisabled: {
+        color: colors.muted,
+    },
+    processingRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
+    processingText: {
+        color: colors.text,
+        fontSize: 15,
+        fontWeight: '700',
     },
     completeMessage: {
         color: colors.green,

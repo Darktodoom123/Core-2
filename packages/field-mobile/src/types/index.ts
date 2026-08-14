@@ -1,4 +1,4 @@
-export type DispatchPriority = 'routine' | 'priority' | 'emergency';
+﻿export type DispatchPriority = 'routine' | 'priority' | 'emergency';
 
 export type DispatchStatus =
     | 'draft'
@@ -227,4 +227,184 @@ export interface DispatchJobV2 {
     offers?: DispatchAssignmentOfferV2[];
     active_plan?: DispatchPlanVersionV2 | null;
     readiness?: DispatchReadinessV2 | null;
+}
+
+// ==========================================
+// Shift & Field Operational State Types
+// ==========================================
+
+export type ShiftStatus = 'on_shift' | 'off_shift' | 'on_break' | 'standby';
+
+export interface ShiftInfo {
+    status: ShiftStatus;
+    startedAt?: string | null;
+    hoursElapsed?: number;
+    breakCount?: number;
+}
+
+export type LocationSharingTone = 'active' | 'queued' | 'paused' | 'offline';
+
+// ==========================================
+// Heavy-Crane Route & Drive Mode Types
+// ==========================================
+
+export type HeavyCraneRouteStatus =
+    'available' | 'cached' | 'stale' | 'unavailable';
+
+export interface HeavyRouteInstruction {
+    id: string;
+    stepNumber: number;
+    instruction: string;
+    distanceLabel: string;
+    caution?: string | null;
+    isHazard?: boolean;
+}
+
+export interface HeavyVehicleRouteDetails {
+    status: HeavyCraneRouteStatus;
+    assetLabel: string;
+    currentPosition: string;
+    destination: string;
+    siteEntrance: string;
+    stagingPoint: string;
+    etaLabel: string;
+    distanceLabel: string;
+    bridgeClearanceMetres?: number;
+    axleWeightLimitTonnes?: number;
+    isFresh: boolean;
+    lastSyncedAt?: string | null;
+    instructions: HeavyRouteInstruction[];
+}
+
+// ==========================================
+// Parked-and-Secured Confirmation Types
+// ==========================================
+
+export interface ParkedSecuredChecklist {
+    parkingBrakeEngaged: boolean;
+    wheelChocksDeployed: boolean;
+    hazardBeaconsActive: boolean;
+    surfaceAssessed: boolean;
+}
+
+export interface ParkedSecuredState {
+    isConfirmed: boolean;
+    confirmedAt?: string | null;
+    confirmedBy?: string | null;
+    checklist: ParkedSecuredChecklist;
+}
+
+// ==========================================
+// Crane Setup Safety Mode Types
+// ==========================================
+
+export type CraneHazardSeverity = 'critical' | 'warning' | 'info';
+
+export interface CraneHazardItem {
+    id: string;
+    type:
+        | 'powerline'
+        | 'underground_utility'
+        | 'unstable_ground'
+        | 'traffic'
+        | 'overhead_load';
+    title: string;
+    description: string;
+    severity: CraneHazardSeverity;
+    clearanceRequiredMetres?: number;
+    isMitigated: boolean;
+}
+
+export interface CraneSetupSafetyChecklist {
+    groundBearingVerified: boolean;
+    outriggersFullyExtended: boolean;
+    levelBubbleCentered: boolean;
+    powerLineClearanceVerified: boolean;
+    exclusionZoneBarricaded: boolean;
+    windSpeedChecked: boolean;
+}
+
+export interface CraneSetupState {
+    isSetupComplete: boolean;
+    verifiedAt?: string | null;
+    verifiedBy?: string | null;
+    exclusionRadiusMetres: number;
+    checklist: CraneSetupSafetyChecklist;
+    hazards: CraneHazardItem[];
+}
+
+// ==========================================
+// Technician Inspection & Handover Types
+// ==========================================
+
+export type InspectionCategory =
+    | 'hydraulics'
+    | 'electrical'
+    | 'structural'
+    | 'tires_tracks'
+    | 'safety_devices'
+    | 'fluids';
+
+export type InspectionCheckStatus =
+    'good' | 'attention' | 'critical' | 'pending';
+
+export interface TechnicianInspectionCheck {
+    id: string;
+    category: InspectionCategory;
+    label: string;
+    status: InspectionCheckStatus;
+    statusLabel: string;
+    notes?: string | null;
+    icon: string;
+}
+
+export type MaintenanceSeverity = 'minor' | 'major' | 'safety_critical';
+export type MaintenanceStatus = 'logged' | 'in_progress' | 'repaired';
+
+export interface MaintenanceWorkOrder {
+    id: string;
+    assetCode: string;
+    assetName: string;
+    defectTitle: string;
+    description: string;
+    severity: MaintenanceSeverity;
+    status: MaintenanceStatus;
+    reportedBy: string;
+    createdAt: string;
+}
+
+export interface SafeReleaseVerification {
+    isCertifiedSafe: boolean;
+    certifiedBy?: string | null;
+    certificationDate?: string | null;
+    certificateNumber?: string | null;
+    remarks?: string | null;
+}
+
+export interface FuelReceiptLog {
+    id: string;
+    assetCode: string;
+    quantityLiters: number;
+    fuelCost?: number | null;
+    odometerKm?: number | null;
+    engineHours?: number | null;
+    receiptNumber: string;
+    vendorName?: string | null;
+    loggedAt: string;
+}
+
+export type HandoverType = 'tech_to_operator' | 'operator_to_tech';
+export type ConditionRating = 'excellent' | 'good' | 'fair' | 'out_of_service';
+
+export interface TechnicianHandover {
+    id: string;
+    assetCode: string;
+    technicianName: string;
+    recipientName: string;
+    handoverType: HandoverType;
+    conditionRating: ConditionRating;
+    odometerKm?: number | null;
+    remarks: string;
+    signatureConfirmed: boolean;
+    timestamp: string;
 }

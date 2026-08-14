@@ -3,8 +3,8 @@
   "project": "Core Transaction 2",
   "name": "UI Execution Dependency Graph",
   "version": "1.0.0",
-  "updated_at": "2026-08-14T16:54:29.481Z",
-  "active_node": "UI-2",
+  "updated_at": "2026-08-14T17:17:34.600Z",
+  "active_node": "UI-5",
   "nodes": [
     {
       "id": "UI-0",
@@ -142,7 +142,7 @@
     {
       "id": "UI-4",
       "title": "Native Field Workflows",
-      "state": "READY",
+      "state": "PASSED",
       "dependencies": [
         "UI-1"
       ],
@@ -173,7 +173,7 @@
     {
       "id": "UI-5",
       "title": "Prototype/Live UI Convergence",
-      "state": "PENDING",
+      "state": "READY",
       "dependencies": [
         "UI-3",
         "UI-4"

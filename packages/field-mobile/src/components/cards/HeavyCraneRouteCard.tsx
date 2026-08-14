@@ -1,9 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { HeavyCraneRouteStatus } from '../../types/index';
 import { colors, sharedStyles } from '../nativeStyles';
 
-export type HeavyCraneRouteStatus =
-    'available' | 'cached' | 'stale' | 'unavailable';
+export type { HeavyCraneRouteStatus } from '../../types/index';
 
 export interface HeavyCraneRouteCardProps {
     /** A server-provided crane label, for example "CRN-07 · 50-ton mobile crane". */
@@ -17,6 +17,7 @@ export interface HeavyCraneRouteCardProps {
     distanceLabel?: string | null;
     lastSyncedAt?: string | null;
     onOpenRoute?: () => void;
+    onOpenDriveMode?: () => void;
     testID?: string;
 }
 
@@ -36,6 +37,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
     distanceLabel,
     lastSyncedAt,
     onOpenRoute,
+    onOpenDriveMode,
     testID = 'heavy-crane-route-card',
 }) => {
     const presentation = statusPresentation[status];
@@ -202,6 +204,25 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                     </Text>
                 </View>
             </View>
+
+            {onOpenDriveMode ? (
+                <Pressable
+                    accessibilityLabel="Launch heavy-crane drive mode"
+                    accessibilityHint="Opens glanceable directions for driving"
+                    accessibilityRole="button"
+                    onPress={onOpenDriveMode}
+                    style={({ pressed }) => [
+                        sharedStyles.button,
+                        styles.driveModeButton,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="launch-drive-mode-btn"
+                >
+                    <Text style={styles.driveModeButtonText}>
+                        ⚡ Launch Heavy-Crane Drive Mode
+                    </Text>
+                </Pressable>
+            ) : null}
 
             {status === 'unavailable' ? (
                 <View
@@ -512,8 +533,24 @@ const styles = StyleSheet.create({
         fontSize: 12,
         lineHeight: 18,
     },
-    routeButton: {
+    driveModeButton: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.amber,
+        borderRadius: 10,
+        borderWidth: 1.5,
         marginTop: 14,
+        minHeight: 52,
+        width: '100%',
+    },
+    driveModeButtonText: {
+        color: colors.amber,
+        fontSize: 15,
+        fontWeight: '900',
+    },
+    routeButton: {
+        backgroundColor: colors.amber,
+        marginTop: 14,
+        minHeight: 48,
         width: '100%',
     },
     plannedRouteButton: {
