@@ -19,13 +19,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(RolePermissionSeeder::class);
-
         $bootstrapPassword = config('auth.bootstrap_admin_password');
 
         if (app()->environment('production') && (! is_string($bootstrapPassword) || strlen($bootstrapPassword) < 12)) {
             throw new RuntimeException('ADMIN_PASSWORD must contain at least 12 characters when seeding production.');
         }
+
+        $this->call(RolePermissionSeeder::class);
 
         $administrator = User::query()->firstOrCreate(
             ['email' => 'admin@example.com'],
@@ -39,6 +39,8 @@ class DatabaseSeeder extends Seeder
         );
         $administrator->syncRoles([RoleName::SystemAdministrator->value]);
 
-        $this->call(LocalDevelopmentSeeder::class);
+        if (app()->environment('local')) {
+            $this->call(LocalDevelopmentSeeder::class);
+        }
     }
 }

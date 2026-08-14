@@ -21,11 +21,16 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use LogicException;
 
 final class BrowserAcceptanceSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new LogicException('Browser acceptance fixtures may only be seeded in local or testing environments.');
+        }
+
         $this->call(RolePermissionSeeder::class);
 
         $dispatcher = $this->user('Browser Dispatcher', 'browser.dispatcher@example.com', RoleName::Dispatcher);

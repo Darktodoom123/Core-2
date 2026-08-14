@@ -8,6 +8,7 @@ use App\Platform\Identity\Support\Username;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use LogicException;
 
 final class LocalDevelopmentSeeder extends Seeder
 {
@@ -16,6 +17,10 @@ final class LocalDevelopmentSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment(['local', 'testing'])) {
+            throw new LogicException('Local development fixtures may only be seeded in local or testing environments.');
+        }
+
         foreach (self::accounts() as $index => $account) {
             $user = User::query()->updateOrCreate(
                 ['email' => $account['email']],

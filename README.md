@@ -120,10 +120,12 @@ docker compose down
 
 ---
 
-## 🔑 Default Credentials
+## 🔑 Local Default Credentials
 
 - **Email**: `admin@example.com`
 - **Password**: `password`
+
+These credentials describe the local developer seed only. Production/bootstrap seeding requires an `ADMIN_PASSWORD` value of at least 12 characters and never invokes local or browser acceptance fixture seeders.
 
 ---
 
