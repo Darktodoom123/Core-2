@@ -8,6 +8,7 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
+use Illuminate\Support\Facades\Gate;
 
 final class DispatchActivationWorkspaceViewModel
 {
@@ -84,10 +85,15 @@ final class DispatchActivationWorkspaceViewModel
                 : 'Independent Operations Manager approval is still required.';
         }
 
-        $user = request()?->user();
+        $user = request()->user();
         $canDecideApproval = $latestApproval !== null
             && $user !== null
-            && \Illuminate\Support\Facades\Gate::forUser($user)->allows('decide', $latestApproval);
+            && Gate::forUser($user)->allows('decide', $latestApproval);
+
+        $requestedChanges = $latestApproval?->requested_changes;
+        $approvalNotes = is_array($requestedChanges) && isset($requestedChanges['notes']) && is_string($requestedChanges['notes'])
+            ? $requestedChanges['notes']
+            : null;
 
         return [
             'ready' => $blockers === [],
@@ -97,7 +103,7 @@ final class DispatchActivationWorkspaceViewModel
             'approval_request_id' => $latestApproval?->id,
             'approval_kind' => $latestApproval?->kind,
             'approval_reason' => $latestApproval?->reason,
-            'approval_notes' => $latestApproval?->notes,
+            'approval_notes' => $approvalNotes,
             'can_decide_approval' => $canDecideApproval,
         ];
     }

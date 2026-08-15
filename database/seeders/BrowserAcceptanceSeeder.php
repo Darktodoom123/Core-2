@@ -4,8 +4,10 @@ namespace Database\Seeders;
 
 use App\Modules\Assignment\Enums\AssignmentResponse;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
+use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
@@ -17,6 +19,8 @@ use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -141,13 +145,13 @@ final class BrowserAcceptanceSeeder extends Seeder
             'rejected' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
         ];
 
-        $truck = \App\Shared\Assets\Models\OperationalAsset::query()->firstOrCreate(
+        $truck = OperationalAsset::query()->firstOrCreate(
             ['code' => 'TRK-01'],
-            ['name' => 'Heavy Rig Truck', 'type' => 'truck', 'status' => \App\Shared\Assets\Enums\AssetStatus::Ready]
+            ['name' => 'Heavy Rig Truck', 'type' => 'truck', 'status' => AssetStatus::Available]
         );
-        $crane = \App\Shared\Assets\Models\OperationalAsset::query()->firstOrCreate(
+        $crane = OperationalAsset::query()->firstOrCreate(
             ['code' => 'CRN-01'],
-            ['name' => '50T Mobile Crane', 'type' => 'crane', 'status' => \App\Shared\Assets\Enums\AssetStatus::Ready]
+            ['name' => '50T Mobile Crane', 'type' => 'crane', 'status' => AssetStatus::Available]
         );
 
         $approvalJob = DispatchJob::query()->create([
@@ -163,13 +167,14 @@ final class BrowserAcceptanceSeeder extends Seeder
             'created_by' => $dispatcher->id,
         ]);
 
-        $approvalRequest = \App\Modules\Dispatch\Models\ApprovalRequest::query()->create([
-            'dispatch_job_id' => $approvalJob->id,
+        $approvalRequest = ApprovalRequest::query()->create([
+            'subject_type' => $approvalJob->getMorphClass(),
+            'subject_id' => $approvalJob->id,
             'requested_by' => $dispatcher->id,
             'kind' => 'dispatch_activation',
-            'status' => \App\Modules\Dispatch\Enums\ApprovalStatus::Pending,
+            'status' => ApprovalStatus::Pending,
             'reason' => 'Emergency priority activation requires manager authorization.',
-            'notes' => 'Site crane ready, priority response needed.',
+            'requested_changes' => ['notes' => 'Site crane ready, priority response needed.'],
         ]);
 
         File::ensureDirectoryExists(storage_path('framework/testing'));
