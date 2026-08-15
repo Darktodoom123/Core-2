@@ -536,12 +536,14 @@ final class OperationsWorkspaceViewModel
             ],
             [
                 'id' => 'assets',
-                'label' => $fieldRole ? self::fieldAssetLabel($user) : 'Fleet & equipment',
+                'label' => $fieldRole ? self::fieldAssetLabel($user) : 'Fleet Management',
                 'permissions' => [
                     PermissionName::FleetViewAll,
                     PermissionName::FleetViewAssigned,
                     PermissionName::EquipmentViewAll,
                     PermissionName::EquipmentViewAssigned,
+                    PermissionName::TrackingViewAll,
+                    PermissionName::TrackingShareOwn,
                 ],
             ],
             [
@@ -551,14 +553,6 @@ final class OperationsWorkspaceViewModel
                     PermissionName::FuelViewAll,
                     PermissionName::FuelViewOwn,
                     PermissionName::FuelRequest,
-                ],
-            ],
-            [
-                'id' => 'tracking',
-                'label' => 'Live Tracking',
-                'permissions' => [
-                    PermissionName::TrackingViewAll,
-                    PermissionName::TrackingShareOwn,
                 ],
             ],
             [

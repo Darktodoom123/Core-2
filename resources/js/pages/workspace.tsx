@@ -42,13 +42,9 @@ export default function Workspace(props: WorkspacePageProps) {
     );
     const handledServerRefresh = useRef<string | null>(null);
     const observedServerRefresh = useRef(props.workspace.refreshed_at);
-    const [outboxQueue, setOutboxQueue] = useState<OutboxItem[]>(() =>
-        getOutboxQueue(),
-    );
+    const [, setOutboxQueue] = useState<OutboxItem[]>(() => getOutboxQueue());
     const [locationPending, setLocationPending] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
-    const locationSharingEnabled =
-        props.workspace.tracking?.current_user?.sharing_enabled ?? false;
     const [dismissedRefreshedAt, setDismissedRefreshedAt] = useState<
         string | null
     >(null);
@@ -191,7 +187,6 @@ export default function Workspace(props: WorkspacePageProps) {
         [beginRefresh, finishRefresh, markRefreshFailure, markRefreshSuccess],
     );
     const refreshWorkspace = useCallback(() => refresh('workspace'), [refresh]);
-    const refreshTracking = useCallback(() => refresh('tracking'), [refresh]);
     const refreshRef = useRef(refresh);
 
     useEffect(() => {
@@ -615,14 +610,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
-                        refresh={refreshState.tracking}
-                        onRefresh={refreshTracking}
-                        sharingEnabled={locationSharingEnabled}
-                        sharingPending={locationPending}
-                        sharingError={locationError}
-                        onToggleSharing={toggleLocationSharing}
-                        outboxQueue={outboxQueue}
-                        onOutboxChanged={updateOutboxState}
+                        onSectionChange={setSection}
                     />
                 )}
             </LiveWorkspaceShell>

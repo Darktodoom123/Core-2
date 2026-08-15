@@ -296,7 +296,7 @@ function OperationsManagerDashboardView({
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenAssets = availableSections.includes('assets');
     const canOpenApprovals = availableSections.includes('approvals');
-    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenTracking = availableSections.includes('assets');
 
     const categoriesInActions = Array.from(
         new Set(actions.map((a) => a.category)),
@@ -493,7 +493,7 @@ function OperationsManagerDashboardView({
                     locations={locations}
                     refresh={refresh}
                     realtimeConnected={realtimeConnected}
-                    onOpenTracking={() => onSectionChange('tracking')}
+                    onOpenTracking={() => onSectionChange('assets')}
                 />
             )}
 
@@ -767,7 +767,7 @@ function DispatcherDashboardView({
     );
 
     const canOpenDispatch = availableSections.includes('dispatch');
-    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenTracking = availableSections.includes('assets');
     const canOpenAssets = availableSections.includes('assets');
     const canOpenGpt = availableSections.includes('gpt-recommendations');
 
@@ -932,7 +932,7 @@ function DispatcherDashboardView({
                     locations={locations}
                     refresh={refresh}
                     realtimeConnected={realtimeConnected}
-                    onOpenTracking={() => onSectionChange('tracking')}
+                    onOpenTracking={() => onSectionChange('assets')}
                 />
             )}
 
@@ -1505,7 +1505,7 @@ function SystemAdminDashboardView({
 
     const canOpenUsers = availableSections.includes('users');
     const canOpenAudit = availableSections.includes('audit');
-    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenTracking = availableSections.includes('assets');
 
     // Role Distribution Summary
     const rolesDistribution = users.reduce(
@@ -1569,7 +1569,7 @@ function SystemAdminDashboardView({
                     liveIndicator={hasLocations && freshLocationsCount > 0}
                     onClick={
                         canOpenTracking
-                            ? () => onSectionChange('tracking')
+                            ? () => onSectionChange('assets')
                             : undefined
                     }
                 />
@@ -1746,7 +1746,7 @@ function FieldWorkerDashboardView({
 
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenFuel = availableSections.includes('fuel');
-    const canOpenTracking = availableSections.includes('tracking');
+    const canOpenTracking = availableSections.includes('assets');
 
     const freshLocations = locations.filter(isFreshLocation).length;
 
@@ -1800,7 +1800,7 @@ function FieldWorkerDashboardView({
                     liveIndicator={capabilities.share_location}
                     onClick={
                         canOpenTracking
-                            ? () => onSectionChange('tracking')
+                            ? () => onSectionChange('assets')
                             : undefined
                     }
                 />
@@ -2178,7 +2178,7 @@ function buildDashboardActions({
             title: `${staleLocations.length} location update${staleLocations.length === 1 ? '' : 's'} need review`,
             description:
                 'These records are stale or offline and must not be treated as live location data.',
-            section: 'tracking',
+            section: 'assets',
             icon: MapPin,
             tone: 'warning',
             category: 'tracking',

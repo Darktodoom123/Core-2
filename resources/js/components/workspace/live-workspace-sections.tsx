@@ -1,6 +1,16 @@
 import { router, useForm } from '@inertiajs/react';
-import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import {
+    Bot,
+    Compass,
+    Fuel,
+    MapPin,
+    Navigation,
+    Radio,
+    ShieldCheck,
+    Truck,
+    Users,
+} from 'lucide-react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
     Button,
@@ -14,9 +24,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
-import { TrackingSurface } from '@/components/workspace/tracking-workspace-section';
 import { formatDateTime, humanize } from '@/lib/formatters';
-import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
@@ -29,11 +37,33 @@ import type {
     LocationUpdateViewModel,
     NotificationViewModel,
     ReportExportViewModel,
-    ScopeRefreshState,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
 } from '@/types/workspace';
+
+const LiveTrackingMap = lazy(() =>
+    import('@/components/live-tracking-map').then(
+        ({ LiveTrackingMap: Map }) => ({ default: Map }),
+    ),
+);
+
+function AssetMapLoadingFallback({ compact = false }: { compact?: boolean }) {
+    return (
+        <div
+            className={cn(
+                'flex items-center justify-center rounded-2xl border border-line bg-surface-subtle p-6 text-center',
+                compact ? 'h-[360px] md:h-[420px]' : 'h-[560px] lg:h-[620px]',
+            )}
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading live location map"
+        >
+            <p className="text-sm text-ink-soft">Loading live location map…</p>
+        </div>
+    );
+}
 
 export function LiveWorkspaceSection({
     section,
@@ -49,14 +79,7 @@ export function LiveWorkspaceSection({
     notifications = [],
     archivedJobs = [],
     gptRecommendations = [],
-    refresh,
-    onRefresh,
-    sharingEnabled,
-    sharingPending,
-    sharingError,
-    onToggleSharing,
-    outboxQueue,
-    onOutboxChanged,
+    onSectionChange,
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
@@ -71,19 +94,17 @@ export function LiveWorkspaceSection({
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
-    refresh: ScopeRefreshState;
-    onRefresh: () => void;
-    sharingEnabled: boolean;
-    sharingPending: boolean;
-    sharingError: string | null;
-    onToggleSharing: (enable: boolean) => void;
-    outboxQueue: OutboxItem[];
-    onOutboxChanged: () => void;
+    onSectionChange?: (section: WorkspaceSection) => void;
 }) {
     switch (section) {
         case 'assets':
             return (
-                <AssetsSurface assets={assets} capabilities={capabilities} />
+                <AssetsSurface
+                    assets={assets}
+                    locations={locations}
+                    capabilities={capabilities}
+                    onSectionChange={onSectionChange}
+                />
             );
         case 'fuel':
             return (
@@ -94,17 +115,12 @@ export function LiveWorkspaceSection({
             );
         case 'tracking':
             return (
-                <TrackingSurface
+                <AssetsSurface
+                    assets={assets}
                     locations={locations}
                     capabilities={capabilities}
-                    refresh={refresh}
-                    onRefresh={onRefresh}
-                    sharingEnabled={sharingEnabled}
-                    sharingPending={sharingPending}
-                    sharingError={sharingError}
-                    onToggleSharing={onToggleSharing}
-                    outboxQueue={outboxQueue}
-                    onOutboxChanged={onOutboxChanged}
+                    onSectionChange={onSectionChange}
+                    initialViewMode="map"
                 />
             );
         case 'approvals':
@@ -148,11 +164,18 @@ export function LiveWorkspaceSection({
 
 function AssetsSurface({
     assets,
+    locations = [],
     capabilities,
+    onSectionChange,
+    initialViewMode = 'list',
 }: {
     assets: AssetViewModel[];
+    locations?: LocationUpdateViewModel[];
     capabilities: WorkspaceCapabilities;
+    onSectionChange?: (section: WorkspaceSection) => void;
+    initialViewMode?: 'list' | 'map';
 }) {
+    const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
     const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
         assets.length > 0 ? assets[0].id : null,
     );
@@ -161,17 +184,73 @@ function AssetsSurface({
     const selectedAsset =
         assets.find((a) => a.id === selectedAssetId) ?? assets[0];
 
+    const selectedAssetLocation = useMemo(
+        () =>
+            selectedAsset
+                ? (locations.find((l) => l.asset?.id === selectedAsset.id) ??
+                  null)
+                : null,
+        [locations, selectedAsset],
+    );
+
+    const activeLiveGpsCount = useMemo(
+        () =>
+            locations.filter(
+                (l) =>
+                    l.latitude !== null &&
+                    l.longitude !== null &&
+                    (l.freshness_status === 'fresh' ||
+                        l.freshness_status === 'delayed'),
+            ).length,
+        [locations],
+    );
+
     return (
         <div>
             <PageHeading
-                title="Fleet and equipment"
-                description="Manage asset registration, readiness status, specifications, safety inspections, and maintenance work orders."
+                title="Fleet Management"
+                description="Unified fleet registry, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
-                {capabilities.register_asset && (
-                    <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="inline-flex rounded-lg border border-line bg-surface-subtle p-1 shadow-xs">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('list')}
+                            className={cn(
+                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                                viewMode === 'list'
+                                    ? 'bg-surface text-ink shadow-xs'
+                                    : 'text-ink-soft hover:text-ink',
+                            )}
+                        >
+                            <Truck className="h-3.5 w-3.5" />
+                            Asset registry ({assets.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('map')}
+                            className={cn(
+                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                                viewMode === 'map'
+                                    ? 'bg-surface text-brand-strong shadow-xs'
+                                    : 'text-ink-soft hover:text-ink',
+                            )}
+                        >
+                            <MapPin className="h-3.5 w-3.5" />
+                            Fleet map view
+                            {activeLiveGpsCount > 0 && (
+                                <span className="py-0.2 inline-flex items-center rounded-full bg-brand-soft px-1.5 text-[10px] font-bold text-brand-strong">
+                                    {activeLiveGpsCount} live
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    {capabilities.register_asset && (
                         <Button
                             variant={showRegisterForm ? 'secondary' : 'primary'}
+                            size="sm"
                             onClick={() =>
                                 setShowRegisterForm(!showRegisterForm)
                             }
@@ -180,8 +259,8 @@ function AssetsSurface({
                                 ? 'Cancel registration'
                                 : 'Register new asset'}
                         </Button>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {showRegisterForm && capabilities.register_asset && (
                     <RegisterAssetForm
@@ -197,6 +276,41 @@ function AssetsSurface({
                             message="Assigned or organization-wide fleet and equipment will appear here once registered or assigned to your role."
                         />
                     </Panel>
+                ) : viewMode === 'map' ? (
+                    <Panel className="space-y-4 overflow-hidden p-4 md:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                            <div>
+                                <h3 className="text-base font-semibold text-ink">
+                                    Live Fleet Telematics & GIS Map
+                                </h3>
+                                <p className="text-xs text-ink-soft">
+                                    Real-time positional tracking and telemetry
+                                    across visible fleet assets and units.
+                                </p>
+                            </div>
+                            {onSectionChange && (
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => onSectionChange('tracking')}
+                                >
+                                    <Compass className="mr-1.5 h-3.5 w-3.5" />
+                                    Open operations tracking
+                                </Button>
+                            )}
+                        </div>
+                        <Suspense
+                            fallback={
+                                <AssetMapLoadingFallback compact={false} />
+                            }
+                        >
+                            <LiveTrackingMap
+                                locations={locations}
+                                compact={false}
+                                showLocationList={true}
+                            />
+                        </Suspense>
+                    </Panel>
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-12">
                         <div className="lg:col-span-5 xl:col-span-4">
@@ -208,6 +322,13 @@ function AssetsSurface({
                                     {assets.map((asset) => {
                                         const isSelected =
                                             asset.id === selectedAsset?.id;
+                                        const matchingLoc = locations.find(
+                                            (l) => l.asset?.id === asset.id,
+                                        );
+                                        const hasLiveGps =
+                                            matchingLoc &&
+                                            matchingLoc.latitude !== null &&
+                                            matchingLoc.longitude !== null;
 
                                         return (
                                             <li key={asset.id}>
@@ -245,10 +366,23 @@ function AssetsSurface({
                                                             )}
                                                         </span>
                                                         <span>·</span>
-                                                        <span>
-                                                            {asset.location ??
-                                                                'Location not set'}
-                                                        </span>
+                                                        {hasLiveGps ? (
+                                                            <span className="inline-flex items-center gap-1 font-semibold text-brand-strong">
+                                                                <Radio className="h-3 w-3 animate-pulse text-success-strong" />
+                                                                GPS Live
+                                                                {matchingLoc.speed !==
+                                                                    null &&
+                                                                matchingLoc.speed >
+                                                                    0
+                                                                    ? ` (${matchingLoc.speed} km/h)`
+                                                                    : ''}
+                                                            </span>
+                                                        ) : (
+                                                            <span>
+                                                                {asset.location ??
+                                                                    'Location not set'}
+                                                            </span>
+                                                        )}
                                                         {asset.blocking_work_orders_count >
                                                             0 && (
                                                             <>
@@ -274,7 +408,11 @@ function AssetsSurface({
                             {selectedAsset && (
                                 <AssetDetailPane
                                     asset={selectedAsset}
+                                    assetLocation={selectedAssetLocation}
                                     capabilities={capabilities}
+                                    onViewFullTracking={() =>
+                                        setViewMode('map')
+                                    }
                                 />
                             )}
                         </div>
@@ -427,14 +565,23 @@ function RegisterAssetForm({ onDone }: { onDone: () => void }) {
 
 function AssetDetailPane({
     asset,
+    assetLocation,
     capabilities,
+    onViewFullTracking,
 }: {
     asset: AssetViewModel;
+    assetLocation?: LocationUpdateViewModel | null;
     capabilities: WorkspaceCapabilities;
+    onViewFullTracking?: () => void;
 }) {
     const [activeTab, setActiveTab] = useState<
-        'overview' | 'status' | 'inspections' | 'maintenance'
+        'overview' | 'telemetry' | 'status' | 'inspections' | 'maintenance'
     >('overview');
+
+    const hasLiveGps =
+        assetLocation &&
+        assetLocation.latitude !== null &&
+        assetLocation.longitude !== null;
 
     return (
         <Panel className="space-y-6 p-4 md:p-6">
@@ -445,6 +592,12 @@ function AssetDetailPane({
                             {asset.code}
                         </span>
                         <CanonicalStatusBadge status={asset.status} />
+                        {hasLiveGps && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
+                                <Radio className="h-3 w-3 animate-pulse text-success-strong" />
+                                Live GPS active
+                            </span>
+                        )}
                         {asset.is_dispatchable ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
                                 Ready for dispatch
@@ -461,12 +614,14 @@ function AssetDetailPane({
                     <p className="mt-0.5 text-sm text-ink-soft">
                         {humanize(asset.kind)}{' '}
                         {asset.subtype ? `· ${asset.subtype}` : ''} · Location:{' '}
-                        {asset.location ?? 'Not reported'}
+                        {hasLiveGps
+                            ? `GPS ${assetLocation.latitude?.toFixed(4)}, ${assetLocation.longitude?.toFixed(4)}`
+                            : (asset.location ?? 'Not reported')}
                     </p>
                 </div>
             </div>
 
-            <div className="flex border-b border-line">
+            <div className="flex flex-wrap border-b border-line">
                 <button
                     type="button"
                     onClick={() => setActiveTab('overview')}
@@ -478,6 +633,22 @@ function AssetDetailPane({
                     )}
                 >
                     Specifications & metrics
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('telemetry')}
+                    className={cn(
+                        'flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        activeTab === 'telemetry'
+                            ? 'border-brand-strong font-semibold text-brand-strong'
+                            : 'border-transparent text-ink-soft hover:text-ink',
+                    )}
+                >
+                    <MapPin className="h-4 w-4" />
+                    Live GPS & Telemetry
+                    {hasLiveGps && (
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-success-strong" />
+                    )}
                 </button>
                 <button
                     type="button"
@@ -603,6 +774,14 @@ function AssetDetailPane({
                 </div>
             )}
 
+            {activeTab === 'telemetry' && (
+                <AssetTelemetrySection
+                    asset={asset}
+                    location={assetLocation}
+                    onViewFullTracking={onViewFullTracking}
+                />
+            )}
+
             {activeTab === 'status' && (
                 <AssetStatusUpdateForm
                     asset={asset}
@@ -624,6 +803,191 @@ function AssetDetailPane({
                 />
             )}
         </Panel>
+    );
+}
+
+function AssetTelemetrySection({
+    asset,
+    location,
+    onViewFullTracking,
+}: {
+    asset: AssetViewModel;
+    location?: LocationUpdateViewModel | null;
+    onViewFullTracking?: () => void;
+}) {
+    const hasGps =
+        location && location.latitude !== null && location.longitude !== null;
+
+    if (!hasGps) {
+        return (
+            <div className="space-y-4">
+                <div className="rounded-xl border border-line bg-surface-subtle/70 p-6 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
+                        <MapPin className="h-6 w-6" aria-hidden="true" />
+                    </div>
+                    <h3 className="mt-3 text-base font-semibold text-ink">
+                        No Active Live GPS Stream
+                    </h3>
+                    <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+                        This vehicle is not currently broadcasting live GPS
+                        coordinates. Its registered yard or depot location is:
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink">
+                        <Navigation className="h-4 w-4 text-brand-strong" />
+                        <span>
+                            {asset.location ??
+                                'Depot yard location not specified'}
+                        </span>
+                    </div>
+                    <p className="mx-auto mt-4 max-w-lg text-xs text-ink-soft">
+                        Real-time GPS telemetry streams automatically when an
+                        operator or driver starts an active dispatch assignment
+                        with this unit using the field mobile app.
+                    </p>
+                    {onViewFullTracking && (
+                        <div className="mt-5 flex justify-center">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={onViewFullTracking}
+                            >
+                                <Compass className="mr-1.5 h-4 w-4" />
+                                View Fleet Map
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-5">
+            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Coordinates (Lat, Lng)
+                    </dt>
+                    <dd className="mt-1 font-mono text-sm font-semibold text-ink">
+                        {location.latitude?.toFixed(5)},{' '}
+                        {location.longitude?.toFixed(5)}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Current Speed
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-ink">
+                        {location.speed !== null && location.speed > 0 ? (
+                            <span className="font-bold text-brand-strong">
+                                {location.speed} km/h
+                            </span>
+                        ) : (
+                            <span className="text-ink-soft">
+                                0 km/h (Stationary)
+                            </span>
+                        )}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Signal Freshness
+                    </dt>
+                    <dd className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
+                        <span
+                            className={cn(
+                                'h-2 w-2 rounded-full',
+                                location.freshness_status === 'fresh' &&
+                                    'animate-pulse bg-success-strong',
+                                location.freshness_status === 'delayed' &&
+                                    'bg-warning-strong',
+                                location.freshness_status === 'stale' &&
+                                    'bg-amber-500',
+                                location.freshness_status === 'offline' &&
+                                    'bg-slate-400',
+                            )}
+                        />
+                        <span className="capitalize">
+                            {humanize(location.freshness_status)}
+                        </span>
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Assigned Operator / Driver
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-ink">
+                        {location.user?.name ?? 'Unassigned'}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Active Dispatch Job
+                    </dt>
+                    <dd className="mt-1 truncate text-sm font-semibold text-ink">
+                        {location.job ? (
+                            <a
+                                href={`/operations/dispatch-jobs/${location.job.id}`}
+                                className="inline-flex items-center gap-1 text-brand-strong hover:underline"
+                            >
+                                <span>{location.job.reference}</span>
+                                <span className="max-w-[120px] truncate text-xs font-normal text-ink-soft">
+                                    ({location.job.title})
+                                </span>
+                            </a>
+                        ) : (
+                            <span className="font-normal text-ink-soft">
+                                None (Standby)
+                            </span>
+                        )}
+                    </dd>
+                </div>
+                <div className="rounded-lg bg-surface-subtle p-3">
+                    <dt className="text-xs font-medium text-ink-soft">
+                        Last Ping Received
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-ink">
+                        {location.received_at
+                            ? formatDateTime(location.received_at)
+                            : 'N/A'}
+                    </dd>
+                </div>
+            </dl>
+
+            <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        Live Map Position
+                    </h4>
+                    {location.accuracy_metres !== null && (
+                        <span className="text-xs text-ink-soft">
+                            Accuracy: ±{location.accuracy_metres}m · Source:{' '}
+                            {humanize(location.source)}
+                        </span>
+                    )}
+                </div>
+                <Suspense fallback={<AssetMapLoadingFallback compact={true} />}>
+                    <LiveTrackingMap
+                        locations={[location]}
+                        compact={true}
+                        showLocationList={false}
+                    />
+                </Suspense>
+            </div>
+
+            {onViewFullTracking && (
+                <div className="flex justify-end pt-1">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={onViewFullTracking}
+                    >
+                        <Compass className="mr-1.5 h-4 w-4" />
+                        View Fleet Map
+                    </Button>
+                </div>
+            )}
+        </div>
     );
 }
 
