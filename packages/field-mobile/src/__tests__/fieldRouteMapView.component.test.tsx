@@ -35,9 +35,7 @@ describe('FieldRouteMapView', () => {
     });
 
     it('renders offline cache status when indicated', async () => {
-        const view = await render(
-            <FieldRouteMapView routeStatus="cached" />,
-        );
+        const view = await render(<FieldRouteMapView routeStatus="cached" />);
 
         expect(view.getByText('Offline Route Cache Active')).toBeTruthy();
     });

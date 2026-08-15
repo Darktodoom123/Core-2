@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { FuelReceiptLog } from '../../types/index';
 import {
-    PhotoAttachmentPicker,
-    type PhotoAttachment,
-} from '../attachments/PhotoAttachmentPicker';
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
+import type { FuelReceiptLog } from '../../types/index';
+import { PhotoAttachmentPicker } from '../attachments/PhotoAttachmentPicker';
+import type { PhotoAttachment } from '../attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../nativeStyles';
 
 export interface FuelReceiptTabProps {

@@ -1,10 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type {
     ParkedSecuredChecklist,
     ParkedSecuredState,
 } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface ParkedSecuredCardProps {
     isArrived: boolean;
@@ -115,7 +116,7 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
                         ]}
                     >
                         {checklist.parkingBrakeEngaged ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -153,7 +154,7 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
                         ]}
                     >
                         {checklist.wheelChocksDeployed ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -191,7 +192,7 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
                         ]}
                     >
                         {checklist.hazardBeaconsActive ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -226,7 +227,7 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
                         ]}
                     >
                         {checklist.surfaceAssessed ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -248,16 +249,20 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
                     disabled={!allChecked}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
-                        sharedStyles.button,
                         styles.confirmButton,
                         !allChecked && styles.confirmButtonDisabled,
                         pressed && allChecked && styles.pressed,
                     ]}
                     testID="confirm-parked-secured-btn"
                 >
+                    <Icon
+                        name="check"
+                        size={18}
+                        color={allChecked ? '#0f172a' : colors.muted}
+                    />
                     <Text
                         style={[
-                            sharedStyles.buttonText,
+                            styles.confirmButtonText,
                             !allChecked && styles.confirmButtonTextDisabled,
                         ]}
                     >
@@ -271,31 +276,32 @@ export const ParkedSecuredCard: React.FC<ParkedSecuredCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 12,
-        borderWidth: 1,
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        borderWidth: 1.5,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     cardPending: {
-        backgroundColor: colors.warningLight,
-        borderColor: colors.warningBorder,
+        borderColor: colors.amberBorder,
     },
     cardConfirmed: {
-        backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
     },
     headingRow: {
         alignItems: 'center',
         flexDirection: 'row',
         gap: 10,
+        marginBottom: 8,
     },
     statusDot: {
-        borderRadius: 6,
-        height: 12,
-        width: 12,
+        borderRadius: 5,
+        height: 10,
+        width: 10,
     },
     statusDotPending: {
-        backgroundColor: colors.warning,
+        backgroundColor: colors.amber,
     },
     statusDotConfirmed: {
         backgroundColor: colors.green,
@@ -304,37 +310,35 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     eyebrow: {
-        color: colors.warningDark,
-        fontSize: 10,
-        fontWeight: '900',
-        letterSpacing: 0.8,
+        color: colors.amberDark,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.6,
     },
     heading: {
         color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     description: {
         color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 20,
-        marginVertical: 10,
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 14,
     },
     checklist: {
         gap: 8,
-        marginVertical: 10,
     },
     checkRow: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 12,
-        minHeight: 52,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        padding: 12,
     },
     checkRowChecked: {
         backgroundColor: colors.greenLight,
@@ -342,51 +346,59 @@ const styles = StyleSheet.create({
     },
     checkbox: {
         alignItems: 'center',
+        backgroundColor: colors.surface,
         borderColor: colors.borderStrong,
         borderRadius: 6,
-        borderWidth: 2,
-        height: 24,
+        borderWidth: 1.5,
+        height: 22,
         justifyContent: 'center',
-        width: 24,
+        width: 22,
     },
     checkboxChecked: {
         backgroundColor: colors.green,
         borderColor: colors.green,
     },
-    checkMark: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: '900',
-    },
     checkTextGroup: {
         flex: 1,
+        gap: 2,
     },
     checkLabel: {
         color: colors.text,
         fontSize: 14,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     checkDetail: {
         color: colors.secondary,
         fontSize: 12,
         lineHeight: 16,
-        marginTop: 2,
     },
     confirmButton: {
+        alignItems: 'center',
         backgroundColor: colors.amber,
-        marginTop: 8,
+        borderRadius: 12,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        marginTop: 14,
         minHeight: 48,
-        width: '100%',
+        paddingHorizontal: 16,
+        ...shadows.sm,
     },
     confirmButtonDisabled: {
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
         borderWidth: 1,
     },
+    confirmButtonText: {
+        color: '#0f172a',
+        fontSize: 14,
+        fontWeight: '700',
+    },
     confirmButtonTextDisabled: {
         color: colors.muted,
     },
     pressed: {
         opacity: 0.78,
+        transform: [{ scale: 0.985 }],
     },
 });

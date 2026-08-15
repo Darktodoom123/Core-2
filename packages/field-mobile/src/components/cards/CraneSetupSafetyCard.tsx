@@ -1,11 +1,12 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type {
     CraneHazardItem,
     CraneSetupSafetyChecklist,
     CraneSetupState,
 } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface CraneSetupSafetyCardProps {
     isParkedAndSecured: boolean;
@@ -172,12 +173,18 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                     </View>
                 </View>
                 <View style={styles.diagramLegend}>
-                    <Text style={styles.legendItem}>
-                        ⚡ Power Line: 8.5m clearance
-                    </Text>
-                    <Text style={styles.legendItem}>
-                        💨 Current Wind: 14 km/h (Limit: 38 km/h)
-                    </Text>
+                    <View style={styles.legendRow}>
+                        <Icon name="alert" size={14} color={colors.amberDark} />
+                        <Text style={styles.legendItem}>
+                            Power Line: 8.5m clearance
+                        </Text>
+                    </View>
+                    <View style={styles.legendRow}>
+                        <Icon name="speed" size={14} color={colors.blueDark} />
+                        <Text style={styles.legendItem}>
+                            Current Wind: 14 km/h (Limit: 38 km/h)
+                        </Text>
+                    </View>
                 </View>
             </View>
 
@@ -212,7 +219,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                             ]}
                         >
                             {hazard.isMitigated ? (
-                                <Text style={styles.checkMark}>✓</Text>
+                                <Icon name="check" size={14} color="#ffffff" />
                             ) : null}
                         </View>
                         <View style={styles.hazardTextGroup}>
@@ -269,7 +276,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.groundBearingVerified ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -308,7 +315,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.outriggersFullyExtended ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -346,7 +353,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.levelBubbleCentered ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -385,7 +392,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.powerLineClearanceVerified ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -424,7 +431,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.exclusionZoneBarricaded ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -460,7 +467,7 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                         ]}
                     >
                         {checklist.windSpeedChecked ? (
-                            <Text style={styles.checkMark}>✓</Text>
+                            <Icon name="check" size={14} color="#ffffff" />
                         ) : null}
                     </View>
                     <View style={styles.checkTextGroup}>
@@ -481,16 +488,20 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
                     disabled={!allChecksVerified}
                     onPress={handleVerify}
                     style={({ pressed }) => [
-                        sharedStyles.button,
                         styles.verifyButton,
                         !allChecksVerified && styles.verifyButtonDisabled,
                         pressed && allChecksVerified && styles.pressed,
                     ]}
                     testID="verify-crane-setup-btn"
                 >
+                    <Icon
+                        name="check"
+                        size={18}
+                        color={allChecksVerified ? '#0f172a' : colors.muted}
+                    />
                     <Text
                         style={[
-                            sharedStyles.buttonText,
+                            styles.verifyButtonText,
                             !allChecksVerified &&
                                 styles.verifyButtonTextDisabled,
                         ]}
@@ -505,10 +516,11 @@ export const CraneSetupSafetyCard: React.FC<CraneSetupSafetyCardProps> = ({
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 12,
-        borderWidth: 1,
+        borderRadius: 16,
+        borderWidth: 1.5,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     cardPending: {
         backgroundColor: colors.surface,
@@ -522,11 +534,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flexDirection: 'row',
         gap: 10,
+        marginBottom: 8,
     },
     statusDot: {
-        borderRadius: 6,
-        height: 12,
-        width: 12,
+        borderRadius: 5,
+        height: 10,
+        width: 10,
     },
     statusDotPending: {
         backgroundColor: colors.amber,
@@ -539,33 +552,34 @@ const styles = StyleSheet.create({
     },
     eyebrow: {
         color: colors.amberDark,
-        fontSize: 10,
-        fontWeight: '900',
-        letterSpacing: 0.8,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.6,
     },
     heading: {
         color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     description: {
         color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 20,
-        marginVertical: 10,
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 14,
     },
     diagramCard: {
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 12,
+        padding: 14,
     },
     diagramTitle: {
         color: colors.text,
         fontSize: 11,
-        fontWeight: '800',
+        fontWeight: '700',
         letterSpacing: 0.5,
         marginBottom: 8,
     },
@@ -597,7 +611,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.amberSoft,
         borderColor: colors.amberBorder,
-        borderRadius: 6,
+        borderRadius: 8,
         borderWidth: 1,
         height: 36,
         justifyContent: 'center',
@@ -631,36 +645,42 @@ const styles = StyleSheet.create({
     diagramLegend: {
         borderTopColor: colors.border,
         borderTopWidth: 1,
-        gap: 4,
+        gap: 6,
         marginTop: 8,
         paddingTop: 8,
+    },
+    legendRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
     },
     legendItem: {
         color: colors.secondary,
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     sectionHeader: {
         color: colors.muted,
         fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 0.8,
+        fontWeight: '700',
+        letterSpacing: 0.6,
         marginBottom: 8,
         marginTop: 10,
     },
     hazardList: {
         gap: 8,
-        marginBottom: 12,
+        marginBottom: 14,
     },
     hazardRow: {
+        alignItems: 'flex-start',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 12,
         minHeight: 52,
-        padding: 10,
+        padding: 12,
     },
     hazardRowMitigated: {
         backgroundColor: colors.greenLight,
@@ -678,12 +698,12 @@ const styles = StyleSheet.create({
         color: colors.text,
         flex: 1,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     hazardSeverity: {
-        borderRadius: 4,
+        borderRadius: 6,
         fontSize: 9,
-        fontWeight: '900',
+        fontWeight: '800',
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
@@ -699,7 +719,7 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 12,
         lineHeight: 16,
-        marginTop: 2,
+        marginTop: 3,
     },
     checklist: {
         gap: 8,
@@ -709,13 +729,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 12,
         minHeight: 52,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        padding: 12,
     },
     checkRowChecked: {
         backgroundColor: colors.greenLight,
@@ -723,50 +742,59 @@ const styles = StyleSheet.create({
     },
     checkbox: {
         alignItems: 'center',
+        backgroundColor: colors.surface,
         borderColor: colors.borderStrong,
         borderRadius: 6,
-        borderWidth: 2,
-        height: 24,
+        borderWidth: 1.5,
+        height: 22,
         justifyContent: 'center',
-        width: 24,
+        width: 22,
     },
     checkboxChecked: {
         backgroundColor: colors.green,
         borderColor: colors.green,
     },
-    checkMark: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: '900',
-    },
     checkTextGroup: {
         flex: 1,
+        gap: 2,
     },
     checkLabel: {
         color: colors.text,
         fontSize: 14,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     checkDetail: {
         color: colors.secondary,
         fontSize: 12,
         lineHeight: 16,
-        marginTop: 2,
     },
     verifyButton: {
+        alignItems: 'center',
         backgroundColor: colors.amber,
+        borderRadius: 12,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        marginTop: 8,
         minHeight: 48,
-        width: '100%',
+        paddingHorizontal: 16,
+        ...shadows.sm,
     },
     verifyButtonDisabled: {
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
         borderWidth: 1,
     },
+    verifyButtonText: {
+        color: '#0f172a',
+        fontSize: 14,
+        fontWeight: '700',
+    },
     verifyButtonTextDisabled: {
         color: colors.muted,
     },
     pressed: {
         opacity: 0.78,
+        transform: [{ scale: 0.985 }],
     },
 });

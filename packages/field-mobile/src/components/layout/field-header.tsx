@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export type SyncTone = 'checking' | 'online' | 'attention' | 'offline';
 
@@ -51,46 +52,7 @@ export interface BellIconProps {
 export const BellIcon: React.FC<BellIconProps> = ({
     color = colors.text,
     size = 20,
-}) => (
-    <View
-        style={{
-            alignItems: 'center',
-            height: size,
-            justifyContent: 'center',
-            width: size,
-        }}
-    >
-        <View
-            style={{
-                borderColor: color,
-                borderTopLeftRadius: size * 0.35,
-                borderTopRightRadius: size * 0.35,
-                borderWidth: 1.8,
-                height: size * 0.58,
-                width: size * 0.68,
-            }}
-        />
-        <View
-            style={{
-                backgroundColor: color,
-                borderRadius: 1,
-                height: 2,
-                marginTop: -1,
-                width: size * 0.86,
-            }}
-        />
-        <View
-            style={{
-                backgroundColor: color,
-                borderBottomLeftRadius: size * 0.12,
-                borderBottomRightRadius: size * 0.12,
-                height: size * 0.18,
-                marginTop: 1,
-                width: size * 0.26,
-            }}
-        />
-    </View>
-);
+}) => <Icon name="bell" size={size} color={color} />;
 
 export interface ProfileSummaryProps {
     userName?: string | null;
@@ -98,6 +60,7 @@ export interface ProfileSummaryProps {
     syncTone?: SyncTone;
     profileOpen: boolean;
     onOpenProfile: () => void;
+
     notificationCount?: number;
     onOpenNotifications?: () => void;
 }
@@ -263,23 +226,23 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
 
 const styles = StyleSheet.create({
     header: {
-        gap: 12,
+        gap: 14,
         marginBottom: 20,
     },
     appBar: {
         alignItems: 'center',
-        borderTopColor: colors.amberBorder,
-        borderTopWidth: 1.5,
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
         justifyContent: 'center',
-        minHeight: 52,
-        paddingTop: 12,
+        minHeight: 48,
+        paddingTop: 14,
     },
     screenTitle: {
         alignSelf: 'flex-start',
         color: colors.text,
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '800',
-        letterSpacing: 0.2,
+        letterSpacing: -0.3,
     },
     syncPill: {
         alignItems: 'center',
@@ -290,9 +253,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 8,
-        minHeight: 48,
-        paddingHorizontal: 12,
-        paddingVertical: 7,
+        minHeight: 44,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        ...shadows.sm,
     },
     syncPillOnline: {
         backgroundColor: colors.greenLight,
@@ -308,8 +272,8 @@ const styles = StyleSheet.create({
     },
     syncMark: {
         borderRadius: 6,
-        height: 12,
-        width: 12,
+        height: 10,
+        width: 10,
     },
     syncMarkChecking: {
         backgroundColor: colors.muted,
@@ -326,7 +290,8 @@ const styles = StyleSheet.create({
     syncLabel: {
         color: colors.text,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: -0.1,
     },
     syncMessage: {
         color: colors.secondary,
@@ -342,30 +307,38 @@ const styles = StyleSheet.create({
     profileRow: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 10,
+        gap: 12,
         minHeight: 56,
     },
     profileCard: {
         alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 16,
+        borderWidth: 1,
         flex: 1,
         flexDirection: 'row',
-        gap: 10,
+        gap: 12,
         minWidth: 0,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        ...shadows.sm,
     },
     avatarCircle: {
         alignItems: 'center',
         backgroundColor: colors.amberSoft,
         borderColor: colors.amberBorder,
-        borderRadius: 22,
-        borderWidth: 1.5,
-        height: 44,
+        borderRadius: 20,
+        borderWidth: 1,
+        height: 40,
         justifyContent: 'center',
-        width: 44,
+        width: 40,
     },
     avatarInitials: {
         color: colors.amberDark,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
     profileCopy: {
         flex: 1,
@@ -379,7 +352,8 @@ const styles = StyleSheet.create({
     profileName: {
         color: colors.text,
         fontSize: 15,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     nameStatusDot: {
         borderRadius: 4,
@@ -387,9 +361,10 @@ const styles = StyleSheet.create({
         width: 8,
     },
     profileRole: {
-        color: colors.secondary,
+        color: colors.muted,
         fontSize: 12,
-        marginTop: 2,
+        fontWeight: '500',
+        marginTop: 1,
         textTransform: 'capitalize',
     },
     headerActions: {
@@ -399,14 +374,15 @@ const styles = StyleSheet.create({
     },
     notificationButton: {
         alignItems: 'center',
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        height: 44,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 14,
+        borderWidth: 1,
+        height: 48,
         justifyContent: 'center',
         position: 'relative',
-        width: 44,
+        width: 48,
+        ...shadows.sm,
     },
     bellIcon: {
         fontSize: 18,
@@ -415,6 +391,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.amber,
         borderRadius: 9,
+
         height: 18,
         justifyContent: 'center',
         minWidth: 18,

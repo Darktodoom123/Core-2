@@ -92,7 +92,9 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                 {/* Background Grid & Compass Rose */}
                 <View style={styles.compassContainer}>
                     <Text style={styles.compassText}>🧭 N</Text>
-                    <Text style={styles.speedRating}>Max {maxAxleWeightTons}T</Text>
+                    <Text style={styles.speedRating}>
+                        Max {maxAxleWeightTons}T
+                    </Text>
                 </View>
 
                 {/* Simulated Waypoint Corridor Route Rail */}
@@ -101,8 +103,12 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                     <View style={styles.waypointRow}>
                         <View style={[styles.pinDot, styles.pinOrigin]} />
                         <View style={styles.waypointCopy}>
-                            <Text style={styles.waypointName}>{originLabel}</Text>
-                            <Text style={styles.waypointType}>Departure Base</Text>
+                            <Text style={styles.waypointName}>
+                                {originLabel}
+                            </Text>
+                            <Text style={styles.waypointType}>
+                                Departure Base
+                            </Text>
                         </View>
                     </View>
 
@@ -120,6 +126,8 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                                     onPress={() => setSelectedWaypoint(wp)}
                                     style={({ pressed }) => [
                                         styles.waypointRow,
+                                        isSelected &&
+                                            styles.waypointRowSelected,
                                         pressed && styles.pressed,
                                     ]}
                                     testID={`${testID}-wp-${wp.id}`}
@@ -160,7 +168,8 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                                     <View
                                         style={[
                                             styles.railSegment,
-                                            wp.isPassed && styles.railSegmentActive,
+                                            wp.isPassed &&
+                                                styles.railSegmentActive,
                                         ]}
                                     />
                                 ) : null}
@@ -282,6 +291,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
         marginVertical: 4,
+    },
+    waypointRowSelected: {
+        backgroundColor: '#1e293b',
+        borderRadius: 8,
+        paddingHorizontal: 6,
     },
     pinDot: {
         alignItems: 'center',

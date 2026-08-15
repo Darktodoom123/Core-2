@@ -1,4 +1,4 @@
-﻿export * from './nativeStyles';
+export * from './nativeStyles';
 export * from './layout/field-header';
 export * from './layout/field-bottom-nav';
 export * from './layout/FieldProgressionStepper';
@@ -13,3 +13,5 @@ export * from './cards/HeavyCraneDriveModeModal';
 export * from './cards/ParkedSecuredCard';
 export * from './cards/CraneSetupSafetyCard';
 export * from './cards/LocationSharingCard';
+export * from './cards/ConstructionWorkingCard';
+export * from './common/Icon';

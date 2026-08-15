@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { HeavyCraneRouteStatus } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export type { HeavyCraneRouteStatus } from '../../types/index';
 
@@ -77,7 +78,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                     </Text>
                 </View>
                 <View style={styles.craneMark} accessibilityElementsHidden>
-                    <Text style={styles.craneMarkText}>CR</Text>
+                    <Icon name="crane" size={24} color={colors.amberDark} />
                 </View>
             </View>
 
@@ -87,7 +88,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                     accessibilityLabel="Illustrative map placeholder; route data unavailable"
                     style={styles.mapPlaceholder}
                 >
-                    <Text style={styles.mapPlaceholderMark}>⌖</Text>
+                    <Icon name="route" size={24} color={colors.muted} />
                     <Text style={styles.mapPlaceholderText}>
                         Map and route data will appear when the route endpoint
                         is connected.
@@ -191,7 +192,7 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                 style={styles.listAlternative}
             >
                 <View style={styles.listAlternativeMark}>
-                    <Text style={styles.listAlternativeMarkText}>≡</Text>
+                    <Icon name="file-text" size={18} color={colors.blueDark} />
                 </View>
                 <View style={styles.listAlternativeCopy}>
                     <Text style={styles.listAlternativeHeading}>
@@ -212,14 +213,14 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                     accessibilityRole="button"
                     onPress={onOpenDriveMode}
                     style={({ pressed }) => [
-                        sharedStyles.button,
                         styles.driveModeButton,
                         pressed && styles.pressed,
                     ]}
                     testID="launch-drive-mode-btn"
                 >
+                    <Icon name="route" size={20} color={colors.amber} />
                     <Text style={styles.driveModeButtonText}>
-                        ⚡ Launch Heavy-Crane Drive Mode
+                        Launch Heavy-Crane Drive Mode
                     </Text>
                 </Pressable>
             ) : null}
@@ -240,13 +241,12 @@ export const HeavyCraneRouteCard: React.FC<HeavyCraneRouteCardProps> = ({
                     accessibilityRole="button"
                     onPress={onOpenRoute}
                     style={({ pressed }) => [
-                        sharedStyles.button,
                         styles.routeButton,
                         pressed && styles.pressed,
                     ]}
                     testID={`${testID}-open-route`}
                 >
-                    <Text style={sharedStyles.buttonText}>
+                    <Text style={styles.routeButtonText}>
                         Open route review
                     </Text>
                 </Pressable>
@@ -259,10 +259,11 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     headingRow: {
         alignItems: 'flex-start',
@@ -278,39 +279,41 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
         backgroundColor: colors.surfaceMuted,
         borderRadius: 6,
-        color: colors.secondary,
+        color: colors.muted,
         fontSize: 10,
-        fontWeight: '800',
+        fontWeight: '700',
         letterSpacing: 0.5,
         paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingVertical: 3,
     },
     eyebrow: {
         color: colors.amberDark,
         fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 0.8,
+        fontWeight: '700',
+        letterSpacing: 0.6,
     },
     heading: {
         color: colors.text,
-        fontSize: 18,
-        fontWeight: '800',
+        fontSize: 17,
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     assetLabel: {
         color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 20,
+        fontSize: 13,
+        lineHeight: 19,
     },
     craneMark: {
         alignItems: 'center',
         backgroundColor: colors.amberSoft,
         borderColor: colors.amberBorder,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         height: 44,
         justifyContent: 'center',
         width: 44,
     },
+
     craneMarkText: {
         color: colors.amberDark,
         fontSize: 12,
@@ -534,30 +537,46 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     driveModeButton: {
+        alignItems: 'center',
         backgroundColor: colors.surfaceDark,
         borderColor: colors.amber,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1.5,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
         marginTop: 14,
-        minHeight: 52,
+        minHeight: 50,
+        paddingHorizontal: 16,
         width: '100%',
+        ...shadows.sm,
     },
     driveModeButtonText: {
         color: colors.amber,
         fontSize: 15,
-        fontWeight: '900',
+        fontWeight: '700',
     },
     routeButton: {
+        alignItems: 'center',
         backgroundColor: colors.amber,
+        borderRadius: 12,
+        justifyContent: 'center',
         marginTop: 14,
         minHeight: 48,
+        paddingHorizontal: 16,
         width: '100%',
+        ...shadows.sm,
+    },
+    routeButtonText: {
+        color: '#0f172a',
+        fontSize: 15,
+        fontWeight: '700',
     },
     plannedRouteButton: {
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
         justifyContent: 'center',
         marginTop: 14,
@@ -566,11 +585,12 @@ const styles = StyleSheet.create({
     },
     plannedRouteButtonText: {
         color: colors.muted,
-        fontSize: 15,
-        fontWeight: '700',
+        fontSize: 14,
+        fontWeight: '600',
     },
     pressed: {
         opacity: 0.78,
+        transform: [{ scale: 0.985 }],
     },
 });
 

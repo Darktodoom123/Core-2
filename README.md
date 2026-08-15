@@ -9,7 +9,7 @@ contains partial, API-first rental and sales workflows; customer-facing
 commercial screens, contracts, payments, billing, and complete dispatch
 handoffs remain roadmap work.
 
-See the [Alibaton business context and CT2 capstone scope](Docs/alibaton-business-scope.md)
+See the [Alibaton business context and CT2 capstone scope](Docs/product/alibaton-business-scope.md)
 for the current rental, sales, and service boundary.
 
 ---
@@ -184,4 +184,4 @@ npm run mobile:android
 Detailed architecture, business rules, product requirements, database design, and API specs are documented in `Docs/`:
 
 - Read [`Docs/README.md`](Docs/README.md) for the complete index of product & architecture documentation.
-- Read the [Docker operations guide](Docs/docker.md) for container setup, runtime commands, persistence, and troubleshooting.
+- Read the [Docker operations guide](Docs/architecture/docker.md) for container setup, runtime commands, persistence, and troubleshooting.

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -7,7 +7,8 @@ import {
     View,
 } from 'react-native';
 import type { DispatchJob, DispatchStatus } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface FieldProgressionStepperProps {
     job: DispatchJob;
@@ -71,17 +72,24 @@ export const FieldProgressionStepper: React.FC<
     return (
         <View style={styles.card} testID="field-progression-stepper">
             <Text accessibilityRole="header" style={styles.heading}>
-                Job progress
+                Job Progress & Workflow
             </Text>
 
             {nextStep ? (
                 <View style={styles.nextCard} testID="next-step-card">
-                    <Text style={styles.nextEyebrow}>YOUR NEXT ACTION</Text>
+                    <View style={styles.nextHeaderRow}>
+                        <View style={styles.nextActionPill}>
+                            <Text style={styles.nextEyebrow}>
+                                YOUR NEXT ACTION
+                            </Text>
+                        </View>
+                        <Text style={styles.nextActionLabel}>
+                            Server will record: {nextStep.status.label}
+                        </Text>
+                    </View>
+
                     <Text style={styles.nextTitle}>
                         {nextStep.confirmation_title}
-                    </Text>
-                    <Text style={styles.nextActionLabel}>
-                        Server will record: {nextStep.status.label}
                     </Text>
                     <Text style={styles.nextMessage}>
                         {nextStep.confirmation_message}
@@ -92,7 +100,11 @@ export const FieldProgressionStepper: React.FC<
                             style={styles.gatedBanner}
                             testID="progression-gate-banner"
                         >
-                            <Text style={styles.gatedIcon}>⛔</Text>
+                            <Icon
+                                name="alert"
+                                size={18}
+                                color={colors.warningDark}
+                            />
                             <Text style={styles.gatedText}>{gateReason}</Text>
                         </View>
                     ) : null}
@@ -113,7 +125,6 @@ export const FieldProgressionStepper: React.FC<
                             )
                         }
                         style={({ pressed }) => [
-                            sharedStyles.button,
                             styles.advanceButton,
                             isDisabled && styles.advanceButtonDisabled,
                             pressed && !isDisabled && styles.pressed,
@@ -127,13 +138,13 @@ export const FieldProgressionStepper: React.FC<
                                     size="small"
                                 />
                                 <Text style={styles.processingText}>
-                                    Processing transition…
+                                    Updating status…
                                 </Text>
                             </View>
                         ) : (
                             <Text
                                 style={[
-                                    sharedStyles.buttonText,
+                                    styles.advanceButtonText,
                                     isDisabled &&
                                         styles.advanceButtonTextDisabled,
                                 ]}
@@ -145,7 +156,7 @@ export const FieldProgressionStepper: React.FC<
                 </View>
             ) : null}
 
-            <Text style={styles.progressLabel}>Progress history</Text>
+            <Text style={styles.progressLabel}>Workflow Stages</Text>
             <View style={styles.steps}>
                 {progression.steps.map((step, index) => {
                     const isComplete = step.state === 'complete';
@@ -168,15 +179,23 @@ export const FieldProgressionStepper: React.FC<
                                     isCurrent && styles.currentMark,
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.stepNumber,
-                                        (isComplete || isCurrent) &&
-                                            styles.activeStepNumber,
-                                    ]}
-                                >
-                                    {index + 1}
-                                </Text>
+                                {isComplete ? (
+                                    <Icon
+                                        name="check"
+                                        size={14}
+                                        color={colors.white}
+                                    />
+                                ) : (
+                                    <Text
+                                        style={[
+                                            styles.stepNumber,
+                                            isCurrent &&
+                                                styles.activeStepNumber,
+                                        ]}
+                                    >
+                                        {index + 1}
+                                    </Text>
+                                )}
                             </View>
                             <View style={styles.stepCopy}>
                                 <Text
@@ -190,9 +209,9 @@ export const FieldProgressionStepper: React.FC<
                                 </Text>
                                 <Text style={styles.stepState}>
                                     {isComplete
-                                        ? 'Complete'
+                                        ? 'Completed'
                                         : isCurrent
-                                          ? 'Current step'
+                                          ? 'Active stage'
                                           : 'Upcoming'}
                                 </Text>
                             </View>
@@ -202,9 +221,16 @@ export const FieldProgressionStepper: React.FC<
             </View>
 
             {!nextStep ? (
-                <Text style={styles.completeMessage}>
-                    Completed — {progression.message}
-                </Text>
+                <View style={styles.completeBanner}>
+                    <Icon
+                        name="check-circle"
+                        size={20}
+                        color={colors.greenDark}
+                    />
+                    <Text style={styles.completeMessage}>
+                        {progression.message || 'Job completed successfully'}
+                    </Text>
+                </View>
             ) : null}
         </View>
     );
@@ -214,10 +240,10 @@ const styles = StyleSheet.create({
     inactiveCard: {
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 14,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 14,
+        padding: 16,
     },
     inactiveText: {
         color: colors.secondary,
@@ -227,149 +253,100 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
+        ...shadows.md,
     },
     heading: {
         color: colors.text,
         fontSize: 17,
-        fontWeight: '800',
-        marginBottom: 14,
-    },
-    steps: {
-        gap: 6,
-    },
-    progressLabel: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.4,
-        marginBottom: 6,
-        textTransform: 'uppercase',
-    },
-    stepRow: {
-        alignItems: 'center',
-        borderRadius: 8,
-        flexDirection: 'row',
-        gap: 12,
-        minHeight: 56,
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-    },
-    currentStepRow: {
-        backgroundColor: colors.amberLight,
-    },
-    stepMark: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 18,
-        borderWidth: 1,
-        height: 36,
-        justifyContent: 'center',
-        width: 36,
-    },
-    completeMark: {
-        backgroundColor: colors.green,
-        borderColor: colors.green,
-    },
-    currentMark: {
-        backgroundColor: colors.amber,
-        borderColor: colors.amber,
-    },
-    stepNumber: {
-        color: colors.secondary,
-        fontSize: 13,
-        fontWeight: '800',
-        fontVariant: ['tabular-nums'],
-    },
-    activeStepNumber: {
-        color: colors.white,
-    },
-    stepCopy: {
-        flex: 1,
-    },
-    stepText: {
-        color: colors.text,
-        fontSize: 14,
         fontWeight: '700',
-    },
-    completeText: {
-        color: colors.greenDark,
-    },
-    currentText: {
-        color: colors.amberDark,
-        fontWeight: '800',
-    },
-    stepState: {
-        color: colors.muted,
-        fontSize: 12,
-        marginTop: 2,
+        letterSpacing: -0.2,
+        marginBottom: 14,
     },
     nextCard: {
         backgroundColor: colors.amberLight,
         borderColor: colors.amberBorder,
-        borderRadius: 10,
+        borderRadius: 14,
         borderWidth: 1,
-        marginBottom: 16,
-        padding: 14,
+        marginBottom: 18,
+        padding: 16,
+        ...shadows.sm,
+    },
+    nextHeaderRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    nextActionPill: {
+        backgroundColor: colors.amberSoft,
+        borderRadius: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
     },
     nextEyebrow: {
         color: colors.amberDark,
-        fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 0.8,
-        marginBottom: 5,
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
     nextActionLabel: {
-        color: colors.amberDark,
-        fontSize: 14,
-        fontWeight: '800',
-        marginTop: 5,
+        color: colors.secondary,
+        fontSize: 12,
+        fontWeight: '500',
     },
     nextTitle: {
         color: colors.text,
-        fontSize: 15,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.2,
+        marginBottom: 4,
     },
     nextMessage: {
         color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 20,
-        marginBottom: 12,
-        marginTop: 4,
+        fontSize: 13,
+        lineHeight: 19,
+        marginBottom: 14,
     },
     gatedBanner: {
-        alignItems: 'flex-start',
-        backgroundColor: colors.redLight,
-        borderColor: colors.redBorder,
-        borderRadius: 8,
+        alignItems: 'center',
+        backgroundColor: colors.warningSoft,
+        borderColor: colors.warningBorder,
+        borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 8,
-        marginBottom: 12,
+        marginBottom: 14,
         padding: 10,
     },
-    gatedIcon: {
-        fontSize: 16,
-    },
     gatedText: {
-        color: colors.redDark,
+        color: colors.warningDark,
         flex: 1,
         fontSize: 12,
-        fontWeight: '700',
+        fontWeight: '600',
         lineHeight: 17,
     },
     advanceButton: {
+        alignItems: 'center',
         backgroundColor: colors.amber,
+        borderRadius: 12,
+        justifyContent: 'center',
         minHeight: 48,
+        paddingHorizontal: 16,
+        ...shadows.sm,
     },
     advanceButtonDisabled: {
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderWidth: 1,
+        backgroundColor: colors.border,
+        opacity: 0.6,
+    },
+    advanceButtonText: {
+        color: '#0f172a',
+        fontSize: 15,
+        fontWeight: '700',
+        letterSpacing: -0.1,
     },
     advanceButtonTextDisabled: {
         color: colors.muted,
@@ -381,14 +358,93 @@ const styles = StyleSheet.create({
     },
     processingText: {
         color: colors.text,
-        fontSize: 15,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    progressLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+    },
+    steps: {
+        gap: 4,
+    },
+    stepRow: {
+        alignItems: 'center',
+        borderRadius: 10,
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+    },
+    currentStepRow: {
+        backgroundColor: colors.surfaceMuted,
+    },
+    stepMark: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 16,
+        borderWidth: 1,
+        height: 32,
+        justifyContent: 'center',
+        width: 32,
+    },
+    completeMark: {
+        backgroundColor: colors.green,
+        borderColor: colors.green,
+    },
+    currentMark: {
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
+    },
+    stepNumber: {
+        color: colors.muted,
+        fontSize: 12,
         fontWeight: '700',
     },
-    completeMessage: {
-        color: colors.green,
+    activeStepNumber: {
+        color: colors.white,
+    },
+    stepCopy: {
+        flex: 1,
+    },
+    stepText: {
+        color: colors.secondary,
         fontSize: 14,
-        fontWeight: '800',
-        marginTop: 16,
+        fontWeight: '600',
+    },
+    completeText: {
+        color: colors.text,
+    },
+    currentText: {
+        color: colors.text,
+        fontWeight: '700',
+    },
+    stepState: {
+        color: colors.muted,
+        fontSize: 11,
+        marginTop: 1,
+    },
+    completeBanner: {
+        alignItems: 'center',
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 14,
+        padding: 12,
+    },
+    completeMessage: {
+        color: colors.greenDark,
+        flex: 1,
+        fontSize: 13,
+        fontWeight: '600',
     },
     pressed: {
         opacity: 0.78,

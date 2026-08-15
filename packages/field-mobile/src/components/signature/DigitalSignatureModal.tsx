@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Modal,
     PanResponder,
@@ -9,7 +9,8 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { colors, sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface SignaturePoint {
     x: number;
@@ -46,38 +47,41 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
     const [signerName, setSignerName] = useState('');
     const [signerRole, setSignerRole] = useState('Site Supervisor');
     const [strokes, setStrokes] = useState<SignatureStroke[]>([]);
-    const currentStrokeRef = useRef<SignatureStroke>([]);
 
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: () => true,
-            onPanResponderGrant: (evt) => {
-                const { locationX, locationY } = evt.nativeEvent;
-                currentStrokeRef.current = [{ x: locationX, y: locationY }];
-                setStrokes((prev) => [...prev, [{ x: locationX, y: locationY }]]);
-            },
-            onPanResponderMove: (evt) => {
-                const { locationX, locationY } = evt.nativeEvent;
-                const point = { x: locationX, y: locationY };
-                currentStrokeRef.current.push(point);
-                setStrokes((prev) => {
-                    if (prev.length === 0) return [[point]];
-                    const lastIdx = prev.length - 1;
-                    const updated = [...prev];
-                    updated[lastIdx] = [...updated[lastIdx], point];
-                    return updated;
-                });
-            },
-            onPanResponderRelease: () => {
-                currentStrokeRef.current = [];
-            },
-        }),
-    ).current;
+    const panResponder = useMemo(
+        () =>
+            PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: () => true,
+                onPanResponderGrant: (evt) => {
+                    const { locationX, locationY } = evt.nativeEvent;
+                    setStrokes((prev) => [
+                        ...prev,
+                        [{ x: locationX, y: locationY }],
+                    ]);
+                },
+                onPanResponderMove: (evt) => {
+                    const { locationX, locationY } = evt.nativeEvent;
+                    const point = { x: locationX, y: locationY };
+                    setStrokes((prev) => {
+                        if (prev.length === 0) {
+                            return [[point]];
+                        }
+
+                        const lastIdx = prev.length - 1;
+                        const updated = [...prev];
+                        updated[lastIdx] = [...updated[lastIdx], point];
+
+                        return updated;
+                    });
+                },
+                onPanResponderRelease: () => {},
+            }),
+        [],
+    );
 
     const handleClear = () => {
         setStrokes([]);
-        currentStrokeRef.current = [];
     };
 
     const handleUndo = () => {
@@ -89,7 +93,9 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
     const canSubmit = signerName.trim().length > 0 && hasSignature;
 
     const handleSubmit = () => {
-        if (!canSubmit) return;
+        if (!canSubmit) {
+            return;
+        }
 
         onConfirmSignature({
             signerName: signerName.trim(),
@@ -135,7 +141,11 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                 ]}
                                 testID={`${testID}-close`}
                             >
-                                <Text style={styles.closeIcon}>✕</Text>
+                                <Icon
+                                    name="close"
+                                    size={20}
+                                    color={colors.secondary}
+                                />
                             </Pressable>
                         </View>
 
@@ -148,16 +158,20 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                 accessibilityLabel="Signer full name"
                                 onChangeText={setSignerName}
                                 placeholder="e.g. John Doe"
+                                placeholderTextColor={colors.muted}
                                 style={styles.input}
                                 value={signerName}
                                 testID={`${testID}-name-input`}
                             />
 
-                            <Text style={styles.label}>Signer Role / Title</Text>
+                            <Text style={styles.label}>
+                                Signer Role / Title
+                            </Text>
                             <TextInput
                                 accessibilityLabel="Signer role"
                                 onChangeText={setSignerRole}
                                 placeholder="e.g. Site Supervisor / Project Manager"
+                                placeholderTextColor={colors.muted}
                                 style={styles.input}
                                 value={signerRole}
                                 testID={`${testID}-role-input`}
@@ -178,7 +192,8 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         onPress={handleUndo}
                                         style={({ pressed }) => [
                                             styles.canvasActionBtn,
-                                            strokes.length === 0 && styles.btnDisabled,
+                                            strokes.length === 0 &&
+                                                styles.btnDisabled,
                                             pressed && styles.pressed,
                                         ]}
                                         testID={`${testID}-undo`}
@@ -194,7 +209,8 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         onPress={handleClear}
                                         style={({ pressed }) => [
                                             styles.canvasActionBtn,
-                                            strokes.length === 0 && styles.btnDisabled,
+                                            strokes.length === 0 &&
+                                                styles.btnDisabled,
                                             pressed && styles.pressed,
                                         ]}
                                         testID={`${testID}-clear`}
@@ -216,8 +232,13 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                         pointerEvents="none"
                                         style={styles.canvasPlaceholder}
                                     >
+                                        <Icon
+                                            name="signature"
+                                            size={22}
+                                            color={colors.muted}
+                                        />
                                         <Text style={styles.placeholderText}>
-                                            ✍️ Sign on the line above
+                                            Sign on the line above
                                         </Text>
                                     </View>
                                 ) : null}
@@ -247,30 +268,62 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                         {/* Confirmation & Submission */}
                         <View style={styles.footerSection}>
                             <Text style={styles.legalNotice}>
-                                By signing, the client representative verifies that the
-                                scheduled operations and site deliverables for{' '}
-                                <Text style={{ fontWeight: '800' }}>{jobReference}</Text>{' '}
-                                have been completed safely and satisfactorily.
+                                By signing, the client representative verifies
+                                that the dispatched tasks and crane operations
+                                were completed safely and in accordance with
+                                site requirements.
                             </Text>
 
-                            <Pressable
-                                accessibilityLabel="Confirm signature and complete job"
-                                accessibilityRole="button"
-                                accessibilityState={{ disabled: !canSubmit }}
-                                disabled={!canSubmit}
-                                onPress={handleSubmit}
-                                style={({ pressed }) => [
-                                    sharedStyles.button,
-                                    styles.submitButton,
-                                    !canSubmit && styles.submitDisabled,
-                                    pressed && canSubmit && styles.pressed,
-                                ]}
-                                testID={`${testID}-submit`}
-                            >
-                                <Text style={sharedStyles.buttonText}>
-                                    ✓ Confirm & Complete Job
-                                </Text>
-                            </Pressable>
+                            <View style={styles.actionRow}>
+                                <Pressable
+                                    accessibilityLabel="Cancel signature"
+                                    accessibilityRole="button"
+                                    onPress={onClose}
+                                    style={({ pressed }) => [
+                                        styles.cancelButton,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID={`${testID}-cancel`}
+                                >
+                                    <Text style={styles.cancelButtonText}>
+                                        Cancel
+                                    </Text>
+                                </Pressable>
+
+                                <Pressable
+                                    accessibilityLabel="Confirm signature and complete job"
+                                    accessibilityRole="button"
+                                    accessibilityState={{
+                                        disabled: !canSubmit,
+                                    }}
+                                    disabled={!canSubmit}
+                                    onPress={handleSubmit}
+                                    style={({ pressed }) => [
+                                        styles.submitButton,
+                                        !canSubmit &&
+                                            styles.submitButtonDisabled,
+                                        pressed && canSubmit && styles.pressed,
+                                    ]}
+                                    testID={`${testID}-submit`}
+                                >
+                                    <Icon
+                                        name="check"
+                                        size={18}
+                                        color={
+                                            canSubmit ? '#0f172a' : colors.muted
+                                        }
+                                    />
+                                    <Text
+                                        style={[
+                                            styles.submitButtonText,
+                                            !canSubmit &&
+                                                styles.submitButtonTextDisabled,
+                                        ]}
+                                    >
+                                        Sign & Complete Job
+                                    </Text>
+                                </Pressable>
+                            </View>
                         </View>
                     </ScrollView>
                 </View>
@@ -281,36 +334,42 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
 
 const styles = StyleSheet.create({
     modalOverlay: {
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        alignItems: 'center',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
         flex: 1,
-        justifyContent: 'flex-end',
+        justifyContent: 'center',
+        padding: 16,
     },
     modalContent: {
         backgroundColor: colors.surface,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '92%',
+        borderRadius: 20,
+        maxHeight: '90%',
+        maxWidth: 580,
+        overflow: 'hidden',
+        width: '100%',
+        ...shadows.lg,
     },
     scrollContent: {
         padding: 20,
-        paddingBottom: 36,
     },
     header: {
         alignItems: 'flex-start',
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        paddingBottom: 14,
     },
     title: {
         color: colors.text,
-        fontSize: 18,
-        fontWeight: '900',
+        fontSize: 17,
+        fontWeight: '700',
+        letterSpacing: -0.3,
     },
     subtitle: {
         color: colors.secondary,
         fontSize: 13,
-        fontWeight: '700',
-        marginTop: 2,
+        marginTop: 3,
     },
     closeButton: {
         alignItems: 'center',
@@ -320,33 +379,29 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         width: 32,
     },
-    closeIcon: {
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '800',
-    },
     formSection: {
-        gap: 8,
-        marginBottom: 14,
+        gap: 6,
+        marginVertical: 14,
     },
     label: {
         color: colors.text,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '600',
+        marginTop: 4,
     },
     input: {
         backgroundColor: colors.surface,
         borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderRadius: 10,
         borderWidth: 1,
         color: colors.text,
         fontSize: 14,
-        minHeight: 48,
+        minHeight: 44,
         paddingHorizontal: 12,
         paddingVertical: 10,
     },
     canvasSection: {
-        marginTop: 6,
+        marginTop: 8,
     },
     canvasHeader: {
         alignItems: 'center',
@@ -360,22 +415,20 @@ const styles = StyleSheet.create({
     },
     canvasActionBtn: {
         backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 6,
-        borderWidth: 1,
+        borderRadius: 8,
         paddingHorizontal: 10,
-        paddingVertical: 5,
-    },
-    canvasActionText: {
-        color: colors.secondary,
-        fontSize: 12,
-        fontWeight: '700',
+        paddingVertical: 4,
     },
     btnDisabled: {
         opacity: 0.4,
     },
+    canvasActionText: {
+        color: colors.secondary,
+        fontSize: 12,
+        fontWeight: '600',
+    },
     canvas: {
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: '#ffffff',
         borderColor: colors.borderStrong,
         borderRadius: 12,
         borderWidth: 1.5,
@@ -386,52 +439,87 @@ const styles = StyleSheet.create({
     },
     canvasPlaceholder: {
         alignItems: 'center',
-        height: '100%',
+        bottom: 0,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
+        left: 0,
         position: 'absolute',
-        width: '100%',
+        right: 0,
+        top: 0,
     },
     placeholderText: {
         color: colors.muted,
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '500',
     },
     strokePoint: {
-        backgroundColor: colors.text,
-        borderRadius: 2,
-        height: 4,
+        backgroundColor: '#0f172a',
+        borderRadius: 3,
+        height: 5,
         position: 'absolute',
-        width: 4,
+        width: 5,
     },
     signatureLine: {
-        backgroundColor: colors.borderStrong,
+        backgroundColor: colors.border,
         bottom: 36,
         height: 1,
-        left: 20,
+        left: 16,
         position: 'absolute',
-        right: 20,
+        right: 16,
     },
     footerSection: {
-        marginTop: 16,
+        marginTop: 14,
     },
     legalNotice: {
         color: colors.muted,
         fontSize: 11,
         lineHeight: 16,
-        marginBottom: 12,
-        textAlign: 'center',
+        marginBottom: 16,
+    },
+    actionRow: {
+        flexDirection: 'row',
+        gap: 10,
+        justifyContent: 'flex-end',
+    },
+    cancelButton: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 10,
+        justifyContent: 'center',
+        minHeight: 46,
+        paddingHorizontal: 16,
+    },
+    cancelButtonText: {
+        color: colors.secondary,
+        fontSize: 14,
+        fontWeight: '600',
     },
     submitButton: {
-        backgroundColor: colors.green,
-        minHeight: 52,
-        width: '100%',
+        alignItems: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 10,
+        flexDirection: 'row',
+        gap: 6,
+        justifyContent: 'center',
+        minHeight: 46,
+        paddingHorizontal: 18,
+        ...shadows.sm,
     },
-    submitDisabled: {
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderWidth: 1,
+    submitButtonDisabled: {
+        backgroundColor: colors.border,
+        opacity: 0.6,
+    },
+    submitButtonText: {
+        color: '#0f172a',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    submitButtonTextDisabled: {
+        color: colors.muted,
     },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.75,
+        transform: [{ scale: 0.985 }],
     },
 });

@@ -9,18 +9,17 @@ import {
 } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { AssignmentResponseCard } from '../components/cards/AssignmentResponseCard';
+import { ConstructionWorkingCard } from '../components/cards/ConstructionWorkingCard';
 import { CraneSetupSafetyCard } from '../components/cards/CraneSetupSafetyCard';
 import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
 import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
 import { LocationSharingCard } from '../components/cards/LocationSharingCard';
 import { ParkedSecuredCard } from '../components/cards/ParkedSecuredCard';
+import { Icon } from '../components/common/Icon';
 import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
-import { colors } from '../components/nativeStyles';
+import { colors, shadows } from '../components/nativeStyles';
 import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
-import {
-    DigitalSignatureModal,
-    type DigitalSignatureData,
-} from '../components/signature/DigitalSignatureModal';
+import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -100,10 +99,11 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
             return;
         }
+
         onTransitionStatus(jobId, nextStatus, version);
     };
 
-    const handleConfirmSignature = (_signature: DigitalSignatureData) => {
+    const handleConfirmSignature = () => {
         setSignatureModalOpen(false);
         onTransitionStatus(job.id, 'completed', job.version);
     };
@@ -237,11 +237,11 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                         pressed && styles.pressed,
                     ]}
                 >
-                    <Text style={styles.backIcon}>‹</Text>
+                    <Icon name="back" size={20} color={colors.text} />
                     <Text style={styles.backButtonText}>Back</Text>
                 </Pressable>
                 <Text accessibilityRole="header" style={styles.screenTitle}>
-                    {isResponsePending ? 'RESPOND' : 'PROGRESS'}
+                    {isResponsePending ? 'Respond to Job' : 'Job Details'}
                 </Text>
                 <View style={styles.headerSpacer} />
             </View>
@@ -272,9 +272,17 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                         jobPendingCommands.length > 0 && styles.syncMarkPending,
                     ]}
                 >
-                    <Text style={styles.syncMarkText}>
-                        {jobConflicts.length > 0 ? '!' : '✓'}
-                    </Text>
+                    <Icon
+                        name={
+                            jobConflicts.length > 0
+                                ? 'alert'
+                                : jobPendingCommands.length > 0
+                                  ? 'sync'
+                                  : 'check'
+                        }
+                        size={12}
+                        color={colors.white}
+                    />
                 </View>
                 <View style={styles.syncCopy}>
                     <Text style={styles.syncLabel}>
@@ -322,14 +330,14 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 </Text>
                 <View style={styles.jobMeta}>
                     <View style={styles.metaRow}>
-                        <Text style={styles.metaLabel}>Site</Text>
+                        <Icon name="location" size={16} color={colors.muted} />
                         <Text selectable style={styles.metaValue}>
                             {job.site}
                         </Text>
                     </View>
                     {job.scheduled_start ? (
                         <View style={styles.metaRow}>
-                            <Text style={styles.metaLabel}>Starts</Text>
+                            <Icon name="clock" size={16} color={colors.muted} />
                             <Text selectable style={styles.metaValue}>
                                 {new Date(job.scheduled_start).toLocaleString()}
                             </Text>
@@ -338,7 +346,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 </View>
                 {job.site_notes ? (
                     <View style={styles.siteNotes}>
-                        <Text style={styles.siteNotesLabel}>Site notes</Text>
+                        <Text style={styles.siteNotesLabel}>Site Notes</Text>
                         <Text selectable style={styles.siteNotesText}>
                             {job.site_notes}
                         </Text>
@@ -350,7 +358,11 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             {primaryAsset ? (
                 <View style={styles.assetCard} testID="assigned-asset-card">
                     <View style={styles.assetIcon}>
-                        <Text style={styles.assetIconText}>CR</Text>
+                        <Icon
+                            name={isCrane ? 'crane' : 'truck'}
+                            size={24}
+                            color={colors.amberDark}
+                        />
                     </View>
                     <View style={styles.assetCopy}>
                         <Text style={styles.assetLabel}>
@@ -432,6 +444,14 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 onVerifySetup={handleVerifyCraneSetup}
                 state={craneSetupState}
             />
+
+            {/* 5b. Construction Working Shift Execution Card */}
+            {job.status.value === 'working' ? (
+                <ConstructionWorkingCard
+                    jobReference={job.reference}
+                    siteName={job.site}
+                />
+            ) : null}
 
             {/* 6. Location Sharing Card */}
             <LocationSharingCard
@@ -518,29 +538,23 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 32,
+        paddingBottom: 36,
         width: '100%',
     },
     screenHeader: {
         alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 12,
+        marginBottom: 14,
         minHeight: 48,
     },
     backButton: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 4,
-        minHeight: 48,
+        gap: 6,
+        minHeight: 44,
         minWidth: 72,
-        paddingHorizontal: 4,
-    },
-    backIcon: {
-        color: colors.text,
-        fontSize: 30,
-        fontWeight: '400',
-        lineHeight: 34,
+        paddingHorizontal: 6,
     },
     backButtonText: {
         color: colors.text,
@@ -549,9 +563,9 @@ const styles = StyleSheet.create({
     },
     screenTitle: {
         color: colors.text,
-        fontSize: 20,
-        fontWeight: '800',
-        letterSpacing: 0.3,
+        fontSize: 17,
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     headerSpacer: {
         minWidth: 72,
@@ -560,13 +574,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 10,
-        marginBottom: 12,
-        paddingHorizontal: 12,
+        marginBottom: 14,
+        paddingHorizontal: 14,
         paddingVertical: 10,
+        ...shadows.sm,
     },
     syncBannerPending: {
         backgroundColor: colors.amberLight,
@@ -579,10 +594,10 @@ const styles = StyleSheet.create({
     syncMark: {
         alignItems: 'center',
         backgroundColor: colors.green,
-        borderRadius: 10,
-        height: 20,
+        borderRadius: 12,
+        height: 24,
         justifyContent: 'center',
-        width: 20,
+        width: 24,
     },
     syncMarkPending: {
         backgroundColor: colors.amber,
@@ -590,19 +605,14 @@ const styles = StyleSheet.create({
     syncMarkConflict: {
         backgroundColor: colors.warning,
     },
-    syncMarkText: {
-        color: colors.white,
-        fontSize: 12,
-        fontWeight: '900',
-    },
     syncCopy: {
         flex: 1,
         gap: 1,
     },
     syncLabel: {
-        color: colors.greenDark,
+        color: colors.text,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     syncMeta: {
         color: colors.secondary,
@@ -612,34 +622,31 @@ const styles = StyleSheet.create({
     headerCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     assetCard: {
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         flexDirection: 'row',
-        gap: 12,
+        gap: 14,
         marginBottom: 16,
-        padding: 14,
+        padding: 16,
+        ...shadows.md,
     },
     assetIcon: {
         alignItems: 'center',
         backgroundColor: colors.amberSoft,
-        borderRadius: 24,
+        borderRadius: 14,
         height: 48,
         justifyContent: 'center',
         width: 48,
-    },
-    assetIconText: {
-        color: colors.amberDark,
-        fontSize: 12,
-        fontWeight: '900',
     },
     assetCopy: {
         flex: 1,
@@ -647,13 +654,15 @@ const styles = StyleSheet.create({
     },
     assetLabel: {
         color: colors.muted,
-        fontSize: 12,
-        fontWeight: '800',
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     assetName: {
         color: colors.text,
         fontSize: 16,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     assetDetail: {
         color: colors.secondary,
@@ -663,10 +672,11 @@ const styles = StyleSheet.create({
     requirementsCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     requirementRow: {
         alignItems: 'flex-start',
@@ -700,15 +710,15 @@ const styles = StyleSheet.create({
     },
     reference: {
         color: colors.blueDark,
-        flexShrink: 1,
-        fontSize: 21,
-        fontWeight: '800',
+        fontSize: 20,
+        fontWeight: '700',
+        letterSpacing: -0.3,
     },
     versionText: {
         color: colors.muted,
         fontSize: 12,
-        fontWeight: '700',
-        marginTop: 3,
+        fontWeight: '600',
+        marginTop: 2,
     },
     badgeGroup: {
         alignItems: 'flex-end',
@@ -718,12 +728,12 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     priorityBadge: {
-        borderRadius: 999,
+        borderRadius: 8,
         fontSize: 11,
-        fontWeight: '800',
+        fontWeight: '700',
         overflow: 'hidden',
-        paddingHorizontal: 9,
-        paddingVertical: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         textTransform: 'uppercase',
     },
     emergencyPriority: {
@@ -741,27 +751,29 @@ const styles = StyleSheet.create({
     statusBadge: {
         alignItems: 'center',
         backgroundColor: colors.blueSoft,
-        borderRadius: 999,
+        borderRadius: 8,
         flexDirection: 'row',
         gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     statusMark: {
         backgroundColor: colors.blue,
         borderRadius: 4,
-        height: 8,
-        width: 8,
+        height: 6,
+        width: 6,
     },
     statusText: {
         color: colors.blueDark,
-        fontSize: 12,
-        fontWeight: '800',
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     title: {
         color: colors.text,
         fontSize: 17,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: -0.3,
         lineHeight: 23,
         marginTop: 12,
     },
@@ -773,33 +785,27 @@ const styles = StyleSheet.create({
         paddingTop: 14,
     },
     metaRow: {
-        alignItems: 'flex-start',
+        alignItems: 'center',
         flexDirection: 'row',
-        gap: 12,
-    },
-    metaLabel: {
-        color: colors.muted,
-        fontSize: 13,
-        fontWeight: '700',
-        width: 56,
+        gap: 10,
     },
     metaValue: {
         color: colors.secondary,
         flex: 1,
         fontSize: 13,
         lineHeight: 19,
-        fontVariant: ['tabular-nums'],
     },
     siteNotes: {
         backgroundColor: colors.surfaceMuted,
-        borderRadius: 8,
+        borderRadius: 10,
         marginTop: 14,
         padding: 12,
     },
     siteNotesLabel: {
         color: colors.text,
-        fontSize: 13,
-        fontWeight: '800',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     siteNotesText: {
         color: colors.secondary,
@@ -810,20 +816,22 @@ const styles = StyleSheet.create({
     teamCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
     },
     sectionHeading: {
         color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.2,
         marginBottom: 14,
     },
     label: {
         color: colors.text,
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '700',
         marginBottom: 6,
     },
     personnelLabel: {
@@ -844,9 +852,9 @@ const styles = StyleSheet.create({
     assignmentMark: {
         backgroundColor: colors.borderStrong,
         borderRadius: 4,
-        height: 8,
-        marginTop: 6,
-        width: 8,
+        height: 6,
+        marginTop: 7,
+        width: 6,
     },
     emptyText: {
         color: colors.muted,
@@ -854,5 +862,6 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.78,
+        transform: [{ scale: 0.985 }],
     },
 });

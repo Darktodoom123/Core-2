@@ -21,8 +21,12 @@ describe('DigitalSignatureModal', () => {
         expect(
             view.getByText(/Job Ref: JOB-2026-8812 · Acme Industrial Corp/),
         ).toBeTruthy();
-        expect(view.getByTestId('digital-signature-modal-name-input')).toBeTruthy();
-        expect(view.getByTestId('digital-signature-modal-role-input')).toBeTruthy();
+        expect(
+            view.getByTestId('digital-signature-modal-name-input'),
+        ).toBeTruthy();
+        expect(
+            view.getByTestId('digital-signature-modal-role-input'),
+        ).toBeTruthy();
         expect(view.getByTestId('digital-signature-modal-canvas')).toBeTruthy();
 
         // Close modal

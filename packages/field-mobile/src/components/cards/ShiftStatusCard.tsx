@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ShiftInfo } from '../../types/index';
-import { colors } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface ShiftStatusCardProps {
     shiftInfo?: ShiftInfo;
@@ -40,15 +41,21 @@ export const ShiftStatusCard: React.FC<ShiftStatusCardProps> = ({
                 ]}
                 testID="location-sharing-indicator"
             >
-                <View
-                    style={[
-                        styles.locDot,
-                        locationSharingActive
-                            ? styles.locDotActive
-                            : styles.locDotPaused,
-                    ]}
+                <Icon
+                    name="location"
+                    size={14}
+                    color={
+                        locationSharingActive ? colors.greenDark : colors.muted
+                    }
                 />
-                <Text style={styles.locText}>
+                <Text
+                    style={[
+                        styles.locText,
+                        locationSharingActive
+                            ? styles.locTextActive
+                            : styles.locTextPaused,
+                    ]}
+                >
                     {locationSharingActive ? 'GPS Sharing: ON' : 'GPS: Paused'}
                 </Text>
             </Pressable>
@@ -67,20 +74,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         flex: 1,
         flexDirection: 'row',
-        gap: 8,
+        gap: 10,
         minHeight: 48,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        ...shadows.sm,
     },
     shiftDot: {
         backgroundColor: colors.green,
-        borderRadius: 5,
-        height: 10,
-        width: 10,
+        borderRadius: 4,
+        height: 8,
+        width: 8,
     },
     shiftCopy: {
         flex: 1,
@@ -88,24 +96,25 @@ const styles = StyleSheet.create({
     shiftLabel: {
         color: colors.muted,
         fontSize: 10,
-        fontWeight: '900',
+        fontWeight: '700',
         letterSpacing: 0.5,
     },
     shiftValue: {
         color: colors.text,
         fontSize: 13,
-        fontWeight: '700',
+        fontWeight: '600',
     },
     locationPill: {
         alignItems: 'center',
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 6,
         justifyContent: 'center',
         minHeight: 48,
         paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingVertical: 8,
+        ...shadows.sm,
     },
     locActive: {
         backgroundColor: colors.greenLight,
@@ -115,22 +124,18 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
     },
-    locDot: {
-        borderRadius: 4,
-        height: 8,
-        width: 8,
-    },
-    locDotActive: {
-        backgroundColor: colors.green,
-    },
-    locDotPaused: {
-        backgroundColor: colors.muted,
-    },
     locText: {
         fontSize: 12,
-        fontWeight: '800',
+        fontWeight: '700',
+    },
+    locTextActive: {
+        color: colors.greenDark,
+    },
+    locTextPaused: {
+        color: colors.muted,
     },
     pressed: {
         opacity: 0.78,
+        transform: [{ scale: 0.985 }],
     },
 });

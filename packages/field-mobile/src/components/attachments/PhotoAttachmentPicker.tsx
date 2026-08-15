@@ -41,16 +41,20 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
     const canAddMore = attachments.length < maxCount;
 
     const handleTakePhoto = async () => {
-        if (!canAddMore) return;
+        if (!canAddMore) {
+            return;
+        }
 
         try {
             const { status } =
                 await ImagePicker.requestCameraPermissionsAsync();
+
             if (status !== 'granted') {
                 Alert.alert(
                     'Camera Permission Required',
                     'Please allow camera access in device settings to take inspection photos.',
                 );
+
                 return;
             }
 
@@ -82,16 +86,20 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
     };
 
     const handleChooseFromGallery = async () => {
-        if (!canAddMore) return;
+        if (!canAddMore) {
+            return;
+        }
 
         try {
             const { status } =
                 await ImagePicker.requestMediaLibraryPermissionsAsync();
+
             if (status !== 'granted') {
                 Alert.alert(
                     'Photo Library Permission Required',
                     'Please allow photo library access in device settings to select images.',
                 );
+
                 return;
             }
 
@@ -130,13 +138,21 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                     {attachments.length} / {maxCount}
                 </Text>
             </View>
-            {helperText ? <Text style={styles.helper}>{helperText}</Text> : null}
+            {helperText ? (
+                <Text style={styles.helper}>{helperText}</Text>
+            ) : null}
 
             {/* Thumbnail Preview Grid */}
             {attachments.length > 0 ? (
-                <View style={styles.thumbnailGrid} testID={`${testID}-thumbnails`}>
+                <View
+                    style={styles.thumbnailGrid}
+                    testID={`${testID}-thumbnails`}
+                >
                     {attachments.map((item, index) => (
-                        <View key={`${item.uri}-${index}`} style={styles.thumbnailWrapper}>
+                        <View
+                            key={`${item.uri}-${index}`}
+                            style={styles.thumbnailWrapper}
+                        >
                             <Image
                                 source={{ uri: item.uri }}
                                 style={styles.thumbnail}
@@ -174,11 +190,16 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                         testID={`${testID}-take-photo`}
                     >
                         {isLoading ? (
-                            <ActivityIndicator color={colors.amberDark} size="small" />
+                            <ActivityIndicator
+                                color={colors.amberDark}
+                                size="small"
+                            />
                         ) : (
                             <>
                                 <Text style={styles.actionIcon}>📷</Text>
-                                <Text style={styles.actionText}>Take Photo</Text>
+                                <Text style={styles.actionText}>
+                                    Take Photo
+                                </Text>
                             </>
                         )}
                     </Pressable>
@@ -196,11 +217,16 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                         testID={`${testID}-choose-gallery`}
                     >
                         {isLoading ? (
-                            <ActivityIndicator color={colors.secondary} size="small" />
+                            <ActivityIndicator
+                                color={colors.secondary}
+                                size="small"
+                            />
                         ) : (
                             <>
                                 <Text style={styles.actionIcon}>🖼️</Text>
-                                <Text style={styles.actionText}>Choose Photo</Text>
+                                <Text style={styles.actionText}>
+                                    Choose Photo
+                                </Text>
                             </>
                         )}
                     </Pressable>

@@ -1,7 +1,9 @@
 import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { colors } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import type { IconName } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export type FieldNavItem = 'today' | 'route' | 'profile';
 
@@ -13,12 +15,12 @@ export interface FieldBottomNavProps {
 const items: ReadonlyArray<{
     id: FieldNavItem;
     label: string;
-    icon: string;
+    iconName: IconName;
     planned?: boolean;
 }> = [
-    { id: 'today', label: 'Today', icon: '▦' },
-    { id: 'route', label: 'Route', icon: '⌖', planned: true },
-    { id: 'profile', label: 'Profile', icon: '○' },
+    { id: 'today', label: 'Today', iconName: 'home' },
+    { id: 'route', label: 'Route', iconName: 'route', planned: true },
+    { id: 'profile', label: 'Profile', iconName: 'profile' },
 ];
 
 export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
@@ -33,11 +35,11 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
             accessibilityLabel="Field mobile navigation"
             style={[
                 styles.container,
-                { paddingBottom: Math.max(8, bottomInset) },
+                { paddingBottom: Math.max(10, bottomInset) },
             ]}
             testID="bottom-nav-bar"
         >
-            {items.map(({ id, label, icon, planned }) => {
+            {items.map(({ id, label, iconName, planned }) => {
                 const selected = activeItem === id;
 
                 return (
@@ -64,15 +66,17 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                                 selected && styles.indicatorSelected,
                             ]}
                         >
-                            <Text
-                                style={[
-                                    styles.icon,
-                                    selected && styles.iconSelected,
-                                    planned && styles.iconPlanned,
-                                ]}
-                            >
-                                {icon}
-                            </Text>
+                            <Icon
+                                name={iconName}
+                                size={22}
+                                color={
+                                    selected
+                                        ? colors.amberDark
+                                        : planned
+                                          ? colors.muted
+                                          : colors.secondary
+                                }
+                            />
                         </View>
                         <Text
                             style={[
@@ -84,7 +88,11 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                             {label}
                         </Text>
                         {planned ? (
-                            <Text style={styles.plannedCaption}>Planned</Text>
+                            <View style={styles.plannedPill}>
+                                <Text style={styles.plannedCaption}>
+                                    Planned
+                                </Text>
+                            </View>
                         ) : null}
                     </Pressable>
                 );
@@ -101,9 +109,10 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-around',
-        paddingHorizontal: 12,
+        paddingHorizontal: 16,
         paddingTop: 8,
         width: '100%',
+        ...shadows.lg,
     },
     item: {
         alignItems: 'center',
@@ -114,47 +123,45 @@ const styles = StyleSheet.create({
     },
     indicator: {
         alignItems: 'center',
-        borderRadius: 16,
-        height: 32,
+        borderRadius: 20,
+        height: 34,
         justifyContent: 'center',
-        marginBottom: 3,
-        minWidth: 56,
-        paddingHorizontal: 12,
+        marginBottom: 2,
+        minWidth: 54,
+        paddingHorizontal: 10,
     },
     indicatorSelected: {
         backgroundColor: colors.amberSoft,
     },
-    icon: {
-        color: colors.secondary,
-        fontSize: 18,
-        lineHeight: 20,
-    },
-    iconSelected: {
-        color: colors.amberDark,
-    },
-    iconPlanned: {
-        color: colors.muted,
-    },
     label: {
         color: colors.secondary,
         fontSize: 11,
-        fontWeight: '700',
+        fontWeight: '600',
+        letterSpacing: -0.1,
         textAlign: 'center',
     },
     labelSelected: {
         color: colors.amberDark,
-        fontWeight: '800',
+        fontWeight: '700',
     },
     labelPlanned: {
         color: colors.muted,
     },
+    plannedPill: {
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 4,
+        marginTop: 2,
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+    },
     plannedCaption: {
         color: colors.muted,
         fontSize: 9,
-        fontWeight: '700',
-        marginTop: 1,
+        fontWeight: '600',
+        textTransform: 'uppercase',
     },
     pressed: {
-        opacity: 0.72,
+        opacity: 0.7,
+        transform: [{ scale: 0.96 }],
     },
 });

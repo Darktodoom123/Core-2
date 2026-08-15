@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import type {
     MaintenanceSeverity,
     MaintenanceWorkOrder,
 } from '../../types/index';
-import {
-    PhotoAttachmentPicker,
-    type PhotoAttachment,
-} from '../attachments/PhotoAttachmentPicker';
+import { PhotoAttachmentPicker } from '../attachments/PhotoAttachmentPicker';
+import type { PhotoAttachment } from '../attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../nativeStyles';
 
 export interface MaintenanceWorkOrderTabProps {

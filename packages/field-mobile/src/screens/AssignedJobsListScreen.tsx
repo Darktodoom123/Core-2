@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     ActivityIndicator,
     RefreshControl,
@@ -11,11 +11,12 @@ import {
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { ShiftStatusCard } from '../components/cards/ShiftStatusCard';
+import { Icon } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
 import type { FieldNavItem } from '../components/layout/field-bottom-nav';
 import { FieldHeader } from '../components/layout/field-header';
 import type { SyncTone } from '../components/layout/field-header';
-import { colors, sharedStyles } from '../components/nativeStyles';
+import { colors, shadows, sharedStyles } from '../components/nativeStyles';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
@@ -158,13 +159,24 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         setActiveNavItem(nextItem);
     };
 
-    const handleStartSignOut = () => setSignOutConfirmationOpen(true);
-    const handleCancelSignOut = () => setSignOutConfirmationOpen(false);
+    const handleStartSignOut = () => {
+        setSignOutConfirmationOpen(true);
+    };
+
+    const handleCancelSignOut = () => {
+        setSignOutConfirmationOpen(false);
+    };
 
     const handleLogout = () => {
-        setProfileSheetOpen(false);
-        setSignOutConfirmationOpen(false);
-        onLogout?.();
+        handleCloseProfile();
+
+        if (onLogout) {
+            onLogout();
+        }
+    };
+
+    const handleOpenNotifications = () => {
+        setNotificationsSheetOpen(true);
     };
 
     const handleNavSelect = (item: FieldNavItem) => {
@@ -178,26 +190,24 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     };
 
     return (
-        <View style={styles.screenRoot} testID="field-mobile-screen">
+        <View style={styles.screenRoot}>
             <ScrollView
                 contentInsetAdjustmentBehavior="automatic"
                 contentContainerStyle={styles.content}
-                style={styles.scrollView}
-                testID="refresh-control"
                 refreshControl={
                     <RefreshControl
-                        refreshing={isLoading}
+                        colors={[colors.amber]}
                         onRefresh={onRefresh}
-                        tintColor={colors.blue}
+                        refreshing={isLoading}
+                        tintColor={colors.amber}
                     />
                 }
-                accessibilityLabel="Active field assignments"
+                style={styles.scrollView}
+                testID="refresh-control"
             >
                 <FieldHeader
-                    notificationCount={
-                        syncAttentionCount + pendingResponseCount
-                    }
-                    onOpenNotifications={() => setNotificationsSheetOpen(true)}
+                    notificationCount={syncAttentionCount}
+                    onOpenNotifications={handleOpenNotifications}
                     onOpenProfile={handleOpenProfile}
                     profileOpen={profileSheetOpen}
                     syncStatusLabel={syncStatusLabel}
@@ -207,7 +217,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     userRole={userRole}
                 />
 
-                {/* Shift & GPS Sharing Status Strip */}
                 <ShiftStatusCard
                     locationSharingActive={locationSharingActive}
                     onToggleLocationSharing={onToggleLocationSharing}
@@ -221,15 +230,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     shiftInfo={shiftInfo}
                 />
 
-                {/* ROUTE TAB CONTENT */}
                 {activeNavItem === 'route' ? (
                     <PlannedRoutePanel
                         onBackToToday={() => setActiveNavItem('today')}
                     />
                 ) : null}
 
-                {/* TODAY ASSIGNMENTS CONTENT */}
-                {activeNavItem === 'today' ? (
+                {activeNavItem === 'today' || activeNavItem === 'profile' ? (
                     <>
                         <View
                             style={[
@@ -268,13 +275,20 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         />
 
                         {error ? (
-                            <View
-                                accessible
-                                accessibilityLiveRegion="assertive"
-                                accessibilityRole="alert"
-                                style={styles.errorBox}
-                            >
-                                <Text style={styles.errorText}>{error}</Text>
+                            <View style={styles.errorBox}>
+                                <Icon
+                                    name="alert"
+                                    size={16}
+                                    color={colors.red}
+                                />
+                                <Text
+                                    accessible
+                                    accessibilityLiveRegion="assertive"
+                                    accessibilityRole="alert"
+                                    style={styles.errorText}
+                                >
+                                    {error}
+                                </Text>
                             </View>
                         ) : null}
 
@@ -296,7 +310,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 testID="empty-assignments-msg"
                             >
                                 <View style={styles.emptyMark}>
-                                    <View style={styles.emptyMarkLine} />
+                                    <Icon
+                                        name="shield-check"
+                                        size={26}
+                                        color={colors.amberDark}
+                                    />
                                 </View>
                                 <Text style={styles.emptyTitle}>
                                     No work assigned yet
@@ -375,7 +393,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 32,
+        paddingBottom: 36,
         width: '100%',
     },
     headerCompact: {
@@ -397,31 +415,36 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 22,
         fontWeight: '800',
+        letterSpacing: -0.4,
         lineHeight: 28,
     },
     subtitle: {
         color: colors.secondary,
         fontSize: 14,
         lineHeight: 20,
-        marginTop: 4,
+        marginTop: 2,
     },
     workSummary: {
-        color: colors.text,
+        color: colors.muted,
         fontSize: 13,
-        fontWeight: '700',
+        fontWeight: '600',
         lineHeight: 19,
-        marginTop: 8,
+        marginTop: 6,
     },
     errorBox: {
+        alignItems: 'center',
         backgroundColor: colors.redSoft,
         borderColor: colors.redBorder,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
         marginBottom: 16,
         padding: 12,
     },
     errorText: {
         color: colors.red,
+        flex: 1,
         fontSize: 14,
         lineHeight: 20,
     },
@@ -438,6 +461,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 16,
         padding: 36,
+        ...shadows.sm,
     },
     emptyMark: {
         alignItems: 'center',
@@ -445,7 +469,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         height: 48,
         justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: 14,
         width: 48,
     },
     emptyMarkLine: {
@@ -457,13 +481,14 @@ const styles = StyleSheet.create({
     emptyTitle: {
         color: colors.text,
         fontSize: 16,
-        fontWeight: '800',
+        fontWeight: '700',
+        letterSpacing: -0.2,
     },
     emptyText: {
         color: colors.secondary,
         fontSize: 14,
         lineHeight: 20,
-        marginTop: 8,
+        marginTop: 6,
         textAlign: 'center',
     },
     jobList: {
