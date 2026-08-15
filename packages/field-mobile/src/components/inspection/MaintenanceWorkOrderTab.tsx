@@ -1,9 +1,13 @@
-﻿import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type {
     MaintenanceSeverity,
     MaintenanceWorkOrder,
 } from '../../types/index';
+import {
+    PhotoAttachmentPicker,
+    type PhotoAttachment,
+} from '../attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../nativeStyles';
 
 export interface MaintenanceWorkOrderTabProps {
@@ -20,7 +24,16 @@ export const MaintenanceWorkOrderTab: React.FC<
     const [title, setTitle] = useState('');
     const [desc, setDesc] = useState('');
     const [severity, setSeverity] = useState<MaintenanceSeverity>('minor');
+    const [attachments, setAttachments] = useState<PhotoAttachment[]>([]);
     const [feedback, setFeedback] = useState<string | null>(null);
+
+    const handleAddAttachment = (attachment: PhotoAttachment) => {
+        setAttachments((prev) => [...prev, attachment]);
+    };
+
+    const handleRemoveAttachment = (index: number) => {
+        setAttachments((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleCreate = () => {
         if (!title.trim()) {
@@ -37,10 +50,12 @@ export const MaintenanceWorkOrderTab: React.FC<
             status: 'logged',
             reportedBy: technicianName,
             createdAt: new Date().toISOString(),
+            attachments: attachments.length > 0 ? attachments : undefined,
         };
         onLogWorkOrder(newOrder);
         setTitle('');
         setDesc('');
+        setAttachments([]);
         setFeedback(`Work order ${newOrder.id} logged successfully.`);
     };
 
@@ -116,6 +131,15 @@ export const MaintenanceWorkOrderTab: React.FC<
                     testID="wo-desc-input"
                 />
 
+                <PhotoAttachmentPicker
+                    attachments={attachments}
+                    helperText="Photograph the defective component, leak area, or error tag."
+                    maxCount={4}
+                    onAddAttachment={handleAddAttachment}
+                    onRemoveAttachment={handleRemoveAttachment}
+                    title="Defect Photo Evidence"
+                />
+
                 <Pressable
                     accessibilityLabel="Log maintenance work order"
                     accessibilityRole="button"
@@ -164,6 +188,20 @@ export const MaintenanceWorkOrderTab: React.FC<
                         </View>
                         <Text style={styles.woTitle}>{wo.defectTitle}</Text>
                         <Text style={styles.woDesc}>{wo.description}</Text>
+
+                        {wo.attachments && wo.attachments.length > 0 ? (
+                            <View style={styles.cardAttachmentsRow}>
+                                {wo.attachments.map((att, attIdx) => (
+                                    <Image
+                                        key={`${att.uri}-${attIdx}`}
+                                        source={{ uri: att.uri }}
+                                        style={styles.cardThumbnail}
+                                        accessibilityLabel={`Attached defect photo ${attIdx + 1}`}
+                                    />
+                                ))}
+                            </View>
+                        ) : null}
+
                         <Text style={styles.woMeta}>
                             Status: {wo.status.toUpperCase()} · Reported by{' '}
                             {wo.reportedBy}
@@ -328,6 +366,19 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '700',
         marginTop: 6,
+    },
+    cardAttachmentsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginVertical: 6,
+    },
+    cardThumbnail: {
+        borderColor: colors.borderStrong,
+        borderRadius: 6,
+        borderWidth: 1,
+        height: 48,
+        width: 48,
     },
     pressed: {
         opacity: 0.78,

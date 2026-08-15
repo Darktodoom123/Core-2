@@ -25,6 +25,13 @@
                     "isAndroidForegroundServiceEnabled": true
                 }
             ],
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Allow Core 2 Field App to access photos to attach evidence to maintenance work orders and fuel receipts.",
+                    "cameraPermission": "Allow Core 2 Field App to access your camera to photograph equipment defects and fuel receipts."
+                }
+            ],
             "./plugins/with-gradle-build-memory.cjs",
             "./plugins/with-gradle-problems-report.cjs",
             "./plugins/with-detox-android.cjs",
@@ -39,7 +46,10 @@
             "permissions": [
                 "ACCESS_COARSE_LOCATION",
                 "ACCESS_FINE_LOCATION",
-                "ACCESS_BACKGROUND_LOCATION"
+                "ACCESS_BACKGROUND_LOCATION",
+                "CAMERA",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE"
             ]
         }
     }

@@ -1,4 +1,4 @@
-﻿export type DispatchPriority = 'routine' | 'priority' | 'emergency';
+export type DispatchPriority = 'routine' | 'priority' | 'emergency';
 
 export type DispatchStatus =
     | 'draft'
@@ -371,6 +371,12 @@ export interface MaintenanceWorkOrder {
     status: MaintenanceStatus;
     reportedBy: string;
     createdAt: string;
+    attachments?: Array<{
+        uri: string;
+        fileName?: string;
+        fileSize?: number;
+        base64?: string;
+    }>;
 }
 
 export interface SafeReleaseVerification {
@@ -390,6 +396,7 @@ export interface FuelReceiptLog {
     engineHours?: number | null;
     receiptNumber: string;
     vendorName?: string | null;
+    receiptPhotoUri?: string | null;
     loggedAt: string;
 }
 

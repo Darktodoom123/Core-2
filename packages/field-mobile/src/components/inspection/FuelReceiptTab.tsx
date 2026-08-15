@@ -1,6 +1,10 @@
-﻿import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { FuelReceiptLog } from '../../types/index';
+import {
+    PhotoAttachmentPicker,
+    type PhotoAttachment,
+} from '../attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../nativeStyles';
 
 export interface FuelReceiptTabProps {
@@ -18,7 +22,16 @@ export const FuelReceiptTab: React.FC<FuelReceiptTabProps> = ({
     const [cost, setCost] = useState('');
     const [odo, setOdo] = useState('');
     const [receiptNo, setReceiptNo] = useState('');
+    const [attachments, setAttachments] = useState<PhotoAttachment[]>([]);
     const [feedback, setFeedback] = useState<string | null>(null);
+
+    const handleAddAttachment = (attachment: PhotoAttachment) => {
+        setAttachments([attachment]);
+    };
+
+    const handleRemoveAttachment = () => {
+        setAttachments([]);
+    };
 
     const handleSave = () => {
         const qty = parseFloat(liters);
@@ -35,6 +48,7 @@ export const FuelReceiptTab: React.FC<FuelReceiptTabProps> = ({
             odometerKm: odo ? parseInt(odo, 10) : undefined,
             receiptNumber:
                 receiptNo.trim() || `RCPT-${Date.now().toString().slice(-6)}`,
+            receiptPhotoUri: attachments[0]?.uri || null,
             loggedAt: new Date().toISOString(),
         };
         onLogFuelReceipt(newLog);
@@ -42,6 +56,7 @@ export const FuelReceiptTab: React.FC<FuelReceiptTabProps> = ({
         setCost('');
         setOdo('');
         setReceiptNo('');
+        setAttachments([]);
         setFeedback(
             `Fuel receipt logged: ${newLog.quantityLiters}L (${newLog.receiptNumber}).`,
         );
@@ -119,6 +134,15 @@ export const FuelReceiptTab: React.FC<FuelReceiptTabProps> = ({
                     </View>
                 </View>
 
+                <PhotoAttachmentPicker
+                    attachments={attachments}
+                    helperText="Photograph the fuel dispenser slip or station invoice."
+                    maxCount={1}
+                    onAddAttachment={handleAddAttachment}
+                    onRemoveAttachment={handleRemoveAttachment}
+                    title="Receipt Photo Evidence"
+                />
+
                 <Pressable
                     accessibilityLabel="Record fuel log"
                     accessibilityRole="button"
@@ -159,6 +183,15 @@ export const FuelReceiptTab: React.FC<FuelReceiptTabProps> = ({
                                 {log.receiptNumber}
                             </Text>
                         </View>
+
+                        {log.receiptPhotoUri ? (
+                            <Image
+                                source={{ uri: log.receiptPhotoUri }}
+                                style={styles.receiptThumbnail}
+                                accessibilityLabel={`Fuel receipt photo for ${log.receiptNumber}`}
+                            />
+                        ) : null}
+
                         <Text style={styles.fuelMeta}>
                             {log.fuelCost
                                 ? `$${log.fuelCost.toFixed(2)} · `
@@ -274,6 +307,14 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 12,
         marginTop: 4,
+    },
+    receiptThumbnail: {
+        borderColor: colors.borderStrong,
+        borderRadius: 6,
+        borderWidth: 1,
+        height: 64,
+        marginVertical: 6,
+        width: 64,
     },
     pressed: {
         opacity: 0.78,
