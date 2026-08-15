@@ -9,8 +9,10 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 
 uses(RefreshDatabase::class);
 
@@ -141,4 +143,37 @@ it('requires a reason when rejecting a job report', function (): void {
     $report->refresh();
     expect($report->status)->toBe(JobReportStatus::Rejected)
         ->and($report->remarks)->toContain('Review Note: Incomplete site photos.');
+});
+
+it('allows dispatcher to view job reports but forbids them from reviewing or approving', function (): void {
+    $dispatcher = createReportUser(RoleName::Dispatcher);
+    $driver = createReportUser(RoleName::Driver);
+    $job = createReportJob($dispatcher);
+
+    $report = JobReport::query()->create([
+        'dispatch_job_id' => $job->id,
+        'author_id' => $driver->id,
+        'started_at' => now()->subHour(),
+        'ended_at' => now(),
+        'work_summary' => 'Driver field report',
+        'status' => JobReportStatus::Submitted,
+        'submitted_at' => now(),
+    ]);
+
+    // Dispatcher can view the report
+    $this->actingAs($dispatcher)
+        ->getJson('/operations/job-reports')
+        ->assertOk()
+        ->assertJsonFragment(['work_summary' => 'Driver field report']);
+
+    expect(Gate::forUser($dispatcher)->allows('review', $report))->toBeFalse();
+
+    // Dispatcher is forbidden from reviewing/approving the report
+    $this->actingAs($dispatcher)
+        ->post("/operations/job-reports/{$report->id}/review", [
+            'status' => 'approved',
+        ])
+        ->assertStatus(403);
+
+    expect(OperationsWorkspaceViewModel::capabilities($dispatcher)['review_job_report'])->toBeFalse();
 });

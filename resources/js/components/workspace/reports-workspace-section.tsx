@@ -1,4 +1,4 @@
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     Check,
@@ -788,6 +788,9 @@ function ReportDetailPane({
     report: JobReportViewModel;
     capabilities: WorkspaceCapabilities;
 }) {
+    const { auth } = usePage<{ auth?: { user?: { id: number } } }>().props;
+    const isAuthor =
+        auth?.user?.id !== undefined && auth.user.id === report.author?.id;
     const [copiedChecksumId, setCopiedChecksumId] = useState<number | null>(
         null,
     );
@@ -1022,6 +1025,7 @@ function ReportDetailPane({
 
             {/* Review Controls (Manager Authorization) */}
             {capabilities.review_job_report &&
+                !isAuthor &&
                 report.status.value === 'submitted' && (
                     <div className="border-t border-line pt-4">
                         <div className="flex items-center gap-2">

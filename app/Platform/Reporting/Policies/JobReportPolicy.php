@@ -51,8 +51,6 @@ class JobReportPolicy
             return false;
         }
 
-        return $user->can(PermissionName::ReportsViewAll->value)
-            || $user->can(PermissionName::ReportsViewDispatch->value)
-            || $user->can(PermissionName::DispatchApproveChange->value);
+        return $user->can(PermissionName::ReportsViewAll->value);
     }
 }

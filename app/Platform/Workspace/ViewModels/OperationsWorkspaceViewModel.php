@@ -662,7 +662,7 @@ final class OperationsWorkspaceViewModel
                 'max_count' => (int) config('attachments.max_count_per_owner'),
                 'accepted_mime_types' => array_keys(config('attachments.mime_extensions', [])),
             ],
-            'review_job_report' => $user->can(PermissionName::ReportsViewAll->value) || $user->can(PermissionName::ReportsViewDispatch->value),
+            'review_job_report' => $user->can(PermissionName::ReportsViewAll->value),
             'export_reports' => $user->can(PermissionName::ReportsExport->value),
             'manage_notifications' => true,
             'view_archive' => $user->can(PermissionName::ArchiveManage->value),

@@ -10,6 +10,7 @@ use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class ReviewJobReport
@@ -19,6 +20,8 @@ class ReviewJobReport
         if ($reviewer->id === $report->author_id) {
             throw new AuthorizationException('Authors cannot review or approve their own job reports.');
         }
+
+        Gate::forUser($reviewer)->authorize('review', $report);
 
         return DB::transaction(function () use ($reviewer, $report, $status, $reason): JobReport {
             $report->refresh();

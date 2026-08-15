@@ -4,15 +4,20 @@ namespace App\Platform\Reporting\Http\Requests;
 
 use App\Platform\Reporting\Models\JobReport;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class ReviewJobReportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        /** @var JobReport|null $report */
+        /** @var JobReport|string|int|null $report */
         $report = $this->route('jobReport');
 
-        return $report !== null && $this->user()->can('review', $report);
+        if (! $report instanceof JobReport && is_numeric($report)) {
+            $report = JobReport::query()->find($report);
+        }
+
+        return $report instanceof JobReport && Gate::forUser($this->user())->allows('review', $report);
     }
 
     /** @return array<string, mixed> */
