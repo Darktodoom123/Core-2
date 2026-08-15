@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 8,
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
         paddingVertical: 7,
     },
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     accountButtonText: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     accountActionText: {

@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
     },
     inputInShell: {
         flex: 1,
-        minHeight: 46,
+        minHeight: 48,
         color: colors.text,
         paddingLeft: 14,
         paddingRight: 4,

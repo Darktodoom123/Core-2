@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         justifyContent: 'center',
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     closeButtonText: {
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     retryButton: {
         backgroundColor: colors.amber,
         marginTop: 6,
-        minHeight: 40,
+        minHeight: 48,
     },
     emptyCard: {
         alignItems: 'center',

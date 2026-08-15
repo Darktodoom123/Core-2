@@ -456,6 +456,9 @@ export function DateTimePicker({
                         maxHeight: `${coords.maxHeight}px`,
                         zIndex: 99999,
                     }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Date and time picker"
                     className="max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-surface p-3.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
                 >
                     {/* Quick Presets Bar */}

@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 4,
         marginBottom: 8,
-        minHeight: 44,
+        minHeight: 48,
         minWidth: 72,
     },
     backIcon: {
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 8,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },

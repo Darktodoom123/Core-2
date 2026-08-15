@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 12,
-        minHeight: 44,
+        minHeight: 48,
     },
     backButton: {
         alignItems: 'center',

@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#334155',
         borderRadius: 8,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         minWidth: 72,
         paddingHorizontal: 12,
     },
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     cancelDelayButton: {
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         marginTop: 4,
     },
     cancelDelayText: {

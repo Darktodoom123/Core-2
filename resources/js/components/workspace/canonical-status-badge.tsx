@@ -49,7 +49,7 @@ const toneClasses: Record<StatusTone, string> = {
     brand: 'bg-brand-soft text-brand-strong',
     success: 'bg-success-soft text-success-strong',
     warning: 'bg-warning-soft text-warning-strong',
-    danger: 'bg-danger-soft text-danger',
+    danger: 'bg-danger-soft text-danger-strong',
 };
 
 const toneIcons: Record<StatusTone, LucideIcon> = {

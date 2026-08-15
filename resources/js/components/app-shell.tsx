@@ -335,7 +335,7 @@ export function AppShell({
                         <button
                             type="button"
                             onClick={() => setMobileOpen(true)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle text-ink transition-colors hover:bg-line"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-subtle text-ink transition-colors hover:bg-line focus-visible:ring-2 focus-visible:ring-brand"
                             aria-label="Open navigation menu"
                         >
                             <Menu className="h-5 w-5" />

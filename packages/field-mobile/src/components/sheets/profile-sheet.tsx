@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         justifyContent: 'center',
-        minHeight: 44,
+        minHeight: 48,
         paddingHorizontal: 14,
     },
     closeButtonText: {
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         justifyContent: 'center',
         marginTop: 4,
-        minHeight: 40,
+        minHeight: 48,
         paddingHorizontal: 12,
     },
     quickSyncButtonText: {

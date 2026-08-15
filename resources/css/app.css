@@ -83,8 +83,11 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-[tabindex]:focus-visible {
-    outline: 3px solid color-mix(in oklch, var(--color-brand) 42%, transparent);
+[tabindex]:focus-visible,
+[role='button']:focus-visible,
+[role='checkbox']:focus-visible,
+[role='tab']:focus-visible {
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
 }
 
@@ -96,6 +99,23 @@ textarea:focus-visible,
 .scrollbar-thin {
     scrollbar-color: var(--color-line-strong) transparent;
     scrollbar-width: thin;
+}
+
+.touch-target-web {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.table-responsive-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.content-readable {
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 
 .mobile-safe-bottom {
@@ -144,8 +164,10 @@ textarea:focus-visible,
     *::before,
     *::after {
         scroll-behavior: auto !important;
-        animation: none !important;
-        transition: none !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        transition-delay: 0ms !important;
     }
 }
 
