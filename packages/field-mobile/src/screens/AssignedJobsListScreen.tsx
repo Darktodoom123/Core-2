@@ -196,10 +196,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 contentContainerStyle={styles.content}
                 refreshControl={
                     <RefreshControl
-                        colors={[colors.amber]}
+                        colors={[colors.primary]}
                         onRefresh={onRefresh}
                         refreshing={isLoading}
-                        tintColor={colors.amber}
+                        tintColor={colors.primary}
                     />
                 }
                 style={styles.scrollView}
@@ -297,7 +297,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 accessibilityLiveRegion="polite"
                                 style={styles.loadingBox}
                             >
-                                <ActivityIndicator color={colors.blue} />
+                                <ActivityIndicator color={colors.primary} />
                                 <Text style={sharedStyles.statusText}>
                                     Loading assignments…
                                 </Text>
@@ -312,8 +312,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 <View style={styles.emptyMark}>
                                     <Icon
                                         name="shield-check"
-                                        size={26}
-                                        color={colors.amberDark}
+                                        size={28}
+                                        color={colors.primaryDark}
                                     />
                                 </View>
                                 <Text style={styles.emptyTitle}>
@@ -457,38 +457,42 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 16,
+        borderRadius: 20,
         borderWidth: 1,
         marginBottom: 16,
-        padding: 36,
+        paddingHorizontal: 24,
+        paddingVertical: 36,
         ...shadows.sm,
     },
     emptyMark: {
         alignItems: 'center',
-        backgroundColor: colors.amberSoft,
-        borderRadius: 24,
-        height: 48,
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primaryBorder,
+        borderRadius: 28,
+        borderWidth: 1,
+        height: 56,
         justifyContent: 'center',
-        marginBottom: 14,
-        width: 48,
+        marginBottom: 16,
+        width: 56,
     },
     emptyMarkLine: {
-        backgroundColor: colors.amberDark,
+        backgroundColor: colors.primaryDark,
         borderRadius: 2,
         height: 4,
         width: 18,
     },
     emptyTitle: {
         color: colors.text,
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '700',
         letterSpacing: -0.2,
     },
     emptyText: {
         color: colors.secondary,
         fontSize: 14,
-        lineHeight: 20,
+        lineHeight: 21,
         marginTop: 6,
+        maxWidth: 300,
         textAlign: 'center',
     },
     jobList: {

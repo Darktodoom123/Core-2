@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { OutboxCommand } from '../../types/index';
-import { colors, sharedStyles } from '../nativeStyles';
+import { colors, shadows, sharedStyles } from '../nativeStyles';
 
 export interface SyncStatusPanelProps {
     showDetails: boolean;
@@ -131,11 +131,12 @@ const styles = StyleSheet.create({
     panel: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         gap: 8,
         marginBottom: 16,
-        padding: 12,
+        padding: 14,
+        ...shadows.sm,
     },
     panelConflict: {
         backgroundColor: colors.warningLight,
@@ -147,14 +148,14 @@ const styles = StyleSheet.create({
     },
     panelTitle: {
         color: colors.text,
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '800',
     },
     details: {
-        borderTopColor: colors.border,
+        borderTopColor: colors.borderSubtle,
         borderTopWidth: 1,
         gap: 8,
-        paddingTop: 8,
+        paddingTop: 10,
     },
     guidance: {
         color: colors.secondary,
@@ -188,10 +189,10 @@ const styles = StyleSheet.create({
         color: colors.secondary,
     },
     syncingChip: {
-        backgroundColor: colors.blueSoft,
+        backgroundColor: colors.primarySoft,
     },
     syncingChipText: {
-        color: colors.blueDark,
+        color: colors.primaryDark,
     },
     failedChip: {
         backgroundColor: colors.redSoft,
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
         color: colors.secondary,
     },
     syncButton: {
-        backgroundColor: colors.amber,
+        backgroundColor: colors.primary,
         minHeight: 48,
         width: '100%',
     },

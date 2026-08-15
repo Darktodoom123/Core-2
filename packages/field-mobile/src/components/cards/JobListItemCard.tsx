@@ -106,7 +106,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                         <Icon
                             name={isCrane ? 'crane' : 'truck'}
                             size={20}
-                            color={colors.amberDark}
+                            color={colors.primaryDark}
                         />
                     </View>
                     <View style={styles.assetCopy}>
@@ -146,7 +146,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                     <Icon
                         name="chevron-right"
                         size={16}
-                        color={colors.amberDark}
+                        color={colors.primaryDark}
                     />
                 </View>
             </View>
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     jobCard: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 16,
+        borderRadius: 18,
         borderWidth: 1,
         padding: 16,
         marginBottom: 12,
@@ -175,13 +175,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     refContainer: {
-        backgroundColor: colors.blueLight,
+        backgroundColor: colors.primarySoft,
         borderRadius: 8,
         paddingHorizontal: 8,
         paddingVertical: 3,
     },
     reference: {
-        color: colors.blueDark,
+        color: colors.primaryDark,
         fontSize: 13,
         fontWeight: '700',
         letterSpacing: 0.2,
@@ -260,8 +260,8 @@ const styles = StyleSheet.create({
     assetSummary: {
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 12,
+        borderColor: colors.borderSubtle,
+        borderRadius: 14,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 10,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     },
     assetIconBox: {
         alignItems: 'center',
-        backgroundColor: colors.amberSoft,
+        backgroundColor: colors.primarySoft,
         borderRadius: 10,
         height: 36,
         justifyContent: 'center',
@@ -283,7 +283,8 @@ const styles = StyleSheet.create({
     assetLabel: {
         color: colors.muted,
         fontSize: 11,
-        fontWeight: '600',
+        fontWeight: '700',
+        letterSpacing: 0.5,
         textTransform: 'uppercase',
     },
     assetValue: {
@@ -311,7 +312,7 @@ const styles = StyleSheet.create({
     },
     cardActionRow: {
         alignItems: 'center',
-        borderTopColor: colors.border,
+        borderTopColor: colors.borderSubtle,
         borderTopWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     actionBtnText: {
-        color: colors.amberDark,
+        color: colors.primaryDark,
         fontSize: 13,
         fontWeight: '700',
     },

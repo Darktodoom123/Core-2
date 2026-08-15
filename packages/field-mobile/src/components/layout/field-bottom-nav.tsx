@@ -71,7 +71,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                                 size={22}
                                 color={
                                     selected
-                                        ? colors.amberDark
+                                        ? colors.primaryDark
                                         : planned
                                           ? colors.muted
                                           : colors.secondary
@@ -124,14 +124,14 @@ const styles = StyleSheet.create({
     indicator: {
         alignItems: 'center',
         borderRadius: 20,
-        height: 34,
+        height: 32,
         justifyContent: 'center',
         marginBottom: 2,
-        minWidth: 54,
+        minWidth: 52,
         paddingHorizontal: 10,
     },
     indicatorSelected: {
-        backgroundColor: colors.amberSoft,
+        backgroundColor: colors.primarySoft,
     },
     label: {
         color: colors.secondary,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     labelSelected: {
-        color: colors.amberDark,
+        color: colors.primaryDark,
         fontWeight: '700',
     },
     labelPlanned: {
@@ -151,13 +151,14 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surfaceMuted,
         borderRadius: 4,
         marginTop: 2,
-        paddingHorizontal: 4,
+        paddingHorizontal: 5,
         paddingVertical: 1,
     },
     plannedCaption: {
         color: colors.muted,
         fontSize: 9,
-        fontWeight: '600',
+        fontWeight: '700',
+        letterSpacing: 0.2,
         textTransform: 'uppercase',
     },
     pressed: {
