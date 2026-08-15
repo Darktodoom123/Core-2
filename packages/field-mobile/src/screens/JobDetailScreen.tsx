@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     AppState,
     Pressable,
@@ -17,6 +17,10 @@ import { ParkedSecuredCard } from '../components/cards/ParkedSecuredCard';
 import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
 import { colors } from '../components/nativeStyles';
 import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
+import {
+    DigitalSignatureModal,
+    type DigitalSignatureData,
+} from '../components/signature/DigitalSignatureModal';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -80,10 +84,29 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     onLocationQueued,
 }) => {
     const [driveModeOpen, setDriveModeOpen] = useState(false);
+    const [signatureModalOpen, setSignatureModalOpen] = useState(false);
     const [parkedSecuredState, setParkedSecuredState] =
         useState<ParkedSecuredState | null>(null);
     const [craneSetupState, setCraneSetupState] =
         useState<CraneSetupState | null>(null);
+
+    const handleProgressionTransition = (
+        jobId: number,
+        nextStatus: DispatchStatus,
+        version: number,
+    ) => {
+        if (nextStatus === 'completed') {
+            setSignatureModalOpen(true);
+
+            return;
+        }
+        onTransitionStatus(jobId, nextStatus, version);
+    };
+
+    const handleConfirmSignature = (_signature: DigitalSignatureData) => {
+        setSignatureModalOpen(false);
+        onTransitionStatus(job.id, 'completed', job.version);
+    };
 
     useEffect(() => {
         if (
@@ -382,7 +405,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 isParkedAndSecured={parkedSecuredState?.isConfirmed ?? false}
                 isProcessing={isProcessingTransition}
                 job={job}
-                onTransitionStatus={onTransitionStatus}
+                onTransitionStatus={handleProgressionTransition}
             />
 
             {/* 3. Heavy Crane Route Preview & Drive Mode */}
@@ -476,6 +499,15 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 }}
                 onClose={() => setDriveModeOpen(false)}
                 visible={driveModeOpen}
+            />
+
+            {/* Client Digital Signature Sign-Off Modal */}
+            <DigitalSignatureModal
+                clientName={job.client}
+                jobReference={job.reference}
+                onClose={() => setSignatureModalOpen(false)}
+                onConfirmSignature={handleConfirmSignature}
+                visible={signatureModalOpen}
             />
         </ScrollView>
     );
