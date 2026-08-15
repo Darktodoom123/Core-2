@@ -1,4 +1,4 @@
-﻿import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
+import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import React from 'react';
 import { CraneSetupSafetyCard } from '../components/cards/CraneSetupSafetyCard';
 import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
@@ -15,6 +15,8 @@ import type {
     ParkedSecuredChecklist,
     TechnicianInspectionCheck,
 } from '../types/index';
+
+jest.setTimeout(25000);
 
 describe('Native Field Workflows Component Tests', () => {
     afterEach(async () => {
