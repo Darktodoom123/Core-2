@@ -39,7 +39,7 @@ flowchart TD
 | **UI-4** | Native Field Workflows | `PASSED` | `UI-1` | `83a4881` | `packages/field-mobile/` (Today's work, Heavy-crane drive mode, inspection) | Drive mode, park & secure confirmation, setup checks, tech inspection/maintenance |
 | **UI-5** | Prototype/Live UI Convergence | `PASSED` | `UI-3`, `UI-4` | `a59bcab` | Prototype cleanup, fixture retirement, shared components | Eliminate fixture-only writes, retire obsolete views, unify status language |
 | **UI-6** | Responsive, A11y & Perf Hardening | `PASSED` | `UI-5` | `36f5b1c` | Responsive layouts, CSS tokens, WCAG 2.2 AA, MapLibre bundle | 320px/390px/tablet/desktop responsiveness, 44px targets, reduced motion, bundle audit |
-| **UI-7** | Final Verification & Release Readiness | `PASSED` | `UI-6` | `d6ad455` | Release docs, test matrix, AI verification responses | All full CI & mobile suites pass, clean build, docs synchronized, completion report |
+| **UI-7** | Final Verification & Release Readiness | `PASSED` | `UI-6` | `b207baa` | Release docs, test matrix, AI verification responses | All full CI & mobile suites pass, clean build, docs synchronized, completion report |
 
 ---
 
