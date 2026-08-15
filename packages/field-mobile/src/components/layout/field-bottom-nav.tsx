@@ -1,4 +1,4 @@
-﻿import React, { useContext } from 'react';
+import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { colors } from '../nativeStyles';
@@ -54,13 +54,16 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                         onPress={() => onSelect(id)}
                         style={({ pressed }) => [
                             styles.item,
-                            selected && styles.itemSelected,
-                            planned && styles.itemPlanned,
                             pressed && styles.pressed,
                         ]}
                         testID={`bottom-nav-${id}`}
                     >
-                        <View style={styles.iconWrap}>
+                        <View
+                            style={[
+                                styles.indicator,
+                                selected && styles.indicatorSelected,
+                            ]}
+                        >
                             <Text
                                 style={[
                                     styles.icon,
@@ -92,42 +95,39 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        alignItems: 'stretch',
+        alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
         borderTopWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-around',
-        paddingHorizontal: 8,
+        paddingHorizontal: 12,
         paddingTop: 8,
+        width: '100%',
     },
     item: {
         alignItems: 'center',
-        borderRadius: 10,
         flex: 1,
-        gap: 2,
         justifyContent: 'center',
-        minHeight: 56,
-        minWidth: 64,
-        paddingHorizontal: 4,
-        paddingVertical: 5,
+        minHeight: 52,
+        paddingVertical: 4,
     },
-    itemSelected: {
-        backgroundColor: colors.amberSoft,
-    },
-    itemPlanned: {
-        opacity: 0.72,
-    },
-    iconWrap: {
+    indicator: {
         alignItems: 'center',
-        height: 22,
+        borderRadius: 16,
+        height: 32,
         justifyContent: 'center',
-        minWidth: 24,
+        marginBottom: 3,
+        minWidth: 56,
+        paddingHorizontal: 12,
+    },
+    indicatorSelected: {
+        backgroundColor: colors.amberSoft,
     },
     icon: {
         color: colors.secondary,
-        fontSize: 19,
-        lineHeight: 22,
+        fontSize: 18,
+        lineHeight: 20,
     },
     iconSelected: {
         color: colors.amberDark,
@@ -138,10 +138,12 @@ const styles = StyleSheet.create({
     label: {
         color: colors.secondary,
         fontSize: 11,
-        fontWeight: '800',
+        fontWeight: '700',
+        textAlign: 'center',
     },
     labelSelected: {
         color: colors.amberDark,
+        fontWeight: '800',
     },
     labelPlanned: {
         color: colors.muted,
@@ -150,8 +152,9 @@ const styles = StyleSheet.create({
         color: colors.muted,
         fontSize: 9,
         fontWeight: '700',
+        marginTop: 1,
     },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.72,
     },
 });

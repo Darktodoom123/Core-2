@@ -1,4 +1,4 @@
-﻿import type { ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import React, {
     Component,
     useCallback,
@@ -617,7 +617,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     return (
         <ErrorBoundary>
-            <SafeAreaView style={styles.fullScreen}>
+            <SafeAreaView
+                edges={['top', 'left', 'right']}
+                style={styles.fullScreen}
+            >
                 <StatusBar
                     barStyle="dark-content"
                     backgroundColor={colors.surface}
