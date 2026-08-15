@@ -23,6 +23,7 @@ import {
     PageHeading,
     Panel,
     StatusBadge,
+    PrototypeSandboxBanner,
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
@@ -82,6 +83,7 @@ export function GuidedDispatch({
     if (!selectedJob) {
         return (
             <div>
+                <PrototypeSandboxBanner surfaceName="Guided Dispatch Simulation" />
                 <PageHeading
                     title="Dispatch workspace"
                     description="Review the request, resolve operational conflicts, and confirm the prepared resource plan."
@@ -102,6 +104,7 @@ export function GuidedDispatch({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Guided Dispatch Simulation" />
             <PageHeading
                 title="Dispatch workspace"
                 description="Review the request, resolve operational conflicts, and confirm the prepared resource plan."
@@ -783,6 +786,7 @@ export function LiveOperations({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Live Telemetry Simulation" />
             <PageHeading
                 title="Live operations"
                 description="Monitor routes, job-site geofences, signal freshness, and field exceptions from one operational view."

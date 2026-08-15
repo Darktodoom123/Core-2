@@ -21,6 +21,7 @@ import {
     Panel,
     ProgressBar,
     StatusBadge,
+    PrototypeSandboxBanner,
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { FuelRequest, Resource, UserRole } from '@/types/operations';
@@ -108,6 +109,7 @@ export function ResourceDirectory({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Resource Directory Simulation" />
             <PageHeading
                 title={
                     mode === 'fleet' ? 'Fleet management' : 'Cranes & equipment'
@@ -374,6 +376,7 @@ export function FuelManagement({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Fuel Management Simulation" />
             <PageHeading
                 title={canApprove ? 'Fuel approvals' : 'Fuel management'}
                 description="Track fuel requests, approval decisions, dispensing records, meter readings, and operational anomalies."

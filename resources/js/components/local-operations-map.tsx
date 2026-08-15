@@ -98,8 +98,8 @@ export function LocalOperationsMap({
                             className="h-4 w-4 text-brand-strong"
                             aria-hidden="true"
                         />
-                        Stadia Maps · development/evaluation · prototype
-                        telemetry
+                        [Prototype / Sandbox Simulation Map] Stadia Maps ·
+                        Evaluation Only (Production tracking is LiveTrackingMap)
                     </div>
                 </div>
             </div>

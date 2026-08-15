@@ -34,6 +34,7 @@ import {
     Panel,
     ProgressBar,
     StatusBadge,
+    PrototypeSandboxBanner,
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
@@ -95,6 +96,10 @@ function MobileFrame({
 
     return (
         <div className="min-h-[calc(100vh-4.5rem)] bg-[#e8edf2] px-0 py-0 md:p-6">
+            <PrototypeSandboxBanner
+                surfaceName="Field Mobile Web Simulation (Native App: packages/field-mobile)"
+                className="mb-3 md:rounded-lg"
+            />
             <div className="mx-auto flex min-h-[calc(100vh-4.5rem)] w-full max-w-[27rem] flex-col overflow-hidden bg-surface md:min-h-[50rem] md:rounded-2xl md:border md:border-line-strong md:shadow-lg">
                 <header className="flex min-h-16 items-center gap-3 border-b border-line px-3">
                     <button

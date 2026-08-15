@@ -20,6 +20,7 @@ import {
     Panel,
     ProgressBar,
     StatusBadge,
+    PrototypeSandboxBanner,
 } from '@/components/ui';
 import type {
     AppSection,
@@ -83,6 +84,7 @@ export function AdministratorOverview({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Administrator Overview Simulation" />
             <PageHeading
                 title="System overview"
                 description="Maintain platform access, registry quality, integration health, and recoverability."
@@ -227,6 +229,7 @@ export function AdministrationSurface() {
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Administration Simulation" />
             <PageHeading
                 title="Users & platform settings"
                 description="Control access, dispatch policies, notifications, GPS retention, and prototype permissions."
@@ -631,6 +634,7 @@ export function ReportsSurface({
 
     return (
         <div>
+            <PrototypeSandboxBanner surfaceName="Reports & Audit Simulation" />
             <PageHeading
                 title={
                     administrator ? 'Audit & backups' : 'Performance reports'

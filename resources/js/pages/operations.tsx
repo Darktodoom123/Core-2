@@ -395,7 +395,7 @@ export default function Operations() {
 
     return (
         <>
-            <Head title="Core Transaction 2 Operations" />
+            <Head title="[Prototype Sandbox - Read-Only Simulation] Core Transaction 2 Operations" />
             <AppShell
                 role={state.role}
                 section={state.section}

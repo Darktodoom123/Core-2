@@ -88,6 +88,7 @@ export function PageHeading({
 }
 
 const statusClasses: Record<string, string> = {
+    // Title Case (Prototype simulation compatibility)
     Draft: 'bg-surface-subtle text-ink-soft',
     Scheduled: 'bg-brand-soft text-brand-strong',
     Dispatched: 'bg-brand-soft text-brand-strong',
@@ -112,6 +113,50 @@ const statusClasses: Record<string, string> = {
     Priority: 'bg-warning-soft text-warning-strong',
     Emergency: 'bg-danger-soft text-danger-strong',
     Routine: 'bg-surface-subtle text-ink-soft',
+    Operational: 'bg-success-soft text-success-strong',
+    Resolved: 'bg-success-soft text-success-strong',
+
+    // Canonical Lowercase Statuses
+    draft: 'bg-surface-subtle text-ink-soft',
+    pending_approval: 'bg-warning-soft text-warning-strong',
+    scheduled: 'bg-brand-soft text-brand-strong',
+    dispatched: 'bg-brand-soft text-brand-strong',
+    accepted: 'bg-brand-soft text-brand-strong',
+    en_route: 'bg-brand-soft text-brand-strong',
+    arrived: 'bg-success-soft text-success-strong',
+    working: 'bg-success-soft text-success-strong',
+    completed: 'bg-success-soft text-success-strong',
+    cancelled: 'bg-danger-soft text-danger-strong',
+    routine: 'bg-surface-subtle text-ink-soft',
+    priority: 'bg-warning-soft text-warning-strong',
+    emergency: 'bg-danger-soft text-danger-strong',
+    available: 'bg-success-soft text-success-strong',
+    assigned: 'bg-brand-soft text-brand-strong',
+    in_transit: 'bg-brand-soft text-brand-strong',
+    on_site: 'bg-success-soft text-success-strong',
+    maintenance: 'bg-warning-soft text-warning-strong',
+    out_of_service: 'bg-danger-soft text-danger-strong',
+    under_inspection: 'bg-warning-soft text-warning-strong',
+    under_maintenance: 'bg-warning-soft text-warning-strong',
+    awaiting_parts: 'bg-warning-soft text-warning-strong',
+    ready_for_service: 'bg-success-soft text-success-strong',
+    unavailable: 'bg-danger-soft text-danger-strong',
+    pending: 'bg-warning-soft text-warning-strong',
+    approved: 'bg-success-soft text-success-strong',
+    rejected: 'bg-danger-soft text-danger-strong',
+    submitted: 'bg-surface-subtle text-ink-soft',
+    dispatching: 'bg-brand-soft text-brand-strong',
+    forwarded: 'bg-brand-soft text-brand-strong',
+    verified: 'bg-success-soft text-success-strong',
+    logged: 'bg-success-soft text-success-strong',
+    queued: 'bg-surface-subtle text-ink-soft',
+    processing: 'bg-brand-soft text-brand-strong',
+    failed: 'bg-danger-soft text-danger-strong',
+    expired: 'bg-surface-subtle text-ink-soft',
+    fresh: 'bg-success-soft text-success-strong',
+    delayed: 'bg-warning-soft text-warning-strong',
+    stale: 'bg-warning-soft text-warning-strong',
+    offline: 'bg-surface-subtle text-ink-soft',
 };
 
 export function StatusBadge({
@@ -376,3 +421,44 @@ export function Skeleton({
 }
 
 export { DateTimePicker } from './ui/date-time-picker';
+
+export function PrototypeSandboxBanner({
+    surfaceName,
+    className,
+}: {
+    surfaceName?: string;
+    className?: string;
+}) {
+    return (
+        <aside
+            className={cn(
+                'border-b border-warning-strong/30 bg-warning-soft/95 px-4 py-2 text-xs text-warning-strong shadow-xs',
+                className,
+            )}
+            role="status"
+            aria-label="Prototype Sandbox Notice"
+        >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded bg-warning-strong px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                        Simulation
+                    </span>
+                    <span className="font-semibold">
+                        [Prototype / Sandbox Demo Mode - Read-Only Simulation
+                        {surfaceName ? ' - ' + surfaceName : ''}]
+                    </span>
+                    <span className="hidden text-ink-soft md:inline">
+                        — Actions simulated in local memory. No database records
+                        modified.
+                    </span>
+                </div>
+                <a
+                    href="/operations"
+                    className="inline-flex items-center gap-1 font-semibold text-brand-strong underline hover:text-brand"
+                >
+                    Go to Live Operations Workspace →
+                </a>
+            </div>
+        </aside>
+    );
+}

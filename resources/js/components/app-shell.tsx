@@ -23,7 +23,7 @@ import { useState } from 'react';
 import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
-import { Button } from '@/components/ui';
+import { Button, PrototypeSandboxBanner } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
     AppSection,
@@ -329,6 +329,7 @@ export function AppShell({
             </aside>
 
             <div className="min-w-0">
+                <PrototypeSandboxBanner surfaceName="Operations Sandbox" />
                 <header className="sticky top-0 z-30 flex h-[4.5rem] items-center gap-3 border-b border-line bg-surface px-5 md:px-7">
                     <div className="flex items-center gap-2 md:hidden">
                         <button
@@ -450,9 +451,9 @@ export function AppShell({
 
 export function PrototypeBadge() {
     return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-strong">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning-strong">
             <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-            Interactive prototype
+            [Prototype / Sandbox Demo Mode - Read-Only Simulation]
         </span>
     );
 }

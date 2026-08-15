@@ -1,0 +1,60 @@
+{
+  "node_id": "UI-5",
+  "name": "Prototype/Live UI Convergence",
+  "status": "PASSED",
+  "upstream_commits": [
+    "feb0819 feat: complete Core-2 UI phase UI-3 shared platform surfaces",
+    "83a4881 feat: complete Core-2 UI phase UI-4 native field workflows"
+  ],
+  "files_changed": [
+    "resources/js/components/app-shell.tsx",
+    "resources/js/components/local-operations-map.tsx",
+    "resources/js/components/surfaces/dispatch-surfaces.tsx",
+    "resources/js/components/surfaces/management-surfaces.tsx",
+    "resources/js/components/surfaces/mobile-surfaces.tsx",
+    "resources/js/components/surfaces/resource-surfaces.tsx",
+    "resources/js/components/surfaces/tracking-surfaces.tsx",
+    "resources/js/components/ui.tsx",
+    "resources/js/components/workspace/canonical-status-badge.tsx",
+    "resources/js/components/workspace/live-workspace-sections.tsx",
+    "resources/js/components/workspace/tracking-workspace-section.tsx",
+    "resources/js/data/fixtures.ts",
+    "resources/js/data/fixtures/index.ts",
+    "resources/js/data/fixtures/README.md",
+    "resources/js/pages/operations.tsx",
+    "resources/js/state/operations-reducer.ts",
+    "resources/js/types/operations.ts",
+    "resources/js/types/workspace.ts"
+  ],
+  "implemented_behavior": [
+    "Strict separation between live production workspaces (/operations and /operations/dispatch-jobs/{id}) and unrouted prototype demo surfaces (pages/operations.tsx).",
+    "Elimination of fake local writes that mimic backend actions in prototype state reducers, replacing them with clear simulation notifications (e.g. [Read-Only Simulation]).",
+    "Implementation of high-visibility [Prototype / Sandbox Demo Mode - Read-Only Simulation] banners and badges across all prototype pages, frames, and surface components (GuidedDispatch, DispatchBoard, LiveOperations, AdministratorOverview, AdministrationSurface, ManagerOverview, ReportsSurface, FieldMobileApp, ResourceDirectory, FuelManagement, LocalOperationsMap).",
+    "Relocation of live TrackingSurface from components/surfaces/ to components/workspace/tracking-workspace-section.tsx, establishing complete isolation of live workspace sections from prototype surfaces.",
+    "Creation of a formal dev-only fixtures boundary in resources/js/data/fixtures/ with README.md and index.ts enforcing that live production routes never import mock fixture datasets.",
+    "Unification and enforcement of canonical status vocabularies across all types and surfaces: DispatchStatusValue (draft, pending_approval, scheduled, dispatched, accepted, en_route, arrived, working, completed, cancelled), DispatchPriorityValue (routine, priority, emergency), AssetStatusValue (available, assigned, in_transit, on_site, maintenance, out_of_service, working, under_inspection, under_maintenance, awaiting_parts, ready_for_service, unavailable), ApprovalStatusValue (pending, approved, rejected), and Location Freshness (fresh, delayed, stale, offline).",
+    "Updated CanonicalStatusBadge and StatusBadge with complete tone classes and icons for all canonical and prototype status combinations."
+  ],
+  "tests_added_or_changed": [],
+  "exact_commands_and_results": {
+    "npm run types:check": "PASS (0 errors, tsc --noEmit clean)",
+    "npm run types:check:mobile": "PASS (0 errors, mobile tsc --noEmit clean)",
+    "npm run lint:check": "PASS (0 errors, 0 warnings, eslint passed)",
+    "npm run format:check": "PASS (All matched files use Prettier style)",
+    "npm run build": "PASS (Vite production build compiled in 14.78s without errors)",
+    "npm --prefix packages/field-mobile run test": "PASS (82/82 tests passed, 34 unit + 48 component in 29.3s)",
+    "php artisan test": "PASS (591/591 tests passed, 7,807 assertions in 301.5s)"
+  },
+  "visual_responsive_evidence": "All prototype and sandbox surfaces clearly render prominent, non-obtrusive [Prototype / Sandbox Demo Mode - Read-Only Simulation] warning banners linking to live production workspaces, while live production routes remain 100% authoritative and server-driven.",
+  "regressions_resolved": [
+    "Retired local mutable fixture actions that mimicked backend persistence without server backing",
+    "Fixed ambiguous status labels and unified canonical vocabulary across web and mobile surfaces",
+    "Prevented accidental imports of fixture datasets into live workspace pages"
+  ],
+  "known_limitations": [],
+  "external_blockers": [],
+  "next_unlocked_nodes": [
+    "UI-6"
+  ],
+  "current_commit": "75eb190095173b126bbacbf0bc2f5fa0a285e8da"
+}

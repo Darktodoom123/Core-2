@@ -1,3 +1,21 @@
+/**
+ * ============================================================================
+ * PROTOTYPE SANDBOX & SIMULATION DATA TYPES
+ * ============================================================================
+ *
+ * IMPORTANT ARCHITECTURAL NOTICE:
+ * The types defined in this file are used EXCLUSIVELY by the unrouted prototype
+ * demo workspace (resources/js/pages/operations.tsx), its simulated state reducer,
+ * and dev fixture datasets.
+ *
+ * AUTHORITATIVE PRODUCTION CONTRACTS:
+ * For all production routes (/operations, /operations/dispatch-jobs/*) and
+ * server-driven view models, use:
+ * - resources/js/types/workspace.ts (authoritative workspace view models & canonical statuses)
+ * - resources/js/types/dispatch.ts (source-aware dispatch models & intake types)
+ * ============================================================================
+ */
+
 export type UserRole =
     | 'administrator'
     | 'dispatcher'

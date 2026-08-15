@@ -2,7 +2,6 @@ import { router, useForm } from '@inertiajs/react';
 import { Bot, Fuel, ShieldCheck, Truck, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { TrackingSurface } from '@/components/surfaces/tracking-surfaces';
 import {
     Button,
     EmptyState,
@@ -15,6 +14,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
 import { NotificationsSurface } from '@/components/workspace/notifications-workspace-section';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
+import { TrackingSurface } from '@/components/workspace/tracking-workspace-section';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';

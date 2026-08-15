@@ -1,3 +1,19 @@
+/**
+ * ============================================================================
+ * PROTOTYPE SANDBOX STATE REDUCER (READ-ONLY SIMULATION ONLY)
+ * ============================================================================
+ *
+ * STRICT ARCHITECTURAL RULE:
+ * This reducer is used EXCLUSIVELY by the unrouted prototype demo sandbox
+ * (resources/js/pages/operations.tsx).
+ *
+ * All actions in this reducer are simulated in-memory UI demonstrations.
+ * They DO NOT execute backend mutations or persist state.
+ * For live production operations, use the authoritative Inertia controllers
+ * and workspace pages (/operations, /operations/dispatch-jobs/*).
+ * ============================================================================
+ */
+
 import {
     auditEvents,
     dispatchJobs,
@@ -87,9 +103,10 @@ export function operationsReducer(
                     ),
                 },
                 toasts: addToast(state, {
-                    tone: 'success',
-                    title: 'Conflict resolved',
-                    message: 'The updated 07:30 start is ready for review.',
+                    tone: 'info',
+                    title: 'Conflict resolved (Simulation)',
+                    message:
+                        '[Read-Only Simulation] The updated start time is previewed locally.',
                 }),
             };
         case 'confirm-dispatch': {
@@ -102,9 +119,9 @@ export function operationsReducer(
                     ...state,
                     toasts: addToast(state, {
                         tone: 'warning',
-                        title: 'Resolve the travel conflict first',
+                        title: 'Resolve conflicts first (Simulation)',
                         message:
-                            'Review the proposed start time before confirming this dispatch.',
+                            '[Read-Only Simulation] Review the proposed start time before previewing confirmation.',
                     }),
                 };
             }
@@ -122,21 +139,11 @@ export function operationsReducer(
                         : job,
                 ),
                 proposal: { ...state.proposal, state: 'Confirmed' },
-                auditEvents: [
-                    {
-                        id: `audit-${Date.now()}`,
-                        actor: 'Marco Villanueva',
-                        action: 'Confirmed GPT-assisted dispatch',
-                        detail: 'CON-1251 · CR-250-04 · 07:30 start',
-                        timestamp: 'Just now',
-                    },
-                    ...state.auditEvents,
-                ],
                 toasts: addToast(state, {
-                    tone: 'success',
-                    title: 'Dispatch scheduled',
+                    tone: 'info',
+                    title: 'Dispatch scheduled (Simulation)',
                     message:
-                        'CON-1251 is scheduled for 07:30. The field team has been notified.',
+                        '[Read-Only Simulation] CON-1251 simulated as scheduled. No backend changes were written.',
                 }),
             };
         }
@@ -155,18 +162,15 @@ export function operationsReducer(
                         : job,
                 ),
                 toasts: addToast(state, {
-                    tone:
-                        state.connectivity === 'offline'
-                            ? 'warning'
-                            : 'success',
+                    tone: state.connectivity === 'offline' ? 'warning' : 'info',
                     title:
                         state.connectivity === 'offline'
-                            ? 'Update queued'
-                            : `Status changed to ${action.status}`,
+                            ? 'Update queued (Simulation)'
+                            : `Status changed to ${action.status} (Simulation)`,
                     message:
                         state.connectivity === 'offline'
-                            ? 'This update will sync when the connection returns.'
-                            : 'Operations can see the new field status.',
+                            ? '[Read-Only Simulation] Update queued locally in memory.'
+                            : '[Read-Only Simulation] Status updated in prototype view. No database records modified.',
                 }),
             };
         }
@@ -179,12 +183,9 @@ export function operationsReducer(
                         : request,
                 ),
                 toasts: addToast(state, {
-                    tone: action.status === 'Approved' ? 'success' : 'info',
-                    title: `Fuel request ${action.status.toLowerCase()}`,
-                    message:
-                        action.status === 'Approved'
-                            ? 'Dispatch and the requester can now see the approval.'
-                            : 'The requester has been notified with the decision.',
+                    tone: 'info',
+                    title: `Fuel request ${action.status.toLowerCase()} (Simulation)`,
+                    message: `[Read-Only Simulation] Fuel request decision simulated in sandbox memory.`,
                 }),
             };
         case 'set-connectivity':
@@ -195,9 +196,9 @@ export function operationsReducer(
                     action.connectivity === 'offline'
                         ? addToast(state, {
                               tone: 'warning',
-                              title: 'Working offline',
+                              title: 'Simulated Offline Mode',
                               message:
-                                  'Job updates will be kept on this device until you reconnect.',
+                                  '[Read-Only Simulation] Testing simulated offline state.',
                           })
                         : state.toasts,
             };
@@ -207,9 +208,9 @@ export function operationsReducer(
                 connectivity: 'online',
                 queuedActions: 0,
                 toasts: addToast(state, {
-                    tone: 'success',
-                    title: 'Updates synchronized',
-                    message: 'Operations now has your latest field activity.',
+                    tone: 'info',
+                    title: 'Sync completed (Simulation)',
+                    message: '[Read-Only Simulation] In-memory queue cleared.',
                 }),
             };
         case 'telemetry-tick':
@@ -254,18 +255,13 @@ export function operationsReducer(
                         : task,
                 ),
                 toasts: addToast(state, {
-                    tone:
-                        state.connectivity === 'offline'
-                            ? 'warning'
-                            : 'success',
+                    tone: state.connectivity === 'offline' ? 'warning' : 'info',
                     title:
                         state.connectivity === 'offline'
-                            ? 'Task update queued'
-                            : `Task moved to ${action.status}`,
+                            ? 'Task update queued (Simulation)'
+                            : `Task moved to ${action.status} (Simulation)`,
                     message:
-                        state.connectivity === 'offline'
-                            ? 'It will sync automatically when you reconnect.'
-                            : 'The maintenance record has been updated.',
+                        '[Read-Only Simulation] Task state updated in local memory only.',
                 }),
             };
         }

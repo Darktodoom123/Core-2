@@ -20,6 +20,10 @@ export type FuelRequestStatusValue =
 export type AssetStatusValue =
     | 'available'
     | 'assigned'
+    | 'in_transit'
+    | 'on_site'
+    | 'maintenance'
+    | 'out_of_service'
     | 'working'
     | 'under_inspection'
     | 'under_maintenance'
