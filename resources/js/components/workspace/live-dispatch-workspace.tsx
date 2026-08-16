@@ -7,7 +7,6 @@ import {
     ChevronRight,
     Clock,
     ClipboardList,
-    Info,
     MapPin,
     Plus,
     RefreshCw,
@@ -15,6 +14,8 @@ import {
     SearchX,
     ShieldCheck,
     Sparkles,
+    Truck,
+    User,
     UserRound,
     X,
 } from 'lucide-react';
@@ -1221,7 +1222,13 @@ function ScheduleBoardTable({
     selectedDate: string;
     onSelectJob: (jobId: number) => void;
 }) {
-    const hours = Array.from({ length: 11 }, (_, i) => i + 7); // 7 AM to 5 PM
+    const timeWindow = useMemo(
+        () => calculateBoardTimeWindow(jobs, selectedDate),
+        [jobs, selectedDate],
+    );
+
+    const { startHour, endHour, totalSlots, hours, isExpanded, label } =
+        timeWindow;
 
     // Compile rows from server assets and assigned personnel
     const rows = useMemo(() => {
@@ -1276,6 +1283,9 @@ function ScheduleBoardTable({
                         job.scheduled_start,
                         job.scheduled_end,
                         selectedDate,
+                        startHour,
+                        endHour,
+                        totalSlots,
                     );
 
                     if (span !== null) {
@@ -1331,6 +1341,9 @@ function ScheduleBoardTable({
                             job.scheduled_start,
                             job.scheduled_end,
                             selectedDate,
+                            startHour,
+                            endHour,
+                            totalSlots,
                         );
 
                         if (span !== null) {
@@ -1377,28 +1390,51 @@ function ScheduleBoardTable({
         conflictsOnly,
         derivedConflicts,
         selectedDate,
+        startHour,
+        endHour,
+        totalSlots,
     ]);
+
+    const minWidthRem = Math.max(64, 16 + totalSlots * 4.5);
 
     return (
         <Panel className="overflow-hidden">
+            {isExpanded && (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-brand-soft/40 px-4 py-2 text-xs text-brand-strong">
+                    <div className="flex items-center gap-2">
+                        <Clock
+                            className="h-3.5 w-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span className="font-semibold">
+                            Auto-Expanded Schedule:
+                        </span>
+                        <span>
+                            Active operating window {label} (Extended beyond
+                            standard 7 AM – 5 PM for early/late operations)
+                        </span>
+                    </div>
+                </div>
+            )}
             <div className="overflow-x-auto">
-                <div className="min-w-[64rem]">
+                <div style={{ minWidth: `${minWidthRem}rem` }}>
                     {/* Header */}
-                    <div className="grid grid-cols-[16rem_minmax(48rem,1fr)] border-b border-line bg-surface-subtle text-xs font-semibold">
+                    <div className="grid grid-cols-[16rem_minmax(0,1fr)] border-b border-line bg-surface-subtle text-xs font-semibold">
                         <div className="border-r border-line px-4 py-3 text-ink">
                             Resource & Status
                         </div>
-                        <div className="grid grid-cols-11 divide-x divide-line">
+                        <div
+                            className="grid divide-x divide-line"
+                            style={{
+                                gridTemplateColumns: `repeat(${totalSlots}, minmax(4.5rem, 1fr))`,
+                            }}
+                        >
                             {hours.map((h) => (
                                 <div
                                     key={h}
                                     className="px-2 py-3 text-center text-ink-soft"
                                 >
-                                    {h > 12
-                                        ? `${h - 12} PM`
-                                        : h === 12
-                                          ? '12 PM'
-                                          : `${h} AM`}
+                                    {formatHourLabel(h)}
                                 </div>
                             ))}
                         </div>
@@ -1421,7 +1457,7 @@ function ScheduleBoardTable({
                             {rows.map((row) => (
                                 <div
                                     key={row.id}
-                                    className="grid grid-cols-[16rem_minmax(48rem,1fr)] items-stretch hover:bg-surface-subtle/50"
+                                    className="grid grid-cols-[16rem_minmax(0,1fr)] items-stretch hover:bg-surface-subtle/50"
                                 >
                                     <div className="flex items-center justify-between border-r border-line px-4 py-3">
                                         <div className="min-w-0 flex-1 pr-2">
@@ -1455,7 +1491,12 @@ function ScheduleBoardTable({
                                         </span>
                                     </div>
 
-                                    <div className="relative grid grid-cols-11 divide-x divide-line bg-canvas/30 p-1">
+                                    <div
+                                        className="relative grid divide-x divide-line bg-canvas/30 p-1"
+                                        style={{
+                                            gridTemplateColumns: `repeat(${totalSlots}, minmax(4.5rem, 1fr))`,
+                                        }}
+                                    >
                                         {row.jobAssignments.map(
                                             ({ job, startCol, colSpan }) => (
                                                 <button
@@ -1770,6 +1811,11 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
     const isRental = source?.type === 'rental_reservation';
     const isSale = source?.type === 'sales_order';
 
+    // Manual direct dispatches have no upstream order requirements; provenance is already in the header & context.
+    if (isManual) {
+        return null;
+    }
+
     return (
         <Panel className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-subtle px-4 py-3">
@@ -1779,38 +1825,10 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
                     </h3>
                     <DispatchSourceBadge source={source} detailed />
                 </div>
-                {isManual && (
-                    <span className="text-ink-muted rounded bg-black/5 px-2 py-0.5 font-mono text-xs">
-                        Provenance: manual_intake
-                    </span>
-                )}
             </div>
 
             <div className="space-y-4 p-4">
-                {/* 1. MANUAL INTAKE PROVENANCE */}
-                {isManual && (
-                    <div className="rounded-lg border border-line bg-surface-subtle p-3.5 text-xs">
-                        <div className="flex items-start gap-2.5">
-                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong" />
-                            <div>
-                                <h4 className="font-semibold text-ink">
-                                    Direct Operational Draft
-                                </h4>
-                                <p className="mt-1 leading-5 text-ink-soft">
-                                    This dispatch was created directly in Core 2
-                                    via manual intake. It operates with full
-                                    scheduling, assignment, credential
-                                    validation, safety approvals, MapLibre
-                                    tracking, and forward-only mobile
-                                    progression without requiring an upstream
-                                    Core 1 commercial quote or order.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 2. SERVICE REQUEST SPECIFICS */}
+                {/* 1. SERVICE REQUEST SPECIFICS */}
                 {isService && (
                     <div className="grid gap-3 text-xs sm:grid-cols-2">
                         <div className="rounded-lg border border-line bg-surface p-3">
@@ -2025,27 +2043,34 @@ function DispatchDetails({
     ];
 
     return (
-        <div className="mx-auto max-w-5xl space-y-4">
+        <div className="mx-auto max-w-6xl space-y-5">
+            {/* Header with Title, Badges, and Primary Assign Action */}
             <div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-xl font-semibold tracking-[-0.02em]">
+                        <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink">
                             {job.title}
                         </h2>
                         <CanonicalStatusBadge status={job.status} />
                     </div>
-                    <p className="mt-1 text-sm text-ink-soft">
-                        {job.reference} · {job.client}
-                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                        <span className="font-medium text-ink">
+                            {job.reference}
+                        </span>
+                        <span>·</span>
+                        <span>{job.client}</span>
+                        <span>·</span>
+                        <DispatchSourceBadge source={job.source} detailed />
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <CanonicalStatusBadge status={job.priority} />
                     <span className="inline-flex min-h-6 items-center rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
                         Version {job.version}
                     </span>
                     <Link
                         href={assignmentWorkspaceUrl(job.id, returnTo)}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-subtle"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-ink shadow-2xs hover:bg-surface-subtle"
                     >
                         Assign resources
                         <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -2053,148 +2078,213 @@ function DispatchDetails({
                 </div>
             </div>
 
+            {/* Actionable Conflict Banner */}
             {conflicts.length > 0 && (
-                <div className="rounded-lg border border-danger/30 bg-danger-soft p-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-danger">
+                <div className="flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
                         <AlertTriangle
-                            className="h-4 w-4 shrink-0"
+                            className="mt-0.5 h-5 w-5 shrink-0 text-danger"
                             aria-hidden="true"
                         />
-                        {conflicts.length} active operational conflict
-                        {conflicts.length === 1 ? '' : 's'} on this job
+                        <div>
+                            <p className="text-sm font-semibold text-danger">
+                                {conflicts.length} active operational conflict
+                                {conflicts.length === 1 ? '' : 's'} on this job
+                            </p>
+                            <ul className="mt-1 space-y-0.5 text-xs text-danger">
+                                {conflicts.map((c) => (
+                                    <li key={c.id}>• {c.description}</li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
-                    <ul className="mt-2 space-y-1 text-xs text-danger">
-                        {conflicts.map((c) => (
-                            <li key={c.id}>• {c.description}</li>
-                        ))}
-                    </ul>
+                    <Link
+                        href={assignmentWorkspaceUrl(job.id, returnTo)}
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-soft"
+                    >
+                        Assign resources
+                        <ChevronRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
+                    </Link>
                 </div>
             )}
 
-            <DispatchGptAdvisory
-                job={job}
-                recommendations={recommendations}
-                capabilities={capabilities}
-            />
-
-            <SourceRequirementsPanel job={job} />
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-                <Panel className="p-4">
-                    <h3 className="font-semibold">Dispatch context</h3>
-                    <dl className="mt-3 divide-y divide-line">
-                        <DataPair
-                            label="Source"
-                            value={
-                                job.source ? (
-                                    <span className="inline-flex flex-wrap items-center gap-2">
-                                        <DispatchSourceBadge
-                                            source={job.source}
-                                            detailed
-                                        />
-                                        {job.source.status && (
-                                            <span className="text-xs text-ink-soft">
-                                                {job.source.status.label}
-                                            </span>
-                                        )}
-                                    </span>
-                                ) : (
-                                    'Direct dispatch'
-                                )
-                            }
-                        />
-                        {job.source?.fulfillment_mode && (
+            {/* 2-Column Responsive Operational Layout */}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(19rem,0.8fr)]">
+                {/* Left Column: Primary Operational Data */}
+                <div className="space-y-5">
+                    {/* Dispatch Logistics & Schedule */}
+                    <Panel className="p-4">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <h3 className="font-semibold text-ink">
+                                Dispatch context
+                            </h3>
+                            <span className="text-xs text-ink-soft">
+                                Last updated: {formatDateTime(job.updated_at)}
+                            </span>
+                        </div>
+                        <dl className="mt-3 divide-y divide-line">
                             <DataPair
-                                label="Fulfillment"
-                                value={humanize(job.source.fulfillment_mode)}
-                            />
-                        )}
-                        <DataPair
-                            label="Schedule"
-                            value={`${formatDateTime(job.scheduled_start)} – ${formatDateTime(job.scheduled_end)}`}
-                        />
-                        <DataPair
-                            label="Site"
-                            value={
-                                <span className="inline-flex items-start gap-2">
-                                    <MapPin
-                                        className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft"
-                                        aria-hidden="true"
-                                    />
-                                    {job.site}
-                                </span>
-                            }
-                        />
-                        <DataPair
-                            label="Last updated"
-                            value={formatDateTime(job.updated_at)}
-                        />
-                    </dl>
-                    <div className="mt-4 rounded-lg bg-surface-subtle p-3">
-                        <p className="text-xs font-semibold">Site note</p>
-                        <p className="mt-1 text-sm leading-6 text-ink-soft">
-                            {job.site_notes?.trim() ||
-                                'No additional site instructions were recorded.'}
-                        </p>
-                    </div>
-                </Panel>
-
-                <Panel className="overflow-hidden">
-                    <div className="border-b border-line px-4 py-3">
-                        <h3 className="font-semibold">Assigned resources</h3>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Current server-backed personnel and assets
-                        </p>
-                    </div>
-                    {assignments.length === 0 ? (
-                        <EmptyState
-                            compact
-                            icon={UserRound}
-                            title="No resources assigned"
-                            message="Assignments will appear after the authorized scheduling workflow completes."
-                        />
-                    ) : (
-                        <ul className="divide-y divide-line">
-                            {assignments.map((assignment) => {
-                                const Icon = assignment.icon;
-
-                                return (
-                                    <li
-                                        key={assignment.id}
-                                        className="flex items-start gap-3 px-4 py-3"
-                                    >
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
-                                            <Icon
-                                                className="h-4 w-4"
-                                                aria-hidden="true"
+                                label="Source"
+                                value={
+                                    job.source ? (
+                                        <span className="inline-flex flex-wrap items-center gap-2">
+                                            <DispatchSourceBadge
+                                                source={job.source}
+                                                detailed
                                             />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium">
-                                                {assignment.primary}
-                                            </p>
-                                            <p className="mt-0.5 text-xs text-ink-soft">
-                                                {assignment.secondary}
-                                            </p>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                </Panel>
-            </div>
+                                            {job.source.status && (
+                                                <span className="text-xs text-ink-soft">
+                                                    {job.source.status.label}
+                                                </span>
+                                            )}
+                                        </span>
+                                    ) : (
+                                        'Direct dispatch'
+                                    )
+                                }
+                            />
+                            {job.source?.fulfillment_mode && (
+                                <DataPair
+                                    label="Fulfillment"
+                                    value={humanize(
+                                        job.source.fulfillment_mode,
+                                    )}
+                                />
+                            )}
+                            <DataPair
+                                label="Schedule"
+                                value={`${formatDateTime(job.scheduled_start)} – ${formatDateTime(job.scheduled_end)}`}
+                            />
+                            <DataPair
+                                label="Site"
+                                value={
+                                    <span className="inline-flex items-start gap-2">
+                                        <MapPin
+                                            className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
+                                            aria-hidden="true"
+                                        />
+                                        {job.site}
+                                    </span>
+                                }
+                            />
+                        </dl>
+                        <div className="mt-4 rounded-lg bg-surface-subtle p-3">
+                            <p className="text-xs font-semibold text-ink">
+                                Site note
+                            </p>
+                            <p className="mt-1 text-sm leading-6 text-ink-soft">
+                                {job.site_notes?.trim() ||
+                                    'No additional site instructions were recorded.'}
+                            </p>
+                        </div>
+                    </Panel>
 
-            <div className="flex items-start gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-sm">
-                <CalendarDays
-                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
-                    aria-hidden="true"
-                />
-                <p className="leading-6 text-ink-soft">
-                    Open the assignment workspace to review server-authoritative
-                    availability, credentials, maintenance blocks, readiness,
-                    and schedule conflicts before confirming resources.
-                </p>
+                    {/* Assigned Resources Panel */}
+                    <Panel className="overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-line bg-surface-subtle px-4 py-3">
+                            <div>
+                                <h3 className="font-semibold text-ink">
+                                    Assigned resources
+                                </h3>
+                                <p className="mt-0.5 text-xs text-ink-soft">
+                                    Current server-backed personnel and assets
+                                </p>
+                            </div>
+                            <Link
+                                href={assignmentWorkspaceUrl(job.id, returnTo)}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong hover:underline"
+                            >
+                                Manage assignments →
+                            </Link>
+                        </div>
+                        {assignments.length === 0 ? (
+                            <div className="p-6 text-center">
+                                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-surface-subtle text-ink-soft">
+                                    <UserRound className="h-5 w-5" />
+                                </div>
+                                <p className="mt-2 text-sm font-semibold text-ink">
+                                    No resources assigned
+                                </p>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Assignments will appear after the authorized
+                                    scheduling workflow completes.
+                                </p>
+                                <Link
+                                    href={assignmentWorkspaceUrl(
+                                        job.id,
+                                        returnTo,
+                                    )}
+                                    className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:bg-surface-subtle"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Assign resources
+                                </Link>
+                            </div>
+                        ) : (
+                            <ul className="divide-y divide-line">
+                                {assignments.map((assignment) => {
+                                    const Icon = assignment.icon;
+
+                                    return (
+                                        <li
+                                            key={assignment.id}
+                                            className="flex items-center justify-between gap-3 px-4 py-3"
+                                        >
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
+                                                    <Icon
+                                                        className="h-4 w-4"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-medium text-ink">
+                                                        {assignment.primary}
+                                                    </p>
+                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                        {assignment.secondary}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success-strong">
+                                                <ShieldCheck className="h-3 w-3" />
+                                                Assigned
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </Panel>
+
+                    {/* Source Requirements */}
+                    <SourceRequirementsPanel job={job} />
+                </div>
+
+                {/* Right Column: AI Advisory & Guidance */}
+                <div className="space-y-5">
+                    <DispatchGptAdvisory
+                        job={job}
+                        recommendations={recommendations}
+                        capabilities={capabilities}
+                    />
+
+                    <div className="flex items-start gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-xs text-ink-soft">
+                        <CalendarDays
+                            className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
+                            aria-hidden="true"
+                        />
+                        <p className="leading-5">
+                            Open the assignment workspace to review
+                            server-authoritative availability, credentials,
+                            maintenance blocks, readiness, and schedule
+                            conflicts before confirming resources.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -2226,7 +2316,7 @@ function DispatchSourceBadge({
                 <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
                 <span>Manual</span>
                 {detailed && (
-                    <span className="py-0.2 text-ink-muted rounded bg-black/5 px-1 font-mono text-[9px]">
+                    <span className="text-ink-muted rounded bg-black/5 px-1 py-0.5 font-mono text-[9px]">
                         manual_intake
                     </span>
                 )}
@@ -2307,11 +2397,11 @@ function DispatchGptAdvisory({
             className="rounded-lg border border-line bg-surface p-4"
             aria-labelledby={`dispatch-gpt-advisory-${job.id}`}
         >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-3 border-b border-line pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h3
                         id={`dispatch-gpt-advisory-${job.id}`}
-                        className="flex items-center gap-2 font-semibold"
+                        className="flex items-center gap-2 text-sm font-semibold text-ink"
                     >
                         <Sparkles
                             className="h-4 w-4 text-brand-strong"
@@ -2319,9 +2409,9 @@ function DispatchGptAdvisory({
                         />
                         GPT dispatch advisory
                     </h3>
-                    <p className="mt-1 text-xs leading-5 text-ink-soft">
-                        Explainable resource guidance for this dispatch. It is
-                        advisory and requires human confirmation.
+                    <p className="mt-0.5 text-xs text-ink-soft">
+                        Explainable resource guidance (requires human
+                        confirmation).
                     </p>
                 </div>
 
@@ -2345,7 +2435,7 @@ function DispatchGptAdvisory({
                         )}
                     <Link
                         href="/?view=gpt-recommendations"
-                        className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
+                        className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
                     >
                         View full advisory
                     </Link>
@@ -2353,11 +2443,28 @@ function DispatchGptAdvisory({
             </div>
 
             {visibleRecommendations.length === 0 ? (
-                <p className="mt-4 rounded-lg bg-surface-subtle px-3 py-3 text-sm text-ink-soft">
-                    No GPT recommendation has been requested for this dispatch.
-                </p>
+                <div className="mt-3 rounded-lg bg-surface-subtle p-4 text-center">
+                    <p className="text-xs text-ink-soft">
+                        No GPT recommendation has been requested for this
+                        dispatch.
+                    </p>
+                    {capabilities.request_gpt_assistance && (
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="mt-2.5"
+                            onClick={requestRecommendation}
+                            disabled={requesting}
+                        >
+                            <Sparkles className="mr-1.5 h-3.5 w-3.5 text-brand-strong" />
+                            {requesting
+                                ? 'Generating…'
+                                : 'Generate AI Proposal'}
+                        </Button>
+                    )}
+                </div>
             ) : (
-                <div className="mt-4 space-y-4">
+                <div className="mt-3 space-y-4">
                     {visibleRecommendations.map((recommendation) => {
                         const reviewable =
                             recommendation.status === 'pending_review' &&
@@ -2367,37 +2474,24 @@ function DispatchGptAdvisory({
                         const assets = recommendation.proposed_assets ?? [];
 
                         return (
-                            <div
-                                key={recommendation.id}
-                                className="space-y-3 border-t border-line pt-4 first:border-t-0 first:pt-0"
-                            >
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="text-sm font-semibold text-ink">
-                                                Recommendation #
-                                                {recommendation.id}
-                                            </p>
-                                            <span
-                                                className={cn(
-                                                    'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                                    gptRecommendationStatusClass(
-                                                        recommendation,
-                                                    ),
-                                                )}
-                                            >
-                                                {gptRecommendationStatusLabel(
+                            <div key={recommendation.id} className="space-y-3">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-semibold text-ink">
+                                            Recommendation #{recommendation.id}
+                                        </p>
+                                        <span
+                                            className={cn(
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                                gptRecommendationStatusClass(
                                                     recommendation,
-                                                )}
-                                            </span>
-                                        </div>
-                                        {recommendation.response_summary && (
-                                            <p className="mt-1 text-sm leading-6 text-ink-soft">
-                                                {
-                                                    recommendation.response_summary
-                                                }
-                                            </p>
-                                        )}
+                                                ),
+                                            )}
+                                        >
+                                            {gptRecommendationStatusLabel(
+                                                recommendation,
+                                            )}
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-1 text-xs text-ink-soft">
                                         <Clock
@@ -2412,39 +2506,53 @@ function DispatchGptAdvisory({
                                     </div>
                                 </div>
 
-                                <RecommendationDetails rec={recommendation} />
+                                {recommendation.response_summary && (
+                                    <p className="text-xs leading-relaxed text-ink">
+                                        {recommendation.response_summary}
+                                    </p>
+                                )}
 
+                                {/* Proposed Resources */}
                                 {(personnel.length > 0 ||
                                     assets.length > 0) && (
-                                    <div className="grid gap-2 text-xs sm:grid-cols-2">
+                                    <div className="space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                                        <p className="font-semibold text-ink">
+                                            Proposed Resource Plan
+                                        </p>
                                         {personnel.length > 0 && (
-                                            <div>
-                                                <p className="font-semibold text-ink">
-                                                    Proposed personnel
-                                                </p>
-                                                <p className="mt-1 text-ink-soft">
-                                                    {personnel
-                                                        .map(
-                                                            (person) =>
-                                                                `${person.name || `User #${person.user_id}`} (${person.assignment_type})`,
-                                                        )
-                                                        .join(', ')}
-                                                </p>
+                                            <div className="flex items-start gap-2">
+                                                <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong" />
+                                                <div className="min-w-0">
+                                                    <span className="font-medium text-ink">
+                                                        Personnel:{' '}
+                                                    </span>
+                                                    <span className="text-ink-soft">
+                                                        {personnel
+                                                            .map(
+                                                                (person) =>
+                                                                    `${person.name || `User #${person.user_id}`} (${person.assignment_type})`,
+                                                            )
+                                                            .join(', ')}
+                                                    </span>
+                                                </div>
                                             </div>
                                         )}
                                         {assets.length > 0 && (
-                                            <div>
-                                                <p className="font-semibold text-ink">
-                                                    Proposed assets
-                                                </p>
-                                                <p className="mt-1 text-ink-soft">
-                                                    {assets
-                                                        .map(
-                                                            (asset) =>
-                                                                `${asset.name || asset.asset_code || `Asset #${asset.operational_asset_id}`} (${asset.assignment_type})`,
-                                                        )
-                                                        .join(', ')}
-                                                </p>
+                                            <div className="flex items-start gap-2">
+                                                <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong" />
+                                                <div className="min-w-0">
+                                                    <span className="font-medium text-ink">
+                                                        Assets:{' '}
+                                                    </span>
+                                                    <span className="text-ink-soft">
+                                                        {assets
+                                                            .map(
+                                                                (asset) =>
+                                                                    `${asset.name || asset.asset_code || `Asset #${asset.operational_asset_id}`} (${asset.assignment_type})`,
+                                                            )
+                                                            .join(', ')}
+                                                    </span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -2476,6 +2584,8 @@ function DispatchGptAdvisory({
                                         </div>
                                     </div>
                                 )}
+
+                                <RecommendationDetails rec={recommendation} />
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
                                     <p className="text-xs text-ink-soft">
@@ -2801,6 +2911,129 @@ function formatBoardDate(value: string): string {
     return value === localDateKey(new Date()) ? `Today · ${label}` : label;
 }
 
+const DEFAULT_BOARD_START_HOUR = 7;
+const DEFAULT_BOARD_END_HOUR = 18; // 11 slots: 7 AM through 5 PM (covers up to 18:00)
+
+interface BoardTimeWindow {
+    startHour: number;
+    endHour: number;
+    totalSlots: number;
+    hours: number[];
+    isExpanded: boolean;
+    label: string;
+}
+
+function formatHourLabel(h: number): string {
+    const normalized = ((h % 24) + 24) % 24;
+
+    if (normalized === 0) {
+        return '12 AM';
+    }
+
+    if (normalized === 12) {
+        return '12 PM';
+    }
+
+    if (normalized > 12) {
+        return `${normalized - 12} PM`;
+    }
+
+    return `${normalized} AM`;
+}
+
+function calculateBoardTimeWindow(
+    jobs: DispatchJobViewModel[],
+    selectedDate: string,
+): BoardTimeWindow {
+    let earliestStart = DEFAULT_BOARD_START_HOUR;
+    let latestEnd = DEFAULT_BOARD_END_HOUR;
+
+    const date = dateFromLocalKey(selectedDate);
+    const dayStart = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        0,
+        0,
+        0,
+    );
+    const dayEnd = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate() + 1,
+        0,
+        0,
+        0,
+    );
+
+    for (const job of jobs) {
+        if (!job.scheduled_start || !job.scheduled_end) {
+            continue;
+        }
+
+        const start = new Date(job.scheduled_start);
+        const end = new Date(job.scheduled_end);
+
+        if (
+            Number.isNaN(start.getTime()) ||
+            Number.isNaN(end.getTime()) ||
+            end <= start
+        ) {
+            continue;
+        }
+
+        // Check if job intersects the selected calendar day
+        if (start < dayEnd && end > dayStart) {
+            const visibleStart = new Date(
+                Math.max(start.getTime(), dayStart.getTime()),
+            );
+            const visibleEnd = new Date(
+                Math.min(end.getTime(), dayEnd.getTime()),
+            );
+
+            const startHour =
+                visibleStart.getHours() + visibleStart.getMinutes() / 60;
+            const endHour =
+                visibleEnd.getTime() === dayEnd.getTime()
+                    ? 24
+                    : visibleEnd.getHours() + visibleEnd.getMinutes() / 60;
+
+            const floorStart = Math.floor(startHour);
+            const ceilEnd = Math.ceil(endHour);
+
+            if (floorStart < earliestStart) {
+                earliestStart = Math.max(0, floorStart);
+            }
+
+            if (ceilEnd > latestEnd) {
+                latestEnd = Math.min(24, ceilEnd);
+            }
+        }
+    }
+
+    const startHour = Math.max(
+        0,
+        Math.min(earliestStart, DEFAULT_BOARD_START_HOUR),
+    );
+    const endHour = Math.min(24, Math.max(latestEnd, DEFAULT_BOARD_END_HOUR));
+    const totalSlots = Math.max(1, endHour - startHour);
+    const hours = Array.from({ length: totalSlots }, (_, i) => startHour + i);
+    const isExpanded =
+        startHour < DEFAULT_BOARD_START_HOUR ||
+        endHour > DEFAULT_BOARD_END_HOUR;
+
+    const label = `${formatHourLabel(startHour)} – ${formatHourLabel(endHour)}`;
+
+    return {
+        startHour,
+        endHour,
+        totalSlots,
+        hours,
+        isExpanded,
+        label,
+    };
+}
+
 function localDayWindow(value: string) {
     const date = dateFromLocalKey(value);
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -2816,13 +3049,13 @@ function localDayWindow(value: string) {
             start.getFullYear(),
             start.getMonth(),
             start.getDate(),
-            7,
+            DEFAULT_BOARD_START_HOUR,
         ),
         boardEnd: new Date(
             start.getFullYear(),
             start.getMonth(),
             start.getDate(),
-            17,
+            DEFAULT_BOARD_END_HOUR,
         ),
     };
 }
@@ -2851,6 +3084,9 @@ function calculateTimeSpan(
     startIso: string | null,
     endIso: string | null,
     selectedDate: string,
+    boardStartHour: number = DEFAULT_BOARD_START_HOUR,
+    boardEndHour: number = DEFAULT_BOARD_END_HOUR,
+    totalSlots?: number,
 ) {
     if (!startIso || !endIso) {
         return null;
@@ -2867,7 +3103,34 @@ function calculateTimeSpan(
         return null;
     }
 
-    const { boardStart, boardEnd } = localDayWindow(selectedDate);
+    const date = dateFromLocalKey(selectedDate);
+    const boardStart = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        boardStartHour,
+        0,
+        0,
+    );
+    const boardEnd =
+        boardEndHour === 24
+            ? new Date(
+                  date.getFullYear(),
+                  date.getMonth(),
+                  date.getDate() + 1,
+                  0,
+                  0,
+                  0,
+              )
+            : new Date(
+                  date.getFullYear(),
+                  date.getMonth(),
+                  date.getDate(),
+                  boardEndHour,
+                  0,
+                  0,
+              );
+
     const visibleStart = new Date(
         Math.max(start.getTime(), boardStart.getTime()),
     );
@@ -2878,13 +3141,18 @@ function calculateTimeSpan(
     }
 
     const startHour = visibleStart.getHours() + visibleStart.getMinutes() / 60;
-    const endHour = visibleEnd.getHours() + visibleEnd.getMinutes() / 60;
+    const endHour =
+        visibleEnd.getTime() === boardEnd.getTime() && boardEndHour === 24
+            ? 24
+            : visibleEnd.getHours() + visibleEnd.getMinutes() / 60;
 
-    let startCol = Math.max(1, Math.floor(startHour - 7) + 1);
-    let endCol = Math.min(12, Math.ceil(endHour - 7) + 1);
+    const slots = totalSlots ?? Math.max(1, boardEndHour - boardStartHour);
 
-    if (startCol >= 12) {
-        startCol = 11;
+    let startCol = Math.max(1, Math.floor(startHour - boardStartHour) + 1);
+    let endCol = Math.min(slots + 1, Math.ceil(endHour - boardStartHour) + 1);
+
+    if (startCol > slots) {
+        startCol = slots;
     }
 
     if (endCol <= startCol) {

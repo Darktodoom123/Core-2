@@ -612,48 +612,12 @@ export function RecommendationDetails({
         : [];
 
     return (
-        <div className="space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-soft">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                    <span className="font-semibold text-ink">Freshness:</span>{' '}
-                    {rec.generated_at
-                        ? formatDateTime(rec.generated_at)
-                        : 'Not generated yet'}
-                </div>
-                <div>
-                    <span className="font-semibold text-ink">Model:</span>{' '}
-                    <span className="font-mono">{rec.model}</span>
-                </div>
-                <div>
-                    <span className="font-semibold text-ink">Latency:</span>{' '}
-                    {rec.latency_ms !== null ? `${rec.latency_ms} ms` : '—'}
-                </div>
-                <div>
-                    <span className="font-semibold text-ink">Token Usage:</span>{' '}
-                    {rec.usage
-                        ? `${rec.usage.total_tokens.toLocaleString()} tokens (${rec.usage.prompt_tokens} in / ${rec.usage.completion_tokens} out)`
-                        : 'Not available'}
-                </div>
-                <div className="sm:col-span-2 lg:col-span-2">
-                    <span className="font-semibold text-ink">
-                        Cost / Budget Ceiling:
-                    </span>{' '}
-                    <span className="font-semibold text-brand-strong">
-                        {rec.cost_usd !== null
-                            ? `$${rec.cost_usd.toFixed(4)}`
-                            : 'N/A'}
-                    </span>{' '}
-                    <span className="text-[11px] text-ink-soft">
-                        ($0.05 ceiling per proposal)
-                    </span>
-                </div>
-            </div>
-
+        <div className="space-y-2.5 rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-soft">
             {/* Explanation Reasons */}
             {reasons.length > 0 && (
-                <div className="border-t border-line/60 pt-2">
+                <div>
                     <span className="font-semibold text-ink">
-                        Advisory Reasons & Rationale:
+                        Advisory Reasons &amp; Rationale:
                     </span>
                     <ul className="mt-1 list-disc space-y-0.5 pl-4 text-ink">
                         {reasons.map((r, i) => (
@@ -665,7 +629,11 @@ export function RecommendationDetails({
 
             {/* Assumptions */}
             {assumptions.length > 0 && (
-                <div className="border-t border-line/60 pt-2">
+                <div
+                    className={cn(
+                        reasons.length > 0 && 'border-t border-line/60 pt-2',
+                    )}
+                >
                     <span className="font-semibold text-ink">
                         Operational Assumptions:
                     </span>
@@ -686,7 +654,7 @@ export function RecommendationDetails({
                 </div>
             )}
 
-            {rec.response_summary && (
+            {rec.response_summary && !reasons.length && (
                 <div className="border-t border-line/60 pt-2">
                     <span className="font-semibold text-ink">
                         Synthesis Summary:
@@ -694,6 +662,66 @@ export function RecommendationDetails({
                     <span className="text-ink">{rec.response_summary}</span>
                 </div>
             )}
+
+            {/* Collapsible Telemetry & Cost Section */}
+            <details className="group border-t border-line/60 pt-2">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] font-medium text-ink-soft hover:text-ink">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-ink">Model:</span>
+                        <span className="font-mono">{rec.model}</span>
+                        {rec.latency_ms !== null && (
+                            <span>· {rec.latency_ms} ms</span>
+                        )}
+                        {rec.cost_usd !== null && (
+                            <span className="font-semibold text-brand-strong">
+                                · ${rec.cost_usd.toFixed(4)}
+                            </span>
+                        )}
+                    </span>
+                    <span className="text-[10px] text-ink-soft transition-transform group-open:rotate-180">
+                        ▼
+                    </span>
+                </summary>
+                <div className="mt-2.5 grid gap-2 border-t border-line/40 pt-2 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <span className="font-semibold text-ink">
+                            Freshness:
+                        </span>{' '}
+                        {rec.generated_at
+                            ? formatDateTime(rec.generated_at)
+                            : 'Not generated yet'}
+                    </div>
+                    <div>
+                        <span className="font-semibold text-ink">Model:</span>{' '}
+                        <span className="font-mono">{rec.model}</span>
+                    </div>
+                    <div>
+                        <span className="font-semibold text-ink">Latency:</span>{' '}
+                        {rec.latency_ms !== null ? `${rec.latency_ms} ms` : '—'}
+                    </div>
+                    <div>
+                        <span className="font-semibold text-ink">
+                            Token Usage:
+                        </span>{' '}
+                        {rec.usage
+                            ? `${rec.usage.total_tokens.toLocaleString()} tokens (${rec.usage.prompt_tokens} in / ${rec.usage.completion_tokens} out)`
+                            : 'Not available'}
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-2">
+                        <span className="font-semibold text-ink">
+                            Cost / Budget Ceiling:
+                        </span>{' '}
+                        <span className="font-semibold text-brand-strong">
+                            {rec.cost_usd !== null
+                                ? `$${rec.cost_usd.toFixed(4)}`
+                                : 'N/A'}
+                        </span>{' '}
+                        <span className="text-[10px] text-ink-soft">
+                            ($0.05 ceiling per proposal)
+                        </span>
+                    </div>
+                </div>
+            </details>
         </div>
     );
 }
