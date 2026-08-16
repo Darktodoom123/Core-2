@@ -1,3 +1,69 @@
+# Route Planning UI Overhaul AI Verification Responses (Strict Quality Gate Verification)
+
+## 1. Did you build this the most secure way?
+
+- **Zero Untrusted HTML/Script Injections in Vector Maps**:
+  - The MapLibre Web vector bridge in `MapLibreWebContainer` strictly renders parameterized GeoJSON coordinate structures with sanitized waypoint labels and numeric coordinate boundaries (`[lng, lat]`).
+  - Origin whitelisting (`originWhitelist={['*']}`) in native `WebView` is scoped exclusively to safe self-contained style definitions with zero remote eval or insecure bridge communications.
+- **Actor-Scoped Location & Route Capabilities**:
+  - Route planning displays and GPS telematic status indicators enforce active role qualifications (`driver`, `crane_operator`, `field_technician`) and active shift state.
+  - Route preview capabilities do not mutate backend dispatch records or leak unassigned destination coordinates.
+
+## 2. Did you build this the most efficient way?
+
+- **Segmented Dynamic Vector / Corridor Architecture**:
+  - Segmented control in `FieldRouteMapView` lazily renders the heavy vector map view while maintaining a lightweight, zero-dependency SVG/vector corridor diagram as the high-speed default for field operations.
+  - Waypoint metrics (ETA, Distance, Bridge Clearance, Axle Load) use memoized tabular projections with zero redundant re-renders or layout jitter during waypoint selection.
+- **Centralized Design Token Integration**:
+  - Integrated dedicated HUD and route tokens directly in `nativeStyles.ts`, eliminating ad-hoc color calculations and reducing component stylesheet allocations.
+
+## 3. What regressions could this introduce?
+
+- **Corridor Step Navigation vs Live GPS Switch Confusion**:
+  - *Risk*: Field drivers navigating with gloves might accidentally toggle modes and lose waypoint selection.
+  - *Mitigation*: Mode tabs provide distinct tactile feedback, persistent telemetry HUD headers above the view mode, and $\ge 48\text{dp}$ touch target surfaces.
+- **Offline Cache Staleness**:
+  - *Risk*: A driver might assume an offline cached route has up-to-the-minute road closure data.
+  - *Mitigation*: The UI prominently displays amber `Offline Route Cache Active` warning strips whenever network connectivity is degraded or server sync is pending.
+
+## 4. What tests do we need to write before we ship this?
+
+- **Automated Verification Suite Executed**:
+  - **Mobile Test Suite**: **98 / 98 tests passed** (34 Node unit tests + 64 Jest component tests across 12 suites, 100% PASS).
+  - **Component Tests Added**:
+    - `plannedRoutePanel.component.test.tsx`: Validates planned capability empty state, corridor preview toggle, back navigation, and active route rendering.
+    - `fieldRouteMapView.component.test.tsx`: Validates metrics HUD, hazard overpass callouts, live vs. cached GPS status, and interactive tab switching.
+  - **TypeScript Checks**: **0 errors** across both `npm run types:check:mobile` and `npm run types:check`.
+  - **Code Style & Linters**: **0 errors, 0 warnings** across `npm run lint:check`, `npm run format:check`, and `composer lint:check` (Pint).
+  - **Release Sign-Off**:
+    - Route Planning UI Overhaul has satisfied all strict quality gate criteria with 100% pass rates.
+
+---
+
+# Focused New Dispatch Interaction Refinement (2026-08-16)
+
+## 1. Did you build this the most secure way?
+
+- The refinement changes presentation and local interaction state only. Existing capability checks, Inertia routes, server-side validation, authorization, and source-specific mutations remain authoritative.
+- The queue filters out already-linked rental and sales handoffs before presenting them as incoming work, reducing the chance of an operator starting a duplicate execution from the visible queue.
+
+## 2. Did you build this the most efficient way?
+
+- The queue count is derived from the existing server-provided view models, with no new request or client-side data store.
+- Focus and Escape behavior are implemented with bounded DOM effects; the interaction avoids synchronous prop-to-state mirroring and passes the React hooks lint rule.
+
+## 3. What regressions could this introduce?
+
+- Existing deep links with `initialServiceRequestId` still open the service workflow; the normal button path now starts at the incoming-work queue so the dispatcher chooses the next item deliberately.
+- The queue’s source rows still route into the existing service, rental, sales, manual, and reconciliation components; no mutation behavior was replaced.
+- If a handoff arrives after the page loads, the trigger count updates and the dispatcher can open the queue manually; the page no longer interrupts an active board view by auto-opening it.
+
+## 4. What tests do we need to write before we ship this?
+
+- Passed `npm run types:check`, `npm run lint:check`, `npm run build`, `git diff --check`, and `npm run test:a11y` against the running local app (5/5 browser accessibility checks passed).
+- Add a focused browser journey for opening New dispatch, verifying queue-first rendering, selecting each source branch, Escape dismissal, and the incoming count badge.
+- The in-app visual browser was unavailable in this workspace, so desktop/mobile screenshots were not captured during this pass.
+
 # Core-2 UI Phase UI-7 AI Verification Responses (Final Verification & Release Readiness)
 
 ## 1. Did you build this the most secure way?
@@ -207,3 +273,48 @@
 ## 4. What tests do we need to write before we ship this?
 
 - Add coverage for manual Service/Rental/Sale draft creation, permission and validation failures, source-specific fields, provenance, readiness gating, and linking/reconciliation with a later Core 1 handoff.
+# Source-aware New dispatch UI AI Verification Responses (2026-08-16)
+
+## 1. Did you build this the most secure way?
+
+- The UI is an automatic source router and incoming-work queue only. Existing
+  capability checks, route middleware, source-specific request validation, and
+  server-authoritative conversion actions remain the enforcement boundary.
+- No new generic source mutation endpoint was introduced, so a user cannot
+  bypass the existing manual, service, rental, or sales workflow by changing a
+  client-side label.
+
+## 2. Did you build this the most efficient way?
+
+- The duplicate manual form was removed from the workspace and its existing
+  manual form was reused as the single Manual dispatch branch.
+- The source graph is represented by one incoming-work queue with automatic
+  service, rental, and sales routing, plus a separate direct/manual fallback
+  and reconciliation review action.
+
+## 3. What regressions could this introduce?
+
+- Existing deep links into service-request intake must still open the service
+  branch; the parent passes the initial mode explicitly and retains the request
+  identifier. New handoffs auto-open the intake queue and route the first item.
+- Rental and sales handoffs remain visible in their existing workspace cards;
+  the new selector is an additional entry path, not a replacement for those
+  source-specific conversion actions.
+- Reconciliation matches remain advisory until human review; the UI does not
+  claim that a suggested match is already linked.
+
+## 4. What tests do we need to write before we ship this?
+
+- Completed the web lint, format, type, and production build checks.
+- Focused Pest coverage passed: `OperationsPageTest` 4/4 (157 assertions) and
+  `RentalSalesDispatchHandoffTest` 7/7 (76 assertions).
+- The authenticated browser accessibility gate was attempted but could not
+  start because the existing browser SQLite fixture is missing the
+  `operational_assets.type` column expected by its seed data; this is a
+  pre-existing fixture/schema mismatch to repair before release.
+- Verify keyboard pressed states, 44px queue controls, labels for custom
+  requirements, and source-specific success/error responses in the browser.
+- Add or extend browser coverage for the four source branches and the separate
+  unmatched-handoff review path before release.
+
+---

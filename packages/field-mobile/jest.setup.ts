@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import * as matchers from '@testing-library/react-native/matchers';
 
 expect.extend(matchers);
@@ -25,4 +26,14 @@ jest.mock('react-native-safe-area-context', () => {
     );
 
     return safeAreaMock.default;
+});
+
+jest.mock('react-native-webview', () => {
+    const React = require('react');
+    const { View } = require('react-native');
+
+    return {
+        WebView: (props: any) =>
+            React.createElement(View, { testID: 'mock-webview', ...props }),
+    };
 });

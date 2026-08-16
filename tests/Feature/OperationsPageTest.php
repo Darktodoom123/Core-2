@@ -92,6 +92,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
                 'label' => 'Submitted',
             ])
             ->where('serviceRequests.0.dispatch_jobs_count', 0)
+            ->where('capabilities.create_dispatch', true)
             ->where('capabilities.create_client', true)
             ->where('capabilities.create_service_request', true)
             ->where('capabilities.convert_service_request', true)
@@ -125,6 +126,7 @@ it('adapts live navigation labels for assigned field work without exposing unava
             ->has('jobs', 0)
             ->has('clients', 0)
             ->has('serviceRequests', 0)
+            ->where('capabilities.create_dispatch', false)
             ->where('capabilities.create_client', false)
             ->where('capabilities.create_service_request', false)
             ->where('capabilities.convert_service_request', false)

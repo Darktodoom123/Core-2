@@ -3,13 +3,10 @@ import {
     AlertTriangle,
     CheckCircle2,
     CalendarDays,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
-    ChevronUp,
     Clock,
     ClipboardList,
-    FileText,
     Info,
     MapPin,
     Plus,
@@ -22,12 +19,10 @@ import {
     X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Button,
     DataPair,
-    DateTimePicker,
     EmptyState,
     PageHeading,
     Panel,
@@ -126,36 +121,75 @@ export function LiveDispatchWorkspace({
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
-    const [showCreate, setShowCreate] = useState(false);
+    const incomingHandoffKey = useMemo(
+        () =>
+            [
+                initialServiceRequestId
+                    ? `service:${initialServiceRequestId}`
+                    : null,
+                ...serviceRequests
+                    .filter((request) => request.dispatch_jobs_count === 0)
+                    .map((request) => `service:${request.id}`),
+                ...rentalHandoffs
+                    .filter((handoff) => !handoff.dispatch_job_id)
+                    .map((handoff) => `rental:${handoff.id}`),
+                ...salesHandoffs
+                    .filter((handoff) => !handoff.dispatch_job_id)
+                    .map((handoff) => `sale:${handoff.id}`),
+            ]
+                .filter(Boolean)
+                .filter(
+                    (value, index, values) => values.indexOf(value) === index,
+                )
+                .sort()
+                .join('|'),
+        [
+            initialServiceRequestId,
+            rentalHandoffs,
+            salesHandoffs,
+            serviceRequests,
+        ],
+    );
+    const incomingWorkCount = incomingHandoffKey
+        ? incomingHandoffKey.split('|').length
+        : 0;
     const [showIntake, setShowIntake] = useState(
         Boolean(initialServiceRequestId),
     );
-    const [handoffPending, setHandoffPending] = useState<string | null>(null);
-    const [salesScheduledStart, setSalesScheduledStart] = useState(() =>
-        localDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)),
-    );
-    const [salesScheduledEnd, setSalesScheduledEnd] = useState(() =>
-        localDateTimeInput(new Date(Date.now() + 3 * 60 * 60 * 1000)),
-    );
-    const [prevInitialRequestId, setPrevInitialRequestId] = useState(
-        initialServiceRequestId,
-    );
+    const intakePanelRef = useRef<HTMLDivElement>(null);
 
-    if (initialServiceRequestId !== prevInitialRequestId) {
-        setPrevInitialRequestId(initialServiceRequestId);
-
-        if (initialServiceRequestId) {
-            setShowIntake(true);
-            setShowCreate(false);
+    useEffect(() => {
+        if (!showIntake) {
+            return;
         }
-    }
+
+        const frame = window.requestAnimationFrame(() => {
+            intakePanelRef.current?.focus({ preventScroll: true });
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [showIntake]);
+
+    useEffect(() => {
+        if (!showIntake) {
+            return;
+        }
+
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setShowIntake(false);
+            }
+        };
+
+        document.addEventListener('keydown', closeOnEscape);
+
+        return () => document.removeEventListener('keydown', closeOnEscape);
+    }, [showIntake]);
 
     useEffect(() => {
         if (initialServiceRequestId && showIntake) {
             const timer = setTimeout(() => {
-                const el = document.getElementById(
-                    'service-request-intake-panel',
-                );
+                const el = document.getElementById('new-dispatch-panel');
 
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -177,16 +211,6 @@ export function LiveDispatchWorkspace({
         useState<ConflictTypeFilter>('all');
 
     const fieldMode = capabilities.update_assigned_dispatch_status;
-    const form = useForm({
-        reference: '',
-        client: '',
-        title: '',
-        site: '',
-        scheduled_start: '',
-        scheduled_end: '',
-        priority: 'routine',
-        requirements: [] as string[],
-    });
 
     // Derive a client-side conflict summary from bounded server data.
     const derivedConflicts = useMemo(() => {
@@ -462,47 +486,6 @@ export function LiveDispatchWorkspace({
         [gptRecommendations, selectedJob],
     );
 
-    const formComplete = [
-        form.data.reference,
-        form.data.client,
-        form.data.title,
-        form.data.site,
-        form.data.scheduled_start,
-        form.data.scheduled_end,
-    ].every((value) => value.trim() !== '');
-
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
-        form.post('/operations/dispatch-jobs', {
-            preserveScroll: true,
-            onSuccess: () => {
-                form.reset();
-                setShowCreate(false);
-            },
-        });
-    };
-
-    const createHandoff = (kind: 'rental' | 'sale', id: number) => {
-        const key = `${kind}-${id}`;
-        setHandoffPending(key);
-
-        router.post(
-            kind === 'rental'
-                ? `/operations/rental-reservations/${id}/dispatch`
-                : `/operations/sales/orders/${id}/dispatch`,
-            kind === 'sale'
-                ? {
-                      scheduled_start: salesScheduledStart,
-                      scheduled_end: salesScheduledEnd,
-                  }
-                : {},
-            {
-                preserveScroll: true,
-                onFinish: () => setHandoffPending(null),
-            },
-        );
-    };
-
     return (
         <div>
             <PageHeading
@@ -581,57 +564,14 @@ export function LiveDispatchWorkspace({
                             </div>
                         )}
 
-                        {!fieldMode &&
-                            (capabilities.create_client ||
-                                capabilities.create_service_request ||
-                                capabilities.convert_service_request) && (
-                                <Button
-                                    variant={showIntake ? 'secondary' : 'quiet'}
-                                    onClick={() => {
-                                        setShowIntake((value) => !value);
-
-                                        if (!showIntake) {
-                                            setShowCreate(false);
-                                        }
-                                    }}
-                                    aria-expanded={showIntake}
-                                    aria-controls="service-request-intake-panel"
-                                >
-                                    <FileText
-                                        className="h-4 w-4"
-                                        aria-hidden="true"
-                                    />
-                                    {showIntake
-                                        ? 'Close intake'
-                                        : 'Client & intake'}
-                                    {showIntake ? (
-                                        <ChevronUp
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <ChevronDown
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                </Button>
-                            )}
-
-                        {canCreate && (
+                        {canCreate && !fieldMode && (
                             <Button
-                                variant={showCreate ? 'secondary' : 'primary'}
-                                onClick={() => {
-                                    setShowCreate((value) => !value);
-
-                                    if (!showCreate) {
-                                        setShowIntake(false);
-                                    }
-                                }}
-                                aria-expanded={showCreate}
-                                aria-controls="create-dispatch-panel"
+                                variant={showIntake ? 'secondary' : 'primary'}
+                                onClick={() => setShowIntake((value) => !value)}
+                                aria-expanded={showIntake}
+                                aria-controls="new-dispatch-panel"
                             >
-                                {showCreate ? (
+                                {showIntake ? (
                                     <X className="h-4 w-4" aria-hidden="true" />
                                 ) : (
                                     <Plus
@@ -639,7 +579,17 @@ export function LiveDispatchWorkspace({
                                         aria-hidden="true"
                                     />
                                 )}
-                                {showCreate ? 'Close form' : 'Create dispatch'}
+                                {showIntake
+                                    ? 'Close new dispatch'
+                                    : 'New dispatch'}
+                                {!showIntake && incomingWorkCount > 0 && (
+                                    <span
+                                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] leading-none font-bold"
+                                        aria-label={`${incomingWorkCount} incoming handoffs need review`}
+                                    >
+                                        {incomingWorkCount}
+                                    </span>
+                                )}
                             </Button>
                         )}
                     </div>
@@ -647,264 +597,33 @@ export function LiveDispatchWorkspace({
             />
 
             <AnimatePresence>
-                {showIntake &&
-                    !fieldMode &&
-                    (capabilities.create_client ||
-                        capabilities.create_service_request ||
-                        capabilities.convert_service_request) && (
-                        <motion.div
-                            id="service-request-intake-panel"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2, ease: 'easeOut' }}
-                            className="overflow-hidden"
-                        >
-                            <LiveDispatchIntake
-                                clients={clients}
-                                serviceRequests={serviceRequests}
-                                rentalHandoffs={rentalHandoffs}
-                                salesHandoffs={salesHandoffs}
-                                jobs={jobs}
-                                capabilities={capabilities}
-                                initialRequestId={initialServiceRequestId}
-                                onClose={() => setShowIntake(false)}
-                            />
-                        </motion.div>
-                    )}
-            </AnimatePresence>
-
-            {!fieldMode &&
-                (rentalHandoffs.length > 0 || salesHandoffs.length > 0) &&
-                (capabilities.create_rental_dispatch ||
-                    capabilities.create_sales_dispatch) && (
-                    <section
-                        className="border-b border-line bg-surface-subtle px-4 py-5 md:px-6"
-                        aria-labelledby="commercial-handoffs-title"
-                    >
-                        <div className="mx-auto max-w-6xl">
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                                <div>
-                                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                        Commercial handoffs
-                                    </p>
-                                    <h2
-                                        id="commercial-handoffs-title"
-                                        className="mt-1 text-lg font-semibold text-ink"
-                                    >
-                                        Rental &amp; sale deliveries ready for
-                                        dispatch
-                                    </h2>
-                                    <p className="mt-1 text-sm text-ink-soft">
-                                        Turn an approved rental or confirmed
-                                        sale into a linked dispatch job. The
-                                        source remains visible on the job after
-                                        handoff.
-                                    </p>
-                                </div>
-                                {salesHandoffs.length > 0 &&
-                                    capabilities.create_sales_dispatch && (
-                                        <div className="grid gap-2 sm:min-w-96 sm:grid-cols-2">
-                                            <HandoffDateInput
-                                                label="Sale delivery start"
-                                                value={salesScheduledStart}
-                                                onChange={
-                                                    setSalesScheduledStart
-                                                }
-                                            />
-                                            <HandoffDateInput
-                                                label="Sale delivery end"
-                                                value={salesScheduledEnd}
-                                                onChange={setSalesScheduledEnd}
-                                            />
-                                        </div>
-                                    )}
-                            </div>
-
-                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                                {rentalHandoffs.map((handoff) => (
-                                    <CommercialHandoffCard
-                                        key={`rental-${handoff.id}`}
-                                        kind="rental"
-                                        handoff={handoff}
-                                        pending={
-                                            handoffPending ===
-                                            `rental-${handoff.id}`
-                                        }
-                                        canCreate={
-                                            capabilities.create_rental_dispatch
-                                        }
-                                        onCreate={() =>
-                                            createHandoff('rental', handoff.id)
-                                        }
-                                    />
-                                ))}
-                                {salesHandoffs.map((handoff) => (
-                                    <CommercialHandoffCard
-                                        key={`sale-${handoff.id}`}
-                                        kind="sale"
-                                        handoff={handoff}
-                                        pending={
-                                            handoffPending ===
-                                            `sale-${handoff.id}`
-                                        }
-                                        canCreate={
-                                            capabilities.create_sales_dispatch
-                                        }
-                                        onCreate={() =>
-                                            createHandoff('sale', handoff.id)
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-                )}
-
-            <AnimatePresence>
-                {showCreate && canCreate && (
-                    <motion.section
-                        id="create-dispatch-panel"
+                {showIntake && !fieldMode && canCreate && (
+                    <motion.div
+                        ref={intakePanelRef}
+                        id="new-dispatch-panel"
+                        tabIndex={-1}
+                        role="region"
+                        aria-label="New dispatch intake"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="overflow-hidden border-b border-line bg-surface px-4 py-5 md:px-6"
-                        aria-labelledby="create-dispatch-title"
+                        className="overflow-hidden"
                     >
-                        <div className="mx-auto mb-4 max-w-6xl">
-                            <h2
-                                id="create-dispatch-title"
-                                className="text-lg font-semibold"
-                            >
-                                New dispatch
-                            </h2>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                Create the live draft first. Assignment and
-                                activation stay in their existing authorized
-                                workflows.
-                            </p>
-                        </div>
-                        <form
-                            onSubmit={submit}
-                            className="mx-auto max-w-6xl space-y-4"
-                            noValidate
-                        >
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                <DispatchInput
-                                    label="Reference"
-                                    value={form.data.reference}
-                                    error={form.errors.reference}
-                                    onChange={(value) =>
-                                        form.setData('reference', value)
-                                    }
-                                />
-                                <DispatchInput
-                                    label="Client"
-                                    value={form.data.client}
-                                    error={form.errors.client}
-                                    onChange={(value) =>
-                                        form.setData('client', value)
-                                    }
-                                />
-                                <DispatchInput
-                                    label="Job title"
-                                    value={form.data.title}
-                                    error={form.errors.title}
-                                    onChange={(value) =>
-                                        form.setData('title', value)
-                                    }
-                                />
-                                <DispatchInput
-                                    label="Site"
-                                    value={form.data.site}
-                                    error={form.errors.site}
-                                    onChange={(value) =>
-                                        form.setData('site', value)
-                                    }
-                                />
-                                <DateTimePicker
-                                    id="dispatch-scheduled-start"
-                                    label="Start"
-                                    value={form.data.scheduled_start}
-                                    error={form.errors.scheduled_start}
-                                    onChange={(value) =>
-                                        form.setData('scheduled_start', value)
-                                    }
-                                    required
-                                />
-                                <DateTimePicker
-                                    id="dispatch-scheduled-end"
-                                    label="End"
-                                    value={form.data.scheduled_end}
-                                    error={form.errors.scheduled_end}
-                                    onChange={(value) =>
-                                        form.setData('scheduled_end', value)
-                                    }
-                                    required
-                                />
-                                <label className="text-sm font-medium text-ink">
-                                    Priority
-                                    <select
-                                        value={form.data.priority}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'priority',
-                                                event.target.value,
-                                            )
-                                        }
-                                        aria-invalid={
-                                            form.errors.priority
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                        className={cn(
-                                            'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
-                                            form.errors.priority
-                                                ? 'border-danger'
-                                                : 'border-line-strong hover:border-ink-soft',
-                                        )}
-                                    >
-                                        <option value="routine">Routine</option>
-                                        <option value="priority">
-                                            Priority
-                                        </option>
-                                        <option value="emergency">
-                                            Emergency
-                                        </option>
-                                    </select>
-                                    {form.errors.priority && (
-                                        <span
-                                            role="alert"
-                                            className="mt-1 block text-xs text-danger"
-                                        >
-                                            {form.errors.priority}
-                                        </span>
-                                    )}
-                                </label>
-                            </div>
-
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                                {!formComplete && !form.processing ? (
-                                    <p className="text-xs text-ink-soft">
-                                        Complete every required field to
-                                        continue.
-                                    </p>
-                                ) : (
-                                    <div />
-                                )}
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={form.processing || !formComplete}
-                                >
-                                    {form.processing
-                                        ? 'Creating dispatch…'
-                                        : 'Create live draft'}
-                                </Button>
-                            </div>
-                        </form>
-                    </motion.section>
+                        <LiveDispatchIntake
+                            clients={clients}
+                            serviceRequests={serviceRequests}
+                            rentalHandoffs={rentalHandoffs}
+                            salesHandoffs={salesHandoffs}
+                            jobs={jobs}
+                            capabilities={capabilities}
+                            initialRequestId={initialServiceRequestId}
+                            initialMode={
+                                initialServiceRequestId ? 'service' : null
+                            }
+                            onClose={() => setShowIntake(false)}
+                        />
+                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -1303,10 +1022,10 @@ export function LiveDispatchWorkspace({
                                             <Button
                                                 variant="primary"
                                                 onClick={() =>
-                                                    setShowCreate(true)
+                                                    setShowIntake(true)
                                                 }
                                             >
-                                                Create dispatch
+                                                New dispatch
                                             </Button>
                                         ) : undefined
                                     }
@@ -2899,52 +2618,6 @@ function gptRecommendationStatusClass(
     return 'bg-cobalt-50 text-cobalt-700';
 }
 
-function DispatchInput({
-    label,
-    value,
-    onChange,
-    error,
-    type = 'text',
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    error?: string;
-    type?: string;
-}) {
-    const errorId = `dispatch-${label.toLowerCase().replaceAll(' ', '-')}-error`;
-
-    return (
-        <label className="text-sm font-medium text-ink">
-            {label}
-            <input
-                type={type}
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                aria-invalid={error ? 'true' : undefined}
-                aria-describedby={error ? errorId : undefined}
-                className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
-                    error
-                        ? 'border-danger'
-                        : 'border-line-strong hover:border-ink-soft',
-                )}
-            />
-            {error && (
-                <span
-                    id={errorId}
-                    role="alert"
-                    aria-live="assertive"
-                    aria-atomic="true"
-                    className="mt-1 block text-xs text-danger"
-                >
-                    {error}
-                </span>
-            )}
-        </label>
-    );
-}
-
 function DispatchListSkeleton() {
     return (
         <div className="space-y-px" aria-label="Loading dispatch jobs">
@@ -2959,6 +2632,7 @@ function DispatchListSkeleton() {
     );
 }
 
+/* Legacy duplicate commercial cards retired; intake orchestration owns these workflows.
 type CommercialHandoffCardProps = {
     kind: 'rental' | 'sale';
     handoff: RentalDispatchHandoffViewModel | SalesDispatchHandoffViewModel;
@@ -3068,6 +2742,7 @@ function localDateTimeInput(date: Date): string {
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+*/
 
 function dateFromLocalKey(value: string): Date {
     const [year, month, day] = value.split('-').map(Number);

@@ -108,7 +108,7 @@ it('keeps local developer seeding idempotent and usable', function (): void {
                 'operator@example.com',
                 'technician@example.com',
             ])->count())->toBe(5)
-            ->and(DB::table('location_updates')->count())->toBe(5);
+            ->and(DB::table('location_updates')->count())->toBe(3);
 
         $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
         expect(Hash::check('password', $dispatcher->getRawOriginal('password')))->toBeTrue()

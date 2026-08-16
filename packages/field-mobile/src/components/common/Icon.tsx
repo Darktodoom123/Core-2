@@ -27,7 +27,12 @@ export type IconName =
     | 'shield-check'
     | 'file-text'
     | 'close'
-    | 'power';
+    | 'power'
+    | 'map'
+    | 'list'
+    | 'flag'
+    | 'compass'
+    | 'pin';
 
 export interface IconProps {
     name: IconName;
@@ -41,6 +46,18 @@ export const Icon: React.FC<IconProps> = ({
     color = colors.text,
 }) => {
     switch (name) {
+        case 'map':
+            return <Ionicons name="map-outline" size={size} color={color} />;
+        case 'list':
+            return <Ionicons name="list-outline" size={size} color={color} />;
+        case 'flag':
+            return <Ionicons name="flag-outline" size={size} color={color} />;
+        case 'compass':
+            return (
+                <Ionicons name="compass-outline" size={size} color={color} />
+            );
+        case 'pin':
+            return <Ionicons name="location" size={size} color={color} />;
         case 'home':
             return <Ionicons name="grid-outline" size={size} color={color} />;
         case 'route':

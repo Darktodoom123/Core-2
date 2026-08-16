@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import type { TokenStorageProvider } from './src/auth/tokenStorage';
@@ -16,6 +16,8 @@ export interface AppProps {
     outboxRepository?: OutboxRepository;
 }
 
+import { ThemeProvider } from './src/theme';
+
 export const App: React.FC<AppProps> = ({
     baseUrl,
     tokenStorage,
@@ -26,17 +28,19 @@ export const App: React.FC<AppProps> = ({
 }) => {
     return (
         <SafeAreaProvider>
-            <AuthProvider
-                baseUrl={baseUrl}
-                tokenStorage={tokenStorage}
-                fetchFn={fetchFn}
-            >
-                <AppNavigator
-                    networkMonitor={networkMonitor}
-                    outboxHasher={outboxHasher}
-                    outboxRepository={outboxRepository}
-                />
-            </AuthProvider>
+            <ThemeProvider initialMode="light">
+                <AuthProvider
+                    baseUrl={baseUrl}
+                    tokenStorage={tokenStorage}
+                    fetchFn={fetchFn}
+                >
+                    <AppNavigator
+                        networkMonitor={networkMonitor}
+                        outboxHasher={outboxHasher}
+                        outboxRepository={outboxRepository}
+                    />
+                </AuthProvider>
+            </ThemeProvider>
         </SafeAreaProvider>
     );
 };

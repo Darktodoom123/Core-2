@@ -14,7 +14,6 @@ import {
     Package,
     Plus,
     PlusCircle,
-    Shield,
     ShieldCheck,
     UserRoundPlus,
     X,
@@ -60,6 +59,16 @@ const PREDEFINED_TECHNICAL_REQUIREMENTS = [
     'Site induction & PPE compliance verified',
 ];
 
+type IncomingWorkItem = {
+    key: string;
+    mode: 'service' | 'rental' | 'sale';
+    sourceLabel: string;
+    reference: string;
+    client: string;
+    detail: string;
+    status: string;
+};
+
 export function LiveDispatchIntake({
     clients,
     serviceRequests,
@@ -81,31 +90,84 @@ export function LiveDispatchIntake({
     initialMode?: IntakeMode;
     onClose?: () => void;
 }) {
+    const canCreateManual = capabilities.create_dispatch;
+    const canReviewService = capabilities.convert_service_request;
+    const canReviewRental = capabilities.create_rental_dispatch;
+    const canReviewSale = capabilities.create_sales_dispatch;
+
+    const incomingItems = useMemo<IncomingWorkItem[]>(() => {
+        const services = canReviewService
+            ? serviceRequests
+                  .filter((request) => request.dispatch_jobs_count === 0)
+                  .map((request) => ({
+                      key: `service-${request.id}`,
+                      mode: 'service' as const,
+                      sourceLabel: 'Service request',
+                      reference: request.reference,
+                      client: request.client.company_name,
+                      detail:
+                          request.project_name ||
+                          request.service_type ||
+                          request.location ||
+                          'Service demand awaiting dispatch',
+                      status: request.status.label,
+                  }))
+            : [];
+        const rentals = canReviewRental
+            ? rentalHandoffs
+                  .filter((handoff) => !handoff.dispatch_job_id)
+                  .map((handoff) => ({
+                      key: `rental-${handoff.id}`,
+                      mode: 'rental' as const,
+                      sourceLabel: 'Rental delivery',
+                      reference: handoff.reference,
+                      client: handoff.client.company_name,
+                      detail:
+                          handoff.location || 'Delivery location needs review',
+                      status: handoff.status.label,
+                  }))
+            : [];
+        const sales = canReviewSale
+            ? salesHandoffs
+                  .filter((handoff) => !handoff.dispatch_job_id)
+                  .map((handoff) => ({
+                      key: `sale-${handoff.id}`,
+                      mode: 'sale' as const,
+                      sourceLabel: 'Sales delivery',
+                      reference: handoff.reference,
+                      client: handoff.client.company_name,
+                      detail:
+                          handoff.location || 'Delivery location needs review',
+                      status: handoff.status.label,
+                  }))
+            : [];
+
+        return [...services, ...rentals, ...sales];
+    }, [
+        canReviewRental,
+        canReviewSale,
+        canReviewService,
+        rentalHandoffs,
+        salesHandoffs,
+        serviceRequests,
+    ]);
+
     const [mode, setMode] = useState<IntakeMode>(() => {
         if (initialRequestId) {
             return 'service';
         }
 
-        if (initialMode) {
-            return initialMode;
-        }
-
-        return null;
+        return initialMode;
     });
+    const [selectedItemKey, setSelectedItemKey] = useState<string | null>(
+        initialRequestId ? `service-${initialRequestId}` : null,
+    );
+    const unlinkedCount = incomingItems.length;
 
-    const unlinkedCount = useMemo(() => {
-        const pendingServices = serviceRequests.filter(
-            (r) => r.dispatch_jobs_count === 0,
-        ).length;
-        const pendingRentals = rentalHandoffs.filter(
-            (r) => !r.dispatch_job_id,
-        ).length;
-        const pendingSales = salesHandoffs.filter(
-            (s) => !s.dispatch_job_id,
-        ).length;
-
-        return pendingServices + pendingRentals + pendingSales;
-    }, [serviceRequests, rentalHandoffs, salesHandoffs]);
+    const closeWorkflow = () => {
+        setMode(null);
+        setSelectedItemKey(null);
+    };
 
     return (
         <section
@@ -115,41 +177,33 @@ export function LiveDispatchIntake({
             <div className="mx-auto max-w-7xl">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <h2
-                                id="dispatch-intake-title"
-                                className="text-lg font-semibold tracking-tight text-ink"
-                            >
-                                Source-aware dispatch intake
-                            </h2>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
-                                <Shield
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden="true"
-                                />
-                                Core 2 Unified
-                            </span>
-                        </div>
+                        <h2
+                            id="dispatch-intake-title"
+                            className="text-lg font-semibold tracking-tight text-ink"
+                        >
+                            New dispatch
+                        </h2>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                            Intake demand across Service Requests, Rental
-                            Reservations, Sales Delivery Orders, or Direct
-                            Manual Operational Drafts without commercial
-                            lock-in.
+                            Core 1 handoffs are routed to the right workflow
+                            automatically. Review the incoming work below, or
+                            create a direct operational dispatch when no
+                            upstream handoff exists.
                         </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                         {capabilities.create_client && (
                             <Button
-                                size="sm"
+                                size="md"
                                 variant={
                                     mode === 'client' ? 'primary' : 'secondary'
                                 }
-                                onClick={() =>
+                                onClick={() => {
+                                    setSelectedItemKey(null);
                                     setMode((cur) =>
                                         cur === 'client' ? null : 'client',
-                                    )
-                                }
+                                    );
+                                }}
                                 aria-expanded={mode === 'client'}
                                 aria-controls="client-intake-form"
                             >
@@ -162,7 +216,7 @@ export function LiveDispatchIntake({
                         )}
                         {onClose && (
                             <Button
-                                size="sm"
+                                size="md"
                                 variant="quiet"
                                 onClick={onClose}
                                 aria-label="Close intake"
@@ -173,129 +227,136 @@ export function LiveDispatchIntake({
                     </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 border-b border-line pb-3">
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setMode((cur) =>
-                                cur === 'manual' ? null : 'manual',
-                            )
-                        }
-                        className={cn(
-                            'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all',
-                            mode === 'manual'
-                                ? 'border-brand bg-brand-soft text-brand-strong shadow-xs'
-                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                        )}
-                    >
-                        <PlusCircle className="h-4 w-4 shrink-0 text-brand-strong" />
-                        <span>Manual intake</span>
-                        <span className="text-ink-muted rounded bg-black/5 px-1.5 py-0.5 font-mono text-[10px]">
-                            manual_intake
+                <div
+                    className="mt-5 rounded-xl border border-line bg-surface-subtle p-4"
+                    aria-live="polite"
+                >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                Incoming work
+                            </p>
+                            <h3 className="mt-1 text-base font-semibold text-ink">
+                                Core 1 handoffs routed automatically
+                            </h3>
+                            <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+                                Each item opens its own service, rental, or
+                                sales workflow. No source selection is needed.
+                            </p>
+                        </div>
+                        <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
+                            {incomingItems.length > 0
+                                ? `${incomingItems.length} needs review`
+                                : 'No handoffs waiting'}
                         </span>
-                    </button>
+                    </div>
 
+                    {incomingItems.length > 0 ? (
+                        <div
+                            className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface"
+                            role="list"
+                            aria-label="Incoming work queue"
+                        >
+                            {incomingItems.map((item) => (
+                                <IncomingWorkRow
+                                    key={item.key}
+                                    item={item}
+                                    selected={selectedItemKey === item.key}
+                                    onClick={() => {
+                                        setSelectedItemKey(item.key);
+                                        setMode(item.mode);
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState
+                            compact
+                            icon={ClipboardCheck}
+                            title="No Core 1 handoffs waiting"
+                            message="Use Direct operational dispatch for work that has not arrived from Core 1."
+                        />
+                    )}
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                            Direct operational fallback
+                        </p>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            For work without a Core 1 request or commercial
+                            handoff.
+                        </p>
+                    </div>
+                    {canCreateManual && (
+                        <Button
+                            type="button"
+                            variant={
+                                mode === 'manual' ? 'secondary' : 'primary'
+                            }
+                            aria-pressed={mode === 'manual'}
+                            onClick={() => {
+                                setSelectedItemKey(null);
+                                setMode((cur) =>
+                                    cur === 'manual' ? null : 'manual',
+                                );
+                            }}
+                        >
+                            <PlusCircle
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            />
+                            {mode === 'manual'
+                                ? 'Close direct dispatch'
+                                : 'Create direct dispatch'}
+                        </Button>
+                    )}
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                            Dispatch review
+                        </p>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            Review unmatched records before they can create a
+                            duplicate execution.
+                        </p>
+                    </div>
                     <button
                         type="button"
-                        onClick={() =>
-                            setMode((cur) =>
-                                cur === 'service' ? null : 'service',
-                            )
-                        }
+                        aria-pressed={mode === 'reconciliation'}
+                        onClick={() => {
+                            setSelectedItemKey(null);
+                            setMode('reconciliation');
+                        }}
                         className={cn(
-                            'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all',
-                            mode === 'service'
-                                ? 'border-brand bg-brand-soft text-brand-strong shadow-xs'
-                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                        )}
-                    >
-                        <FileText className="h-4 w-4 shrink-0 text-brand-strong" />
-                        <span>Service request</span>
-                        {serviceRequests.length > 0 && (
-                            <span className="py-0.2 rounded-full bg-brand-soft px-1.5 text-[10px] font-bold text-brand-strong">
-                                {serviceRequests.length}
-                            </span>
-                        )}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setMode((cur) =>
-                                cur === 'rental' ? null : 'rental',
-                            )
-                        }
-                        className={cn(
-                            'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all',
-                            mode === 'rental'
-                                ? 'border-warning-strong bg-warning-soft text-warning-strong shadow-xs'
-                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                        )}
-                    >
-                        <CalendarDays className="h-4 w-4 shrink-0 text-warning-strong" />
-                        <span>Rental reservation</span>
-                        {rentalHandoffs.length > 0 && (
-                            <span className="py-0.2 rounded-full bg-warning-soft px-1.5 text-[10px] font-bold text-warning-strong">
-                                {rentalHandoffs.length}
-                            </span>
-                        )}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setMode((cur) => (cur === 'sale' ? null : 'sale'))
-                        }
-                        className={cn(
-                            'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all',
-                            mode === 'sale'
-                                ? 'border-success-strong bg-success-soft text-success-strong shadow-xs'
-                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                        )}
-                    >
-                        <Package className="h-4 w-4 shrink-0 text-success-strong" />
-                        <span>Sales order delivery</span>
-                        {salesHandoffs.length > 0 && (
-                            <span className="py-0.2 rounded-full bg-success-soft px-1.5 text-[10px] font-bold text-success-strong">
-                                {salesHandoffs.length}
-                            </span>
-                        )}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setMode((cur) =>
-                                cur === 'reconciliation'
-                                    ? null
-                                    : 'reconciliation',
-                            )
-                        }
-                        className={cn(
-                            'inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all',
+                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all',
                             mode === 'reconciliation'
                                 ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
                                 : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
-                        <Link2 className="h-4 w-4 shrink-0 text-info-strong" />
-                        <span>Reconciliation queue</span>
-                        {unlinkedCount > 0 && (
-                            <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
-                                {unlinkedCount}
-                            </span>
-                        )}
+                        <Link2
+                            className="h-4 w-4 shrink-0 text-info-strong"
+                            aria-hidden="true"
+                        />
+                        <span>Review unmatched handoffs</span>
+                        <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
+                            {unlinkedCount} to review
+                        </span>
                     </button>
                 </div>
 
                 {mode === 'client' && (
-                    <ClientIntakeForm onClose={() => setMode(null)} />
+                    <ClientIntakeForm onClose={closeWorkflow} />
                 )}
 
                 {mode === 'manual' && (
                     <ManualDispatchIntakeForm
                         clients={clients}
-                        onClose={() => setMode(null)}
+                        onClose={closeWorkflow}
                     />
                 )}
 
@@ -303,8 +364,9 @@ export function LiveDispatchIntake({
                     <ServiceIntakeSection
                         clients={clients}
                         serviceRequests={serviceRequests}
+                        capabilities={capabilities}
                         initialRequestId={initialRequestId}
-                        onClose={() => setMode(null)}
+                        onClose={closeWorkflow}
                     />
                 )}
 
@@ -312,7 +374,7 @@ export function LiveDispatchIntake({
                     <RentalIntakeSection
                         rentalHandoffs={rentalHandoffs}
                         capabilities={capabilities}
-                        onClose={() => setMode(null)}
+                        onClose={closeWorkflow}
                     />
                 )}
 
@@ -320,7 +382,7 @@ export function LiveDispatchIntake({
                     <SaleIntakeSection
                         salesHandoffs={salesHandoffs}
                         capabilities={capabilities}
-                        onClose={() => setMode(null)}
+                        onClose={closeWorkflow}
                     />
                 )}
 
@@ -330,11 +392,81 @@ export function LiveDispatchIntake({
                         rentalHandoffs={rentalHandoffs}
                         salesHandoffs={salesHandoffs}
                         jobs={jobs}
-                        onClose={() => setMode(null)}
+                        onClose={closeWorkflow}
                     />
                 )}
             </div>
         </section>
+    );
+}
+
+function IncomingWorkRow({
+    item,
+    selected,
+    onClick,
+}: {
+    item: IncomingWorkItem;
+    selected: boolean;
+    onClick: () => void;
+}) {
+    const Icon =
+        item.mode === 'service'
+            ? FileText
+            : item.mode === 'rental'
+              ? CalendarDays
+              : Package;
+    const toneClass =
+        item.mode === 'service'
+            ? 'text-brand-strong'
+            : item.mode === 'rental'
+              ? 'text-warning-strong'
+              : 'text-success-strong';
+
+    return (
+        <div role="listitem">
+            <button
+                type="button"
+                aria-pressed={selected}
+                aria-label={`Review ${item.sourceLabel}: ${item.reference}`}
+                onClick={onClick}
+                className={cn(
+                    'flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors',
+                    selected
+                        ? 'bg-brand-soft/60'
+                        : 'bg-surface hover:bg-surface-subtle',
+                )}
+            >
+                <Icon
+                    className={cn('h-4 w-4 shrink-0', toneClass)}
+                    aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="text-sm font-semibold text-ink">
+                            {item.sourceLabel}
+                        </span>
+                        <span className="text-xs font-medium text-ink-soft">
+                            {item.reference}
+                        </span>
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-ink-soft">
+                        {item.client} · {item.detail}
+                    </span>
+                </span>
+                <span className="hidden shrink-0 text-right sm:block">
+                    <span className="block text-xs font-medium text-ink-soft">
+                        {item.status}
+                    </span>
+                    <span className="mt-0.5 block text-xs font-semibold text-brand-strong">
+                        {selected ? 'Open workflow' : 'Review'}
+                    </span>
+                </span>
+                <ArrowRight
+                    className="text-ink-muted h-4 w-4 shrink-0"
+                    aria-hidden="true"
+                />
+            </button>
+        </div>
     );
 }
 
@@ -600,9 +732,10 @@ function ManualDispatchIntakeForm({
                                 <button
                                     key={req}
                                     type="button"
+                                    aria-pressed={active}
                                     onClick={() => togglePredefined(req)}
                                     className={cn(
-                                        'flex min-h-10 items-center gap-2.5 rounded-lg border p-2.5 text-left text-xs font-medium transition-colors',
+                                        'flex min-h-11 items-center gap-2.5 rounded-lg border p-2.5 text-left text-xs font-medium transition-colors',
                                         active
                                             ? 'border-brand bg-brand-soft text-brand-strong'
                                             : 'border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
@@ -630,7 +763,14 @@ function ManualDispatchIntakeForm({
                     </div>
 
                     <div className="mt-3 flex gap-2">
+                        <label
+                            htmlFor="manual-custom-requirement"
+                            className="sr-only"
+                        >
+                            Custom technical requirement
+                        </label>
                         <input
+                            id="manual-custom-requirement"
                             type="text"
                             value={customRequirement}
                             onChange={(e) =>
@@ -643,7 +783,7 @@ function ManualDispatchIntakeForm({
                                 }
                             }}
                             placeholder="Add custom technical requirement..."
-                            className="h-10 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-xs"
+                            className="h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-xs"
                         />
                         <Button
                             type="button"
@@ -673,7 +813,7 @@ function ManualDispatchIntakeForm({
                                         type="button"
                                         onClick={() => removeRequirement(req)}
                                         className="text-brand-strong hover:text-danger"
-                                        aria-label="Remove requirement"
+                                        aria-label={`Remove requirement: ${req}`}
                                     >
                                         <X
                                             className="h-3 w-3"
@@ -728,16 +868,24 @@ function ManualDispatchIntakeForm({
 function ServiceIntakeSection({
     clients,
     serviceRequests,
+    capabilities,
     initialRequestId,
     onClose,
 }: {
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
+    capabilities: WorkspaceCapabilities;
     initialRequestId?: number | null;
     onClose: () => void;
 }) {
+    const canCreateRequest = capabilities.create_service_request;
+    const canConvertRequest = capabilities.convert_service_request;
     const [subTab, setSubTab] = useState<'create' | 'convert'>(() =>
-        initialRequestId ? 'convert' : 'create',
+        initialRequestId && canConvertRequest
+            ? 'convert'
+            : canCreateRequest
+              ? 'create'
+              : 'convert',
     );
 
     return (
@@ -764,30 +912,36 @@ function ServiceIntakeSection({
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="flex rounded-lg border border-line bg-surface p-1">
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('create')}
-                            className={cn(
-                                'rounded-md px-3 py-1 text-xs font-medium transition-colors',
-                                subTab === 'create'
-                                    ? 'bg-brand-soft font-semibold text-brand-strong'
-                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                            )}
-                        >
-                            New service request
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSubTab('convert')}
-                            className={cn(
-                                'rounded-md px-3 py-1 text-xs font-medium transition-colors',
-                                subTab === 'convert'
-                                    ? 'bg-brand-soft font-semibold text-brand-strong'
-                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                            )}
-                        >
-                            Convert to draft ({serviceRequests.length})
-                        </button>
+                        {canCreateRequest && (
+                            <button
+                                type="button"
+                                aria-pressed={subTab === 'create'}
+                                onClick={() => setSubTab('create')}
+                                className={cn(
+                                    'inline-flex min-h-11 items-center rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                                    subTab === 'create'
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                )}
+                            >
+                                New service request
+                            </button>
+                        )}
+                        {canConvertRequest && (
+                            <button
+                                type="button"
+                                aria-pressed={subTab === 'convert'}
+                                onClick={() => setSubTab('convert')}
+                                className={cn(
+                                    'inline-flex min-h-11 items-center rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                                    subTab === 'convert'
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                )}
+                            >
+                                Convert to draft ({serviceRequests.length})
+                            </button>
+                        )}
                     </div>
                     <Button
                         size="icon"
@@ -800,14 +954,14 @@ function ServiceIntakeSection({
                 </div>
             </div>
 
-            {subTab === 'create' ? (
+            {subTab === 'create' && canCreateRequest ? (
                 <ServiceRequestIntakeForm clients={clients} onClose={onClose} />
-            ) : (
+            ) : canConvertRequest ? (
                 <DispatchConversion
                     serviceRequests={serviceRequests}
                     initialRequestId={initialRequestId}
                 />
-            )}
+            ) : null}
         </Panel>
     );
 }

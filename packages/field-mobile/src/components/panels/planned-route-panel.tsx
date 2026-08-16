@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../common/Icon';
 import { FieldRouteMapView } from '../map/FieldRouteMapView';
-import { colors } from '../nativeStyles';
+import { colors, shadows } from '../nativeStyles';
 
 export interface PlannedRoutePanelProps {
     onBackToToday: () => void;
@@ -15,6 +16,7 @@ export const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
     hasRouteData = false,
 }) => {
     const [previewMode, setPreviewMode] = useState(false);
+    const isRouteActive = hasRouteData || previewMode;
 
     return (
         <View
@@ -22,16 +24,44 @@ export const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
             style={styles.panel}
             testID="planned-route-panel"
         >
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                    {hasRouteData || previewMode
-                        ? 'ROUTE ACTIVE'
-                        : 'PLANNED CAPABILITY'}
-                </Text>
+            {/* Header with Title and Capability Badge */}
+            <View style={styles.headerRow}>
+                <View style={styles.titleWrap}>
+                    <View
+                        style={[
+                            styles.badge,
+                            isRouteActive
+                                ? styles.badgeActive
+                                : styles.badgePlanned,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.badgeText,
+                                isRouteActive
+                                    ? styles.badgeTextActive
+                                    : styles.badgeTextPlanned,
+                            ]}
+                        >
+                            {isRouteActive
+                                ? 'ROUTE ACTIVE'
+                                : 'PLANNED CAPABILITY'}
+                        </Text>
+                    </View>
+                    <Text style={styles.title}>Route planning</Text>
+                </View>
+                <View style={styles.iconBadge}>
+                    <Icon
+                        color={
+                            isRouteActive ? colors.primaryDark : colors.muted
+                        }
+                        name="route"
+                        size={20}
+                    />
+                </View>
             </View>
-            <Text style={styles.title}>Route planning</Text>
 
-            {hasRouteData || previewMode ? (
+            {isRouteActive ? (
                 <View style={styles.mapWrap} testID="route-map">
                     <FieldRouteMapView
                         destinationLabel={destinationLabel}
@@ -41,24 +71,41 @@ export const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
                         accessibilityLabel="Hide route corridor preview"
                         accessibilityRole="button"
                         onPress={() => setPreviewMode(false)}
-                        style={styles.toggleBtn}
+                        style={({ pressed }) => [
+                            styles.toggleBtn,
+                            pressed && styles.pressed,
+                        ]}
                     >
+                        <Icon color={colors.secondary} name="close" size={16} />
                         <Text style={styles.toggleBtnText}>
                             Close Route Preview
                         </Text>
                     </Pressable>
                 </View>
             ) : (
-                <>
-                    <Text style={styles.status}>Route data unavailable</Text>
-                    <Text style={styles.body}>
-                        Route planning is not available for this assignment yet.
-                    </Text>
-                    <Text style={styles.body}>
-                        Heavy-vehicle route details will appear when the server
-                        provides route data. No map, ETA, coordinates, or gate
-                        information is being shown until then.
-                    </Text>
+                <View style={styles.unavailableWrap}>
+                    <View style={styles.noticeBox}>
+                        <View style={styles.noticeHeader}>
+                            <Icon
+                                color={colors.amberDark}
+                                name="alert-circle"
+                                size={18}
+                            />
+                            <Text style={styles.status}>
+                                Route data unavailable
+                            </Text>
+                        </View>
+                        <Text style={styles.body}>
+                            Route planning is not available for this assignment
+                            yet.
+                        </Text>
+                        <Text style={styles.bodyMuted}>
+                            Heavy-vehicle route details will appear when the
+                            server provides route data. No map, ETA,
+                            coordinates, or gate information is being shown
+                            until then.
+                        </Text>
+                    </View>
 
                     <Pressable
                         accessibilityLabel="Preview verified corridor routing diagram"
@@ -70,11 +117,12 @@ export const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
                         ]}
                         testID="preview-route-corridor-btn"
                     >
+                        <Icon color={colors.primaryDark} name="map" size={18} />
                         <Text style={styles.previewButtonText}>
-                            🗺️ Preview Heavy Transport Corridor
+                            Preview MapLibre Transport Corridor
                         </Text>
                     </Pressable>
-                </>
+                </View>
             )}
 
             <Pressable
@@ -86,6 +134,7 @@ export const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
                     pressed && styles.pressed,
                 ]}
             >
+                <Icon color={colors.text} name="back" size={16} />
                 <Text style={styles.backButtonText}>Back to Today</Text>
             </Pressable>
         </View>
@@ -96,54 +145,107 @@ const styles = StyleSheet.create({
     panel: {
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 12,
-        borderStyle: 'dashed',
+        borderRadius: 16,
         borderWidth: 1,
-        gap: 10,
+        gap: 14,
         marginBottom: 16,
-        padding: 16,
+        padding: 18,
+        ...shadows.md,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+    },
+    titleWrap: {
+        gap: 6,
     },
     badge: {
         alignSelf: 'flex-start',
-        backgroundColor: colors.surfaceMuted,
         borderRadius: 999,
+        borderWidth: 1,
         paddingHorizontal: 10,
-        paddingVertical: 5,
+        paddingVertical: 3,
+    },
+    badgeActive: {
+        backgroundColor: colors.primaryLight,
+        borderColor: colors.primaryBorder,
+    },
+    badgePlanned: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
     },
     badgeText: {
-        color: colors.secondary,
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '800',
-        letterSpacing: 0.5,
+        letterSpacing: 0.6,
+    },
+    badgeTextActive: {
+        color: colors.primaryDark,
+    },
+    badgeTextPlanned: {
+        color: colors.amberDark,
     },
     title: {
         color: colors.text,
-        fontSize: 20,
+        fontSize: 19,
         fontWeight: '800',
+        letterSpacing: -0.3,
+    },
+    iconBadge: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        padding: 8,
+    },
+    unavailableWrap: {
+        gap: 12,
+    },
+    noticeBox: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 8,
+        padding: 14,
+    },
+    noticeHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     status: {
-        color: colors.warningDark,
-        fontSize: 15,
+        color: colors.amberDark,
+        fontSize: 14,
         fontWeight: '800',
     },
     body: {
-        color: colors.secondary,
+        color: colors.text,
         fontSize: 14,
-        lineHeight: 21,
+        fontWeight: '600',
+        lineHeight: 20,
+    },
+    bodyMuted: {
+        color: colors.secondary,
+        fontSize: 13,
+        lineHeight: 19,
     },
     mapWrap: {
-        gap: 10,
+        gap: 12,
         marginVertical: 4,
     },
     toggleBtn: {
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
-        borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderColor: colors.border,
+        borderRadius: 12,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
-        minHeight: 44,
-        paddingHorizontal: 12,
+        minHeight: 48,
+        paddingHorizontal: 14,
     },
     toggleBtnText: {
         color: colors.secondary,
@@ -152,32 +254,37 @@ const styles = StyleSheet.create({
     },
     previewButton: {
         alignItems: 'center',
-        backgroundColor: colors.amberSoft,
-        borderColor: colors.amberBorder,
-        borderRadius: 8,
+        backgroundColor: colors.primaryLight,
+        borderColor: colors.primaryBorder,
+        borderRadius: 12,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
         minHeight: 48,
-        paddingHorizontal: 14,
+        paddingHorizontal: 16,
     },
     previewButtonText: {
-        color: colors.amberDark,
+        color: colors.primaryDark,
         fontSize: 14,
         fontWeight: '800',
     },
     backButton: {
         alignItems: 'center',
+        backgroundColor: colors.surface,
         borderColor: colors.borderStrong,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 8,
         justifyContent: 'center',
         minHeight: 48,
         paddingHorizontal: 16,
     },
     backButtonText: {
         color: colors.text,
-        fontSize: 15,
-        fontWeight: '800',
+        fontSize: 14,
+        fontWeight: '700',
     },
     pressed: {
         opacity: 0.78,

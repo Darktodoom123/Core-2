@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
+import { MapLibreWebContainer } from './MapLibreWebContainer';
 
 export interface RouteWaypoint {
     id: string;
@@ -13,19 +15,24 @@ export interface RouteWaypoint {
 
 export interface FieldRouteMapViewProps {
     originLabel?: string;
+    originCoords?: [number, number];
     destinationLabel?: string;
+    destinationCoords?: [number, number];
     waypoints?: RouteWaypoint[];
     routeStatus?: 'live' | 'cached' | 'planned' | 'unavailable';
     etaMinutes?: number;
     distanceKm?: number;
     clearanceHeightMetres?: number;
     maxAxleWeightTons?: number;
+    initialMode?: 'map' | 'corridor';
     testID?: string;
 }
 
 export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
     originLabel = 'Yard / Base',
+    originCoords = [120.9842, 14.5995],
     destinationLabel = 'Project Site',
+    destinationCoords = [121.002, 14.612],
     waypoints = [
         {
             id: 'wp-1',
@@ -55,14 +62,20 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
     distanceKm = 18.4,
     clearanceHeightMetres = 4.8,
     maxAxleWeightTons = 45,
+    initialMode = 'corridor',
     testID = 'field-route-map-view',
 }) => {
     const [selectedWaypoint, setSelectedWaypoint] =
         useState<RouteWaypoint | null>(null);
+    const [viewMode, setViewMode] = useState<'map' | 'corridor'>(initialMode);
 
     return (
-        <View style={styles.container} testID={testID}>
-            {/* Map Header Status & Metric Bar */}
+        <View
+            accessibilityRole="summary"
+            style={styles.container}
+            testID={testID}
+        >
+            {/* Top Telemetry & Clearance HUD */}
             <View style={styles.metricsBar}>
                 <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>EST. TIME</Text>
@@ -87,21 +100,111 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                 </View>
             </View>
 
+            {/* Segmented Mode Switcher */}
+            <View accessibilityRole="tablist" style={styles.modeSwitcherRow}>
+                <Pressable
+                    accessibilityLabel="Switch to MapLibre Map View"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: viewMode === 'map' }}
+                    onPress={() => setViewMode('map')}
+                    style={[
+                        styles.modeButton,
+                        viewMode === 'map' && styles.modeButtonActive,
+                    ]}
+                    testID={`${testID}-tab-map`}
+                >
+                    <View style={styles.modeButtonContent}>
+                        <Icon
+                            color={
+                                viewMode === 'map'
+                                    ? colors.white
+                                    : colors.mutedOnDark
+                            }
+                            name="map"
+                            size={16}
+                        />
+                        <Text
+                            style={[
+                                styles.modeButtonText,
+                                viewMode === 'map' &&
+                                    styles.modeButtonTextActive,
+                            ]}
+                        >
+                            MapLibre Map
+                        </Text>
+                    </View>
+                </Pressable>
+
+                <Pressable
+                    accessibilityLabel="Switch to Corridor Step View"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: viewMode === 'corridor' }}
+                    onPress={() => setViewMode('corridor')}
+                    style={[
+                        styles.modeButton,
+                        viewMode === 'corridor' && styles.modeButtonActive,
+                    ]}
+                    testID={`${testID}-tab-corridor`}
+                >
+                    <View style={styles.modeButtonContent}>
+                        <Icon
+                            color={
+                                viewMode === 'corridor'
+                                    ? colors.white
+                                    : colors.mutedOnDark
+                            }
+                            name="list"
+                            size={16}
+                        />
+                        <Text
+                            style={[
+                                styles.modeButtonText,
+                                viewMode === 'corridor' &&
+                                    styles.modeButtonTextActive,
+                            ]}
+                        >
+                            Corridor Steps
+                        </Text>
+                    </View>
+                </Pressable>
+            </View>
+
+            {/* MapLibre Live Vector Map Container */}
+            {viewMode === 'map' ? (
+                <View style={styles.mapLibreContainer}>
+                    <MapLibreWebContainer
+                        destinationCoords={destinationCoords}
+                        destinationLabel={destinationLabel}
+                        originCoords={originCoords}
+                        originLabel={originLabel}
+                        styleVariant="dark"
+                        waypoints={waypoints}
+                    />
+                </View>
+            ) : null}
+
             {/* Visual Vector Route Corridor Diagram */}
             <View style={styles.mapCanvas} testID={`${testID}-canvas`}>
-                {/* Background Grid & Compass Rose */}
+                {/* Background Compass & Axle Load Pill */}
                 <View style={styles.compassContainer}>
-                    <Text style={styles.compassText}>🧭 N</Text>
-                    <Text style={styles.speedRating}>
-                        Max {maxAxleWeightTons}T
-                    </Text>
+                    <View style={styles.compassBadge}>
+                        <Icon color={colors.amber} name="compass" size={13} />
+                        <Text style={styles.compassText}>N</Text>
+                    </View>
+                    <View style={styles.axleBadge}>
+                        <Text style={styles.speedRating}>
+                            Max {maxAxleWeightTons}T Axle
+                        </Text>
+                    </View>
                 </View>
 
-                {/* Simulated Waypoint Corridor Route Rail */}
+                {/* Waypoint Corridor Rail */}
                 <View style={styles.routeRailContainer}>
                     {/* Origin Pin */}
                     <View style={styles.waypointRow}>
-                        <View style={[styles.pinDot, styles.pinOrigin]} />
+                        <View style={[styles.pinDot, styles.pinOrigin]}>
+                            <Icon color={colors.white} name="pin" size={12} />
+                        </View>
                         <View style={styles.waypointCopy}>
                             <Text style={styles.waypointName}>
                                 {originLabel}
@@ -123,7 +226,11 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                                 <Pressable
                                     accessibilityLabel={`Waypoint ${idx + 1}: ${wp.label}${wp.hazardNote ? `, Hazard: ${wp.hazardNote}` : ''}`}
                                     accessibilityRole="button"
-                                    onPress={() => setSelectedWaypoint(wp)}
+                                    onPress={() =>
+                                        setSelectedWaypoint(
+                                            isSelected ? null : wp,
+                                        )
+                                    }
                                     style={({ pressed }) => [
                                         styles.waypointRow,
                                         isSelected &&
@@ -142,23 +249,59 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                                                   : styles.pinPending,
                                         ]}
                                     >
-                                        <Text style={styles.pinIcon}>
-                                            {wp.hazardNote ? '⚠️' : '●'}
-                                        </Text>
+                                        {wp.hazardNote ? (
+                                            <Icon
+                                                color={colors.white}
+                                                name="alert"
+                                                size={12}
+                                            />
+                                        ) : wp.isPassed ? (
+                                            <Icon
+                                                color={colors.white}
+                                                name="check"
+                                                size={12}
+                                            />
+                                        ) : (
+                                            <View
+                                                style={styles.pinPendingInner}
+                                            />
+                                        )}
                                     </View>
                                     <View style={styles.waypointCopy}>
-                                        <Text style={styles.waypointName}>
-                                            {wp.label}
-                                        </Text>
-                                        {wp.hazardNote ? (
-                                            <Text style={styles.hazardWarning}>
-                                                {wp.hazardNote}
+                                        <View style={styles.waypointHeaderRow}>
+                                            <Text style={styles.waypointName}>
+                                                {wp.label}
                                             </Text>
+                                            {wp.isPassed ? (
+                                                <View style={styles.passedPill}>
+                                                    <Text
+                                                        style={
+                                                            styles.passedPillText
+                                                        }
+                                                    >
+                                                        PASSED
+                                                    </Text>
+                                                </View>
+                                            ) : null}
+                                        </View>
+                                        {wp.hazardNote ? (
+                                            <View style={styles.hazardCallout}>
+                                                <Icon
+                                                    color="#f87171"
+                                                    name="alert"
+                                                    size={13}
+                                                />
+                                                <Text
+                                                    style={styles.hazardWarning}
+                                                >
+                                                    {wp.hazardNote}
+                                                </Text>
+                                            </View>
                                         ) : (
                                             <Text style={styles.waypointType}>
                                                 {wp.isPassed
-                                                    ? 'Passed'
-                                                    : 'Upcoming Corridor'}
+                                                    ? 'Checkpoint completed'
+                                                    : 'Upcoming corridor waypoint'}
                                             </Text>
                                         )}
                                     </View>
@@ -182,7 +325,7 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                     {/* Destination Pin */}
                     <View style={styles.waypointRow}>
                         <View style={[styles.pinDot, styles.pinDestination]}>
-                            <Text style={styles.pinIcon}>🏁</Text>
+                            <Icon color={colors.text} name="flag" size={12} />
                         </View>
                         <View style={styles.waypointCopy}>
                             <Text style={styles.waypointName}>
@@ -196,7 +339,7 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                 </View>
             </View>
 
-            {/* Route Status Strip */}
+            {/* Route Status Footer Strip */}
             <View style={styles.footerStrip}>
                 <View style={styles.statusRow}>
                     <View
@@ -204,6 +347,8 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                             styles.statusIndicator,
                             routeStatus === 'live' && styles.statusLive,
                             routeStatus === 'cached' && styles.statusCached,
+                            routeStatus === 'unavailable' &&
+                                styles.statusUnavailable,
                         ]}
                     />
                     <Text style={styles.statusText}>
@@ -211,7 +356,9 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
                             ? 'Heavy Transport Corridor Verified (Live GPS Active)'
                             : routeStatus === 'cached'
                               ? 'Offline Route Cache Active'
-                              : 'Standard Route Plan'}
+                              : routeStatus === 'unavailable'
+                                ? 'Route Data Unavailable'
+                                : 'Standard Route Plan'}
                     </Text>
                 </View>
             </View>
@@ -221,47 +368,92 @@ export const FieldRouteMapView: React.FC<FieldRouteMapViewProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 14,
+        backgroundColor: colors.hudBackground,
+        borderColor: colors.hudBorder,
+        borderRadius: 16,
         borderWidth: 1,
         overflow: 'hidden',
+        ...shadows.md,
     },
     metricsBar: {
-        backgroundColor: colors.text,
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorderSubtle,
+        borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 14,
     },
     metricItem: {
         alignItems: 'center',
         flex: 1,
     },
     metricLabel: {
-        color: colors.amber,
+        color: colors.hudTextDim,
         fontSize: 10,
-        fontWeight: '900',
-        letterSpacing: 0.5,
+        fontWeight: '800',
+        letterSpacing: 0.8,
     },
     metricValue: {
-        color: colors.white,
-        fontSize: 18,
+        color: colors.hudText,
+        fontSize: 19,
         fontWeight: '900',
-        marginTop: 2,
+        letterSpacing: -0.4,
+        marginTop: 3,
     },
     metricUnit: {
-        color: colors.secondary,
-        fontSize: 11,
+        color: colors.hudAccent,
+        fontSize: 12,
         fontWeight: '700',
     },
     metricDivider: {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        backgroundColor: colors.hudBorderSubtle,
         height: '100%',
         width: 1,
     },
+    modeSwitcherRow: {
+        flexDirection: 'row',
+        backgroundColor: colors.hudSurfaceElevated,
+        padding: 6,
+        gap: 6,
+        borderBottomColor: colors.hudBorderSubtle,
+        borderBottomWidth: 1,
+    },
+    modeButton: {
+        flex: 1,
+        minHeight: 44,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent',
+    },
+    modeButtonActive: {
+        backgroundColor: colors.primary,
+        ...shadows.sm,
+    },
+    modeButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    modeButtonText: {
+        color: colors.mutedOnDark,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    modeButtonTextActive: {
+        color: colors.white,
+        fontWeight: '800',
+    },
+    mapLibreContainer: {
+        width: '100%',
+        height: 270,
+        backgroundColor: colors.hudBackground,
+    },
     mapCanvas: {
-        backgroundColor: '#111827',
+        backgroundColor: colors.hudBackground,
         padding: 16,
         position: 'relative',
     },
@@ -269,40 +461,62 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         position: 'absolute',
         right: 14,
-        top: 12,
+        top: 14,
         zIndex: 2,
+        gap: 4,
+    },
+    compassBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.hudSurfaceElevated,
+        borderColor: colors.hudBorder,
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        gap: 4,
     },
     compassText: {
-        color: colors.amber,
+        color: colors.hudAmber,
         fontSize: 11,
         fontWeight: '900',
     },
+    axleBadge: {
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        borderRadius: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
     speedRating: {
-        color: '#9ca3af',
+        color: colors.hudTextDim,
         fontSize: 10,
         fontWeight: '700',
-        marginTop: 2,
     },
     routeRailContainer: {
         paddingLeft: 4,
+        paddingRight: 48,
     },
     waypointRow: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexDirection: 'row',
         gap: 12,
         marginVertical: 4,
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        borderRadius: 10,
     },
     waypointRowSelected: {
-        backgroundColor: '#1e293b',
-        borderRadius: 8,
-        paddingHorizontal: 6,
+        backgroundColor: colors.hudSurfaceElevated,
+        borderColor: colors.hudAccent,
+        borderWidth: 1,
     },
     pinDot: {
         alignItems: 'center',
-        borderRadius: 10,
-        height: 20,
+        borderRadius: 12,
+        height: 24,
         justifyContent: 'center',
-        width: 20,
+        width: 24,
+        marginTop: 1,
     },
     pinOrigin: {
         backgroundColor: colors.green,
@@ -314,51 +528,88 @@ const styles = StyleSheet.create({
         backgroundColor: colors.blue,
     },
     pinPending: {
-        backgroundColor: '#4b5563',
+        backgroundColor: '#334155',
+        borderColor: '#475569',
+        borderWidth: 1,
+    },
+    pinPendingInner: {
+        backgroundColor: '#94a3b8',
+        borderRadius: 3,
+        height: 6,
+        width: 6,
     },
     pinDestination: {
-        backgroundColor: colors.amberDark,
-    },
-    pinIcon: {
-        fontSize: 10,
+        backgroundColor: colors.amber,
     },
     waypointCopy: {
         flex: 1,
+        gap: 2,
+    },
+    waypointHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     waypointName: {
-        color: colors.white,
-        fontSize: 13,
+        color: colors.hudText,
+        fontSize: 14,
         fontWeight: '800',
+        letterSpacing: -0.2,
+    },
+    passedPill: {
+        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+        borderRadius: 4,
+        paddingHorizontal: 5,
+        paddingVertical: 1,
+    },
+    passedPillText: {
+        color: colors.hudAccent,
+        fontSize: 9,
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
     waypointType: {
-        color: '#9ca3af',
-        fontSize: 11,
-        marginTop: 1,
+        color: colors.hudTextDim,
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    hazardCallout: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+        borderColor: 'rgba(239, 68, 68, 0.3)',
+        borderRadius: 6,
+        borderWidth: 1,
+        gap: 6,
+        marginTop: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
     },
     hazardWarning: {
-        color: '#f87171',
+        color: '#fca5a5',
         fontSize: 11,
         fontWeight: '700',
-        marginTop: 1,
+        flex: 1,
+        lineHeight: 15,
     },
     railSegment: {
-        backgroundColor: '#374151',
-        height: 16,
-        marginLeft: 9,
+        backgroundColor: '#334155',
+        height: 18,
+        marginLeft: 19,
         width: 2,
     },
     railSegmentActive: {
-        backgroundColor: colors.amber,
-        height: 16,
-        marginLeft: 9,
+        backgroundColor: colors.hudAccent,
+        height: 18,
+        marginLeft: 19,
         width: 2,
     },
     footerStrip: {
-        backgroundColor: colors.surfaceMuted,
-        borderTopColor: colors.border,
+        backgroundColor: colors.hudSurface,
+        borderTopColor: colors.hudBorderSubtle,
         borderTopWidth: 1,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
     },
     statusRow: {
         alignItems: 'center',
@@ -374,14 +625,17 @@ const styles = StyleSheet.create({
         backgroundColor: colors.green,
     },
     statusCached: {
-        backgroundColor: colors.warning,
+        backgroundColor: colors.amber,
+    },
+    statusUnavailable: {
+        backgroundColor: colors.muted,
     },
     statusText: {
-        color: colors.secondary,
+        color: colors.hudTextDim,
         fontSize: 12,
         fontWeight: '700',
     },
     pressed: {
-        opacity: 0.7,
+        opacity: 0.8,
     },
 });

@@ -52,6 +52,16 @@ export const colors = {
     redSoft: '#fee2e2',
     redBorder: '#fecaca',
     redDark: '#b91c1c',
+    // Route & Telemetry HUD Tokens
+    hudBackground: '#0b1329',
+    hudSurface: '#131f37',
+    hudSurfaceElevated: '#1e293b',
+    hudBorder: '#334155',
+    hudBorderSubtle: 'rgba(255, 255, 255, 0.1)',
+    hudText: '#f8fafc',
+    hudTextDim: '#94a3b8',
+    hudAccent: '#38bdf8',
+    hudAmber: '#fbbf24',
     white: '#ffffff',
 };
 
