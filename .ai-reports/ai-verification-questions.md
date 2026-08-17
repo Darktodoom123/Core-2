@@ -318,3 +318,123 @@
   unmatched-handoff review path before release.
 
 ---
+
+# Assigned Resources Interaction Refinement (2026-08-16)
+
+## 1. Did you build this the most secure way?
+
+- The change is presentation-only and keeps assignment mutations on the existing
+  authenticated Inertia route and server-authoritative assignment endpoint.
+  Existing capability checks, eligibility validation, version checks, and audit
+  behavior are unchanged.
+
+## 2. Did you build this the most efficient way?
+
+- Draft and saved assignment states are derived directly from existing form data
+  and server-provided assignments. No new request, client-side store, or
+  redundant synchronization effect was introduced.
+- The assignment workspace remains one page with a persistent review rail, so
+  users do not incur extra navigation or lose their selection context.
+
+## 3. What regressions could this introduce?
+
+- Saved assignments now appear in the review rail as well as the operational
+  assignment panel, which can add vertical density for dispatches with many
+  resources. The content is grouped by people/assets and remains limited to the
+  existing assignment data.
+- Assignment updates with both saved and newly selected resources now use
+  explicit “Update assignment” and “Pending changes” labels; browser journeys
+  that assert the old static “Assignment plan” heading after selection must use
+  the new state label.
+
+## 4. What tests do we need to write before we ship this?
+
+- Added browser assertions for draft selection, pending assignment copy, saved
+  assignment copy, and the “Currently assigned” review state.
+- npm run types:check, focused ESLint, Prettier checks for the changed page,
+  git diff --check, and npm run build passed.
+- The focused Playwright journey could not start because the existing browser
+  acceptance seeder inserts operational_assets.type, while the current test
+  schema does not contain that column. Repair that pre-existing fixture/schema
+  mismatch, then rerun the browser journey and accessibility assertion.
+
+---
+
+# Dispatch Detail Header UX Refinement (2026-08-17)
+
+## 1. Did you build this the most secure way?
+
+- This is a presentation-only change in the authenticated dispatch workspace.
+  It does not add actions, permissions, data sources, or mutation paths. The
+  existing server-authoritative dispatch and assignment boundaries remain
+  unchanged.
+
+## 2. Did you build this the most efficient way?
+
+- The header reuses the existing job, status, priority, version, client, and
+  source view models. No additional request, derived store, or duplicated
+  source data was introduced.
+- The change is scoped to the existing header block and keeps the responsive
+  layout in the same workspace surface.
+
+## 3. What regressions could this introduce?
+
+- The additional source label and priority label increase header height on
+  narrow screens. The content is intentionally allowed to wrap so record
+  identity and operational state remain readable instead of being truncated.
+- Browser selectors that depended on the old unlabeled metadata row may need to
+  target the new explicit labels.
+
+## 4. What tests do we need to write before we ship this?
+
+- Added browser assertions for dispatch context, record title, source, priority,
+  and version metadata on the selected dispatch detail surface.
+- npm run types:check and npm run build passed. The edited blocks match
+  Prettier output; whole-file formatting is already dirty in the touched
+  workspace/test files.
+- The focused browser journey could not start because the existing browser
+  acceptance seeder expects operational_assets.type, which is missing from the
+  current test schema. The focused ESLint run reports only five pre-existing
+  errors in the same dirty workspace file outside the edited header block.
+
+# Conflict Review UX Refinement (2026-08-17)
+
+## 1. Did you build this the most secure way?
+
+- The refinement is presentation-only. Conflict records still come from the
+  existing bounded server data and assignment, approval, and authorization
+  routes; no client-side resolution or permission bypass was added.
+- Existing approval reason validation and assignment workspace boundaries are
+  unchanged. The new labels and filters only change how actionable items are
+  grouped and reached.
+
+## 2. Did you build this the most efficient way?
+
+- The repeated full-width conflict cards were consolidated into one review
+  queue with severity summaries, category counts, and compact action rows.
+- Counts and filters are derived from the existing conflict collection in
+  memory, avoiding additional requests, duplicated API state, or new backend
+  queries.
+
+## 3. What regressions could this introduce?
+
+- Conflict filter labels are now user-facing names with counts instead of raw
+  enum text, so browser selectors that targeted the old labels may need updates.
+- Conflict queue rows now route to the selected dispatch with Open dispatch;
+  resource resolution remains available from the detail banner.
+- The detail view hides duplicate assignment links when a conflict is active,
+  while preserving the empty-state entry point for conflict-free jobs.
+- The denser queue changes the visual grouping of conflicts but preserves every
+  conflict, description, required action, approval control, and return path.
+
+## 4. What tests do we need to write before we ship this?
+
+- Added browser assertions for the conflict heading, accessible filter tabs,
+  selected state, review queue, conflict rows, the unassigned filter, dispatch
+  deep-linking, and the single detail-page assignment action.
+- Run the frontend type check, production build, focused lint, and diff checks.
+- The focused browser journey remains blocked by the existing acceptance
+  seeder/schema mismatch: BrowserAcceptanceSeeder inserts operational_assets.type,
+  while the current browser test schema does not contain that column.
+
+---

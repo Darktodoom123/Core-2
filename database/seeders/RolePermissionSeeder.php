@@ -79,7 +79,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::FleetMaintain, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
                 PermissionName::EquipmentInspect, PermissionName::EquipmentMaintain, PermissionName::FuelViewOwn,
                 PermissionName::FuelRecord, PermissionName::FuelVerify, PermissionName::TrackingShareOwn,
-                PermissionName::GptUseMaintenance, PermissionName::ReportsViewMaintenance,
+                PermissionName::GptUseMaintenance, PermissionName::ReportsViewMaintenance, PermissionName::ReportsViewOwn,
             ]),
         ];
     }

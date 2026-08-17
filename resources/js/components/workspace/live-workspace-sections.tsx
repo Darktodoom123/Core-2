@@ -31,6 +31,7 @@ import type {
     ArchivedJobViewModel,
     AssetViewModel,
     AuditEventViewModel,
+    DispatchJobViewModel,
     FuelRequestViewModel,
     GptRecommendationViewModel,
     JobReportViewModel,
@@ -79,6 +80,7 @@ export function LiveWorkspaceSection({
     notifications = [],
     archivedJobs = [],
     gptRecommendations = [],
+    jobs = [],
     onSectionChange,
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
@@ -94,6 +96,7 @@ export function LiveWorkspaceSection({
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
+    jobs?: DispatchJobViewModel[];
     onSectionChange?: (section: WorkspaceSection) => void;
 }) {
     switch (section) {
@@ -135,6 +138,7 @@ export function LiveWorkspaceSection({
                 <ReportsSurface
                     reports={jobReports}
                     exports={reportExports}
+                    jobs={jobs}
                     capabilities={capabilities}
                 />
             );
@@ -2121,7 +2125,7 @@ function ApprovalsSurface({
                         <EmptyState
                             icon={ShieldCheck}
                             title="No approvals need attention"
-                            message="Exceptional changes awaiting an independent decision will appear here."
+                            message="All dispatch and reassignment requests awaiting manager decision are clear."
                         />
                     </Panel>
                 ) : (

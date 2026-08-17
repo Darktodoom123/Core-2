@@ -48,6 +48,11 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
 
         // 4. Verify real-time assignment summary updates
         await expect(page.getByText('1 new resource selected')).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Draft assignment' }),
+        ).toBeVisible();
+        await expect(page.getByText('Pending changes')).toBeVisible();
+        await expect(page.getByText('Draft assignment pending')).toBeVisible();
 
         // 5. Submit assignment
         const assignButton = page.getByRole('button', {
@@ -62,6 +67,10 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
                 /Resources were assigned to|Assignments were updated/i,
             ),
         ).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Assigned resources' }),
+        ).toBeVisible();
+        await expect(page.getByText('Currently assigned')).toBeVisible();
 
         // 7. Verify accessibility
         const results = await new AxeBuilder({ page }).analyze();

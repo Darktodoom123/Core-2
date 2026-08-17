@@ -54,6 +54,7 @@ function createReassignmentJob(
 
 test('authorized dispatcher can end active personnel and asset assignments preserving history', function (): void {
     $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Alpha');
+    $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
     $driver = createReassignmentUser(RoleName::Driver, 'Driver Bob');
@@ -133,6 +134,7 @@ test('reassignment validates replacement resource eligibility server-side', func
 
 test('reassignment succeeds when replacing with eligible driver and asset', function (): void {
     $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Gamma');
+    $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
     $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Driver');

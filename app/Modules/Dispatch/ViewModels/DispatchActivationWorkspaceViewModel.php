@@ -81,7 +81,7 @@ final class DispatchActivationWorkspaceViewModel
 
         if ($job->priority->requiresApproval() && $latestApproval?->status !== ApprovalStatus::Approved) {
             $blockers[] = $latestApproval?->status === ApprovalStatus::Rejected
-                ? 'The latest exceptional request was rejected. Revise it and request a new review.'
+                ? 'The latest approval request was rejected. Revise it and request a new review.'
                 : 'Independent Operations Manager approval is still required.';
         }
 

@@ -14,7 +14,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
         await expect(
             page.getByRole('button', { name: 'GPT AI Advisory' }),
-        ).toBeVisible();
+        ).toHaveCount(0);
         await expect(
             page.getByRole('navigation', {
                 name: 'Available operations modules',
@@ -327,7 +327,11 @@ test.describe('R6 deterministic authenticated acceptance', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(
+            page,
+            fixtures.users.admin ?? fixtures.users.dispatcher,
+            fixtures.password,
+        );
         await page.goto('/?view=gpt-recommendations');
         await expect(
             page.getByRole('heading', {
@@ -415,6 +419,22 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
 
         await expect(
+            page.getByText('Dispatch job', { exact: true }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('heading', {
+                name: 'Deterministic browser acceptance lift',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByText('Source', { exact: true }).first(),
+        ).toBeVisible();
+        await expect(
+            page.getByText('Priority', { exact: true }),
+        ).toBeVisible();
+        await expect(page.getByText('Version 1', { exact: true })).toBeVisible();
+
+        await expect(
             page.getByRole('heading', { name: 'GPT dispatch advisory' }),
         ).toBeVisible();
         await expect(
@@ -426,6 +446,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('button', { name: 'Accept recommendation' }).first(),
         ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: 'Assign resources' }),
+        ).toHaveCount(1);
     });
 
     test('schedule board identifies the selected day and filters navigation', async ({
@@ -704,6 +727,43 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             .getByRole('link', { name: 'Back to dispatch workspace' })
             .click();
         await expect(page).toHaveURL(/\/\?view=dispatch$/);
+    });
+
+    test('conflict review presents a prioritized, filterable action queue', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?view=dispatch');
+        await page.getByRole('button', { name: /Conflicts/ }).click();
+
+        await expect(
+            page.getByRole('heading', {
+                name: 'Operational conflict review',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('tablist', { name: 'Conflict filters' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('tab', { name: /All conflicts/ }),
+        ).toHaveAttribute('aria-selected', 'true');
+        await expect(page.getByText('Review queue')).toBeVisible();
+        await expect(page.locator('[data-conflict-row="true"]')).not.toHaveCount(
+            0,
+        );
+
+        const unassignedTab = page.getByRole('tab', { name: /Unassigned/ });
+        await unassignedTab.click();
+        await expect(unassignedTab).toHaveAttribute('aria-selected', 'true');
+        await expect(
+            page.getByRole('link', { name: 'Open dispatch' }).first(),
+        ).toBeVisible();
+        await page.getByRole('link', { name: 'Open dispatch' }).first().click();
+        await expect(
+            page.getByText('Dispatch job', { exact: true }),
+        ).toBeVisible();
     });
 
     test('assignment workspace stays usable across mobile, tablet, and desktop widths', async ({

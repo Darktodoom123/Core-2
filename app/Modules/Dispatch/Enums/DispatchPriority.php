@@ -10,7 +10,7 @@ enum DispatchPriority: string
 
     public function requiresApproval(): bool
     {
-        return $this !== self::Routine;
+        return true;
     }
 
     public function label(): string

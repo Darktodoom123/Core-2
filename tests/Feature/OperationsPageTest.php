@@ -79,9 +79,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('navigation.4.label', 'Job reports')
             ->where('navigation.5.id', 'notifications')
             ->where('navigation.5.label', 'Notifications')
-            ->where('navigation.6.id', 'gpt-recommendations')
-            ->where('navigation.6.label', 'GPT AI Advisory')
-            ->missing('navigation.7')
+            ->missing('navigation.6')
             ->has('clients', 1)
             ->where('clients.0.code', 'CLI-1001')
             ->has('serviceRequests', 1)
@@ -156,6 +154,7 @@ it('serves operational overview workspace for Operations Manager and System Admi
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.role', 'system_administrator')
             ->where('navigation.0.id', 'overview')
+            ->where('navigation', fn ($nav): bool => collect($nav)->contains('id', 'gpt-recommendations'))
             ->has('users')
             ->has('auditEvents')
         );

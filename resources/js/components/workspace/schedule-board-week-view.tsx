@@ -305,14 +305,26 @@ function formatJobTime(job: DispatchJobViewModel, dateKey: string) {
 
 function jobTone(job: DispatchJobViewModel, hasConflict: boolean) {
     if (hasConflict || job.priority.value === 'emergency') {
-        return 'border-danger bg-danger-soft text-danger-strong';
+        return 'border-danger/60 bg-danger-soft text-danger-strong ring-1 ring-danger/20';
     }
 
     if (job.priority.value === 'priority') {
-        return 'border-warning bg-warning-soft text-warning-strong';
+        return 'border-warning/60 bg-warning-soft text-warning-strong';
     }
 
-    return 'border-brand bg-brand-soft text-brand-strong';
+    if (job.status.value === 'completed') {
+        return 'border-success/30 bg-success-soft/30 text-ink';
+    }
+
+    if (
+        ['working', 'active', 'en_route', 'dispatched'].includes(
+            job.status.value,
+        )
+    ) {
+        return 'border-brand-strong bg-brand-soft text-brand-strong';
+    }
+
+    return 'border-line bg-surface text-ink hover:border-brand-strong hover:bg-surface-subtle';
 }
 
 interface WeekResourceRow {

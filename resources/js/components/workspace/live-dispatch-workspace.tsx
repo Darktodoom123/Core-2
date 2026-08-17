@@ -41,6 +41,7 @@ import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-wee
 import { localDateKey } from '@/lib/date-utils';
 import { formatCurrency, formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import type { Auth } from '@/types/auth';
 import type {
     ApprovalViewModel,
     AssetViewModel,
@@ -78,6 +79,49 @@ interface DerivedConflict {
     approvalId?: number;
     canDecide?: boolean;
     decisionBlocker?: string | null;
+}
+
+const conflictFilterLabels: Record<ConflictTypeFilter, string> = {
+    all: 'All conflicts',
+    overlaps: 'Overlaps',
+    maintenance: 'Maintenance',
+    approvals: 'Approvals',
+    responses: 'Responses',
+    unassigned: 'Unassigned',
+};
+
+function conflictFilterForType(
+    type: DerivedConflict['type'],
+): Exclude<ConflictTypeFilter, 'all'> {
+    if (type === 'overlap') {
+        return 'overlaps';
+    }
+
+    if (type === 'maintenance') {
+        return 'maintenance';
+    }
+
+    if (type === 'approval') {
+        return 'approvals';
+    }
+
+    if (type === 'response') {
+        return 'responses';
+    }
+
+    return 'unassigned';
+}
+
+function conflictSeverityLabel(severity: DerivedConflict['severity']) {
+    if (severity === 'danger') {
+        return 'Blocking';
+    }
+
+    if (severity === 'warning') {
+        return 'Review';
+    }
+
+    return 'Action needed';
 }
 
 export function LiveDispatchWorkspace({
@@ -364,7 +408,7 @@ export function LiveDispatchWorkspace({
                     type: 'approval',
                     severity: 'warning',
                     title: `Pending Approval: ${humanize(approval.kind)}`,
-                    description: `Exceptional request for ${approval.subject.reference} (${approval.subject.title ?? 'Dispatch'}) submitted by ${approval.requester.name}.`,
+                    description: `Approval request for ${approval.subject.reference} (${approval.subject.title ?? 'Dispatch'}) submitted by ${approval.requester.name}.`,
                     actionRequired: approval.can_decide
                         ? 'Review requested resource changes and decide approval below.'
                         : (approval.decision_blocker ??
@@ -411,9 +455,10 @@ export function LiveDispatchWorkspace({
                     id: `unassigned-${job.id}`,
                     type: 'unassigned',
                     severity: 'info',
-                    title: 'Missing Resource Assignments',
-                    description: `Job ${job.reference} (${job.title}) has no personnel or assets assigned yet.`,
-                    actionRequired: `Open assignment workspace to select qualified candidates.`,
+                    title: 'Resource assignment needed',
+                    description: `Job ${job.reference} · ${job.title} has no personnel or assets assigned yet.`,
+                    actionRequired:
+                        'Open the assignment workspace to select qualified candidates.',
                     jobId: job.id,
                     jobReference: job.reference,
                 });
@@ -442,6 +487,31 @@ export function LiveDispatchWorkspace({
 
         return conflicts;
     }, [jobs, assets, approvals, gptRecommendations]);
+
+    const conflictCounts = useMemo<Record<ConflictTypeFilter, number>>(() => {
+        const counts: Record<ConflictTypeFilter, number> = {
+            all: derivedConflicts.length,
+            overlaps: 0,
+            maintenance: 0,
+            approvals: 0,
+            responses: 0,
+            unassigned: 0,
+        };
+
+        for (const conflict of derivedConflicts) {
+            counts[conflictFilterForType(conflict.type)] += 1;
+        }
+
+        return counts;
+    }, [derivedConflicts]);
+
+    const conflictBadgeClass = derivedConflicts.some(
+        (conflict) => conflict.severity === 'danger',
+    )
+        ? 'bg-danger text-white'
+        : derivedConflicts.some((conflict) => conflict.severity === 'warning')
+          ? 'bg-warning text-ink'
+          : 'bg-info text-white';
 
     const filteredJobs = useMemo(() => {
         const normalized = query.trim().toLowerCase();
@@ -557,7 +627,13 @@ export function LiveDispatchWorkspace({
                                     />
                                     Conflicts
                                     {derivedConflicts.length > 0 && (
-                                        <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+                                        <span
+                                            className={cn(
+                                                'ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold',
+                                                conflictBadgeClass,
+                                            )}
+                                            aria-label={`${derivedConflicts.length} active conflicts`}
+                                        >
                                             {derivedConflicts.length}
                                         </span>
                                     )}
@@ -869,49 +945,110 @@ export function LiveDispatchWorkspace({
                     className="p-4 md:p-6"
                     aria-label="Conflict review section"
                 >
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                    <div className="mb-4 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
                         <div>
+                            <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
+                                <span>Conflict queue</span>
+                                <span className="rounded-full bg-surface-subtle px-2 py-0.5 tracking-normal text-ink normal-case">
+                                    {derivedConflicts.length}{' '}
+                                    {derivedConflicts.length === 1
+                                        ? 'active item'
+                                        : 'active items'}
+                                </span>
+                            </div>
                             <h2 className="text-lg font-semibold tracking-[-0.02em]">
                                 Operational conflict review
                             </h2>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Server-derived schedule overlaps, maintenance
-                                blockers, and required manager approvals.
+                                Prioritized schedule, resource, and approval
+                                checks that need an operational decision.
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
-                            {(
-                                [
-                                    'all',
-                                    'overlaps',
-                                    'maintenance',
-                                    'approvals',
-                                    'responses',
-                                    'unassigned',
-                                ] as ConflictTypeFilter[]
-                            ).map((filter) => (
-                                <button
-                                    key={filter}
-                                    type="button"
-                                    onClick={() => setConflictFilter(filter)}
+                        <div className="flex items-center gap-2 rounded-lg border border-line bg-surface-subtle px-3 py-2 text-xs text-ink-soft">
+                            <span
+                                className={cn(
+                                    'h-2 w-2 rounded-full',
+                                    derivedConflicts.some(
+                                        (conflict) =>
+                                            conflict.severity === 'danger',
+                                    )
+                                        ? 'bg-danger'
+                                        : derivedConflicts.some(
+                                                (conflict) =>
+                                                    conflict.severity ===
+                                                    'warning',
+                                            )
+                                          ? 'bg-warning'
+                                          : 'bg-info',
+                                )}
+                                aria-hidden="true"
+                            />
+                            <span>
+                                {derivedConflicts.some(
+                                    (conflict) =>
+                                        conflict.severity === 'danger',
+                                )
+                                    ? 'Resolve blocking items before activation'
+                                    : derivedConflicts.length > 0
+                                      ? 'Review the next operational decision'
+                                      : 'No action required'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div
+                        className="mb-5 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1"
+                        role="tablist"
+                        aria-label="Conflict filters"
+                    >
+                        {(
+                            [
+                                'all',
+                                'overlaps',
+                                'maintenance',
+                                'approvals',
+                                'responses',
+                                'unassigned',
+                            ] as ConflictTypeFilter[]
+                        ).map((filter) => (
+                            <button
+                                key={filter}
+                                type="button"
+                                id={`conflict-tab-${filter}`}
+                                role="tab"
+                                aria-selected={conflictFilter === filter}
+                                aria-controls="conflict-results"
+                                onClick={() => setConflictFilter(filter)}
+                                className={cn(
+                                    'inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                                    conflictFilter === filter
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
+                                        : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                )}
+                            >
+                                <span>{conflictFilterLabels[filter]}</span>
+                                <span
                                     className={cn(
-                                        'inline-flex min-h-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                                        'inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] leading-none font-bold',
                                         conflictFilter === filter
-                                            ? 'bg-brand-soft font-semibold text-brand-strong'
-                                            : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                            ? 'bg-brand text-ink'
+                                            : 'bg-surface-subtle text-ink-soft',
                                     )}
                                 >
-                                    {filter}
-                                </button>
-                            ))}
-                        </div>
+                                    {conflictCounts[filter]}
+                                </span>
+                            </button>
+                        ))}
                     </div>
 
                     <ConflictReviewList
                         conflicts={derivedConflicts}
                         filter={conflictFilter}
-                        returnTo={returnTo}
+                        onOpenDispatch={(jobId) => {
+                            setSelectedJobId(jobId);
+                            setViewMode('list');
+                        }}
                     />
                 </section>
             )}
@@ -1498,46 +1635,73 @@ function ScheduleBoardTable({
                                         }}
                                     >
                                         {row.jobAssignments.map(
-                                            ({ job, startCol, colSpan }) => (
-                                                <button
-                                                    key={`${row.id}-job-${job.id}`}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        onSelectJob(job.id)
-                                                    }
-                                                    style={{
-                                                        gridColumnStart:
-                                                            startCol,
-                                                        gridColumnEnd: `span ${colSpan}`,
-                                                    }}
-                                                    className={cn(
-                                                        'z-10 flex flex-col justify-center rounded-lg border px-2 py-1.5 text-left shadow-xs transition-all hover:scale-[1.01] hover:shadow-md',
-                                                        job.priority.value ===
-                                                            'emergency'
-                                                            ? 'border-danger bg-danger-soft text-danger'
-                                                            : job.priority
-                                                                    .value ===
-                                                                'priority'
-                                                              ? 'border-warning bg-warning-soft text-warning-strong'
-                                                              : 'border-brand bg-brand-soft text-brand-strong',
-                                                    )}
-                                                    title={`${job.reference}: ${job.title} (${job.client})`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <span className="text-[11px] font-bold tracking-tight">
-                                                            {job.reference}
-                                                        </span>
-                                                        <CanonicalStatusBadge
-                                                            status={
-                                                                job.priority
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <p className="truncate text-[10px] leading-tight font-medium">
-                                                        {job.title}
-                                                    </p>
-                                                </button>
-                                            ),
+                                            ({ job, startCol, colSpan }) => {
+                                                const hasJobConflict =
+                                                    row.hasConflict ||
+                                                    job.priority.value ===
+                                                        'emergency';
+                                                const dayJobClass =
+                                                    hasJobConflict
+                                                        ? 'border-danger/60 bg-danger-soft text-danger-strong ring-1 ring-danger/20'
+                                                        : job.priority.value ===
+                                                            'priority'
+                                                          ? 'border-warning/60 bg-warning-soft text-warning-strong'
+                                                          : job.status.value ===
+                                                              'completed'
+                                                            ? 'border-success/30 bg-success-soft/30 text-ink'
+                                                            : [
+                                                                    'working',
+                                                                    'active',
+                                                                    'en_route',
+                                                                    'dispatched',
+                                                                ].includes(
+                                                                    job.status
+                                                                        .value,
+                                                                )
+                                                              ? 'border-brand-strong bg-brand-soft text-brand-strong'
+                                                              : 'border-line bg-surface text-ink hover:border-brand-strong hover:bg-surface-subtle';
+
+                                                return (
+                                                    <button
+                                                        key={`${row.id}-job-${job.id}`}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onSelectJob(job.id)
+                                                        }
+                                                        style={{
+                                                            gridColumnStart:
+                                                                startCol,
+                                                            gridColumnEnd: `span ${colSpan}`,
+                                                        }}
+                                                        className={cn(
+                                                            'z-10 flex flex-col justify-center rounded-lg border px-2 py-1.5 text-left shadow-xs transition-all hover:scale-[1.01] hover:shadow-md',
+                                                            dayJobClass,
+                                                        )}
+                                                        title={`${job.reference}: ${job.title} (${job.client})`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-1">
+                                                            <span className="truncate text-[11px] font-bold tracking-tight">
+                                                                {job.reference}
+                                                            </span>
+                                                            {hasJobConflict ? (
+                                                                <AlertTriangle
+                                                                    className="h-3 w-3 shrink-0 text-danger"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            ) : (
+                                                                <CanonicalStatusBadge
+                                                                    status={
+                                                                        job.priority
+                                                                    }
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <p className="truncate text-[10px] leading-tight font-medium">
+                                                            {job.title}
+                                                        </p>
+                                                    </button>
+                                                );
+                                            },
                                         )}
                                     </div>
                                 </div>
@@ -1553,82 +1717,117 @@ function ScheduleBoardTable({
 function ConflictReviewList({
     conflicts,
     filter,
-    returnTo,
+    onOpenDispatch,
 }: {
     conflicts: DerivedConflict[];
     filter: ConflictTypeFilter;
-    returnTo: string;
+    onOpenDispatch: (jobId: number) => void;
 }) {
     const filtered = useMemo(() => {
         if (filter === 'all') {
             return conflicts;
         }
 
-        if (filter === 'overlaps') {
-            return conflicts.filter((c) => c.type === 'overlap');
-        }
-
-        if (filter === 'maintenance') {
-            return conflicts.filter((c) => c.type === 'maintenance');
-        }
-
-        if (filter === 'approvals') {
-            return conflicts.filter((c) => c.type === 'approval');
-        }
-
-        if (filter === 'responses') {
-            return conflicts.filter((c) => c.type === 'response');
-        }
-
-        if (filter === 'unassigned') {
-            return conflicts.filter((c) => c.type === 'unassigned');
-        }
-
-        return conflicts;
+        return conflicts.filter(
+            (conflict) => conflictFilterForType(conflict.type) === filter,
+        );
     }, [conflicts, filter]);
 
     if (filtered.length === 0) {
         return (
-            <Panel className="p-6">
+            <Panel
+                id="conflict-results"
+                role="tabpanel"
+                aria-labelledby={`conflict-tab-${filter}`}
+                className="p-6"
+            >
                 <EmptyState
                     icon={ShieldCheck}
-                    title="All schedule and resource checks clear"
-                    message="No active schedule overlaps, maintenance blockers, or pending manager approvals were found."
+                    title={
+                        filter === 'all'
+                            ? 'All conflict checks are clear'
+                            : `${conflictFilterLabels[filter]} checks are clear`
+                    }
+                    message="There are no active items in this queue. New issues will appear here when the workspace detects them."
                 />
             </Panel>
         );
     }
 
+    const blockingCount = filtered.filter(
+        (conflict) => conflict.severity === 'danger',
+    ).length;
+    const reviewCount = filtered.filter(
+        (conflict) => conflict.severity === 'warning',
+    ).length;
+    const actionCount = filtered.filter(
+        (conflict) => conflict.severity === 'info',
+    ).length;
+
     return (
         <div className="space-y-4">
-            {filtered.map((conflict) => (
-                <Panel key={conflict.id} className="p-4 md:p-5">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="flex min-w-0 items-start gap-3.5">
-                            <div
-                                className={cn(
-                                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                                    conflict.severity === 'danger' &&
-                                        'bg-danger-soft text-danger',
-                                    conflict.severity === 'warning' &&
-                                        'bg-warning-soft text-warning-strong',
-                                    conflict.severity === 'info' &&
-                                        'bg-info-soft text-info-strong',
-                                )}
-                            >
-                                <AlertTriangle
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="text-base font-semibold text-ink">
-                                        {conflict.title}
-                                    </h3>
-                                    <span
+            <div
+                className="grid gap-3 sm:grid-cols-3"
+                aria-label="Conflict summary"
+            >
+                <ConflictSummaryCard
+                    label="Blocking"
+                    count={blockingCount}
+                    detail="Stops safe dispatch progression"
+                    tone="danger"
+                />
+                <ConflictSummaryCard
+                    label="Review"
+                    count={reviewCount}
+                    detail="Needs a manager decision"
+                    tone="warning"
+                />
+                <ConflictSummaryCard
+                    label="Action needed"
+                    count={actionCount}
+                    detail="Ready for operational follow-up"
+                    tone="info"
+                />
+            </div>
+
+            <Panel
+                id="conflict-results"
+                role="tabpanel"
+                aria-labelledby={`conflict-tab-${filter}`}
+                className="overflow-hidden p-0"
+            >
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line bg-surface-subtle px-4 py-4 md:px-5">
+                    <div>
+                        <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
+                            Review queue
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-ink">
+                            {filtered.length}{' '}
+                            {filtered.length === 1 ? 'item' : 'items'} to review
+                        </h3>
+                        <p className="mt-1 text-xs text-ink-soft">
+                            {filter === 'all'
+                                ? 'Start with blocking items, then clear review and assignment gaps.'
+                                : `Showing ${conflictFilterLabels[filter].toLowerCase()} that need attention.`}
+                        </p>
+                    </div>
+                    <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink-soft">
+                        {conflictFilterLabels[filter]}
+                    </span>
+                </div>
+
+                <div className="divide-y divide-line">
+                    {filtered.map((conflict) => (
+                        <article
+                            key={conflict.id}
+                            data-conflict-row="true"
+                            className="p-4 md:p-5"
+                        >
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="flex min-w-0 items-start gap-3.5">
+                                    <div
                                         className={cn(
-                                            'rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize',
+                                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
                                             conflict.severity === 'danger' &&
                                                 'bg-danger-soft text-danger',
                                             conflict.severity === 'warning' &&
@@ -1637,53 +1836,124 @@ function ConflictReviewList({
                                                 'bg-info-soft text-info-strong',
                                         )}
                                     >
-                                        {conflict.severity}
-                                    </span>
+                                        <AlertTriangle
+                                            className="h-5 w-5"
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-soft uppercase">
+                                                {
+                                                    conflictFilterLabels[
+                                                        conflictFilterForType(
+                                                            conflict.type,
+                                                        )
+                                                    ]
+                                                }
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                                    conflict.severity ===
+                                                        'danger' &&
+                                                        'bg-danger-soft text-danger',
+                                                    conflict.severity ===
+                                                        'warning' &&
+                                                        'bg-warning-soft text-warning-strong',
+                                                    conflict.severity ===
+                                                        'info' &&
+                                                        'bg-info-soft text-info-strong',
+                                                )}
+                                            >
+                                                {conflictSeverityLabel(
+                                                    conflict.severity,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <h4 className="mt-1 text-sm font-semibold text-ink">
+                                            {conflict.title}
+                                        </h4>
+                                        <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+                                            {conflict.description}
+                                        </p>
+                                    </div>
                                 </div>
-                                <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                                    {conflict.description}
-                                </p>
-                                <div className="mt-3 rounded-lg bg-surface-subtle px-3 py-2 text-xs font-medium text-ink">
-                                    <span className="font-bold text-ink-soft">
-                                        Required action:{' '}
-                                    </span>
-                                    {conflict.actionRequired}
+
+                                <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto lg:items-end">
+                                    {conflict.type === 'approval' &&
+                                        conflict.approvalId &&
+                                        (conflict.canDecide ? (
+                                            <ApprovalConflictActions
+                                                approvalId={conflict.approvalId}
+                                            />
+                                        ) : (
+                                            <p className="w-full rounded-md bg-danger-soft px-3 py-2 text-xs font-medium text-danger lg:max-w-xs">
+                                                {conflict.decisionBlocker}
+                                            </p>
+                                        ))}
+
+                                    {conflict.jobId && (
+                                        <Link
+                                            href="/?view=dispatch"
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                onOpenDispatch(conflict.jobId!);
+                                            }}
+                                            className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none lg:w-auto"
+                                        >
+                                            Open dispatch
+                                            <ChevronRight
+                                                className="h-3.5 w-3.5"
+                                                aria-hidden="true"
+                                            />
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
-                        </div>
+                        </article>
+                    ))}
+                </div>
+            </Panel>
+        </div>
+    );
+}
 
-                        <div className="flex shrink-0 flex-wrap items-center gap-2 self-end md:self-start">
-                            {conflict.type === 'approval' &&
-                                conflict.approvalId &&
-                                (conflict.canDecide ? (
-                                    <ApprovalConflictActions
-                                        approvalId={conflict.approvalId}
-                                    />
-                                ) : (
-                                    <p className="rounded-md bg-danger-soft px-3 py-1.5 text-xs font-medium text-danger">
-                                        {conflict.decisionBlocker}
-                                    </p>
-                                ))}
-
-                            {conflict.jobId && (
-                                <Link
-                                    href={assignmentWorkspaceUrl(
-                                        conflict.jobId,
-                                        returnTo,
-                                    )}
-                                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
-                                >
-                                    Assign resources
-                                    <ChevronRight
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden="true"
-                                    />
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </Panel>
-            ))}
+function ConflictSummaryCard({
+    label,
+    count,
+    detail,
+    tone,
+}: {
+    label: string;
+    count: number;
+    detail: string;
+    tone: 'danger' | 'warning' | 'info';
+}) {
+    return (
+        <div className="flex items-start gap-3 rounded-lg border border-line bg-surface p-3.5">
+            <span
+                className={cn(
+                    'mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full',
+                    tone === 'danger' && 'bg-danger',
+                    tone === 'warning' && 'bg-warning',
+                    tone === 'info' && 'bg-info',
+                )}
+                aria-hidden="true"
+            />
+            <div className="min-w-0">
+                <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-semibold tracking-[-0.03em] text-ink">
+                        {count}
+                    </span>
+                    <span className="text-xs font-semibold text-ink">
+                        {label}
+                    </span>
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-ink-soft">
+                    {detail}
+                </p>
+            </div>
         </div>
     );
 }
@@ -2042,56 +2312,92 @@ function DispatchDetails({
         })),
     ];
 
+    const scheduleDuration = useMemo(() => {
+        if (!job.scheduled_start || !job.scheduled_end) {
+            return null;
+        }
+
+        const start = new Date(job.scheduled_start);
+        const end = new Date(job.scheduled_end);
+        const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+        if (diffHours <= 0 || isNaN(diffHours)) {
+            return null;
+        }
+
+        return diffHours % 1 === 0
+            ? `${diffHours} hrs`
+            : `${diffHours.toFixed(1)} hrs`;
+    }, [job.scheduled_start, job.scheduled_end]);
+
     return (
         <div className="mx-auto max-w-6xl space-y-5">
-            {/* Header with Title, Badges, and Primary Assign Action */}
-            <div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
+            {/* Header with record identity and operational state */}
+            <div className="flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-brand-strong uppercase">
+                        Dispatch job
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2.5">
                         <h2 className="text-xl font-semibold tracking-[-0.02em] text-ink">
                             {job.title}
                         </h2>
                         <CanonicalStatusBadge status={job.status} />
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
-                        <span className="font-medium text-ink">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span className="font-semibold text-ink">
                             {job.reference}
                         </span>
-                        <span>·</span>
-                        <span>{job.client}</span>
-                        <span>·</span>
+                        <span className="text-ink-muted" aria-hidden="true">
+                            ·
+                        </span>
+                        <span className="text-ink-soft">{job.client}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-medium text-ink-soft">
+                            Source
+                        </span>
                         <DispatchSourceBadge source={job.source} detailed />
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                    <span className="text-xs font-medium text-ink-soft">
+                        Priority
+                    </span>
                     <CanonicalStatusBadge status={job.priority} />
-                    <span className="inline-flex min-h-6 items-center rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                    <span
+                        className="mx-1 hidden h-4 w-px bg-line sm:block"
+                        aria-hidden="true"
+                    />
+                    <span
+                        className="inline-flex min-h-7 items-center rounded-full border border-line bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft"
+                        aria-label={'Dispatch version ' + job.version}
+                    >
                         Version {job.version}
                     </span>
-                    <Link
-                        href={assignmentWorkspaceUrl(job.id, returnTo)}
-                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-4 text-sm font-medium text-ink shadow-2xs hover:bg-surface-subtle"
-                    >
-                        Assign resources
-                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
                 </div>
             </div>
 
-            {/* Actionable Conflict Banner */}
+            {/* Operational Conflict Alert Banner */}
             {conflicts.length > 0 && (
-                <div className="flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                    className="flex flex-col gap-3 rounded-lg border border-danger/30 bg-danger-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    role="alert"
+                >
                     <div className="flex items-start gap-3">
                         <AlertTriangle
                             className="mt-0.5 h-5 w-5 shrink-0 text-danger"
                             aria-hidden="true"
                         />
                         <div>
-                            <p className="text-sm font-semibold text-danger">
-                                {conflicts.length} active operational conflict
-                                {conflicts.length === 1 ? '' : 's'} on this job
-                            </p>
-                            <ul className="mt-1 space-y-0.5 text-xs text-danger">
+                            <h3 className="font-semibold text-danger">
+                                {conflicts.length} active operational{' '}
+                                {conflicts.length === 1
+                                    ? 'conflict'
+                                    : 'conflicts'}{' '}
+                                on this job
+                            </h3>
+                            <ul className="mt-1 space-y-0.5 text-xs text-ink-soft">
                                 {conflicts.map((c) => (
                                     <li key={c.id}>• {c.description}</li>
                                 ))}
@@ -2156,7 +2462,26 @@ function DispatchDetails({
                             )}
                             <DataPair
                                 label="Schedule"
-                                value={`${formatDateTime(job.scheduled_start)} – ${formatDateTime(job.scheduled_end)}`}
+                                value={
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span>
+                                            {formatDateTime(
+                                                job.scheduled_start,
+                                            )}{' '}
+                                            –{' '}
+                                            {formatDateTime(job.scheduled_end)}
+                                        </span>
+                                        {scheduleDuration && (
+                                            <span className="inline-flex items-center gap-1 rounded bg-brand-soft px-1.5 py-0.5 text-xs font-medium text-brand-strong">
+                                                <Clock
+                                                    className="h-3 w-3"
+                                                    aria-hidden="true"
+                                                />
+                                                {scheduleDuration}
+                                            </span>
+                                        )}
+                                    </div>
+                                }
                             />
                             <DataPair
                                 label="Site"
@@ -2170,16 +2495,43 @@ function DispatchDetails({
                                     </span>
                                 }
                             />
+                            {job.requirements &&
+                                job.requirements.length > 0 && (
+                                    <DataPair
+                                        label="Requirements"
+                                        value={
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {job.requirements.map(
+                                                    (req, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className="inline-flex items-center rounded-md border border-line bg-surface px-2 py-0.5 text-xs font-medium text-ink"
+                                                        >
+                                                            {req}
+                                                        </span>
+                                                    ),
+                                                )}
+                                            </div>
+                                        }
+                                    />
+                                )}
                         </dl>
-                        <div className="mt-4 rounded-lg bg-surface-subtle p-3">
-                            <p className="text-xs font-semibold text-ink">
-                                Site note
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-ink-soft">
-                                {job.site_notes?.trim() ||
-                                    'No additional site instructions were recorded.'}
-                            </p>
-                        </div>
+                        {job.site_notes?.trim() && (
+                            <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                                <ClipboardList
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                                <div>
+                                    <p className="font-semibold text-ink">
+                                        Site Instructions
+                                    </p>
+                                    <p className="mt-0.5 leading-relaxed whitespace-pre-line text-ink-soft">
+                                        {job.site_notes.trim()}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </Panel>
 
                     {/* Assigned Resources Panel */}
@@ -2193,12 +2545,17 @@ function DispatchDetails({
                                     Current server-backed personnel and assets
                                 </p>
                             </div>
-                            <Link
-                                href={assignmentWorkspaceUrl(job.id, returnTo)}
-                                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong hover:underline"
-                            >
-                                Manage assignments →
-                            </Link>
+                            {assignments.length > 0 && (
+                                <Link
+                                    href={assignmentWorkspaceUrl(
+                                        job.id,
+                                        returnTo,
+                                    )}
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong hover:underline"
+                                >
+                                    Manage assignments →
+                                </Link>
+                            )}
                         </div>
                         {assignments.length === 0 ? (
                             <div className="p-6 text-center">
@@ -2209,19 +2566,22 @@ function DispatchDetails({
                                     No resources assigned
                                 </p>
                                 <p className="mt-1 text-xs text-ink-soft">
-                                    Assignments will appear after the authorized
-                                    scheduling workflow completes.
+                                    {conflicts.length > 0
+                                        ? 'Use Assign resources above to choose qualified personnel and assets.'
+                                        : 'Assignments will appear after the authorized scheduling workflow completes.'}
                                 </p>
-                                <Link
-                                    href={assignmentWorkspaceUrl(
-                                        job.id,
-                                        returnTo,
-                                    )}
-                                    className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:bg-surface-subtle"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    Assign resources
-                                </Link>
+                                {conflicts.length === 0 && (
+                                    <Link
+                                        href={assignmentWorkspaceUrl(
+                                            job.id,
+                                            returnTo,
+                                        )}
+                                        className="mt-3.5 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:bg-surface-subtle"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        Assign resources
+                                    </Link>
+                                )}
                             </div>
                         ) : (
                             <ul className="divide-y divide-line">
@@ -2358,6 +2718,12 @@ function DispatchGptAdvisory({
     recommendations: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
+    const { auth } = usePage<{ auth?: Auth }>().props;
+    const isAdmin =
+        auth?.role === 'system_administrator' ||
+        auth?.role === 'admin' ||
+        auth?.prototype_role === 'system_administrator';
+
     const [selectedForAccept, setSelectedForAccept] =
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
@@ -2374,7 +2740,6 @@ function DispatchGptAdvisory({
         activeRecommendations.length > 0
             ? activeRecommendations
             : recommendations.slice(0, 1);
-    const hasOpenRecommendation = activeRecommendations.length > 0;
 
     const requestRecommendation = () => {
         setRequesting(true);
@@ -2397,7 +2762,7 @@ function DispatchGptAdvisory({
             className="rounded-lg border border-line bg-surface p-4"
             aria-labelledby={`dispatch-gpt-advisory-${job.id}`}
         >
-            <div className="flex flex-col gap-3 border-b border-line pb-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-2 border-b border-line pb-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h3
                         id={`dispatch-gpt-advisory-${job.id}`}
@@ -2415,51 +2780,44 @@ function DispatchGptAdvisory({
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    {capabilities.request_gpt_assistance &&
-                        !hasOpenRecommendation && (
-                            <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={requestRecommendation}
-                                disabled={requesting}
-                            >
-                                <Sparkles
-                                    className="mr-1.5 h-3.5 w-3.5"
-                                    aria-hidden="true"
-                                />
-                                {requesting
-                                    ? 'Requesting…'
-                                    : 'Request AI assistance'}
-                            </Button>
-                        )}
+                {isAdmin && (
                     <Link
                         href="/?view=gpt-recommendations"
-                        className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
+                        className="inline-flex min-h-8 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
                     >
                         View full advisory
                     </Link>
-                </div>
+                )}
             </div>
 
             {visibleRecommendations.length === 0 ? (
-                <div className="mt-3 rounded-lg bg-surface-subtle p-4 text-center">
-                    <p className="text-xs text-ink-soft">
-                        No GPT recommendation has been requested for this
-                        dispatch.
+                <div className="mt-3 rounded-lg bg-surface-subtle p-5 text-center">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
+                        <Sparkles className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <h4 className="mt-2 text-sm font-semibold text-ink">
+                        No AI proposal generated
+                    </h4>
+                    <p className="mx-auto mt-1 max-w-sm text-xs text-ink-soft">
+                        Request automated assistance to analyze qualified
+                        operators, crane capacity match, and conflict-free
+                        schedules.
                     </p>
                     {capabilities.request_gpt_assistance && (
                         <Button
                             size="sm"
-                            variant="secondary"
-                            className="mt-2.5"
+                            variant="primary"
+                            className="mt-3"
                             onClick={requestRecommendation}
                             disabled={requesting}
                         >
-                            <Sparkles className="mr-1.5 h-3.5 w-3.5 text-brand-strong" />
+                            <Sparkles
+                                className="mr-1.5 h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
                             {requesting
-                                ? 'Generating…'
-                                : 'Generate AI Proposal'}
+                                ? 'Evaluating fleet…'
+                                : 'Suggest crew & equipment'}
                         </Button>
                     )}
                 </div>
@@ -2474,7 +2832,13 @@ function DispatchGptAdvisory({
                         const assets = recommendation.proposed_assets ?? [];
 
                         return (
-                            <div key={recommendation.id} className="space-y-3">
+                            <div
+                                key={recommendation.id}
+                                className={cn(
+                                    'space-y-3',
+                                    recommendation.is_expired && 'opacity-90',
+                                )}
+                            >
                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <p className="text-sm font-semibold text-ink">
@@ -2506,15 +2870,34 @@ function DispatchGptAdvisory({
                                     </div>
                                 </div>
 
+                                {/* Expired Advisory Explanation Banner */}
+                                {recommendation.is_expired && (
+                                    <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft/30 p-2.5 text-xs">
+                                        <Clock
+                                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-strong"
+                                            aria-hidden="true"
+                                        />
+                                        <p className="leading-relaxed text-ink-soft">
+                                            <span className="font-semibold text-warning-strong">
+                                                Proposal Expired:
+                                            </span>{' '}
+                                            Fleet availability and operator
+                                            schedules may have shifted since
+                                            this was synthesized. Re-evaluate
+                                            live availability to update
+                                            suggestions.
+                                        </p>
+                                    </div>
+                                )}
+
                                 {recommendation.response_summary && (
                                     <p className="text-xs leading-relaxed text-ink">
                                         {recommendation.response_summary}
                                     </p>
                                 )}
 
-                                {/* Proposed Resources */}
-                                {(personnel.length > 0 ||
-                                    assets.length > 0) && (
+                                {/* Proposed Resources Plan */}
+                                {personnel.length > 0 || assets.length > 0 ? (
                                     <div className="space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
                                         <p className="font-semibold text-ink">
                                             Proposed Resource Plan
@@ -2556,6 +2939,14 @@ function DispatchGptAdvisory({
                                             </div>
                                         )}
                                     </div>
+                                ) : (
+                                    <div className="rounded-lg border border-dashed border-line bg-surface-subtle/50 px-3 py-2 text-xs text-ink-soft">
+                                        <span className="font-medium text-ink">
+                                            Resource Plan:
+                                        </span>{' '}
+                                        No specific personnel or equipment were
+                                        attached in this proposal draft.
+                                    </div>
                                 )}
 
                                 {recommendation.conflicts.length > 0 && (
@@ -2588,13 +2979,20 @@ function DispatchGptAdvisory({
                                 <RecommendationDetails rec={recommendation} />
 
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                                    <p className="text-xs text-ink-soft">
-                                        Requested by{' '}
-                                        <span className="font-medium text-ink">
-                                            {recommendation.requested_by.name}
-                                        </span>
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
+                                    {isAdmin ? (
+                                        <p className="text-xs text-ink-soft">
+                                            Requested by{' '}
+                                            <span className="font-medium text-ink">
+                                                {
+                                                    recommendation.requested_by
+                                                        .name
+                                                }
+                                            </span>
+                                        </p>
+                                    ) : (
+                                        <span />
+                                    )}
+                                    <div className="flex flex-wrap items-center gap-2">
                                         {reviewable &&
                                             capabilities.decide_gpt_recommendation && (
                                                 <>
@@ -2626,7 +3024,11 @@ function DispatchGptAdvisory({
                                             capabilities.retry_gpt_recommendation && (
                                                 <Button
                                                     size="sm"
-                                                    variant="secondary"
+                                                    variant={
+                                                        recommendation.is_expired
+                                                            ? 'primary'
+                                                            : 'secondary'
+                                                    }
                                                     disabled={
                                                         retryingId ===
                                                         recommendation.id
@@ -2659,7 +3061,7 @@ function DispatchGptAdvisory({
                                                     />
                                                     {retryingId ===
                                                     recommendation.id
-                                                        ? 'Retrying…'
+                                                        ? 'Re-evaluating…'
                                                         : 'Retry recommendation'}
                                                 </Button>
                                             )}

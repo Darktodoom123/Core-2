@@ -6,6 +6,7 @@ import {
     Clock,
     Copy,
     Download,
+    ExternalLink,
     FileCheck,
     FileImage,
     FileText,
@@ -28,6 +29,7 @@ import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     AttachmentViewModel,
+    DispatchJobViewModel,
     JobReportViewModel,
     ReportExportViewModel,
     WorkspaceCapabilities,
@@ -38,13 +40,30 @@ type ReportFilterStatus = 'all' | 'submitted' | 'approved' | 'rejected';
 export function ReportsSurface({
     reports = [],
     exports = [],
+    jobs = [],
     capabilities,
 }: {
     reports?: JobReportViewModel[];
     exports?: ReportExportViewModel[];
+    jobs?: DispatchJobViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
-    const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const initialJobIdFromUrl = useMemo(() => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+
+        return params.get('job_id') || params.get('dispatch_id') || null;
+    }, []);
+
+    const [showSubmitModal, setShowSubmitModal] = useState(
+        () => initialJobIdFromUrl !== null,
+    );
+    const [prefilledJobId] = useState<string | number | null>(
+        initialJobIdFromUrl,
+    );
     const [statusFilter, setStatusFilter] = useState<ReportFilterStatus>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedReportId, setSelectedReportId] = useState<number | null>(
@@ -225,6 +244,8 @@ export function ReportsSurface({
                 {/* Submit Job Report Modal / Drawer Form */}
                 {showSubmitModal && capabilities.create_job_report && (
                     <SubmitJobReportForm
+                        jobs={jobs}
+                        initialJobId={prefilledJobId ?? ''}
                         capabilities={capabilities}
                         onDone={() => {
                             setShowSubmitModal(false);
@@ -430,9 +451,13 @@ export function ReportsSurface({
 }
 
 function SubmitJobReportForm({
+    jobs = [],
+    initialJobId = '',
     capabilities,
     onDone,
 }: {
+    jobs?: DispatchJobViewModel[];
+    initialJobId?: string | number;
     capabilities: WorkspaceCapabilities;
     onDone: () => void;
 }) {
@@ -452,7 +477,7 @@ function SubmitJobReportForm({
     >(null);
 
     const form = useForm({
-        dispatch_job_id: '',
+        dispatch_job_id: initialJobId ? String(initialJobId) : '',
         work_summary: '',
         remarks: '',
         started_at: '',
@@ -550,19 +575,52 @@ function SubmitJobReportForm({
             >
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label className="block text-xs font-semibold text-ink uppercase">
-                            Dispatch Job ID *
+                        <label
+                            htmlFor="report-dispatch-select"
+                            className="block text-xs font-semibold text-ink uppercase"
+                        >
+                            Dispatch Job *
                         </label>
-                        <input
-                            type="number"
-                            value={form.data.dispatch_job_id}
-                            onChange={(e) =>
-                                form.setData('dispatch_job_id', e.target.value)
-                            }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                            placeholder="e.g. 101"
-                            required
-                        />
+                        {jobs.length > 0 ? (
+                            <select
+                                id="report-dispatch-select"
+                                value={form.data.dispatch_job_id}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'dispatch_job_id',
+                                        e.target.value,
+                                    )
+                                }
+                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                                required
+                            >
+                                <option value="">
+                                    Select an operational dispatch…
+                                </option>
+                                {jobs.map((j) => (
+                                    <option key={j.id} value={j.id}>
+                                        {j.reference} —{' '}
+                                        {j.title || j.client || 'Dispatch'} (
+                                        {j.status.label})
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                id="report-dispatch-select"
+                                type="number"
+                                value={form.data.dispatch_job_id}
+                                onChange={(e) =>
+                                    form.setData(
+                                        'dispatch_job_id',
+                                        e.target.value,
+                                    )
+                                }
+                                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                                placeholder="e.g. 101"
+                                required
+                            />
+                        )}
                         {form.errors.dispatch_job_id && (
                             <p className="mt-1 text-xs text-danger">
                                 {form.errors.dispatch_job_id}
@@ -831,10 +889,17 @@ function ReportDetailPane({
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-ink">
-                            {report.job?.reference ??
-                                `Dispatch #${report.dispatch_job_id}`}
-                        </h2>
+                        <a
+                            href={`/operations/dispatch-jobs/${report.dispatch_job_id}`}
+                            className="group inline-flex items-center gap-1.5 text-xl font-bold text-ink hover:text-brand-strong hover:underline"
+                            title="View dispatch details"
+                        >
+                            <span>
+                                {report.job?.reference ??
+                                    `Dispatch #${report.dispatch_job_id}`}
+                            </span>
+                            <ExternalLink className="h-4 w-4 text-ink-soft transition-colors group-hover:text-brand-strong" />
+                        </a>
                         <CanonicalStatusBadge status={report.status} />
                     </div>
                     {report.job?.title && (

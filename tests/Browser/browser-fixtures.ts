@@ -3,7 +3,12 @@ import { resolve } from 'node:path';
 import type { Page } from '@playwright/test';
 
 export type BrowserFixtures = {
-    users: { dispatcher: string; manager: string; driver: string };
+    users: {
+        admin?: string;
+        dispatcher: string;
+        manager: string;
+        driver: string;
+    };
     password: string;
     job_id: number;
     assigned_job_id: number;

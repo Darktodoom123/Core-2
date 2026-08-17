@@ -11,6 +11,7 @@ import {
     Circle,
     ClipboardList,
     Clock3,
+    FileText,
     HardHat,
     ListChecks,
     MapPin,
@@ -549,6 +550,10 @@ export default function DispatchDetail({
                                         currentAssetCount={
                                             job.asset_assignments.length
                                         }
+                                        currentPersonnel={
+                                            job.personnel_assignments
+                                        }
+                                        currentAssets={job.asset_assignments}
                                     />
                                     {hasAssignmentNextAction && (
                                         <AssignmentNextAction
@@ -582,6 +587,10 @@ export default function DispatchDetail({
                                     <CurrentAssignments
                                         job={job}
                                         capabilities={capabilities}
+                                        hasPendingSelections={
+                                            hasPendingSelections
+                                        }
+                                        pendingSelectionCount={selectedCount}
                                         personnelCandidates={
                                             personnelCandidates
                                         }
@@ -614,10 +623,9 @@ export default function DispatchDetail({
 }
 
 function ApprovalDecisionBanner({
-    job,
     activation,
 }: {
-    job: DispatchDetailPageProps['job'];
+    job?: DispatchDetailPageProps['job'];
     activation: DispatchDetailPageProps['activation'];
 }) {
     const [deciding, setDeciding] = useState<'approve' | 'reject' | null>(null);
@@ -711,17 +719,17 @@ function ApprovalDecisionBanner({
                     <div>
                         <h3 className="text-sm font-semibold">
                             {isApproved
-                                ? 'Independent approval granted'
+                                ? 'Operations Manager approval granted'
                                 : isRejected
                                   ? 'Approval request rejected'
-                                  : 'Independent Operations Manager approval pending'}
+                                  : 'Operations Manager approval pending'}
                         </h3>
                         <p className="mt-0.5 text-xs">
                             {isApproved
-                                ? 'The exceptional priority or assignment override has been authorized. Activation is unblocked.'
+                                ? 'The dispatch assignment has been approved by Operations. Field activation is unblocked.'
                                 : isRejected
                                   ? `The approval request was rejected: ${activation.approval_reason || 'Revise the assignment plan and request a new review.'}`
-                                  : `${job.priority.label} priority requires independent manager approval before activation.`}
+                                  : 'Operations Manager approval is required before field activation.'}
                         </p>
                         {activation.approval_notes && (
                             <p className="mt-1 text-xs italic">
@@ -968,6 +976,8 @@ function AssignmentSelectionSummary({
     canAssign,
     currentPersonnelCount,
     currentAssetCount,
+    currentPersonnel,
+    currentAssets,
 }: {
     formId?: string;
     personnel: PersonnelCandidateViewModel[];
@@ -977,9 +987,32 @@ function AssignmentSelectionSummary({
     canAssign: boolean;
     currentPersonnelCount: number;
     currentAssetCount: number;
+    currentPersonnel: DispatchDetailPageProps['job']['personnel_assignments'];
+    currentAssets: DispatchDetailPageProps['job']['asset_assignments'];
 }) {
-    const totalPersonnelCount = currentPersonnelCount + personnel.length;
-    const totalAssetCount = currentAssetCount + assets.length;
+    const hasDraftSelections = selectedCount > 0;
+    const currentCount = currentPersonnelCount + currentAssetCount;
+    const hasSavedAssignments = currentCount > 0;
+    const summaryTitle = hasDraftSelections
+        ? hasSavedAssignments
+            ? 'Update assignment'
+            : 'Draft assignment'
+        : hasSavedAssignments
+          ? 'Assigned resources'
+          : 'Assignment plan';
+    const summaryDescription = hasDraftSelections
+        ? hasSavedAssignments
+            ? 'Review the new resources before saving this assignment update.'
+            : 'These selections are not saved yet. Review them before assigning.'
+        : hasSavedAssignments
+          ? 'Saved personnel and assets for this dispatch.'
+          : 'Select eligible resources, then save them to this dispatch.';
+    const visibleCount = hasDraftSelections ? selectedCount : currentCount;
+    const visibleCountLabel = hasDraftSelections
+        ? `new resource${selectedCount === 1 ? '' : 's'} selected`
+        : hasSavedAssignments
+          ? `resource${currentCount === 1 ? '' : 's'} assigned`
+          : 'resources selected';
 
     return (
         <Panel
@@ -989,13 +1022,22 @@ function AssignmentSelectionSummary({
             <div className="border-b border-line px-4 py-4">
                 <div className="flex items-start gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
-                        <ListChecks className="h-5 w-5" aria-hidden="true" />
+                        {hasSavedAssignments && !hasDraftSelections ? (
+                            <CheckCircle2
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <ListChecks
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                            />
+                        )}
                     </span>
                     <div>
-                        <h2 className="font-semibold">Assignment plan</h2>
+                        <h2 className="font-semibold">{summaryTitle}</h2>
                         <p className="mt-0.5 text-xs leading-5 text-ink-soft">
-                            Review your selections before saving them to the
-                            dispatch.
+                            {summaryDescription}
                         </p>
                     </div>
                 </div>
@@ -1004,59 +1046,105 @@ function AssignmentSelectionSummary({
             <div className="space-y-4 px-4 py-4">
                 <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-semibold tracking-[-0.03em]">
-                        {selectedCount}
+                        {visibleCount}
                     </span>
                     <span className="text-sm text-ink-soft">
-                        new resource{selectedCount === 1 ? '' : 's'} selected
+                        {visibleCountLabel}
                     </span>
                 </div>
 
                 <div className="space-y-3 text-sm">
                     <AssignmentRequirementRow
                         label="People"
-                        count={totalPersonnelCount}
+                        count={currentPersonnelCount}
+                        draftCount={personnel.length}
                     />
                     <AssignmentRequirementRow
                         label="Assets"
-                        count={totalAssetCount}
-                    />
-                    <SelectionGroup
-                        label="New people"
-                        items={personnel.map((candidate) => candidate.name)}
-                        emptyMessage="No new people selected"
-                    />
-                    <SelectionGroup
-                        label="New assets"
-                        items={assets.map(
-                            (candidate) =>
-                                `${candidate.code} · ${candidate.name}`,
-                        )}
-                        emptyMessage="No new assets selected"
+                        count={currentAssetCount}
+                        draftCount={assets.length}
                     />
                 </div>
+
+                {hasSavedAssignments && (
+                    <div className="space-y-3 border-t border-line pt-3">
+                        <p className="text-xs font-semibold text-ink-soft">
+                            Currently assigned
+                        </p>
+                        <SelectionGroup
+                            label="People"
+                            items={currentPersonnel.map(
+                                (assignment) =>
+                                    assignment.name +
+                                    ' / ' +
+                                    humanize(assignment.type) +
+                                    ' / ' +
+                                    assignment.response_status.label,
+                            )}
+                            emptyMessage="No people assigned"
+                        />
+                        <SelectionGroup
+                            label="Assets"
+                            items={currentAssets.map(
+                                (assignment) =>
+                                    assignment.code +
+                                    ' / ' +
+                                    assignment.name +
+                                    ' / ' +
+                                    humanize(assignment.type),
+                            )}
+                            emptyMessage="No assets assigned"
+                        />
+                    </div>
+                )}
+
+                {hasDraftSelections && (
+                    <div className="space-y-3 border-t border-line pt-3">
+                        <p className="text-xs font-semibold text-ink-soft">
+                            Pending changes
+                        </p>
+                        <SelectionGroup
+                            label="People to add"
+                            items={personnel.map((candidate) => candidate.name)}
+                            emptyMessage="No people selected"
+                        />
+                        <SelectionGroup
+                            label="Assets to add"
+                            items={assets.map(
+                                (candidate) =>
+                                    candidate.code + ' / ' + candidate.name,
+                            )}
+                            emptyMessage="No assets selected"
+                        />
+                    </div>
+                )}
             </div>
 
-            <div className="border-t border-line bg-surface-subtle px-4 py-4">
-                <Button
-                    type="submit"
-                    form={formId}
-                    variant="primary"
-                    className="w-full"
-                    disabled={processing || selectedCount === 0 || !canAssign}
-                    aria-busy={processing}
-                >
-                    {processing
-                        ? 'Saving assignments…'
-                        : selectedCount > 0
-                          ? `Assign ${selectedCount} resource${selectedCount === 1 ? '' : 's'}`
-                          : 'Select resources to continue'}
-                </Button>
-                <p className="mt-2 text-center text-xs leading-5 text-ink-soft">
-                    {canAssign
-                        ? 'At least one eligible resource is required. Activation also needs one person and one asset.'
-                        : 'Your role can review this dispatch but cannot create assignments.'}
-                </p>
-            </div>
+            {(!hasSavedAssignments || hasDraftSelections) && (
+                <div className="border-t border-line bg-surface-subtle px-4 py-4">
+                    <Button
+                        type="submit"
+                        form={formId}
+                        variant="primary"
+                        className="w-full"
+                        disabled={
+                            processing || selectedCount === 0 || !canAssign
+                        }
+                        aria-busy={processing}
+                    >
+                        {processing
+                            ? 'Saving assignments…'
+                            : selectedCount > 0
+                              ? `Assign ${selectedCount} resource${selectedCount === 1 ? '' : 's'}`
+                              : 'Select resources to continue'}
+                    </Button>
+                    <p className="mt-2 text-center text-xs leading-5 text-ink-soft">
+                        {canAssign
+                            ? 'At least one eligible resource is required. Activation also needs one person and one asset.'
+                            : 'Your role can review this dispatch but cannot create assignments.'}
+                    </p>
+                </div>
+            )}
         </Panel>
     );
 }
@@ -1064,30 +1152,42 @@ function AssignmentSelectionSummary({
 function AssignmentRequirementRow({
     label,
     count,
+    draftCount = 0,
 }: {
     label: string;
     count: number;
+    draftCount?: number;
 }) {
     const ready = count > 0;
 
     return (
         <div className="flex items-center justify-between text-xs">
             <span className="text-ink-soft">{label}</span>
-            <span
-                className={cn(
-                    'inline-flex items-center gap-1 font-medium',
-                    ready ? 'text-success-strong' : 'text-warning-strong',
+            <span className="inline-flex items-center gap-2 font-medium">
+                <span
+                    className={cn(
+                        'inline-flex items-center gap-1',
+                        ready ? 'text-success-strong' : 'text-warning-strong',
+                    )}
+                >
+                    {ready ? (
+                        <CheckCircle2
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <Circle
+                            className="h-3.5 w-3.5 opacity-60"
+                            aria-hidden="true"
+                        />
+                    )}
+                    {count} assigned
+                </span>
+                {draftCount > 0 && (
+                    <span className="text-brand-strong">
+                        · {draftCount} new
+                    </span>
                 )}
-            >
-                {ready ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                    <Circle
-                        className="h-3.5 w-3.5 opacity-60"
-                        aria-hidden="true"
-                    />
-                )}
-                {count} assigned
             </span>
         </div>
     );
@@ -1578,35 +1678,58 @@ function FieldProgressionPanel({
                 )}
 
                 {next === null ? (
-                    <div
-                        className={cn(
-                            'flex items-start gap-3 rounded-lg p-4',
-                            isCompleted
-                                ? 'bg-success-soft text-success-strong'
-                                : 'bg-surface-subtle text-ink',
-                        )}
-                    >
-                        {isCompleted ? (
-                            <CheckCircle2
-                                className="mt-0.5 h-5 w-5 shrink-0"
-                                aria-hidden="true"
-                            />
-                        ) : (
-                            <Clock3
-                                className="mt-0.5 h-5 w-5 shrink-0 text-ink-soft"
-                                aria-hidden="true"
-                            />
-                        )}
-                        <div>
-                            <p className="font-semibold">
-                                {isCompleted
-                                    ? 'Field progression complete'
-                                    : 'No field action available'}
-                            </p>
-                            <p className="mt-1 text-sm leading-5">
-                                {progression.message}
-                            </p>
+                    <div className="space-y-3">
+                        <div
+                            className={cn(
+                                'flex items-start gap-3 rounded-lg p-4',
+                                isCompleted
+                                    ? 'bg-success-soft text-success-strong'
+                                    : 'bg-surface-subtle text-ink',
+                            )}
+                        >
+                            {isCompleted ? (
+                                <CheckCircle2
+                                    className="mt-0.5 h-5 w-5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <Clock3
+                                    className="mt-0.5 h-5 w-5 shrink-0 text-ink-soft"
+                                    aria-hidden="true"
+                                />
+                            )}
+                            <div>
+                                <p className="font-semibold">
+                                    {isCompleted
+                                        ? 'Field progression complete'
+                                        : 'No field action available'}
+                                </p>
+                                <p className="mt-1 text-sm leading-5">
+                                    {progression.message}
+                                </p>
+                            </div>
                         </div>
+
+                        {isCompleted && (
+                            <div className="flex flex-col items-start justify-between gap-3 rounded-lg border border-brand/20 bg-brand-soft/40 p-4 sm:flex-row sm:items-center">
+                                <div>
+                                    <p className="text-xs font-semibold text-ink">
+                                        Field Completion Report & Evidence
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                        Submit work summary, timestamps, and
+                                        SHA-256 verified attachments.
+                                    </p>
+                                </div>
+                                <a
+                                    href={`/?view=reports&job_id=${job.id}`}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-strong px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    Submit Job Report
+                                </a>
+                            </div>
+                        )}
                     </div>
                 ) : confirming ? (
                     <div
@@ -1918,14 +2041,13 @@ function ActivationPrerequisiteChecklist({
                 ),
         },
         {
-            title: 'Manager approval',
-            desc: !activation.approval_required
-                ? 'Standard priority — no exceptional approval required.'
-                : activation.approval_status === 'approved'
-                  ? 'Independent manager approval granted.'
-                  : activation.approval_status === 'rejected'
-                    ? 'Approval request was rejected.'
-                    : 'Awaiting independent manager approval decision.',
+            title: 'Operations Manager approval',
+            desc:
+                activation.approval_status === 'approved'
+                    ? 'Operations Manager approval granted.'
+                    : activation.approval_status === 'rejected'
+                      ? 'Approval request was rejected.'
+                      : 'Awaiting Operations Manager approval decision.',
             ready: approvalPassed,
         },
     ];
@@ -2547,11 +2669,15 @@ function DispatchContext({ job }: { job: DispatchDetailPageProps['job'] }) {
 function CurrentAssignments({
     job,
     capabilities,
+    hasPendingSelections = false,
+    pendingSelectionCount = 0,
     personnelCandidates,
     assetCandidates,
 }: {
     job: DispatchDetailPageProps['job'];
     capabilities: DispatchDetailPageProps['capabilities'];
+    hasPendingSelections?: boolean;
+    pendingSelectionCount?: number;
     personnelCandidates: PersonnelCandidateViewModel[];
     assetCandidates: AssetCandidateViewModel[];
 }) {
@@ -2671,16 +2797,29 @@ function CurrentAssignments({
             <div className="border-b border-line px-4 py-3">
                 <h2 className="font-semibold">Current assignments</h2>
                 <p className="mt-0.5 text-xs text-ink-soft">
-                    {assignmentCount} active resource
-                    {assignmentCount === 1 ? '' : 's'}
+                    {assignmentCount > 0
+                        ? assignmentCount +
+                          ' active resource' +
+                          (assignmentCount === 1 ? '' : 's')
+                        : hasPendingSelections
+                          ? pendingSelectionCount + ' selected but not saved'
+                          : 'No saved resources yet'}
                 </p>
             </div>
             {assignmentCount === 0 ? (
                 <EmptyState
                     compact
                     icon={ClipboardList}
-                    title="No resources assigned"
-                    message="Eligible selections confirmed below will appear here."
+                    title={
+                        hasPendingSelections
+                            ? 'Draft assignment pending'
+                            : 'No resources assigned'
+                    }
+                    message={
+                        hasPendingSelections
+                            ? 'Save the selected resources above to create active assignments.'
+                            : 'Eligible selections confirmed below will appear here.'
+                    }
                 />
             ) : (
                 <ul className="divide-y divide-line">

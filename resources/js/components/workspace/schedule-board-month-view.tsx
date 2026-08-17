@@ -295,29 +295,56 @@ export function ScheduleBoardMonthView({
 
                                                 {dayJobs.length > 0 && (
                                                     <div className="mt-1.5 max-h-28 space-y-1 overflow-y-auto pr-0.5 sm:max-h-32">
-                                                        {dayJobs.map((job) => (
-                                                            <button
-                                                                key={job.id}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    onSelectJob(
-                                                                        job.id,
-                                                                    )
-                                                                }
-                                                                className="block min-h-9 w-full rounded-md border border-line bg-surface px-1.5 py-1 text-left transition-colors hover:border-brand-strong hover:bg-brand-soft/60 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
-                                                                title={`${job.reference}: ${job.title}`}
-                                                                aria-label={`Open dispatch ${job.reference}: ${job.title}`}
-                                                            >
-                                                                <span className="block truncate text-[10px] font-bold text-brand-strong">
-                                                                    {
-                                                                        job.reference
+                                                        {dayJobs.map((job) => {
+                                                            const hasConflict =
+                                                                derivedConflicts.some(
+                                                                    (c) =>
+                                                                        conflictAppliesToJob(
+                                                                            c,
+                                                                            job,
+                                                                        ),
+                                                                );
+
+                                                            return (
+                                                                <button
+                                                                    key={job.id}
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        onSelectJob(
+                                                                            job.id,
+                                                                        )
                                                                     }
-                                                                </span>
-                                                                <span className="block truncate text-[10px] leading-tight text-ink">
-                                                                    {job.title}
-                                                                </span>
-                                                            </button>
-                                                        ))}
+                                                                    className={cn(
+                                                                        'block min-h-9 w-full rounded-md border px-1.5 py-1 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                                        monthJobTone(
+                                                                            job,
+                                                                            hasConflict,
+                                                                        ),
+                                                                    )}
+                                                                    title={`${job.reference}: ${job.title}`}
+                                                                    aria-label={`Open dispatch ${job.reference}: ${job.title}`}
+                                                                >
+                                                                    <span className="flex items-center justify-between gap-1">
+                                                                        <span className="truncate text-[10px] font-bold text-ink">
+                                                                            {
+                                                                                job.reference
+                                                                            }
+                                                                        </span>
+                                                                        {hasConflict && (
+                                                                            <AlertTriangle
+                                                                                className="h-3 w-3 shrink-0 text-danger"
+                                                                                aria-hidden="true"
+                                                                            />
+                                                                        )}
+                                                                    </span>
+                                                                    <span className="block truncate text-[10px] leading-tight text-ink-soft">
+                                                                        {
+                                                                            job.title
+                                                                        }
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
@@ -590,4 +617,28 @@ function formatDayLabel(
             : '';
 
     return `${dayLabel}, ${jobLabel}${conflictLabel}`;
+}
+
+function monthJobTone(job: DispatchJobViewModel, hasConflict: boolean) {
+    if (hasConflict || job.priority.value === 'emergency') {
+        return 'border-danger/60 bg-danger-soft/60 hover:bg-danger-soft';
+    }
+
+    if (job.priority.value === 'priority') {
+        return 'border-warning/60 bg-warning-soft/60 hover:bg-warning-soft';
+    }
+
+    if (job.status.value === 'completed') {
+        return 'border-success/30 bg-success-soft/20 hover:bg-success-soft/40';
+    }
+
+    if (
+        ['working', 'active', 'en_route', 'dispatched'].includes(
+            job.status.value,
+        )
+    ) {
+        return 'border-brand-strong bg-brand-soft hover:bg-brand-soft/80';
+    }
+
+    return 'border-line bg-surface hover:border-brand-strong hover:bg-surface-subtle';
 }

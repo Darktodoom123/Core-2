@@ -113,8 +113,16 @@ function requestExceptionalWorkflowApproval(
 
 it('activates a ready routine dispatch through the browser and records the actor and version', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Routine Dispatcher');
+    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Routine Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6001');
-    assignExceptionalWorkflowResources($job, $dispatcher, '6001');
+    $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6001');
+    $approval = requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
+
+    $this->actingAs($manager)
+        ->post("/operations/approval-requests/{$approval->id}/decision", [
+            'status' => ApprovalStatus::Approved->value,
+            'reason' => 'Routine assignment verified by operations.',
+        ]);
 
     $this->actingAs($dispatcher)
         ->from("/operations/dispatch-jobs/{$job->id}")
@@ -229,9 +237,26 @@ it('requires an independent manager approval for exceptional dispatch activation
 
     expect($job->refresh()->status)->toBe(DispatchStatus::Dispatched);
 })->with([
+    'routine' => [DispatchPriority::Routine->value, 'CON-6100'],
     'priority' => [DispatchPriority::Priority->value, 'CON-6101'],
     'emergency' => [DispatchPriority::Emergency->value, 'CON-6102'],
 ]);
+
+it('blocks activation of unapproved routine dispatches and requires operations approval', function () {
+    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Unapproved Dispatcher');
+    $job = exceptionalWorkflowJob($dispatcher, 'CON-6150', DispatchPriority::Routine);
+    assignExceptionalWorkflowResources($job, $dispatcher, '6150');
+
+    $this->actingAs($dispatcher)
+        ->from("/operations/dispatch-jobs/{$job->id}")
+        ->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])
+        ->assertRedirect("/operations/dispatch-jobs/{$job->id}")
+        ->assertSessionHasErrors([
+            'approval' => 'Operations Manager approval is required before activation.',
+        ]);
+
+    expect($job->refresh()->status)->toBe(DispatchStatus::Draft);
+});
 
 it('keeps rejected exceptional work inactive and preserves the rejection reason', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Rejected Dispatcher');
@@ -369,8 +394,14 @@ it('rejects a stale activation version with a refresh and review error and audit
 it('revalidates changed asset safety at activation time and audits the blocked attempt', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Safety Dispatcher');
     $technician = exceptionalWorkflowUser(RoleName::FieldTechnician, 'Safety Technician');
+    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Manager');
     $statusJob = exceptionalWorkflowJob($dispatcher, 'CON-6701');
     $statusResources = assignExceptionalWorkflowResources($statusJob, $dispatcher, '6701');
+    $approval1 = requestExceptionalWorkflowApproval($statusJob, $dispatcher, $statusResources['driver'], $statusResources['asset']);
+    $this->actingAs($manager)->post("/operations/approval-requests/{$approval1->id}/decision", [
+        'status' => ApprovalStatus::Approved->value,
+        'reason' => 'Initial safety approval.',
+    ]);
     $statusResources['asset']->update(['status' => AssetStatus::UnderMaintenance]);
 
     $this->actingAs($dispatcher)
@@ -384,6 +415,11 @@ it('revalidates changed asset safety at activation time and audits the blocked a
 
     $maintenanceJob = exceptionalWorkflowJob($dispatcher, 'CON-6702');
     $maintenanceResources = assignExceptionalWorkflowResources($maintenanceJob, $dispatcher, '6702');
+    $approval2 = requestExceptionalWorkflowApproval($maintenanceJob, $dispatcher, $maintenanceResources['driver'], $maintenanceResources['asset']);
+    $this->actingAs($manager)->post("/operations/approval-requests/{$approval2->id}/decision", [
+        'status' => ApprovalStatus::Approved->value,
+        'reason' => 'Initial safety approval.',
+    ]);
     $maintenanceResources['asset']->maintenanceWorkOrders()->create([
         'technician_id' => $technician->id,
         'status' => AssetStatus::UnderMaintenance->value,
@@ -515,8 +551,29 @@ it('does not expose pending approvals for dispatches outside the reviewer visibi
 
 it('exposes dispatcher activation readiness without treating UI visibility as authorization', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Readiness Dispatcher');
+    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Readiness Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6901');
-    assignExceptionalWorkflowResources($job, $dispatcher, '6901');
+    $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6901');
+
+    // Before approval
+    $this->actingAs($dispatcher)
+        ->get("/operations/dispatch-jobs/{$job->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dispatch-detail')
+            ->where('capabilities.activate', true)
+            ->where('activation.ready', false)
+            ->where('activation.approval_required', true)
+            ->where('activation.approval_status', null)
+            ->where('activation.blockers.0', 'Independent Operations Manager approval is still required.')
+        );
+
+    // After approval
+    $approval = requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
+    $this->actingAs($manager)->post("/operations/approval-requests/{$approval->id}/decision", [
+        'status' => ApprovalStatus::Approved->value,
+        'reason' => 'Readiness verified.',
+    ]);
 
     $this->actingAs($dispatcher)
         ->get("/operations/dispatch-jobs/{$job->id}")
@@ -525,8 +582,8 @@ it('exposes dispatcher activation readiness without treating UI visibility as au
             ->component('dispatch-detail')
             ->where('capabilities.activate', true)
             ->where('activation.ready', true)
-            ->where('activation.approval_required', false)
-            ->where('activation.approval_status', null)
+            ->where('activation.approval_required', true)
+            ->where('activation.approval_status', ApprovalStatus::Approved->value)
             ->has('activation.blockers', 0)
         );
 });

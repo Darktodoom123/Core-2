@@ -37,6 +37,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $this->call(RolePermissionSeeder::class);
 
+        $admin = $this->user('Browser Admin', 'browser.admin@example.com', RoleName::SystemAdministrator);
         $dispatcher = $this->user('Browser Dispatcher', 'browser.dispatcher@example.com', RoleName::Dispatcher);
         $manager = $this->user('Browser Manager', 'browser.manager@example.com', RoleName::OperationsManager);
         $driver = $this->user('Browser Driver', 'browser.driver@example.com', RoleName::Driver);
@@ -180,6 +181,7 @@ final class BrowserAcceptanceSeeder extends Seeder
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
+                'admin' => $admin->username,
                 'dispatcher' => $dispatcher->username,
                 'manager' => $manager->username,
                 'driver' => $driver->username,

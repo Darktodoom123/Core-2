@@ -1,7 +1,9 @@
 <?php
 
+use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Rental\Enums\RentalReservationStatus;
@@ -10,6 +12,7 @@ use App\Modules\Rental\Models\RentalReservationItem;
 use App\Modules\Sales\Enums\SalesOrderStatus;
 use App\Modules\Sales\Models\SalesCatalogItem;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
@@ -32,6 +35,23 @@ function r4Dispatcher(string $name = 'R4 Dispatcher'): User
     $dispatcher->syncRoles([RoleName::Dispatcher->value]);
 
     return $dispatcher;
+}
+
+function r4Approve(DispatchJob $job, User $dispatcher): void
+{
+    $manager = User::factory()->create(['name' => 'R4 Operations Manager']);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    ApprovalRequest::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'kind' => 'dispatch_activation',
+        'status' => ApprovalStatus::Approved,
+        'requested_by' => $dispatcher->id,
+        'decided_by' => $manager->id,
+        'decided_at' => now(),
+        'reason' => 'Approved for dispatch safety test',
+    ]);
 }
 
 function r4Asset(string $code, string $kind = 'equipment'): OperationalAsset
@@ -273,6 +293,7 @@ it('rechecks a late rental commitment before activation', function (): void {
         'active_from' => $job->scheduled_start,
     ]);
     r4Rental($dispatcher, $asset, RentalReservationStatus::Requested, 'R4-LATE-RENTAL-RESERVATION');
+    r4Approve($job, $dispatcher);
 
     $this->actingAs($dispatcher)
         ->get("/operations/dispatch-jobs/{$job->id}")
@@ -301,6 +322,7 @@ it('rechecks a late committed sale before activation', function (): void {
         'active_from' => $job->scheduled_start,
     ]);
     r4SalesOrder($dispatcher, $asset, SalesOrderStatus::Confirmed);
+    r4Approve($job, $dispatcher);
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1]);
 
@@ -334,6 +356,7 @@ it('checks replacement assets during reassignment and leaves the old assignment 
 
 it('only excludes assignment rows being ended when reusing an asset on the same dispatch', function (): void {
     $dispatcher = r4Dispatcher();
+    $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $asset = r4Asset('R4-REASSIGN-SELF');
     $job = r4DispatchJob($dispatcher, 'R4-REASSIGN-SELF');
     $oldAssignment = $job->assetAssignments()->create([

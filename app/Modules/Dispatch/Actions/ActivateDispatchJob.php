@@ -111,7 +111,7 @@ final class ActivateDispatchJob
                 if ($latestApproval?->status !== ApprovalStatus::Approved) {
                     throw ValidationException::withMessages([
                         'approval' => $latestApproval?->status === ApprovalStatus::Rejected
-                            ? 'The latest exceptional request was rejected. Revise the dispatch and request a new independent review.'
+                            ? 'The latest approval request was rejected. Revise the dispatch and request a new review.'
                             : 'Operations Manager approval is required before activation.',
                     ]);
                 }

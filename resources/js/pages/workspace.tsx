@@ -610,6 +610,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
+                        jobs={props.jobs}
                         onSectionChange={setSection}
                     />
                 )}

@@ -593,9 +593,7 @@ final class OperationsWorkspaceViewModel
                 'id' => 'gpt-recommendations',
                 'label' => 'GPT AI Advisory',
                 'permissions' => [
-                    PermissionName::GptUseDispatch,
-                    PermissionName::GptUseOperations,
-                    PermissionName::GptUseMaintenance,
+                    PermissionName::GptConfigure,
                 ],
             ],
             [

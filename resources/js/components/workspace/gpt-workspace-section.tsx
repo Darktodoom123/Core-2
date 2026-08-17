@@ -1,4 +1,4 @@
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertCircle,
     AlertTriangle,
@@ -17,6 +17,7 @@ import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import type { Auth } from '@/types/auth';
 import type {
     GptRecommendationViewModel,
     WorkspaceCapabilities,
@@ -444,6 +445,12 @@ function PendingRecommendationCard({
     onAccept: () => void;
     onReject: () => void;
 }) {
+    const { auth } = usePage<{ auth?: Auth }>().props;
+    const isAdmin =
+        auth?.role === 'system_administrator' ||
+        auth?.role === 'admin' ||
+        auth?.prototype_role === 'system_administrator';
+
     return (
         <Panel className="space-y-4 border-brand/30 bg-surface p-5 shadow-sm">
             {/* Header / Purpose & 15-Minute Expiry Countdown */}
@@ -453,9 +460,11 @@ function PendingRecommendationCard({
                         <span className="inline-flex items-center rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
                             {rec.purpose.replace('_', ' ').toUpperCase()}
                         </span>
-                        <span className="font-mono text-xs text-ink-soft">
-                            {rec.model}
-                        </span>
+                        {isAdmin && (
+                            <span className="font-mono text-xs text-ink-soft">
+                                {rec.model}
+                            </span>
+                        )}
                     </div>
                     <h4 className="mt-1 text-sm font-bold text-ink">
                         Advisory Proposal #{rec.id} · Dispatch #{rec.subject_id}
@@ -570,12 +579,14 @@ function PendingRecommendationCard({
 
             {/* Footer / Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-xs">
-                <span className="text-ink-soft">
-                    Requested by{' '}
-                    <strong className="font-medium text-ink">
-                        {rec.requested_by.name}
-                    </strong>
-                </span>
+                {isAdmin && (
+                    <span className="text-ink-soft">
+                        Requested by{' '}
+                        <strong className="font-medium text-ink">
+                            {rec.requested_by.name}
+                        </strong>
+                    </span>
+                )}
 
                 {capabilities.decide_gpt_recommendation && (
                     <div className="flex items-center gap-2">
@@ -603,6 +614,12 @@ export function RecommendationDetails({
 }: {
     rec: GptRecommendationViewModel;
 }) {
+    const { auth } = usePage<{ auth?: Auth }>().props;
+    const isAdmin =
+        auth?.role === 'system_administrator' ||
+        auth?.role === 'admin' ||
+        auth?.prototype_role === 'system_administrator';
+
     const recommendation = rec.recommendation ?? {};
     const reasons = Array.isArray(recommendation.reasons)
         ? recommendation.reasons
@@ -663,65 +680,81 @@ export function RecommendationDetails({
                 </div>
             )}
 
-            {/* Collapsible Telemetry & Cost Section */}
-            <details className="group border-t border-line/60 pt-2">
-                <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] font-medium text-ink-soft hover:text-ink">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-semibold text-ink">Model:</span>
-                        <span className="font-mono">{rec.model}</span>
-                        {rec.latency_ms !== null && (
-                            <span>· {rec.latency_ms} ms</span>
-                        )}
-                        {rec.cost_usd !== null && (
-                            <span className="font-semibold text-brand-strong">
-                                · ${rec.cost_usd.toFixed(4)}
+            {/* Collapsible Telemetry & Cost Section (Admin / Developer Audit Only) */}
+            {isAdmin && (
+                <details className="group border-t border-line/60 pt-2">
+                    <summary className="flex cursor-pointer list-none items-center justify-between text-[11px] font-medium text-ink-soft hover:text-ink">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-ink">
+                                Admin Telemetry:
                             </span>
-                        )}
-                    </span>
-                    <span className="text-[10px] text-ink-soft transition-transform group-open:rotate-180">
-                        ▼
-                    </span>
-                </summary>
-                <div className="mt-2.5 grid gap-2 border-t border-line/40 pt-2 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                        <span className="font-semibold text-ink">
-                            Freshness:
-                        </span>{' '}
-                        {rec.generated_at
-                            ? formatDateTime(rec.generated_at)
-                            : 'Not generated yet'}
-                    </div>
-                    <div>
-                        <span className="font-semibold text-ink">Model:</span>{' '}
-                        <span className="font-mono">{rec.model}</span>
-                    </div>
-                    <div>
-                        <span className="font-semibold text-ink">Latency:</span>{' '}
-                        {rec.latency_ms !== null ? `${rec.latency_ms} ms` : '—'}
-                    </div>
-                    <div>
-                        <span className="font-semibold text-ink">
-                            Token Usage:
-                        </span>{' '}
-                        {rec.usage
-                            ? `${rec.usage.total_tokens.toLocaleString()} tokens (${rec.usage.prompt_tokens} in / ${rec.usage.completion_tokens} out)`
-                            : 'Not available'}
-                    </div>
-                    <div className="sm:col-span-2 lg:col-span-2">
-                        <span className="font-semibold text-ink">
-                            Cost / Budget Ceiling:
-                        </span>{' '}
-                        <span className="font-semibold text-brand-strong">
-                            {rec.cost_usd !== null
-                                ? `$${rec.cost_usd.toFixed(4)}`
-                                : 'N/A'}
-                        </span>{' '}
-                        <span className="text-[10px] text-ink-soft">
-                            ($0.05 ceiling per proposal)
+                            <span className="font-mono">{rec.model}</span>
+                            {rec.latency_ms !== null && (
+                                <span>· {rec.latency_ms} ms</span>
+                            )}
+                            {rec.cost_usd !== null && (
+                                <span className="font-semibold text-brand-strong">
+                                    · ${rec.cost_usd.toFixed(4)}
+                                </span>
+                            )}
                         </span>
+                        <span className="text-[10px] text-ink-soft transition-transform group-open:rotate-180">
+                            ▼
+                        </span>
+                    </summary>
+                    <div className="mt-2.5 grid gap-2 border-t border-line/40 pt-2 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
+                        <div>
+                            <span className="font-semibold text-ink">
+                                Freshness:
+                            </span>{' '}
+                            {rec.generated_at
+                                ? formatDateTime(rec.generated_at)
+                                : 'Not generated yet'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-ink">
+                                Model:
+                            </span>{' '}
+                            <span className="font-mono">{rec.model}</span>
+                        </div>
+                        <div>
+                            <span className="font-semibold text-ink">
+                                Latency:
+                            </span>{' '}
+                            {rec.latency_ms !== null
+                                ? `${rec.latency_ms} ms`
+                                : '—'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-ink">
+                                Token Usage:
+                            </span>{' '}
+                            {rec.usage
+                                ? `${rec.usage.total_tokens.toLocaleString()} tokens (${rec.usage.prompt_tokens} in / ${rec.usage.completion_tokens} out)`
+                                : 'Not available'}
+                        </div>
+                        <div>
+                            <span className="font-semibold text-ink">
+                                Requested By:
+                            </span>{' '}
+                            <span>{rec.requested_by.name}</span>
+                        </div>
+                        <div className="sm:col-span-2 lg:col-span-2">
+                            <span className="font-semibold text-ink">
+                                Cost / Budget Ceiling:
+                            </span>{' '}
+                            <span className="font-semibold text-brand-strong">
+                                {rec.cost_usd !== null
+                                    ? `$${rec.cost_usd.toFixed(4)}`
+                                    : 'N/A'}
+                            </span>{' '}
+                            <span className="text-[10px] text-ink-soft">
+                                ($0.05 ceiling per proposal)
+                            </span>
+                        </div>
                     </div>
-                </div>
-            </details>
+                </details>
+            )}
         </div>
     );
 }
