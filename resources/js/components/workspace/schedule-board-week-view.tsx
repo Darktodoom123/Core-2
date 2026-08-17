@@ -8,7 +8,15 @@ import {
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { EmptyState, Panel } from '@/components/ui';
-import { localDateKey } from '@/lib/date-utils';
+import {
+    dateFromLocalKey,
+    isDateOnlyValue,
+    localDateKey,
+    parseScheduleDate,
+    shiftLocalDate,
+    startOfWeekLocalDate,
+    weekDateKeys,
+} from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
@@ -43,65 +51,6 @@ export interface ScheduleBoardWeekViewProps {
 export type ScheduleBoardResourceCategory =
     'cranes' | 'trucks' | 'equipment' | 'personnel';
 
-const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
-
-export function dateFromLocalKey(value: string): Date | null {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-    if (!match) {
-        return null;
-    }
-
-    const date = new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-    );
-
-    return date.getFullYear() === Number(match[1]) &&
-        date.getMonth() === Number(match[2]) - 1 &&
-        date.getDate() === Number(match[3])
-        ? date
-        : null;
-}
-
-export function shiftLocalDate(value: string, days: number): string {
-    const date = dateFromLocalKey(value) ?? new Date();
-    date.setDate(date.getDate() + days);
-
-    return localDateKey(date);
-}
-
-export function startOfWeekLocalDate(value: string): string {
-    const date = dateFromLocalKey(value) ?? new Date();
-    const mondayOffset = (date.getDay() + 6) % 7;
-    date.setDate(date.getDate() - mondayOffset);
-
-    return localDateKey(date);
-}
-
-export function weekDateKeys(value: string): string[] {
-    const weekStart = startOfWeekLocalDate(value);
-
-    return Array.from({ length: 7 }, (_, index) =>
-        shiftLocalDate(weekStart, index),
-    );
-}
-
-function parseScheduleDate(value: string | null): Date | null {
-    if (!value) {
-        return null;
-    }
-
-    if (dateOnlyPattern.test(value)) {
-        return dateFromLocalKey(value);
-    }
-
-    const date = new Date(value);
-
-    return Number.isNaN(date.getTime()) ? null : date;
-}
-
 interface NormalizedJobWindow {
     start: Date;
     end: Date;
@@ -123,8 +72,8 @@ function normalizedJobWindow(
     }
 
     const isDateOnly =
-        dateOnlyPattern.test(job.scheduled_start) &&
-        dateOnlyPattern.test(job.scheduled_end);
+        isDateOnlyValue(job.scheduled_start) &&
+        isDateOnlyValue(job.scheduled_end);
 
     // Date-only records commonly represent all-day work. Treat an equal pair
     // as one local day while still rejecting reversed timestamp ranges.

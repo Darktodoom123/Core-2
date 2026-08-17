@@ -134,6 +134,7 @@ export default [
     },
     {
         files: [
+            'scripts/**/*.cjs',
             'packages/field-mobile/**/*.cjs',
             'packages/field-mobile/plugins/**/*.cjs',
             'packages/field-mobile/scripts/**/*.cjs',

@@ -4,7 +4,15 @@ import {
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
-import { localDateKey } from '@/lib/date-utils';
+import {
+    isDateOnlyValue,
+    isValidLocalDateKey,
+    localDateKey,
+    parseScheduleDate,
+    shiftLocalDate,
+    shiftLocalMonth,
+    startOfMonthLocalDate,
+} from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
@@ -369,61 +377,6 @@ const WEEKDAY_LABELS = [
     { short: 'Sat', long: 'Saturday' },
 ] as const;
 
-export function dateFromLocalKey(value: string): Date {
-    const [year, month, day] = value.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-
-    if (
-        !Number.isFinite(year) ||
-        !Number.isFinite(month) ||
-        !Number.isFinite(day) ||
-        date.getFullYear() !== year ||
-        date.getMonth() !== month - 1 ||
-        date.getDate() !== day
-    ) {
-        return new Date(Number.NaN);
-    }
-
-    return date;
-}
-
-export function shiftLocalDate(value: string, days: number): string {
-    const date = dateFromLocalKey(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return localDateKey(new Date());
-    }
-
-    date.setDate(date.getDate() + days);
-
-    return localDateKey(date);
-}
-
-export function shiftLocalMonth(value: string, months: number): string {
-    const date = dateFromLocalKey(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return localDateKey(new Date());
-    }
-
-    date.setDate(1);
-    date.setMonth(date.getMonth() + months);
-
-    return localDateKey(date);
-}
-
-export function startOfMonthLocalDate(value: string): Date {
-    const date = dateFromLocalKey(value);
-
-    if (Number.isNaN(date.getTime())) {
-        const today = new Date();
-
-        return new Date(today.getFullYear(), today.getMonth(), 1);
-    }
-
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
 export function buildMonthGrid(monthStart: Date): CalendarDay[] {
     const firstGridDate = new Date(
         monthStart.getFullYear(),
@@ -508,33 +461,6 @@ function localDateSpanForJob(job: DispatchJobViewModel): LocalDateSpan | null {
         start: localDateKey(start),
         end: localDateKey(lastCoveredInstant),
     };
-}
-
-function parseScheduleDate(value: string | null): Date | null {
-    if (!value) {
-        return null;
-    }
-
-    if (isDateOnlyValue(value)) {
-        const date = dateFromLocalKey(value);
-
-        return Number.isNaN(date.getTime()) ? null : date;
-    }
-
-    const date = new Date(value);
-
-    return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function isDateOnlyValue(value: string | null): value is string {
-    return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-}
-
-function isValidLocalDateKey(value: string): boolean {
-    return (
-        /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-        !Number.isNaN(dateFromLocalKey(value).getTime())
-    );
 }
 
 function jobMatchesCategory(

@@ -38,7 +38,11 @@ import {
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
 import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
-import { localDateKey } from '@/lib/date-utils';
+import {
+    dateFromLocalKey,
+    localDateKey,
+    shiftLocalDate,
+} from '@/lib/date-utils';
 import { formatCurrency, formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
@@ -3142,131 +3146,6 @@ function DispatchListSkeleton() {
             ))}
         </div>
     );
-}
-
-/* Legacy duplicate commercial cards retired; intake orchestration owns these workflows.
-type CommercialHandoffCardProps = {
-    kind: 'rental' | 'sale';
-    handoff: RentalDispatchHandoffViewModel | SalesDispatchHandoffViewModel;
-    pending: boolean;
-    canCreate: boolean;
-    onCreate: () => void;
-};
-
-function CommercialHandoffCard({
-    kind,
-    handoff,
-    pending,
-    canCreate,
-    onCreate,
-}: CommercialHandoffCardProps) {
-    const isRental = kind === 'rental';
-    const rental = isRental
-        ? (handoff as RentalDispatchHandoffViewModel)
-        : null;
-
-    return (
-        <article className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span
-                            className={cn(
-                                'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase',
-                                isRental
-                                    ? 'bg-warning-soft text-warning-strong'
-                                    : 'bg-success-soft text-success-strong',
-                            )}
-                        >
-                            {isRental ? 'Rental delivery' : 'Sale delivery'}
-                        </span>
-                        <span className="text-xs font-medium text-ink-soft">
-                            {handoff.status.label}
-                        </span>
-                    </div>
-                    <h3 className="mt-2 truncate text-sm font-semibold text-ink">
-                        {handoff.reference}
-                    </h3>
-                    <p className="mt-1 truncate text-sm text-ink-soft">
-                        {handoff.client.company_name} · {handoff.client.code}
-                    </p>
-                    <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-soft">
-                        <span className="font-semibold text-ink">
-                            Deliver to:
-                        </span>
-                        <span className="min-w-0 break-words">
-                            {handoff.location || 'Location required'}
-                        </span>
-                    </p>
-                    {rental && (
-                        <p className="mt-1 text-xs text-ink-soft">
-                            Rental window: {rental.start_date || '—'} to{' '}
-                            {rental.end_date || '—'}
-                        </p>
-                    )}
-                </div>
-                <Button
-                    size="sm"
-                    variant="primary"
-                    type="button"
-                    disabled={!canCreate || pending}
-                    onClick={onCreate}
-                >
-                    {pending
-                        ? 'Creating…'
-                        : isRental
-                          ? 'Create rental dispatch'
-                          : 'Create sale dispatch'}
-                </Button>
-            </div>
-        </article>
-    );
-}
-
-function HandoffDateInput({
-    label,
-    value,
-    onChange,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <label className="text-xs font-semibold text-ink-soft">
-            {label}
-            <input
-                type="datetime-local"
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-2.5 text-sm font-normal text-ink focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none"
-            />
-        </label>
-    );
-}
-
-function localDateTimeInput(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-*/
-
-function dateFromLocalKey(value: string): Date {
-    const [year, month, day] = value.split('-').map(Number);
-
-    return new Date(year, month - 1, day);
-}
-
-function shiftLocalDate(value: string, days: number): string {
-    const date = dateFromLocalKey(value);
-    date.setDate(date.getDate() + days);
-
-    return localDateKey(date);
 }
 
 function startOfLocalWeek(value: string): Date {
