@@ -95,8 +95,30 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            'search_path' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'require'),
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => env('DB_EMULATE_PREPARES') !== null ? filter_var(env('DB_EMULATE_PREPARES'), FILTER_VALIDATE_BOOLEAN) : null,
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT') ? (int) env('DB_TIMEOUT') : null,
+            ], fn ($value) => $value !== null) : [],
+        ],
+
+        'pgsql_direct' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_DIRECT_URL'),
+            'host' => env('DB_DIRECT_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_DIRECT_PORT', '5432'),
+            'database' => env('DB_DIRECT_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('DB_DIRECT_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_DIRECT_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('DB_SCHEMA', 'public'),
+            'sslmode' => env('DB_DIRECT_SSLMODE', env('DB_SSLMODE', 'require')),
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT') ? (int) env('DB_TIMEOUT') : null,
+            ], fn ($value) => $value !== null) : [],
         ],
 
         'sqlsrv' => [
