@@ -142,6 +142,34 @@ it('enforces the submitted forwarded approved verified logged fuel workflow end-
     expect(AuditEvent::query()->where('action', 'fuel.status_updated')->count())->toBeGreaterThanOrEqual(4);
 });
 
+it('allows an operations manager to forward a fuel request as fallback', function () {
+    $driver = fieldUser(RoleName::Driver);
+    $manager = fieldUser(RoleName::OperationsManager);
+    $otherManager = fieldUser(RoleName::OperationsManager);
+
+    $this->actingAs($driver)->post('/operations/fuel-requests', [
+        'quantity_litres' => 120,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Urgent generator refueling',
+    ])->assertRedirect('/');
+
+    $id = FuelRequest::query()->sole()->id;
+
+    // Manager forwards the request
+    $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])
+        ->assertRedirect('/');
+
+    $fuel = FuelRequest::findOrFail($id);
+    expect($fuel->status)->toBe(FuelRequestStatus::Forwarded)
+        ->and($fuel->reviewed_by)->toBe($manager->id);
+
+    // Another manager approves it
+    $this->actingAs($otherManager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])
+        ->assertRedirect('/');
+
+    expect(FuelRequest::findOrFail($id)->status)->toBe(FuelRequestStatus::Approved);
+});
+
 it('handles rejection path with a decision reason', function () {
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);

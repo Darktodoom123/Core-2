@@ -90,6 +90,12 @@ final class DispatchActivationWorkspaceViewModel
             && $user !== null
             && Gate::forUser($user)->allows('decide', $latestApproval);
 
+        $nonApprovalBlockers = array_filter(
+            $blockers,
+            static fn (string $b): bool => ! str_contains($b, 'Operations Manager approval') && ! str_contains($b, 'rejected')
+        );
+        $canApproveAndActivate = $canDecideApproval && $nonApprovalBlockers === [] && Gate::forUser($user)->allows('activate', $job);
+
         $requestedChanges = $latestApproval?->requested_changes;
         $approvalNotes = is_array($requestedChanges) && isset($requestedChanges['notes']) && is_string($requestedChanges['notes'])
             ? $requestedChanges['notes']
@@ -105,6 +111,7 @@ final class DispatchActivationWorkspaceViewModel
             'approval_reason' => $latestApproval?->reason,
             'approval_notes' => $approvalNotes,
             'can_decide_approval' => $canDecideApproval,
+            'can_approve_and_activate' => $canApproveAndActivate,
         ];
     }
 }

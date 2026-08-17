@@ -132,23 +132,29 @@ export function LiveTrackingPreview({
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <span
-                        className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${connection.className}`}
-                        role="status"
-                        aria-live="polite"
-                    >
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         <span
-                            className={`h-2 w-2 rounded-full ${connection.dotClassName}`}
-                            aria-hidden="true"
-                        />
-                        {connection.label}
-                        {latestReceivedAt && (
-                            <span className="font-normal text-current/75">
-                                · updated {formatAge(latestReceivedAt)}
+                            className={`inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${connection.className}`}
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <span
+                                className={`h-2 w-2 rounded-full ${connection.dotClassName}`}
+                                aria-hidden="true"
+                            />
+                            {connection.label}
+                        </span>
+                        {latestReceivedAt ? (
+                            <span className="text-xs text-ink-soft">
+                                Last signal: {formatAge(latestReceivedAt)}
+                            </span>
+                        ) : (
+                            <span className="text-xs text-ink-soft">
+                                No signals recorded
                             </span>
                         )}
-                    </span>
+                    </div>
                     {onOpenTracking && (
                         <Button
                             variant="secondary"
@@ -401,7 +407,7 @@ function getConnectionState(
 
     if (realtimeConnected) {
         return {
-            label: 'Live',
+            label: 'Connected',
             className: 'border-success/30 bg-success-soft text-success-strong',
             dotClassName: 'bg-success-strong',
         };

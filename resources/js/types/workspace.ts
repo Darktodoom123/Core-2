@@ -732,6 +732,7 @@ export interface DispatchDetailPageProps {
         approval_reason?: string | null;
         approval_notes?: string | null;
         can_decide_approval?: boolean;
+        can_approve_and_activate?: boolean;
     };
     progression: {
         current: StatusViewModel<DispatchStatusValue>;

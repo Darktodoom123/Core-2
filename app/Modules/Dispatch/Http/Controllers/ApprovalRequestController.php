@@ -46,11 +46,16 @@ final class ApprovalRequestController extends Controller
             }
         }
 
-        $action->handle($request->user(), $approvalRequest, $status, $reason);
+        $activateAfterApproval = (bool) $request->validated('activate_after_approval', false);
+        $action->handle($request->user(), $approvalRequest, $status, $reason, $activateAfterApproval);
+
+        $message = $status === ApprovalStatus::Approved && $activateAfterApproval
+            ? 'Approval request was approved and dispatch was activated.'
+            : "Approval request was {$status->value}.";
 
         return to_route('home')->with('flash', [
             'tone' => 'success',
-            'message' => "Approval request was {$status->value}.",
+            'message' => $message,
         ]);
     }
 }

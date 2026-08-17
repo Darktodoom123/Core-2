@@ -30,6 +30,7 @@ final class DecideApprovalRequestRequest extends FormRequest
                 ]),
             ],
             'reason' => ['required', 'string', 'max:2000'],
+            'activate_after_approval' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -644,14 +644,21 @@ function ApprovalDecisionBanner({
         activation.can_decide_approval && activation.approval_request_id,
     );
 
-    const handleDecision = (status: 'approved' | 'rejected') => {
+    const handleDecision = (
+        status: 'approved' | 'rejected',
+        activateAfterApproval: boolean = false,
+    ) => {
         if (!activation.approval_request_id) {
             return;
         }
 
         const finalReason =
             reason.trim() ||
-            (status === 'approved' ? 'Approved by Operations Manager' : '');
+            (status === 'approved'
+                ? activateAfterApproval
+                    ? 'Approved and activated by Operations Manager'
+                    : 'Approved by Operations Manager'
+                : '');
 
         if (status === 'rejected' && !finalReason) {
             setReasonError(
@@ -668,6 +675,7 @@ function ApprovalDecisionBanner({
             {
                 status,
                 reason: finalReason,
+                activate_after_approval: activateAfterApproval,
             },
             {
                 preserveScroll: true,
@@ -743,16 +751,39 @@ function ApprovalDecisionBanner({
                     <div className="flex flex-wrap items-center gap-2">
                         {deciding === null && (
                             <>
+                                {activation.can_approve_and_activate ? (
+                                    <Button
+                                        size="sm"
+                                        variant="primary"
+                                        disabled={submitting}
+                                        onClick={() =>
+                                            handleDecision('approved', true)
+                                        }
+                                    >
+                                        <Check className="h-4 w-4" />
+                                        {submitting
+                                            ? 'Approving & activating…'
+                                            : 'Approve & activate'}
+                                    </Button>
+                                ) : null}
                                 <Button
                                     size="sm"
-                                    variant="primary"
+                                    variant={
+                                        activation.can_approve_and_activate
+                                            ? 'secondary'
+                                            : 'primary'
+                                    }
                                     disabled={submitting}
-                                    onClick={() => handleDecision('approved')}
+                                    onClick={() =>
+                                        handleDecision('approved', false)
+                                    }
                                 >
                                     <Check className="h-4 w-4" />
                                     {submitting
                                         ? 'Approving…'
-                                        : 'Approve request'}
+                                        : activation.can_approve_and_activate
+                                          ? 'Approve only'
+                                          : 'Approve request'}
                                 </Button>
                                 <Button
                                     size="sm"

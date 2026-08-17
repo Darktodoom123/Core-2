@@ -333,7 +333,6 @@ it('prevents a privileged requester from deciding their own exceptional work', f
 it('forbids unauthorized decision and activation access while auditing the activation attempt', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Authorized Dispatcher');
     $driver = exceptionalWorkflowUser(RoleName::Driver, 'Unauthorized Driver');
-    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Unauthorized Activator');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6501', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6501');
     $approval = requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
@@ -345,7 +344,7 @@ it('forbids unauthorized decision and activation access while auditing the activ
         ])
         ->assertForbidden();
 
-    $this->actingAs($manager)
+    $this->actingAs($driver)
         ->post("/operations/dispatch-jobs/{$job->id}/activate", ['version' => 1])
         ->assertForbidden();
 
@@ -353,8 +352,74 @@ it('forbids unauthorized decision and activation access while auditing the activ
         ->and($job->refresh()->status)->toBe(DispatchStatus::Draft);
 
     $attempt = AuditEvent::query()->where('action', 'dispatch.activation_attempted')->sole();
-    expect($attempt->actor_id)->toBe($manager->id)
+    expect($attempt->actor_id)->toBe($driver->id)
         ->and($attempt->after)->toBe(['requested_version' => 1]);
+});
+
+it('prohibits an operations manager from approving their own requested approval', function () {
+    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Requester Manager');
+    $otherManager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Decider Manager');
+    $job = exceptionalWorkflowJob($manager, 'CON-6503', DispatchPriority::Priority);
+    $resources = assignExceptionalWorkflowResources($job, $manager, '6503');
+    $approval = requestExceptionalWorkflowApproval($job, $manager, $resources['driver'], $resources['asset']);
+
+    // Requester manager cannot decide their own approval
+    $this->actingAs($manager)
+        ->post("/operations/approval-requests/{$approval->id}/decision", [
+            'status' => ApprovalStatus::Approved->value,
+            'reason' => 'Self-approving my own request.',
+        ])
+        ->assertForbidden();
+
+    expect($approval->refresh()->status)->toBe(ApprovalStatus::Pending);
+
+    // Another manager can decide it
+    $this->actingAs($otherManager)
+        ->post("/operations/approval-requests/{$approval->id}/decision", [
+            'status' => ApprovalStatus::Approved->value,
+            'reason' => 'Independent approval by second manager.',
+        ])
+        ->assertRedirect('/')
+        ->assertSessionHas('flash', [
+            'tone' => 'success',
+            'message' => 'Approval request was approved.',
+        ]);
+
+    expect($approval->refresh()->status)->toBe(ApprovalStatus::Approved)
+        ->and($approval->decided_by)->toBe($otherManager->id);
+});
+
+it('allows an operations manager to approve and activate a priority dispatch atomically', function () {
+    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Atomic Dispatcher');
+    $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Atomic Manager');
+    $job = exceptionalWorkflowJob($dispatcher, 'CON-6504', DispatchPriority::Priority);
+    $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6504');
+    $approval = requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);
+
+    $this->actingAs($manager)
+        ->post("/operations/approval-requests/{$approval->id}/decision", [
+            'status' => ApprovalStatus::Approved->value,
+            'reason' => 'Approved and activated atomically.',
+            'activate_after_approval' => true,
+        ])
+        ->assertRedirect('/')
+        ->assertSessionHas('flash', [
+            'tone' => 'success',
+            'message' => 'Approval request was approved and dispatch was activated.',
+        ]);
+
+    expect($approval->refresh()->status)->toBe(ApprovalStatus::Approved)
+        ->and($job->refresh()->status)->toBe(DispatchStatus::Dispatched)
+        ->and($job->version)->toBe(2)
+        ->and($job->activated_by)->toBe($manager->id);
+
+    $activationEvent = AuditEvent::query()
+        ->where('subject_type', (new DispatchJob)->getMorphClass())
+        ->where('subject_id', $job->id)
+        ->where('action', 'dispatch.activated')
+        ->sole();
+
+    expect($activationEvent->actor_id)->toBe($manager->id);
 });
 
 it('requires activation capability and dispatch visibility for activation', function () {
