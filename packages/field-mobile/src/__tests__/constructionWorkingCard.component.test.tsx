@@ -3,8 +3,7 @@ import React from 'react';
 import { ConstructionWorkingCard } from '../components/cards/ConstructionWorkingCard';
 
 describe('ConstructionWorkingCard', () => {
-    it('renders all telemetry, lift counters, and wind warning in Philippine operational context', async () => {
-        const onLogLift = jest.fn();
+    it('renders all shift telemetry, delay rockers, and wind warning in Philippine operational context', async () => {
         const onLogStandby = jest.fn();
         const onRequestFuel = jest.fn();
         const onSubmitDailyProgress = jest.fn();
@@ -13,9 +12,6 @@ describe('ConstructionWorkingCard', () => {
             <ConstructionWorkingCard
                 activeWorkMinutes={255}
                 jobReference="DSP-2026-0894"
-                liftsCompleted={6}
-                liftsTotal={10}
-                onLogLift={onLogLift}
                 onLogStandby={onLogStandby}
                 onRequestFuel={onRequestFuel}
                 onSubmitDailyProgress={onSubmitDailyProgress}
@@ -38,10 +34,7 @@ describe('ConstructionWorkingCard', () => {
         expect(view.getByText('1h 27m')).toBeTruthy();
         expect(view.getByTestId('wind-speed-badge')).toBeTruthy();
 
-        // Interactions
-        fireEvent.press(view.getByTestId('log-lift-button'));
-        expect(onLogLift).toHaveBeenCalledTimes(1);
-
+        // Interactions for field action rockers
         fireEvent.press(view.getByTestId('log-standby-button'));
         expect(onLogStandby).toHaveBeenCalledTimes(1);
 

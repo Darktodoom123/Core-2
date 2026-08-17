@@ -11,13 +11,10 @@ export interface ConstructionWorkingCardProps {
     shiftElapsed?: string;
     windSpeedKmh?: number;
     windSpeedLimitKmh?: number;
-    liftsCompleted?: number;
-    liftsTotal?: number;
     activeWorkMinutes?: number;
     standbyMinutes?: number;
     weatherHoldMinutes?: number;
     standbyHourlyRatePHP?: number;
-    onLogLift?: () => void;
     onLogStandby?: () => void;
     onRequestFuel?: () => void;
     onSubmitDailyProgress?: () => void;
@@ -31,13 +28,10 @@ export const ConstructionWorkingCard: React.FC<
     shiftElapsed = '05:42:18',
     windSpeedKmh = 14,
     windSpeedLimitKmh = 38,
-    liftsCompleted = 6,
-    liftsTotal = 10,
     activeWorkMinutes = 255, // 4h 15m
     standbyMinutes = 87, // 1h 27m
     weatherHoldMinutes = 0,
     standbyHourlyRatePHP = 4500,
-    onLogLift,
     onLogStandby,
     onRequestFuel,
     onSubmitDailyProgress,
@@ -314,34 +308,6 @@ export const ConstructionWorkingCard: React.FC<
                         </View>
                     </View>
                 </View>
-
-                {/* Optional Lift Progress (Preserved for compatibility) */}
-                {onLogLift ? (
-                    <View
-                        style={styles.liftSectionCompat}
-                        testID="lift-counter-section"
-                    >
-                        <Pressable
-                            accessibilityLabel="Log Completed Lift"
-                            accessibilityRole="button"
-                            onPress={onLogLift}
-                            style={({ pressed }) => [
-                                styles.logLiftBtnCompat,
-                                pressed && styles.pressed,
-                            ]}
-                            testID="log-lift-button"
-                        >
-                            <Icon
-                                name="check-circle"
-                                size={14}
-                                color="#FFFFFF"
-                            />
-                            <Text style={styles.logLiftBtnText}>
-                                + Log Lift ({liftsCompleted}/{liftsTotal})
-                            </Text>
-                        </Pressable>
-                    </View>
-                ) : null}
 
                 {/* Glove-Friendly Field Action Rockers */}
                 <View style={styles.actionGrid}>
@@ -700,23 +666,6 @@ const styles = StyleSheet.create({
     },
     darkTimePillValue: {
         color: '#F8FAFC',
-    },
-    liftSectionCompat: {
-        marginBottom: 10,
-    },
-    logLiftBtnCompat: {
-        alignItems: 'center',
-        backgroundColor: colors.primary,
-        borderRadius: 8,
-        flexDirection: 'row',
-        gap: 6,
-        justifyContent: 'center',
-        paddingVertical: 6,
-    },
-    logLiftBtnText: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '700',
     },
     actionGrid: {
         flexDirection: 'row',
