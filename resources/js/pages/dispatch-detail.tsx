@@ -752,7 +752,7 @@ function ApprovalDecisionBanner({
                                     <Check className="h-4 w-4" />
                                     {submitting
                                         ? 'Approving…'
-                                        : 'Approve priority'}
+                                        : 'Approve request'}
                                 </Button>
                                 <Button
                                     size="sm"

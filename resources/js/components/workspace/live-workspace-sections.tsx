@@ -1,5 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import {
+    ArrowUpRight,
     Bot,
     Compass,
     Fuel,
@@ -460,8 +461,8 @@ function RegisterAssetForm({ onDone }: { onDone: () => void }) {
                 Register Operational Asset
             </h3>
             <p className="mt-1 text-sm text-ink-soft">
-                Add a new truck, vehicle, crane, or piece of heavy equipment to
-                the unified asset model.
+                Add a new truck, crane, or mobile crane to the unified asset
+                model.
             </p>
             <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -487,9 +488,8 @@ function RegisterAssetForm({ onDone }: { onDone: () => void }) {
                             className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
                         >
                             <option value="truck">Truck</option>
-                            <option value="vehicle">Vehicle</option>
                             <option value="crane">Crane</option>
-                            <option value="equipment">Equipment</option>
+                            <option value="mobile_crane">Mobile Crane</option>
                         </select>
                     </label>
                     <FuelInput
@@ -2118,6 +2118,17 @@ function ApprovalsSurface({
             <PageHeading
                 title="Pending approvals"
                 description="Review the requester, job plan, schedule, and proposed resources before recording an independent decision."
+                actions={
+                    <span
+                        className="rounded-full bg-warning-soft px-3 py-1.5 text-xs font-semibold text-warning-strong"
+                        role="status"
+                    >
+                        {approvals.length}{' '}
+                        {approvals.length === 1
+                            ? 'pending decision'
+                            : 'pending decisions'}
+                    </span>
+                }
             />
             <div className="p-4 md:p-6">
                 {approvals.length === 0 ? (
@@ -2208,6 +2219,17 @@ function ApprovalReviewCard({
                             {approval.subject.reference} · Requested by{' '}
                             {approval.requester.name}
                         </p>
+                        <a
+                            href={`/operations/dispatch-jobs/${approval.subject.id}`}
+                            className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none"
+                            aria-label={`Open dispatch ${approval.subject.reference}`}
+                        >
+                            Open dispatch
+                            <ArrowUpRight
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                        </a>
                     </div>
                     <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft">
                         {humanize(approval.kind)}

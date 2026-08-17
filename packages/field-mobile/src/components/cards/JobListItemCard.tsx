@@ -30,7 +30,9 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
           ? styles.priorityBadgeText
           : styles.routineBadgeText;
 
-    const isCrane = assignedAsset?.asset_kind === 'crane';
+    const isCrane =
+        assignedAsset?.asset_kind === 'crane' ||
+        assignedAsset?.asset_kind === 'mobile_crane';
 
     return (
         <Pressable

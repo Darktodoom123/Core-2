@@ -45,7 +45,7 @@ export const FieldProgressionStepper: React.FC<
 
     const nextStep = progression.next;
     const isCrane = job.asset_assignments?.some(
-        (a) => a.asset_kind === 'crane',
+        (a) => a.asset_kind === 'crane' || a.asset_kind === 'mobile_crane',
     );
 
     // Safety Gating Logic

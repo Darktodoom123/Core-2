@@ -10,7 +10,7 @@ final class AssetCatalogController extends BaseAssetCatalogController
     /** @return list<string> */
     protected function assetKinds(): array
     {
-        return ['crane', 'equipment'];
+        return ['crane', 'mobile_crane', 'equipment'];
     }
 
     protected function viewAllPermission(): PermissionName

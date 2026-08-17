@@ -354,7 +354,7 @@ function AssetIcon({ location }: { location: LocationUpdateViewModel }) {
         return <Truck className="h-4 w-4" aria-hidden="true" />;
     }
 
-    if (kind === 'crane') {
+    if (kind === 'crane' || kind === 'mobile_crane') {
         return <Construction className="h-4 w-4" aria-hidden="true" />;
     }
 

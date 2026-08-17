@@ -19,6 +19,7 @@ const ASSET_TYPE_FILTERS: ReadonlyArray<{
 }> = [
     { id: 'truck', label: 'Trucks' },
     { id: 'crane', label: 'Cranes' },
+    { id: 'mobile_crane', label: 'Mobile Cranes' },
     { id: 'equipment', label: 'Heavy Eqp' },
     { id: 'personnel', label: 'Personnel' },
 ];
@@ -239,7 +240,7 @@ function AssetTypeIcon({ type }: { type: AssetKind }) {
         return <Truck className={className} aria-hidden="true" />;
     }
 
-    if (type === 'crane') {
+    if (type === 'crane' || type === 'mobile_crane') {
         return <Construction className={className} aria-hidden="true" />;
     }
 

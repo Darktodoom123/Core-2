@@ -89,8 +89,24 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         }
 
         await signIn(page, fixtures.users.manager, fixtures.password);
-        await page.goto(
-            `/operations/dispatch-jobs/${fixtures.approval_job_id}`,
+        await page.goto('/?view=approvals');
+
+        await expect(
+            page.getByRole('heading', { name: 'Pending approvals' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: /Approvals.*pending/i }),
+        ).toBeVisible();
+        const openDispatch = page.locator(
+            `a[href="/operations/dispatch-jobs/${fixtures.approval_job_id}"]`,
+        );
+        await expect(openDispatch).toBeVisible();
+
+        await openDispatch.click();
+        await expect(page).toHaveURL(
+            new RegExp(
+                `/operations/dispatch-jobs/${fixtures.approval_job_id}$`,
+            ),
         );
 
         // 1. Verify Manager Approval Decision Banner is rendered
@@ -99,14 +115,12 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         });
         await expect(approvalBanner).toBeVisible();
         await expect(
-            approvalBanner.getByText(
-                /Independent Operations Manager approval pending/i,
-            ),
+            approvalBanner.getByText(/Operations Manager approval pending/i),
         ).toBeVisible();
 
         // 2. Verify decision actions (Approve / Reject) are available to manager
         const approveButton = approvalBanner.getByRole('button', {
-            name: 'Approve priority',
+            name: 'Approve request',
         });
         const rejectButton = approvalBanner.getByRole('button', {
             name: 'Reject request',
@@ -132,7 +146,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
 
         // 5. Verify banner updates to approved state
         await expect(
-            page.getByText(/Independent approval granted/i),
+            page.getByText(/Operations Manager approval granted/i),
         ).toBeVisible();
 
         // 6. Verify accessibility
@@ -180,9 +194,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             await nextActionButton.click();
 
             // Verify confirmation modal / dialog
-            const confirmationTitle = page.locator(
-                '#field-confirmation-title',
-            );
+            const confirmationTitle = page.locator('#field-confirmation-title');
             await expect(confirmationTitle).toBeVisible();
             await expect(
                 page.getByRole('button', { name: 'Keep current status' }),

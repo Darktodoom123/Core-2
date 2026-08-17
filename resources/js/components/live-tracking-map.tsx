@@ -356,7 +356,9 @@ export function LiveTrackingMap({
                                                             kind === 'truck'
                                                                 ? 'rounded-lg bg-success-strong'
                                                                 : kind ===
-                                                                    'crane'
+                                                                        'crane' ||
+                                                                    kind ===
+                                                                        'mobile_crane'
                                                                   ? 'rotate-45 rounded-md bg-success-strong'
                                                                   : kind ===
                                                                       'equipment'
@@ -367,8 +369,10 @@ export function LiveTrackingMap({
                                                         <span
                                                             className={cn(
                                                                 'flex items-center justify-center',
-                                                                kind ===
-                                                                    'crane' &&
+                                                                (kind ===
+                                                                    'crane' ||
+                                                                    kind ===
+                                                                        'mobile_crane') &&
                                                                     '-rotate-45',
                                                             )}
                                                         >
@@ -379,7 +383,9 @@ export function LiveTrackingMap({
                                                                     aria-hidden="true"
                                                                 />
                                                             ) : kind ===
-                                                              'crane' ? (
+                                                                  'crane' ||
+                                                              kind ===
+                                                                  'mobile_crane' ? (
                                                                 <Construction
                                                                     className="h-3.5 w-3.5"
                                                                     aria-hidden="true"

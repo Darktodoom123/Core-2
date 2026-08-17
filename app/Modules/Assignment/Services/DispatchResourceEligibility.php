@@ -120,7 +120,10 @@ final class DispatchResourceEligibility
     {
         $reasons = [];
 
-        if ($asset->kind !== $assignmentType) {
+        $matchesKind = $asset->kind === $assignmentType
+            || ($assignmentType === 'crane' && $asset->kind === 'mobile_crane');
+
+        if (! $matchesKind) {
             $reasons[] = "Asset kind {$asset->kind} does not match {$assignmentType}.";
         }
 
@@ -200,6 +203,7 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'truck' => 'Truck',
             'crane' => 'Crane',
+            'mobile_crane' => 'Mobile Crane',
             'equipment' => 'Equipment',
             default => 'Asset',
         };

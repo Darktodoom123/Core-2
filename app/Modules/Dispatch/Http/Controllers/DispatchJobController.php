@@ -143,7 +143,7 @@ final class DispatchJobController extends Controller
             : collect();
         $assets = $canViewCandidates
             ? OperationalAsset::query()
-                ->whereIn('kind', ['truck', 'crane', 'equipment'])
+                ->whereIn('kind', ['truck', 'crane', 'mobile_crane', 'equipment'])
                 ->orderBy('code')
                 ->limit(200)
                 ->get()

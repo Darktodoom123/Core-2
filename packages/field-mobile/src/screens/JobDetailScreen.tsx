@@ -175,7 +175,9 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     );
 
     const primaryAsset = job.asset_assignments?.[0] ?? null;
-    const isCrane = primaryAsset?.asset_kind === 'crane';
+    const isCrane =
+        primaryAsset?.asset_kind === 'crane' ||
+        primaryAsset?.asset_kind === 'mobile_crane';
     const isResponsePending = job.my_assignment?.response_status === 'pending';
     const isArrived =
         job.status.value === 'arrived' ||
@@ -366,7 +368,8 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                     </View>
                     <View style={styles.assetCopy}>
                         <Text style={styles.assetLabel}>
-                            {primaryAsset.asset_kind === 'crane'
+                            {primaryAsset.asset_kind === 'crane' ||
+                            primaryAsset.asset_kind === 'mobile_crane'
                                 ? 'Assigned crane'
                                 : 'Assigned asset'}
                         </Text>

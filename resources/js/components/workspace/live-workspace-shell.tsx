@@ -56,6 +56,7 @@ export function LiveWorkspaceShell({
     canShareLocation,
     locationPending,
     unreadNotificationCount = 0,
+    pendingApprovalCount = 0,
     notifications = [],
     onSectionChange,
     onRefresh,
@@ -69,6 +70,7 @@ export function LiveWorkspaceShell({
     canShareLocation: boolean;
     locationPending: boolean;
     unreadNotificationCount?: number;
+    pendingApprovalCount?: number;
     notifications?: NotificationViewModel[];
     onSectionChange: (section: WorkspaceSection) => void;
     onRefresh: () => void;
@@ -264,9 +266,16 @@ export function LiveWorkspaceShell({
                                 const active = item.id === section;
                                 const isNotifications =
                                     item.id === 'notifications';
-                                const showBadge =
-                                    isNotifications &&
-                                    unreadNotificationCount > 0;
+                                const isApprovals = item.id === 'approvals';
+                                const badgeCount = isNotifications
+                                    ? unreadNotificationCount
+                                    : isApprovals
+                                      ? pendingApprovalCount
+                                      : 0;
+                                const badgeLabel = isNotifications
+                                    ? 'unread'
+                                    : 'pending';
+                                const showBadge = badgeCount > 0;
 
                                 return (
                                     <li key={item.id}>
@@ -291,14 +300,14 @@ export function LiveWorkspaceShell({
                                             aria-label={
                                                 collapsed
                                                     ? showBadge
-                                                        ? `${item.label} (${unreadNotificationCount} unread)`
+                                                        ? `${item.label} (${badgeCount} ${badgeLabel})`
                                                         : item.label
                                                     : undefined
                                             }
                                             title={
                                                 collapsed
                                                     ? showBadge
-                                                        ? `${item.label} (${unreadNotificationCount} unread)`
+                                                        ? `${item.label} (${badgeCount} ${badgeLabel})`
                                                         : item.label
                                                     : undefined
                                             }
@@ -325,10 +334,9 @@ export function LiveWorkspaceShell({
                                                         className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white"
                                                         aria-hidden="true"
                                                     >
-                                                        {unreadNotificationCount >
-                                                        9
+                                                        {badgeCount > 9
                                                             ? '9+'
-                                                            : unreadNotificationCount}
+                                                            : badgeCount}
                                                     </span>
                                                 )}
                                             </span>
@@ -337,18 +345,16 @@ export function LiveWorkspaceShell({
                                                     {item.label}
                                                     {showBadge && (
                                                         <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
-                                                            {unreadNotificationCount >
-                                                            9
+                                                            {badgeCount > 9
                                                                 ? '9+'
-                                                                : unreadNotificationCount}
+                                                                : badgeCount}
                                                         </span>
                                                     )}
                                                 </span>
                                             )}
                                             {showBadge && (
                                                 <span className="sr-only">
-                                                    {unreadNotificationCount}{' '}
-                                                    unread
+                                                    {badgeCount} {badgeLabel}
                                                 </span>
                                             )}
                                         </button>

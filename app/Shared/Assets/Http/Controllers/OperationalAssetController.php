@@ -31,7 +31,7 @@ final class OperationalAssetController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:64', 'unique:operational_assets,code'],
             'name' => ['required', 'string', 'max:255'],
-            'kind' => ['required', 'string', 'in:truck,vehicle,crane,equipment'],
+            'kind' => ['required', 'string', 'in:truck,vehicle,crane,mobile_crane,equipment'],
             'subtype' => ['nullable', 'string', 'max:255'],
             'registration_number' => ['nullable', 'string', 'max:255', 'unique:operational_assets,registration_number'],
             'manufacturer' => ['nullable', 'string', 'max:255'],

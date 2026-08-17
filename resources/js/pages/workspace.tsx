@@ -477,6 +477,9 @@ export default function Workspace(props: WorkspacePageProps) {
     const unreadNotificationCount = (props.notifications ?? []).filter(
         (n) => n.status !== 'read' && !n.read_at,
     ).length;
+    const pendingApprovalCount = props.approvals.filter(
+        (approval) => approval.status.value === 'pending',
+    ).length;
 
     return (
         <>
@@ -489,6 +492,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 canShareLocation={props.capabilities.share_location}
                 locationPending={locationPending}
                 unreadNotificationCount={unreadNotificationCount}
+                pendingApprovalCount={pendingApprovalCount}
                 notifications={props.notifications ?? []}
                 onSectionChange={changeSection}
                 onRefresh={refreshWorkspace}

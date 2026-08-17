@@ -438,3 +438,46 @@
   while the current browser test schema does not contain that column.
 
 ---
+
+# Approval Workflow Placement (2026-08-17)
+
+## 1. Did you build this the most secure way?
+
+- The change is presentation and navigation work only. Existing server-side
+  approval scoping, requester self-approval prevention, policy checks, reason
+  validation, CSRF protection, version checks, and audit recording remain the
+  authorization boundary.
+- Dispatch links use server-provided dispatch subject IDs and still enter the
+  existing authenticated dispatch-detail route; no client-side permission
+  bypass or new mutation endpoint was introduced.
+
+## 2. Did you build this the most efficient way?
+
+- The pending count is derived from the already-loaded, server-scoped approval
+  view models. No extra request, store, migration, or approval query was added.
+- The queue reuses the existing approval payload and endpoint, while the new
+  link routes to the existing dispatch detail instead of duplicating its review
+  data or workflow.
+
+## 3. What regressions could this introduce?
+
+- Adding an approval badge increases navigation density, especially in the
+  collapsed/mobile navigation; the badge remains bounded to `9+` and exposes
+  an accessible text label.
+- Multiple approvals could make a generic first-card browser selector flaky;
+  the new browser coverage targets the fixture's exact dispatch URL.
+- The browser journey remains blocked by the pre-existing
+  `BrowserAcceptanceSeeder`/schema mismatch where `operational_assets.type` is
+  seeded but absent from the current browser SQLite schema.
+
+## 4. What tests do we need to write before we ship this?
+
+- Passed focused Laravel coverage: 38 tests and 474 assertions across approval,
+  dispatch workflow, and workspace page behavior.
+- Passed `npm run types:check`, `npm run lint:check`, targeted Prettier checks,
+  and `git diff --check`.
+- The manager browser journey was updated to cover the Approvals queue,
+  pending count, exact dispatch link, and decision wording, but cannot execute
+  until the existing browser fixture/schema mismatch is repaired.
+
+---

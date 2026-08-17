@@ -58,6 +58,34 @@ it('allows authorized roles to register fleet vehicles and equipment with full s
         'action' => 'asset.registered',
         'actor_id' => $dispatcher->id,
     ]);
+
+    // Equipment registration (mobile_crane)
+    $mobileCraneResponse = $this->actingAs($dispatcher)->post('/operations/assets', [
+        'code' => 'CRN-201',
+        'name' => 'All-Terrain Mobile Crane 60T',
+        'kind' => 'mobile_crane',
+        'subtype' => 'All-Terrain',
+        'registration_number' => 'REG-9912',
+        'manufacturer' => 'Liebherr',
+        'model' => 'LTM 1060',
+        'rated_capacity' => 60.0,
+        'capacity_unit' => 'tonnes',
+        'meter_type' => 'hour_meter',
+        'meter_value' => 3200.0,
+        'location' => 'Yard B',
+    ]);
+
+    $mobileCraneResponse->assertRedirect('/')->assertSessionHas('flash', function (array $flash) {
+        return $flash['tone'] === 'success' && str_contains($flash['message'], 'CRN-201');
+    });
+
+    $this->assertDatabaseHas('operational_assets', [
+        'code' => 'CRN-201',
+        'name' => 'All-Terrain Mobile Crane 60T',
+        'kind' => 'mobile_crane',
+        'subtype' => 'All-Terrain',
+        'status' => AssetStatus::Available->value,
+    ]);
 });
 
 it('rejects asset registration for unauthorized users or duplicate codes', function () {

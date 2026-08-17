@@ -30,7 +30,7 @@ enum RentalOperatorType: string
     {
         return match ($asset->kind) {
             'truck', 'vehicle' => self::Driver,
-            'crane', 'equipment' => self::CraneOperator,
+            'crane', 'mobile_crane', 'equipment' => self::CraneOperator,
             default => null,
         };
     }
