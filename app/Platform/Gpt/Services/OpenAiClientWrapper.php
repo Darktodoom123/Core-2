@@ -61,6 +61,13 @@ final class OpenAiClientWrapper
      */
     public function checkRateLimits(User $user): array
     {
+        if (Cache::get('gpt_circuit_breaker_disabled', false)) {
+            return [
+                'allowed' => false,
+                'reason' => 'AI Advisory is currently paused by System Administrator (Circuit Breaker active).',
+            ];
+        }
+
         $userKey = "gpt_rate_limit:user:{$user->id}:".now()->format('Y-m-d-H');
         $systemKey = 'gpt_rate_limit:system:'.now()->format('Y-m-d');
 

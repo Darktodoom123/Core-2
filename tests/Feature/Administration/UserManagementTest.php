@@ -78,3 +78,67 @@ it('denies user management to operations roles', function () {
     $dispatcher->syncRoles([RoleName::Dispatcher->value]);
     $this->actingAs($dispatcher)->getJson('/operations/users')->assertForbidden();
 });
+
+it('allows administrator to generate a temporary one-time password during user provisioning', function () {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $response = $this->actingAs($admin)->postJson('/operations/users', [
+        'name' => 'Field Crane Operator',
+        'username' => 'crane.op1',
+        'email' => 'crane.op1@core.test',
+        'role' => RoleName::CraneOperator->value,
+        'generate_temp_password' => true,
+    ])->assertCreated();
+
+    expect($response->json('temporary_password'))->not->toBeEmpty();
+    expect(strlen($response->json('temporary_password')))->toBe(14);
+
+    $user = User::query()->where('email', 'crane.op1@core.test')->firstOrFail();
+    expect($user->email_verified_at)->not->toBeNull();
+    expect($user->hasRole(RoleName::CraneOperator->value))->toBeTrue();
+});
+
+it('allows administrator to reset a user password and invalidate tokens', function () {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $operator = User::factory()->create(['email' => 'driver1@core.test']);
+    $operator->syncRoles([RoleName::Driver->value]);
+    $token = $operator->createToken('Field App')->plainTextToken;
+
+    $response = $this->actingAs($admin)
+        ->postJson("/operations/users/{$operator->id}/reset-password")
+        ->assertOk();
+
+    expect($response->json('temporary_password'))->not->toBeEmpty();
+    expect(PersonalAccessToken::query()->where('tokenable_id', $operator->id)->exists())->toBeFalse();
+});
+
+it('allows administrator to manage and delete personnel credentials with qualification tracking', function () {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $driver = User::factory()->create();
+    $driver->syncRoles([RoleName::Driver->value]);
+
+    // 1. Create Credential
+    $createResponse = $this->actingAs($admin)->postJson("/operations/users/{$driver->id}/credentials", [
+        'kind' => 'operator_certification',
+        'credential_number' => 'TESDA-CRANE-99128',
+        'credential_type' => 'TESDA Heavy Crane NC II (50T+ Hydraulic)',
+        'issued_at' => '2024-01-01',
+        'expires_at' => now()->addDays(15)->format('Y-m-d'),
+    ])->assertCreated();
+
+    $credId = $createResponse->json('data.id');
+    expect($credId)->not->toBeNull();
+
+    // 2. Delete Credential
+    $this->actingAs($admin)
+        ->deleteJson("/operations/users/{$driver->id}/credentials/{$credId}")
+        ->assertOk();
+
+    expect(\App\Platform\Identity\Models\PersonnelCredential::find($credId))->toBeNull();
+});
+

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import {
     Button,
     DataPair,
@@ -2334,6 +2335,51 @@ function DispatchDetails({
             : `${diffHours.toFixed(1)} hrs`;
     }, [job.scheduled_start, job.scheduled_end]);
 
+    const [showEmergencyAbortModal, setShowEmergencyAbortModal] = useState(false);
+    const [abortReason, setAbortReason] = useState('');
+    const [aborting, setAborting] = useState(false);
+    const [abortError, setAbortError] = useState<string | null>(null);
+
+    const canEmergencyAbort = !['completed', 'cancelled'].includes(job.status.value);
+
+    const handleEmergencyAbort = async (e: FormEvent) => {
+        e.preventDefault();
+        setAborting(true);
+        setAbortError(null);
+
+        const csrfToken =
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch(`/operations/admin/dispatch-jobs/${job.id}/emergency-abort`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ reason: abortReason }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setAbortError(data.message || 'Failed to force-abort dispatch.');
+                setAborting(false);
+
+                return;
+            }
+
+            setShowEmergencyAbortModal(false);
+            setAbortReason('');
+            setAborting(false);
+            router.reload();
+        } catch {
+            setAbortError('Network error while processing emergency abort.');
+            setAborting(false);
+        }
+    };
+
     return (
         <div className="mx-auto max-w-6xl space-y-5">
             {/* Header with record identity and operational state */}
@@ -2379,8 +2425,77 @@ function DispatchDetails({
                     >
                         Version {job.version}
                     </span>
+
+                    {canEmergencyAbort && (
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => setShowEmergencyAbortModal(true)}
+                            title="Force-abort stuck or hazardous dispatch"
+                        >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Emergency Abort
+                        </Button>
+                    )}
                 </div>
             </div>
+
+            {/* Emergency Abort Confirmation Modal */}
+            {showEmergencyAbortModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-strong">
+                                <AlertTriangle className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-ink">Emergency Force-Abort</h3>
+                                <p className="text-xs text-ink-soft">Job: {job.reference} ({job.title})</p>
+                            </div>
+                        </div>
+
+                        {abortError && (
+                            <div className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong">
+                                {abortError}
+                            </div>
+                        )}
+
+                        <p className="mt-3 text-xs leading-5 text-ink-soft">
+                            Force-aborting immediately cancels this dispatch job, releases all assigned personnel, and returns all assigned crane & fleet assets to <strong>Available</strong> status.
+                        </p>
+
+                        <form onSubmit={handleEmergencyAbort} className="mt-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">
+                                    Mandatory Operational Justification *
+                                </label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    minLength={6}
+                                    value={abortReason}
+                                    onChange={(e) => setAbortReason(e.target.value)}
+                                    placeholder="Explain why this dispatch is being force-aborted (e.g. Hazardous weather, mechanical breakdown, site closure)…"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-danger focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+                                <Button
+                                    variant="quiet"
+                                    onClick={() => setShowEmergencyAbortModal(false)}
+                                    disabled={aborting}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button variant="danger" type="submit" disabled={aborting}>
+                                    {aborting ? 'Aborting…' : 'Confirm Force-Abort'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Operational Conflict Alert Banner */}
             {conflicts.length > 0 && (

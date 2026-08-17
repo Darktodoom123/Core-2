@@ -75,4 +75,55 @@ final class GptRecommendationController extends Controller
             'success' => 'A fresh GPT recommendation request was queued.',
         ]);
     }
+
+    public function toggleCircuitBreaker(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor->hasRole(\App\Platform\Identity\Enums\RoleName::SystemAdministrator->value) || $actor->can(\App\Platform\Identity\Enums\PermissionName::GptConfigure->value), 403);
+
+        $currentState = (bool) \Illuminate\Support\Facades\Cache::get('gpt_circuit_breaker_disabled', false);
+        $newState = ! $currentState;
+        \Illuminate\Support\Facades\Cache::forever('gpt_circuit_breaker_disabled', $newState);
+
+        return response()->json([
+            'circuit_breaker_active' => $newState,
+            'message' => $newState
+                ? 'GPT Advisory circuit breaker activated. AI requests paused.'
+                : 'GPT Advisory resumed successfully.',
+        ]);
+    }
+
+    public function governanceTelemetry(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $actor = $request->user();
+        abort_unless($actor->hasRole(\App\Platform\Identity\Enums\RoleName::SystemAdministrator->value) || $actor->can(\App\Platform\Identity\Enums\PermissionName::GptConfigure->value), 403);
+
+        $monthlyMetrics = \App\Platform\Gpt\Models\GptRecommendationMetric::query()
+            ->where('occurred_at', '>=', now()->startOfMonth())
+            ->get();
+
+        $monthlySpend = (float) $monthlyMetrics->sum('cost_usd');
+        $totalTokens = (int) $monthlyMetrics->sum('total_tokens');
+        $avgLatencyMs = (int) ($monthlyMetrics->avg('latency_ms') ?? 0);
+
+        $recommendations = GptRecommendation::query()
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->get();
+
+        $accepted = $recommendations->where('status', 'accepted')->count();
+        $rejected = $recommendations->where('status', 'rejected')->count();
+        $totalDecided = $accepted + $rejected;
+        $acceptanceRate = $totalDecided > 0 ? round(($accepted / $totalDecided) * 100, 1) : 100.0;
+
+        return response()->json([
+            'monthly_spend_usd' => $monthlySpend,
+            'monthly_budget_ceiling_usd' => 250.0,
+            'total_tokens' => $totalTokens,
+            'avg_latency_ms' => $avgLatencyMs,
+            'acceptance_rate' => $acceptanceRate,
+            'accepted_count' => $accepted,
+            'rejected_count' => $rejected,
+            'circuit_breaker_active' => (bool) \Illuminate\Support\Facades\Cache::get('gpt_circuit_breaker_disabled', false),
+        ]);
+    }
 }

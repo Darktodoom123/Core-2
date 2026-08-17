@@ -1,17 +1,28 @@
 import { router, useForm } from '@inertiajs/react';
 import {
     ArrowUpRight,
+    Award,
     Bot,
+    Check,
+    CheckCircle2,
     Compass,
+    Copy,
+    Download,
+    FileText,
     Fuel,
+    Key,
     MapPin,
     Navigation,
     Radio,
+    ShieldAlert,
     ShieldCheck,
+    Trash2,
     Truck,
+    UserPlus,
     Users,
+    X,
 } from 'lucide-react';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
     Button,
@@ -582,10 +593,53 @@ function AssetDetailPane({
         'overview' | 'telemetry' | 'status' | 'inspections' | 'maintenance'
     >('overview');
 
+    const [showLockdownModal, setShowLockdownModal] = useState(false);
+    const [lockdownReason, setLockdownReason] = useState('');
+    const [lockingDown, setLockingDown] = useState(false);
+    const [lockdownError, setLockdownError] = useState<string | null>(null);
+
     const hasLiveGps =
         assetLocation &&
         assetLocation.latitude !== null &&
         assetLocation.longitude !== null;
+
+    const handleSafetyLockdown = async (e: FormEvent) => {
+        e.preventDefault();
+        setLockingDown(true);
+        setLockdownError(null);
+
+        const csrfToken =
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch(`/operations/admin/assets/${asset.id}/safety-lockdown`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ reason: lockdownReason }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setLockdownError(data.message || 'Failed to place asset on safety lockdown.');
+                setLockingDown(false);
+
+                return;
+            }
+
+            setShowLockdownModal(false);
+            setLockdownReason('');
+            setLockingDown(false);
+            router.reload();
+        } catch {
+            setLockdownError('Network error while applying safety lockdown.');
+            setLockingDown(false);
+        }
+    };
 
     return (
         <Panel className="space-y-6 p-4 md:p-6">
@@ -623,7 +677,78 @@ function AssetDetailPane({
                             : (asset.location ?? 'Not reported')}
                     </p>
                 </div>
+
+                <div className="flex items-center gap-2">
+                    {asset.status.value !== 'unavailable' && (
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => setShowLockdownModal(true)}
+                            title="Place asset under emergency safety recall lockdown"
+                        >
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                            Safety Lockdown
+                        </Button>
+                    )}
+                </div>
             </div>
+
+            {/* Safety Lockdown Modal */}
+            {showLockdownModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-strong">
+                                <ShieldAlert className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-ink">Fleet Safety Recall Lockdown</h3>
+                                <p className="text-xs text-ink-soft">Asset: {asset.code} ({asset.name})</p>
+                            </div>
+                        </div>
+
+                        {lockdownError && (
+                            <div className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong">
+                                {lockdownError}
+                            </div>
+                        )}
+
+                        <p className="mt-3 text-xs leading-5 text-ink-soft">
+                            Safety lockdown immediately revokes assignment eligibility for this equipment, ends any active dispatch assignment, and marks the unit <strong>Unavailable</strong>.
+                        </p>
+
+                        <form onSubmit={handleSafetyLockdown} className="mt-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">
+                                    Mandatory Safety Recall Reason *
+                                </label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    minLength={6}
+                                    value={lockdownReason}
+                                    onChange={(e) => setLockdownReason(e.target.value)}
+                                    placeholder="Specify safety defect, hydraulic fault, structural crack, or regulatory recall notice…"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-danger focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+                                <Button
+                                    variant="quiet"
+                                    onClick={() => setShowLockdownModal(false)}
+                                    disabled={lockingDown}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button variant="danger" type="submit" disabled={lockingDown}>
+                                    {lockingDown ? 'Applying…' : 'Enforce Safety Lockdown'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <div className="flex flex-wrap border-b border-line">
                 <button
@@ -2494,22 +2619,61 @@ function ApprovalReviewCard({
 
 function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
     const [roleFilter, setRoleFilter] = useState<string>('all');
-    const [statusFilter, setStatusFilter] = useState<
-        'all' | 'active' | 'suspended'
-    >('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Modals
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [generatedPasswordInfo, setGeneratedPasswordInfo] = useState<{
+        name: string;
+        username: string;
+        email: string;
+        password: string;
+    } | null>(null);
+    const [selectedUserForAccess, setSelectedUserForAccess] = useState<WorkspaceUserViewModel | null>(null);
+    const [selectedUserForCreds, setSelectedUserForCreds] = useState<WorkspaceUserViewModel | null>(null);
+    const [passwordResetUser, setPasswordResetUser] = useState<WorkspaceUserViewModel | null>(null);
+
+    // Form states for Invite User
+    const [inviteName, setInviteName] = useState('');
+    const [inviteUsername, setInviteUsername] = useState('');
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [invitePhone, setInvitePhone] = useState('');
+    const [inviteRole, setInviteRole] = useState('driver');
+    const [generateTempPassword, setGenerateTempPassword] = useState(true);
+    const [inviteSubmitting, setInviteSubmitting] = useState(false);
+    const [inviteError, setInviteError] = useState<string | null>(null);
+
+    // Form state for Access update
+    const [editRole, setEditRole] = useState('');
+    const [editActive, setEditActive] = useState(true);
+    const [accessSubmitting, setAccessSubmitting] = useState(false);
+    const [accessError, setAccessError] = useState<string | null>(null);
+
+    // Form state for Credential creation
+    const [credKind, setCredKind] = useState<'driver_license' | 'operator_certification' | 'qualification'>('operator_certification');
+    const [credNumber, setCredNumber] = useState('');
+    const [credType, setCredType] = useState('');
+    const [credIssuedAt, setCredIssuedAt] = useState('');
+    const [credExpiresAt, setCredExpiresAt] = useState('');
+    const [credSubmitting, setCredSubmitting] = useState(false);
+    const [credError, setCredError] = useState<string | null>(null);
+
+    // Clipboard copy state
+    const [copied, setCopied] = useState(false);
 
     const stats = useMemo(() => {
         const total = users.length;
         const active = users.filter((u) => u.is_active).length;
         const suspended = users.filter((u) => !u.is_active).length;
         const fieldPersonnel = users.filter((u) =>
-            ['driver', 'crane_operator', 'field_technician'].includes(
-                u.role ?? '',
-            ),
+            ['driver', 'crane_operator', 'field_technician'].includes(u.role ?? ''),
         ).length;
+        const expiringCredentials = users.reduce((count, u) => {
+            return count + (u.credentials?.filter((c) => c.expires_soon || c.is_expired).length ?? 0);
+        }, 0);
 
-        return { total, active, suspended, fieldPersonnel };
+        return { total, active, suspended, fieldPersonnel, expiringCredentials };
     }, [users]);
 
     const uniqueRoles = useMemo(() => {
@@ -2542,71 +2706,271 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                 const name = user.name.toLowerCase();
                 const email = user.email.toLowerCase();
                 const role = (user.role_label ?? '').toLowerCase();
+                const username = (user.username ?? '').toLowerCase();
 
-                return (
-                    name.includes(q) || email.includes(q) || role.includes(q)
-                );
+                return name.includes(q) || email.includes(q) || role.includes(q) || username.includes(q);
             }
 
             return true;
         });
     }, [users, roleFilter, statusFilter, searchQuery]);
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleCreateUser = async (e: FormEvent) => {
+        e.preventDefault();
+        setInviteSubmitting(true);
+        setInviteError(null);
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch('/operations/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    name: inviteName,
+                    username: inviteUsername || inviteName.toLowerCase().replace(/\s+/g, '.'),
+                    email: inviteEmail,
+                    phone: invitePhone || null,
+                    role: inviteRole,
+                    generate_temp_password: generateTempPassword,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setInviteError(data.message || 'Failed to create user. Please check your inputs.');
+                setInviteSubmitting(false);
+
+                return;
+            }
+
+            setShowInviteModal(false);
+            setInviteName('');
+            setInviteUsername('');
+            setInviteEmail('');
+            setInvitePhone('');
+            setInviteSubmitting(false);
+
+            if (data.temporary_password) {
+                setGeneratedPasswordInfo({
+                    name: data.data.name,
+                    username: data.data.username,
+                    email: data.data.email,
+                    password: data.temporary_password,
+                });
+            }
+
+            router.reload({ only: ['users', 'auditEvents'] });
+        } catch {
+            setInviteError('Network error while provisioning user.');
+            setInviteSubmitting(false);
+        }
+    };
+
+    const handleUpdateAccess = async (e: FormEvent) => {
+        e.preventDefault();
+
+        if (!selectedUserForAccess) {
+return;
+}
+
+        setAccessSubmitting(true);
+        setAccessError(null);
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch(`/operations/users/${selectedUserForAccess.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    role: editRole,
+                    is_active: editActive,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setAccessError(data.message || 'Failed to update access.');
+                setAccessSubmitting(false);
+
+                return;
+            }
+
+            setSelectedUserForAccess(null);
+            setAccessSubmitting(false);
+            router.reload({ only: ['users', 'auditEvents'] });
+        } catch {
+            setAccessError('Network error while updating access.');
+            setAccessSubmitting(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!passwordResetUser) {
+return;
+}
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch(`/operations/users/${passwordResetUser.id}/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.temporary_password) {
+                setGeneratedPasswordInfo({
+                    name: passwordResetUser.name,
+                    username: passwordResetUser.username ?? passwordResetUser.email,
+                    email: passwordResetUser.email,
+                    password: data.temporary_password,
+                });
+            }
+
+            setPasswordResetUser(null);
+            router.reload({ only: ['auditEvents'] });
+        } catch {
+            alert('Failed to reset password.');
+        }
+    };
+
+    const handleAddCredential = async (e: FormEvent) => {
+        e.preventDefault();
+
+        if (!selectedUserForCreds) {
+return;
+}
+
+        setCredSubmitting(true);
+        setCredError(null);
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const response = await fetch(`/operations/users/${selectedUserForCreds.id}/credentials`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    kind: credKind,
+                    credential_number: credNumber,
+                    credential_type: credType,
+                    issued_at: credIssuedAt || null,
+                    expires_at: credExpiresAt || null,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setCredError(data.message || 'Failed to add credential.');
+                setCredSubmitting(false);
+
+                return;
+            }
+
+            setCredNumber('');
+            setCredType('');
+            setCredIssuedAt('');
+            setCredExpiresAt('');
+            setCredSubmitting(false);
+            router.reload({ only: ['users', 'auditEvents'] });
+        } catch {
+            setCredError('Network error while adding credential.');
+            setCredSubmitting(false);
+        }
+    };
+
+    const handleDeleteCredential = async (credId: number) => {
+        if (!selectedUserForCreds) {
+return;
+}
+
+        if (!confirm('Are you sure you want to remove this credential record?')) {
+return;
+}
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            await fetch(`/operations/users/${selectedUserForCreds.id}/credentials/${credId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            });
+
+            router.reload({ only: ['users', 'auditEvents'] });
+        } catch {
+            alert('Failed to remove credential.');
+        }
+    };
+
     return (
         <div>
             <PageHeading
                 title="Users, roles & personnel credentials"
-                description="Operational user administration with single canonical role enforcement and field credential qualification tracking."
+                description="Operational user administration with single canonical role enforcement, temporary password provisioning, and certified qualification governance."
+                actions={
+                    <Button variant="primary" onClick={() => setShowInviteModal(true)}>
+                        <UserPlus className="h-4 w-4" />
+                        Provision User
+                    </Button>
+                }
             />
+
             <div className="space-y-6 p-4 md:p-6">
                 {/* Stats Header Bar */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-ink-soft">
-                            Total Users
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-ink">
-                            {stats.total}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Canonical role assigned
-                        </p>
+                        <span className="text-xs font-medium text-ink-soft">Total Users</span>
+                        <p className="mt-1 text-2xl font-bold text-ink">{stats.total}</p>
+                        <p className="mt-0.5 text-xs text-ink-soft">Canonical roles managed</p>
                     </div>
 
                     <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-success-strong">
-                            Active Accounts
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-success-strong">
-                            {stats.active}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Operational readiness
-                        </p>
+                        <span className="text-xs font-medium text-success-strong">Active Accounts</span>
+                        <p className="mt-1 text-2xl font-bold text-success-strong">{stats.active}</p>
+                        <p className="mt-0.5 text-xs text-ink-soft">Operational readiness</p>
                     </div>
 
                     <div className="rounded-xl border border-danger/30 bg-danger-soft/30 p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-danger-strong">
-                            Suspended
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-danger-strong">
-                            {stats.suspended}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Access restricted
-                        </p>
+                        <span className="text-xs font-medium text-danger-strong">Suspended</span>
+                        <p className="mt-1 text-2xl font-bold text-danger-strong">{stats.suspended}</p>
+                        <p className="mt-0.5 text-xs text-ink-soft">Access revoked</p>
                     </div>
 
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-ink-soft">
-                            Field Personnel
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-ink">
-                            {stats.fieldPersonnel}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Drivers, operators & techs
-                        </p>
+                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-warning-strong">Compliance Alerts</span>
+                        <p className="mt-1 text-2xl font-bold text-warning-strong">{stats.expiringCredentials}</p>
+                        <p className="mt-0.5 text-xs text-ink-soft">Expired or expiring credentials</p>
                     </div>
                 </div>
 
@@ -2615,9 +2979,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         {/* Role Pills */}
                         <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-medium text-ink-soft">
-                                Role:
-                            </span>
+                            <span className="text-xs font-medium text-ink-soft">Role:</span>
                             <button
                                 type="button"
                                 onClick={() => setRoleFilter('all')}
@@ -2630,32 +2992,25 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             >
                                 All Roles ({stats.total})
                             </button>
-                            {uniqueRoles.map(
-                                ([roleVal, roleName]: [string, string]) => {
-                                    const count = users.filter(
-                                        (u: WorkspaceUserViewModel) =>
-                                            u.role === roleVal,
-                                    ).length;
+                            {uniqueRoles.map(([roleVal, roleName]: [string, string]) => {
+                                const count = users.filter((u) => u.role === roleVal).length;
 
-                                    return (
-                                        <button
-                                            key={roleVal}
-                                            type="button"
-                                            onClick={() =>
-                                                setRoleFilter(roleVal)
-                                            }
-                                            className={cn(
-                                                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
-                                                roleFilter === roleVal
-                                                    ? 'bg-brand-strong text-white shadow-xs'
-                                                    : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
-                                            )}
-                                        >
-                                            {roleName} ({count})
-                                        </button>
-                                    );
-                                },
-                            )}
+                                return (
+                                    <button
+                                        key={roleVal}
+                                        type="button"
+                                        onClick={() => setRoleFilter(roleVal)}
+                                        className={cn(
+                                            'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                                            roleFilter === roleVal
+                                                ? 'bg-brand-strong text-white shadow-xs'
+                                                : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
+                                        )}
+                                    >
+                                        {roleName} ({count})
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         {/* Status Toggle */}
@@ -2705,7 +3060,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by name, email, or role…"
+                            placeholder="Search by name, username, email, or role…"
                             className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                     </div>
@@ -2732,109 +3087,551 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                     <Panel className="overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
+                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold uppercase text-ink-soft">
                                     <tr>
-                                        <th className="px-4 py-3">
-                                            User & Contact
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Canonical Role
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Personnel Credential / Qualification
-                                        </th>
+                                        <th className="px-4 py-3">User & Contact</th>
+                                        <th className="px-4 py-3">Canonical Role</th>
+                                        <th className="px-4 py-3">Qualifications & Credentials</th>
                                         <th className="px-4 py-3">Status</th>
+                                        <th className="px-4 py-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-line">
-                                    {filteredUsers.map(
-                                        (user: WorkspaceUserViewModel) => {
-                                            const role = user.role ?? '';
-                                            const isDriver = role === 'driver';
-                                            const isCraneOp =
-                                                role === 'crane_operator';
-                                            const isTech =
-                                                role === 'field_technician';
+                                    {filteredUsers.map((user: WorkspaceUserViewModel) => {
+                                        const creds = user.credentials ?? [];
+                                        const hasExpired = creds.some((c) => c.is_expired);
+                                        const hasExpiring = creds.some((c) => c.expires_soon);
 
-                                            return (
-                                                <tr
-                                                    key={user.id}
-                                                    className="hover:bg-surface-subtle/50"
-                                                >
-                                                    <td className="px-4 py-3.5">
-                                                        <span className="block font-semibold text-ink">
-                                                            {user.name}
+                                        return (
+                                            <tr key={user.id} className="hover:bg-surface-subtle/50">
+                                                <td className="px-4 py-3.5">
+                                                    <span className="block font-semibold text-ink">{user.name}</span>
+                                                    <span className="block text-xs text-ink-soft">
+                                                        {user.email} {user.phone && `· ${user.phone}`}
+                                                    </span>
+                                                    {user.username && (
+                                                        <span className="mt-0.5 inline-block font-mono text-[11px] text-muted">
+                                                            @{user.username}
                                                         </span>
-                                                        <span className="block text-xs text-ink-soft">
-                                                            {user.email}
-                                                        </span>
-                                                    </td>
+                                                    )}
+                                                </td>
 
-                                                    <td className="px-4 py-3.5">
-                                                        <span className="inline-flex items-center rounded-md bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink">
-                                                            {user.role_label ??
-                                                                'Unassigned'}
-                                                        </span>
-                                                    </td>
+                                                <td className="px-4 py-3.5">
+                                                    <span className="inline-flex items-center rounded-md bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink">
+                                                        {user.role_label ?? 'Unassigned'}
+                                                    </span>
+                                                </td>
 
-                                                    <td className="px-4 py-3.5 text-xs">
-                                                        {isDriver && (
-                                                            <span className="inline-flex items-center gap-1 rounded bg-brand-soft/60 px-2 py-0.5 font-medium text-brand-strong">
-                                                                Commercial Heavy
-                                                                Vehicle License
-                                                                (Valid)
-                                                            </span>
-                                                        )}
-                                                        {isCraneOp && (
-                                                            <span className="inline-flex items-center gap-1 rounded bg-warning-soft/60 px-2 py-0.5 font-medium text-warning-strong">
-                                                                Mobile &
-                                                                All-Terrain
-                                                                Crane Operator
-                                                                Certified
-                                                            </span>
-                                                        )}
-                                                        {isTech && (
-                                                            <span className="inline-flex items-center gap-1 rounded bg-brand-soft/60 px-2 py-0.5 font-medium text-brand-strong">
-                                                                Field Safety &
-                                                                Rigging
-                                                                Certified
-                                                            </span>
-                                                        )}
-                                                        {!isDriver &&
-                                                            !isCraneOp &&
-                                                            !isTech && (
-                                                                <span className="text-ink-soft">
-                                                                    Platform
-                                                                    Management
-                                                                    Role
+                                                <td className="px-4 py-3.5 text-xs">
+                                                    {creds.length === 0 ? (
+                                                        <span className="text-ink-soft italic">No credentials on file</span>
+                                                    ) : (
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {creds.map((cred) => (
+                                                                <span
+                                                                    key={cred.id}
+                                                                    className={cn(
+                                                                        'inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium',
+                                                                        cred.is_expired
+                                                                            ? 'bg-danger-soft text-danger-strong'
+                                                                            : cred.expires_soon
+                                                                            ? 'bg-warning-soft text-warning-strong'
+                                                                            : 'bg-brand-soft/60 text-brand-strong',
+                                                                    )}
+                                                                >
+                                                                    <Award className="h-3 w-3 shrink-0" />
+                                                                    {cred.credential_type}
+                                                                    {cred.expires_at && ` (Exp: ${cred.expires_at})`}
                                                                 </span>
-                                                            )}
-                                                    </td>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {(hasExpired || hasExpiring) && (
+                                                        <p className="mt-1 text-[11px] font-medium text-danger-strong">
+                                                            ⚠️ Action required: License renewal needed
+                                                        </p>
+                                                    )}
+                                                </td>
 
-                                                    <td className="px-4 py-3.5">
-                                                        <span
-                                                            className={cn(
-                                                                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                                                                user.is_active
-                                                                    ? 'bg-success-soft text-success-strong'
-                                                                    : 'bg-danger-soft text-danger-strong',
-                                                            )}
+                                                <td className="px-4 py-3.5">
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                                            user.is_active
+                                                                ? 'bg-success-soft text-success-strong'
+                                                                : 'bg-danger-soft text-danger-strong',
+                                                        )}
+                                                    >
+                                                        {user.is_active ? 'Active' : 'Suspended'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-4 py-3.5 text-right">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setSelectedUserForCreds(user);
+                                                            }}
+                                                            title="Manage Operator Credentials"
                                                         >
-                                                            {user.is_active
-                                                                ? 'Active'
-                                                                : 'Suspended'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        },
-                                    )}
+                                                            <Award className="h-3.5 w-3.5" />
+                                                            Creds
+                                                        </Button>
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setSelectedUserForAccess(user);
+                                                                setEditRole(user.role ?? 'driver');
+                                                                setEditActive(user.is_active);
+                                                                setAccessError(null);
+                                                            }}
+                                                            title="Edit Role & Status"
+                                                        >
+                                                            Access
+                                                        </Button>
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="quiet"
+                                                            onClick={() => setPasswordResetUser(user)}
+                                                            title="Reset Password"
+                                                        >
+                                                            <Key className="h-3.5 w-3.5 text-ink-soft" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
                     </Panel>
                 )}
             </div>
+
+            {/* Modal: Provision / Invite User */}
+            {showInviteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <h3 className="text-lg font-bold text-ink">Provision Operational User</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowInviteModal(false)}
+                                className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {inviteError && (
+                            <div className="mt-4 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong">
+                                {inviteError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleCreateUser} className="mt-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">Full Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={inviteName}
+                                    onChange={(e) => setInviteName(e.target.value)}
+                                    placeholder="e.g. Maria Santos"
+                                    className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-ink">Username</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={inviteUsername}
+                                        onChange={(e) => setInviteUsername(e.target.value)}
+                                        placeholder="e.g. maria.santos"
+                                        className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-ink">Mobile Phone</label>
+                                    <input
+                                        type="text"
+                                        value={invitePhone}
+                                        onChange={(e) => setInvitePhone(e.target.value)}
+                                        placeholder="+63 917 123 4567"
+                                        className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    placeholder="maria@example.com"
+                                    className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">Canonical Operational Role</label>
+                                <select
+                                    value={inviteRole}
+                                    onChange={(e) => setInviteRole(e.target.value)}
+                                    className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                                >
+                                    <option value="driver">Driver (Prime Mover / Hauler)</option>
+                                    <option value="crane_operator">Crane Operator (Mobile / All-Terrain)</option>
+                                    <option value="field_technician">Field Technician (Rigging & Safety)</option>
+                                    <option value="dispatcher">Dispatcher</option>
+                                    <option value="operations_manager">Operations Manager</option>
+                                    <option value="system_administrator">System Administrator</option>
+                                </select>
+                            </div>
+
+                            <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                <label className="flex items-start gap-2.5 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={generateTempPassword}
+                                        onChange={(e) => setGenerateTempPassword(e.target.checked)}
+                                        className="mt-0.5 h-4 w-4 rounded border-line text-brand focus:ring-brand"
+                                    />
+                                    <div className="text-xs">
+                                        <span className="font-semibold text-ink">Generate temporary one-time password in UI</span>
+                                        <p className="text-ink-soft">
+                                            Generates a high-entropy password you can copy and hand to the field operator immediately.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+                                <Button variant="quiet" onClick={() => setShowInviteModal(false)}>
+                                    Cancel
+                                </Button>
+                                <Button variant="primary" type="submit" disabled={inviteSubmitting}>
+                                    {inviteSubmitting ? 'Provisioning…' : 'Create User Account'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Generated Temporary Password Display */}
+            {generatedPasswordInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong">
+                                <CheckCircle2 className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-ink">User Provisioned Successfully</h3>
+                                <p className="text-xs text-ink-soft">Share these initial login credentials with the user</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 rounded-xl border border-line bg-surface-subtle p-4 space-y-2.5">
+                            <div>
+                                <span className="text-[11px] font-semibold uppercase text-ink-soft">User</span>
+                                <p className="text-sm font-semibold text-ink">{generatedPasswordInfo.name}</p>
+                            </div>
+
+                            <div>
+                                <span className="text-[11px] font-semibold uppercase text-ink-soft">Login Username / Email</span>
+                                <p className="font-mono text-xs text-ink">{generatedPasswordInfo.username} / {generatedPasswordInfo.email}</p>
+                            </div>
+
+                            <div>
+                                <span className="text-[11px] font-semibold uppercase text-ink-soft">Temporary One-Time Password</span>
+                                <div className="mt-1 flex items-center justify-between rounded-lg border border-brand/30 bg-surface px-3 py-2">
+                                    <span className="font-mono text-sm font-bold tracking-wider text-brand-strong">
+                                        {generatedPasswordInfo.password}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyToClipboard(generatedPasswordInfo.password)}
+                                        className="inline-flex items-center gap-1 rounded bg-brand-soft px-2 py-1 text-xs font-semibold text-brand-strong hover:bg-brand-soft/80"
+                                    >
+                                        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                        {copied ? 'Copied' : 'Copy'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex justify-end">
+                            <Button variant="primary" onClick={() => setGeneratedPasswordInfo(null)}>
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Edit Access & Status */}
+            {selectedUserForAccess && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <h3 className="text-lg font-bold text-ink">Manage Access: {selectedUserForAccess.name}</h3>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedUserForAccess(null)}
+                                className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {accessError && (
+                            <div className="mt-4 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong">
+                                {accessError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleUpdateAccess} className="mt-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">Canonical Role</label>
+                                <select
+                                    value={editRole}
+                                    onChange={(e) => setEditRole(e.target.value)}
+                                    className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                                >
+                                    <option value="driver">Driver</option>
+                                    <option value="crane_operator">Crane Operator</option>
+                                    <option value="field_technician">Field Technician</option>
+                                    <option value="dispatcher">Dispatcher</option>
+                                    <option value="operations_manager">Operations Manager</option>
+                                    <option value="system_administrator">System Administrator</option>
+                                </select>
+                            </div>
+
+                            <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <div>
+                                        <span className="text-xs font-semibold text-ink">Account Status</span>
+                                        <p className="text-[11px] text-ink-soft">
+                                            Suspension immediately revokes active mobile tokens & web sessions.
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={editActive}
+                                        onChange={(e) => setEditActive(e.target.checked)}
+                                        className="h-5 w-5 rounded border-line text-brand focus:ring-brand"
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+                                <Button variant="quiet" onClick={() => setSelectedUserForAccess(null)}>
+                                    Cancel
+                                </Button>
+                                <Button variant="primary" type="submit" disabled={accessSubmitting}>
+                                    {accessSubmitting ? 'Saving…' : 'Update Access'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Password Reset Confirmation */}
+            {passwordResetUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning-strong">
+                                <Key className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-ink">Reset User Password</h3>
+                                <p className="text-xs text-ink-soft">Generate a new temporary password for {passwordResetUser.name}</p>
+                            </div>
+                        </div>
+
+                        <p className="mt-3 text-xs leading-5 text-ink-soft">
+                            This will invalidate all current active login sessions and mobile tokens for this user and generate a new temporary password.
+                        </p>
+
+                        <div className="mt-5 flex justify-end gap-2">
+                            <Button variant="quiet" onClick={() => setPasswordResetUser(null)}>
+                                Cancel
+                            </Button>
+                            <Button variant="danger" onClick={handleResetPassword}>
+                                Confirm & Generate New Password
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Manage Operator Credentials */}
+            {selectedUserForCreds && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-ink">Operator Qualifications & Credentials</h3>
+                                <p className="text-xs text-ink-soft">{selectedUserForCreds.name} ({selectedUserForCreds.role_label})</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedUserForCreds(null)}
+                                className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Existing Credentials List */}
+                        <div className="mt-4 space-y-2.5">
+                            <h4 className="text-xs font-semibold uppercase text-ink-soft">Current Licenses & Certifications</h4>
+                            {(selectedUserForCreds.credentials ?? []).length === 0 ? (
+                                <div className="rounded-lg border border-dashed border-line p-4 text-center text-xs text-ink-soft">
+                                    No verified credentials on record for this operator.
+                                </div>
+                            ) : (
+                                (selectedUserForCreds.credentials ?? []).map((cred) => (
+                                    <div
+                                        key={cred.id}
+                                        className="flex items-center justify-between rounded-xl border border-line bg-surface-subtle p-3"
+                                    >
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-xs text-ink">{cred.credential_type}</span>
+                                                <span
+                                                    className={cn(
+                                                        'rounded px-1.5 py-0.2 text-[10px] font-semibold uppercase',
+                                                        cred.is_expired
+                                                            ? 'bg-danger-soft text-danger-strong'
+                                                            : cred.expires_soon
+                                                            ? 'bg-warning-soft text-warning-strong'
+                                                            : 'bg-success-soft text-success-strong',
+                                                    )}
+                                                >
+                                                    {cred.is_expired ? 'Expired' : cred.expires_soon ? 'Expiring Soon' : 'Valid'}
+                                                </span>
+                                            </div>
+                                            <p className="font-mono text-xs text-ink-soft">ID: {cred.credential_number}</p>
+                                            <p className="text-[11px] text-muted">
+                                                Issued: {cred.issued_at ?? 'N/A'} · Expires: {cred.expires_at ?? 'Lifetime / No Expiry'}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteCredential(cred.id)}
+                                            className="rounded-lg p-1.5 text-danger hover:bg-danger-soft"
+                                            title="Revoke / Delete Credential"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Add Credential Form */}
+                        <div className="mt-6 rounded-xl border border-line bg-surface p-4">
+                            <h4 className="text-xs font-semibold uppercase text-ink">Add New Verified Credential</h4>
+
+                            {credError && (
+                                <div className="mt-2 rounded-lg bg-danger-soft p-2.5 text-xs text-danger-strong">
+                                    {credError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleAddCredential} className="mt-3 space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-ink">Credential Kind</label>
+                                        <select
+                                            value={credKind}
+                                            onChange={(e) => setCredKind(e.target.value as any)}
+                                            className="mt-1 h-8 w-full rounded-lg border border-line bg-surface px-2 text-xs text-ink focus:border-brand focus:outline-none"
+                                        >
+                                            <option value="operator_certification">Heavy Crane Operator Certification (NC II)</option>
+                                            <option value="driver_license">Commercial Driver's License</option>
+                                            <option value="qualification">Safety & Rigging Qualification</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-ink">Credential / License #</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={credNumber}
+                                            onChange={(e) => setCredNumber(e.target.value)}
+                                            placeholder="e.g. DL-N02-19-094821"
+                                            className="mt-1 h-8 w-full rounded-lg border border-line bg-surface px-2.5 text-xs text-ink focus:border-brand focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-semibold text-ink">Classification / Rating</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={credType}
+                                        onChange={(e) => setCredType(e.target.value)}
+                                        placeholder="e.g. TESDA Heavy Crane NC II (50T+ Hydraulic)"
+                                        className="mt-1 h-8 w-full rounded-lg border border-line bg-surface px-2.5 text-xs text-ink focus:border-brand focus:outline-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-ink">Issued Date</label>
+                                        <input
+                                            type="date"
+                                            value={credIssuedAt}
+                                            onChange={(e) => setCredIssuedAt(e.target.value)}
+                                            className="mt-1 h-8 w-full rounded-lg border border-line bg-surface px-2.5 text-xs text-ink focus:border-brand focus:outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-ink">Expiry Date</label>
+                                        <input
+                                            type="date"
+                                            value={credExpiresAt}
+                                            onChange={(e) => setCredExpiresAt(e.target.value)}
+                                            className="mt-1 h-8 w-full rounded-lg border border-line bg-surface px-2.5 text-xs text-ink focus:border-brand focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <Button size="sm" variant="primary" type="submit" disabled={credSubmitting}>
+                                        {credSubmitting ? 'Saving…' : 'Add Credential'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="mt-4 flex justify-end">
+                            <Button variant="secondary" onClick={() => setSelectedUserForCreds(null)}>
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -2842,20 +3639,42 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
     const [actionFilter, setActionFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedEvent, setSelectedEvent] = useState<AuditEventViewModel | null>(null);
+
+    // System Health State (Node 5)
+    const [health, setHealth] = useState<{
+        status: 'healthy' | 'degraded' | 'unhealthy';
+        services: {
+            database: { status: string; latency_ms: number | null };
+            cache: { status: string; latency_ms: number | null };
+            outbox: { status: string; pending: number; failed: number; delivered: number };
+            queues: { status: string; failed_jobs: number };
+        };
+    } | null>(null);
+
+    useEffect(() => {
+        fetch('/operations/admin/health')
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (data) {
+setHealth(data);
+}
+            })
+            .catch(() => {});
+    }, []);
 
     const stats = useMemo(() => {
         const total = events.length;
         const overrides = events.filter(
-            (e) =>
-                e.action.includes('override') || e.action.includes('approval'),
+            (e) => e.action.includes('override') || e.action.includes('approval'),
         ).length;
         const transitions = events.filter(
-            (e) =>
-                e.action.includes('status') || e.action.includes('transition'),
+            (e) => e.action.includes('status') || e.action.includes('transition'),
         ).length;
         const gpt = events.filter((e) => e.action.includes('gpt')).length;
+        const userAccess = events.filter((e) => e.action.includes('user') || e.action.includes('personnel')).length;
 
-        return { total, overrides, transitions, gpt };
+        return { total, overrides, transitions, gpt, userAccess };
     }, [events]);
 
     const filteredEvents = useMemo(() => {
@@ -2880,93 +3699,147 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                 return false;
             }
 
+            if (actionFilter === 'access' && !event.action.includes('user') && !event.action.includes('personnel')) {
+                return false;
+            }
+
             if (searchQuery.trim() !== '') {
                 const q = searchQuery.toLowerCase().trim();
                 const action = event.action.toLowerCase();
                 const actor = (event.actor?.name ?? 'system').toLowerCase();
                 const reason = (event.reason ?? '').toLowerCase();
+                const reqId = (event.request_id ?? '').toLowerCase();
 
-                return (
-                    action.includes(q) ||
-                    actor.includes(q) ||
-                    reason.includes(q)
-                );
+                return action.includes(q) || actor.includes(q) || reason.includes(q) || reqId.includes(q);
             }
 
             return true;
         });
     }, [events, actionFilter, searchQuery]);
 
+    const handleExportAudit = () => {
+        window.location.href = '/operations/reports/exports';
+    };
+
     return (
         <div>
             <PageHeading
                 title="Audit trail & compliance log"
-                description="Immutable log of approvals, overrides, state transitions, GPT advisory decisions, and access operations."
+                description="Immutable forensic log of approvals, overrides, state transitions, GPT advisory decisions, user access, and cryptographic telemetry."
+                actions={
+                    <Button variant="secondary" onClick={handleExportAudit}>
+                        <Download className="h-4 w-4" />
+                        Export Audit Dataset
+                    </Button>
+                }
             />
             <div className="space-y-6 p-4 md:p-6">
+                {/* Synthetic Infrastructure & Outbox DLQ Health Monitor */}
+                {health && (
+                    <div className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className={cn(
+                                        'h-2.5 w-2.5 rounded-full',
+                                        health.status === 'healthy'
+                                            ? 'bg-success animate-pulse'
+                                            : 'bg-warning',
+                                    )}
+                                />
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                                    System Infrastructure & Telemetry Health
+                                </h3>
+                            </div>
+                            <span
+                                className={cn(
+                                    'rounded-md px-2 py-0.5 text-xs font-semibold uppercase',
+                                    health.status === 'healthy'
+                                        ? 'bg-success-soft text-success-strong'
+                                        : 'bg-warning-soft text-warning-strong',
+                                )}
+                            >
+                                {health.status}
+                            </span>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+                            <div className="rounded-xl border border-line bg-surface-subtle p-3">
+                                <span className="font-semibold text-ink-soft">Postgres Latency</span>
+                                <p className="mt-1 font-mono text-sm font-bold text-ink">
+                                    {health.services.database.latency_ms !== null
+                                        ? `${health.services.database.latency_ms} ms`
+                                        : 'Offline'}
+                                </p>
+                            </div>
+
+                            <div className="rounded-xl border border-line bg-surface-subtle p-3">
+                                <span className="font-semibold text-ink-soft">Redis / Cache Ping</span>
+                                <p className="mt-1 font-mono text-sm font-bold text-ink">
+                                    {health.services.cache.latency_ms !== null
+                                        ? `${health.services.cache.latency_ms} ms`
+                                        : 'Offline'}
+                                </p>
+                            </div>
+
+                            <div className="rounded-xl border border-line bg-surface-subtle p-3">
+                                <span className="font-semibold text-ink-soft">Transactional Outbox (DLQ)</span>
+                                <p className="mt-1 font-mono text-sm font-bold text-ink">
+                                    {health.services.outbox.failed === 0 ? (
+                                        <span className="text-success-strong">0 Dead Letters (Clean)</span>
+                                    ) : (
+                                        <span className="text-danger-strong">{health.services.outbox.failed} Failed Messages</span>
+                                    )}
+                                </p>
+                            </div>
+
+                            <div className="rounded-xl border border-line bg-surface-subtle p-3">
+                                <span className="font-semibold text-ink-soft">Background Queues</span>
+                                <p className="mt-1 font-mono text-sm font-bold text-ink">
+                                    {health.services.queues.failed_jobs === 0 ? (
+                                        <span className="text-success-strong">0 Failed Jobs</span>
+                                    ) : (
+                                        <span className="text-danger-strong">{health.services.queues.failed_jobs} Failed</span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-ink-soft">
-                            Total Audit Events
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-ink">
-                            {stats.total}
-                        </p>
+                        <span className="text-xs font-medium text-ink-soft">Total Events</span>
+                        <p className="mt-1 text-2xl font-bold text-ink">{stats.total}</p>
                     </div>
                     <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-warning-strong">
-                            Approvals & Overrides
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-warning-strong">
-                            {stats.overrides}
-                        </p>
+                        <span className="text-xs font-medium text-warning-strong">Approvals & Overrides</span>
+                        <p className="mt-1 text-2xl font-bold text-warning-strong">{stats.overrides}</p>
                     </div>
                     <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-ink-soft">
-                            State Transitions
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-ink">
-                            {stats.transitions}
-                        </p>
+                        <span className="text-xs font-medium text-ink-soft">State Transitions</span>
+                        <p className="mt-1 text-2xl font-bold text-ink">{stats.transitions}</p>
                     </div>
                     <div className="rounded-xl border border-brand/30 bg-brand-soft/30 p-3.5 shadow-sm">
-                        <span className="text-xs font-medium text-brand-strong">
-                            GPT AI Decisions
-                        </span>
-                        <p className="mt-1 text-2xl font-bold text-brand-strong">
-                            {stats.gpt}
-                        </p>
+                        <span className="text-xs font-medium text-brand-strong">GPT AI Decisions</span>
+                        <p className="mt-1 text-2xl font-bold text-brand-strong">{stats.gpt}</p>
+                    </div>
+                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                        <span className="text-xs font-medium text-ink-soft">Access & Security</span>
+                        <p className="mt-1 text-2xl font-bold text-ink">{stats.userAccess}</p>
                     </div>
                 </div>
 
                 {/* Filter and Search */}
                 <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-xs font-medium text-ink-soft">
-                            Filter:
-                        </span>
+                        <span className="text-xs font-medium text-ink-soft">Filter:</span>
                         {[
-                            {
-                                id: 'all',
-                                label: 'All Events',
-                                count: stats.total,
-                            },
-                            {
-                                id: 'overrides',
-                                label: 'Approvals & Overrides',
-                                count: stats.overrides,
-                            },
-                            {
-                                id: 'transitions',
-                                label: 'State Transitions',
-                                count: stats.transitions,
-                            },
-                            {
-                                id: 'gpt',
-                                label: 'GPT Decisions',
-                                count: stats.gpt,
-                            },
+                            { id: 'all', label: 'All Events', count: stats.total },
+                            { id: 'overrides', label: 'Overrides', count: stats.overrides },
+                            { id: 'transitions', label: 'Transitions', count: stats.transitions },
+                            { id: 'gpt', label: 'GPT Decisions', count: stats.gpt },
+                            { id: 'access', label: 'Access & Users', count: stats.userAccess },
                         ].map((cat) => (
                             <button
                                 key={cat.id}
@@ -2984,12 +3857,12 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         ))}
                     </div>
 
-                    <div className="relative w-full sm:w-72">
+                    <div className="relative w-full sm:w-80">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by action, actor, or reason…"
+                            placeholder="Search action, actor, reason, correlation ID…"
                             className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                     </div>
@@ -3015,55 +3888,150 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                     <Panel className="overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
+                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold uppercase text-ink-soft">
                                     <tr>
                                         <th className="px-4 py-3">Timestamp</th>
-                                        <th className="px-4 py-3">
-                                            Actor Attribution
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Action Type
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Attribution Reason & Context
-                                        </th>
+                                        <th className="px-4 py-3">Actor Attribution</th>
+                                        <th className="px-4 py-3">Action Type</th>
+                                        <th className="px-4 py-3">Attribution Reason & Context</th>
+                                        <th className="px-4 py-3 text-right">Forensic Inspection</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-line">
-                                    {filteredEvents.map(
-                                        (event: AuditEventViewModel) => (
-                                            <tr
-                                                key={event.id}
-                                                className="hover:bg-surface-subtle/50"
-                                            >
-                                                <td className="px-4 py-3 text-xs text-ink-soft">
-                                                    {formatDateTime(
-                                                        event.occurred_at,
-                                                        'Not recorded',
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 font-medium text-ink">
-                                                    {event.actor?.name ??
-                                                        'System Observer'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
-                                                        {event.action}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-ink-soft">
-                                                    {event.reason ??
-                                                        'No operational reason recorded'}
-                                                </td>
-                                            </tr>
-                                        ),
-                                    )}
+                                    {filteredEvents.map((event: AuditEventViewModel) => (
+                                        <tr
+                                            key={event.id}
+                                            onClick={() => setSelectedEvent(event)}
+                                            className="cursor-pointer hover:bg-surface-subtle/50 transition-colors"
+                                        >
+                                            <td className="px-4 py-3 text-xs text-ink-soft">
+                                                {formatDateTime(event.occurred_at, 'Not recorded')}
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-ink">
+                                                {event.actor?.name ?? 'System Observer'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
+                                                    {event.action}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-ink-soft">
+                                                {event.reason ?? 'No operational reason recorded'}
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedEvent(event);
+                                                    }}
+                                                >
+                                                    <FileText className="h-3.5 w-3.5" />
+                                                    Diff
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
                     </Panel>
                 )}
             </div>
+
+            {/* Modal: Visual Before/After JSON Diff Modal */}
+            {selectedEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm font-bold text-ink">{selectedEvent.action}</span>
+                                    <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs text-ink-soft">
+                                        Event #{selectedEvent.id}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-ink-soft">
+                                    Actor: {selectedEvent.actor?.name ?? 'System'} · {formatDateTime(selectedEvent.occurred_at, 'N/A')}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedEvent(null)}
+                                className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Correlation Metadata */}
+                        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 rounded-xl border border-line bg-surface-subtle p-3 text-xs">
+                            <div>
+                                <span className="text-[10px] font-semibold uppercase text-ink-soft">Subject</span>
+                                <p className="font-mono text-ink">
+                                    {selectedEvent.subject_type ? `${selectedEvent.subject_type.split('\\').pop()} #${selectedEvent.subject_id}` : 'Platform'}
+                                </p>
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-semibold uppercase text-ink-soft">IP Address</span>
+                                <p className="font-mono text-ink">{selectedEvent.ip_address ?? '127.0.0.1'}</p>
+                            </div>
+                            <div className="col-span-2">
+                                <span className="text-[10px] font-semibold uppercase text-ink-soft">Request Correlation UUID</span>
+                                <p className="font-mono text-[11px] truncate text-ink">{selectedEvent.request_id ?? 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        {selectedEvent.reason && (
+                            <div className="mt-3 rounded-lg border border-warning/30 bg-warning-soft/30 p-3 text-xs text-warning-strong">
+                                <strong>Operational Justification:</strong> {selectedEvent.reason}
+                            </div>
+                        )}
+
+                        {/* Before / After State Comparison */}
+                        <div className="mt-5 space-y-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+                                State Mutation Comparison (Before vs. After)
+                            </h4>
+
+                            {!selectedEvent.before && !selectedEvent.after ? (
+                                <div className="rounded-xl border border-line bg-surface-subtle p-4 text-center text-xs text-ink-soft">
+                                    No state payload captured for this operational event.
+                                </div>
+                            ) : (
+                                <div className="grid sm:grid-cols-2 gap-4">
+                                    {/* Before Panel */}
+                                    <div className="rounded-xl border border-line bg-surface overflow-hidden">
+                                        <div className="border-b border-line bg-danger-soft/40 px-3 py-2 text-xs font-semibold text-danger-strong">
+                                            Prior State (Before)
+                                        </div>
+                                        <pre className="p-3 text-[11px] font-mono text-ink overflow-x-auto max-h-60">
+                                            {selectedEvent.before ? JSON.stringify(selectedEvent.before, null, 2) : '(No prior state recorded)'}
+                                        </pre>
+                                    </div>
+
+                                    {/* After Panel */}
+                                    <div className="rounded-xl border border-line bg-surface overflow-hidden">
+                                        <div className="border-b border-line bg-success-soft/40 px-3 py-2 text-xs font-semibold text-success-strong">
+                                            New State (After)
+                                        </div>
+                                        <pre className="p-3 text-[11px] font-mono text-ink overflow-x-auto max-h-60">
+                                            {selectedEvent.after ? JSON.stringify(selectedEvent.after, null, 2) : '(No subsequent state)'}
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <Button variant="secondary" onClick={() => setSelectedEvent(null)}>
+                                Close Inspector
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

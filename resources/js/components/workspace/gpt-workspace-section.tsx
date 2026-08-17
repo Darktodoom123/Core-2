@@ -5,7 +5,9 @@ import {
     Bot,
     CheckCircle,
     Clock,
+    Power,
     RefreshCw,
+    ShieldAlert,
     ShieldCheck,
     Sparkles,
     Truck,
@@ -38,6 +40,67 @@ export function GptRecommendationsSurface({
     const [pollingStoppedFor, setPollingStoppedFor] = useState<string | null>(
         null,
     );
+
+    // AI Governance & Telemetry state
+    const [telemetry, setTelemetry] = useState<{
+        monthly_spend_usd: number;
+        monthly_budget_ceiling_usd: number;
+        total_tokens: number;
+        avg_latency_ms: number;
+        acceptance_rate: number;
+        accepted_count: number;
+        rejected_count: number;
+        circuit_breaker_active: boolean;
+    } | null>(null);
+    const [togglingCircuitBreaker, setTogglingCircuitBreaker] = useState(false);
+
+    useEffect(() => {
+        fetch('/operations/gpt-governance/telemetry')
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (data) {
+setTelemetry(data);
+}
+            })
+            .catch(() => {});
+    }, []);
+
+    const handleToggleCircuitBreaker = async () => {
+        const isCurrentlyActive = telemetry?.circuit_breaker_active ?? false;
+
+        if (
+            !confirm(
+                isCurrentlyActive
+                    ? 'Resume AI Advisory services platform-wide?'
+                    : 'Emergency Pause: Temporarily halt all AI recommendations and automated evaluations platform-wide?',
+            )
+        ) {
+            return;
+        }
+
+        setTogglingCircuitBreaker(true);
+        const csrfToken =
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+        try {
+            const res = await fetch('/operations/gpt-circuit-breaker/toggle', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                setTelemetry((prev) =>
+                    prev ? { ...prev, circuit_breaker_active: data.circuit_breaker_active } : null,
+                );
+            }
+        } finally {
+            setTogglingCircuitBreaker(false);
+        }
+    };
 
     const pending = useMemo(
         () =>
@@ -109,9 +172,74 @@ export function GptRecommendationsSurface({
             <PageHeading
                 title="GPT AI Advisory & Resource Recommendations"
                 description="Review explainable AI dispatch and resource proposals. All recommendations are purely advisory and require explicit human confirmation to apply."
+                actions={
+                    telemetry && (
+                        <Button
+                            variant={telemetry.circuit_breaker_active ? 'danger' : 'secondary'}
+                            onClick={handleToggleCircuitBreaker}
+                            disabled={togglingCircuitBreaker}
+                        >
+                            <Power className="h-4 w-4" />
+                            {telemetry.circuit_breaker_active
+                                ? 'AI Paused (Click to Resume)'
+                                : 'Emergency AI Circuit Breaker'}
+                        </Button>
+                    )
+                }
             />
 
             <div className="space-y-6 p-4 md:p-6">
+                {/* Circuit Breaker Warning if active */}
+                {telemetry?.circuit_breaker_active && (
+                    <div className="flex items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs text-danger-strong font-medium">
+                        <ShieldAlert className="h-5 w-5 shrink-0" />
+                        <div>
+                            <strong>Emergency Circuit Breaker Engaged:</strong> Automated AI recommendation generation is currently paused platform-wide by Administrator instruction.
+                        </div>
+                    </div>
+                )}
+
+                {/* AI Governance & Spend Telemetry Cards */}
+                {telemetry && (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                            <span className="text-xs font-medium text-ink-soft">Monthly Spend / Cap</span>
+                            <p className="mt-1 text-2xl font-bold text-ink">
+                                ${telemetry.monthly_spend_usd.toFixed(2)}
+                            </p>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Limit: ${telemetry.monthly_budget_ceiling_usd.toFixed(2)} USD
+                            </p>
+                        </div>
+
+                        <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                            <span className="text-xs font-medium text-ink-soft">Dispatcher Acceptance</span>
+                            <p className="mt-1 text-2xl font-bold text-ink">
+                                {telemetry.acceptance_rate}%
+                            </p>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                {telemetry.accepted_count} accepted, {telemetry.rejected_count} rejected
+                            </p>
+                        </div>
+
+                        <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                            <span className="text-xs font-medium text-ink-soft">Monthly Token Vol</span>
+                            <p className="mt-1 text-2xl font-bold text-ink">
+                                {telemetry.total_tokens.toLocaleString()}
+                            </p>
+                            <p className="mt-0.5 text-xs text-ink-soft">Prompt & completion</p>
+                        </div>
+
+                        <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                            <span className="text-xs font-medium text-ink-soft">Avg Model Latency</span>
+                            <p className="mt-1 text-2xl font-bold text-ink">
+                                {telemetry.avg_latency_ms} ms
+                            </p>
+                            <p className="mt-0.5 text-xs text-ink-soft">Structured inference</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Informational Guidance Banner */}
                 <div className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4">
                     <Bot className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong" />

@@ -34,8 +34,10 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
     Route::get('/users', [UserManagementController::class, 'index']);
     Route::post('/users', [UserManagementController::class, 'store']);
     Route::patch('/users/{user}', [UserManagementController::class, 'update']);
+    Route::post('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword']);
     Route::patch('/users/{user}/personnel-profile', [PersonnelController::class, 'updateProfile']);
     Route::post('/users/{user}/credentials', [PersonnelController::class, 'storeCredential']);
+    Route::delete('/users/{user}/credentials/{credential}', [PersonnelController::class, 'destroyCredential']);
 });
 
 if (app()->environment(['local', 'testing'])) {

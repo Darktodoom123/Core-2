@@ -6,6 +6,7 @@ Welcome to the documentation repository for Core Transaction 2. Documentation is
 
 ## 📦 Product & Business Specifications (`Docs/product/`)
 - [Alibaton Business Scope](product/alibaton-business-scope.md) — Alibaton heavy equipment rental, sales, and service domain boundaries.
+- [Core HR & Workforce Management Boundary](product/core-hr-workforce-boundary.md) — External Core HR employee master and Workforce Management availability boundaries.
 - [Business Rules](product/business_rules.md) — Domain business rules, validation criteria, and approval constraints.
 - [Feature Catalog](product/features.md) — Comprehensive functional catalog across Dispatch Intake, Scheduling, Approvals, Tracking, Shared Surfaces, and Native Field Mobile.
 - [Product Requirements (PRD)](product/prd.md) — Product goals, target user personas, system workflows, and operational requirements.
@@ -18,6 +19,7 @@ Welcome to the documentation repository for Core Transaction 2. Documentation is
 - [Overall Architecture](architecture/Architecture.md) — System components, tech stack boundaries, and integration principles.
 - [HTTP API Specification](architecture/API.md) — Endpoint contracts, payload schemas, and authentication models.
 - [Database Schema & Models](architecture/database.md) — Eloquent models, migration standards, table relations, and indexing.
+- [Core HR & Workforce Management Integration](architecture/hr-workforce-integration.md) — Upstream HR employee master, workforce availability/leave synchronization, and system admin provisioning.
 - [Domain Contract ADR](architecture/ADR-DISPATCH-BACKEND-V2-DOMAIN-CONTRACT.md) — Backend V2 state machines, capabilities, readiness, approval, attempt, and archive semantics.
 - [Modular Monolith Architecture](architecture/modular-monolith.md) — Domain boundaries and module encapsulation principles.
 - [Top-Level Modules](architecture/modules.md) — Backend domain modules, Web React/Inertia architecture, and React Native field mobile structure.

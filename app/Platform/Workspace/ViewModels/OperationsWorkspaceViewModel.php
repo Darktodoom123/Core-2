@@ -431,14 +431,48 @@ final class OperationsWorkspaceViewModel
      */
     public static function users(Collection $users): array
     {
-        return $users->map(static fn (User $user): array => [
-            'id' => (int) $user->getKey(),
-            'name' => $user->name,
-            'email' => $user->email,
-            'is_active' => (bool) $user->is_active,
-            'role' => $user->operationalRole()?->value,
-            'role_label' => $user->operationalRole()?->label(),
-        ])->values()->all();
+        $today = Carbon::now()->startOfDay();
+
+        return $users->map(static function (User $user) use ($today): array {
+            $profile = $user->relationLoaded('personnelProfile') ? $user->personnelProfile : null;
+            $credentials = $user->relationLoaded('personnelCredentials') ? $user->personnelCredentials : collect();
+
+            return [
+                'id' => (int) $user->getKey(),
+                'name' => $user->name,
+                'username' => $user->username,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'is_active' => (bool) $user->is_active,
+                'suspended_at' => $user->suspended_at?->toIso8601String(),
+                'role' => $user->operationalRole()?->value,
+                'role_label' => $user->operationalRole()?->label(),
+                'profile' => $profile === null ? null : [
+                    'employee_number' => $profile->employee_number,
+                    'availability_status' => $profile->availability_status,
+                    'emergency_contact_name' => $profile->emergency_contact_name,
+                    'emergency_contact_phone' => $profile->emergency_contact_phone,
+                ],
+                'credentials' => $credentials->map(static function ($cred) use ($today): array {
+                    $expiresAt = $cred->expires_at ? Carbon::parse($cred->expires_at)->startOfDay() : null;
+                    $isExpired = $expiresAt !== null && $expiresAt->isPast();
+                    $expiresSoon = $expiresAt !== null && ! $isExpired && $today->diffInDays($expiresAt, false) <= 30;
+
+                    return [
+                        'id' => (int) $cred->id,
+                        'kind' => $cred->kind,
+                        'credential_number' => $cred->credential_number,
+                        'credential_type' => $cred->credential_type,
+                        'issued_at' => $cred->issued_at?->toDateString(),
+                        'expires_at' => $cred->expires_at?->toDateString(),
+                        'status' => $cred->status,
+                        'is_expired' => $isExpired,
+                        'expires_soon' => $expiresSoon,
+                        'verified_at' => $cred->verified_at?->toIso8601String(),
+                    ];
+                })->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**
@@ -456,6 +490,12 @@ final class OperationsWorkspaceViewModel
             ],
             'occurred_at' => $event->occurred_at?->toIso8601String(),
             'reason' => $event->reason,
+            'subject_type' => $event->subject_type,
+            'subject_id' => $event->subject_id,
+            'before' => $event->before,
+            'after' => $event->after,
+            'ip_address' => $event->ip_address,
+            'request_id' => $event->request_id,
         ])->values()->all();
     }
 

@@ -239,7 +239,11 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
-        return User::query()->with('roles:id,name')->orderBy('name')->limit(100)->get();
+        return User::query()
+            ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials'])
+            ->orderBy('name')
+            ->limit(200)
+            ->get();
     }
 
     /** @return Collection<int, AuditEvent> */

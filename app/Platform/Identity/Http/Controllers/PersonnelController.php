@@ -50,4 +50,17 @@ final class PersonnelController extends Controller
 
         return response()->json(['data' => $credential], 201);
     }
+
+    public function destroyCredential(Request $request, User $user, PersonnelCredential $credential, RecordAuditEvent $audit): JsonResponse
+    {
+        Gate::authorize(PermissionName::UsersManage->value);
+        abort_unless($credential->user_id === $user->id, 404);
+
+        $credentialData = $credential->toArray();
+        $credential->delete();
+
+        $audit->handle($request->user(), $user, 'personnel.credential_removed', $credentialData, null);
+
+        return response()->json(['message' => 'Credential removed successfully.']);
+    }
 }

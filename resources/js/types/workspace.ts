@@ -366,13 +366,38 @@ export interface ApprovalViewModel {
     created_at: string | null;
 }
 
+export interface PersonnelCredentialViewModel {
+    id: number;
+    kind: 'driver_license' | 'operator_certification' | 'qualification' | string;
+    credential_number: string;
+    credential_type: string;
+    issued_at: string | null;
+    expires_at: string | null;
+    status: 'active' | 'expired' | 'suspended' | string;
+    is_expired?: boolean;
+    expires_soon?: boolean;
+    verified_at?: string | null;
+}
+
+export interface PersonnelProfileViewModel {
+    employee_number: string | null;
+    availability_status: string;
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
+}
+
 export interface WorkspaceUserViewModel {
     id: number;
     name: string;
+    username?: string;
     email: string;
+    phone?: string | null;
     is_active: boolean;
+    suspended_at?: string | null;
     role: string | null;
     role_label: string | null;
+    profile?: PersonnelProfileViewModel | null;
+    credentials?: PersonnelCredentialViewModel[];
 }
 
 export interface AuditEventViewModel {
@@ -384,6 +409,12 @@ export interface AuditEventViewModel {
     } | null;
     occurred_at: string | null;
     reason: string | null;
+    subject_type?: string | null;
+    subject_id?: number | string | null;
+    before?: Record<string, unknown> | null;
+    after?: Record<string, unknown> | null;
+    ip_address?: string | null;
+    request_id?: string | null;
 }
 
 export interface LocationUpdateViewModel {

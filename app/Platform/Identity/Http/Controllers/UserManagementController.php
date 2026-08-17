@@ -42,17 +42,62 @@ final class UserManagementController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:32'],
             'role' => ['required', Rule::enum(RoleName::class)],
+            'generate_temp_password' => ['sometimes', 'boolean'],
         ]);
 
-        $user = DB::transaction(function () use ($request, $validated, $audit): User {
-            $user = User::query()->create(['name' => $validated['name'], 'username' => $validated['username'], 'email' => $validated['email'], 'phone' => $validated['phone'] ?? null, 'password' => Hash::make(Str::password(40)), 'is_active' => true]);
+        $tempPassword = ! empty($validated['generate_temp_password'])
+            ? Str::password(14, true, true, false)
+            : null;
+
+        $user = DB::transaction(function () use ($request, $validated, $tempPassword, $audit): User {
+            $user = User::query()->create([
+                'name' => $validated['name'],
+                'username' => $validated['username'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+                'password' => Hash::make($tempPassword ?? Str::password(40)),
+                'is_active' => true,
+                'email_verified_at' => $tempPassword !== null ? now() : null,
+            ]);
             $user->syncRoles([$validated['role']]);
-            $audit->handle($request->user(), $user, 'user.invited', null, ['email' => $user->email, 'role' => $validated['role']]);
+            $audit->handle($request->user(), $user, 'user.invited', null, [
+                'email' => $user->email,
+                'role' => $validated['role'],
+                'has_temp_password' => $tempPassword !== null,
+            ]);
 
             return $user->load('roles:id,name');
         });
 
-        return response()->json(['data' => $user], 201);
+        return response()->json([
+            'data' => $user,
+            'temporary_password' => $tempPassword,
+        ], 201);
+    }
+
+    public function resetPassword(Request $request, User $user, RecordAuditEvent $audit): JsonResponse
+    {
+        Gate::authorize(PermissionName::UsersManage->value);
+
+        $tempPassword = Str::password(14, true, true, false);
+
+        DB::transaction(function () use ($request, $user, $tempPassword, $audit): void {
+            $user->update([
+                'password' => Hash::make($tempPassword),
+                'email_verified_at' => $user->email_verified_at ?? now(),
+            ]);
+            $user->tokens()->delete();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+
+            $audit->handle($request->user(), $user, 'user.password_reset', null, [
+                'user_id' => $user->id,
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Temporary password generated successfully.',
+            'temporary_password' => $tempPassword,
+        ]);
     }
 
     public function update(Request $request, User $user, RecordAuditEvent $audit): JsonResponse
