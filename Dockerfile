@@ -1,7 +1,8 @@
-FROM composer:2 AS composer-builder
+FROM composer:2-alpine AS composer-builder
 WORKDIR /app
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache \
+    && apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
@@ -15,14 +16,13 @@ RUN composer install \
     --no-interaction \
     --prefer-dist \
     --optimize-autoloader \
-    --no-scripts
-
 # This target intentionally contains only the PHP runtime needed by the
 # PostgreSQL row-lock tests. Compose mounts the working tree and its existing
 # development dependencies, so the production image stays production-only.
 FROM php:8.4-cli-alpine AS test-runner
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache \
+    && apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
@@ -46,36 +46,13 @@ RUN apk add --no-cache \
 
 WORKDIR /var/www/html
 
-FROM node:22-alpine AS frontend-builder
+FROM php:8.4-cli-alpine AS frontend-builder
 WORKDIR /app
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-RUN apk add --no-cache \
-    ca-certificates \
-    gcompat \
-    libc6-compat \
-    php84 \
-    php84-cli \
-    php84-phar \
-    php84-mbstring \
-    php84-openssl \
-    php84-tokenizer \
-    php84-xml \
-    php84-ctype \
-    php84-json \
-    php84-pdo \
-    php84-pdo_sqlite \
-    php84-dom \
-    php84-fileinfo \
-    php84-curl \
-    php84-session \
-    php84-simplexml \
-    php84-iconv \
-    php84-posix \
-    php84-pcntl \
-    php84-bcmath \
-    && ln -sf /usr/bin/php84 /usr/bin/php
+RUN apk update && apk upgrade --no-cache \
+    && apk add --no-cache nodejs npm
 
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -101,7 +78,8 @@ RUN cp .env.example .env \
 
 FROM php:8.4-fpm-alpine AS runtime
 
-RUN apk add --no-cache \
+RUN apk update && apk upgrade --no-cache \
+    && apk add --no-cache \
     nginx \
     supervisor \
     curl \
