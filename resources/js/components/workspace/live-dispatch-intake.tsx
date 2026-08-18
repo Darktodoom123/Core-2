@@ -50,13 +50,21 @@ export type IntakeMode =
     | 'client'
     | null;
 
+const ON_SITE_SAFETY_REQUIREMENTS = [
+    'Require on-site ground bearing & soil stability check',
+    'Require outrigger pad clearance & positioning check',
+    'Require overhead power line safe clearance verification',
+    'Require site induction & PPE compliance verification',
+];
+
+const PERMITS_RIGGING_REQUIREMENTS = [
+    'Require certified rigging gear & inspection sign-off',
+    'Require traffic control & local municipal permit in place',
+];
+
 const PREDEFINED_TECHNICAL_REQUIREMENTS = [
-    'Ground bearing & soil stability verified',
-    'Outrigger pad clearance & positioning confirmed',
-    'Overhead power line safe clearance verified',
-    'Certified rigging equipment inspection passed',
-    'Traffic control & local municipal permit in place',
-    'Site induction & PPE compliance verified',
+    ...ON_SITE_SAFETY_REQUIREMENTS,
+    ...PERMITS_RIGGING_REQUIREMENTS,
 ];
 
 type IncomingWorkItem = {
@@ -478,6 +486,7 @@ function ManualDispatchIntakeForm({
     onClose: () => void;
 }) {
     const [requirements, setRequirements] = useState<string[]>([]);
+    const [customRequirements, setCustomRequirements] = useState<string[]>([]);
     const [customRequirement, setCustomRequirement] = useState('');
 
     const form = useForm({
@@ -500,17 +509,54 @@ function ManualDispatchIntakeForm({
         );
     };
 
+    const toggleCustomRequirement = (text: string) => {
+        setRequirements((prev) =>
+            prev.includes(text)
+                ? prev.filter((r) => r !== text)
+                : [...prev, text],
+        );
+    };
+
     const addCustomRequirement = () => {
         const trimmed = customRequirement.trim();
 
-        if (trimmed && !requirements.includes(trimmed)) {
-            setRequirements((prev) => [...prev, trimmed]);
+        if (trimmed) {
+            if (!customRequirements.includes(trimmed)) {
+                setCustomRequirements((prev) => [...prev, trimmed]);
+            }
+
+            if (!requirements.includes(trimmed)) {
+                setRequirements((prev) => [...prev, trimmed]);
+            }
+
             setCustomRequirement('');
         }
     };
 
-    const removeRequirement = (text: string) => {
+    const removeCustomRequirement = (text: string) => {
+        setCustomRequirements((prev) => prev.filter((r) => r !== text));
         setRequirements((prev) => prev.filter((r) => r !== text));
+    };
+
+    const allStandardSelected = PREDEFINED_TECHNICAL_REQUIREMENTS.every((req) =>
+        requirements.includes(req),
+    );
+
+    const toggleAllStandard = () => {
+        if (allStandardSelected) {
+            setRequirements((prev) =>
+                prev.filter(
+                    (r) => !PREDEFINED_TECHNICAL_REQUIREMENTS.includes(r),
+                ),
+            );
+        } else {
+            setRequirements((prev) => [
+                ...prev.filter(
+                    (r) => !PREDEFINED_TECHNICAL_REQUIREMENTS.includes(r),
+                ),
+                ...PREDEFINED_TECHNICAL_REQUIREMENTS,
+            ]);
+        }
     };
 
     const formComplete =
@@ -532,6 +578,7 @@ function ManualDispatchIntakeForm({
             onSuccess: () => {
                 form.reset();
                 setRequirements([]);
+                setCustomRequirements([]);
                 onClose();
             },
         });
@@ -707,62 +754,262 @@ function ManualDispatchIntakeForm({
                     </SelectField>
                 </div>
 
-                <div className="rounded-lg border border-line bg-surface p-4">
-                    <div className="flex items-center justify-between">
+                <div className="rounded-xl border border-line bg-surface p-4 shadow-2xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h4 className="text-sm font-semibold text-ink">
-                                Technical requirements &amp; safety checklist
+                                Technical requirements &amp; safety directives
                             </h4>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Select required prerequisites or add custom site
-                                criteria for this dispatch.
+                                Optional field directives — select criteria the
+                                operator &amp; crew must verify before
+                                commencing work.
                             </p>
                         </div>
-                        <span className="text-xs font-medium text-ink-soft">
-                            {requirements.length} requirement
-                            {requirements.length === 1 ? '' : 's'} added
-                        </span>
+                        <div className="flex items-center gap-2.5">
+                            <button
+                                type="button"
+                                onClick={toggleAllStandard}
+                                className="text-xs font-semibold text-brand-strong transition-colors hover:text-ink hover:underline"
+                            >
+                                {allStandardSelected
+                                    ? 'Deselect all standard'
+                                    : 'Select all standard'}
+                            </button>
+                            <span
+                                className={cn(
+                                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors',
+                                    requirements.length > 0
+                                        ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong shadow-2xs'
+                                        : 'border border-line bg-surface-subtle text-ink-soft',
+                                )}
+                            >
+                                {requirements.length} requirement
+                                {requirements.length === 1 ? '' : 's'} added
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {PREDEFINED_TECHNICAL_REQUIREMENTS.map((req) => {
-                            const active = requirements.includes(req);
+                    {/* Section 1: On-Site Safety Checks */}
+                    <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-1.5 text-ink-soft">
+                            <ShieldCheck
+                                className="h-3.5 w-3.5 text-brand-strong"
+                                aria-hidden="true"
+                            />
+                            <span className="text-[11px] font-semibold tracking-wide uppercase">
+                                On-Site Safety Checks (Operator verifies on
+                                site)
+                            </span>
+                        </div>
+                        <div className="grid gap-2.5 sm:grid-cols-2">
+                            {ON_SITE_SAFETY_REQUIREMENTS.map((req) => {
+                                const active = requirements.includes(req);
 
-                            return (
-                                <button
-                                    key={req}
-                                    type="button"
-                                    aria-pressed={active}
-                                    onClick={() => togglePredefined(req)}
-                                    className={cn(
-                                        'flex min-h-11 items-center gap-2.5 rounded-lg border p-2.5 text-left text-xs font-medium transition-colors',
-                                        active
-                                            ? 'border-brand bg-brand-soft text-brand-strong'
-                                            : 'border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                                    )}
-                                >
-                                    <div
+                                return (
+                                    <label
+                                        key={req}
                                         className={cn(
-                                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                            'group relative flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-all duration-150 select-none',
                                             active
-                                                ? 'border-brand-strong bg-brand-strong text-white'
-                                                : 'border-line-strong bg-surface',
+                                                ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
+                                                : 'border-line bg-surface text-ink shadow-2xs hover:border-brand/40 hover:bg-surface-subtle/60',
                                         )}
                                     >
-                                        {active && (
-                                            <Check
-                                                className="h-3 w-3"
-                                                aria-hidden="true"
-                                            />
-                                        )}
-                                    </div>
-                                    <span className="leading-snug">{req}</span>
-                                </button>
-                            );
-                        })}
+                                        <input
+                                            type="checkbox"
+                                            checked={active}
+                                            onChange={() =>
+                                                togglePredefined(req)
+                                            }
+                                            className="sr-only"
+                                        />
+                                        <div
+                                            className={cn(
+                                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
+                                                active
+                                                    ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
+                                                    : 'border-line-strong bg-surface group-hover:border-brand/60',
+                                            )}
+                                            aria-hidden="true"
+                                        >
+                                            {active && (
+                                                <Check
+                                                    className="h-3.5 w-3.5 stroke-[2.75]"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                        </div>
+                                        <span
+                                            className={cn(
+                                                'flex-1 leading-snug transition-colors',
+                                                active
+                                                    ? 'font-semibold text-ink'
+                                                    : 'font-normal text-ink',
+                                            )}
+                                        >
+                                            {req}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    <div className="mt-3 flex gap-2">
+                    {/* Section 2: Permits & Rigging Compliance */}
+                    <div className="mt-4 space-y-2 border-t border-line/70 pt-3.5">
+                        <div className="flex items-center gap-1.5 text-ink-soft">
+                            <ClipboardCheck
+                                className="h-3.5 w-3.5 text-brand-strong"
+                                aria-hidden="true"
+                            />
+                            <span className="text-[11px] font-semibold tracking-wide uppercase">
+                                Permits &amp; Equipment Compliance
+                            </span>
+                        </div>
+                        <div className="grid gap-2.5 sm:grid-cols-2">
+                            {PERMITS_RIGGING_REQUIREMENTS.map((req) => {
+                                const active = requirements.includes(req);
+
+                                return (
+                                    <label
+                                        key={req}
+                                        className={cn(
+                                            'group relative flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-all duration-150 select-none',
+                                            active
+                                                ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
+                                                : 'border-line bg-surface text-ink shadow-2xs hover:border-brand/40 hover:bg-surface-subtle/60',
+                                        )}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={active}
+                                            onChange={() =>
+                                                togglePredefined(req)
+                                            }
+                                            className="sr-only"
+                                        />
+                                        <div
+                                            className={cn(
+                                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
+                                                active
+                                                    ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
+                                                    : 'border-line-strong bg-surface group-hover:border-brand/60',
+                                            )}
+                                            aria-hidden="true"
+                                        >
+                                            {active && (
+                                                <Check
+                                                    className="h-3.5 w-3.5 stroke-[2.75]"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                        </div>
+                                        <span
+                                            className={cn(
+                                                'flex-1 leading-snug transition-colors',
+                                                active
+                                                    ? 'font-semibold text-ink'
+                                                    : 'font-normal text-ink',
+                                            )}
+                                        >
+                                            {req}
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Section 3: Custom Technical Requirements */}
+                    {customRequirements.length > 0 && (
+                        <div className="mt-4 space-y-2 border-t border-line/70 pt-3.5">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+                                    Custom Site Criteria (
+                                    {customRequirements.length})
+                                </p>
+                            </div>
+                            <div className="grid gap-2.5 sm:grid-cols-2">
+                                {customRequirements.map((req) => {
+                                    const active = requirements.includes(req);
+
+                                    return (
+                                        <div
+                                            key={req}
+                                            className={cn(
+                                                'group relative flex min-h-[52px] items-center justify-between gap-2.5 rounded-xl border p-3 text-left text-xs transition-all duration-150',
+                                                active
+                                                    ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
+                                                    : 'border-line bg-surface text-ink-soft shadow-2xs hover:border-line-strong hover:bg-surface-subtle/60',
+                                            )}
+                                        >
+                                            <label className="flex flex-1 cursor-pointer items-center gap-3 select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={active}
+                                                    onChange={() =>
+                                                        toggleCustomRequirement(
+                                                            req,
+                                                        )
+                                                    }
+                                                    className="sr-only"
+                                                />
+                                                <div
+                                                    className={cn(
+                                                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
+                                                        active
+                                                            ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
+                                                            : 'border-line-strong bg-surface group-hover:border-brand/60',
+                                                    )}
+                                                    aria-hidden="true"
+                                                >
+                                                    {active && (
+                                                        <Check
+                                                            className="h-3.5 w-3.5 stroke-[2.75]"
+                                                            aria-hidden="true"
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 leading-snug">
+                                                    <span
+                                                        className={cn(
+                                                            'block',
+                                                            active
+                                                                ? 'font-semibold text-ink'
+                                                                : 'text-ink-soft line-through',
+                                                        )}
+                                                    >
+                                                        {req}
+                                                    </span>
+                                                    <span className="text-[10px] font-medium text-brand-strong">
+                                                        Custom
+                                                    </span>
+                                                </div>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeCustomRequirement(req)
+                                                }
+                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-danger-soft hover:text-danger-strong"
+                                                aria-label={`Remove custom requirement: ${req}`}
+                                                title="Remove custom requirement"
+                                            >
+                                                <X
+                                                    className="h-3.5 w-3.5"
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Add Custom Requirement Input */}
+                    <div className="mt-4 flex gap-2 border-t border-line/70 pt-3.5">
                         <label
                             htmlFor="manual-custom-requirement"
                             className="sr-only"
@@ -783,7 +1030,7 @@ function ManualDispatchIntakeForm({
                                 }
                             }}
                             placeholder="Add custom technical requirement..."
-                            className="h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-xs"
+                            className="h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                         <Button
                             type="button"
@@ -796,34 +1043,6 @@ function ManualDispatchIntakeForm({
                             Add item
                         </Button>
                     </div>
-
-                    {requirements.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3">
-                            {requirements.map((req) => (
-                                <span
-                                    key={req}
-                                    className="inline-flex items-center gap-1.5 rounded-md border border-brand/30 bg-brand-soft px-2.5 py-1 text-xs text-brand-strong"
-                                >
-                                    <ShieldCheck
-                                        className="h-3.5 w-3.5 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span>{req}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeRequirement(req)}
-                                        className="text-brand-strong hover:text-danger"
-                                        aria-label={`Remove requirement: ${req}`}
-                                    >
-                                        <X
-                                            className="h-3 w-3"
-                                            aria-hidden="true"
-                                        />
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-                    )}
                 </div>
 
                 <TextAreaField
