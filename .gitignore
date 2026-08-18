@@ -57,7 +57,15 @@ PRODUCT.md
 /resources/js/components/assets/173b1ecd897678a07c7dd15caa7ca201924b16fbee1bf22391bbd205fb274e21.png
 PENCIL_PROMPTS.md
 skills-lock.json
-storage/framework/testing/
+/.cursor
+/.windsurf
+.DS_Store
+Thumbs.db
+/playwright-report
+/.playwright-artifacts
+/coverage
+storage/framework/testing/*
+!storage/framework/testing/.gitignore
 /Docs
 .ai-reports/
 /test-results/
