@@ -33,7 +33,7 @@ return [
     */
 
     'csp' => [
-        'enabled' => env('SECURITY_HEADER_CSP_ENABLED', true),
+        'enabled' => env('SECURITY_HEADER_CSP_ENABLED', false),
         'default-src' => ["'self'"],
         'script-src' => [
             "'self'",

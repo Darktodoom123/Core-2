@@ -148,11 +148,11 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $truck = OperationalAsset::query()->firstOrCreate(
             ['code' => 'TRK-01'],
-            ['name' => 'Heavy Rig Truck', 'type' => 'truck', 'status' => AssetStatus::Available]
+            ['name' => 'Heavy Rig Truck', 'kind' => 'truck', 'status' => AssetStatus::Available]
         );
         $crane = OperationalAsset::query()->firstOrCreate(
             ['code' => 'CRN-01'],
-            ['name' => '50T Mobile Crane', 'type' => 'crane', 'status' => AssetStatus::Available]
+            ['name' => '50T Mobile Crane', 'kind' => 'crane', 'status' => AssetStatus::Available]
         );
 
         $approvalJob = DispatchJob::query()->create([

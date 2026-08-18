@@ -202,6 +202,12 @@ final class LocalDevelopmentSeeder extends Seeder
     {
         return [
             [
+                'name' => 'Dev System Administrator',
+                'username' => Username::fromEmail('admin@example.com'),
+                'email' => 'admin@example.com',
+                'role' => RoleName::SystemAdministrator,
+            ],
+            [
                 'name' => 'Dev Dispatcher',
                 'username' => Username::fromEmail('dispatcher@example.com'),
                 'email' => 'dispatcher@example.com',

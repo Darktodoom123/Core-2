@@ -1,6 +1,7 @@
 <?php
 
 use App\Platform\Identity\Models\User;
+use Database\Seeders\BrowserAcceptanceSeeder;
 use Database\Seeders\LocalDevelopmentSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,29 +13,58 @@ beforeEach(function (): void {
     $this->seed(LocalDevelopmentSeeder::class);
 });
 
-it('lists active local accounts with their operational role labels', function (): void {
+it('lists only active system admin, operations manager, and dispatcher accounts', function (): void {
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(5);
+    expect($response->json())->toHaveCount(3);
     expect(collect($response->json())->pluck('role_label')->sort()->values()->all())
         ->toEqual([
-            'Crane Operator',
             'Dispatcher',
-            'Driver',
-            'Field Technician',
             'Operations Manager',
+            'System Administrator',
         ]);
 });
 
-it('quick logs in active accounts and excludes suspended accounts', function (): void {
-    $user = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
+it('quick logs in allowed roles and rejects disallowed or suspended accounts', function (): void {
+    $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
+    $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
+    $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
+    $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
     $suspendedUser = User::factory()->suspended()->create();
 
-    $this->post('/dev/login/'.$user->id)
-        ->assertRedirect(route('home'));
+    // Allowed accounts can quick-login
+    $this->post('/dev/login/'.$admin->id)->assertRedirect(route('home'));
+    $this->assertAuthenticatedAs($admin);
 
-    $this->assertAuthenticatedAs($user);
-    $this->getJson('/dev/users')->assertJsonMissing(['id' => $suspendedUser->id]);
+    $this->post('/dev/login/'.$dispatcher->id)->assertRedirect(route('home'));
+    $this->assertAuthenticatedAs($dispatcher);
 
+    $this->post('/dev/login/'.$manager->id)->assertRedirect(route('home'));
+    $this->assertAuthenticatedAs($manager);
+
+    // Non-allowed roles and suspended accounts are not in dev list
+    $this->getJson('/dev/users')
+        ->assertJsonMissing(['id' => $driver->id])
+        ->assertJsonMissing(['id' => $suspendedUser->id]);
+
+    // Quick login is rejected for disallowed role or suspended account
+    $this->post('/dev/login/'.$driver->id)->assertNotFound();
     $this->post('/dev/login/'.$suspendedUser->id)->assertNotFound();
+});
+
+it('excludes browser test fixtures from dev quick sign-in', function (): void {
+    $this->seed(BrowserAcceptanceSeeder::class);
+
+    $response = $this->getJson('/dev/users')->assertOk();
+
+    expect($response->json())->toHaveCount(3);
+    expect(collect($response->json())->pluck('email')->sort()->values()->all())
+        ->toEqual([
+            'admin@example.com',
+            'dispatcher@example.com',
+            'manager@example.com',
+        ]);
+
+    $browserDispatcher = User::query()->where('email', 'browser.dispatcher@example.com')->firstOrFail();
+    $this->post('/dev/login/'.$browserDispatcher->id)->assertNotFound();
 });

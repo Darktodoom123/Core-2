@@ -1,5 +1,6 @@
 <?php
 
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Platform\Identity\Http\Controllers\Auth\EmailVerificationController;
 use App\Platform\Identity\Http\Controllers\Auth\NewPasswordController;
@@ -44,6 +45,16 @@ if (app()->environment(['local', 'testing'])) {
     Route::get('/dev/users', function () {
         return response()->json(
             User::query()
+                ->whereIn('email', [
+                    'admin@example.com',
+                    'manager@example.com',
+                    'dispatcher@example.com',
+                ])
+                ->role([
+                    RoleName::SystemAdministrator->value,
+                    RoleName::OperationsManager->value,
+                    RoleName::Dispatcher->value,
+                ])
                 ->with('roles')
                 ->select('id', 'name', 'email')
                 ->where('is_active', true)
@@ -63,7 +74,19 @@ if (app()->environment(['local', 'testing'])) {
 
     Route::post('/dev/login/{user}', function (User $user) {
         abort_unless(
-            $user->is_active && $user->suspended_at === null && $user->hasVerifiedEmail(),
+            $user->is_active
+            && $user->suspended_at === null
+            && $user->hasVerifiedEmail()
+            && in_array($user->email, [
+                'admin@example.com',
+                'manager@example.com',
+                'dispatcher@example.com',
+            ], true)
+            && $user->hasAnyRole([
+                RoleName::SystemAdministrator->value,
+                RoleName::OperationsManager->value,
+                RoleName::Dispatcher->value,
+            ]),
             404,
         );
 
