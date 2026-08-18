@@ -59,8 +59,8 @@ export function GptRecommendationsSurface({
             .then((res) => (res.ok ? res.json() : null))
             .then((data) => {
                 if (data) {
-setTelemetry(data);
-}
+                    setTelemetry(data);
+                }
             })
             .catch(() => {});
     }, []);
@@ -80,7 +80,9 @@ setTelemetry(data);
 
         setTogglingCircuitBreaker(true);
         const csrfToken =
-            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? '';
 
         try {
             const res = await fetch('/operations/gpt-circuit-breaker/toggle', {
@@ -94,7 +96,13 @@ setTelemetry(data);
 
             if (res.ok) {
                 setTelemetry((prev) =>
-                    prev ? { ...prev, circuit_breaker_active: data.circuit_breaker_active } : null,
+                    prev
+                        ? {
+                              ...prev,
+                              circuit_breaker_active:
+                                  data.circuit_breaker_active,
+                          }
+                        : null,
                 );
             }
         } finally {
@@ -175,7 +183,11 @@ setTelemetry(data);
                 actions={
                     telemetry && (
                         <Button
-                            variant={telemetry.circuit_breaker_active ? 'danger' : 'secondary'}
+                            variant={
+                                telemetry.circuit_breaker_active
+                                    ? 'danger'
+                                    : 'secondary'
+                            }
                             onClick={handleToggleCircuitBreaker}
                             disabled={togglingCircuitBreaker}
                         >
@@ -191,10 +203,12 @@ setTelemetry(data);
             <div className="space-y-6 p-4 md:p-6">
                 {/* Circuit Breaker Warning if active */}
                 {telemetry?.circuit_breaker_active && (
-                    <div className="flex items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs text-danger-strong font-medium">
+                    <div className="flex items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs font-medium text-danger-strong">
                         <ShieldAlert className="h-5 w-5 shrink-0" />
                         <div>
-                            <strong>Emergency Circuit Breaker Engaged:</strong> Automated AI recommendation generation is currently paused platform-wide by Administrator instruction.
+                            <strong>Emergency Circuit Breaker Engaged:</strong>{' '}
+                            Automated AI recommendation generation is currently
+                            paused platform-wide by Administrator instruction.
                         </div>
                     </div>
                 )}
@@ -203,39 +217,56 @@ setTelemetry(data);
                 {telemetry && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                            <span className="text-xs font-medium text-ink-soft">Monthly Spend / Cap</span>
+                            <span className="text-xs font-medium text-ink-soft">
+                                Monthly Spend / Cap
+                            </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
                                 ${telemetry.monthly_spend_usd.toFixed(2)}
                             </p>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Limit: ${telemetry.monthly_budget_ceiling_usd.toFixed(2)} USD
+                                Limit: $
+                                {telemetry.monthly_budget_ceiling_usd.toFixed(
+                                    2,
+                                )}{' '}
+                                USD
                             </p>
                         </div>
 
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                            <span className="text-xs font-medium text-ink-soft">Dispatcher Acceptance</span>
+                            <span className="text-xs font-medium text-ink-soft">
+                                Dispatcher Acceptance
+                            </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
                                 {telemetry.acceptance_rate}%
                             </p>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                {telemetry.accepted_count} accepted, {telemetry.rejected_count} rejected
+                                {telemetry.accepted_count} accepted,{' '}
+                                {telemetry.rejected_count} rejected
                             </p>
                         </div>
 
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                            <span className="text-xs font-medium text-ink-soft">Monthly Token Vol</span>
+                            <span className="text-xs font-medium text-ink-soft">
+                                Monthly Token Vol
+                            </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
                                 {telemetry.total_tokens.toLocaleString()}
                             </p>
-                            <p className="mt-0.5 text-xs text-ink-soft">Prompt & completion</p>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Prompt & completion
+                            </p>
                         </div>
 
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                            <span className="text-xs font-medium text-ink-soft">Avg Model Latency</span>
+                            <span className="text-xs font-medium text-ink-soft">
+                                Avg Model Latency
+                            </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
                                 {telemetry.avg_latency_ms} ms
                             </p>
-                            <p className="mt-0.5 text-xs text-ink-soft">Structured inference</p>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Structured inference
+                            </p>
                         </div>
                     </div>
                 )}

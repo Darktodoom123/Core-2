@@ -9,8 +9,13 @@ use App\Platform\Gpt\Actions\GenerateGptRecommendation;
 use App\Platform\Gpt\Actions\RejectGptRecommendation;
 use App\Platform\Gpt\Actions\RetryGptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Models\GptRecommendationMetric;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -76,14 +81,14 @@ final class GptRecommendationController extends Controller
         ]);
     }
 
-    public function toggleCircuitBreaker(Request $request): \Illuminate\Http\JsonResponse
+    public function toggleCircuitBreaker(Request $request): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor->hasRole(\App\Platform\Identity\Enums\RoleName::SystemAdministrator->value) || $actor->can(\App\Platform\Identity\Enums\PermissionName::GptConfigure->value), 403);
+        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::GptConfigure->value), 403);
 
-        $currentState = (bool) \Illuminate\Support\Facades\Cache::get('gpt_circuit_breaker_disabled', false);
+        $currentState = (bool) Cache::get('gpt_circuit_breaker_disabled', false);
         $newState = ! $currentState;
-        \Illuminate\Support\Facades\Cache::forever('gpt_circuit_breaker_disabled', $newState);
+        Cache::forever('gpt_circuit_breaker_disabled', $newState);
 
         return response()->json([
             'circuit_breaker_active' => $newState,
@@ -93,12 +98,12 @@ final class GptRecommendationController extends Controller
         ]);
     }
 
-    public function governanceTelemetry(Request $request): \Illuminate\Http\JsonResponse
+    public function governanceTelemetry(Request $request): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor->hasRole(\App\Platform\Identity\Enums\RoleName::SystemAdministrator->value) || $actor->can(\App\Platform\Identity\Enums\PermissionName::GptConfigure->value), 403);
+        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::GptConfigure->value), 403);
 
-        $monthlyMetrics = \App\Platform\Gpt\Models\GptRecommendationMetric::query()
+        $monthlyMetrics = GptRecommendationMetric::query()
             ->where('occurred_at', '>=', now()->startOfMonth())
             ->get();
 
@@ -123,7 +128,7 @@ final class GptRecommendationController extends Controller
             'acceptance_rate' => $acceptanceRate,
             'accepted_count' => $accepted,
             'rejected_count' => $rejected,
-            'circuit_breaker_active' => (bool) \Illuminate\Support\Facades\Cache::get('gpt_circuit_breaker_disabled', false),
+            'circuit_breaker_active' => (bool) Cache::get('gpt_circuit_breaker_disabled', false),
         ]);
     }
 }

@@ -30,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $source_reference
  * @property Carbon|null $scheduled_start
  * @property Carbon|null $scheduled_end
+ * @property int|null $cancelled_by
+ * @property string|null $cancellation_reason
  */
 class DispatchJob extends Model
 {

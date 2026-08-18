@@ -1,6 +1,7 @@
 <?php
 
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,6 +140,5 @@ it('allows administrator to manage and delete personnel credentials with qualifi
         ->deleteJson("/operations/users/{$driver->id}/credentials/{$credId}")
         ->assertOk();
 
-    expect(\App\Platform\Identity\Models\PersonnelCredential::find($credId))->toBeNull();
+    expect(PersonnelCredential::find($credId))->toBeNull();
 });
-

@@ -24,6 +24,9 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $name
  * @property string $username
  * @property string $email
+ * @property string|null $phone
+ * @property bool $is_active
+ * @property Carbon|null $suspended_at
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token

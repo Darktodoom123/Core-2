@@ -16,7 +16,6 @@ use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 
 final class AdminOverrideController extends Controller
 {
@@ -61,7 +60,7 @@ final class AdminOverrideController extends Controller
             // 3. Set dispatch job status to cancelled with audit flag
             $job->status = DispatchStatus::Cancelled;
             $job->cancelled_by = $actor->id;
-            $job->cancellation_reason = '[EMERGENCY ADMIN OVERRIDE] ' . $validated['reason'];
+            $job->cancellation_reason = '[EMERGENCY ADMIN OVERRIDE] '.$validated['reason'];
             $job->version += 1;
             $job->save();
 

@@ -368,7 +368,8 @@ export interface ApprovalViewModel {
 
 export interface PersonnelCredentialViewModel {
     id: number;
-    kind: 'driver_license' | 'operator_certification' | 'qualification' | string;
+    kind:
+        'driver_license' | 'operator_certification' | 'qualification' | string;
     credential_number: string;
     credential_type: string;
     issued_at: string | null;
