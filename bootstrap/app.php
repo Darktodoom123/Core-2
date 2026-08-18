@@ -5,6 +5,7 @@ use App\Platform\Gpt\Jobs\PruneGptRecommendationsJob;
 use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
 use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
+use App\Platform\Security\Http\Middleware\EnforceSecurityHeaders;
 use App\Platform\Workspace\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -33,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'api-token' => EnsurePersonalAccessToken::class,
         ]);
+
+        $middleware->append(EnforceSecurityHeaders::class);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

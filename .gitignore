@@ -62,3 +62,4 @@ storage/framework/testing/
 .ai-reports/
 /test-results/
 .devswarm-temp/
+/zap-report*.json
