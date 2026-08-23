@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import React from 'react';
 import { Button, Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -15,22 +15,17 @@ export function AssignmentNextAction({
 }) {
     return (
         <Panel className="border-brand/40 bg-brand-soft/20 p-4 shadow-2xs">
-            <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-ink">
-                    <Check className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink">
-                        {assignmentSaved
-                            ? 'Assignments recorded'
-                            : 'Ready for next step'}
-                    </p>
-                    <p className="mt-0.5 text-xs leading-5 text-ink-soft">
-                        {activation.ready && canActivate
-                            ? 'All prerequisites met. You can now activate this dispatch.'
-                            : 'Review the latest readiness and approval state before activation.'}
-                    </p>
-                </div>
+            <div className="min-w-0">
+                <p className="text-sm font-semibold text-ink">
+                    {assignmentSaved
+                        ? 'Assignments recorded'
+                        : 'Ready for next step'}
+                </p>
+                <p className="mt-0.5 text-xs leading-5 text-ink-soft">
+                    {activation.ready && canActivate
+                        ? 'All prerequisites met. You can now activate this dispatch.'
+                        : 'Review the latest readiness and approval state before activation.'}
+                </p>
             </div>
         </Panel>
     );
@@ -76,9 +71,8 @@ export function AssignmentStageSummaries({
                         </span>
                     </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand-strong">
+                <span className="inline-flex shrink-0 items-center text-sm font-medium text-brand-strong">
                     View details
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </span>
             </a>
             {canActivate && (
@@ -102,7 +96,7 @@ export function AssignmentStageSummaries({
                     className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-subtle sm:px-5"
                 >
                     <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-soft">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-xs font-semibold text-ink-soft">
                             3
                         </span>
                         <span className="min-w-0">
@@ -116,7 +110,7 @@ export function AssignmentStageSummaries({
                     </span>
                     <span
                         className={cn(
-                            'inline-flex shrink-0 items-center gap-1 text-sm font-medium',
+                            'inline-flex shrink-0 items-center text-sm font-medium',
                             activation.ready
                                 ? 'text-success-strong'
                                 : 'text-warning-strong',
@@ -127,10 +121,6 @@ export function AssignmentStageSummaries({
                             : blockerCount > 0
                               ? `${blockerCount} blocker${blockerCount === 1 ? '' : 's'}`
                               : 'Review needed'}
-                        <ArrowRight
-                            className="h-4 w-4 text-brand-strong"
-                            aria-hidden="true"
-                        />
                     </span>
                 </a>
             )}

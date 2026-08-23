@@ -124,7 +124,6 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                     ]}
                     testID="critical-defect-banner"
                 >
-                    <Text style={styles.criticalIcon}>⛔</Text>
                     <View style={styles.criticalCopy}>
                         <Text
                             style={[
@@ -147,8 +146,8 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                 </View>
             ) : null}
 
-            {/* Inspection Checklist Items with 3-State Tactile Rockers */}
-            <View style={styles.checkList}>
+            {/* Checklist items container */}
+            <View style={styles.listContainer}>
                 {filteredChecks.map((item) => {
                     const isPass = item.status === 'good';
                     const isAttention = item.status === 'attention';
@@ -158,12 +157,12 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                         <View
                             key={item.id}
                             style={[
-                                styles.checkRowContainer,
-                                isDarkHud && styles.darkCheckRowContainer,
+                                styles.checkRow,
+                                isDarkHud && styles.darkCheckRow,
                                 isPass &&
                                     (isDarkHud
-                                        ? styles.darkCheckRowPass
-                                        : styles.checkRowPass),
+                                        ? styles.darkCheckRowGood
+                                        : styles.checkRowGood),
                                 isAttention &&
                                     (isDarkHud
                                         ? styles.darkCheckRowAttention
@@ -185,9 +184,11 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                 testID={`check-item-${item.id}`}
                             >
                                 <View style={styles.checkLeft}>
-                                    <Text style={styles.checkIcon}>
-                                        {item.icon}
-                                    </Text>
+                                    {item.icon ? (
+                                        <Text style={styles.checkIcon}>
+                                            {item.icon}
+                                        </Text>
+                                    ) : null}
                                     <View style={styles.checkCopy}>
                                         <Text
                                             style={[
@@ -218,13 +219,8 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                 </View>
                             </Pressable>
 
-                            {/* 3-State Physical-Style Segmented Rocker Controls */}
-                            <View
-                                style={[
-                                    styles.segmentedRockerRail,
-                                    isDarkHud && styles.darkSegmentedRockerRail,
-                                ]}
-                            >
+                            {/* Glove-Friendly Tri-State Rocker Segmented Control */}
+                            <View style={styles.rockerContainer}>
                                 <Pressable
                                     accessibilityLabel={`Mark ${item.label} as Pass`}
                                     accessibilityRole="button"
@@ -244,6 +240,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                             isPass &&
                                             styles.darkRockerSegmentPass,
                                     ]}
+                                    testID={`rocker-pass-${item.id}`}
                                 >
                                     <Text
                                         style={[
@@ -254,12 +251,12 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                                 styles.darkRockerTextPass,
                                         ]}
                                     >
-                                        ✓ PASS
+                                        PASS
                                     </Text>
                                 </Pressable>
 
                                 <Pressable
-                                    accessibilityLabel={`Mark ${item.label} as Attention`}
+                                    accessibilityLabel={`Mark ${item.label} as Attention Needed`}
                                     accessibilityRole="button"
                                     onPress={() => {
                                         if (onSetCheckStatus) {
@@ -281,6 +278,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                             isAttention &&
                                             styles.darkRockerSegmentAttention,
                                     ]}
+                                    testID={`rocker-attn-${item.id}`}
                                 >
                                     <Text
                                         style={[
@@ -292,7 +290,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                                 styles.darkRockerTextAttention,
                                         ]}
                                     >
-                                        ⚠ ATTN
+                                        ATTN
                                     </Text>
                                 </Pressable>
 
@@ -319,6 +317,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                             isCritical &&
                                             styles.darkRockerSegmentCritical,
                                     ]}
+                                    testID={`rocker-defect-${item.id}`}
                                 >
                                     <Text
                                         style={[
@@ -330,7 +329,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                                 styles.darkRockerTextCritical,
                                         ]}
                                     >
-                                        ⛔ DEFECT
+                                        DEFECT
                                     </Text>
                                 </Pressable>
                             </View>

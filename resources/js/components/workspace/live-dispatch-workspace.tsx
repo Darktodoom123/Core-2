@@ -2239,27 +2239,18 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
                             <p className="text-[10px] font-semibold text-warning-strong uppercase">
                                 Rental Condition Requirements
                             </p>
-                            <ul className="mt-1.5 space-y-1 text-ink-soft">
-                                <li className="flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                    <span>
-                                        Pre-delivery mechanical &amp; safety
-                                        inspection passed
-                                    </span>
+                            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-ink-soft">
+                                <li>
+                                    Pre-delivery mechanical &amp; safety
+                                    inspection passed
                                 </li>
-                                <li className="flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                    <span>
-                                        Fuel level verified at 100% full before
-                                        release
-                                    </span>
+                                <li>
+                                    Fuel level verified at 100% full before
+                                    release
                                 </li>
-                                <li className="flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                    <span>
-                                        Maintenance &amp; test certificates
-                                        attached to job
-                                    </span>
+                                <li>
+                                    Maintenance &amp; test certificates attached
+                                    to job
                                 </li>
                             </ul>
                         </div>
@@ -2305,20 +2296,14 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
                             <p className="text-[10px] font-semibold text-success-strong uppercase">
                                 Order Handover Checklist
                             </p>
-                            <ul className="mt-1.5 space-y-1 text-ink-soft">
-                                <li className="flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                    <span>
-                                        Item packaging, serial numbers, and
-                                        warranty documentation verified
-                                    </span>
+                            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-ink-soft">
+                                <li>
+                                    Item packaging, serial numbers, and warranty
+                                    documentation verified
                                 </li>
-                                <li className="flex items-center gap-1.5">
-                                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                    <span>
-                                        Client site delivery coordinates
-                                        confirmed with transport team
-                                    </span>
+                                <li>
+                                    Client site delivery coordinates confirmed
+                                    with transport team
                                 </li>
                             </ul>
                         </div>
@@ -2342,9 +2327,12 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
                             {job.requirements.map((req, index) => (
                                 <li
                                     key={index}
-                                    className="flex items-center gap-2 rounded-md bg-surface-subtle p-2 text-ink"
+                                    className="flex items-center gap-2 rounded-md bg-surface-subtle px-2.5 py-2 text-ink"
                                 >
-                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success-strong" />
+                                    <span
+                                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-strong"
+                                        aria-hidden="true"
+                                    />
                                     <span className="leading-tight">{req}</span>
                                 </li>
                             ))}
@@ -3254,8 +3242,7 @@ function DispatchDetails({
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[11px] font-medium text-success-strong">
-                                                <ShieldCheck className="h-3 w-3" />
+                                            <span className="inline-flex items-center rounded-full bg-success-soft px-2.5 py-0.5 text-[11px] font-semibold text-success-strong">
                                                 Assigned
                                             </span>
                                         </li>

@@ -3427,8 +3427,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                                         {(hasExpired ||
                                                             hasExpiring) && (
                                                             <p className="mt-1 text-[11px] font-medium text-danger-strong">
-                                                                ⚠️ Action
-                                                                required:
+                                                                Action required:
                                                                 License renewal
                                                                 needed
                                                             </p>

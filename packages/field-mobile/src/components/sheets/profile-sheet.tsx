@@ -260,7 +260,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                             {queuedCount > 0 ? (
                                 <View style={styles.warningCallout}>
                                     <Text style={styles.warningCalloutText}>
-                                        ⚠️ You have {queuedCount} unsynced
+                                        You have {queuedCount} unsynced
                                         action(s) stored on this device. Signing
                                         out will pause syncing until you log
                                         back in.

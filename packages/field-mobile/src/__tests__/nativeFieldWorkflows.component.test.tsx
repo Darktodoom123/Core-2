@@ -203,7 +203,7 @@ describe('Native Field Workflows Component Tests', () => {
                     label: 'Hydraulic cylinders & outrigger rams',
                     status: 'good',
                     statusLabel: 'Pass · No leaks',
-                    icon: '💧',
+                    icon: '',
                 },
             ];
 

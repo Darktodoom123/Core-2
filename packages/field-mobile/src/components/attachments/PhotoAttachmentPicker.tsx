@@ -195,12 +195,7 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                                 size="small"
                             />
                         ) : (
-                            <>
-                                <Text style={styles.actionIcon}>📷</Text>
-                                <Text style={styles.actionText}>
-                                    Take Photo
-                                </Text>
-                            </>
+                            <Text style={styles.actionText}>Take Photo</Text>
                         )}
                     </Pressable>
 
@@ -222,12 +217,7 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                                 size="small"
                             />
                         ) : (
-                            <>
-                                <Text style={styles.actionIcon}>🖼️</Text>
-                                <Text style={styles.actionText}>
-                                    Choose Photo
-                                </Text>
-                            </>
+                            <Text style={styles.actionText}>Choose Photo</Text>
                         )}
                     </Pressable>
                 </View>

@@ -165,7 +165,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                 waypoints.forEach((wp) => {
                     const el = document.createElement('div');
                     el.className = wp.hazardNote ? 'marker marker-hazard' : 'marker marker-wp';
-                    if (wp.hazardNote) el.innerHTML = '⚠️';
+                    if (wp.hazardNote) el.innerHTML = '!';
 
                     const popupHtml = '<strong>' + wp.label + '</strong>' + 
                         (wp.hazardNote ? '<div style="color:#f87171;margin-top:4px;">' + wp.hazardNote + '</div>' : '');
@@ -272,7 +272,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                             onPress={() =>
                                 setSelectedPin(
                                     wp.hazardNote
-                                        ? `${wp.label} (⚠️ ${wp.hazardNote})`
+                                        ? `${wp.label} (Hazard: ${wp.hazardNote})`
                                         : wp.label,
                                 )
                             }
@@ -287,9 +287,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                                 ]}
                             >
                                 {wp.hazardNote ? (
-                                    <Text style={styles.hazardIconText}>
-                                        ⚠️
-                                    </Text>
+                                    <Text style={styles.hazardIconText}>!</Text>
                                 ) : null}
                             </View>
                             <Text style={styles.nodeLabel} numberOfLines={1}>

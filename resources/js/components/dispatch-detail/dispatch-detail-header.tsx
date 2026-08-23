@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import { Button } from '@/components/ui';
@@ -100,7 +100,6 @@ export function DispatchDetailHeader({
                                     );
                                 }}
                             >
-                                <Sparkles className="h-4 w-4 text-brand" />
                                 Request AI assistance
                             </Button>
                         )}

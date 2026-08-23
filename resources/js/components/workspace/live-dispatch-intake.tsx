@@ -1,21 +1,10 @@
 import { useForm, router } from '@inertiajs/react';
 import {
-    AlertCircle,
-    ArrowRight,
     CalendarDays,
     Check,
     CheckCircle2,
     ClipboardCheck,
-    Edit3,
-    FileText,
-    Link2,
-    MapPin,
     Package,
-    Plus,
-    PlusCircle,
-    ShieldCheck,
-    UserRoundPlus,
-    Wrench,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -276,10 +265,6 @@ export function LiveDispatchIntake({
                                 aria-expanded={mode === 'client'}
                                 aria-controls="client-intake-form"
                             >
-                                <UserRoundPlus
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                />
                                 Add client
                             </Button>
                         )}
@@ -376,10 +361,6 @@ export function LiveDispatchIntake({
                                 );
                             }}
                         >
-                            <PlusCircle
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                            />
                             {mode === 'manual'
                                 ? 'Close direct dispatch'
                                 : 'Create direct dispatch'}
@@ -405,16 +386,12 @@ export function LiveDispatchIntake({
                             setMode('reconciliation');
                         }}
                         className={cn(
-                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
                             mode === 'reconciliation'
                                 ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
                                 : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
-                        <Link2
-                            className="h-4 w-4 shrink-0 text-info-strong"
-                            aria-hidden="true"
-                        />
                         <span>Review unmatched handoffs</span>
                         <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
                             {unlinkedCount} to review
@@ -482,19 +459,6 @@ function IncomingWorkRow({
     selected: boolean;
     onClick: () => void;
 }) {
-    const Icon =
-        item.mode === 'service'
-            ? FileText
-            : item.mode === 'rental'
-              ? CalendarDays
-              : Package;
-    const toneClass =
-        item.mode === 'service'
-            ? 'text-brand-strong'
-            : item.mode === 'rental'
-              ? 'text-warning-strong'
-              : 'text-success-strong';
-
     return (
         <div role="listitem">
             <button
@@ -503,45 +467,36 @@ function IncomingWorkRow({
                 aria-label={`Review ${item.sourceLabel}: ${item.reference}`}
                 onClick={onClick}
                 className={cn(
-                    'flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                    'flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
                     selected
                         ? 'bg-brand-soft/60'
                         : 'bg-surface hover:bg-surface-subtle',
                 )}
             >
-                <Icon
-                    className={cn('h-4 w-4 shrink-0', toneClass)}
-                    aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <span className="text-sm font-semibold text-ink">
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                        <span className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
                             {item.sourceLabel}
                         </span>
-                        <span className="text-xs font-medium text-ink-soft">
+                        <span className="font-mono text-xs font-semibold text-brand-strong">
                             {item.reference}
                         </span>
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-ink-soft">
-                        {item.client} · {item.detail}
-                    </span>
-                </span>
-                <span className="hidden shrink-0 items-center gap-2.5 sm:flex">
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-ink-soft">
+                        <span className="font-medium text-ink">
+                            {item.client}
+                        </span>{' '}
+                        · {item.detail}
+                    </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2.5">
                     <span className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {item.status}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong">
+                    <span className="text-xs font-semibold text-brand-strong">
                         {selected ? 'Open workflow' : 'Review'}
-                        <ArrowRight
-                            className="h-3.5 w-3.5"
-                            aria-hidden="true"
-                        />
                     </span>
-                </span>
-                <ArrowRight
-                    className="h-4 w-4 shrink-0 text-ink-muted sm:hidden"
-                    aria-hidden="true"
-                />
+                </div>
             </button>
         </div>
     );
@@ -703,8 +658,7 @@ function ManualDispatchIntakeForm({
             <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
-                            <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span className="rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
                             Direct Manual Intake
                         </span>
                         <span className="rounded bg-brand-soft px-2 py-0.5 font-mono text-xs font-medium text-brand-strong">
@@ -755,33 +709,28 @@ function ManualDispatchIntakeForm({
                             id: 'service' as const,
                             title: 'Field Service',
                             subtitle: 'Crane lifts & on-site service work',
-                            icon: Wrench,
-                            tone: 'border-brand-strong bg-brand-soft/70 text-brand-strong',
+                            tone: 'border-brand-strong bg-brand-soft/70',
                         },
                         {
                             id: 'rental' as const,
                             title: 'Rental Delivery',
                             subtitle: 'Equipment hire mobilization & prep',
-                            icon: CalendarDays,
-                            tone: 'border-warning-strong bg-warning-soft/70 text-warning-strong',
+                            tone: 'border-warning-strong bg-warning-soft/70',
                         },
                         {
                             id: 'sale' as const,
                             title: 'Sales Transport',
                             subtitle: 'Machinery hauling & VIN handover',
-                            icon: Package,
-                            tone: 'border-success-strong bg-success-soft/70 text-success-strong',
+                            tone: 'border-success-strong bg-success-soft/70',
                         },
                         {
                             id: 'general' as const,
                             title: 'General Operational',
                             subtitle: 'Ad-hoc direct draft dispatch',
-                            icon: ClipboardCheck,
-                            tone: 'border-info-strong bg-info-soft/70 text-info-strong',
+                            tone: 'border-info-strong bg-info-soft/70',
                         },
                     ].map((stream) => {
                         const active = workStream === stream.id;
-                        const IconComponent = stream.icon;
 
                         return (
                             <button
@@ -789,7 +738,7 @@ function ManualDispatchIntakeForm({
                                 type="button"
                                 onClick={() => handleStreamChange(stream.id)}
                                 className={cn(
-                                    'flex flex-col items-start gap-2 rounded-xl border p-3.5 text-left transition-all duration-150',
+                                    'flex flex-col items-start gap-1 rounded-xl border p-3.5 text-left transition-all duration-150',
                                     active
                                         ? cn(
                                               stream.tone,
@@ -798,36 +747,12 @@ function ManualDispatchIntakeForm({
                                         : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
                                 )}
                             >
-                                <div className="flex w-full items-center justify-between">
-                                    <IconComponent
-                                        className={cn(
-                                            'h-5 w-5',
-                                            active
-                                                ? 'text-current'
-                                                : 'text-ink-soft',
-                                        )}
-                                        aria-hidden="true"
-                                    />
-                                    {active && (
-                                        <CheckCircle2
-                                            className="h-4 w-4 text-current"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                </div>
-                                <div>
-                                    <p
-                                        className={cn(
-                                            'text-sm font-semibold',
-                                            active ? 'text-ink' : 'text-ink',
-                                        )}
-                                    >
-                                        {stream.title}
-                                    </p>
-                                    <p className="mt-0.5 text-xs leading-tight text-ink-soft">
-                                        {stream.subtitle}
-                                    </p>
-                                </div>
+                                <p className="text-sm font-semibold text-ink">
+                                    {stream.title}
+                                </p>
+                                <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+                                    {stream.subtitle}
+                                </p>
                             </button>
                         );
                     })}
@@ -843,15 +768,15 @@ function ManualDispatchIntakeForm({
                                 {[
                                     {
                                         id: 'mobile_crane' as const,
-                                        label: '🏗️ Mobile / All-Terrain Crane',
+                                        label: 'Mobile / All-Terrain Crane',
                                     },
                                     {
                                         id: 'tower_crane' as const,
-                                        label: '🗼 Tower Crane',
+                                        label: 'Tower Crane',
                                     },
                                     {
                                         id: 'general_service' as const,
-                                        label: '🛠️ Rigging & Support',
+                                        label: 'Rigging & Support',
                                     },
                                 ].map((sub) => {
                                     const active = equipmentSubtype === sub.id;
@@ -1053,11 +978,7 @@ function ManualDispatchIntakeForm({
 
                     {/* Predefined Directives for the active Stream/Subtype */}
                     <div className="mt-4 space-y-2">
-                        <div className="flex items-center gap-1.5 text-ink-soft">
-                            <ShieldCheck
-                                className="h-3.5 w-3.5 text-brand-strong"
-                                aria-hidden="true"
-                            />
+                        <div className="flex items-center text-ink-soft">
                             <span className="text-[11px] font-semibold tracking-wide uppercase">
                                 {workStream === 'service' &&
                                 equipmentSubtype === 'tower_crane'
@@ -1243,7 +1164,6 @@ function ManualDispatchIntakeForm({
                             onClick={addCustomRequirement}
                             disabled={!customRequirement.trim()}
                         >
-                            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                             Add item
                         </Button>
                     </div>
@@ -1316,11 +1236,7 @@ function ServiceIntakeSection({
             <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
-                            <FileText
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
+                        <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
                             Service Request Workflow
                         </span>
                     </div>
@@ -1618,23 +1534,15 @@ function DispatchConversion({
     return (
         <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)]">
             <div className="rounded-lg border border-line bg-surface p-4">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
-                        <ClipboardCheck
-                            className="h-5 w-5"
-                            aria-hidden="true"
-                        />
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-ink">
-                            Convert request to linked draft
-                        </h4>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            Request details are copied as a durable snapshot
-                            into the draft dispatch. Multiple dispatches can
-                            link to the same request for staged execution.
-                        </p>
-                    </div>
+                <div>
+                    <h4 className="font-semibold text-ink">
+                        Convert request to linked draft
+                    </h4>
+                    <p className="mt-1 text-sm text-ink-soft">
+                        Request details are copied as a durable snapshot into
+                        the draft dispatch. Multiple dispatches can link to the
+                        same request for staged execution.
+                    </p>
                 </div>
 
                 {selectedRequest ? (
@@ -1803,11 +1711,7 @@ function RentalIntakeSection({
             <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
-                            <CalendarDays
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
+                        <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
                             Rental Reservation Workflow
                         </span>
                     </div>
@@ -1891,21 +1795,14 @@ function RentalIntakeSection({
                                     <p className="text-[10px] font-semibold text-ink-soft uppercase">
                                         Rental Condition Checklist:
                                     </p>
-                                    <ul className="mt-1 space-y-1 text-ink-soft">
-                                        <li className="flex items-center gap-1.5">
-                                            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                            <span>
-                                                Pre-operation inspection &amp;
-                                                safe release certified
-                                            </span>
+                                    <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-soft">
+                                        <li>
+                                            Pre-operation inspection &amp; safe
+                                            release certified
                                         </li>
-                                        <li className="flex items-center gap-1.5">
-                                            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success-strong" />
-                                            <span>
-                                                Operator assignment context:
-                                                Dedicated crane operator
-                                                required
-                                            </span>
+                                        <li>
+                                            Operator assignment context:
+                                            Dedicated crane operator required
                                         </li>
                                     </ul>
                                 </div>
@@ -1930,7 +1827,6 @@ function RentalIntakeSection({
                                         {isPending
                                             ? 'Converting…'
                                             : 'Create rental dispatch'}
-                                        <ArrowRight className="ml-1 h-3.5 w-3.5" />
                                     </Button>
                                 </div>
                             </div>
@@ -1981,11 +1877,7 @@ function SaleIntakeSection({
             <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
-                            <Package
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
+                        <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
                             Sales Order Delivery Workflow
                         </span>
                     </div>
@@ -2119,7 +2011,6 @@ function SaleIntakeSection({
                                         {isPending
                                             ? 'Converting…'
                                             : 'Create delivery dispatch'}
-                                        <ArrowRight className="ml-1 h-3.5 w-3.5" />
                                     </Button>
                                 </div>
                             </div>
@@ -2270,8 +2161,7 @@ function ReconciliationQueueSection({
             <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-strong">
-                            <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span className="rounded-full bg-info-soft px-2.5 py-0.5 text-xs font-semibold text-info-strong">
                             Core 1 &harr; Core 2 Reconciliation
                         </span>
                         <span className="rounded bg-black/5 px-2 py-0.5 text-xs font-semibold text-ink">
@@ -2346,18 +2236,16 @@ function ReconciliationQueueSection({
                                         {item.title}
                                     </p>
                                     {item.location && (
-                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-soft">
-                                            <MapPin className="h-3 w-3" />
-                                            {item.location}
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            Location: {item.location}
                                         </p>
                                     )}
                                 </div>
 
                                 {item.matched_draft_job_id ? (
                                     <div className="rounded-md border border-info-strong/30 bg-surface p-2.5 text-xs sm:max-w-xs">
-                                        <div className="flex items-center gap-1.5 font-semibold text-info-strong">
-                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                            <span>Matching Draft Detected</span>
+                                        <div className="font-semibold text-info-strong">
+                                            Matching Draft Detected
                                         </div>
                                         <p className="mt-1 text-ink-soft">
                                             Draft{' '}
@@ -2391,7 +2279,6 @@ function ReconciliationQueueSection({
                                                 );
                                             }}
                                         >
-                                            <Link2 className="h-3.5 w-3.5" />
                                             Review draft{' '}
                                             {item.matched_draft_reference}
                                         </Button>
@@ -2432,7 +2319,6 @@ function ReconciliationQueueSection({
                                             }
                                         }}
                                     >
-                                        <ArrowRight className="h-3.5 w-3.5" />
                                         Convert to linked dispatch
                                     </Button>
                                 </div>

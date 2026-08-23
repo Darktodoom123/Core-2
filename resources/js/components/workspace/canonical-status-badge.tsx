@@ -1,5 +1,3 @@
-import { AlertTriangle, Check, Circle, Clock3, X } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CanonicalStatusValue, StatusViewModel } from '@/types/workspace';
 
@@ -53,33 +51,42 @@ const toneClasses: Record<StatusTone, string> = {
     danger: 'border border-danger/25 bg-danger-soft text-danger-strong',
 };
 
-const toneIcons: Record<StatusTone, LucideIcon> = {
-    neutral: Circle,
-    brand: Clock3,
-    success: Check,
-    warning: AlertTriangle,
-    danger: X,
+const toneDotClasses: Record<StatusTone, string> = {
+    neutral: 'bg-ink-muted',
+    brand: 'bg-brand-strong',
+    success: 'bg-success-strong',
+    warning: 'bg-warning-strong',
+    danger: 'bg-danger-strong',
 };
 
 export function CanonicalStatusBadge({
     status,
     className,
+    showDot = true,
 }: {
     status: StatusViewModel<CanonicalStatusValue>;
     className?: string;
+    showDot?: boolean;
 }) {
     const tone = statusTones[status.value] ?? 'neutral';
-    const Icon = toneIcons[tone];
 
     return (
         <span
             className={cn(
-                'inline-flex min-h-6 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                'inline-flex min-h-6 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide transition-colors',
                 toneClasses[tone],
                 className,
             )}
         >
-            <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            {showDot && (
+                <span
+                    className={cn(
+                        'h-1.5 w-1.5 shrink-0 rounded-full',
+                        toneDotClasses[tone],
+                    )}
+                    aria-hidden="true"
+                />
+            )}
             <span>{status.label}</span>
         </span>
     );

@@ -2,11 +2,12 @@ import { router, usePage } from '@inertiajs/react';
 import {
     Archive,
     Bell,
-    Bot,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
+    Cpu,
     FileText,
+    History,
     LayoutDashboard,
     Fuel,
     LogOut,
@@ -14,7 +15,6 @@ import {
     Menu,
     RefreshCw,
     ShieldCheck,
-    Sparkles,
     Truck,
     Users,
     X,
@@ -43,9 +43,9 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     reports: FileText,
     notifications: Bell,
     archive: Archive,
-    'gpt-recommendations': Sparkles,
+    'gpt-recommendations': Cpu,
     users: Users,
-    audit: Bot,
+    audit: History,
 };
 
 export function LiveWorkspaceShell({

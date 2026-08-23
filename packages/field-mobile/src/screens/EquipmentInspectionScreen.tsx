@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
     FuelReceiptTab,
@@ -35,7 +35,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Hydraulic cylinders & outrigger rams',
         status: 'good',
         statusLabel: 'Pass · No leaks',
-        icon: '💧',
+        icon: '',
     },
     {
         id: 'hyd-02',
@@ -43,7 +43,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Hydraulic pressure & control valves',
         status: 'good',
         statusLabel: 'Pass · Normal pressure (210 bar)',
-        icon: '🎛️',
+        icon: '',
     },
     {
         id: 'elec-01',
@@ -51,7 +51,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Load Moment Indicator (LMI) & sensors',
         status: 'good',
         statusLabel: 'Pass · Calibrated',
-        icon: '⚡',
+        icon: '',
     },
     {
         id: 'elec-02',
@@ -59,7 +59,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Anti-two-block (A2B) limit switch',
         status: 'good',
         statusLabel: 'Pass · Audible alarm active',
-        icon: '🔔',
+        icon: '',
     },
     {
         id: 'struct-01',
@@ -67,7 +67,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Telescopic boom sections & wear pads',
         status: 'good',
         statusLabel: 'Pass · Smooth extension',
-        icon: '🏗️',
+        icon: '',
     },
     {
         id: 'rope-01',
@@ -75,7 +75,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Hoist wire rope & main hook block',
         status: 'good',
         statusLabel: 'Pass · Safety latch intact',
-        icon: '🪢',
+        icon: '',
     },
     {
         id: 'tire-01',
@@ -83,7 +83,7 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         label: 'Tire pressures & wheel lug torque',
         status: 'good',
         statusLabel: 'Pass · 120 PSI across all axles',
-        icon: '🛞',
+        icon: '',
     },
 ];
 

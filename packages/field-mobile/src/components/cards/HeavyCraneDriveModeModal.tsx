@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     Modal,
     Pressable,
@@ -246,8 +246,8 @@ export const HeavyCraneDriveModeModal: React.FC<
                                     >
                                         <Text style={styles.cautionIcon}>
                                             {step.isHazard
-                                                ? '⛔ HAZARD'
-                                                : '⚠️ CAUTION'}
+                                                ? 'HAZARD'
+                                                : 'CAUTION'}
                                         </Text>
                                         <Text style={styles.cautionText}>
                                             {step.caution}
@@ -262,7 +262,7 @@ export const HeavyCraneDriveModeModal: React.FC<
                     {delayReported ? (
                         <View style={styles.reportedDelayCard}>
                             <Text style={styles.reportedDelayTitle}>
-                                ✓ Delay reported to Dispatch:
+                                Delay reported to Dispatch:
                             </Text>
                             <Text style={styles.reportedDelayText}>
                                 {delayReported}
@@ -315,7 +315,7 @@ export const HeavyCraneDriveModeModal: React.FC<
                             testID="report-delay-trigger-btn"
                         >
                             <Text style={styles.reportDelayTriggerText}>
-                                ⚠️ Report Route Delay / Obstruction
+                                Report Route Delay / Obstruction
                             </Text>
                         </Pressable>
                     )}

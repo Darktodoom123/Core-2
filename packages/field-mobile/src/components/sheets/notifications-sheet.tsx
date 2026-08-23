@@ -238,7 +238,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                         style={styles.alertCardNotice}
                                     >
                                         <Text style={styles.alertCardTitle}>
-                                            📋 {job.reference} · {job.title}
+                                            {job.reference} · {job.title}
                                         </Text>
                                         <Text style={styles.alertCardBody}>
                                             Site: {job.site}
@@ -262,7 +262,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                         <Text
                                             style={styles.alertCardTitleWarning}
                                         >
-                                            ⚠️ Action Failed:{' '}
+                                            Action Failed:{' '}
                                             {cmd.type.replaceAll('_', ' ')}
                                         </Text>
                                         <Text
@@ -302,7 +302,6 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                         {/* 4. Empty State when all clear */}
                         {totalAttention === 0 && queuedCount === 0 ? (
                             <View style={styles.emptyCard}>
-                                <Text style={styles.emptyIcon}>🔔</Text>
                                 <Text style={styles.emptyTitle}>
                                     You're all caught up!
                                 </Text>

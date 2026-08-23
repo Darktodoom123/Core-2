@@ -1,7 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import {
     Bell,
-    Bot,
     ChevronRight,
     ClipboardList,
     Fuel,
@@ -452,7 +451,10 @@ export function AppShell({
 export function PrototypeBadge() {
     return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning-strong">
-            <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+            <span
+                className="h-1.5 w-1.5 rounded-full bg-warning-strong"
+                aria-hidden="true"
+            />
             [Prototype / Sandbox Demo Mode - Read-Only Simulation]
         </span>
     );
