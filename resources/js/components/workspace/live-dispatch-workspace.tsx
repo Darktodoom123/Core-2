@@ -1,12 +1,14 @@
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    Check,
     CheckCircle2,
     CalendarDays,
     ChevronLeft,
     ChevronRight,
     Clock,
     ClipboardList,
+    FileText,
     MapPin,
     Plus,
     RefreshCw,
@@ -17,6 +19,7 @@ import {
     Truck,
     User,
     UserRound,
+    Users,
     X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -1230,12 +1233,34 @@ export function LiveDispatchWorkspace({
                                                 >
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex min-w-0 items-center gap-1.5">
-                                                                <p className="font-semibold">
+                                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                                <p className="font-semibold text-ink">
                                                                     {
                                                                         job.reference
                                                                     }
                                                                 </p>
+                                                                {job.priority &&
+                                                                    job.priority
+                                                                        .value !==
+                                                                        'routine' && (
+                                                                        <span
+                                                                            className={cn(
+                                                                                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
+                                                                                job
+                                                                                    .priority
+                                                                                    .value ===
+                                                                                    'emergency'
+                                                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                                                                    : 'border border-warning/30 bg-warning-soft text-warning-strong',
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                job
+                                                                                    .priority
+                                                                                    .label
+                                                                            }
+                                                                        </span>
+                                                                    )}
                                                                 {job.source && (
                                                                     <DispatchSourceBadge
                                                                         source={
@@ -1246,7 +1271,7 @@ export function LiveDispatchWorkspace({
                                                             </div>
                                                             <CanonicalStatusBadge
                                                                 status={
-                                                                    job.priority
+                                                                    job.status
                                                                 }
                                                             />
                                                         </div>
@@ -1287,12 +1312,34 @@ export function LiveDispatchWorkspace({
                                                 >
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <p className="font-semibold">
+                                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                                <p className="font-semibold text-ink">
                                                                     {
                                                                         job.reference
                                                                     }
                                                                 </p>
+                                                                {job.priority &&
+                                                                    job.priority
+                                                                        .value !==
+                                                                        'routine' && (
+                                                                        <span
+                                                                            className={cn(
+                                                                                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
+                                                                                job
+                                                                                    .priority
+                                                                                    .value ===
+                                                                                    'emergency'
+                                                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                                                                    : 'border border-warning/30 bg-warning-soft text-warning-strong',
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                job
+                                                                                    .priority
+                                                                                    .label
+                                                                            }
+                                                                        </span>
+                                                                    )}
                                                                 {job.source && (
                                                                     <DispatchSourceBadge
                                                                         source={
@@ -1309,7 +1356,7 @@ export function LiveDispatchWorkspace({
                                                             </div>
                                                             <CanonicalStatusBadge
                                                                 status={
-                                                                    job.priority
+                                                                    job.status
                                                                 }
                                                             />
                                                         </div>
@@ -1716,7 +1763,7 @@ function ScheduleBoardTable({
                                                             ) : (
                                                                 <CanonicalStatusBadge
                                                                     status={
-                                                                        job.priority
+                                                                        job.status
                                                                     }
                                                                 />
                                                             )}
@@ -2309,6 +2356,212 @@ function SourceRequirementsPanel({ job }: { job: DispatchJobViewModel }) {
     );
 }
 
+function DispatchLifecycleStepper({
+    job,
+    hasApprovals,
+}: {
+    job: DispatchJobViewModel;
+    hasApprovals: boolean;
+}) {
+    const hasAssignments =
+        job.personnel_assignments.length > 0 &&
+        job.asset_assignments.length > 0;
+    const isCancelled = job.status.value === 'cancelled';
+    const isCompleted = job.status.value === 'completed';
+    const isFieldActive = [
+        'dispatched',
+        'accepted',
+        'en_route',
+        'arrived',
+        'working',
+    ].includes(job.status.value);
+    const isPendingApproval = job.status.value === 'pending_approval';
+    const isScheduled = job.status.value === 'scheduled';
+    const isDraft = job.status.value === 'draft';
+    const isPriorityOrEmergency =
+        job.priority.value === 'priority' || job.priority.value === 'emergency';
+
+    const approvalNeeded = isPriorityOrEmergency || hasApprovals;
+    const step1Done = true;
+    const step2Done = hasAssignments;
+    const step2Current = isDraft && !hasAssignments;
+    const step3Done =
+        !approvalNeeded ||
+        (!isPendingApproval && (isScheduled || isFieldActive || isCompleted));
+    const step3Current =
+        isPendingApproval || (isDraft && hasAssignments && approvalNeeded);
+    const step4Done = isCompleted;
+    const step4Current = isScheduled || isFieldActive;
+    const step5Done = isCompleted;
+
+    const steps = [
+        {
+            id: 'draft',
+            label: '1. Draft Scope',
+            sub: 'Job details defined',
+            done: step1Done,
+            current: isDraft && !hasAssignments,
+            icon: FileText,
+        },
+        {
+            id: 'assignments',
+            label: '2. Assignments',
+            sub: hasAssignments
+                ? `${job.personnel_assignments.length} staff · ${job.asset_assignments.length} asset`
+                : 'No resources',
+            done: step2Done,
+            current: step2Current,
+            icon: Users,
+        },
+        {
+            id: 'approval',
+            label: '3. Approval Gate',
+            sub: !approvalNeeded
+                ? 'Standard / Routine'
+                : isPendingApproval
+                  ? 'Awaiting Approval'
+                  : 'Approved',
+            done: step3Done,
+            current: step3Current,
+            icon: ShieldCheck,
+        },
+        {
+            id: 'dispatch',
+            label: '4. Dispatch & Field',
+            sub: isFieldActive
+                ? job.status.label
+                : isScheduled
+                  ? 'Ready to dispatch'
+                  : 'Pending activation',
+            done: step4Done,
+            current: step4Current,
+            icon: Truck,
+        },
+        {
+            id: 'completed',
+            label: '5. Completed',
+            sub: isCompleted ? 'Completed' : 'Pending completion',
+            done: step5Done,
+            current: isCompleted,
+            icon: CheckCircle2,
+        },
+    ];
+
+    if (isCancelled) {
+        return (
+            <div className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft/40 p-4 text-xs font-medium text-danger-strong">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-danger" />
+                <span>
+                    This dispatch job has been cancelled. Field execution and
+                    assignment lifecycles are terminated.
+                </span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-xl border border-line bg-surface p-4 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        Lifecycle Progression
+                    </span>
+                    <span className="text-ink-muted">·</span>
+                    <span className="text-xs font-bold text-ink">
+                        {isDraft
+                            ? !hasAssignments
+                                ? 'Stage 1 of 5: Setup & Resource Allocation'
+                                : 'Stage 2 of 5: Ready for Review'
+                            : isPendingApproval
+                              ? 'Stage 3 of 5: Pending Manager Approval'
+                              : isScheduled
+                                ? 'Stage 4 of 5: Scheduled & Ready'
+                                : isFieldActive
+                                  ? `Stage 4 of 5: Live Field Progression (${job.status.label})`
+                                  : isCompleted
+                                    ? 'Stage 5 of 5: Completed'
+                                    : job.status.label}
+                    </span>
+                </div>
+                <CanonicalStatusBadge status={job.status} />
+            </div>
+
+            <div className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+                {steps.map((step, idx) => {
+                    const Icon = step.icon;
+
+                    return (
+                        <div
+                            key={step.id}
+                            className={cn(
+                                'relative flex flex-col justify-between rounded-lg border p-3 transition-colors',
+                                step.current
+                                    ? 'border-brand bg-brand-soft/40 ring-1 ring-brand/40'
+                                    : step.done
+                                      ? 'border-success/30 bg-success-soft/20 text-ink'
+                                      : 'border-line bg-surface-subtle/50 text-ink-soft opacity-60',
+                            )}
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <span
+                                    className={cn(
+                                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+                                        step.current
+                                            ? 'bg-brand text-ink shadow-2xs'
+                                            : step.done
+                                              ? 'bg-success-soft text-success-strong'
+                                              : 'text-ink-muted border border-line bg-surface',
+                                    )}
+                                >
+                                    {step.done && !step.current ? (
+                                        <Check className="h-3 w-3" />
+                                    ) : (
+                                        idx + 1
+                                    )}
+                                </span>
+                                <Icon
+                                    className={cn(
+                                        'h-4 w-4 shrink-0',
+                                        step.current
+                                            ? 'text-brand-strong'
+                                            : step.done
+                                              ? 'text-success-strong'
+                                              : 'text-ink-muted',
+                                    )}
+                                />
+                            </div>
+                            <div className="mt-2 min-w-0">
+                                <p
+                                    className={cn(
+                                        'truncate text-xs font-bold',
+                                        step.current
+                                            ? 'text-ink'
+                                            : step.done
+                                              ? 'text-ink'
+                                              : 'text-ink-soft',
+                                    )}
+                                >
+                                    {step.label}
+                                </p>
+                                <p
+                                    className={cn(
+                                        'mt-0.5 truncate text-[11px]',
+                                        step.current
+                                            ? 'font-semibold text-brand-strong'
+                                            : 'text-ink-soft',
+                                    )}
+                                >
+                                    {step.sub}
+                                </p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function DispatchDetails({
     job,
     conflicts = [],
@@ -2361,9 +2614,18 @@ function DispatchDetails({
     const [aborting, setAborting] = useState(false);
     const [abortError, setAbortError] = useState<string | null>(null);
 
-    const canEmergencyAbort = !['completed', 'cancelled'].includes(
-        job.status.value,
-    );
+    const isLiveJob = [
+        'dispatched',
+        'accepted',
+        'en_route',
+        'arrived',
+        'working',
+    ].includes(job.status.value);
+    const canEmergencyAbort = isLiveJob;
+
+    const blockingConflicts = conflicts.filter((c) => c.severity === 'danger');
+    const approvalConflicts = conflicts.filter((c) => c.type === 'approval');
+    const unassignedPrereq = conflicts.find((c) => c.type === 'unassigned');
 
     const handleEmergencyAbort = async (e: FormEvent) => {
         e.preventDefault();
@@ -2470,6 +2732,12 @@ function DispatchDetails({
                 </div>
             </div>
 
+            {/* Lifecycle Progression Stepper */}
+            <DispatchLifecycleStepper
+                job={job}
+                hasApprovals={approvalConflicts.length > 0}
+            />
+
             {/* Emergency Abort Confirmation Modal */}
             {showEmergencyAbortModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -2547,8 +2815,8 @@ function DispatchDetails({
                 </div>
             )}
 
-            {/* Operational Conflict Alert Banner */}
-            {conflicts.length > 0 && (
+            {/* Operational Conflict Alert Banner (Hard Blocking Conflicts) */}
+            {blockingConflicts.length > 0 && (
                 <div
                     className="flex flex-col gap-3 rounded-lg border border-danger/30 bg-danger-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between"
                     role="alert"
@@ -2560,14 +2828,14 @@ function DispatchDetails({
                         />
                         <div>
                             <h3 className="font-semibold text-danger">
-                                {conflicts.length} active operational{' '}
-                                {conflicts.length === 1
+                                {blockingConflicts.length} active operational{' '}
+                                {blockingConflicts.length === 1
                                     ? 'conflict'
                                     : 'conflicts'}{' '}
                                 on this job
                             </h3>
                             <ul className="mt-1 space-y-0.5 text-xs text-ink-soft">
-                                {conflicts.map((c) => (
+                                {blockingConflicts.map((c) => (
                                     <li key={c.id}>• {c.description}</li>
                                 ))}
                             </ul>
@@ -2576,6 +2844,73 @@ function DispatchDetails({
                     <Link
                         href={assignmentWorkspaceUrl(job.id, returnTo)}
                         className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-xs font-semibold text-danger hover:bg-danger-soft"
+                    >
+                        Resolve in assignment workspace
+                        <ChevronRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
+                    </Link>
+                </div>
+            )}
+
+            {/* Pending Manager Approval Notice */}
+            {approvalConflicts.length > 0 && (
+                <div
+                    className="flex flex-col gap-3 rounded-lg border border-warning/40 bg-warning-soft/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    role="status"
+                >
+                    <div className="flex items-start gap-3">
+                        <Clock
+                            className="mt-0.5 h-5 w-5 shrink-0 text-warning-strong"
+                            aria-hidden="true"
+                        />
+                        <div>
+                            <h3 className="font-semibold text-warning-strong">
+                                Pending Manager Approval
+                            </h3>
+                            <ul className="mt-1 space-y-0.5 text-xs text-ink-soft">
+                                {approvalConflicts.map((c) => (
+                                    <li key={c.id}>• {c.description}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                    <Link
+                        href="/?view=approvals"
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-warning/50 bg-surface px-3 py-1.5 text-xs font-semibold text-warning-strong hover:bg-warning-soft"
+                    >
+                        Review approvals
+                        <ChevronRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
+                    </Link>
+                </div>
+            )}
+
+            {/* Actionable Setup Guidance (Prerequisite on Drafts) */}
+            {unassignedPrereq && blockingConflicts.length === 0 && (
+                <div className="flex flex-col gap-3 rounded-lg border border-brand/25 bg-brand-soft/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                        <ClipboardList
+                            className="mt-0.5 h-5 w-5 shrink-0 text-brand-strong"
+                            aria-hidden="true"
+                        />
+                        <div>
+                            <h3 className="font-semibold text-ink">
+                                Prerequisite: Resource assignment needed
+                            </h3>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Assign qualified drivers, crane operators, and
+                                operational assets to prepare this draft for
+                                dispatch.
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href={assignmentWorkspaceUrl(job.id, returnTo)}
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-brand-strong hover:text-white"
                     >
                         Assign resources
                         <ChevronRight
@@ -2840,15 +3175,10 @@ function DispatchSourceBadge({
                     'inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-semibold text-ink-soft',
                     className,
                 )}
-                title="Direct operational draft (manual_intake)"
+                title="Direct operational intake"
             >
                 <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
-                <span>Manual</span>
-                {detailed && (
-                    <span className="text-ink-muted rounded bg-black/5 px-1 py-0.5 font-mono text-[9px]">
-                        manual_intake
-                    </span>
-                )}
+                <span>Direct intake</span>
             </span>
         );
     }
@@ -2949,7 +3279,7 @@ function DispatchGptAdvisory({
                     </p>
                 </div>
 
-                {isAdmin && (
+                {(isAdmin || capabilities.request_gpt_assistance) && (
                     <Link
                         href="/?view=gpt-recommendations"
                         className="inline-flex min-h-8 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"

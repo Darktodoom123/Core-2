@@ -725,13 +725,13 @@ function ApprovalDecisionBanner({
                         />
                     )}
                     <div>
-                        <h3 className="text-sm font-semibold">
+                        <h2 className="text-sm font-semibold">
                             {isApproved
                                 ? 'Operations Manager approval granted'
                                 : isRejected
                                   ? 'Approval request rejected'
                                   : 'Operations Manager approval pending'}
-                        </h3>
+                        </h2>
                         <p className="mt-0.5 text-xs">
                             {isApproved
                                 ? 'The dispatch assignment has been approved by Operations. Field activation is unblocked.'
@@ -2826,7 +2826,7 @@ function CurrentAssignments({
     return (
         <Panel className="overflow-hidden">
             <div className="border-b border-line px-4 py-3">
-                <h2 className="font-semibold">Current assignments</h2>
+                <h2 className="font-semibold">Resources assigned</h2>
                 <p className="mt-0.5 text-xs text-ink-soft">
                     {assignmentCount > 0
                         ? assignmentCount +

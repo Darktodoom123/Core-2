@@ -45,11 +45,12 @@ const statusTones: Record<CanonicalStatusValue, StatusTone> = {
 };
 
 const toneClasses: Record<StatusTone, string> = {
-    neutral: 'bg-surface-subtle text-ink-soft',
-    brand: 'bg-brand-soft text-brand-strong',
-    success: 'bg-success-soft text-success-strong',
-    warning: 'bg-warning-soft text-warning-strong',
-    danger: 'bg-danger-soft text-danger-strong',
+    neutral: 'border border-line-strong bg-surface-subtle text-ink-soft',
+    brand: 'border border-brand/25 bg-brand-soft text-brand-strong',
+    success: 'border border-success/25 bg-success-soft text-success-strong',
+    warning:
+        'border border-warning/30 bg-warning-soft text-warning-strong font-medium',
+    danger: 'border border-danger/25 bg-danger-soft text-danger-strong',
 };
 
 const toneIcons: Record<StatusTone, LucideIcon> = {
@@ -67,19 +68,19 @@ export function CanonicalStatusBadge({
     status: StatusViewModel<CanonicalStatusValue>;
     className?: string;
 }) {
-    const tone = statusTones[status.value];
+    const tone = statusTones[status.value] ?? 'neutral';
     const Icon = toneIcons[tone];
 
     return (
         <span
             className={cn(
-                'inline-flex min-h-6 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                'inline-flex min-h-6 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
                 toneClasses[tone],
                 className,
             )}
         >
-            <Icon className="h-3 w-3" aria-hidden="true" />
-            {status.label}
+            <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span>{status.label}</span>
         </span>
     );
 }

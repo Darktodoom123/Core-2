@@ -1,5 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ArrowUpRight,
     Award,
     Bot,
@@ -8,19 +9,24 @@ import {
     Compass,
     Copy,
     Download,
+    FileCheck,
     FileText,
     Fuel,
     Key,
+    Lock,
     MapPin,
     Navigation,
     Radio,
+    RotateCcw,
     ShieldAlert,
     ShieldCheck,
     Trash2,
     Truck,
+    UserMinus,
     UserPlus,
     Users,
     X,
+    Zap,
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
@@ -2096,6 +2102,95 @@ function FuelSurface({
     );
 }
 
+function ApprovalKindBadge({ kind }: { kind: string }) {
+    switch (kind) {
+        case 'assignment_override':
+            return (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong"
+                    title="Assignment exception override"
+                >
+                    <Zap className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>Assignment Override</span>
+                </span>
+            );
+        case 'reassignment_override':
+            return (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong"
+                    title="Mid-flight crew or equipment replacement override"
+                >
+                    <RotateCcw
+                        className="h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span>Reassignment Override</span>
+                </span>
+            );
+        case 'plan_approval':
+            return (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong"
+                    title="Initial dispatch plan sign-off"
+                >
+                    <FileCheck
+                        className="h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span>Plan Approval Gate</span>
+                </span>
+            );
+        case 'readiness_exception':
+            return (
+                <span
+                    className="inline-flex items-center gap-1 rounded-full border border-danger/40 bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger-strong"
+                    title="Asset or driver readiness exception"
+                >
+                    <AlertTriangle
+                        className="h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span>Readiness Exception</span>
+                </span>
+            );
+        default:
+            return (
+                <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                    <ShieldCheck
+                        className="text-ink-muted h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span>{humanize(kind)}</span>
+                </span>
+            );
+    }
+}
+
+function getApprovalExecutiveSummary(approval: ApprovalViewModel): string {
+    const pCount = approval.requested_changes.personnel.length;
+    const aCount = approval.requested_changes.assets.length;
+    const endPCount = approval.requested_changes.ended_personnel.length;
+    const endACount = approval.requested_changes.ended_assets.length;
+    const requester = approval.requester.name;
+    const jobRef = approval.subject.reference;
+    const statusLabel = approval.subject.status?.label ?? 'dispatch';
+
+    if (endPCount > 0 || endACount > 0) {
+        const endedText = `${endPCount > 0 ? `${endPCount} personnel` : ''}${endPCount > 0 && endACount > 0 ? ' & ' : ''}${endACount > 0 ? `${endACount} asset` : ''}`;
+        const addedText = `${pCount > 0 ? `${pCount} replacement personnel` : ''}${pCount > 0 && aCount > 0 ? ' & ' : ''}${aCount > 0 ? `${aCount} replacement asset` : ''}`;
+
+        return `${requester} requested a reassignment override on ${statusLabel} ${jobRef}: ending ${endedText}${addedText ? ` and allocating ${addedText}` : ''}.`;
+    }
+
+    if (pCount > 0 || aCount > 0) {
+        const addedText = `${pCount > 0 ? `${pCount} personnel` : ''}${pCount > 0 && aCount > 0 ? ' & ' : ''}${aCount > 0 ? `${aCount} asset` : ''}`;
+
+        return `${requester} requested ${humanize(approval.kind).toLowerCase()} for ${statusLabel} ${jobRef} to assign ${addedText}.`;
+    }
+
+    return `${requester} submitted an operational ${humanize(approval.kind).toLowerCase()} for ${statusLabel} ${jobRef}.`;
+}
+
 function ApprovalsSurface({
     approvals,
     canDecide,
@@ -2103,11 +2198,30 @@ function ApprovalsSurface({
     approvals: ApprovalViewModel[];
     canDecide: boolean;
 }) {
+    const [filter, setFilter] = useState<'all' | 'actionable' | 'peer'>('all');
+
+    const actionableCount = approvals.filter(
+        (a) => canDecide && a.can_decide,
+    ).length;
+    const peerReviewCount = approvals.filter((a) => !a.can_decide).length;
+
+    const filteredApprovals = useMemo(() => {
+        if (filter === 'actionable') {
+            return approvals.filter((a) => canDecide && a.can_decide);
+        }
+
+        if (filter === 'peer') {
+            return approvals.filter((a) => !a.can_decide);
+        }
+
+        return approvals;
+    }, [approvals, filter, canDecide]);
+
     return (
         <div>
             <PageHeading
                 title="Pending approvals"
-                description="Review the requester, job plan, schedule, and proposed resources before recording an independent decision."
+                description="Review requester, operational context, proposed resource changes, and policy compliance before recording an independent decision."
                 actions={
                     <span
                         className="rounded-full bg-warning-soft px-3 py-1.5 text-xs font-semibold text-warning-strong"
@@ -2120,18 +2234,67 @@ function ApprovalsSurface({
                     </span>
                 }
             />
-            <div className="p-4 md:p-6">
-                {approvals.length === 0 ? (
+            <div className="space-y-4 p-4 md:p-6">
+                {approvals.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3">
+                        <button
+                            type="button"
+                            onClick={() => setFilter('all')}
+                            className={cn(
+                                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                                filter === 'all'
+                                    ? 'bg-brand text-ink shadow-2xs'
+                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
+                        >
+                            All Pending ({approvals.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilter('actionable')}
+                            className={cn(
+                                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                                filter === 'actionable'
+                                    ? 'bg-brand text-ink shadow-2xs'
+                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
+                        >
+                            Actionable by You ({actionableCount})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFilter('peer')}
+                            className={cn(
+                                'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                                filter === 'peer'
+                                    ? 'bg-brand text-ink shadow-2xs'
+                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
+                        >
+                            Self-Requested · Peer Review ({peerReviewCount})
+                        </button>
+                    </div>
+                )}
+
+                {filteredApprovals.length === 0 ? (
                     <Panel>
                         <EmptyState
                             icon={ShieldCheck}
-                            title="No approvals need attention"
-                            message="All dispatch and reassignment requests awaiting manager decision are clear."
+                            title={
+                                approvals.length === 0
+                                    ? 'No approvals need attention'
+                                    : 'No approvals match selected filter'
+                            }
+                            message={
+                                approvals.length === 0
+                                    ? 'All dispatch and reassignment requests awaiting manager decision are clear.'
+                                    : 'Switch filters above to view other pending requests.'
+                            }
                         />
                     </Panel>
                 ) : (
                     <div className="grid gap-4 xl:grid-cols-2">
-                        {approvals.map((approval) => (
+                        {filteredApprovals.map((approval) => (
                             <ApprovalReviewCard
                                 key={approval.id}
                                 approval={approval}
@@ -2190,50 +2353,84 @@ function ApprovalReviewCard({
 
     return (
         <Panel className="overflow-hidden">
-            <div className="border-b border-line px-4 py-4">
+            <div className="border-b border-line bg-surface-subtle/30 px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                            {approval.subject.priority && (
+                            <CanonicalStatusBadge status={approval.status} />
+                            <ApprovalKindBadge kind={approval.kind} />
+                            {approval.subject.status && (
                                 <CanonicalStatusBadge
-                                    status={approval.subject.priority}
+                                    status={approval.subject.status}
                                 />
                             )}
-                            <CanonicalStatusBadge status={approval.status} />
                         </div>
-                        <h2 className="mt-2 font-semibold">
+                        <h2 className="mt-2.5 text-base font-bold text-ink">
                             {approval.subject.title ??
                                 approval.subject.reference}
                         </h2>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            {approval.subject.reference} · Requested by{' '}
-                            {approval.requester.name}
-                        </p>
-                        <a
-                            href={`/operations/dispatch-jobs/${approval.subject.id}`}
-                            className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none"
-                            aria-label={`Open dispatch ${approval.subject.reference}`}
-                        >
-                            Open dispatch
-                            <ArrowUpRight
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
-                        </a>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
+                            <span className="font-semibold text-ink">
+                                {approval.subject.reference}
+                            </span>
+                            {approval.subject.priority &&
+                                approval.subject.priority.value !==
+                                    'routine' && (
+                                    <span
+                                        className={cn(
+                                            'rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
+                                            approval.subject.priority.value ===
+                                                'emergency'
+                                                ? 'bg-danger-soft text-danger-strong ring-1 ring-danger/30'
+                                                : 'bg-warning-soft text-warning-strong ring-1 ring-warning/30',
+                                        )}
+                                    >
+                                        [{approval.subject.priority.label}]
+                                    </span>
+                                )}
+                            <span>·</span>
+                            <span>
+                                Requested by{' '}
+                                <strong className="font-medium text-ink">
+                                    {approval.requester.name}
+                                </strong>
+                            </span>
+                            <span>·</span>
+                            <span>{formatDateTime(approval.created_at)}</span>
+                        </div>
                     </div>
-                    <span className="rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft">
-                        {humanize(approval.kind)}
-                    </span>
+                    <a
+                        href={`/operations/dispatch-jobs/${approval.subject.id}`}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none"
+                        aria-label={`Open dispatch ${approval.subject.reference}`}
+                    >
+                        Open dispatch
+                        <ArrowUpRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
+                    </a>
                 </div>
             </div>
 
-            <div className="space-y-4 px-4 py-4">
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="space-y-4 px-5 py-4">
+                {/* Executive Approval Summary */}
+                <div className="flex items-start gap-2.5 rounded-lg border border-brand/20 bg-brand-soft/25 p-3 text-xs">
+                    <ShieldCheck
+                        className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
+                        aria-hidden="true"
+                    />
+                    <p className="leading-relaxed text-ink">
+                        {getApprovalExecutiveSummary(approval)}
+                    </p>
+                </div>
+
+                <dl className="grid gap-3 rounded-lg border border-line bg-surface-subtle/40 p-3.5 text-xs sm:grid-cols-2">
                     <div>
-                        <dt className="text-xs font-medium text-ink-soft">
-                            Schedule
+                        <dt className="font-medium text-ink-soft">
+                            Execution Schedule
                         </dt>
-                        <dd className="mt-1 font-medium">
+                        <dd className="mt-1 font-semibold text-ink">
                             {formatDateTime(
                                 approval.subject.scheduled_start,
                                 'Not recorded',
@@ -2246,35 +2443,38 @@ function ApprovalReviewCard({
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-xs font-medium text-ink-soft">
-                            Site
+                        <dt className="font-medium text-ink-soft">
+                            Site Location
                         </dt>
-                        <dd className="mt-1 font-medium">
-                            {approval.subject.site ?? 'Not recorded'}
+                        <dd className="mt-1 flex items-center gap-1.5 font-semibold text-ink">
+                            <MapPin className="h-3.5 w-3.5 text-brand-strong" />
+                            <span>
+                                {approval.subject.site ?? 'Not recorded'}
+                            </span>
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-xs font-medium text-ink-soft">
-                            Dispatch state
+                        <dt className="font-medium text-ink-soft">
+                            Target Dispatch State
                         </dt>
-                        <dd className="mt-1 flex flex-wrap items-center gap-2">
+                        <dd className="mt-1 flex flex-wrap items-center gap-2 font-semibold text-ink">
                             {approval.subject.status && (
                                 <CanonicalStatusBadge
                                     status={approval.subject.status}
                                 />
                             )}
                             {approval.subject.version !== null && (
-                                <span className="text-xs text-ink-soft">
+                                <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft">
                                     Version {approval.subject.version}
                                 </span>
                             )}
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-xs font-medium text-ink-soft">
-                            Requested
+                        <dt className="font-medium text-ink-soft">
+                            Request Timestamp
                         </dt>
-                        <dd className="mt-1 font-medium">
+                        <dd className="mt-1 font-semibold text-ink">
                             {formatDateTime(
                                 approval.created_at,
                                 'Not recorded',
@@ -2284,131 +2484,226 @@ function ApprovalReviewCard({
                 </dl>
 
                 {approval.subject.site_notes?.trim() && (
-                    <div className="rounded-lg bg-surface-subtle p-3">
-                        <p className="text-xs font-semibold">Site note</p>
-                        <p className="mt-1 text-sm leading-6 text-ink-soft">
+                    <div className="rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                        <p className="font-bold text-ink">Site Instructions</p>
+                        <p className="mt-1 leading-relaxed text-ink-soft">
                             {approval.subject.site_notes}
                         </p>
                     </div>
                 )}
 
-                <div>
-                    <h3 className="text-sm font-semibold">
-                        Proposed resource changes
+                {/* Proposed Resource Changes Section */}
+                <div className="space-y-3">
+                    <h3 className="text-xs font-bold tracking-wider text-ink-soft uppercase">
+                        Proposed Resource Allocations & Adjustments
                     </h3>
+
                     {endedPersonnel.length > 0 && (
-                        <div className="mt-2">
-                            <p className="text-xs font-medium text-ink-soft">
-                                Ending active personnel assignments
-                            </p>
+                        <div className="rounded-lg border border-danger/25 bg-danger-soft/20 p-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+                                <UserMinus className="h-3.5 w-3.5 shrink-0" />
+                                <span>
+                                    Ending active personnel assignments (
+                                    {endedPersonnel.length})
+                                </span>
+                            </div>
                             <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {endedPersonnel.map((person) => (
                                     <li
                                         key={`ended-personnel-${person.id}`}
-                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                        className="flex items-center justify-between rounded-md border border-danger/20 bg-surface px-3 py-2 text-xs"
                                     >
-                                        <p className="font-medium">
-                                            {person.name}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {humanize(person.assignment_type)}
-                                        </p>
+                                        <div>
+                                            <p className="font-semibold text-ink">
+                                                {person.name}
+                                            </p>
+                                            <p className="text-[11px] text-ink-soft">
+                                                {humanize(
+                                                    person.assignment_type,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <span className="rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                                            Replaced
+                                        </span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     )}
+
                     {endedAssets.length > 0 && (
-                        <div className="mt-3">
-                            <p className="text-xs font-medium text-ink-soft">
-                                Ending active asset assignments
-                            </p>
+                        <div className="rounded-lg border border-danger/25 bg-danger-soft/20 p-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+                                <Truck className="h-3.5 w-3.5 shrink-0" />
+                                <span>
+                                    Ending active asset assignments (
+                                    {endedAssets.length})
+                                </span>
+                            </div>
                             <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {endedAssets.map((asset) => (
                                     <li
                                         key={`ended-asset-${asset.id}`}
-                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                        className="flex items-center justify-between rounded-md border border-danger/20 bg-surface px-3 py-2 text-xs"
                                     >
-                                        <p className="font-medium">
-                                            {asset.code} · {asset.name}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {humanize(asset.assignment_type)}
-                                        </p>
+                                        <div>
+                                            <p className="font-semibold text-ink">
+                                                {asset.code} · {asset.name}
+                                            </p>
+                                            <p className="text-[11px] text-ink-soft">
+                                                {humanize(
+                                                    asset.assignment_type,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <span className="rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                                            Replaced
+                                        </span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
                     )}
-                    {personnel.length > 0 || assets.length > 0 ? (
-                        <div className="mt-3">
-                            <p className="text-xs font-medium text-ink-soft">
-                                Adding replacement resources
-                            </p>
+
+                    {(personnel.length > 0 || assets.length > 0) && (
+                        <div className="rounded-lg border border-success/30 bg-success-soft/20 p-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-success-strong">
+                                <UserPlus className="h-3.5 w-3.5 shrink-0" />
+                                <span>
+                                    Adding replacement resources (
+                                    {personnel.length + assets.length})
+                                </span>
+                            </div>
                             <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {personnel.map((person) => (
                                     <li
                                         key={`personnel-${person.id}`}
-                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                        className="flex items-center justify-between rounded-md border border-success/25 bg-surface px-3 py-2 text-xs"
                                     >
-                                        <p className="font-medium">
-                                            {person.name}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {humanize(person.assignment_type)}
-                                        </p>
+                                        <div>
+                                            <p className="font-semibold text-ink">
+                                                {person.name}
+                                            </p>
+                                            <p className="text-[11px] text-ink-soft">
+                                                {humanize(
+                                                    person.assignment_type,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <span className="rounded bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success-strong">
+                                            Proposed
+                                        </span>
                                     </li>
                                 ))}
                                 {assets.map((asset) => (
                                     <li
                                         key={`asset-${asset.id}`}
-                                        className="rounded-lg border border-line px-3 py-2 text-sm"
+                                        className="flex items-center justify-between rounded-md border border-success/25 bg-surface px-3 py-2 text-xs"
                                     >
-                                        <p className="font-medium">
-                                            {asset.code} · {asset.name}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-ink-soft">
-                                            {humanize(asset.assignment_type)}
-                                        </p>
+                                        <div>
+                                            <p className="font-semibold text-ink">
+                                                {asset.code} · {asset.name}
+                                            </p>
+                                            <p className="text-[11px] text-ink-soft">
+                                                {humanize(
+                                                    asset.assignment_type,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <span className="rounded bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success-strong">
+                                            Proposed
+                                        </span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
-                    ) : endedPersonnel.length === 0 &&
-                      endedAssets.length === 0 ? (
-                        <p className="mt-2 text-sm text-ink-soft">
-                            This request covers dispatch activation without a
-                            new resource batch.
-                        </p>
-                    ) : null}
+                    )}
+
+                    {endedPersonnel.length === 0 &&
+                        endedAssets.length === 0 &&
+                        personnel.length === 0 &&
+                        assets.length === 0 && (
+                            <p className="rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-soft">
+                                This request covers dispatch activation without
+                                a new resource batch.
+                            </p>
+                        )}
                 </div>
 
-                {canDecide ? (
+                {!canDecide ? (
+                    <div
+                        className="rounded-xl border border-warning/40 bg-warning-soft/30 p-4"
+                        role="status"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning-strong">
+                                <Lock className="h-4 w-4" aria-hidden="true" />
+                            </div>
+                            <div className="space-y-1 text-xs">
+                                <h4 className="font-bold text-warning-strong">
+                                    Segregation of Duties · Independent Review
+                                    Required
+                                </h4>
+                                <p className="leading-relaxed text-ink">
+                                    {approval.decision_blocker ??
+                                        'You submitted this operational change. Company governance requires an independent, authorized second manager to record the approval decision.'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
                     <div className="border-t border-line pt-4">
                         {approvalError && (
                             <div
-                                className="mb-3 rounded-lg border border-danger bg-danger-soft px-3 py-3 text-sm text-danger"
+                                className="mb-3 rounded-lg border border-danger/40 bg-danger-soft p-3 text-xs font-semibold text-danger"
                                 role="alert"
                             >
                                 {approvalError}
                             </div>
                         )}
-                        <label
-                            htmlFor={reasonId}
-                            className="text-sm font-medium"
-                        >
-                            Decision reason
-                        </label>
-                        <p className="mt-1 text-xs text-ink-soft">
-                            Required for both approval and rejection. This
-                            reason becomes part of the audit history.
-                        </p>
+                        <div className="flex items-center justify-between">
+                            <label
+                                htmlFor={reasonId}
+                                className="text-xs font-bold text-ink"
+                            >
+                                Mandatory Decision Justification *
+                            </label>
+                            <span className="text-[11px] text-ink-soft">
+                                Becomes permanent audit trail
+                            </span>
+                        </div>
+
+                        {/* Quick preset chips */}
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span className="text-ink-muted text-[11px]">
+                                Quick reasons:
+                            </span>
+                            {[
+                                'Resource availability and site readiness verified',
+                                'Schedule conflicts cleared and certified',
+                                'Capacity and qualifications confirmed',
+                            ].map((preset, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() =>
+                                        form.setData('reason', preset)
+                                    }
+                                    className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-ink transition-colors hover:border-brand hover:bg-brand-soft hover:text-brand-strong"
+                                >
+                                    + {preset.slice(0, 30)}…
+                                </button>
+                            ))}
+                        </div>
+
                         <textarea
                             id={reasonId}
                             value={form.data.reason}
                             onChange={(event) =>
                                 form.setData('reason', event.target.value)
                             }
+                            placeholder="Enter the operational justification for approving or rejecting this request…"
                             rows={3}
                             required
                             maxLength={2000}
@@ -2419,7 +2714,7 @@ function ApprovalReviewCard({
                                 form.errors.reason ? errorId : undefined
                             }
                             className={cn(
-                                'mt-2 w-full resize-y rounded-lg border bg-surface px-3 py-2 text-sm',
+                                'mt-2 w-full resize-y rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none',
                                 form.errors.reason
                                     ? 'border-danger'
                                     : 'border-line-strong',
@@ -2428,7 +2723,7 @@ function ApprovalReviewCard({
                         {form.errors.reason && (
                             <p
                                 id={errorId}
-                                className="mt-1 text-xs text-danger"
+                                className="mt-1 text-xs font-medium text-danger"
                                 role="alert"
                             >
                                 {form.errors.reason}
@@ -2443,6 +2738,7 @@ function ApprovalReviewCard({
                                     form.data.reason.trim().length === 0
                                 }
                             >
+                                <X className="h-3.5 w-3.5" aria-hidden="true" />
                                 {form.processing &&
                                 pendingDecision === 'rejected'
                                     ? 'Rejecting…'
@@ -2456,25 +2752,16 @@ function ApprovalReviewCard({
                                     form.data.reason.trim().length === 0
                                 }
                             >
+                                <Check
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
                                 {form.processing &&
                                 pendingDecision === 'approved'
                                     ? 'Approving…'
                                     : 'Approve request'}
                             </Button>
                         </div>
-                    </div>
-                ) : (
-                    <div
-                        className="rounded-lg border border-warning bg-warning-soft px-3 py-3 text-sm text-warning-strong"
-                        role="status"
-                    >
-                        <p className="font-semibold">
-                            Independent review needed
-                        </p>
-                        <p className="mt-1">
-                            {approval.decision_blocker ??
-                                'Another authorized manager must decide this request.'}
-                        </p>
                     </div>
                 )}
             </div>
