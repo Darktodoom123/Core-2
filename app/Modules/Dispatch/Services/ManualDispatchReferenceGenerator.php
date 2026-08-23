@@ -8,8 +8,15 @@ use LogicException;
 
 final class ManualDispatchReferenceGenerator
 {
-    public function generate(): string
+    public function generate(?string $stream = 'MAN'): string
     {
+        $prefix = match (strtolower((string) $stream)) {
+            'service', 'srv' => 'SRV',
+            'rental', 'ren' => 'REN',
+            'sale', 'sales', 'sal' => 'SAL',
+            default => 'MAN',
+        };
+
         $timestamp = now();
         $year = $timestamp->year;
 
@@ -32,7 +39,7 @@ final class ManualDispatchReferenceGenerator
         $number = (int) $sequence->next_number;
 
         do {
-            $reference = sprintf('DSP-MAN-%d-%03d', $year, $number);
+            $reference = sprintf('DSP-%s-%d-%03d', $prefix, $year, $number);
             $number++;
         } while (DispatchJob::query()->withTrashed()->where('reference', $reference)->exists());
 

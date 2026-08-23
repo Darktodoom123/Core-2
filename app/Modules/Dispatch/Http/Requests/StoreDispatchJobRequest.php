@@ -48,6 +48,8 @@ final class StoreDispatchJobRequest extends FormRequest
             'scheduled_start' => ['required', 'date'],
             'scheduled_end' => ['required', 'date', 'after:scheduled_start'],
             'priority' => [Rule::prohibitedIf($linkedToServiceRequest), 'required_without:service_request_id', Rule::enum(DispatchPriority::class)],
+            'work_stream' => ['nullable', 'string', Rule::in(['service', 'rental', 'sale', 'general'])],
+            'equipment_subtype' => ['nullable', 'string', 'max:50'],
             'requirements' => [Rule::prohibitedIf($linkedToServiceRequest), 'sometimes', 'array'],
             'requirements.*' => ['string', 'max:255'],
         ];

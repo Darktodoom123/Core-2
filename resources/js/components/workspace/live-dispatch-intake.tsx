@@ -8,7 +8,6 @@ import {
     ClipboardCheck,
     Edit3,
     FileText,
-    Info,
     Link2,
     MapPin,
     Package,
@@ -16,6 +15,7 @@ import {
     PlusCircle,
     ShieldCheck,
     UserRoundPlus,
+    Wrench,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -50,22 +50,83 @@ export type IntakeMode =
     | 'client'
     | null;
 
-const ON_SITE_SAFETY_REQUIREMENTS = [
+export type ManualWorkStream = 'service' | 'rental' | 'sale' | 'general';
+export type EquipmentSubtype =
+    'mobile_crane' | 'tower_crane' | 'general_service';
+
+export const MOBILE_CRANE_REQUIREMENTS = [
+    'Require on-site ground bearing & soil stability check',
+    'Require outrigger pad clearance & positioning check',
+    'Require overhead power line safe clearance verification (15m)',
+    'Require certified rigging gear & inspection sign-off',
+    'Require site induction & PPE compliance verification',
+    'Require traffic control & local municipal permit in place',
+];
+
+export const TOWER_CRANE_REQUIREMENTS = [
+    'Require weathervaning / free-slew mechanism verification at shift end',
+    'Require foundation anchor bolt & mast pin torque inspection',
+    'Require Load Moment Indicator (LMI) & hoist limit switch testing',
+    'Require high-rise aviation obstruction warning lights operational',
+    'Require mast vertical ladder fall-arrest rail & safety cage inspection',
+];
+
+export const GENERAL_SERVICE_REQUIREMENTS = [
+    'Require certified rigging gear & inspection sign-off',
+    'Require site induction & PPE compliance verification',
+    'Require traffic control & local municipal permit in place',
+    'Require task hazard analysis & safety briefing sign-off',
+];
+
+export const RENTAL_DELIVERY_REQUIREMENTS = [
+    'Require pre-checkout condition photos & fluid/hour meter documentation',
+    'Require pre-operation inspection & safe release certificate',
+    'Require customer site delivery receipt & condition handover sign-off',
+    'Require heavy transport lowbed 4-point tie-down inspection',
+];
+
+export const SALES_TRANSPORT_REQUIREMENTS = [
+    'Require physical VIN & serial number verification against sales order',
+    'Require heavy transport lowbed height & route clearance check',
+    'Require delivery handover inspection & customer sign-off',
+    'Require equipment title & ownership transfer documentation sign-off',
+];
+
+export const GENERAL_MANUAL_REQUIREMENTS = [
     'Require on-site ground bearing & soil stability check',
     'Require outrigger pad clearance & positioning check',
     'Require overhead power line safe clearance verification',
     'Require site induction & PPE compliance verification',
-];
-
-const PERMITS_RIGGING_REQUIREMENTS = [
     'Require certified rigging gear & inspection sign-off',
     'Require traffic control & local municipal permit in place',
 ];
 
-const PREDEFINED_TECHNICAL_REQUIREMENTS = [
-    ...ON_SITE_SAFETY_REQUIREMENTS,
-    ...PERMITS_RIGGING_REQUIREMENTS,
-];
+export function getRecommendedRequirements(
+    stream: ManualWorkStream,
+    subtype: EquipmentSubtype,
+): string[] {
+    if (stream === 'service') {
+        if (subtype === 'tower_crane') {
+            return TOWER_CRANE_REQUIREMENTS;
+        }
+
+        if (subtype === 'general_service') {
+            return GENERAL_SERVICE_REQUIREMENTS;
+        }
+
+        return MOBILE_CRANE_REQUIREMENTS;
+    }
+
+    if (stream === 'rental') {
+        return RENTAL_DELIVERY_REQUIREMENTS;
+    }
+
+    if (stream === 'sale') {
+        return SALES_TRANSPORT_REQUIREMENTS;
+    }
+
+    return GENERAL_MANUAL_REQUIREMENTS;
+}
 
 type IncomingWorkItem = {
     key: string;
@@ -245,11 +306,11 @@ export function LiveDispatchIntake({
                                 Incoming work
                             </p>
                             <h3 className="mt-1 text-base font-semibold text-ink">
-                                Core 1 handoffs routed automatically
+                                Incoming work queue
                             </h3>
                             <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                                Each item opens its own service, rental, or
-                                sales workflow. No source selection is needed.
+                                Select an incoming handoff to verify site
+                                details, assign equipment, and dispatch.
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
@@ -301,7 +362,11 @@ export function LiveDispatchIntake({
                         <Button
                             type="button"
                             variant={
-                                mode === 'manual' ? 'secondary' : 'primary'
+                                mode === 'manual'
+                                    ? 'secondary'
+                                    : incomingItems.length > 0
+                                      ? 'secondary'
+                                      : 'primary'
                             }
                             aria-pressed={mode === 'manual'}
                             onClick={() => {
@@ -340,7 +405,7 @@ export function LiveDispatchIntake({
                             setMode('reconciliation');
                         }}
                         className={cn(
-                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all',
+                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                             mode === 'reconciliation'
                                 ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
                                 : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -438,7 +503,7 @@ function IncomingWorkRow({
                 aria-label={`Review ${item.sourceLabel}: ${item.reference}`}
                 onClick={onClick}
                 className={cn(
-                    'flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors',
+                    'flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
                     selected
                         ? 'bg-brand-soft/60'
                         : 'bg-surface hover:bg-surface-subtle',
@@ -461,16 +526,20 @@ function IncomingWorkRow({
                         {item.client} · {item.detail}
                     </span>
                 </span>
-                <span className="hidden shrink-0 text-right sm:block">
-                    <span className="block text-xs font-medium text-ink-soft">
+                <span className="hidden shrink-0 items-center gap-2.5 sm:flex">
+                    <span className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {item.status}
                     </span>
-                    <span className="mt-0.5 block text-xs font-semibold text-brand-strong">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-strong">
                         {selected ? 'Open workflow' : 'Review'}
+                        <ArrowRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                        />
                     </span>
                 </span>
                 <ArrowRight
-                    className="text-ink-muted h-4 w-4 shrink-0"
+                    className="h-4 w-4 shrink-0 text-ink-muted sm:hidden"
                     aria-hidden="true"
                 />
             </button>
@@ -485,7 +554,12 @@ function ManualDispatchIntakeForm({
     clients: ClientViewModel[];
     onClose: () => void;
 }) {
-    const [requirements, setRequirements] = useState<string[]>([]);
+    const [workStream, setWorkStream] = useState<ManualWorkStream>('service');
+    const [equipmentSubtype, setEquipmentSubtype] =
+        useState<EquipmentSubtype>('mobile_crane');
+    const [requirements, setRequirements] = useState<string[]>(() =>
+        getRecommendedRequirements('service', 'mobile_crane'),
+    );
     const [customRequirements, setCustomRequirements] = useState<string[]>([]);
     const [customRequirement, setCustomRequirement] = useState('');
 
@@ -496,9 +570,28 @@ function ManualDispatchIntakeForm({
         scheduled_start: '',
         scheduled_end: '',
         priority: 'routine' as DispatchPriorityValue,
+        work_stream: 'service',
+        equipment_subtype: 'mobile_crane' as string | null,
         site_notes: '',
         requirements: [] as string[],
     });
+
+    const handleStreamChange = (nextStream: ManualWorkStream) => {
+        setWorkStream(nextStream);
+        const rec = getRecommendedRequirements(nextStream, equipmentSubtype);
+        setRequirements([...rec, ...customRequirements]);
+    };
+
+    const handleSubtypeChange = (nextSubtype: EquipmentSubtype) => {
+        setEquipmentSubtype(nextSubtype);
+        const rec = getRecommendedRequirements('service', nextSubtype);
+        setRequirements([...rec, ...customRequirements]);
+    };
+
+    const currentRecommended = getRecommendedRequirements(
+        workStream,
+        equipmentSubtype,
+    );
 
     const togglePredefined = (text: string) => {
         setRequirements((prev) =>
@@ -537,26 +630,44 @@ function ManualDispatchIntakeForm({
         setRequirements((prev) => prev.filter((r) => r !== text));
     };
 
-    const allStandardSelected = PREDEFINED_TECHNICAL_REQUIREMENTS.every((req) =>
+    const allStandardSelected = currentRecommended.every((req) =>
         requirements.includes(req),
     );
 
     const toggleAllStandard = () => {
         if (allStandardSelected) {
             setRequirements((prev) =>
-                prev.filter(
-                    (r) => !PREDEFINED_TECHNICAL_REQUIREMENTS.includes(r),
-                ),
+                prev.filter((r) => !currentRecommended.includes(r)),
             );
         } else {
             setRequirements((prev) => [
-                ...prev.filter(
-                    (r) => !PREDEFINED_TECHNICAL_REQUIREMENTS.includes(r),
-                ),
-                ...PREDEFINED_TECHNICAL_REQUIREMENTS,
+                ...prev.filter((r) => !currentRecommended.includes(r)),
+                ...currentRecommended,
             ]);
         }
     };
+
+    const refPrefix =
+        workStream === 'service'
+            ? 'DSP-SRV'
+            : workStream === 'rental'
+              ? 'DSP-REN'
+              : workStream === 'sale'
+                ? 'DSP-SAL'
+                : 'DSP-MAN';
+
+    const titlePlaceholder =
+        workStream === 'service'
+            ? equipmentSubtype === 'tower_crane'
+                ? 'e.g. High-Rise Tower Crane Erection & Operation'
+                : equipmentSubtype === 'general_service'
+                  ? 'e.g. Structural Rigging & Technical Site Service'
+                  : 'e.g. 50T Mobile Crane Tandem Lift & Erection'
+            : workStream === 'rental'
+              ? 'e.g. 25T Rough Terrain Crane Rental Delivery & Setup'
+              : workStream === 'sale'
+                ? 'e.g. Cat 320D Excavator Sales Transport & Handover'
+                : 'e.g. 50T Heavy Crane Lift & Transport';
 
     const formComplete =
         form.data.client.trim() !== '' &&
@@ -569,13 +680,18 @@ function ManualDispatchIntakeForm({
         event.preventDefault();
         form.transform((data) => ({
             ...data,
+            work_stream: workStream,
+            equipment_subtype:
+                workStream === 'service' ? equipmentSubtype : null,
             requirements,
         }));
         form.post('/operations/dispatch-jobs', {
             preserveScroll: true,
             onSuccess: () => {
                 form.reset();
-                setRequirements([]);
+                setRequirements(
+                    getRecommendedRequirements('service', 'mobile_crane'),
+                );
                 setCustomRequirements([]);
                 onClose();
             },
@@ -592,7 +708,7 @@ function ManualDispatchIntakeForm({
                             Direct Manual Intake
                         </span>
                         <span className="rounded bg-brand-soft px-2 py-0.5 font-mono text-xs font-medium text-brand-strong">
-                            manual_intake provenance
+                            {refPrefix.toLowerCase()}_intake provenance
                         </span>
                     </div>
                     <h3 className="mt-2 text-lg font-semibold text-ink">
@@ -601,8 +717,9 @@ function ManualDispatchIntakeForm({
                     <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
                         Creates an operational draft dispatch directly in Core 2
                         with full assignment, approval, and scheduling
-                        capabilities. Does not generate or require an upstream
-                        Core 1 commercial quotation or order.
+                        capabilities. Select the operational work stream to
+                        automatically apply appropriate directives and reference
+                        codes.
                     </p>
                 </div>
                 <Button
@@ -615,24 +732,152 @@ function ManualDispatchIntakeForm({
                 </Button>
             </div>
 
-            <div className="mt-4 flex items-start gap-3 rounded-lg border border-line bg-surface-subtle p-3 text-xs text-ink-soft">
-                <Info
-                    className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong"
-                    aria-hidden="true"
-                />
-                <div>
-                    <strong className="font-semibold text-ink">
-                        Operational Draft Provenance:
-                    </strong>{' '}
-                    This dispatch will be registered with source type{' '}
-                    <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-ink">
-                        manual_intake
-                    </code>
-                    . All Core 2 features (Day/Week/Month scheduling,
-                    eligibility validation, credential checks, safety approvals,
-                    live MapLibre tracking, and mobile progression) apply
-                    identically.
+            {/* Section A: Work Stream & Equipment Subtype Selector */}
+            <div className="mt-4 rounded-xl border border-line bg-surface-subtle p-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <span className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                            Operational Work Stream
+                        </span>
+                        <p className="text-xs text-ink-soft">
+                            Categorize the dispatch operation to tailor safety
+                            directives and reference tags.
+                        </p>
+                    </div>
+                    <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-0.5 font-mono text-xs font-semibold text-brand-strong">
+                        {refPrefix}-YYYY-NNN
+                    </span>
                 </div>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                        {
+                            id: 'service' as const,
+                            title: 'Field Service',
+                            subtitle: 'Crane lifts & on-site service work',
+                            icon: Wrench,
+                            tone: 'border-brand-strong bg-brand-soft/70 text-brand-strong',
+                        },
+                        {
+                            id: 'rental' as const,
+                            title: 'Rental Delivery',
+                            subtitle: 'Equipment hire mobilization & prep',
+                            icon: CalendarDays,
+                            tone: 'border-warning-strong bg-warning-soft/70 text-warning-strong',
+                        },
+                        {
+                            id: 'sale' as const,
+                            title: 'Sales Transport',
+                            subtitle: 'Machinery hauling & VIN handover',
+                            icon: Package,
+                            tone: 'border-success-strong bg-success-soft/70 text-success-strong',
+                        },
+                        {
+                            id: 'general' as const,
+                            title: 'General Operational',
+                            subtitle: 'Ad-hoc direct draft dispatch',
+                            icon: ClipboardCheck,
+                            tone: 'border-info-strong bg-info-soft/70 text-info-strong',
+                        },
+                    ].map((stream) => {
+                        const active = workStream === stream.id;
+                        const IconComponent = stream.icon;
+
+                        return (
+                            <button
+                                key={stream.id}
+                                type="button"
+                                onClick={() => handleStreamChange(stream.id)}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-xl border p-3.5 text-left transition-all duration-150',
+                                    active
+                                        ? cn(
+                                              stream.tone,
+                                              'font-semibold shadow-xs ring-1 ring-brand-strong/30',
+                                          )
+                                        : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
+                                )}
+                            >
+                                <div className="flex w-full items-center justify-between">
+                                    <IconComponent
+                                        className={cn(
+                                            'h-5 w-5',
+                                            active
+                                                ? 'text-current'
+                                                : 'text-ink-soft',
+                                        )}
+                                        aria-hidden="true"
+                                    />
+                                    {active && (
+                                        <CheckCircle2
+                                            className="h-4 w-4 text-current"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                </div>
+                                <div>
+                                    <p
+                                        className={cn(
+                                            'text-sm font-semibold',
+                                            active ? 'text-ink' : 'text-ink',
+                                        )}
+                                    >
+                                        {stream.title}
+                                    </p>
+                                    <p className="mt-0.5 text-xs leading-tight text-ink-soft">
+                                        {stream.subtitle}
+                                    </p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {workStream === 'service' && (
+                    <div className="mt-3 border-t border-line/70 pt-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-ink">
+                                Equipment Subtype:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {[
+                                    {
+                                        id: 'mobile_crane' as const,
+                                        label: '🏗️ Mobile / All-Terrain Crane',
+                                    },
+                                    {
+                                        id: 'tower_crane' as const,
+                                        label: '🗼 Tower Crane',
+                                    },
+                                    {
+                                        id: 'general_service' as const,
+                                        label: '🛠️ Rigging & Support',
+                                    },
+                                ].map((sub) => {
+                                    const active = equipmentSubtype === sub.id;
+
+                                    return (
+                                        <button
+                                            key={sub.id}
+                                            type="button"
+                                            onClick={() =>
+                                                handleSubtypeChange(sub.id)
+                                            }
+                                            className={cn(
+                                                'inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
+                                                active
+                                                    ? 'border-brand-strong bg-brand-strong font-semibold text-white shadow-xs'
+                                                    : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                            )}
+                                        >
+                                            {sub.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <form onSubmit={submit} className="mt-5 space-y-5" noValidate>
@@ -645,15 +890,16 @@ function ManualDispatchIntakeForm({
                             aria-describedby="manual-reference-hint"
                         >
                             <span className="font-mono text-sm text-ink-soft">
-                                DSP-MAN-YYYY-NNN
+                                {refPrefix}-YYYY-NNN
                             </span>
                         </div>
                         <p
                             id="manual-reference-hint"
                             className="mt-1 text-xs font-normal text-ink-soft"
                         >
-                            A unique reference is assigned automatically when
-                            this draft is saved.
+                            Assigned automatically with{' '}
+                            <code className="font-mono">{refPrefix}</code>{' '}
+                            prefix when saved.
                         </p>
                     </div>
 
@@ -707,7 +953,7 @@ function ManualDispatchIntakeForm({
                         value={form.data.title}
                         error={form.errors.title}
                         onChange={(value) => form.setData('title', value)}
-                        placeholder="e.g. 50T Heavy Crane Lift & Transport"
+                        placeholder={titlePlaceholder}
                         required
                     />
 
@@ -769,9 +1015,16 @@ function ManualDispatchIntakeForm({
                                 Technical requirements &amp; safety directives
                             </h4>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Optional field directives — select criteria the
-                                operator &amp; crew must verify before
-                                commencing work.
+                                {workStream === 'service' &&
+                                equipmentSubtype === 'tower_crane'
+                                    ? 'High-rise tower crane directives — weathervaning, mast tie-in bolts, LMI, and aviation beacons.'
+                                    : workStream === 'service'
+                                      ? 'Crane lift directives — ground stability, outrigger pad positioning, powerline clearance, and rigging.'
+                                      : workStream === 'rental'
+                                        ? 'Rental equipment delivery directives — pre-checkout condition photos, safe release, and customer sign-off.'
+                                        : workStream === 'sale'
+                                          ? 'Equipment sales transport directives — physical VIN verification, tie-down checks, and ownership transfer.'
+                                          : 'General operational directives — site induction, PPE, and traffic permits.'}
                             </p>
                         </div>
                         <div className="flex items-center gap-2.5">
@@ -781,8 +1034,8 @@ function ManualDispatchIntakeForm({
                                 className="text-xs font-semibold text-brand-strong transition-colors hover:text-ink hover:underline"
                             >
                                 {allStandardSelected
-                                    ? 'Deselect all standard'
-                                    : 'Select all standard'}
+                                    ? 'Deselect all recommended'
+                                    : 'Select all recommended'}
                             </button>
                             <span
                                 className={cn(
@@ -792,13 +1045,13 @@ function ManualDispatchIntakeForm({
                                         : 'border border-line bg-surface-subtle text-ink-soft',
                                 )}
                             >
-                                {requirements.length} requirement
+                                {requirements.length} directive
                                 {requirements.length === 1 ? '' : 's'} added
                             </span>
                         </div>
                     </div>
 
-                    {/* Section 1: On-Site Safety Checks */}
+                    {/* Predefined Directives for the active Stream/Subtype */}
                     <div className="mt-4 space-y-2">
                         <div className="flex items-center gap-1.5 text-ink-soft">
                             <ShieldCheck
@@ -806,12 +1059,20 @@ function ManualDispatchIntakeForm({
                                 aria-hidden="true"
                             />
                             <span className="text-[11px] font-semibold tracking-wide uppercase">
-                                On-Site Safety Checks (Operator verifies on
-                                site)
+                                {workStream === 'service' &&
+                                equipmentSubtype === 'tower_crane'
+                                    ? 'Tower Crane Safety Directives'
+                                    : workStream === 'service'
+                                      ? 'Crane Lift & Site Safety Directives'
+                                      : workStream === 'rental'
+                                        ? 'Rental Prep & Delivery Directives'
+                                        : workStream === 'sale'
+                                          ? 'Sales Transport & Handover Directives'
+                                          : 'Standard Operational Directives'}
                             </span>
                         </div>
                         <div className="grid gap-2.5 sm:grid-cols-2">
-                            {ON_SITE_SAFETY_REQUIREMENTS.map((req) => {
+                            {currentRecommended.map((req) => {
                                 const active = requirements.includes(req);
 
                                 return (
@@ -864,72 +1125,7 @@ function ManualDispatchIntakeForm({
                         </div>
                     </div>
 
-                    {/* Section 2: Permits & Rigging Compliance */}
-                    <div className="mt-4 space-y-2 border-t border-line/70 pt-3.5">
-                        <div className="flex items-center gap-1.5 text-ink-soft">
-                            <ClipboardCheck
-                                className="h-3.5 w-3.5 text-brand-strong"
-                                aria-hidden="true"
-                            />
-                            <span className="text-[11px] font-semibold tracking-wide uppercase">
-                                Permits &amp; Equipment Compliance
-                            </span>
-                        </div>
-                        <div className="grid gap-2.5 sm:grid-cols-2">
-                            {PERMITS_RIGGING_REQUIREMENTS.map((req) => {
-                                const active = requirements.includes(req);
-
-                                return (
-                                    <label
-                                        key={req}
-                                        className={cn(
-                                            'group relative flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-all duration-150 select-none',
-                                            active
-                                                ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
-                                                : 'border-line bg-surface text-ink shadow-2xs hover:border-brand/40 hover:bg-surface-subtle/60',
-                                        )}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={active}
-                                            onChange={() =>
-                                                togglePredefined(req)
-                                            }
-                                            className="sr-only"
-                                        />
-                                        <div
-                                            className={cn(
-                                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
-                                                active
-                                                    ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
-                                                    : 'border-line-strong bg-surface group-hover:border-brand/60',
-                                            )}
-                                            aria-hidden="true"
-                                        >
-                                            {active && (
-                                                <Check
-                                                    className="h-3.5 w-3.5 stroke-[2.75]"
-                                                    aria-hidden="true"
-                                                />
-                                            )}
-                                        </div>
-                                        <span
-                                            className={cn(
-                                                'flex-1 leading-snug transition-colors',
-                                                active
-                                                    ? 'font-semibold text-ink'
-                                                    : 'font-normal text-ink',
-                                            )}
-                                        >
-                                            {req}
-                                        </span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Section 3: Custom Technical Requirements */}
+                    {/* Section: Custom Technical Requirements */}
                     {customRequirements.length > 0 && (
                         <div className="mt-4 space-y-2 border-t border-line/70 pt-3.5">
                             <div className="flex items-center justify-between">
@@ -1083,7 +1279,7 @@ function ManualDispatchIntakeForm({
                         >
                             {form.processing
                                 ? 'Creating operational draft…'
-                                : 'Create manual draft dispatch'}
+                                : `Create manual ${workStream} draft`}
                         </Button>
                     </div>
                 </div>

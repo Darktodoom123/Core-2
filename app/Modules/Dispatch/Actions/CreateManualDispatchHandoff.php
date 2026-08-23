@@ -23,7 +23,11 @@ final class CreateManualDispatchHandoff
     public function handle(User $actor, array $attributes): DispatchJob
     {
         return DB::transaction(function () use ($actor, $attributes): DispatchJob {
-            $attributes['reference'] ??= $this->references->generate();
+            $workStream = (string) ($attributes['work_stream'] ?? 'general');
+            $equipmentSubtype = isset($attributes['equipment_subtype']) ? (string) $attributes['equipment_subtype'] : null;
+            unset($attributes['work_stream'], $attributes['equipment_subtype']);
+
+            $attributes['reference'] ??= $this->references->generate($workStream);
 
             $job = DispatchJob::query()->create([
                 ...$attributes,
@@ -51,6 +55,8 @@ final class CreateManualDispatchHandoff
                             'source_id' => $job->id,
                             'external_reference' => $job->reference,
                             'payload' => [
+                                'work_stream' => $workStream,
+                                'equipment_subtype' => $equipmentSubtype,
                                 'reference' => $job->reference,
                                 'client' => $job->client,
                                 'title' => $job->title,
@@ -62,6 +68,8 @@ final class CreateManualDispatchHandoff
                             ],
                         ],
                         'plan_snapshot' => [
+                            'work_stream' => $workStream,
+                            'equipment_subtype' => $equipmentSubtype,
                             'reference' => $job->reference,
                             'title' => $job->title,
                             'site' => $job->site,
