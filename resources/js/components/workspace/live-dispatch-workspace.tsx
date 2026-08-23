@@ -2363,9 +2363,11 @@ function DispatchLifecycleStepper({
     job: DispatchJobViewModel;
     hasApprovals: boolean;
 }) {
-    const hasAssignments =
-        job.personnel_assignments.length > 0 &&
-        job.asset_assignments.length > 0;
+    const personnelCount = job.personnel_assignments.length;
+    const assetCount = job.asset_assignments.length;
+    const totalAssigned = personnelCount + assetCount;
+    const hasAssignments = totalAssigned > 0;
+
     const isCancelled = job.status.value === 'cancelled';
     const isCompleted = job.status.value === 'completed';
     const isFieldActive = [
@@ -2382,74 +2384,123 @@ function DispatchLifecycleStepper({
         job.priority.value === 'priority' || job.priority.value === 'emergency';
 
     const approvalNeeded = isPriorityOrEmergency || hasApprovals;
-    const step1Done = true;
-    const step2Done = hasAssignments;
-    const step2Current = isDraft && !hasAssignments;
-    const step3Done =
-        !approvalNeeded ||
-        (!isPendingApproval && (isScheduled || isFieldActive || isCompleted));
-    const step3Current =
-        isPendingApproval || (isDraft && hasAssignments && approvalNeeded);
-    const step4Done = isCompleted;
-    const step4Current = isScheduled || isFieldActive;
-    const step5Done = isCompleted;
 
-    const steps = [
-        {
-            id: 'draft',
-            label: '1. Draft Scope',
-            sub: 'Job details defined',
-            done: step1Done,
-            current: isDraft && !hasAssignments,
-            icon: FileText,
-        },
-        {
-            id: 'assignments',
-            label: '2. Assignments',
-            sub: hasAssignments
-                ? `${job.personnel_assignments.length} staff · ${job.asset_assignments.length} asset`
-                : 'No resources',
-            done: step2Done,
-            current: step2Current,
-            icon: Users,
-        },
-        {
-            id: 'approval',
-            label: '3. Approval Gate',
-            sub: !approvalNeeded
-                ? 'Standard / Routine'
-                : isPendingApproval
-                  ? 'Awaiting Approval'
-                  : 'Approved',
-            done: step3Done,
-            current: step3Current,
-            icon: ShieldCheck,
-        },
-        {
-            id: 'dispatch',
-            label: '4. Dispatch & Field',
-            sub: isFieldActive
-                ? job.status.label
-                : isScheduled
-                  ? 'Ready to dispatch'
-                  : 'Pending activation',
-            done: step4Done,
-            current: step4Current,
-            icon: Truck,
-        },
-        {
-            id: 'completed',
-            label: '5. Completed',
-            sub: isCompleted ? 'Completed' : 'Pending completion',
-            done: step5Done,
-            current: isCompleted,
-            icon: CheckCircle2,
-        },
-    ];
+    // Single deterministic active step index (0 to 4)
+    const activeStepIndex = useMemo(() => {
+        if (isCompleted) {
+            return 4;
+        }
+
+        if (isFieldActive || isScheduled) {
+            return 3;
+        }
+
+        if (
+            isPendingApproval ||
+            (isDraft && hasAssignments && approvalNeeded)
+        ) {
+            return 2;
+        }
+
+        if (isDraft && !hasAssignments) {
+            return 1;
+        }
+
+        if (isDraft && hasAssignments && !approvalNeeded) {
+            return 3;
+        }
+
+        return 1;
+    }, [
+        isCompleted,
+        isFieldActive,
+        isScheduled,
+        isPendingApproval,
+        isDraft,
+        hasAssignments,
+        approvalNeeded,
+    ]);
+
+    const assignmentsSub = useMemo(() => {
+        if (personnelCount > 0 && assetCount > 0) {
+            return `${personnelCount} crew · ${assetCount} asset${assetCount === 1 ? '' : 's'}`;
+        }
+
+        if (personnelCount > 0) {
+            return `${personnelCount} crew assigned`;
+        }
+
+        if (assetCount > 0) {
+            return `${assetCount} asset${assetCount === 1 ? '' : 's'} assigned`;
+        }
+
+        if (activeStepIndex > 1) {
+            return 'Direct dispatch';
+        }
+
+        return activeStepIndex === 1
+            ? 'Assign crew & fleet'
+            : 'Awaiting allocation';
+    }, [personnelCount, assetCount, activeStepIndex]);
+
+    const approvalSub = useMemo(() => {
+        if (!approvalNeeded) {
+            return activeStepIndex > 2
+                ? 'Routine · Auto-approved'
+                : 'Routine · Standard';
+        }
+
+        if (isPendingApproval) {
+            return 'Awaiting review';
+        }
+
+        if (activeStepIndex > 2) {
+            return 'Manager approved';
+        }
+
+        return 'Required before dispatch';
+    }, [approvalNeeded, isPendingApproval, activeStepIndex]);
+
+    const currentStageLabel = useMemo(() => {
+        if (isCompleted) {
+            return 'Stage 5 of 5: Completed';
+        }
+
+        if (isFieldActive) {
+            return `Stage 4 of 5: Live Field Progression (${job.status.label})`;
+        }
+
+        if (isScheduled) {
+            return 'Stage 4 of 5: Scheduled & Ready';
+        }
+
+        if (isPendingApproval) {
+            return 'Stage 3 of 5: Pending Manager Approval';
+        }
+
+        if (isDraft && hasAssignments && approvalNeeded) {
+            return 'Stage 3 of 5: Manager Approval Required';
+        }
+
+        if (isDraft && hasAssignments && !approvalNeeded) {
+            return 'Stage 4 of 5: Ready for Dispatch';
+        }
+
+        return 'Stage 2 of 5: Resource Allocation';
+    }, [
+        isCompleted,
+        isFieldActive,
+        isScheduled,
+        isPendingApproval,
+        isDraft,
+        hasAssignments,
+        approvalNeeded,
+        job.status.label,
+    ]);
 
     if (isCancelled) {
         return (
-            <div className="flex items-center gap-2 rounded-xl border border-danger/30 bg-danger-soft/40 p-4 text-xs font-medium text-danger-strong">
+            <div className="flex items-center gap-2.5 rounded-xl border border-danger/30 bg-danger-soft/40 p-4 text-xs font-medium text-danger-strong shadow-2xs">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-danger" />
                 <span>
                     This dispatch job has been cancelled. Field execution and
@@ -2459,105 +2510,195 @@ function DispatchLifecycleStepper({
         );
     }
 
+    const steps = [
+        {
+            id: 'scope',
+            label: 'Scope & Intake',
+            sub: 'Job details defined',
+            isDone: true,
+            isCurrent: false,
+            icon: FileText,
+        },
+        {
+            id: 'assignments',
+            label: 'Resource Allocation',
+            sub: assignmentsSub,
+            isDone: activeStepIndex > 1 || totalAssigned > 0,
+            isCurrent: activeStepIndex === 1,
+            icon: Users,
+        },
+        {
+            id: 'approval',
+            label: 'Approval Gate',
+            sub: approvalSub,
+            isDone:
+                activeStepIndex > 2 ||
+                (!approvalNeeded && (activeStepIndex > 1 || totalAssigned > 0)),
+            isCurrent: activeStepIndex === 2,
+            icon: ShieldCheck,
+        },
+        {
+            id: 'dispatch',
+            label: 'Dispatch & Field',
+            sub: isCompleted
+                ? 'Field execution finished'
+                : isFieldActive
+                  ? `Live · ${job.status.label}`
+                  : isScheduled
+                    ? 'Scheduled · Ready'
+                    : activeStepIndex === 3
+                      ? 'Ready for dispatch'
+                      : 'Pending activation',
+            isDone: isCompleted,
+            isCurrent: activeStepIndex === 3,
+            icon: Truck,
+        },
+        {
+            id: 'completed',
+            label: 'Completion',
+            sub: isCompleted ? 'Finalized & closed' : 'Pending completion',
+            isDone: isCompleted,
+            isCurrent: activeStepIndex === 4,
+            icon: CheckCircle2,
+        },
+    ];
+
     return (
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-2xs">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+        <div className="rounded-2xl border border-line bg-surface p-4 shadow-2xs sm:p-5">
+            {/* Header with Title and Current Status */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3.5">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                    <span className="text-[11px] font-bold tracking-wider text-ink-soft uppercase">
                         Lifecycle Progression
                     </span>
-                    <span className="text-ink-muted">·</span>
-                    <span className="text-xs font-bold text-ink">
-                        {isDraft
-                            ? !hasAssignments
-                                ? 'Stage 1 of 5: Setup & Resource Allocation'
-                                : 'Stage 2 of 5: Ready for Review'
-                            : isPendingApproval
-                              ? 'Stage 3 of 5: Pending Manager Approval'
-                              : isScheduled
-                                ? 'Stage 4 of 5: Scheduled & Ready'
-                                : isFieldActive
-                                  ? `Stage 4 of 5: Live Field Progression (${job.status.label})`
-                                  : isCompleted
-                                    ? 'Stage 5 of 5: Completed'
-                                    : job.status.label}
+                    <span className="text-ink-muted" aria-hidden="true">
+                        ·
+                    </span>
+                    <span className="text-xs font-semibold text-ink">
+                        {currentStageLabel}
                     </span>
                 </div>
                 <CanonicalStatusBadge status={job.status} />
             </div>
 
-            <div className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-                {steps.map((step, idx) => {
-                    const Icon = step.icon;
-
-                    return (
-                        <div
-                            key={step.id}
-                            className={cn(
-                                'relative flex flex-col justify-between rounded-lg border p-3 transition-colors',
-                                step.current
-                                    ? 'border-brand bg-brand-soft/40 ring-1 ring-brand/40'
-                                    : step.done
-                                      ? 'border-success/30 bg-success-soft/20 text-ink'
-                                      : 'border-line bg-surface-subtle/50 text-ink-soft opacity-60',
-                            )}
-                        >
-                            <div className="flex items-center justify-between gap-2">
-                                <span
-                                    className={cn(
-                                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
-                                        step.current
-                                            ? 'bg-brand text-ink shadow-2xs'
-                                            : step.done
-                                              ? 'bg-success-soft text-success-strong'
-                                              : 'text-ink-muted border border-line bg-surface',
-                                    )}
-                                >
-                                    {step.done && !step.current ? (
-                                        <Check className="h-3 w-3" />
-                                    ) : (
-                                        idx + 1
-                                    )}
-                                </span>
-                                <Icon
-                                    className={cn(
-                                        'h-4 w-4 shrink-0',
-                                        step.current
-                                            ? 'text-brand-strong'
-                                            : step.done
-                                              ? 'text-success-strong'
-                                              : 'text-ink-muted',
-                                    )}
-                                />
-                            </div>
-                            <div className="mt-2 min-w-0">
-                                <p
-                                    className={cn(
-                                        'truncate text-xs font-bold',
-                                        step.current
-                                            ? 'text-ink'
-                                            : step.done
-                                              ? 'text-ink'
-                                              : 'text-ink-soft',
-                                    )}
-                                >
-                                    {step.label}
-                                </p>
-                                <p
-                                    className={cn(
-                                        'mt-0.5 truncate text-[11px]',
-                                        step.current
-                                            ? 'font-semibold text-brand-strong'
-                                            : 'text-ink-soft',
-                                    )}
-                                >
-                                    {step.sub}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                })}
+            {/* Segmented Linear Progress Visual Track */}
+            <div
+                className="mt-3.5 hidden grid-cols-5 gap-1.5 sm:grid"
+                aria-hidden="true"
+            >
+                {steps.map((step) => (
+                    <div
+                        key={`track-${step.id}`}
+                        className={cn(
+                            'h-1 rounded-full transition-all duration-300',
+                            step.isDone && !step.isCurrent
+                                ? 'bg-success'
+                                : step.isCurrent
+                                  ? 'bg-brand'
+                                  : 'bg-line',
+                        )}
+                    />
+                ))}
             </div>
+
+            {/* Accessible Interactive Stepper */}
+            <nav
+                aria-label="Dispatch lifecycle progression"
+                className="mt-3.5 sm:mt-3"
+            >
+                <ol className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+                    {steps.map((step, idx) => {
+                        const Icon = step.icon;
+
+                        return (
+                            <li
+                                key={step.id}
+                                aria-current={
+                                    step.isCurrent ? 'step' : undefined
+                                }
+                                className={cn(
+                                    'relative flex flex-col justify-between rounded-xl border p-3.5 transition-all duration-150',
+                                    step.isCurrent
+                                        ? 'border-brand/40 bg-brand-soft/30 shadow-xs ring-2 ring-brand/20'
+                                        : step.isDone
+                                          ? 'border-line bg-surface-subtle/50 text-ink'
+                                          : 'border-line/70 bg-surface/50 text-ink-soft',
+                                )}
+                            >
+                                <span className="sr-only">
+                                    {step.isDone
+                                        ? 'Completed: '
+                                        : step.isCurrent
+                                          ? 'Current: '
+                                          : 'Upcoming: '}
+                                    Step {idx + 1} of 5 - {step.label}
+                                </span>
+
+                                <div className="flex items-center justify-between gap-2">
+                                    <span
+                                        className={cn(
+                                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-transform',
+                                            step.isCurrent
+                                                ? 'bg-brand text-brand-contrast shadow-2xs'
+                                                : step.isDone
+                                                  ? 'border border-success/30 bg-success-soft text-success-strong'
+                                                  : 'text-ink-muted border border-line bg-surface',
+                                        )}
+                                        aria-hidden="true"
+                                    >
+                                        {step.isDone && !step.isCurrent ? (
+                                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                                        ) : (
+                                            idx + 1
+                                        )}
+                                    </span>
+
+                                    <div
+                                        className={cn(
+                                            'flex h-7 w-7 items-center justify-center rounded-lg transition-colors',
+                                            step.isCurrent
+                                                ? 'bg-brand/15 text-brand-strong'
+                                                : step.isDone
+                                                  ? 'bg-success-soft/60 text-success-strong'
+                                                  : 'text-ink-muted bg-surface-subtle',
+                                        )}
+                                        aria-hidden="true"
+                                    >
+                                        <Icon className="h-4 w-4 shrink-0" />
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 min-w-0">
+                                    <p
+                                        className={cn(
+                                            'truncate text-xs font-semibold',
+                                            step.isCurrent
+                                                ? 'font-bold text-ink'
+                                                : step.isDone
+                                                  ? 'text-ink'
+                                                  : 'text-ink-soft',
+                                        )}
+                                    >
+                                        {step.label}
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            'mt-0.5 truncate text-[11px]',
+                                            step.isCurrent
+                                                ? 'font-semibold text-brand-strong'
+                                                : step.isDone
+                                                  ? 'text-ink-soft'
+                                                  : 'text-muted',
+                                        )}
+                                    >
+                                        {step.sub}
+                                    </p>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ol>
+            </nav>
         </div>
     );
 }
