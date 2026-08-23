@@ -1,6 +1,9 @@
 <?php
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
+use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
+use App\Modules\Sales\ViewModels\SalesHandoffViewModel;
 use App\Shared\Assets\Services\OperationalAssetAvailability;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Artisan;
@@ -100,4 +103,10 @@ test('all tagged asset usage checkers and their providers are registered', funct
         ->and($providers)->toContain('AssignmentServiceProvider::class');
 
     expect(app()->make(OperationalAssetAvailability::class))->toBeInstanceOf(OperationalAssetAvailability::class);
+});
+
+test('domain modules encapsulate their own workspace view models', function (): void {
+    expect(class_exists(RentalHandoffViewModel::class))->toBeTrue()
+        ->and(class_exists(SalesHandoffViewModel::class))->toBeTrue()
+        ->and(class_exists(FuelWorkspaceViewModel::class))->toBeTrue();
 });

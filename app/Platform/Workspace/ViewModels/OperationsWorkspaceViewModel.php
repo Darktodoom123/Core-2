@@ -9,10 +9,12 @@ use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
-use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
 use App\Modules\Sales\Models\SalesOrder;
+use App\Modules\Sales\ViewModels\SalesHandoffViewModel;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
@@ -85,11 +87,7 @@ final class OperationsWorkspaceViewModel
      */
     public static function rentalHandoffs(Collection $reservations): array
     {
-        return $reservations->map(static fn (RentalReservation $reservation): array => [
-            ...self::commercialHandoff($reservation),
-            'start_date' => self::dateOnly($reservation->getAttribute('start_date')),
-            'end_date' => self::dateOnly($reservation->getAttribute('end_date')),
-        ])->values()->all();
+        return RentalHandoffViewModel::collection($reservations);
     }
 
     /**
@@ -98,40 +96,7 @@ final class OperationsWorkspaceViewModel
      */
     public static function salesHandoffs(Collection $orders): array
     {
-        return $orders->map(static fn (SalesOrder $order): array => [
-            ...self::commercialHandoff($order),
-            'total_cents' => $order->total_cents,
-        ])->values()->all();
-    }
-
-    /** @return array<string, mixed> */
-    private static function commercialHandoff(RentalReservation|SalesOrder $handoff): array
-    {
-        $status = $handoff->getAttribute('status');
-        $statusValue = $status instanceof BackedEnum ? (string) $status->value : (string) $status;
-
-        return [
-            'id' => (int) $handoff->getKey(),
-            'reference' => $handoff->reference,
-            'client' => [
-                'id' => (int) $handoff->client->getKey(),
-                'code' => $handoff->client->code,
-                'company_name' => $handoff->client->company_name,
-            ],
-            'status' => [
-                'value' => $statusValue,
-                'label' => self::humanizeStatus($statusValue),
-            ],
-            'fulfillment_mode' => $handoff->fulfillmentMode()->value,
-            'location' => $handoff->delivery_location,
-            'dispatch_job_id' => $handoff->dispatch_job_id,
-            'ready' => $handoff->isReadyForDispatchHandoff(),
-        ];
-    }
-
-    private static function dateOnly(mixed $value): ?string
-    {
-        return $value === null ? null : Carbon::parse((string) $value)->toDateString();
+        return SalesHandoffViewModel::collection($orders);
     }
 
     /**
@@ -305,53 +270,7 @@ final class OperationsWorkspaceViewModel
      */
     public static function fuelRequests(Collection $requests): array
     {
-        return $requests->map(static fn (FuelRequest $request): array => [
-            'id' => (int) $request->getKey(),
-            'reference' => $request->reference,
-            'requester' => [
-                'id' => (int) $request->requester->getKey(),
-                'name' => $request->requester->name,
-            ],
-            'job' => $request->job === null ? null : [
-                'id' => (int) $request->job->getKey(),
-                'reference' => $request->job->reference,
-                'title' => $request->job->title,
-            ],
-            'asset' => $request->asset === null ? null : [
-                'id' => (int) $request->asset->getKey(),
-                'code' => $request->asset->code,
-                'name' => $request->asset->name,
-            ],
-            'quantity_litres' => (string) $request->quantity_litres,
-            'fuel_type' => $request->fuel_type,
-            'purpose' => $request->purpose,
-            'status' => [
-                'value' => $request->status->value,
-                'label' => $request->status->label(),
-            ],
-            'decision_reason' => $request->decision_reason,
-            'reviewed_at' => $request->reviewed_at?->toIso8601String(),
-            'approved_at' => $request->approved_at?->toIso8601String(),
-            'verified_at' => $request->verified_at?->toIso8601String(),
-            'logs' => $request->relationLoaded('logs')
-                ? $request->logs->map(static fn (FuelLog $log): array => [
-                    'id' => (int) $log->getKey(),
-                    'quantity_litres' => (string) $log->quantity_litres,
-                    'odometer_km' => $log->odometer_km,
-                    'hour_meter' => $log->hour_meter !== null ? (string) $log->hour_meter : null,
-                    'price_per_litre' => $log->price_per_litre !== null ? (string) $log->price_per_litre : null,
-                    'total_cost' => $log->total_cost !== null ? (string) $log->total_cost : null,
-                    'fuel_station' => $log->fuel_station,
-                    'remarks' => $log->remarks,
-                    'receipt_path' => $log->receipt_path,
-                    'recorded_by' => $log->relationLoaded('recorder') ? [
-                        'id' => (int) $log->recorder->getKey(),
-                        'name' => $log->recorder->name,
-                    ] : null,
-                    'recorded_at' => $log->recorded_at?->toIso8601String(),
-                ])->values()->all()
-                : [],
-        ])->values()->all();
+        return FuelWorkspaceViewModel::collection($requests);
     }
 
     /**
