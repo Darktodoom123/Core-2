@@ -490,7 +490,6 @@ function ManualDispatchIntakeForm({
     const [customRequirement, setCustomRequirement] = useState('');
 
     const form = useForm({
-        reference: '',
         client: '',
         title: '',
         site: '',
@@ -560,7 +559,6 @@ function ManualDispatchIntakeForm({
     };
 
     const formComplete =
-        form.data.reference.trim() !== '' &&
         form.data.client.trim() !== '' &&
         form.data.title.trim() !== '' &&
         form.data.site.trim() !== '' &&
@@ -639,15 +637,25 @@ function ManualDispatchIntakeForm({
 
             <form onSubmit={submit} className="mt-5 space-y-5" noValidate>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <IntakeInput
-                        id="manual-reference"
-                        label="Dispatch reference"
-                        value={form.data.reference}
-                        error={form.errors.reference}
-                        onChange={(value) => form.setData('reference', value)}
-                        placeholder="e.g. DSP-MAN-2026-001"
-                        required
-                    />
+                    <div className="text-sm font-medium text-ink">
+                        <span>Dispatch reference</span>
+                        <div
+                            id="manual-reference"
+                            className="mt-1 flex h-11 items-center rounded-lg border border-dashed border-line-strong bg-surface-subtle px-3"
+                            aria-describedby="manual-reference-hint"
+                        >
+                            <span className="font-mono text-sm text-ink-soft">
+                                DSP-MAN-YYYY-NNN
+                            </span>
+                        </div>
+                        <p
+                            id="manual-reference-hint"
+                            className="mt-1 text-xs font-normal text-ink-soft"
+                        >
+                            A unique reference is assigned automatically when
+                            this draft is saved.
+                        </p>
+                    </div>
 
                     <div>
                         <label className="text-sm font-medium text-ink">

@@ -72,6 +72,16 @@ type ConflictTypeFilter =
     | 'responses'
     | 'unassigned';
 
+const FIELD_USER_ROLES = new Set([
+    'driver',
+    'crane_operator',
+    'field_technician',
+]);
+
+function isFieldUser(user: WorkspaceUserViewModel): boolean {
+    return user.role !== null && FIELD_USER_ROLES.has(user.role);
+}
+
 interface DerivedConflict {
     id: string;
     type: 'overlap' | 'maintenance' | 'approval' | 'response' | 'unassigned';
@@ -267,6 +277,10 @@ export function LiveDispatchWorkspace({
         role === 'field_technician';
     const fieldMode =
         isFieldRole && capabilities.update_assigned_dispatch_status;
+    const scheduleBoardUsers = useMemo(
+        () => users.filter(isFieldUser),
+        [users],
+    );
 
     // Derive a client-side conflict summary from bounded server data.
     const derivedConflicts = useMemo(() => {
@@ -906,7 +920,7 @@ export function LiveDispatchWorkspace({
                         <ScheduleBoardTable
                             jobs={boardJobs}
                             assets={assets}
-                            users={users}
+                            users={scheduleBoardUsers}
                             derivedConflicts={derivedConflicts}
                             category={boardCategory}
                             conflictsOnly={conflictsOnly}
@@ -920,7 +934,7 @@ export function LiveDispatchWorkspace({
                         <ScheduleBoardWeekView
                             jobs={filteredJobs}
                             assets={assets}
-                            users={users}
+                            users={scheduleBoardUsers}
                             derivedConflicts={derivedConflicts}
                             category={boardCategory}
                             conflictsOnly={conflictsOnly}

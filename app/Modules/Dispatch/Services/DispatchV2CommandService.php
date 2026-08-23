@@ -167,7 +167,7 @@ final class DispatchV2CommandService
                 ]);
             }
 
-            $attemptNumber = ((int) $handoff->attempts()->lockForUpdate()->max('attempt_number')) + 1;
+            $attemptNumber = ((int) $handoff->attempts()->lockForUpdate()->get()->max('attempt_number')) + 1;
 
             $attempt = DispatchExecutionAttempt::query()->create([
                 'handoff_id' => $handoff->id,

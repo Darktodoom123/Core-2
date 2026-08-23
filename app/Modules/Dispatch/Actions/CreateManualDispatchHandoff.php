@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Data\DispatchV2Mutation;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Services\DispatchV2CommandService;
+use App\Modules\Dispatch\Services\ManualDispatchReferenceGenerator;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -15,12 +16,15 @@ final class CreateManualDispatchHandoff
     public function __construct(
         private readonly DispatchV2CommandService $commands,
         private readonly RecordAuditEvent $audit,
+        private readonly ManualDispatchReferenceGenerator $references,
     ) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $actor, array $attributes): DispatchJob
     {
         return DB::transaction(function () use ($actor, $attributes): DispatchJob {
+            $attributes['reference'] ??= $this->references->generate();
+
             $job = DispatchJob::query()->create([
                 ...$attributes,
                 'status' => DispatchStatus::Draft,

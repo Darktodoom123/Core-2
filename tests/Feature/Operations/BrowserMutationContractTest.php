@@ -55,7 +55,6 @@ it('returns browser validation errors without creating a dispatch', function () 
     $this->actingAs($dispatcher)
         ->from('/')
         ->post('/operations/dispatch-jobs', [
-            'reference' => '',
             'client' => '',
             'title' => '',
             'site' => '',
@@ -65,7 +64,6 @@ it('returns browser validation errors without creating a dispatch', function () 
         ])
         ->assertRedirect('/')
         ->assertSessionHasErrors([
-            'reference',
             'client',
             'title',
             'site',
