@@ -63,6 +63,41 @@ const LOCATION_REVIEW_STATUSES: ReadonlyArray<LocationFreshnessStatus> = [
     'offline',
 ];
 
+const ACTIVE_DISPATCH_STATUSES = [
+    'dispatched',
+    'accepted',
+    'en_route',
+    'arrived',
+    'working',
+];
+
+function isActiveDispatchJob(job: DispatchJobViewModel): boolean {
+    return ACTIVE_DISPATCH_STATUSES.includes(job.status.value);
+}
+
+function compareDispatchSchedule(
+    left: DispatchJobViewModel,
+    right: DispatchJobViewModel,
+): number {
+    if (!left.scheduled_start && !right.scheduled_start) {
+        return left.reference.localeCompare(right.reference);
+    }
+
+    if (!left.scheduled_start) {
+        return 1;
+    }
+
+    if (!right.scheduled_start) {
+        return -1;
+    }
+
+    const scheduleDifference =
+        new Date(left.scheduled_start).getTime() -
+        new Date(right.scheduled_start).getTime();
+
+    return scheduleDifference || left.reference.localeCompare(right.reference);
+}
+
 function isFreshLocation(location: LocationUpdateViewModel): boolean {
     return location.freshness_status === 'fresh';
 }
@@ -686,11 +721,7 @@ function DispatcherDashboardView({
 }: OperationsOverviewDashboardProps) {
     const [jobView, setJobView] = useState<'all' | 'active'>('all');
 
-    const activeJobs = jobs.filter((job) =>
-        ['dispatched', 'accepted', 'en_route', 'arrived', 'working'].includes(
-            job.status.value,
-        ),
-    );
+    const activeJobs = jobs.filter(isActiveDispatchJob);
 
     // [Improvement 4] Detect dispatched jobs where any assigned worker has rejected or is still pending response
     const needsAttentionJobs = jobs.filter(
@@ -707,6 +738,31 @@ function DispatcherDashboardView({
             job.personnel_assignments.every(
                 (a) => a.response_status.value === 'pending',
             ),
+    );
+
+    const nonTerminalJobs = jobs.filter(
+        (job) => !['completed', 'cancelled'].includes(job.status.value),
+    );
+    const sortedActiveJobs = [...activeJobs].sort(compareDispatchSchedule);
+    const scheduledJobs = nonTerminalJobs
+        .filter((job) => job.scheduled_start && !isActiveDispatchJob(job))
+        .sort(compareDispatchSchedule);
+    const needsSchedulingJobs = (
+        jobView === 'active'
+            ? []
+            : nonTerminalJobs.filter(
+                  (job) => !job.scheduled_start && !isActiveDispatchJob(job),
+              )
+    ).sort(compareDispatchSchedule);
+    const upcomingJobs = (
+        jobView === 'active'
+            ? sortedActiveJobs
+            : [...sortedActiveJobs, ...scheduledJobs]
+    ).slice(0, 6);
+    const visibleNeedsSchedulingJobs = needsSchedulingJobs.slice(0, 6);
+    const hiddenNeedsSchedulingCount = Math.max(
+        0,
+        needsSchedulingJobs.length - visibleNeedsSchedulingJobs.length,
     );
 
     // [Improvement 5] Sort service requests oldest-first so urgent unprocessed ones surface
@@ -733,15 +789,6 @@ function DispatcherDashboardView({
     );
     const visibleRequests = sortedServiceRequests.slice(0, 4);
     const hiddenRequestsCount = Math.max(0, sortedServiceRequests.length - 4);
-
-    const upcomingJobs = (
-        jobView === 'active'
-            ? activeJobs
-            : jobs.filter(
-                  (job) =>
-                      !['completed', 'cancelled'].includes(job.status.value),
-              )
-    ).slice(0, 6);
 
     const totalAssets = assets.length;
     const readyAssetsCount = assets.filter((a) => a.is_dispatchable).length;
@@ -1106,7 +1153,8 @@ function DispatcherDashboardView({
                     </div>
 
                     <Panel className="overflow-hidden">
-                        {upcomingJobs.length === 0 ? (
+                        {upcomingJobs.length === 0 &&
+                        visibleNeedsSchedulingJobs.length === 0 ? (
                             <DispatchReadinessState
                                 pendingRequestsCount={pendingRequests.length}
                                 readyAssetsCount={readyAssetsCount}
@@ -1119,17 +1167,61 @@ function DispatcherDashboardView({
                                 }
                             />
                         ) : (
-                            <ul className="divide-y divide-line">
-                                {upcomingJobs.map((job) => (
-                                    <JobOverviewRow
-                                        key={job.id}
-                                        job={job}
-                                        onClick={() =>
-                                            onSectionChange('dispatch')
-                                        }
-                                    />
-                                ))}
-                            </ul>
+                            <>
+                                {upcomingJobs.length > 0 && (
+                                    <ul className="divide-y divide-line">
+                                        {upcomingJobs.map((job) => (
+                                            <JobOverviewRow
+                                                key={job.id}
+                                                job={job}
+                                                onClick={() =>
+                                                    onSectionChange('dispatch')
+                                                }
+                                            />
+                                        ))}
+                                    </ul>
+                                )}
+
+                                {visibleNeedsSchedulingJobs.length > 0 && (
+                                    <div className="border-t border-line">
+                                        <div className="flex items-start justify-between gap-3 bg-surface-subtle px-4 py-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-ink">
+                                                    Needs scheduling
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-ink-soft">
+                                                    Dispatches without a
+                                                    scheduled start.
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-semibold text-warning-strong">
+                                                {needsSchedulingJobs.length}
+                                            </span>
+                                        </div>
+                                        <ul className="divide-y divide-line">
+                                            {visibleNeedsSchedulingJobs.map(
+                                                (job) => (
+                                                    <JobOverviewRow
+                                                        key={job.id}
+                                                        job={job}
+                                                        onClick={() =>
+                                                            onSectionChange(
+                                                                'dispatch',
+                                                            )
+                                                        }
+                                                    />
+                                                ),
+                                            )}
+                                        </ul>
+                                        {hiddenNeedsSchedulingCount > 0 && (
+                                            <div className="border-t border-line px-4 py-3 text-xs font-semibold text-brand">
+                                                + {hiddenNeedsSchedulingCount}{' '}
+                                                more need scheduling
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </Panel>
                 </section>

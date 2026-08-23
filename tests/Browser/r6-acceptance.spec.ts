@@ -322,6 +322,22 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect(documentWidth).toBeLessThanOrEqual(390);
     });
 
+    test('dispatcher schedule shows active work before upcoming scheduled work', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+
+        const schedule = page.locator(
+            'section[aria-labelledby="dispatcher-jobs-heading"]',
+        );
+        const scheduleRows = schedule.locator('ul').first().locator('li');
+
+        await expect(scheduleRows.nth(0)).toContainText('R6-BROWSER-002');
+        await expect(scheduleRows.nth(1)).toContainText('R6-BROWSER-001');
+    });
+
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({
         page,
     }) => {
@@ -456,7 +472,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.admin!, fixtures.password);
         await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
         await page.getByRole('button', { name: 'Schedule board' }).click();
 
@@ -481,7 +497,23 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await board.getByRole('button', { name: 'Show next day' }).click();
 
         await expect(dateHeading).not.toContainText('Today');
-        await expect(board.getByRole('status')).toHaveText('2 scheduled jobs');
+        await expect(board.getByRole('status')).toHaveText('3 scheduled jobs');
+
+        await board
+            .getByRole('button', { name: 'personnel', exact: true })
+            .click();
+        await expect(
+            board.getByText('Browser Driver', { exact: true }),
+        ).toBeVisible();
+        await expect(
+            board.getByText('Browser Dispatcher', { exact: true }),
+        ).toHaveCount(0);
+        await expect(
+            board.getByText('Browser Manager', { exact: true }),
+        ).toHaveCount(0);
+        await expect(
+            board.getByText('Browser Admin', { exact: true }),
+        ).toHaveCount(0);
 
         await board.getByRole('button', { name: 'Show today' }).click();
         await expect(dateHeading).toContainText('Today');
