@@ -19,94 +19,83 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('allows authorized roles to register fleet vehicles and equipment with full specifications', function () {
-    $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
-
-    // Fleet registration (truck)
-    $response = $this->actingAs($dispatcher)->post('/operations/assets', [
-        'code' => 'TRK-101',
-        'name' => 'Heavy Hauler 1',
+it('disables local asset registration for every operational role without changing existing records', function () {
+    $existingAsset = OperationalAsset::query()->create([
+        'code' => 'CORE3-TRK-101',
+        'name' => 'Core 3 Heavy Hauler',
         'kind' => 'truck',
-        'subtype' => 'Flatbed',
-        'registration_number' => 'REG-8821',
-        'manufacturer' => 'Volvo',
-        'model' => 'FH16',
-        'rated_capacity' => 25.5,
-        'capacity_unit' => 'tonnes',
-        'meter_type' => 'odometer',
-        'meter_value' => 125000.5,
-        'location' => 'Yard A',
-        'specifications' => ['axles' => 3, 'engine' => 'D16K'],
+        'status' => AssetStatus::Available,
     ]);
 
-    $response->assertRedirect('/')->assertSessionHas('flash', function (array $flash) {
-        return $flash['tone'] === 'success' && str_contains($flash['message'], 'TRK-101');
-    });
+    foreach ([RoleName::Dispatcher, RoleName::OperationsManager, RoleName::SystemAdministrator] as $role) {
+        $user = User::factory()->create();
+        $user->syncRoles([$role->value]);
 
+        $this->actingAs($user)->post('/operations/assets', [
+            'code' => 'CORE3-NEW-'.$role->value,
+            'name' => 'Locally attempted asset',
+            'kind' => 'truck',
+        ])->assertForbidden();
+    }
+
+    expect(OperationalAsset::query()->count())->toBe(1);
     $this->assertDatabaseHas('operational_assets', [
-        'code' => 'TRK-101',
-        'name' => 'Heavy Hauler 1',
-        'kind' => 'truck',
-        'subtype' => 'Flatbed',
-        'registration_number' => 'REG-8821',
-        'manufacturer' => 'Volvo',
+        'id' => $existingAsset->id,
+        'code' => 'CORE3-TRK-101',
+        'name' => 'Core 3 Heavy Hauler',
         'status' => AssetStatus::Available->value,
     ]);
-
-    $this->assertDatabaseHas('audit_events', [
-        'action' => 'asset.registered',
-        'actor_id' => $dispatcher->id,
-    ]);
-
-    // Equipment registration (mobile_crane)
-    $mobileCraneResponse = $this->actingAs($dispatcher)->post('/operations/assets', [
-        'code' => 'CRN-201',
-        'name' => 'All-Terrain Mobile Crane 60T',
-        'kind' => 'mobile_crane',
-        'subtype' => 'All-Terrain',
-        'registration_number' => 'REG-9912',
-        'manufacturer' => 'Liebherr',
-        'model' => 'LTM 1060',
-        'rated_capacity' => 60.0,
-        'capacity_unit' => 'tonnes',
-        'meter_type' => 'hour_meter',
-        'meter_value' => 3200.0,
-        'location' => 'Yard B',
-    ]);
-
-    $mobileCraneResponse->assertRedirect('/')->assertSessionHas('flash', function (array $flash) {
-        return $flash['tone'] === 'success' && str_contains($flash['message'], 'CRN-201');
-    });
-
-    $this->assertDatabaseHas('operational_assets', [
-        'code' => 'CRN-201',
-        'name' => 'All-Terrain Mobile Crane 60T',
-        'kind' => 'mobile_crane',
-        'subtype' => 'All-Terrain',
-        'status' => AssetStatus::Available->value,
-    ]);
+    $this->assertDatabaseMissing('audit_events', ['action' => 'asset.registered']);
 });
 
-it('rejects asset registration for unauthorized users or duplicate codes', function () {
-    $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
-
-    $this->actingAs($driver)->post('/operations/assets', [
-        'code' => 'TRK-999',
-        'name' => 'Unauthorized Truck',
-        'kind' => 'truck',
-    ])->assertForbidden();
-
+it('keeps imported Core 3 assets assignable through the normal dispatch workflow', function () {
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::Dispatcher->value]);
-    OperationalAsset::query()->create(['code' => 'EX-1', 'name' => 'Existing', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
+    $driver = User::factory()->create();
+    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->personnelCredentials()->create([
+        'kind' => 'driver_license',
+        'credential_number' => 'CORE3-DL-101',
+        'credential_type' => 'professional',
+        'issued_at' => now()->subYear(),
+        'expires_at' => now()->addYear(),
+        'status' => 'active',
+    ]);
 
-    $this->actingAs($dispatcher)->post('/operations/assets', [
-        'code' => 'EX-1',
-        'name' => 'Duplicate Code',
-        'kind' => 'equipment',
-    ])->assertSessionHasErrors(['code']);
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CORE3-TRK-202',
+        'name' => 'Imported Core 3 Truck',
+        'kind' => 'truck',
+        'status' => AssetStatus::Available,
+    ]);
+    $job = DispatchJob::query()->create([
+        'reference' => 'CORE3-DSP-202',
+        'client' => 'Core 3 Handoff Client',
+        'title' => 'Imported asset assignment',
+        'site' => 'Operations Yard',
+        'scheduled_start' => now()->addDay(),
+        'scheduled_end' => now()->addDay()->addHours(4),
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $dispatcher->id,
+    ]);
+
+    $this->actingAs($dispatcher)
+        ->post("/operations/dispatch-jobs/{$job->id}/assignments", [
+            'personnel' => [['user_id' => $driver->id, 'assignment_type' => 'driver']],
+            'assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'truck']],
+        ])
+        ->assertRedirect("/operations/dispatch-jobs/{$job->id}");
+
+    $this->assertDatabaseHas('dispatch_asset_assignments', [
+        'dispatch_job_id' => $job->id,
+        'operational_asset_id' => $asset->id,
+        'assignment_type' => 'truck',
+    ]);
+    $this->assertDatabaseHas('operational_assets', [
+        'id' => $asset->id,
+        'code' => 'CORE3-TRK-202',
+    ]);
 });
 
 it('requires reasons and safety checks when updating asset status', function () {

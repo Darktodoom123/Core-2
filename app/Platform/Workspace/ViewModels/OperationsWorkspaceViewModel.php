@@ -679,7 +679,6 @@ final class OperationsWorkspaceViewModel
             'decide_approval' => $user->can(PermissionName::AssignmentsApprove->value)
                 || $user->can(PermissionName::DispatchApprovePriority->value),
             'update_assigned_dispatch_status' => $user->can(PermissionName::DispatchUpdateOwnStatus->value),
-            'register_asset' => $user->can(PermissionName::FleetRegister->value) || $user->can(PermissionName::EquipmentRegister->value),
             'update_asset_status' => $user->can(PermissionName::FleetUpdateStatus->value) || $user->can(PermissionName::EquipmentUpdateStatus->value),
             'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),

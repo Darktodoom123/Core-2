@@ -142,7 +142,6 @@ export default function Operations() {
                             resources={state.resources}
                             selectedAssetId={state.selectedAssetId}
                             query={query}
-                            role={state.role}
                             onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
@@ -156,7 +155,6 @@ export default function Operations() {
                             resources={state.resources}
                             selectedAssetId={state.selectedAssetId}
                             query={query}
-                            role={state.role}
                             onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
@@ -235,7 +233,6 @@ export default function Operations() {
                             resources={state.resources}
                             selectedAssetId={state.selectedAssetId}
                             query={query}
-                            role={state.role}
                             onClearQuery={() => setQuery('')}
                             onSelectAsset={(assetId) =>
                                 dispatch({ type: 'select-asset', assetId })
@@ -335,7 +332,6 @@ export default function Operations() {
                         resources={state.resources}
                         selectedAssetId={state.selectedAssetId}
                         query={query}
-                        role={state.role}
                         onClearQuery={() => setQuery('')}
                         onSelectAsset={(assetId) =>
                             dispatch({ type: 'select-asset', assetId })

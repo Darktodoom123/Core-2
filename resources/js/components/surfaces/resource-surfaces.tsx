@@ -68,7 +68,6 @@ export function ResourceDirectory({
     resources,
     selectedAssetId,
     query,
-    role,
     onClearQuery,
     onSelectAsset,
 }: {
@@ -76,7 +75,6 @@ export function ResourceDirectory({
     resources: Resource[];
     selectedAssetId: string;
     query: string;
-    role: UserRole;
     onClearQuery: () => void;
     onSelectAsset: (assetId: string) => void;
 }) {
@@ -123,14 +121,8 @@ export function ResourceDirectory({
                     <>
                         <Button variant="secondary">
                             <Download className="h-4 w-4" aria-hidden="true" />
-                            Export register
+                            Export asset register
                         </Button>
-                        {role === 'administrator' && (
-                            <Button variant="primary">
-                                <Plus className="h-4 w-4" aria-hidden="true" />
-                                Register resource
-                            </Button>
-                        )}
                     </>
                 }
             />
@@ -146,7 +138,7 @@ export function ResourceDirectory({
                             <p className="h-10 rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-9 text-sm text-ink-soft">
                                 {query
                                     ? `Filtered by “${query}”`
-                                    : `Showing ${filtered.length} registered resources`}
+                                    : `Showing ${filtered.length} Core 3 assets`}
                             </p>
                         </div>
                         <label className="relative">
@@ -181,12 +173,12 @@ export function ResourceDirectory({
                             title={
                                 hasActiveFilters
                                     ? 'No resources match these filters'
-                                    : `No ${mode === 'fleet' ? 'fleet resources' : 'equipment'} registered`
+                                    : `No ${mode === 'fleet' ? 'fleet assets' : 'equipment assets'} available`
                             }
                             message={
                                 hasActiveFilters
-                                    ? 'Clear the workspace search and status filter to restore the register.'
-                                    : 'Registered resources will appear here with their readiness and assignment status.'
+                                    ? 'Clear the workspace search and status filter to restore the asset list.'
+                                    : 'Assets received from Core 3 will appear here with their readiness and assignment status.'
                             }
                             primaryAction={
                                 hasActiveFilters ? (

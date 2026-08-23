@@ -195,7 +195,6 @@ function AssetsSurface({
     const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
         assets.length > 0 ? assets[0].id : null,
     );
-    const [showRegisterForm, setShowRegisterForm] = useState(false);
 
     const selectedAsset =
         assets.find((a) => a.id === selectedAssetId) ?? assets[0];
@@ -225,7 +224,7 @@ function AssetsSurface({
         <div>
             <PageHeading
                 title="Fleet Management"
-                description="Unified fleet registry, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
+                description="Core 3 assets, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -262,34 +261,14 @@ function AssetsSurface({
                             )}
                         </button>
                     </div>
-
-                    {capabilities.register_asset && (
-                        <Button
-                            variant={showRegisterForm ? 'secondary' : 'primary'}
-                            size="sm"
-                            onClick={() =>
-                                setShowRegisterForm(!showRegisterForm)
-                            }
-                        >
-                            {showRegisterForm
-                                ? 'Cancel registration'
-                                : 'Register new asset'}
-                        </Button>
-                    )}
                 </div>
-
-                {showRegisterForm && capabilities.register_asset && (
-                    <RegisterAssetForm
-                        onDone={() => setShowRegisterForm(false)}
-                    />
-                )}
 
                 {assets.length === 0 ? (
                     <Panel>
                         <EmptyState
                             icon={Truck}
                             title="No assets available"
-                            message="Assigned or organization-wide fleet and equipment will appear here once registered or assigned to your role."
+                            message="Assets received from Core 3 or assigned to your role will appear here."
                         />
                     </Panel>
                 ) : viewMode === 'map' ? (
@@ -436,145 +415,6 @@ function AssetsSurface({
                 )}
             </div>
         </div>
-    );
-}
-
-function RegisterAssetForm({ onDone }: { onDone: () => void }) {
-    const form = useForm({
-        code: '',
-        name: '',
-        kind: 'truck',
-        subtype: '',
-        registration_number: '',
-        manufacturer: '',
-        model: '',
-        rated_capacity: '',
-        capacity_unit: 'tonnes',
-        meter_type: 'odometer',
-        meter_value: '',
-        location: '',
-    });
-
-    const submit = (e: FormEvent) => {
-        e.preventDefault();
-        form.post('/operations/assets', {
-            preserveScroll: true,
-            onSuccess: () => {
-                form.reset();
-                onDone();
-            },
-        });
-    };
-
-    return (
-        <Panel className="p-4 md:p-6">
-            <h3 className="text-base font-semibold text-ink">
-                Register Operational Asset
-            </h3>
-            <p className="mt-1 text-sm text-ink-soft">
-                Add a new truck, crane, or mobile crane to the unified asset
-                model.
-            </p>
-            <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <FuelInput
-                        label="Asset code *"
-                        value={form.data.code}
-                        error={form.errors.code}
-                        onChange={(v) => form.setData('code', v)}
-                    />
-                    <FuelInput
-                        label="Asset name *"
-                        value={form.data.name}
-                        error={form.errors.name}
-                        onChange={(v) => form.setData('name', v)}
-                    />
-                    <label className="text-sm font-medium text-ink">
-                        Asset kind *
-                        <select
-                            value={form.data.kind}
-                            onChange={(e) =>
-                                form.setData('kind', e.target.value)
-                            }
-                            className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
-                        >
-                            <option value="truck">Truck</option>
-                            <option value="crane">Crane</option>
-                            <option value="mobile_crane">Mobile Crane</option>
-                        </select>
-                    </label>
-                    <FuelInput
-                        label="Subtype (e.g. Flatbed, All-Terrain)"
-                        value={form.data.subtype}
-                        error={form.errors.subtype}
-                        onChange={(v) => form.setData('subtype', v)}
-                    />
-                    <FuelInput
-                        label="Registration number"
-                        value={form.data.registration_number}
-                        error={form.errors.registration_number}
-                        onChange={(v) => form.setData('registration_number', v)}
-                    />
-                    <FuelInput
-                        label="Manufacturer"
-                        value={form.data.manufacturer}
-                        error={form.errors.manufacturer}
-                        onChange={(v) => form.setData('manufacturer', v)}
-                    />
-                    <FuelInput
-                        label="Model"
-                        value={form.data.model}
-                        error={form.errors.model}
-                        onChange={(v) => form.setData('model', v)}
-                    />
-                    <FuelInput
-                        label="Rated capacity"
-                        type="number"
-                        value={form.data.rated_capacity}
-                        error={form.errors.rated_capacity}
-                        onChange={(v) => form.setData('rated_capacity', v)}
-                    />
-                    <FuelInput
-                        label="Capacity unit"
-                        value={form.data.capacity_unit}
-                        error={form.errors.capacity_unit}
-                        onChange={(v) => form.setData('capacity_unit', v)}
-                    />
-                    <FuelInput
-                        label="Meter type (odometer/hour_meter)"
-                        value={form.data.meter_type}
-                        error={form.errors.meter_type}
-                        onChange={(v) => form.setData('meter_type', v)}
-                    />
-                    <FuelInput
-                        label="Meter reading"
-                        type="number"
-                        value={form.data.meter_value}
-                        error={form.errors.meter_value}
-                        onChange={(v) => form.setData('meter_value', v)}
-                    />
-                    <FuelInput
-                        label="Initial location"
-                        value={form.data.location}
-                        error={form.errors.location}
-                        onChange={(v) => form.setData('location', v)}
-                    />
-                </div>
-
-                <div className="flex justify-end gap-3 border-t border-line pt-4">
-                    <Button type="button" variant="secondary" onClick={onDone}>
-                        Cancel
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        disabled={form.processing}
-                    >
-                        {form.processing ? 'Registering…' : 'Register asset'}
-                    </Button>
-                </div>
-            </form>
-        </Panel>
     );
 }
 

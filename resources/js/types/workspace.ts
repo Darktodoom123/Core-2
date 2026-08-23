@@ -560,7 +560,6 @@ export interface WorkspaceCapabilities {
     record_fuel: boolean;
     decide_approval: boolean;
     update_assigned_dispatch_status: boolean;
-    register_asset: boolean;
     update_asset_status: boolean;
     inspect_asset: boolean;
     maintain_asset: boolean;

@@ -94,6 +94,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('capabilities.create_client', true)
             ->where('capabilities.create_service_request', true)
             ->where('capabilities.convert_service_request', true)
+            ->missing('capabilities.register_asset')
             ->has('assets')
             ->has('fuelRequests')
             ->has('workspace.refreshed_at')

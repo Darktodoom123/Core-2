@@ -23,13 +23,11 @@ enum PermissionName: string
     case AssignmentsOverride = 'assignments.override';
     case FleetViewAll = 'fleet.view_all';
     case FleetViewAssigned = 'fleet.view_assigned';
-    case FleetRegister = 'fleet.register';
     case FleetUpdateStatus = 'fleet.update_status';
     case FleetInspect = 'fleet.inspect';
     case FleetMaintain = 'fleet.maintain';
     case EquipmentViewAll = 'equipment.view_all';
     case EquipmentViewAssigned = 'equipment.view_assigned';
-    case EquipmentRegister = 'equipment.register';
     case EquipmentUpdateStatus = 'equipment.update_status';
     case EquipmentInspect = 'equipment.inspect';
     case EquipmentMaintain = 'equipment.maintain';

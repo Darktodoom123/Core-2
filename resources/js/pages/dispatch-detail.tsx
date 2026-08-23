@@ -3607,8 +3607,8 @@ function AssetCandidates({
                                 title={`No ${group.label.toLowerCase()}`}
                                 message={
                                     catalogAccess
-                                        ? 'No registered assets in this category are available for this dispatch window.'
-                                        : 'Ask a fleet or equipment administrator to register an eligible asset for this dispatch.'
+                                        ? 'No Core 3 assets in this category are available for this dispatch window.'
+                                        : 'Ask the Core 3 asset administrator to import an eligible asset for this dispatch.'
                                 }
                                 primaryAction={
                                     catalogAccess ? (
