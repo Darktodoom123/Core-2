@@ -3793,7 +3793,11 @@ function gptRecommendationStatusClass(
 
 function DispatchListSkeleton() {
     return (
-        <div className="space-y-px" aria-label="Loading dispatch jobs">
+        <div
+            className="space-y-px"
+            role="status"
+            aria-label="Loading dispatch jobs"
+        >
             {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="border-b border-line px-4 py-4">
                     <Skeleton className="h-3.5 w-24" />
