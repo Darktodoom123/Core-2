@@ -343,6 +343,102 @@ textarea:focus-visible,
     outline-offset: 3px;
 }
 
+.maplibre-asset-marker[data-sos-active='true'],
+.maplibre-sos-marker {
+    overflow: visible;
+}
+
+.maplibre-sos-marker {
+    position: relative;
+    display: flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
+.maplibre-sos-marker__halo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: 58px;
+    height: 58px;
+    border: 3px solid #dc2626;
+    border-radius: 9999px;
+    background: rgb(220 38 38 / 12%);
+    box-shadow:
+        0 0 0 3px rgb(220 38 38 / 28%),
+        0 0 16px rgb(220 38 38 / 24%);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: maplibre-sos-halo-pulse 2.2s cubic-bezier(0.4, 0, 0.2, 1)
+        infinite;
+}
+
+.maplibre-sos-marker__surface {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fecaca;
+    border-radius: 9999px;
+    background: #b91c1c;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 28%);
+}
+
+.maplibre-sos-marker__surface svg {
+    width: 17px;
+    height: 17px;
+}
+
+.maplibre-sos-marker__indicator {
+    position: absolute;
+    top: -7px;
+    right: -11px;
+    z-index: 3;
+    display: inline-flex;
+    min-height: 16px;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid #ffffff;
+    border-radius: 9999px;
+    background: #b91c1c;
+    padding: 2px 5px;
+    color: #ffffff;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 28%);
+    pointer-events: none;
+}
+
+.maplibre-sos-marker__indicator svg {
+    width: 10px;
+    height: 10px;
+}
+
+.maplibre-asset-marker[data-sos-status] .maplibre-sos-marker__indicator {
+    top: -5px;
+    right: -10px;
+}
+
+.maplibre-sos-marker:focus-visible {
+    outline: 3px solid #dc2626;
+    outline-offset: 3px;
+}
+
 .maplibre-popup-card {
     min-width: 13rem;
     padding: 0.75rem;
@@ -457,6 +553,28 @@ textarea:focus-visible,
         transform: scale(0.95);
         box-shadow: 0 0 0 0
             color-mix(in oklch, var(--color-success) 0%, transparent);
+    }
+}
+
+@keyframes maplibre-sos-halo-pulse {
+    0%,
+    100% {
+        opacity: 0.82;
+        transform: translate(-50%, -50%) scale(0.94);
+    }
+    55% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .maplibre-sos-marker__halo {
+        animation: none !important;
+        box-shadow:
+            0 0 0 6px rgb(220 38 38 / 38%),
+            0 0 20px rgb(220 38 38 / 50%) !important;
+        opacity: 1;
     }
 }
 

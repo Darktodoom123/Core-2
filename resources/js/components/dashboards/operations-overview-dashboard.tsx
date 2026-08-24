@@ -42,6 +42,7 @@ import type {
     LocationUpdateViewModel,
     ScopeRefreshState,
     ServiceRequestViewModel,
+    SosIncidentViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -113,6 +114,7 @@ export interface OperationsOverviewDashboardProps {
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
     locations: LocationUpdateViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     approvals: ApprovalViewModel[];
     users?: WorkspaceUserViewModel[];
     auditEvents?: AuditEventViewModel[];
@@ -283,6 +285,7 @@ function OperationsManagerDashboardView({
     assets,
     fuelRequests,
     locations,
+    activeSosIncidents = [],
     approvals,
     gptRecommendations = [],
     capabilities,
@@ -534,6 +537,7 @@ function OperationsManagerDashboardView({
             {canOpenTracking && (
                 <LiveTrackingPreview
                     locations={locations}
+                    activeSosIncidents={activeSosIncidents}
                     refresh={refresh}
                     realtimeConnected={realtimeConnected}
                     onOpenTracking={() => onSectionChange('assets')}
@@ -712,6 +716,7 @@ function DispatcherDashboardView({
     serviceRequests = [],
     assets,
     locations,
+    activeSosIncidents = [],
     gptRecommendations = [],
     capabilities,
     availableSections,
@@ -985,6 +990,7 @@ function DispatcherDashboardView({
             {canOpenTracking && (
                 <LiveTrackingPreview
                     locations={locations}
+                    activeSosIncidents={activeSosIncidents}
                     refresh={refresh}
                     realtimeConnected={realtimeConnected}
                     onOpenTracking={() => onSectionChange('assets')}
@@ -1594,6 +1600,7 @@ function SystemAdminDashboardView({
     users = [],
     auditEvents = [],
     locations = [],
+    activeSosIncidents = [],
     gptRecommendations = [],
     assets = [],
     refresh,
@@ -2091,6 +2098,7 @@ function SystemAdminDashboardView({
             {canOpenTracking && (
                 <LiveTrackingPreview
                     locations={locations}
+                    activeSosIncidents={activeSosIncidents}
                     refresh={refresh}
                     realtimeConnected={realtimeConnected}
                     onOpenTracking={() => onSectionChange('assets')}

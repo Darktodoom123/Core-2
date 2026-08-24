@@ -18,6 +18,7 @@ import { getAssetKind } from '@/lib/asset-kind';
 import type {
     LocationUpdateViewModel,
     ScopeRefreshState,
+    SosIncidentViewModel,
 } from '@/types/workspace';
 
 const LiveTrackingMap = lazy(() =>
@@ -52,6 +53,7 @@ const STATUS_ORDER: Record<
 
 export interface LiveTrackingPreviewProps {
     locations: LocationUpdateViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     refresh?: ScopeRefreshState;
     realtimeConnected?: boolean;
     onOpenTracking?: () => void;
@@ -59,6 +61,7 @@ export interface LiveTrackingPreviewProps {
 
 export function LiveTrackingPreview({
     locations,
+    activeSosIncidents = [],
     refresh,
     realtimeConnected = false,
     onOpenTracking,
@@ -183,6 +186,7 @@ export function LiveTrackingPreview({
                 <Suspense fallback={<MapLoadingFallback />}>
                     <LiveTrackingMap
                         locations={filteredLocations}
+                        activeSosIncidents={activeSosIncidents}
                         compact
                         showLocationList={false}
                         selectedLocationId={effectiveSelectedLocationId}
