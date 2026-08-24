@@ -11,14 +11,18 @@ export default defineConfig(({ mode }) => {
 
     const mapProvider = env.VITE_MAP_PROVIDER || 'stadia';
     const mapPlan = env.VITE_MAP_PLAN || 'free';
+    const mapUseCase = (env.VITE_MAP_USE_CASE || 'commercial')
+        .trim()
+        .toLowerCase();
 
     if (
         env.APP_ENV === 'production' &&
         mapProvider === 'stadia' &&
-        mapPlan === 'free'
+        mapPlan === 'free' &&
+        mapUseCase !== 'academic'
     ) {
         throw new Error(
-            'Stadia Free is development/evaluation-only. Set VITE_MAP_PLAN=starter or configure another approved paid provider before a production build.',
+            'Stadia Free is limited to non-commercial academic evaluation. Set VITE_MAP_USE_CASE=academic only for a capstone/demo, or set VITE_MAP_PLAN=starter (or configure another approved paid provider) for commercial production.',
         );
     }
 
