@@ -161,30 +161,50 @@ final class OperationsWorkspaceViewModel
     {
         $sourceType = $job->sourceType();
         $source = $job->relationLoaded('source') ? $job->getRelationValue('source') : null;
+        $canonicalHandoff = $job->relationLoaded('canonicalHandoff')
+            ? $job->getRelationValue('canonicalHandoff')
+            : null;
 
         if ($sourceType === null && $job->service_request_id !== null) {
             $sourceType = DispatchSourceType::ServiceRequest;
             $source ??= $job->relationLoaded('serviceRequest') ? $job->getRelationValue('serviceRequest') : null;
         }
 
-        if ($sourceType === null && $job->source_reference === null) {
+        if ($sourceType === null) {
+            $canonicalSourceType = is_object($canonicalHandoff) && method_exists($canonicalHandoff, 'sourceType')
+                ? $canonicalHandoff->sourceType()
+                : null;
+
+            if ($canonicalSourceType instanceof DispatchSourceType) {
+                $sourceType = $canonicalSourceType;
+            }
+        }
+
+        $reference = $job->source_reference
+            ?? ($source?->getAttribute('reference') !== null ? (string) $source->getAttribute('reference') : null)
+            ?? self::nullableStringAttribute($canonicalHandoff, 'external_reference')
+            ?? self::nullableStringAttribute($canonicalHandoff, 'source_reference');
+
+        if ($sourceType === null && $reference === null) {
             return null;
         }
 
         $status = $source?->getAttribute('status');
         $statusValue = $status instanceof BackedEnum ? (string) $status->value : null;
+        $isManual = $sourceType === DispatchSourceType::Manual;
 
         return [
             'type' => $sourceType === null ? 'direct' : $sourceType->value,
-            'label' => $sourceType === null ? 'Direct dispatch' : $sourceType->label(),
-            'reference' => $job->source_reference
-                ?? ($source?->getAttribute('reference') !== null ? (string) $source->getAttribute('reference') : null),
+            'label' => $isManual ? 'Manual source' : ($sourceType === null ? 'Direct dispatch' : $sourceType->label()),
+            'reference' => $reference,
             'status' => $statusValue === null ? null : [
                 'value' => $statusValue,
                 'label' => self::humanizeStatus($statusValue),
             ],
             'fulfillment_mode' => self::nullableStringAttribute($source, 'fulfillment_mode'),
             'location' => self::nullableStringAttribute($source, 'delivery_location'),
+            'manual_intake' => $isManual,
+            'provenance_indicator' => $isManual ? 'manual_intake' : null,
         ];
     }
 

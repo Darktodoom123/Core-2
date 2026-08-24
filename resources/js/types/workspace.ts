@@ -697,6 +697,7 @@ export interface WorkspacePageProps {
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     navigation: WorkspaceNavigationItem[];
+    initial_section: WorkspaceSection | null;
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
 }

@@ -30,8 +30,8 @@ const DEFAULT_REFRESH_ERROR =
 
 export default function Workspace(props: WorkspacePageProps) {
     const { flash, errors } = usePage().props;
-    const [section, setSection] = useState<WorkspaceSection | null>(() =>
-        initialSection(props.navigation),
+    const [section, setSection] = useState<WorkspaceSection | null>(
+        props.initial_section,
     );
     const [wsState, setWsState] = useState<ConnectionStatus>(getInitialWsState);
     const [refreshState, setRefreshState] = useState<WorkspaceRefreshState>(
@@ -673,19 +673,6 @@ function StateNotice({
             )}
         </div>
     );
-}
-
-function initialSection(
-    navigation: WorkspacePageProps['navigation'],
-): WorkspaceSection | null {
-    if (typeof window === 'undefined') {
-        return navigation[0]?.id ?? null;
-    }
-
-    const requested = new URLSearchParams(window.location.search).get('view');
-    const available = navigation.find((item) => item.id === requested);
-
-    return available?.id ?? navigation[0]?.id ?? null;
 }
 
 function isStale(

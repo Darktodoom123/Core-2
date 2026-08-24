@@ -34,6 +34,7 @@ import {
     Skeleton,
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
 import {
     AcceptGptModal,
     RecommendationDetails,
@@ -187,18 +188,23 @@ export function LiveDispatchWorkspace({
     const incomingHandoffKey = useMemo(
         () =>
             [
-                initialServiceRequestId
-                    ? `service:${initialServiceRequestId}`
-                    : null,
-                ...serviceRequests
-                    .filter((request) => request.dispatch_jobs_count === 0)
-                    .map((request) => `service:${request.id}`),
-                ...rentalHandoffs
-                    .filter((handoff) => !handoff.dispatch_job_id)
-                    .map((handoff) => `rental:${handoff.id}`),
-                ...salesHandoffs
-                    .filter((handoff) => !handoff.dispatch_job_id)
-                    .map((handoff) => `sale:${handoff.id}`),
+                ...(capabilities.convert_service_request
+                    ? serviceRequests
+                          .filter(
+                              (request) => request.dispatch_jobs_count === 0,
+                          )
+                          .map((request) => `service:${request.id}`)
+                    : []),
+                ...(capabilities.create_rental_dispatch
+                    ? rentalHandoffs
+                          .filter((handoff) => !handoff.dispatch_job_id)
+                          .map((handoff) => `rental:${handoff.id}`)
+                    : []),
+                ...(capabilities.create_sales_dispatch
+                    ? salesHandoffs
+                          .filter((handoff) => !handoff.dispatch_job_id)
+                          .map((handoff) => `sale:${handoff.id}`)
+                    : []),
             ]
                 .filter(Boolean)
                 .filter(
@@ -207,10 +213,12 @@ export function LiveDispatchWorkspace({
                 .sort()
                 .join('|'),
         [
-            initialServiceRequestId,
             rentalHandoffs,
             salesHandoffs,
             serviceRequests,
+            capabilities.convert_service_request,
+            capabilities.create_rental_dispatch,
+            capabilities.create_sales_dispatch,
         ],
     );
     const incomingWorkCount = incomingHandoffKey
@@ -219,6 +227,7 @@ export function LiveDispatchWorkspace({
     const [showIntake, setShowIntake] = useState(
         Boolean(initialServiceRequestId),
     );
+    const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
     const intakePanelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -233,20 +242,16 @@ export function LiveDispatchWorkspace({
         return () => window.cancelAnimationFrame(frame);
     }, [showIntake]);
 
+    const wasIntakeOpen = useRef(false);
+
     useEffect(() => {
-        if (!showIntake) {
-            return;
+        if (wasIntakeOpen.current && !showIntake) {
+            window.requestAnimationFrame(() => {
+                document.getElementById('new-dispatch-trigger')?.focus();
+            });
         }
 
-        const closeOnEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                setShowIntake(false);
-            }
-        };
-
-        document.addEventListener('keydown', closeOnEscape);
-
-        return () => document.removeEventListener('keydown', closeOnEscape);
+        wasIntakeOpen.current = showIntake;
     }, [showIntake]);
 
     useEffect(() => {
@@ -586,7 +591,7 @@ export function LiveDispatchWorkspace({
     );
 
     return (
-        <div>
+        <div className="max-w-full min-w-0">
             <PageHeading
                 title={
                     fieldMode ? "Today's assigned work" : 'Dispatch workspace'
@@ -600,7 +605,7 @@ export function LiveDispatchWorkspace({
                     <div className="flex flex-wrap items-center gap-2">
                         {!fieldMode && (
                             <div
-                                className="inline-flex rounded-lg border border-line bg-surface p-1"
+                                className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-surface p-1"
                                 role="group"
                                 aria-label="Workspace views"
                             >
@@ -671,8 +676,29 @@ export function LiveDispatchWorkspace({
 
                         {canCreate && !fieldMode && (
                             <Button
+                                id="new-dispatch-trigger"
                                 variant={showIntake ? 'secondary' : 'primary'}
-                                onClick={() => setShowIntake((value) => !value)}
+                                onClick={() => {
+                                    if (showIntake) {
+                                        if (
+                                            directIntakeDirty &&
+                                            !window.confirm(
+                                                'Discard this direct dispatch draft? Unsaved details will be lost.',
+                                            )
+                                        ) {
+                                            return;
+                                        }
+
+                                        window.dispatchEvent(
+                                            new Event(
+                                                DIRECT_DISPATCH_DISCARD_EVENT,
+                                            ),
+                                        );
+                                        setDirectIntakeDirty(false);
+                                    }
+
+                                    setShowIntake((value) => !value);
+                                }}
                                 aria-expanded={showIntake}
                                 aria-controls="new-dispatch-panel"
                             >
@@ -726,7 +752,11 @@ export function LiveDispatchWorkspace({
                             initialMode={
                                 initialServiceRequestId ? 'service' : null
                             }
-                            onClose={() => setShowIntake(false)}
+                            onDirtyChange={setDirectIntakeDirty}
+                            onClose={() => {
+                                setDirectIntakeDirty(false);
+                                setShowIntake(false);
+                            }}
                         />
                     </motion.div>
                 )}
@@ -1085,14 +1115,14 @@ export function LiveDispatchWorkspace({
             {(viewMode === 'list' || fieldMode) && (
                 <div
                     className={cn(
-                        'min-h-[calc(100vh-9rem)]',
+                        'min-h-[calc(100vh-9rem)] max-w-full min-w-0',
                         !fieldMode &&
                             'grid lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]',
                     )}
                 >
                     <aside
                         className={cn(
-                            'border-b border-line bg-surface',
+                            'min-w-0 border-b border-line bg-surface',
                             fieldMode
                                 ? 'mx-auto w-full max-w-5xl'
                                 : 'lg:border-r lg:border-b-0',
@@ -1151,7 +1181,7 @@ export function LiveDispatchWorkspace({
                                             Sales delivery orders
                                         </option>
                                         <option value="manual">
-                                            Manual intake (manual_intake)
+                                            Manual source · manual_intake
                                         </option>
                                     </select>
                                 </label>
@@ -3291,12 +3321,12 @@ function DispatchSourceBadge({
     detailed?: boolean;
     className?: string;
 }) {
-    if (
-        !source ||
-        source.type === 'direct' ||
-        source.type === 'manual' ||
-        source.manual_intake
-    ) {
+    const isManual =
+        source?.type === 'manual' ||
+        source?.provenance_indicator === 'manual_intake' ||
+        Boolean(source?.manual_intake);
+
+    if (!source || source.type === 'direct' || isManual) {
         return (
             <span
                 className={cn(
@@ -3306,7 +3336,11 @@ function DispatchSourceBadge({
                 title="Direct operational intake"
             >
                 <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
-                <span>Direct intake</span>
+                <span>
+                    {isManual
+                        ? 'Manual source · manual_intake'
+                        : 'Direct intake'}
+                </span>
             </span>
         );
     }

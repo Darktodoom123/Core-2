@@ -42,6 +42,7 @@ final class OperationsWorkspaceController extends Controller
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
         $refreshedAt = now();
         $locations = $this->fetchLocations($user);
+        $navigation = OperationsWorkspaceViewModel::navigation($user);
 
         return Inertia::render('workspace', [
             'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
@@ -60,7 +61,8 @@ final class OperationsWorkspaceController extends Controller
             'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
             'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
-            'navigation' => OperationsWorkspaceViewModel::navigation($user),
+            'navigation' => $navigation,
+            'initial_section' => $this->initialSection($request, $navigation),
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
             'workspace' => [
                 'refreshed_at' => $refreshedAt->toIso8601String(),
@@ -68,6 +70,18 @@ final class OperationsWorkspaceController extends Controller
                 'tracking' => $this->trackingFreshness($user, $refreshedAt),
             ],
         ]);
+    }
+
+    /** @param array<int, array{id: string, label: string}> $navigation */
+    private function initialSection(Request $request, array $navigation): ?string
+    {
+        $requested = $request->query('view');
+
+        if (is_string($requested) && collect($navigation)->contains('id', $requested)) {
+            return $requested;
+        }
+
+        return $navigation[0]['id'] ?? null;
     }
 
     /** @return array<string, mixed> */
@@ -152,6 +166,7 @@ final class OperationsWorkspaceController extends Controller
                     ->with('asset:id,code,name'),
                 'source',
                 'serviceRequest:id,reference',
+                'canonicalHandoff',
             ])
             ->orderBy('scheduled_start')
             ->limit(100)

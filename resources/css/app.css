@@ -160,14 +160,17 @@ textarea:focus-visible,
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        animation-duration: 0.001ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
+    .direct-dispatch-view {
+        scroll-behavior: auto;
+    }
+
+    .direct-dispatch-view [class*='transition-'] {
+        transition-duration: 0ms !important;
         transition-delay: 0ms !important;
+    }
+
+    .direct-dispatch-view [class*='animate-'] {
+        animation: none !important;
     }
 }
 

@@ -1,7 +1,6 @@
 import { useForm, router } from '@inertiajs/react';
 import {
     CalendarDays,
-    Check,
     CheckCircle2,
     ClipboardCheck,
     Package,
@@ -17,12 +16,12 @@ import {
     Panel,
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { DirectDispatchView } from '@/components/workspace/direct-dispatch/direct-dispatch-view';
 import { formatCurrency, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     ClientViewModel,
     DispatchJobViewModel,
-    DispatchPriorityValue,
     RentalDispatchHandoffViewModel,
     SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
@@ -38,84 +37,6 @@ export type IntakeMode =
     | 'reconciliation'
     | 'client'
     | null;
-
-export type ManualWorkStream = 'service' | 'rental' | 'sale' | 'general';
-export type EquipmentSubtype =
-    'mobile_crane' | 'tower_crane' | 'general_service';
-
-export const MOBILE_CRANE_REQUIREMENTS = [
-    'Require on-site ground bearing & soil stability check',
-    'Require outrigger pad clearance & positioning check',
-    'Require overhead power line safe clearance verification (15m)',
-    'Require certified rigging gear & inspection sign-off',
-    'Require site induction & PPE compliance verification',
-    'Require traffic control & local municipal permit in place',
-];
-
-export const TOWER_CRANE_REQUIREMENTS = [
-    'Require weathervaning / free-slew mechanism verification at shift end',
-    'Require foundation anchor bolt & mast pin torque inspection',
-    'Require Load Moment Indicator (LMI) & hoist limit switch testing',
-    'Require high-rise aviation obstruction warning lights operational',
-    'Require mast vertical ladder fall-arrest rail & safety cage inspection',
-];
-
-export const GENERAL_SERVICE_REQUIREMENTS = [
-    'Require certified rigging gear & inspection sign-off',
-    'Require site induction & PPE compliance verification',
-    'Require traffic control & local municipal permit in place',
-    'Require task hazard analysis & safety briefing sign-off',
-];
-
-export const RENTAL_DELIVERY_REQUIREMENTS = [
-    'Require pre-checkout condition photos & fluid/hour meter documentation',
-    'Require pre-operation inspection & safe release certificate',
-    'Require customer site delivery receipt & condition handover sign-off',
-    'Require heavy transport lowbed 4-point tie-down inspection',
-];
-
-export const SALES_TRANSPORT_REQUIREMENTS = [
-    'Require physical VIN & serial number verification against sales order',
-    'Require heavy transport lowbed height & route clearance check',
-    'Require delivery handover inspection & customer sign-off',
-    'Require equipment title & ownership transfer documentation sign-off',
-];
-
-export const GENERAL_MANUAL_REQUIREMENTS = [
-    'Require on-site ground bearing & soil stability check',
-    'Require outrigger pad clearance & positioning check',
-    'Require overhead power line safe clearance verification',
-    'Require site induction & PPE compliance verification',
-    'Require certified rigging gear & inspection sign-off',
-    'Require traffic control & local municipal permit in place',
-];
-
-export function getRecommendedRequirements(
-    stream: ManualWorkStream,
-    subtype: EquipmentSubtype,
-): string[] {
-    if (stream === 'service') {
-        if (subtype === 'tower_crane') {
-            return TOWER_CRANE_REQUIREMENTS;
-        }
-
-        if (subtype === 'general_service') {
-            return GENERAL_SERVICE_REQUIREMENTS;
-        }
-
-        return MOBILE_CRANE_REQUIREMENTS;
-    }
-
-    if (stream === 'rental') {
-        return RENTAL_DELIVERY_REQUIREMENTS;
-    }
-
-    if (stream === 'sale') {
-        return SALES_TRANSPORT_REQUIREMENTS;
-    }
-
-    return GENERAL_MANUAL_REQUIREMENTS;
-}
 
 type IncomingWorkItem = {
     key: string;
@@ -137,6 +58,7 @@ export function LiveDispatchIntake({
     initialRequestId,
     initialMode = null,
     onClose,
+    onDirtyChange,
 }: {
     clients: ClientViewModel[];
     serviceRequests: ServiceRequestViewModel[];
@@ -147,6 +69,7 @@ export function LiveDispatchIntake({
     initialRequestId?: number | null;
     initialMode?: IntakeMode;
     onClose?: () => void;
+    onDirtyChange?: (isDirty: boolean) => void;
 }) {
     const canCreateManual = capabilities.create_dispatch;
     const canReviewService = capabilities.convert_service_request;
@@ -220,12 +143,58 @@ export function LiveDispatchIntake({
     const [selectedItemKey, setSelectedItemKey] = useState<string | null>(
         initialRequestId ? `service-${initialRequestId}` : null,
     );
+    const [showClientIntake, setShowClientIntake] = useState(false);
     const unlinkedCount = incomingItems.length;
 
     const closeWorkflow = () => {
         setMode(null);
         setSelectedItemKey(null);
+        setShowClientIntake(false);
     };
+
+    if (mode === 'manual') {
+        return (
+            <section
+                className="direct-dispatch-view border-b border-line bg-surface px-4 py-5 md:px-6"
+                aria-labelledby="direct-dispatch-title"
+            >
+                <div className="mx-auto max-w-7xl">
+                    <DirectDispatchView
+                        clients={clients}
+                        capabilities={capabilities}
+                        onBack={() => {
+                            setShowClientIntake(false);
+                            onDirtyChange?.(false);
+                            setMode(null);
+                        }}
+                        onClose={() => {
+                            setShowClientIntake(false);
+                            onDirtyChange?.(false);
+                            onClose?.();
+                        }}
+                        onAddClient={() => setShowClientIntake(true)}
+                        onDirtyChange={onDirtyChange}
+                        onExitFocus={(reason) => {
+                            window.requestAnimationFrame(() => {
+                                document
+                                    .getElementById(
+                                        reason === 'back'
+                                            ? 'create-direct-dispatch-trigger'
+                                            : 'new-dispatch-trigger',
+                                    )
+                                    ?.focus();
+                            });
+                        }}
+                    />
+                    {showClientIntake && (
+                        <ClientIntakeForm
+                            onClose={() => setShowClientIntake(false)}
+                        />
+                    )}
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section
@@ -345,25 +314,19 @@ export function LiveDispatchIntake({
                     </div>
                     {canCreateManual && (
                         <Button
+                            id="create-direct-dispatch-trigger"
                             type="button"
                             variant={
-                                mode === 'manual'
+                                incomingItems.length > 0
                                     ? 'secondary'
-                                    : incomingItems.length > 0
-                                      ? 'secondary'
-                                      : 'primary'
+                                    : 'primary'
                             }
-                            aria-pressed={mode === 'manual'}
                             onClick={() => {
                                 setSelectedItemKey(null);
-                                setMode((cur) =>
-                                    cur === 'manual' ? null : 'manual',
-                                );
+                                setMode('manual');
                             }}
                         >
-                            {mode === 'manual'
-                                ? 'Close direct dispatch'
-                                : 'Create direct dispatch'}
+                            Create direct dispatch
                         </Button>
                     )}
                 </div>
@@ -401,13 +364,6 @@ export function LiveDispatchIntake({
 
                 {mode === 'client' && (
                     <ClientIntakeForm onClose={closeWorkflow} />
-                )}
-
-                {mode === 'manual' && (
-                    <ManualDispatchIntakeForm
-                        clients={clients}
-                        onClose={closeWorkflow}
-                    />
                 )}
 
                 {mode === 'service' && (
@@ -499,712 +455,6 @@ function IncomingWorkRow({
                 </div>
             </button>
         </div>
-    );
-}
-
-function ManualDispatchIntakeForm({
-    clients,
-    onClose,
-}: {
-    clients: ClientViewModel[];
-    onClose: () => void;
-}) {
-    const [workStream, setWorkStream] = useState<ManualWorkStream>('service');
-    const [equipmentSubtype, setEquipmentSubtype] =
-        useState<EquipmentSubtype>('mobile_crane');
-    const [requirements, setRequirements] = useState<string[]>(() =>
-        getRecommendedRequirements('service', 'mobile_crane'),
-    );
-    const [customRequirements, setCustomRequirements] = useState<string[]>([]);
-    const [customRequirement, setCustomRequirement] = useState('');
-
-    const form = useForm({
-        client: '',
-        title: '',
-        site: '',
-        scheduled_start: '',
-        scheduled_end: '',
-        priority: 'routine' as DispatchPriorityValue,
-        work_stream: 'service',
-        equipment_subtype: 'mobile_crane' as string | null,
-        site_notes: '',
-        requirements: [] as string[],
-    });
-
-    const handleStreamChange = (nextStream: ManualWorkStream) => {
-        setWorkStream(nextStream);
-        const rec = getRecommendedRequirements(nextStream, equipmentSubtype);
-        setRequirements([...rec, ...customRequirements]);
-    };
-
-    const handleSubtypeChange = (nextSubtype: EquipmentSubtype) => {
-        setEquipmentSubtype(nextSubtype);
-        const rec = getRecommendedRequirements('service', nextSubtype);
-        setRequirements([...rec, ...customRequirements]);
-    };
-
-    const currentRecommended = getRecommendedRequirements(
-        workStream,
-        equipmentSubtype,
-    );
-
-    const togglePredefined = (text: string) => {
-        setRequirements((prev) =>
-            prev.includes(text)
-                ? prev.filter((r) => r !== text)
-                : [...prev, text],
-        );
-    };
-
-    const toggleCustomRequirement = (text: string) => {
-        setRequirements((prev) =>
-            prev.includes(text)
-                ? prev.filter((r) => r !== text)
-                : [...prev, text],
-        );
-    };
-
-    const addCustomRequirement = () => {
-        const trimmed = customRequirement.trim();
-
-        if (trimmed) {
-            if (!customRequirements.includes(trimmed)) {
-                setCustomRequirements((prev) => [...prev, trimmed]);
-            }
-
-            if (!requirements.includes(trimmed)) {
-                setRequirements((prev) => [...prev, trimmed]);
-            }
-
-            setCustomRequirement('');
-        }
-    };
-
-    const removeCustomRequirement = (text: string) => {
-        setCustomRequirements((prev) => prev.filter((r) => r !== text));
-        setRequirements((prev) => prev.filter((r) => r !== text));
-    };
-
-    const allStandardSelected = currentRecommended.every((req) =>
-        requirements.includes(req),
-    );
-
-    const toggleAllStandard = () => {
-        if (allStandardSelected) {
-            setRequirements((prev) =>
-                prev.filter((r) => !currentRecommended.includes(r)),
-            );
-        } else {
-            setRequirements((prev) => [
-                ...prev.filter((r) => !currentRecommended.includes(r)),
-                ...currentRecommended,
-            ]);
-        }
-    };
-
-    const refPrefix =
-        workStream === 'service'
-            ? 'DSP-SRV'
-            : workStream === 'rental'
-              ? 'DSP-REN'
-              : workStream === 'sale'
-                ? 'DSP-SAL'
-                : 'DSP-MAN';
-
-    const titlePlaceholder =
-        workStream === 'service'
-            ? equipmentSubtype === 'tower_crane'
-                ? 'e.g. High-Rise Tower Crane Erection & Operation'
-                : equipmentSubtype === 'general_service'
-                  ? 'e.g. Structural Rigging & Technical Site Service'
-                  : 'e.g. 50T Mobile Crane Tandem Lift & Erection'
-            : workStream === 'rental'
-              ? 'e.g. 25T Rough Terrain Crane Rental Delivery & Setup'
-              : workStream === 'sale'
-                ? 'e.g. Cat 320D Excavator Sales Transport & Handover'
-                : 'e.g. 50T Heavy Crane Lift & Transport';
-
-    const formComplete =
-        form.data.client.trim() !== '' &&
-        form.data.title.trim() !== '' &&
-        form.data.site.trim() !== '' &&
-        form.data.scheduled_start.trim() !== '' &&
-        form.data.scheduled_end.trim() !== '';
-
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
-        form.transform((data) => ({
-            ...data,
-            work_stream: workStream,
-            equipment_subtype:
-                workStream === 'service' ? equipmentSubtype : null,
-            requirements,
-        }));
-        form.post('/operations/dispatch-jobs', {
-            preserveScroll: true,
-            onSuccess: () => {
-                form.reset();
-                setRequirements(
-                    getRecommendedRequirements('service', 'mobile_crane'),
-                );
-                setCustomRequirements([]);
-                onClose();
-            },
-        });
-    };
-
-    return (
-        <Panel id="manual-intake-form" className="mt-4 p-4 md:p-6">
-            <div className="flex flex-col gap-3 border-b border-line pb-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
-                            Direct Manual Intake
-                        </span>
-                        <span className="rounded bg-brand-soft px-2 py-0.5 font-mono text-xs font-medium text-brand-strong">
-                            {refPrefix.toLowerCase()}_intake provenance
-                        </span>
-                    </div>
-                    <h3 className="mt-2 text-lg font-semibold text-ink">
-                        Create manual operational draft dispatch
-                    </h3>
-                    <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                        Creates an operational draft dispatch directly in Core 2
-                        with full assignment, approval, and scheduling
-                        capabilities. Select the operational work stream to
-                        automatically apply appropriate directives and reference
-                        codes.
-                    </p>
-                </div>
-                <Button
-                    size="icon"
-                    variant="quiet"
-                    onClick={onClose}
-                    aria-label="Close manual intake form"
-                >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                </Button>
-            </div>
-
-            {/* Section A: Work Stream & Equipment Subtype Selector */}
-            <div className="mt-4 rounded-xl border border-line bg-surface-subtle p-4">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <span className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                            Operational Work Stream
-                        </span>
-                        <p className="text-xs text-ink-soft">
-                            Categorize the dispatch operation to tailor safety
-                            directives and reference tags.
-                        </p>
-                    </div>
-                    <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-0.5 font-mono text-xs font-semibold text-brand-strong">
-                        {refPrefix}-YYYY-NNN
-                    </span>
-                </div>
-
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {[
-                        {
-                            id: 'service' as const,
-                            title: 'Field Service',
-                            subtitle: 'Crane lifts & on-site service work',
-                            tone: 'border-brand-strong bg-brand-soft/70',
-                        },
-                        {
-                            id: 'rental' as const,
-                            title: 'Rental Delivery',
-                            subtitle: 'Equipment hire mobilization & prep',
-                            tone: 'border-warning-strong bg-warning-soft/70',
-                        },
-                        {
-                            id: 'sale' as const,
-                            title: 'Sales Transport',
-                            subtitle: 'Machinery hauling & VIN handover',
-                            tone: 'border-success-strong bg-success-soft/70',
-                        },
-                        {
-                            id: 'general' as const,
-                            title: 'General Operational',
-                            subtitle: 'Ad-hoc direct draft dispatch',
-                            tone: 'border-info-strong bg-info-soft/70',
-                        },
-                    ].map((stream) => {
-                        const active = workStream === stream.id;
-
-                        return (
-                            <button
-                                key={stream.id}
-                                type="button"
-                                onClick={() => handleStreamChange(stream.id)}
-                                className={cn(
-                                    'flex flex-col items-start gap-1 rounded-xl border p-3.5 text-left transition-all duration-150',
-                                    active
-                                        ? cn(
-                                              stream.tone,
-                                              'font-semibold shadow-xs ring-1 ring-brand-strong/30',
-                                          )
-                                        : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
-                                )}
-                            >
-                                <p className="text-sm font-semibold text-ink">
-                                    {stream.title}
-                                </p>
-                                <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
-                                    {stream.subtitle}
-                                </p>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {workStream === 'service' && (
-                    <div className="mt-3 border-t border-line/70 pt-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold text-ink">
-                                Equipment Subtype:
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                                {[
-                                    {
-                                        id: 'mobile_crane' as const,
-                                        label: 'Mobile / All-Terrain Crane',
-                                    },
-                                    {
-                                        id: 'tower_crane' as const,
-                                        label: 'Tower Crane',
-                                    },
-                                    {
-                                        id: 'general_service' as const,
-                                        label: 'Rigging & Support',
-                                    },
-                                ].map((sub) => {
-                                    const active = equipmentSubtype === sub.id;
-
-                                    return (
-                                        <button
-                                            key={sub.id}
-                                            type="button"
-                                            onClick={() =>
-                                                handleSubtypeChange(sub.id)
-                                            }
-                                            className={cn(
-                                                'inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
-                                                active
-                                                    ? 'border-brand-strong bg-brand-strong font-semibold text-white shadow-xs'
-                                                    : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                                            )}
-                                        >
-                                            {sub.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <form onSubmit={submit} className="mt-5 space-y-5" noValidate>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="text-sm font-medium text-ink">
-                        <span>Dispatch reference</span>
-                        <div
-                            id="manual-reference"
-                            className="mt-1 flex h-11 items-center rounded-lg border border-dashed border-line-strong bg-surface-subtle px-3"
-                            aria-describedby="manual-reference-hint"
-                        >
-                            <span className="font-mono text-sm text-ink-soft">
-                                {refPrefix}-YYYY-NNN
-                            </span>
-                        </div>
-                        <p
-                            id="manual-reference-hint"
-                            className="mt-1 text-xs font-normal text-ink-soft"
-                        >
-                            Assigned automatically with{' '}
-                            <code className="font-mono">{refPrefix}</code>{' '}
-                            prefix when saved.
-                        </p>
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-medium text-ink">
-                            Client name
-                            <span className="ml-1 text-danger">*</span>
-                            <div className="mt-1 flex gap-2">
-                                <input
-                                    id="manual-client"
-                                    value={form.data.client}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'client',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Enter or pick client"
-                                    className={cn(
-                                        'h-11 w-full rounded-lg border bg-surface px-3 text-sm',
-                                        form.errors.client
-                                            ? 'border-danger'
-                                            : 'border-line-strong',
-                                    )}
-                                    required
-                                    list="existing-clients-datalist"
-                                />
-                                <datalist id="existing-clients-datalist">
-                                    {clients.map((c) => (
-                                        <option
-                                            key={c.id}
-                                            value={c.company_name}
-                                        >
-                                            {c.code} · {c.company_name}
-                                        </option>
-                                    ))}
-                                </datalist>
-                            </div>
-                        </label>
-                        {form.errors.client && (
-                            <FieldError
-                                id="manual-client-error"
-                                error={form.errors.client}
-                            />
-                        )}
-                    </div>
-
-                    <IntakeInput
-                        id="manual-title"
-                        label="Dispatch title / scope"
-                        value={form.data.title}
-                        error={form.errors.title}
-                        onChange={(value) => form.setData('title', value)}
-                        placeholder={titlePlaceholder}
-                        required
-                    />
-
-                    <IntakeInput
-                        id="manual-site"
-                        label="Job site location"
-                        value={form.data.site}
-                        error={form.errors.site}
-                        onChange={(value) => form.setData('site', value)}
-                        placeholder="e.g. Jurong Island Berth 4"
-                        required
-                    />
-
-                    <DateTimePicker
-                        id="manual-start"
-                        label="Scheduled start"
-                        value={form.data.scheduled_start}
-                        error={form.errors.scheduled_start}
-                        onChange={(value) =>
-                            form.setData('scheduled_start', value)
-                        }
-                        required
-                    />
-
-                    <DateTimePicker
-                        id="manual-end"
-                        label="Scheduled end"
-                        value={form.data.scheduled_end}
-                        error={form.errors.scheduled_end}
-                        onChange={(value) =>
-                            form.setData('scheduled_end', value)
-                        }
-                        required
-                    />
-
-                    <SelectField
-                        id="manual-priority"
-                        label="Operational priority"
-                        value={form.data.priority}
-                        error={form.errors.priority}
-                        onChange={(value) =>
-                            form.setData(
-                                'priority',
-                                value as DispatchPriorityValue,
-                            )
-                        }
-                        required
-                    >
-                        <option value="routine">Routine</option>
-                        <option value="priority">Priority</option>
-                        <option value="emergency">Emergency</option>
-                    </SelectField>
-                </div>
-
-                <div className="rounded-xl border border-line bg-surface p-4 shadow-2xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                            <h4 className="text-sm font-semibold text-ink">
-                                Technical requirements &amp; safety directives
-                            </h4>
-                            <p className="mt-0.5 text-xs text-ink-soft">
-                                {workStream === 'service' &&
-                                equipmentSubtype === 'tower_crane'
-                                    ? 'High-rise tower crane directives — weathervaning, mast tie-in bolts, LMI, and aviation beacons.'
-                                    : workStream === 'service'
-                                      ? 'Crane lift directives — ground stability, outrigger pad positioning, powerline clearance, and rigging.'
-                                      : workStream === 'rental'
-                                        ? 'Rental equipment delivery directives — pre-checkout condition photos, safe release, and customer sign-off.'
-                                        : workStream === 'sale'
-                                          ? 'Equipment sales transport directives — physical VIN verification, tie-down checks, and ownership transfer.'
-                                          : 'General operational directives — site induction, PPE, and traffic permits.'}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                            <button
-                                type="button"
-                                onClick={toggleAllStandard}
-                                className="text-xs font-semibold text-brand-strong transition-colors hover:text-ink hover:underline"
-                            >
-                                {allStandardSelected
-                                    ? 'Deselect all recommended'
-                                    : 'Select all recommended'}
-                            </button>
-                            <span
-                                className={cn(
-                                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors',
-                                    requirements.length > 0
-                                        ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong shadow-2xs'
-                                        : 'border border-line bg-surface-subtle text-ink-soft',
-                                )}
-                            >
-                                {requirements.length} directive
-                                {requirements.length === 1 ? '' : 's'} added
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Predefined Directives for the active Stream/Subtype */}
-                    <div className="mt-4 space-y-2">
-                        <div className="flex items-center text-ink-soft">
-                            <span className="text-[11px] font-semibold tracking-wide uppercase">
-                                {workStream === 'service' &&
-                                equipmentSubtype === 'tower_crane'
-                                    ? 'Tower Crane Safety Directives'
-                                    : workStream === 'service'
-                                      ? 'Crane Lift & Site Safety Directives'
-                                      : workStream === 'rental'
-                                        ? 'Rental Prep & Delivery Directives'
-                                        : workStream === 'sale'
-                                          ? 'Sales Transport & Handover Directives'
-                                          : 'Standard Operational Directives'}
-                            </span>
-                        </div>
-                        <div className="grid gap-2.5 sm:grid-cols-2">
-                            {currentRecommended.map((req) => {
-                                const active = requirements.includes(req);
-
-                                return (
-                                    <label
-                                        key={req}
-                                        className={cn(
-                                            'group relative flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border p-3 text-left text-xs transition-all duration-150 select-none',
-                                            active
-                                                ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
-                                                : 'border-line bg-surface text-ink shadow-2xs hover:border-brand/40 hover:bg-surface-subtle/60',
-                                        )}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={active}
-                                            onChange={() =>
-                                                togglePredefined(req)
-                                            }
-                                            className="sr-only"
-                                        />
-                                        <div
-                                            className={cn(
-                                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
-                                                active
-                                                    ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
-                                                    : 'border-line-strong bg-surface group-hover:border-brand/60',
-                                            )}
-                                            aria-hidden="true"
-                                        >
-                                            {active && (
-                                                <Check
-                                                    className="h-3.5 w-3.5 stroke-[2.75]"
-                                                    aria-hidden="true"
-                                                />
-                                            )}
-                                        </div>
-                                        <span
-                                            className={cn(
-                                                'flex-1 leading-snug transition-colors',
-                                                active
-                                                    ? 'font-semibold text-ink'
-                                                    : 'font-normal text-ink',
-                                            )}
-                                        >
-                                            {req}
-                                        </span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Section: Custom Technical Requirements */}
-                    {customRequirements.length > 0 && (
-                        <div className="mt-4 space-y-2 border-t border-line/70 pt-3.5">
-                            <div className="flex items-center justify-between">
-                                <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
-                                    Custom Site Criteria (
-                                    {customRequirements.length})
-                                </p>
-                            </div>
-                            <div className="grid gap-2.5 sm:grid-cols-2">
-                                {customRequirements.map((req) => {
-                                    const active = requirements.includes(req);
-
-                                    return (
-                                        <div
-                                            key={req}
-                                            className={cn(
-                                                'group relative flex min-h-[52px] items-center justify-between gap-2.5 rounded-xl border p-3 text-left text-xs transition-all duration-150',
-                                                active
-                                                    ? 'border-brand-strong bg-brand-soft/80 font-medium text-ink shadow-xs ring-1 ring-brand-strong/30'
-                                                    : 'border-line bg-surface text-ink-soft shadow-2xs hover:border-line-strong hover:bg-surface-subtle/60',
-                                            )}
-                                        >
-                                            <label className="flex flex-1 cursor-pointer items-center gap-3 select-none">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={active}
-                                                    onChange={() =>
-                                                        toggleCustomRequirement(
-                                                            req,
-                                                        )
-                                                    }
-                                                    className="sr-only"
-                                                />
-                                                <div
-                                                    className={cn(
-                                                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
-                                                        active
-                                                            ? 'scale-105 border-brand-strong bg-brand-strong text-white shadow-xs'
-                                                            : 'border-line-strong bg-surface group-hover:border-brand/60',
-                                                    )}
-                                                    aria-hidden="true"
-                                                >
-                                                    {active && (
-                                                        <Check
-                                                            className="h-3.5 w-3.5 stroke-[2.75]"
-                                                            aria-hidden="true"
-                                                        />
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 leading-snug">
-                                                    <span
-                                                        className={cn(
-                                                            'block',
-                                                            active
-                                                                ? 'font-semibold text-ink'
-                                                                : 'text-ink-soft line-through',
-                                                        )}
-                                                    >
-                                                        {req}
-                                                    </span>
-                                                    <span className="text-[10px] font-medium text-brand-strong">
-                                                        Custom
-                                                    </span>
-                                                </div>
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeCustomRequirement(req)
-                                                }
-                                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-danger-soft hover:text-danger-strong"
-                                                aria-label={`Remove custom requirement: ${req}`}
-                                                title="Remove custom requirement"
-                                            >
-                                                <X
-                                                    className="h-3.5 w-3.5"
-                                                    aria-hidden="true"
-                                                />
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Add Custom Requirement Input */}
-                    <div className="mt-4 flex gap-2 border-t border-line/70 pt-3.5">
-                        <label
-                            htmlFor="manual-custom-requirement"
-                            className="sr-only"
-                        >
-                            Custom technical requirement
-                        </label>
-                        <input
-                            id="manual-custom-requirement"
-                            type="text"
-                            value={customRequirement}
-                            onChange={(e) =>
-                                setCustomRequirement(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    addCustomRequirement();
-                                }
-                            }}
-                            placeholder="Add custom technical requirement..."
-                            className="h-11 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
-                        />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={addCustomRequirement}
-                            disabled={!customRequirement.trim()}
-                        >
-                            Add item
-                        </Button>
-                    </div>
-                </div>
-
-                <TextAreaField
-                    id="manual-site-notes"
-                    label="Site instructions & operational notes"
-                    value={form.data.site_notes}
-                    error={form.errors.site_notes}
-                    onChange={(value) => form.setData('site_notes', value)}
-                    hint="Include gate clearance, escort protocol, or load-in window details."
-                />
-
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                    <p className="text-xs text-ink-soft">
-                        {formComplete
-                            ? 'Ready to create manual draft dispatch.'
-                            : 'Fill in reference, client, title, site, and schedule to create draft.'}
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={form.processing || !formComplete}
-                        >
-                            {form.processing
-                                ? 'Creating operational draft…'
-                                : `Create manual ${workStream} draft`}
-                        </Button>
-                    </div>
-                </div>
-            </form>
-        </Panel>
     );
 }
 

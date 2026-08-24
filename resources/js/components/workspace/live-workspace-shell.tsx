@@ -529,7 +529,7 @@ export function LiveWorkspaceShell({
 
                     <main
                         id="workspace-content"
-                        className="min-w-0"
+                        className="max-w-full min-w-0 overflow-x-clip"
                         tabIndex={-1}
                     >
                         {children}

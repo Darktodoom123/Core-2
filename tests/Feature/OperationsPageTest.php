@@ -1,10 +1,12 @@
 <?php
 
+use App\Modules\Dispatch\Actions\CreateManualDispatchHandoff;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Tracking\Models\LocationUpdate;
@@ -203,5 +205,110 @@ it('serves only the latest visible location per worker in the workspace feed', f
                     $latestDriverLocation->id,
                     $secondDriverLocation->id,
                 ])->sort()->values()->all();
+            }));
+});
+
+it('derives the initial workspace section from the authorized navigation', function () {
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+
+    $this->actingAs($dispatcher)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('initial_section', 'dispatch')
+            ->where('navigation.1.id', 'dispatch'));
+
+    $fuelViewer = User::factory()->create();
+    $fuelViewer->givePermissionTo(PermissionName::FuelViewAll->value);
+
+    $this->actingAs($fuelViewer)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('initial_section', 'overview')
+            ->where('navigation.0.id', 'overview')
+            ->where('navigation', fn ($navigation): bool => ! collect($navigation)->contains('id', 'dispatch')));
+});
+
+it('projects canonical manual provenance independently from the reference prefix', function () {
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+
+    $job = app(CreateManualDispatchHandoff::class)->handle($dispatcher, [
+        'client' => 'Canonical Manual Client',
+        'title' => 'Manual service dispatch',
+        'site' => 'Quezon City',
+        'scheduled_start' => now()->addDay(),
+        'scheduled_end' => now()->addDay()->addHours(4),
+        'priority' => DispatchPriority::Routine,
+        'requirements' => ['Require site induction & PPE compliance verification'],
+        'work_stream' => 'service',
+        'equipment_subtype' => 'mobile_crane',
+    ]);
+
+    expect($job->canonicalHandoff)->not->toBeNull();
+
+    $this->actingAs($dispatcher)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('jobs.0.reference', $job->reference)
+            ->where('jobs.0.source.type', 'manual')
+            ->where('jobs.0.source.label', 'Manual source')
+            ->where('jobs.0.source.reference', $job->reference)
+            ->where('jobs.0.source.manual_intake', true)
+            ->where('jobs.0.source.provenance_indicator', 'manual_intake'));
+});
+
+it('projects dispatch job counts from the rendered service request relationships', function () {
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $client = Client::query()->create([
+        'code' => 'CLI-COUNT-1',
+        'company_name' => 'Count Client',
+        'status' => 'active',
+    ]);
+
+    $unlinkedRequest = ServiceRequest::query()->create([
+        'reference' => 'SR-COUNT-1',
+        'client_id' => $client->id,
+        'created_by' => $dispatcher->id,
+        'project_name' => 'Unlinked request',
+        'service_type' => 'crane',
+        'location' => 'Pasig City',
+        'status' => 'submitted',
+    ]);
+    $linkedRequest = ServiceRequest::query()->create([
+        'reference' => 'SR-COUNT-2',
+        'client_id' => $client->id,
+        'created_by' => $dispatcher->id,
+        'project_name' => 'Linked request',
+        'service_type' => 'crane',
+        'location' => 'Makati City',
+        'status' => 'submitted',
+    ]);
+
+    DispatchJob::query()->create([
+        'service_request_id' => $linkedRequest->id,
+        'reference' => 'DSP-SRV-COUNT-1',
+        'client' => $client->company_name,
+        'title' => 'Linked dispatch',
+        'site' => $linkedRequest->location,
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $dispatcher->id,
+    ]);
+
+    $this->actingAs($dispatcher)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('serviceRequests', 2)
+            ->where('serviceRequests', function ($requests) use ($unlinkedRequest, $linkedRequest): bool {
+                $counts = collect($requests)->mapWithKeys(
+                    static fn (array $request): array => [$request['reference'] => $request['dispatch_jobs_count']],
+                );
+
+                return $counts->sortKeys()->all() === collect([
+                    $unlinkedRequest->reference => 0,
+                    $linkedRequest->reference => 1,
+                ])->sortKeys()->all();
             }));
 });
