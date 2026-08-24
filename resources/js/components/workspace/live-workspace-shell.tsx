@@ -15,6 +15,7 @@ import {
     Menu,
     RefreshCw,
     ShieldCheck,
+    Siren,
     Truck,
     Users,
     X,
@@ -48,6 +49,7 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     'gpt-recommendations': Cpu,
     users: Users,
     audit: History,
+    sos: Siren,
 };
 
 export function LiveWorkspaceShell({

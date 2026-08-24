@@ -585,11 +585,22 @@ final class OperationsWorkspaceViewModel
                 'label' => 'Audit trail',
                 'permissions' => [PermissionName::AuditView],
             ],
+            [
+                'id' => 'sos',
+                'label' => 'Emergency SOS',
+                'permissions' => [],
+                'additional_permissions' => ['sos.view'],
+            ],
         ];
 
         return collect($items)
-            ->filter(static fn (array $item): bool => collect($item['permissions'])
-                ->contains(static fn (PermissionName $permission): bool => $user->can($permission->value)))
+            ->filter(static function (array $item) use ($user): bool {
+                $permissions = collect($item['permissions'])
+                    ->map(static fn (PermissionName $permission): string => $permission->value)
+                    ->merge($item['additional_permissions'] ?? []);
+
+                return $permissions->contains(static fn (string $permission): bool => $user->can($permission));
+            })
             ->map(static fn (array $item): array => [
                 'id' => $item['id'],
                 'label' => $item['label'],
@@ -637,7 +648,160 @@ final class OperationsWorkspaceViewModel
             'manage_notifications' => true,
             'view_archive' => $user->can(PermissionName::ArchiveManage->value),
             'restore_dispatch' => $user->can(PermissionName::ArchiveManage->value),
+            'view_sos' => $user->can('sos.view'),
+            'respond_sos' => $user->can('sos.respond'),
         ];
+    }
+
+    /**
+     * @param  Collection<int, object>  $incidents
+     * @return array<int, array<string, mixed>>
+     */
+    public static function activeSosIncidents(Collection $incidents, bool $canRespond): array
+    {
+        return $incidents->map(static function (object $incident) use ($canRespond): array {
+            $reporter = self::sosRelation($incident, 'reporter');
+            $acknowledgedBy = self::sosRelation($incident, 'acknowledgedBy');
+            $resolvedBy = self::sosRelation($incident, 'resolvedBy');
+            $dispatch = self::sosRelation($incident, 'dispatchJob');
+            $asset = self::sosRelation($incident, 'asset');
+            $location = self::sosRelation($incident, 'location');
+
+            $status = self::sosEnumValue($incident, 'status');
+            $category = self::sosEnumValue($incident, 'category');
+
+            return [
+                'id' => (string) $incident->getKey(),
+                'category' => [
+                    'value' => $category,
+                    'label' => self::sosEnumLabel($incident, 'category', $category),
+                ],
+                'status' => [
+                    'value' => $status,
+                    'label' => self::sosEnumLabel($incident, 'status', $status),
+                ],
+                'note' => $incident->getAttribute('worker_note'),
+                'worker' => self::sosPerson($reporter),
+                'received_at' => self::sosDate($incident, 'received_at'),
+                'device_activated_at' => self::sosDate($incident, 'device_activated_at'),
+                'escalation_due_at' => self::sosDate($incident, 'escalation_due_at'),
+                'escalated_at' => self::sosDate($incident, 'escalated_at'),
+                'acknowledged_at' => self::sosDate($incident, 'acknowledged_at'),
+                'acknowledged_by' => $acknowledgedBy === null ? null : self::sosPerson($acknowledgedBy),
+                'resolved_at' => self::sosDate($incident, 'resolved_at'),
+                'resolved_by' => $resolvedBy === null ? null : self::sosPerson($resolvedBy),
+                'resolution_code' => $incident->getAttribute('resolution_code'),
+                'resolution_notes' => $incident->getAttribute('resolution_notes'),
+                'cancelled_at' => self::sosDate($incident, 'cancelled_at'),
+                'cancellation_reason' => $incident->getAttribute('cancellation_reason'),
+                'dispatch' => $dispatch === null ? null : [
+                    'id' => (int) $dispatch->getKey(),
+                    'reference' => (string) $dispatch->getAttribute('reference'),
+                    'title' => (string) $dispatch->getAttribute('title'),
+                    'site' => $dispatch->getAttribute('site'),
+                ],
+                'asset' => $asset === null ? null : [
+                    'id' => (int) $asset->getKey(),
+                    'code' => (string) $asset->getAttribute('code'),
+                    'name' => (string) $asset->getAttribute('name'),
+                ],
+                'location' => $location === null ? self::sosLocation($incident) : self::sosLocation($location),
+                'delivery_attempts' => self::sosDeliveryAttempts($incident),
+                'can_acknowledge' => $canRespond && in_array($status, ['active', 'escalated'], true),
+                'can_resolve' => $canRespond && in_array($status, ['acknowledged', 'escalated'], true),
+                'can_cancel' => $canRespond && in_array($status, ['active', 'escalated', 'acknowledged'], true),
+            ];
+        })->values()->all();
+    }
+
+    private static function sosRelation(object $model, string $relation): ?object
+    {
+        if (! method_exists($model, 'relationLoaded') || ! $model->relationLoaded($relation)) {
+            return null;
+        }
+
+        $value = $model->getRelationValue($relation);
+
+        return is_object($value) ? $value : null;
+    }
+
+    private static function sosPerson(?object $person): array
+    {
+        return [
+            'id' => $person === null ? 0 : (int) $person->getKey(),
+            'name' => $person === null ? 'Unknown worker' : (string) $person->getAttribute('name'),
+            'phone' => $person?->getAttribute('phone'),
+        ];
+    }
+
+    private static function sosEnumValue(object $model, string $attribute): string
+    {
+        $value = $model->getAttribute($attribute);
+
+        return $value instanceof BackedEnum ? (string) $value->value : (string) $value;
+    }
+
+    private static function sosEnumLabel(object $model, string $attribute, string $value): string
+    {
+        $enum = $model->getAttribute($attribute);
+
+        return is_object($enum) && method_exists($enum, 'label')
+            ? (string) $enum->label()
+            : str_replace('_', ' ', ucfirst($value));
+    }
+
+    private static function sosDate(object $model, string $attribute): ?string
+    {
+        $value = $model->getAttribute($attribute);
+
+        return $value instanceof Carbon ? $value->toIso8601String() : (is_string($value) ? $value : null);
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function sosLocation(object $model): ?array
+    {
+        $latitude = $model->getAttribute('latitude');
+        $longitude = $model->getAttribute('longitude');
+
+        if ($latitude === null || $longitude === null) {
+            return null;
+        }
+
+        $capturedAt = $model->getAttribute('location_captured_at') ?? $model->getAttribute('captured_at');
+        $capturedAt = $capturedAt instanceof Carbon ? $capturedAt->toIso8601String() : (is_string($capturedAt) ? $capturedAt : null);
+        $age = $capturedAt === null ? null : now()->diffInSeconds(Carbon::parse($capturedAt), false);
+
+        return [
+            'latitude' => (float) $latitude,
+            'longitude' => (float) $longitude,
+            'accuracy_metres' => $model->getAttribute('accuracy_metres') === null ? null : (float) $model->getAttribute('accuracy_metres'),
+            'captured_at' => $capturedAt,
+            'freshness_status' => $age === null || $age > 1800 ? 'offline' : ($age > 600 ? 'stale' : ($age > 120 ? 'delayed' : 'fresh')),
+            'context' => $model->getAttribute('location_context'),
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private static function sosDeliveryAttempts(object $incident): array
+    {
+        if (! method_exists($incident, 'relationLoaded') || ! $incident->relationLoaded('deliveryAttempts')) {
+            return [];
+        }
+
+        $attempts = $incident->getRelationValue('deliveryAttempts');
+
+        if (! $attempts instanceof Collection) {
+            return [];
+        }
+
+        return $attempts->map(static fn (object $attempt): array => [
+            'channel' => (string) $attempt->getAttribute('channel'),
+            'target' => (string) ($attempt->getAttribute('target_type') ?? 'responder'),
+            'status' => (string) ($attempt->getAttribute('status') ?? $attempt->getAttribute('state')),
+            'attempted_at' => self::sosDate($attempt, 'attempted_at'),
+            'delivered_at' => self::sosDate($attempt, 'delivered_at'),
+            'failure_code' => $attempt->getAttribute('failure_code'),
+        ])->values()->all();
     }
 
     /**
