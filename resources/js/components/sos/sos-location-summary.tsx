@@ -77,6 +77,7 @@ export function SosLocationSummary({ incident }: SosLocationSummaryProps) {
                 >
                     <LiveTrackingMap
                         locations={[mapLocation]}
+                        activeSosIncidents={[incident]}
                         compact
                         showLocationList={false}
                     />

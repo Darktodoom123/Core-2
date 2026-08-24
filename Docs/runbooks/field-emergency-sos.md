@@ -30,6 +30,7 @@ Use the persistent SOS banner and responder queue in the Operations workspace. A
 - Provider credentials, delivery failure handling, retry policy, and emergency queue monitoring approved.
 - Company emergency contacts entered by an authorized System Administrator and verified by a test drill.
 - Realtime delivery, polling fallback, notification center, and dashboard alerting observed in staging.
+- Live tracking map acceptance confirms active and acknowledged SOS halos follow the affected worker, resolved/cancelled incidents remove the halo, reduced motion uses a strong static halo, and marker interaction remains available.
 - Three-minute acknowledgement/escalation drill completed without public-authority auto-contact.
 - Android development-build, cold-start, offline, GPS timeout, accessibility, call/SMS handoff, and physical-device acceptance evidence attached.
 - Only then set `SOS_ENABLED=true` in the intended environment and repeat smoke checks.

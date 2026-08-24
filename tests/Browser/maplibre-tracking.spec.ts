@@ -59,7 +59,8 @@ async function openTracking(page: Page) {
     const fixtures = browserFixtures();
 
     await signIn(page, fixtures.users.dispatcher, fixtures.password);
-    await page.goto('/?view=tracking');
+    await page.goto('/?view=assets');
+    await page.getByRole('button', { name: 'Fleet map view' }).click();
 }
 
 async function expectMapReady(page: Page) {
@@ -85,6 +86,57 @@ async function expectSynchronizedList(page: Page) {
         list.getByRole('heading', { name: 'Mapped locations' }),
     ).toBeVisible();
 }
+
+test('exposes the SOS marker DOM contract without blocking marker interaction', async ({
+    page,
+}) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await stubStadiaStyle(page);
+    await openTracking(page);
+    await expectMapReady(page);
+
+    await page.evaluate(() => {
+        const marker = document.createElement('button');
+        marker.type = 'button';
+        marker.className = 'maplibre-sos-marker';
+        marker.setAttribute(
+            'aria-label',
+            'SOS incident for Worker One (Acknowledged)',
+        );
+        marker.dataset.sosStatus = 'acknowledged';
+        marker.style.position = 'fixed';
+        marker.style.top = '50%';
+        marker.style.left = '50%';
+        marker.style.zIndex = '10000';
+        marker.innerHTML = `
+            <span class="maplibre-sos-marker__halo" data-sos-status="acknowledged" aria-hidden="true"></span>
+            <span class="maplibre-sos-marker__indicator" aria-hidden="true">⚠ SOS</span>
+        `;
+        document.body.append(marker);
+    });
+
+    const marker = page.locator('.maplibre-sos-marker');
+    const halo = marker.locator('.maplibre-sos-marker__halo');
+
+    await expect(marker).toHaveAttribute(
+        'aria-label',
+        'SOS incident for Worker One (Acknowledged)',
+    );
+    await expect(
+        marker.locator('.maplibre-sos-marker__indicator'),
+    ).toContainText('SOS');
+    await expect(halo).toHaveAttribute('data-sos-status', 'acknowledged');
+    await expect(halo).toHaveCSS('pointer-events', 'none');
+    await expect(halo).toHaveCSS('animation-name', 'none');
+
+    await marker.evaluate((element) => {
+        element.addEventListener('click', () =>
+            element.setAttribute('data-clicked', 'true'),
+        );
+    });
+    await marker.click();
+    await expect(marker).toHaveAttribute('data-clicked', 'true');
+});
 
 test('loads the configured MapLibre surface with attribution and accessible controls', async ({
     page,

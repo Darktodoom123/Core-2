@@ -1,4 +1,44 @@
 import type { AssetKind } from '@/lib/asset-kind';
+import type {
+    LocationUpdateViewModel,
+    SosIncidentStatusValue,
+    SosIncidentViewModel,
+} from '@/types/workspace';
+
+export type SosMarkerStatus = SosIncidentStatusValue;
+
+export interface SosMarkerOptions {
+    status: SosMarkerStatus;
+    label: string;
+    prefersReducedMotion?: boolean;
+}
+
+export function getSosMarkerPosition(
+    incident: SosIncidentViewModel,
+    liveLocation?: LocationUpdateViewModel,
+): [number, number] | null {
+    if (
+        liveLocation?.latitude !== null &&
+        liveLocation?.latitude !== undefined &&
+        liveLocation?.longitude !== null &&
+        liveLocation?.longitude !== undefined
+    ) {
+        return [liveLocation.longitude, liveLocation.latitude];
+    }
+
+    const snapshot = incident.location;
+
+    if (
+        snapshot?.latitude === null ||
+        snapshot?.latitude === undefined ||
+        snapshot.longitude === null ||
+        snapshot.longitude === undefined
+    ) {
+        return null;
+    }
+
+    return [snapshot.longitude, snapshot.latitude];
+}
 
 const ASSET_SVG_ICONS: Record<AssetKind, string> = {
     truck: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>',
@@ -16,11 +56,13 @@ export function createAssetMarker({
     freshness,
     isSelected,
     label,
+    sos,
 }: {
     kind: AssetKind;
     freshness: string;
     isSelected: boolean;
     label: string;
+    sos?: SosMarkerOptions;
 }): HTMLButtonElement {
     const marker = document.createElement('button');
     marker.type = 'button';
@@ -28,8 +70,12 @@ export function createAssetMarker({
     marker.dataset.kind = kind;
     marker.dataset.freshness = freshness.toLowerCase();
     marker.dataset.selected = String(isSelected);
-    marker.setAttribute('aria-label', label);
+    marker.setAttribute('aria-label', sos ? `${label}. ${sos.label}` : label);
     marker.setAttribute('aria-pressed', String(isSelected));
+
+    if (sos) {
+        appendSosMarkerTreatment(marker, sos);
+    }
 
     const surface = document.createElement('span');
     surface.className = 'maplibre-asset-marker__surface';
@@ -37,6 +83,80 @@ export function createAssetMarker({
     marker.appendChild(surface);
 
     return marker;
+}
+
+export function createSosMarker({
+    status,
+    label,
+    prefersReducedMotion,
+}: SosMarkerOptions): HTMLButtonElement {
+    const marker = document.createElement('button');
+    marker.type = 'button';
+    marker.className = 'maplibre-sos-marker';
+    marker.dataset.sosStatus = status;
+    marker.setAttribute('aria-label', label);
+
+    appendSosMarkerTreatment(marker, {
+        status,
+        label,
+        prefersReducedMotion,
+    });
+
+    const surface = document.createElement('span');
+    surface.className = 'maplibre-sos-marker__surface';
+    surface.setAttribute('aria-hidden', 'true');
+    surface.innerHTML = SOS_ICON;
+    marker.appendChild(surface);
+
+    return marker;
+}
+
+const SOS_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+
+const ACTIVE_SOS_STATUSES = new Set<SosMarkerStatus>([
+    'active',
+    'escalated',
+    'acknowledged',
+]);
+
+function appendSosMarkerTreatment(
+    marker: HTMLButtonElement,
+    sos: SosMarkerOptions,
+): void {
+    marker.dataset.sosStatus = sos.status;
+    marker.dataset.sosActive = String(ACTIVE_SOS_STATUSES.has(sos.status));
+    marker.title = sos.label;
+
+    const indicator = document.createElement('span');
+    indicator.className = 'maplibre-sos-marker__indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.innerHTML = `${SOS_ICON}<span>SOS</span>`;
+
+    if (ACTIVE_SOS_STATUSES.has(sos.status)) {
+        const halo = document.createElement('span');
+        halo.className = 'maplibre-sos-marker__halo';
+        halo.dataset.sosStatus = sos.status;
+        halo.setAttribute('aria-hidden', 'true');
+
+        if (sos.prefersReducedMotion ?? detectReducedMotionPreference()) {
+            halo.style.animation = 'none';
+            halo.style.boxShadow =
+                '0 0 0 6px rgba(220, 38, 38, 0.38), 0 0 20px rgba(220, 38, 38, 0.5)';
+        }
+
+        marker.appendChild(halo);
+    }
+
+    marker.appendChild(indicator);
+}
+
+function detectReducedMotionPreference(): boolean {
+    return (
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
 }
 
 export function createPopupCard({

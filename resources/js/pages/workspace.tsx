@@ -693,6 +693,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         assets={props.assets ?? []}
                         fuelRequests={props.fuelRequests ?? []}
                         locations={props.locations ?? []}
+                        activeSosIncidents={props.activeSosIncidents}
                         approvals={props.approvals ?? []}
                         users={props.users ?? []}
                         auditEvents={props.auditEvents ?? []}
@@ -737,6 +738,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
                         jobs={props.jobs ?? []}
+                        activeSosIncidents={props.activeSosIncidents}
                         onSectionChange={changeSection}
                     />
                 )}

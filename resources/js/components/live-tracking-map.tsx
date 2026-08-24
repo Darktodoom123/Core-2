@@ -18,7 +18,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@/components/ui';
 import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
-import type { LocationUpdateViewModel } from '@/types/workspace';
+import type {
+    LocationUpdateViewModel,
+    SosIncidentViewModel,
+} from '@/types/workspace';
 import {
     circleFeature,
     featureCollection,
@@ -28,7 +31,12 @@ import type { LngLat } from './maplibre/geojson';
 import { getMapProviderConfiguration } from './maplibre/map-config';
 import type { MapStyleVariant } from './maplibre/map-config';
 import { MapLibreMap, useMapLibre } from './maplibre/maplibre-map';
-import { createAssetMarker, createPopupCard } from './maplibre/markers';
+import {
+    createAssetMarker,
+    createPopupCard,
+    createSosMarker,
+    getSosMarkerPosition,
+} from './maplibre/markers';
 
 export type { AssetKind } from '@/lib/asset-kind';
 export { getAssetKind } from '@/lib/asset-kind';
@@ -36,15 +44,18 @@ export { getAssetKind } from '@/lib/asset-kind';
 const DEFAULT_CENTER: LngLat = [121.04, 14.64];
 const DEFAULT_ZOOM = 11;
 const HTML_MARKER_THRESHOLD = 250;
+const EMPTY_SOS_INCIDENTS: SosIncidentViewModel[] = [];
 
 export function LiveTrackingMap({
     locations,
+    activeSosIncidents = EMPTY_SOS_INCIDENTS,
     compact = false,
     showLocationList = true,
     selectedLocationId,
     onSelectedLocationChange,
 }: {
     locations: LocationUpdateViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     compact?: boolean;
     showLocationList?: boolean;
     selectedLocationId?: number | null;
@@ -149,8 +160,11 @@ export function LiveTrackingMap({
         );
     }, [locations, searchQuery]);
     const mapCenter = useMemo(
-        () => averagePosition(mappedLocations),
-        [mappedLocations],
+        () =>
+            mappedLocations.length > 0
+                ? averagePosition(mappedLocations)
+                : averageSosPosition(activeSosIncidents),
+        [activeSosIncidents, mappedLocations],
     );
     const selectedId = selectedLocationId ?? internalSelectedId;
     const selected =
@@ -238,6 +252,7 @@ export function LiveTrackingMap({
                 >
                     <TrackingMapContent
                         locations={mappedLocations}
+                        activeSosIncidents={activeSosIncidents}
                         selected={
                             selected && hasMapCoordinates(selected)
                                 ? selected
@@ -466,12 +481,14 @@ export function LiveTrackingMap({
 
 function TrackingMapContent({
     locations,
+    activeSosIncidents,
     selected,
     selectedId,
     onSelect,
     onCopyCoordinates,
 }: {
     locations: LocationUpdateViewModel[];
+    activeSosIncidents: SosIncidentViewModel[];
     selected?: LocationUpdateViewModel;
     selectedId: number | null;
     onSelect: (id: number) => void;
@@ -627,22 +644,96 @@ function TrackingMapContent({
         markersRef.current.forEach((marker) => marker.remove());
         markersRef.current = [];
 
-        if (locations.length > HTML_MARKER_THRESHOLD) {
-            return;
+        const matchedSosIncidentIds = new Set(
+            activeSosIncidents
+                .filter((incident) =>
+                    locations.some(
+                        (location) => location.user.id === incident.worker.id,
+                    ),
+                )
+                .map((incident) => incident.id),
+        );
+        const shouldUseHtmlMarkers = locations.length <= HTML_MARKER_THRESHOLD;
+
+        if (shouldUseHtmlMarkers) {
+            locations.forEach((location) => {
+                const kind = getAssetKind(location);
+                const isSelected = location.id === selected?.id;
+                const sosIncident = findSosIncidentForLocation(
+                    location,
+                    activeSosIncidents,
+                );
+
+                const markerElement = createAssetMarker({
+                    kind,
+                    freshness: location.freshness_status,
+                    isSelected,
+                    label: `${location.user.name}, ${location.freshness_status} location`,
+                    sos: sosIncident
+                        ? {
+                              status: sosIncident.status.value,
+                              label: `SOS incident for ${sosIncident.worker.name} (${sosIncident.status.label})`,
+                              prefersReducedMotion,
+                          }
+                        : undefined,
+                });
+                markerElement.addEventListener('click', () =>
+                    onSelect(location.id),
+                );
+
+                const popup = new maplibregl.Popup({
+                    closeButton: true,
+                    closeOnClick: true,
+                    offset: 24,
+                }).setDOMContent(
+                    createPopupCard({
+                        title: location.user.name,
+                        subtitle: location.asset?.code ?? kind,
+                        status: location.freshness_status,
+                        coordinateText: `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`,
+                        details: location.captured_at
+                            ? [
+                                  `Captured: ${new Date(location.captured_at).toLocaleTimeString()}`,
+                              ]
+                            : [],
+                        onCopyCoordinates: (button) =>
+                            onCopyCoordinates(location, button),
+                    }),
+                );
+
+                markersRef.current.push(
+                    new maplibregl.Marker({ element: markerElement })
+                        .setLngLat(toLngLat(location))
+                        .setPopup(popup)
+                        .addTo(map),
+                );
+            });
         }
 
-        locations.forEach((location) => {
-            const kind = getAssetKind(location);
-            const isSelected = location.id === selected?.id;
-            const markerElement = createAssetMarker({
-                kind,
-                freshness: location.freshness_status,
-                isSelected,
-                label: `${location.user.name}, ${location.freshness_status} location`,
-            });
-            markerElement.addEventListener('click', () =>
-                onSelect(location.id),
+        activeSosIncidents.forEach((incident) => {
+            const liveLocation = locations.find(
+                (location) => location.user.id === incident.worker.id,
             );
+            const markerPosition = getSosMarkerPosition(incident, liveLocation);
+
+            if (
+                (shouldUseHtmlMarkers &&
+                    matchedSosIncidentIds.has(incident.id)) ||
+                markerPosition === null
+            ) {
+                return;
+            }
+
+            const markerElement = createSosMarker({
+                status: incident.status.value,
+                label: `SOS incident for ${incident.worker.name} (${incident.status.label})`,
+                prefersReducedMotion,
+            });
+            markerElement.addEventListener('click', () => {
+                if (liveLocation) {
+                    onSelect(liveLocation.id);
+                }
+            });
 
             const popup = new maplibregl.Popup({
                 closeButton: true,
@@ -650,23 +741,22 @@ function TrackingMapContent({
                 offset: 24,
             }).setDOMContent(
                 createPopupCard({
-                    title: location.user.name,
-                    subtitle: location.asset?.code ?? kind,
-                    status: location.freshness_status,
-                    coordinateText: `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`,
-                    details: location.captured_at
-                        ? [
-                              `Captured: ${new Date(location.captured_at).toLocaleTimeString()}`,
-                          ]
-                        : [],
-                    onCopyCoordinates: (button) =>
-                        onCopyCoordinates(location, button),
+                    title: incident.worker.name,
+                    subtitle: 'Emergency SOS',
+                    status: incident.status.label,
+                    coordinateText: `${markerPosition[1].toFixed(5)}, ${markerPosition[0].toFixed(5)}`,
+                    details: [
+                        `Category: ${incident.category.label}`,
+                        incident.dispatch
+                            ? `Dispatch: ${incident.dispatch.reference}`
+                            : 'No dispatch context attached',
+                    ],
                 }),
             );
 
             markersRef.current.push(
                 new maplibregl.Marker({ element: markerElement })
-                    .setLngLat(toLngLat(location))
+                    .setLngLat(markerPosition)
                     .setPopup(popup)
                     .addTo(map),
             );
@@ -676,7 +766,16 @@ function TrackingMapContent({
             markersRef.current.forEach((marker) => marker.remove());
             markersRef.current = [];
         };
-    }, [locations, map, maplibregl, onCopyCoordinates, onSelect, selected?.id]);
+    }, [
+        activeSosIncidents,
+        locations,
+        map,
+        maplibregl,
+        onCopyCoordinates,
+        onSelect,
+        prefersReducedMotion,
+        selected?.id,
+    ]);
 
     useEffect(() => {
         if (!selected) {
@@ -920,6 +1019,38 @@ function toLngLat(location: LocationUpdateViewModel): LngLat {
     return [
         location.longitude ?? DEFAULT_CENTER[0],
         location.latitude ?? DEFAULT_CENTER[1],
+    ];
+}
+
+function findSosIncidentForLocation(
+    location: LocationUpdateViewModel,
+    incidents: SosIncidentViewModel[],
+): SosIncidentViewModel | undefined {
+    return incidents.find(
+        (incident) => incident.worker.id === location.user.id,
+    );
+}
+
+function averageSosPosition(incidents: SosIncidentViewModel[]): LngLat {
+    const coordinates = incidents.flatMap((incident) => {
+        const location = incident.location;
+
+        return location !== null &&
+            location.latitude !== null &&
+            location.longitude !== null
+            ? [[location.longitude, location.latitude] as LngLat]
+            : [];
+    });
+
+    if (coordinates.length === 0) {
+        return DEFAULT_CENTER;
+    }
+
+    return [
+        coordinates.reduce((sum, coordinate) => sum + coordinate[0], 0) /
+            coordinates.length,
+        coordinates.reduce((sum, coordinate) => sum + coordinate[1], 0) /
+            coordinates.length,
     ];
 }
 

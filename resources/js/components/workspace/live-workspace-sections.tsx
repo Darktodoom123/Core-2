@@ -56,6 +56,7 @@ import type {
     LocationUpdateViewModel,
     NotificationViewModel,
     ReportExportViewModel,
+    SosIncidentViewModel,
     WorkspaceCapabilities,
     WorkspaceSection,
     WorkspaceUserViewModel,
@@ -99,6 +100,7 @@ export function LiveWorkspaceSection({
     archivedJobs = [],
     gptRecommendations = [],
     jobs = [],
+    activeSosIncidents,
     onSectionChange,
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
@@ -115,6 +117,7 @@ export function LiveWorkspaceSection({
     archivedJobs?: ArchivedJobViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     jobs?: DispatchJobViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     onSectionChange?: (section: WorkspaceSection) => void;
 }) {
     switch (section) {
@@ -123,6 +126,7 @@ export function LiveWorkspaceSection({
                 <AssetsSurface
                     assets={assets}
                     locations={locations}
+                    activeSosIncidents={activeSosIncidents}
                     capabilities={capabilities}
                     onSectionChange={onSectionChange}
                 />
@@ -139,6 +143,7 @@ export function LiveWorkspaceSection({
                 <AssetsSurface
                     assets={assets}
                     locations={locations}
+                    activeSosIncidents={activeSosIncidents}
                     capabilities={capabilities}
                     onSectionChange={onSectionChange}
                     initialViewMode="map"
@@ -187,12 +192,14 @@ export function LiveWorkspaceSection({
 function AssetsSurface({
     assets,
     locations = [],
+    activeSosIncidents = [],
     capabilities,
     onSectionChange,
     initialViewMode = 'list',
 }: {
     assets: AssetViewModel[];
     locations?: LocationUpdateViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     capabilities: WorkspaceCapabilities;
     onSectionChange?: (section: WorkspaceSection) => void;
     initialViewMode?: 'list' | 'map';
@@ -307,6 +314,7 @@ function AssetsSurface({
                         >
                             <LiveTrackingMap
                                 locations={locations}
+                                activeSosIncidents={activeSosIncidents}
                                 compact={false}
                                 showLocationList={true}
                             />
@@ -410,6 +418,7 @@ function AssetsSurface({
                                 <AssetDetailPane
                                     asset={selectedAsset}
                                     assetLocation={selectedAssetLocation}
+                                    activeSosIncidents={activeSosIncidents}
                                     capabilities={capabilities}
                                     onViewFullTracking={() =>
                                         setViewMode('map')
@@ -427,11 +436,13 @@ function AssetsSurface({
 function AssetDetailPane({
     asset,
     assetLocation,
+    activeSosIncidents = [],
     capabilities,
     onViewFullTracking,
 }: {
     asset: AssetViewModel;
     assetLocation?: LocationUpdateViewModel | null;
+    activeSosIncidents?: SosIncidentViewModel[];
     capabilities: WorkspaceCapabilities;
     onViewFullTracking?: () => void;
 }) {
@@ -778,6 +789,7 @@ function AssetDetailPane({
                 <AssetTelemetrySection
                     asset={asset}
                     location={assetLocation}
+                    activeSosIncidents={activeSosIncidents}
                     onViewFullTracking={onViewFullTracking}
                 />
             )}
@@ -809,10 +821,12 @@ function AssetDetailPane({
 function AssetTelemetrySection({
     asset,
     location,
+    activeSosIncidents = [],
     onViewFullTracking,
 }: {
     asset: AssetViewModel;
     location?: LocationUpdateViewModel | null;
+    activeSosIncidents?: SosIncidentViewModel[];
     onViewFullTracking?: () => void;
 }) {
     const hasGps =
@@ -969,6 +983,7 @@ function AssetTelemetrySection({
                 <Suspense fallback={<AssetMapLoadingFallback compact={true} />}>
                     <LiveTrackingMap
                         locations={[location]}
+                        activeSosIncidents={activeSosIncidents}
                         compact={true}
                         showLocationList={false}
                     />
