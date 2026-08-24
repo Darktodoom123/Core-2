@@ -268,9 +268,10 @@ it('uses the same rental blocker reason in the read model and assignment write p
         ->get("/operations/dispatch-jobs/{$job->id}")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('asset_candidates.0.code', 'R4-READ-WRITE')
-            ->where('asset_candidates.0.eligible', false)
-            ->where('asset_candidates.0.reasons.0', 'The asset is committed to another active rental reservation.'));
+            ->loadDeferredProps('dispatch-candidates', fn (Assert $deferred) => $deferred
+                ->where('asset_candidates.data.0.code', 'R4-READ-WRITE')
+                ->where('asset_candidates.data.0.eligible', false)
+                ->where('asset_candidates.data.0.reasons.0', 'The asset is committed to another active rental reservation.')));
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/assignments", [
         'assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'equipment']],

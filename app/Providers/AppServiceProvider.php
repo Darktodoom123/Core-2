@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Platform\Workspace\Support\WorkspacePerformanceCollector;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(WorkspacePerformanceCollector::class);
     }
 
     /**
@@ -28,6 +30,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        DB::listen(function (QueryExecuted $query): void {
+            app(WorkspacePerformanceCollector::class)->recordQuery((float) $query->time);
+        });
     }
 
     /**

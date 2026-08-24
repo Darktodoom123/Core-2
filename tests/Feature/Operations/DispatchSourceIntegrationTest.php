@@ -62,11 +62,12 @@ it('creates a source-linked rental dispatch and exposes its source in the worksp
     $this->actingAs($dispatcher)->get('/?view=dispatch')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('jobs.0.source.type', 'rental_reservation')
-            ->where('jobs.0.source.label', 'Rental')
-            ->where('jobs.0.source.reference', 'RENT-SRC-1')
-            ->where('jobs.0.source.fulfillment_mode', 'delivery')
-            ->where('jobs.0.source.location', 'Pasig staging area'));
+            ->loadDeferredProps('workspace-dispatch', fn (Assert $section) => $section
+                ->where('jobs.0.source.type', 'rental_reservation')
+                ->where('jobs.0.source.label', 'Rental')
+                ->where('jobs.0.source.reference', 'RENT-SRC-1')
+                ->where('jobs.0.source.fulfillment_mode', 'delivery')
+                ->where('jobs.0.source.location', 'Pasig staging area')));
 });
 
 it('rejects a source type that does not match the source model', function (): void {

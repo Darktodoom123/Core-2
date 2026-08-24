@@ -28,6 +28,49 @@ const FALLBACK_POLL_INTERVAL_MS = 15_000;
 const DEFAULT_REFRESH_ERROR =
     'The workspace could not be refreshed. Review the current data before continuing.';
 
+const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
+    overview: [
+        'jobs',
+        'clients',
+        'serviceRequests',
+        'assets',
+        'fuelRequests',
+        'locations',
+        'approvals',
+        'users',
+        'auditEvents',
+        'gptRecommendations',
+    ],
+    dispatch: [
+        'jobs',
+        'clients',
+        'serviceRequests',
+        'rentalHandoffs',
+        'salesHandoffs',
+        'assets',
+        'approvals',
+        'users',
+        'gptRecommendations',
+    ],
+    assets: ['assets', 'locations'],
+    tracking: ['assets', 'locations'],
+    fuel: ['fuelRequests'],
+    approvals: ['approvals'],
+    reports: ['jobReports', 'reportExports', 'jobs'],
+    notifications: ['notifications'],
+    archive: ['archivedJobs'],
+    'gpt-recommendations': ['gptRecommendations', 'jobs'],
+    users: ['users', 'auditEvents'],
+    audit: ['auditEvents'],
+};
+
+function hasSectionProps(
+    props: WorkspacePageProps,
+    section: WorkspaceSection,
+): boolean {
+    return SECTION_PROPS[section].every((prop) => prop in props);
+}
+
 export default function Workspace(props: WorkspacePageProps) {
     const { flash, errors } = usePage().props;
     const [section, setSection] = useState<WorkspaceSection | null>(
@@ -167,9 +210,16 @@ export default function Workspace(props: WorkspacePageProps) {
             }
 
             router.reload({
-                ...(scope === 'tracking'
-                    ? { only: ['locations', 'workspace'] }
-                    : {}),
+                only: [
+                    'workspace',
+                    'badges',
+                    ...(scope === 'tracking'
+                        ? ['locations']
+                        : availableSection
+                          ? SECTION_PROPS[availableSection]
+                          : []),
+                ],
+                preserveErrors: true,
                 onSuccess: (page) => markRefreshSuccess(scope, page),
                 onError: () => markRefreshFailure(scope, DEFAULT_REFRESH_ERROR),
                 onHttpException: () =>
@@ -184,7 +234,13 @@ export default function Workspace(props: WorkspacePageProps) {
                 onFinish: () => finishRefresh(scope),
             });
         },
-        [beginRefresh, finishRefresh, markRefreshFailure, markRefreshSuccess],
+        [
+            availableSection,
+            beginRefresh,
+            finishRefresh,
+            markRefreshFailure,
+            markRefreshSuccess,
+        ],
     );
     const refreshWorkspace = useCallback(() => refresh('workspace'), [refresh]);
     const refreshRef = useRef(refresh);
@@ -333,8 +389,43 @@ export default function Workspace(props: WorkspacePageProps) {
         setSelectedServiceRequestId(options?.serviceRequestId ?? null);
         const url = new URL(window.location.href);
         url.searchParams.set('view', nextSection);
-        window.history.replaceState({}, '', url);
+        router.visit(url.toString(), {
+            only: ['workspace', 'badges', ...SECTION_PROPS[nextSection]],
+            preserveState: true,
+            preserveScroll: true,
+            preserveErrors: true,
+        });
     };
+
+    useEffect(() => {
+        const handlePopState = () => {
+            const requested = new URL(window.location.href).searchParams.get(
+                'view',
+            ) as WorkspaceSection | null;
+            const nextSection = props.navigation.some(
+                (item) => item.id === requested,
+            )
+                ? requested
+                : (props.navigation[0]?.id ?? null);
+
+            setSection(nextSection);
+
+            if (nextSection) {
+                router.reload({
+                    only: [
+                        'workspace',
+                        'badges',
+                        ...SECTION_PROPS[nextSection],
+                    ],
+                    preserveErrors: true,
+                });
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [props.navigation]);
 
     const reconnectAndRefresh = () => {
         reconnectEcho();
@@ -477,9 +568,11 @@ export default function Workspace(props: WorkspacePageProps) {
     const unreadNotificationCount = (props.notifications ?? []).filter(
         (n) => n.status !== 'read' && !n.read_at,
     ).length;
-    const pendingApprovalCount = props.approvals.filter(
+    const pendingApprovalCount = (props.approvals ?? []).filter(
         (approval) => approval.status.value === 'pending',
     ).length;
+    const sectionReady =
+        availableSection !== null && hasSectionProps(props, availableSection);
 
     return (
         <>
@@ -563,18 +656,20 @@ export default function Workspace(props: WorkspacePageProps) {
                             />
                         </Panel>
                     </div>
+                ) : !sectionReady ? (
+                    <WorkspaceSectionLoading section={availableSection} />
                 ) : availableSection === 'overview' ? (
                     <OperationsOverviewDashboard
-                        jobs={props.jobs}
-                        clients={props.clients}
-                        serviceRequests={props.serviceRequests}
-                        assets={props.assets}
-                        fuelRequests={props.fuelRequests}
+                        jobs={props.jobs ?? []}
+                        clients={props.clients ?? []}
+                        serviceRequests={props.serviceRequests ?? []}
+                        assets={props.assets ?? []}
+                        fuelRequests={props.fuelRequests ?? []}
                         locations={props.locations ?? []}
-                        approvals={props.approvals}
-                        users={props.users}
-                        auditEvents={props.auditEvents}
-                        gptRecommendations={props.gptRecommendations}
+                        approvals={props.approvals ?? []}
+                        users={props.users ?? []}
+                        auditEvents={props.auditEvents ?? []}
+                        gptRecommendations={props.gptRecommendations ?? []}
                         capabilities={props.capabilities}
                         availableSections={props.navigation.map(
                             (item) => item.id,
@@ -585,15 +680,15 @@ export default function Workspace(props: WorkspacePageProps) {
                     />
                 ) : availableSection === 'dispatch' ? (
                     <LiveDispatchWorkspace
-                        jobs={props.jobs}
-                        clients={props.clients}
-                        serviceRequests={props.serviceRequests}
-                        rentalHandoffs={props.rentalHandoffs}
-                        salesHandoffs={props.salesHandoffs}
-                        assets={props.assets}
-                        approvals={props.approvals}
-                        users={props.users}
-                        gptRecommendations={props.gptRecommendations}
+                        jobs={props.jobs!}
+                        clients={props.clients!}
+                        serviceRequests={props.serviceRequests!}
+                        rentalHandoffs={props.rentalHandoffs!}
+                        salesHandoffs={props.salesHandoffs!}
+                        assets={props.assets!}
+                        approvals={props.approvals!}
+                        users={props.users!}
+                        gptRecommendations={props.gptRecommendations!}
                         capabilities={props.capabilities}
                         canCreate={props.capabilities.create_dispatch}
                         refreshing={refreshing}
@@ -602,24 +697,46 @@ export default function Workspace(props: WorkspacePageProps) {
                 ) : (
                     <LiveWorkspaceSection
                         section={availableSection}
-                        assets={props.assets}
-                        fuelRequests={props.fuelRequests}
+                        assets={props.assets ?? []}
+                        fuelRequests={props.fuelRequests ?? []}
                         locations={props.locations ?? []}
-                        approvals={props.approvals}
-                        users={props.users}
-                        auditEvents={props.auditEvents}
+                        approvals={props.approvals ?? []}
+                        users={props.users ?? []}
+                        auditEvents={props.auditEvents ?? []}
                         capabilities={props.capabilities}
                         jobReports={props.jobReports}
                         reportExports={props.reportExports}
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}
                         gptRecommendations={props.gptRecommendations}
-                        jobs={props.jobs}
-                        onSectionChange={setSection}
+                        jobs={props.jobs ?? []}
+                        onSectionChange={changeSection}
                     />
                 )}
             </LiveWorkspaceShell>
         </>
+    );
+}
+
+function WorkspaceSectionLoading({ section }: { section: WorkspaceSection }) {
+    return (
+        <section
+            className="space-y-4 p-4 md:p-6"
+            aria-busy="true"
+            aria-live="polite"
+            aria-label={`${section} section loading`}
+        >
+            <div className="h-8 w-56 animate-pulse rounded-lg bg-surface-subtle" />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                    <div
+                        key={item}
+                        className="h-32 animate-pulse rounded-xl border border-line bg-surface"
+                    />
+                ))}
+            </div>
+            <p className="sr-only">Loading {section} data.</p>
+        </section>
     );
 }
 

@@ -59,16 +59,6 @@ it('serves canonical live dispatch view models and capability navigation', funct
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('workspace')
-            ->has('jobs', 1)
-            ->where('jobs.0.reference', 'CON-1001')
-            ->where('jobs.0.priority', [
-                'value' => 'priority',
-                'label' => 'Priority',
-            ])
-            ->where('jobs.0.status', [
-                'value' => 'pending_approval',
-                'label' => 'Pending approval',
-            ])
             ->where('navigation.0.id', 'overview')
             ->where('navigation.0.label', 'Operations overview')
             ->where('navigation.1.id', 'dispatch')
@@ -82,25 +72,36 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('navigation.5.id', 'notifications')
             ->where('navigation.5.label', 'Notifications')
             ->missing('navigation.6')
-            ->has('clients', 1)
-            ->where('clients.0.code', 'CLI-1001')
-            ->has('serviceRequests', 1)
-            ->where('serviceRequests.0.reference', 'SR-1001')
-            ->where('serviceRequests.0.client.company_name', 'Arcwell')
-            ->where('serviceRequests.0.status', [
-                'value' => 'submitted',
-                'label' => 'Submitted',
-            ])
-            ->where('serviceRequests.0.dispatch_jobs_count', 0)
             ->where('capabilities.create_dispatch', true)
             ->where('capabilities.create_client', true)
             ->where('capabilities.create_service_request', true)
             ->where('capabilities.convert_service_request', true)
             ->missing('capabilities.register_asset')
-            ->has('assets')
-            ->has('fuelRequests')
             ->has('workspace.refreshed_at')
             ->where('workspace.stale_after_seconds', 120)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('jobs', 1)
+                ->where('jobs.0.reference', 'CON-1001')
+                ->where('jobs.0.priority', [
+                    'value' => 'priority',
+                    'label' => 'Priority',
+                ])
+                ->where('jobs.0.status', [
+                    'value' => 'pending_approval',
+                    'label' => 'Pending approval',
+                ])
+                ->has('clients', 1)
+                ->where('clients.0.code', 'CLI-1001')
+                ->has('serviceRequests', 1)
+                ->where('serviceRequests.0.reference', 'SR-1001')
+                ->where('serviceRequests.0.client.company_name', 'Arcwell')
+                ->where('serviceRequests.0.status', [
+                    'value' => 'submitted',
+                    'label' => 'Submitted',
+                ])
+                ->where('serviceRequests.0.dispatch_jobs_count', 0)
+                ->has('assets')
+                ->has('fuelRequests'))
         );
 });
 
@@ -124,13 +125,14 @@ it('adapts live navigation labels for assigned field work without exposing unava
             ->where('navigation.5.id', 'notifications')
             ->where('navigation.5.label', 'Notifications')
             ->missing('navigation.6')
-            ->has('jobs', 0)
-            ->has('clients', 0)
-            ->has('serviceRequests', 0)
             ->where('capabilities.create_dispatch', false)
             ->where('capabilities.create_client', false)
             ->where('capabilities.create_service_request', false)
             ->where('capabilities.convert_service_request', false)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('jobs', 0)
+                ->has('clients', 0)
+                ->has('serviceRequests', 0))
         );
 });
 
@@ -143,10 +145,11 @@ it('serves operational overview workspace for Operations Manager and System Admi
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.role', 'operations_manager')
             ->where('navigation.0.id', 'overview')
-            ->has('jobs')
-            ->has('assets')
-            ->has('approvals')
-            ->has('fuelRequests')
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('jobs')
+                ->has('assets')
+                ->has('approvals')
+                ->has('fuelRequests'))
         );
 
     $admin = User::factory()->create();
@@ -158,8 +161,9 @@ it('serves operational overview workspace for Operations Manager and System Admi
             ->where('auth.role', 'system_administrator')
             ->where('navigation.0.id', 'overview')
             ->where('navigation', fn ($nav): bool => collect($nav)->contains('id', 'gpt-recommendations'))
-            ->has('users')
-            ->has('auditEvents')
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('users')
+                ->has('auditEvents'))
         );
 });
 
@@ -199,13 +203,14 @@ it('serves only the latest visible location per worker in the workspace feed', f
     $this->actingAs($dispatcher)->get('/')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('locations', 2)
-            ->where('locations', function ($locations) use ($latestDriverLocation, $secondDriverLocation): bool {
-                return collect($locations)->pluck('id')->sort()->values()->all() === collect([
-                    $latestDriverLocation->id,
-                    $secondDriverLocation->id,
-                ])->sort()->values()->all();
-            }));
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('locations', 2)
+                ->where('locations', function ($locations) use ($latestDriverLocation, $secondDriverLocation): bool {
+                    return collect($locations)->pluck('id')->sort()->values()->all() === collect([
+                        $latestDriverLocation->id,
+                        $secondDriverLocation->id,
+                    ])->sort()->values()->all();
+                })));
 });
 
 it('derives the initial workspace section from the authorized navigation', function () {
@@ -250,12 +255,13 @@ it('projects canonical manual provenance independently from the reference prefix
     $this->actingAs($dispatcher)->get('/?view=dispatch')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('jobs.0.reference', $job->reference)
-            ->where('jobs.0.source.type', 'manual')
-            ->where('jobs.0.source.label', 'Manual source')
-            ->where('jobs.0.source.reference', $job->reference)
-            ->where('jobs.0.source.manual_intake', true)
-            ->where('jobs.0.source.provenance_indicator', 'manual_intake'));
+            ->loadDeferredProps('workspace-dispatch', fn (Assert $section) => $section
+                ->where('jobs.0.reference', $job->reference)
+                ->where('jobs.0.source.type', 'manual')
+                ->where('jobs.0.source.label', 'Manual source')
+                ->where('jobs.0.source.reference', $job->reference)
+                ->where('jobs.0.source.manual_intake', true)
+                ->where('jobs.0.source.provenance_indicator', 'manual_intake')));
 });
 
 it('projects dispatch job counts from the rendered service request relationships', function () {
@@ -300,15 +306,16 @@ it('projects dispatch job counts from the rendered service request relationships
     $this->actingAs($dispatcher)->get('/?view=dispatch')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('serviceRequests', 2)
-            ->where('serviceRequests', function ($requests) use ($unlinkedRequest, $linkedRequest): bool {
-                $counts = collect($requests)->mapWithKeys(
-                    static fn (array $request): array => [$request['reference'] => $request['dispatch_jobs_count']],
-                );
+            ->loadDeferredProps('workspace-dispatch', fn (Assert $section) => $section
+                ->has('serviceRequests', 2)
+                ->where('serviceRequests', function ($requests) use ($unlinkedRequest, $linkedRequest): bool {
+                    $counts = collect($requests)->mapWithKeys(
+                        static fn (array $request): array => [$request['reference'] => $request['dispatch_jobs_count']],
+                    );
 
-                return $counts->sortKeys()->all() === collect([
-                    $unlinkedRequest->reference => 0,
-                    $linkedRequest->reference => 1,
-                ])->sortKeys()->all();
-            }));
+                    return $counts->sortKeys()->all() === collect([
+                        $unlinkedRequest->reference => 0,
+                        $linkedRequest->reference => 1,
+                    ])->sortKeys()->all();
+                })));
 });

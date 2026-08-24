@@ -680,18 +680,18 @@ export interface GptRecommendationViewModel {
 }
 
 export interface WorkspacePageProps {
-    jobs: DispatchJobViewModel[];
-    clients: ClientViewModel[];
-    serviceRequests: ServiceRequestViewModel[];
-    rentalHandoffs: RentalDispatchHandoffViewModel[];
-    salesHandoffs: SalesDispatchHandoffViewModel[];
-    assets: AssetViewModel[];
-    fuelRequests: FuelRequestViewModel[];
-    locations: LocationUpdateViewModel[];
-    approvals: ApprovalViewModel[];
-    users: WorkspaceUserViewModel[];
-    auditEvents: AuditEventViewModel[];
-    gptRecommendations: GptRecommendationViewModel[];
+    jobs?: DispatchJobViewModel[];
+    clients?: ClientViewModel[];
+    serviceRequests?: ServiceRequestViewModel[];
+    rentalHandoffs?: RentalDispatchHandoffViewModel[];
+    salesHandoffs?: SalesDispatchHandoffViewModel[];
+    assets?: AssetViewModel[];
+    fuelRequests?: FuelRequestViewModel[];
+    locations?: LocationUpdateViewModel[];
+    approvals?: ApprovalViewModel[];
+    users?: WorkspaceUserViewModel[];
+    auditEvents?: AuditEventViewModel[];
+    gptRecommendations?: GptRecommendationViewModel[];
     jobReports?: JobReportViewModel[];
     reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
@@ -700,6 +700,12 @@ export interface WorkspacePageProps {
     initial_section: WorkspaceSection | null;
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
+    badges?: {
+        jobs: number;
+        pending_approvals: number;
+        unread_notifications: number;
+        blocking_assets: number;
+    };
 }
 
 export interface AssignmentScheduleConflictViewModel {
@@ -740,7 +746,7 @@ export interface AssetCandidateViewModel {
     id: number;
     code: string;
     name: string;
-    assignment_type: 'truck' | 'crane' | 'equipment';
+    assignment_type: 'truck' | 'crane' | 'mobile_crane' | 'equipment';
     assignment_label: string;
     eligible: boolean;
     reasons: string[];
@@ -750,10 +756,30 @@ export interface AssetCandidateViewModel {
     already_assigned: boolean;
 }
 
+export interface CandidatePageViewModel<T> {
+    data: T[];
+    pagination: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+    evaluated_at: string;
+    job_version: number;
+    schedule_fingerprint: string;
+    error: string | null;
+}
+
 export interface DispatchDetailPageProps {
     job: DispatchJobViewModel;
-    personnel_candidates: PersonnelCandidateViewModel[];
-    asset_candidates: AssetCandidateViewModel[];
+    personnel_candidates?:
+        | CandidatePageViewModel<PersonnelCandidateViewModel>
+        | PersonnelCandidateViewModel[];
+    asset_candidates?:
+        | CandidatePageViewModel<AssetCandidateViewModel>
+        | AssetCandidateViewModel[];
     activation: {
         ready: boolean;
         blockers: string[];

@@ -296,11 +296,13 @@ test('approved reassignment applies atomically with requester and approver attri
     $this->actingAs($manager)
         ->get('/')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('approvals', 1)
-            ->where('approvals.0.kind', 'reassignment_override')
-            ->where('approvals.0.requested_changes.ended_personnel.0.name', $oldDriver->name)
-            ->where('approvals.0.requested_changes.personnel.0.name', "User #{$newDriver->id}")
-            ->where('approvals.0.can_decide', true)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('approvals', 1)
+                ->where('approvals.0.kind', 'reassignment_override')
+                ->where('approvals.0.requested_changes.ended_personnel.0.name', $oldDriver->name)
+                ->where('approvals.0.requested_changes.personnel.0.name', "User #{$newDriver->id}")
+                ->where('approvals.0.can_decide', true)
+            )
         );
 
     $this->actingAs($manager)

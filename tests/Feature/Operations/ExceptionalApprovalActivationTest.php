@@ -540,20 +540,22 @@ it('provides managers enough context to independently review each pending reques
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('workspace')
-            ->has('approvals', 1)
-            ->where('approvals.0.requester.name', 'Context Dispatcher')
-            ->where('approvals.0.subject.reference', 'CON-6801')
-            ->where('approvals.0.subject.title', 'Exceptional dispatch activation')
-            ->where('approvals.0.subject.site', 'Pasig City')
-            ->where('approvals.0.subject.priority.value', DispatchPriority::Emergency->value)
-            ->where('approvals.0.subject.status.value', DispatchStatus::Draft->value)
-            ->where('approvals.0.subject.version', 1)
-            ->where('approvals.0.requested_changes.personnel.0.name', 'Driver 6801')
-            ->where('approvals.0.requested_changes.personnel.0.assignment_type', 'driver')
-            ->where('approvals.0.requested_changes.assets.0.code', 'TR-6801')
-            ->where('approvals.0.requested_changes.assets.0.assignment_type', 'truck')
-            ->where('approvals.0.can_decide', true)
-            ->where('approvals.0.decision_blocker', null)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('approvals', 1)
+                ->where('approvals.0.requester.name', 'Context Dispatcher')
+                ->where('approvals.0.subject.reference', 'CON-6801')
+                ->where('approvals.0.subject.title', 'Exceptional dispatch activation')
+                ->where('approvals.0.subject.site', 'Pasig City')
+                ->where('approvals.0.subject.priority.value', DispatchPriority::Emergency->value)
+                ->where('approvals.0.subject.status.value', DispatchStatus::Draft->value)
+                ->where('approvals.0.subject.version', 1)
+                ->where('approvals.0.requested_changes.personnel.0.name', 'Driver 6801')
+                ->where('approvals.0.requested_changes.personnel.0.assignment_type', 'driver')
+                ->where('approvals.0.requested_changes.assets.0.code', 'TR-6801')
+                ->where('approvals.0.requested_changes.assets.0.assignment_type', 'truck')
+                ->where('approvals.0.can_decide', true)
+                ->where('approvals.0.decision_blocker', null)
+            )
         );
 });
 
@@ -567,9 +569,11 @@ it('marks self-requested approvals as reviewable but not decidable in the live U
         ->get('/')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('approvals', 1)
-            ->where('approvals.0.can_decide', false)
-            ->where('approvals.0.decision_blocker', 'You requested this exceptional work. Another authorized manager must decide it.')
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('approvals', 1)
+                ->where('approvals.0.can_decide', false)
+                ->where('approvals.0.decision_blocker', 'You requested this exceptional work. Another authorized manager must decide it.')
+            )
         );
 });
 
@@ -595,8 +599,10 @@ it('limits the pending approval feed to kinds the reviewer is authorized to deci
         ->get('/')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->has('approvals', 1)
-            ->where('approvals.0.kind', 'assignment_override')
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('approvals', 1)
+                ->where('approvals.0.kind', 'assignment_override')
+            )
         );
 });
 
@@ -611,7 +617,8 @@ it('does not expose pending approvals for dispatches outside the reviewer visibi
     $this->actingAs($reviewer)
         ->get('/')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->has('approvals', 0));
+        ->assertInertia(fn (Assert $page) => $page
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section->has('approvals', 0)));
 });
 
 it('exposes dispatcher activation readiness without treating UI visibility as authorization', function () {
