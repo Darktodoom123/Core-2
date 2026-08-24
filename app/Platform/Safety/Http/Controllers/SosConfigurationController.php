@@ -3,6 +3,7 @@
 namespace App\Platform\Safety\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Safety\Actions\UpsertSosEmergencyContact;
 use App\Platform\Safety\Http\Requests\StoreSosEmergencyContactRequest;
 use App\Platform\Safety\Models\SosEmergencyContact;
@@ -33,7 +34,7 @@ final class SosConfigurationController extends Controller
             ...$request->validated(),
             'is_active' => $request->boolean('is_active', true),
         ];
-        $contact = $action->handle($data);
+        $contact = $action->handle($data, new SosEmergencyContact, $request->user());
 
         return response()->json(['data' => ['id' => $contact->id, 'name' => $contact->name]], 201);
     }
@@ -46,15 +47,25 @@ final class SosConfigurationController extends Controller
             ...$request->validated(),
             'is_active' => $request->boolean('is_active', $sosEmergencyContact->is_active),
         ];
-        $contact = $action->handle($data, $sosEmergencyContact);
+        $contact = $action->handle($data, $sosEmergencyContact, $request->user());
 
         return response()->json(['data' => ['id' => $contact->id, 'name' => $contact->name]]);
     }
 
-    public function deactivate(Request $request, SosEmergencyContact $sosEmergencyContact): JsonResponse
+    public function deactivate(Request $request, SosEmergencyContact $sosEmergencyContact, RecordAuditEvent $audit): JsonResponse
     {
         Gate::authorize('configure', SosEmergencyContact::class);
+        $before = [
+            'name' => $sosEmergencyContact->name,
+            'role_label' => $sosEmergencyContact->role_label,
+            'escalation_order' => $sosEmergencyContact->escalation_order,
+            'is_active' => $sosEmergencyContact->is_active,
+        ];
         $sosEmergencyContact->update(['is_active' => false]);
+        $audit->handle($request->user(), $sosEmergencyContact, 'safety.sos_contact_deactivated', $before, [
+            ...$before,
+            'is_active' => false,
+        ]);
 
         return response()->json(['data' => ['id' => $sosEmergencyContact->id, 'is_active' => false]]);
     }

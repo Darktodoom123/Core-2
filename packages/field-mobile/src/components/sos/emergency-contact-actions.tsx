@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { SosEmergencyAction } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
-import type { SosEmergencyAction } from '../../types/index';
 
-function isAllowedEmergencyUri(uri: string): boolean {
-    return /^(tel|sms):[^\s]+$/i.test(uri);
+function isAllowedEmergencyUri(action: SosEmergencyAction): boolean {
+    const match = /^(tel|sms):((?:\+[1-9]\d{7,14})|(?:\d{3,6}))$/i.exec(
+        action.uri,
+    );
+
+    if (!match) {
+        return false;
+    }
+
+    return action.kind === 'call'
+        ? match[1].toLowerCase() === 'tel'
+        : action.kind === 'sms'
+          ? match[1].toLowerCase() === 'sms'
+          : true;
 }
 
 export const EmergencyContactActions: React.FC<{
     actions: SosEmergencyAction[];
 }> = ({ actions }) => {
     const [error, setError] = useState<string | null>(null);
-    const visibleActions = actions.filter((action) =>
-        isAllowedEmergencyUri(action.uri),
-    );
+    const visibleActions = actions.filter(isAllowedEmergencyUri);
 
     const openAction = async (action: SosEmergencyAction) => {
         setError(null);
 
-        if (!isAllowedEmergencyUri(action.uri)) {
+        if (!isAllowedEmergencyUri(action)) {
             setError('This emergency action is not configured safely.');
 
             return;

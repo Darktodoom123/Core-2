@@ -800,7 +800,7 @@ final class OperationsWorkspaceViewModel
         return $attempts->map(static fn (Model $attempt): array => [
             'channel' => (string) $attempt->getAttribute('channel'),
             'target' => (string) ($attempt->getAttribute('target_type') ?? 'responder'),
-            'status' => (string) ($attempt->getAttribute('status') ?? $attempt->getAttribute('state')),
+            'status' => (string) ($attempt->getAttribute('attempt_status') ?? $attempt->getAttribute('status') ?? $attempt->getAttribute('state')),
             'attempted_at' => self::sosDate($attempt, 'attempted_at'),
             'delivered_at' => self::sosDate($attempt, 'delivered_at'),
             'failure_code' => $attempt->getAttribute('failure_code'),

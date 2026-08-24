@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../nativeStyles';
 import type { SosIncidentCategory } from '../../types/index';
+import { colors } from '../nativeStyles';
 
 const CATEGORIES: Array<{ value: SosIncidentCategory; label: string }> = [
     { value: 'vehicular_accident', label: 'Vehicular accident' },

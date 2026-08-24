@@ -227,3 +227,19 @@ it('keeps company emergency contact phones encrypted and does not expose them in
     test()->actingAs($admin)->getJson('/operations/sos-configuration/contacts')
         ->assertOk()->assertJsonMissing(['phone_e164' => '+15550000001']);
 });
+
+it('returns deliberate call and SMS actions only for a validated configured number', function (): void {
+    config([
+        'sos.local_emergency_label' => 'Duty officer',
+        'sos.local_emergency_number' => '+15550000002',
+    ]);
+    $worker = safetyUser(RoleName::Driver);
+    $token = $worker->createToken('Synthetic SOS configuration device')->plainTextToken;
+
+    test()->withToken($token)->getJson('/api/v1/sos-configuration')
+        ->assertOk()
+        ->assertJsonPath('data.actions.0.kind', 'call')
+        ->assertJsonPath('data.actions.0.uri', 'tel:+15550000002')
+        ->assertJsonPath('data.actions.1.kind', 'sms')
+        ->assertJsonPath('data.actions.1.uri', 'sms:+15550000002');
+});

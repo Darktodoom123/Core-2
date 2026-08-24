@@ -33,11 +33,12 @@ export interface CommandOutboxOptions {
     now?: () => Date;
     maxAutomaticAttempts?: number;
     baseRetryDelayMs?: number;
+    sosRetryWindowMs?: number;
 }
 
 const completedRetentionMs = 8 * 60 * 60 * 1000;
 const maxRetryDelayMs = 5 * 60 * 1000;
-export const sosRetryWindowMs = 15 * 60 * 1000;
+export const defaultSosRetryWindowMs = 15 * 60 * 1000;
 const sosMaxRetryDelayMs = 30 * 1000;
 
 export async function createCommandId(): Promise<string> {
@@ -100,6 +101,7 @@ export class CommandOutboxManager {
     private readonly now: () => Date;
     private readonly maxAutomaticAttempts: number;
     private readonly baseRetryDelayMs: number;
+    private sosRetryWindowMs: number;
 
     constructor(options: CommandOutboxOptions = {}) {
         this.repository = options.repository ?? new MemoryOutboxRepository();
@@ -107,6 +109,14 @@ export class CommandOutboxManager {
         this.now = options.now ?? (() => new Date());
         this.maxAutomaticAttempts = options.maxAutomaticAttempts ?? 5;
         this.baseRetryDelayMs = options.baseRetryDelayMs ?? 1_000;
+        this.sosRetryWindowMs =
+            options.sosRetryWindowMs ?? defaultSosRetryWindowMs;
+    }
+
+    public setSosRetryWindowMs(milliseconds: number): void {
+        if (Number.isFinite(milliseconds) && milliseconds >= 60_000) {
+            this.sosRetryWindowMs = milliseconds;
+        }
     }
 
     public subscribe(listener: OutboxListener): () => void {
@@ -347,7 +357,9 @@ export class CommandOutboxManager {
             null,
             {
                 priority: 'emergency',
-                expiresAt: new Date(baseTime + sosRetryWindowMs).toISOString(),
+                expiresAt: new Date(
+                    baseTime + this.sosRetryWindowMs,
+                ).toISOString(),
             },
         );
     }

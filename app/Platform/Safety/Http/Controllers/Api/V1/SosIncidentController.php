@@ -90,11 +90,25 @@ final class SosIncidentController extends Controller
         );
 
         $actions = [];
-        if (filled(config('sos.local_emergency_number')) && filled(config('sos.local_emergency_label'))) {
+        if (filled(config('sos.local_emergency_number'))
+            && filled(config('sos.local_emergency_label'))
+            && preg_match('/^(?:\+[1-9]\d{7,14}|\d{3,6})$/', (string) config('sos.local_emergency_number')) === 1) {
+            $number = (string) config('sos.local_emergency_number');
+            $label = (string) config('sos.local_emergency_label');
             $actions[] = [
-                'label' => config('sos.local_emergency_label'),
-                'number' => config('sos.local_emergency_number'),
-                'tel_uri' => 'tel:'.config('sos.local_emergency_number'),
+                'kind' => 'call',
+                'label' => "Call {$label}",
+                'number' => $number,
+                'uri' => "tel:{$number}",
+                'tel_uri' => "tel:{$number}",
+                'hint' => 'Opens the phone app; review the number before placing the call.',
+            ];
+            $actions[] = [
+                'kind' => 'sms',
+                'label' => "Text {$label}",
+                'number' => $number,
+                'uri' => "sms:{$number}",
+                'hint' => 'Opens messaging; review the recipient before sending.',
             ];
         }
 

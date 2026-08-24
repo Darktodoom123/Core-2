@@ -18,7 +18,7 @@ final class SosIncidentChanged implements ShouldBroadcastNow, ShouldDispatchAfte
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('operations.workspace')];
+        return [new PrivateChannel('operations.sos')];
     }
 
     public function broadcastAs(): string

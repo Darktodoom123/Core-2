@@ -15,11 +15,6 @@ import {
     Vibration,
     View,
 } from 'react-native';
-import { EmergencyContactActions } from './emergency-contact-actions';
-import { SosCategorySelector } from './sos-category-selector';
-import { SosDeliveryStatus } from './sos-delivery-status';
-import { Icon } from '../common/Icon';
-import { colors } from '../nativeStyles';
 import type {
     ActivateSosIncidentPayload,
     DispatchJob,
@@ -28,6 +23,11 @@ import type {
     SosIncident,
     SosIncidentCategory,
 } from '../../types/index';
+import { Icon } from '../common/Icon';
+import { colors } from '../nativeStyles';
+import { EmergencyContactActions } from './emergency-contact-actions';
+import { SosCategorySelector } from './sos-category-selector';
+import { SosDeliveryStatus } from './sos-delivery-status';
 
 const HOLD_DURATION_MS = 2_000;
 const HOLD_TICK_MS = 50;
@@ -65,9 +65,6 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
         jobs[0]?.asset_assignments?.[0]?.operational_asset_id ?? null,
     );
-    const [category, setCategory] = useState<SosIncidentCategory>(
-        activeIncident?.category ?? 'unclassified',
-    );
     const [holdProgress, setHoldProgress] = useState(0);
     const [isActivating, setIsActivating] = useState(false);
     const [reduceMotion, setReduceMotion] = useState(false);
@@ -100,14 +97,6 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     }, []);
 
     useEffect(() => {
-        if (!activeIncident) {
-            setCategory('unclassified');
-        } else {
-            setCategory(activeIncident.category);
-        }
-    }, [activeIncident]);
-
-    useEffect(() => {
         if (!contextInitializedRef.current && jobs.length > 0) {
             contextInitializedRef.current = true;
             setSelectedJobId(jobs[0].id);
@@ -116,15 +105,6 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
             );
         }
     }, [jobs]);
-
-    useEffect(() => {
-        if (selectedJob) {
-            setSelectedAssetId(
-                selectedJob.asset_assignments?.[0]?.operational_asset_id ??
-                    null,
-            );
-        }
-    }, [selectedJob]);
 
     const clearHold = useCallback(() => {
         if (holdTimerRef.current) {
@@ -299,9 +279,14 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                             accessibilityRole="radio"
                                             accessibilityState={{ selected }}
                                             key={job.id}
-                                            onPress={() =>
-                                                setSelectedJobId(job.id)
-                                            }
+                                            onPress={() => {
+                                                setSelectedJobId(job.id);
+                                                setSelectedAssetId(
+                                                    job.asset_assignments?.[0]
+                                                        ?.operational_asset_id ??
+                                                        null,
+                                                );
+                                            }}
                                             style={[
                                                 styles.contextOption,
                                                 selected &&
@@ -385,6 +370,12 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                     busy: isActivating,
                                     disabled: isActivating,
                                 }}
+                                accessibilityValue={{
+                                    max: 100,
+                                    min: 0,
+                                    now: Math.round(holdProgress * 100),
+                                    text: `${Math.round(holdProgress * 100)} percent held`,
+                                }}
                                 disabled={isActivating}
                                 onAccessibilityAction={
                                     handleAccessibilityAction
@@ -417,10 +408,9 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         <SosCategorySelector
                             disabled={deliveryState === 'sending'}
                             onChange={(nextCategory) => {
-                                setCategory(nextCategory);
                                 void onClassify(nextCategory);
                             }}
-                            value={category}
+                            value={activeIncident?.category ?? 'unclassified'}
                         />
                     ) : null}
 

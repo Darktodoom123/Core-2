@@ -339,10 +339,15 @@ export default function Workspace(props: WorkspacePageProps) {
                 refreshRef.current('workspace', 'realtime');
             });
 
+        echo.private('operations.sos').listen('.SosIncidentChanged', () => {
+            refreshRef.current('workspace', 'realtime');
+        });
+
         return () => {
             window.clearTimeout(initialStateSync);
             unsubscribeConnection();
             echo.leave('operations.workspace');
+            echo.leave('operations.sos');
         };
     }, []);
 

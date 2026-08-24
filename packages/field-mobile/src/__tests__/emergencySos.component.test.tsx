@@ -55,14 +55,16 @@ describe('Emergency SOS sheet', () => {
             />,
         );
 
-        fireEvent.press(view.getByTestId('activate-emergency-sos'));
+        await fireEvent.press(view.getByTestId('activate-emergency-sos'));
 
         expect(onActivate).not.toHaveBeenCalled();
     });
 
     it('activates only after the full two-second hold and sends no required location', async () => {
         jest.useFakeTimers();
-        const onActivate = jest.fn().mockResolvedValue(undefined);
+        const onActivate = jest
+            .fn()
+            .mockImplementation(() => new Promise<void>(() => undefined));
 
         const view = await render(
             <EmergencySosSheet
@@ -78,13 +80,13 @@ describe('Emergency SOS sheet', () => {
         );
 
         const button = view.getByTestId('activate-emergency-sos');
-        fireEvent(button, 'pressIn');
+        await fireEvent(button, 'pressIn');
         await act(async () => {
-            jest.advanceTimersByTime(1_999);
+            await Promise.resolve();
         });
-        expect(onActivate).not.toHaveBeenCalled();
-
-        await act(async () => {
+        await act(() => {
+            jest.advanceTimersByTime(1_999);
+            expect(onActivate).not.toHaveBeenCalled();
             jest.advanceTimersByTime(1);
         });
 

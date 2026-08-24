@@ -2,11 +2,14 @@
 
 namespace App\Platform\Safety\Actions;
 
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Support\Facades\DB;
 
 final class PruneSosIncidentCoordinates
 {
+    public function __construct(private readonly RecordAuditEvent $audit) {}
+
     public function handle(): void
     {
         SosIncident::query()
@@ -29,6 +32,14 @@ final class PruneSosIncidentCoordinates
                         'location_pruned_at' => now(),
                         'version' => $incident->version + 1,
                     ])->save();
+                    $this->audit->handle(
+                        $incident->reporter()->firstOrFail(),
+                        $incident,
+                        'safety.sos_coordinates_pruned',
+                        ['has_location' => true, 'version' => $incident->version - 1],
+                        $incident->auditSnapshot(),
+                        'Coordinate retention window elapsed.',
+                    );
                 });
             });
     }

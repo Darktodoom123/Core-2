@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { SosDeliveryState } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
-import type { SosDeliveryState } from '../../types/index';
 
 const STATUS_COPY: Record<
     SosDeliveryState,

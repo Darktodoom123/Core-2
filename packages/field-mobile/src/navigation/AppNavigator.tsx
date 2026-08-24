@@ -23,6 +23,7 @@ import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
+import { EmergencySosButton, EmergencySosSheet } from '../components/sos';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { nativeLocationAdapter } from '../native/locationAdapter';
@@ -51,7 +52,6 @@ import type {
     ShiftInfo,
     ShiftStatus,
 } from '../types/index';
-import { EmergencySosButton, EmergencySosSheet } from '../components/sos';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
@@ -273,17 +273,37 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     useEffect(() => {
         if (status !== 'authenticated' || !user) {
-            setActiveSosIncident(null);
-
             return;
         }
 
-        void refreshActiveSosIncident();
-        void apiClient
-            .fetchSosConfiguration()
-            .then((configuration) => setSosConfiguration(configuration))
-            .catch(() => undefined);
-    }, [apiClient, refreshActiveSosIncident, status, user]);
+        let active = true;
+        queueMicrotask(() => {
+            if (!active) {
+                return;
+            }
+
+            void refreshActiveSosIncident();
+            void apiClient
+                .fetchSosConfiguration()
+                .then((configuration) => {
+                    if (!active) {
+                        return;
+                    }
+
+                    setSosConfiguration(configuration);
+                    commandOutbox.setSosRetryWindowMs(
+                        configuration.automatic_retry_window_minutes *
+                            60 *
+                            1000,
+                    );
+                })
+                .catch(() => undefined);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [apiClient, commandOutbox, refreshActiveSosIncident, status, user]);
 
     useEffect(() => {
         if (
@@ -724,6 +744,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, handleRequestFailure],
     );
 
+    const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
+    const handleGlobalSosHold = useCallback(() => {
+        setSosSheetOpen(true);
+
+        if (activeSosIncident) {
+            return;
+        }
+
+        void handleActivateSos({
+            category: 'unclassified',
+            device_activated_at: new Date().toISOString(),
+            dispatch_job_id: activeJob?.id ?? null,
+            operational_asset_id:
+                activeJob?.asset_assignments?.[0]?.operational_asset_id ?? null,
+            location: null,
+        });
+    }, [activeJob, activeSosIncident, handleActivateSos]);
+
     if (isInitializing) {
         return (
             <SafeAreaView style={styles.fullScreen}>
@@ -809,7 +847,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         );
     }
 
-    const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
     const latestSosCommand = outboxCommands
         .filter((command) => command.type === 'activate_sos')
         .sort((left, right) =>
@@ -913,7 +950,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     </View>
                 </View>
                 <View style={styles.sosAffordance}>
-                    <EmergencySosButton onPress={() => setSosSheetOpen(true)} />
+                    <EmergencySosButton
+                        disabled={isSosActivating}
+                        onHoldComplete={handleGlobalSosHold}
+                    />
                 </View>
                 <EmergencySosSheet
                     actions={emergencyActions}
