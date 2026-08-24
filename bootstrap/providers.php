@@ -8,6 +8,7 @@ use App\Modules\Fuel\FuelServiceProvider;
 use App\Modules\Rental\RentalServiceProvider;
 use App\Modules\Sales\SalesServiceProvider;
 use App\Platform\PlatformServiceProvider;
+use App\Platform\Safety\SafetyServiceProvider;
 use App\Platform\Tracking\TrackingServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Shared\Assets\AssetsServiceProvider;
@@ -24,4 +25,5 @@ return [
     AssetsServiceProvider::class,
     PlatformServiceProvider::class,
     TrackingServiceProvider::class,
+    SafetyServiceProvider::class,
 ];

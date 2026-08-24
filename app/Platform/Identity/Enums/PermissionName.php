@@ -69,4 +69,8 @@ enum PermissionName: string
     case SalesApproveOrder = 'sales.approve_order';
     case SalesFulfill = 'sales.fulfill';
     case SalesTransferOwnership = 'sales.transfer_ownership';
+    case SosTrigger = 'sos.trigger';
+    case SosView = 'sos.view';
+    case SosRespond = 'sos.respond';
+    case SosConfigure = 'sos.configure';
 }

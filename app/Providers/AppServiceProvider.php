@@ -47,6 +47,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('exports', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
 
         RateLimiter::for('gpt', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
+
+        RateLimiter::for('sos', static fn (Request $request): Limit => Limit::perMinute(12)->by(sprintf(
+            '%s:%s',
+            $request->user()?->id ?: $request->ip(),
+            (string) ($request->user()?->currentAccessToken()->id ?? 'session'),
+        )));
     }
 
     /**

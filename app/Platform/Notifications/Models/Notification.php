@@ -3,6 +3,7 @@
 namespace App\Platform\Notifications\Models;
 
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $notifiable_type
  * @property int $notifiable_id
  * @property int|null $dispatch_job_id
+ * @property string|null $sos_incident_id
  * @property string $status
  * @property array<string, mixed> $data
  * @property Carbon|null $read_at
@@ -31,6 +33,7 @@ class Notification extends Model
         'notifiable_type',
         'notifiable_id',
         'dispatch_job_id',
+        'sos_incident_id',
         'status',
         'data',
         'read_at',
@@ -54,5 +57,11 @@ class Notification extends Model
     public function dispatchJob(): BelongsTo
     {
         return $this->belongsTo(DispatchJob::class, 'dispatch_job_id');
+    }
+
+    /** @return BelongsTo<SosIncident, $this> */
+    public function sosIncident(): BelongsTo
+    {
+        return $this->belongsTo(SosIncident::class, 'sos_incident_id');
     }
 }
