@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -33,17 +33,53 @@ import {
 import { Button, Panel } from '@/components/ui';
 import { EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import type { DispatchDetailPageProps } from '@/types/workspace';
+import type {
+    CandidatePageViewModel,
+    AssetCandidateViewModel,
+    DispatchDetailPageProps,
+    PersonnelCandidateViewModel,
+} from '@/types/workspace';
 
 export default function DispatchDetail({
     job,
-    personnel_candidates: personnelCandidates,
-    asset_candidates: assetCandidates,
+    personnel_candidates: personnelCandidatePage,
+    asset_candidates: assetCandidatePage,
     activation,
     progression,
     capabilities,
 }: DispatchDetailPageProps) {
     const { flash, errors, auth } = usePage().props;
+    const personnelCandidates = candidateData<PersonnelCandidateViewModel>(
+        personnelCandidatePage,
+    );
+    const assetCandidates =
+        candidateData<AssetCandidateViewModel>(assetCandidatePage);
+    const candidatesReady =
+        !capabilities.view_assignment_candidates ||
+        (hasCandidateData(personnelCandidatePage) &&
+            hasCandidateData(assetCandidatePage));
+    const failedCandidateProps = [
+        candidatePageError(personnelCandidatePage)
+            ? 'personnel_candidates'
+            : null,
+        candidatePageError(assetCandidatePage) ? 'asset_candidates' : null,
+    ].filter((prop): prop is 'personnel_candidates' | 'asset_candidates' =>
+        Boolean(prop),
+    );
+    const reloadCandidateProps =
+        failedCandidateProps.length > 0
+            ? failedCandidateProps
+            : ['personnel_candidates', 'asset_candidates'];
+    const candidatesStale =
+        candidatesReady &&
+        [personnelCandidatePage, assetCandidatePage].some((value) => {
+            const version = candidatePageVersion(value);
+
+            return version !== null && version !== job.version;
+        });
+    const candidateError =
+        candidatePageError(personnelCandidatePage) ??
+        candidatePageError(assetCandidatePage);
     const {
         form,
         activeStep,
@@ -228,165 +264,242 @@ export default function DispatchDetail({
                                     {activeStep === 2 && (
                                         <div className="animate-in fade-in space-y-5 duration-150">
                                             {capabilities.view_assignment_candidates ? (
-                                                <form
-                                                    id="assignment-selection-form"
-                                                    onSubmit={submit}
-                                                    className="space-y-6"
-                                                    noValidate
-                                                    aria-busy={form.processing}
-                                                >
-                                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                                                        <div>
-                                                            <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                                                Step 2 of 3 ·
-                                                                Resource
-                                                                Assignment
-                                                            </p>
-                                                            <h2 className="mt-1 text-xl font-semibold text-ink">
-                                                                Choose eligible
-                                                                resources
-                                                            </h2>
-                                                            <p className="mt-0.5 max-w-3xl text-xs leading-5 text-ink-soft">
-                                                                Select the
-                                                                people and
-                                                                assets for this
-                                                                dispatch. Every
-                                                                option below is
-                                                                checked against
-                                                                the scheduled
-                                                                window by the
-                                                                server.
-                                                            </p>
-                                                        </div>
-                                                        <a
-                                                            href="#assignment-summary"
-                                                            className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-lg px-3 text-sm font-medium text-brand-strong transition-colors hover:bg-brand-soft sm:self-auto"
-                                                        >
-                                                            Review selection
-                                                            <ArrowRight
-                                                                className="h-4 w-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        </a>
-                                                    </div>
-
-                                                    <section
-                                                        aria-labelledby="personnel-heading"
-                                                        className="space-y-3"
+                                                candidatesReady ? (
+                                                    <form
+                                                        id="assignment-selection-form"
+                                                        onSubmit={submit}
+                                                        className="space-y-6"
+                                                        noValidate
+                                                        aria-busy={
+                                                            form.processing
+                                                        }
                                                     >
-                                                        <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
-                                                            <div>
-                                                                <h3
-                                                                    id="personnel-heading"
-                                                                    className="font-semibold text-ink"
+                                                        {candidatesStale && (
+                                                            <div
+                                                                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
+                                                                role="alert"
+                                                            >
+                                                                <span>
+                                                                    The dispatch
+                                                                    changed
+                                                                    while these
+                                                                    candidates
+                                                                    were being
+                                                                    evaluated.
+                                                                    Refresh
+                                                                    before
+                                                                    selecting
+                                                                    resources.
+                                                                </span>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="secondary"
+                                                                    onClick={() =>
+                                                                        router.reload(
+                                                                            {
+                                                                                only: reloadCandidateProps,
+                                                                                preserveErrors: true,
+                                                                            },
+                                                                        )
+                                                                    }
                                                                 >
-                                                                    People
-                                                                </h3>
-                                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                                    Field
-                                                                    workers and
-                                                                    certified
-                                                                    operators
-                                                                    who can
-                                                                    respond to
+                                                                    Refresh
+                                                                    candidates
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                                                            <div>
+                                                                <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
+                                                                    Step 2 of 3
+                                                                    · Resource
+                                                                    Assignment
+                                                                </p>
+                                                                <h2 className="mt-1 text-xl font-semibold text-ink">
+                                                                    Choose
+                                                                    eligible
+                                                                    resources
+                                                                </h2>
+                                                                <p className="mt-0.5 max-w-3xl text-xs leading-5 text-ink-soft">
+                                                                    Select the
+                                                                    people and
+                                                                    assets for
                                                                     this
-                                                                    assignment.
+                                                                    dispatch.
+                                                                    Every option
+                                                                    below is
+                                                                    checked
+                                                                    against the
+                                                                    scheduled
+                                                                    window by
+                                                                    the server.
                                                                 </p>
                                                             </div>
-                                                            <Users
-                                                                className="h-5 w-5 shrink-0 text-ink-soft"
-                                                                aria-hidden="true"
-                                                            />
+                                                            <a
+                                                                href="#assignment-summary"
+                                                                className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-lg px-3 text-sm font-medium text-brand-strong transition-colors hover:bg-brand-soft sm:self-auto"
+                                                            >
+                                                                Review selection
+                                                                <ArrowRight
+                                                                    className="h-4 w-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </a>
                                                         </div>
-                                                        <PersonnelCandidates
-                                                            candidates={
-                                                                personnelCandidates
-                                                            }
-                                                            selectedIds={form.data.personnel.map(
-                                                                (assignment) =>
-                                                                    assignment.user_id,
-                                                            )}
-                                                            canAssign={
-                                                                capabilities.assign_resources
-                                                            }
-                                                            onToggle={
-                                                                togglePersonnel
-                                                            }
-                                                        />
-                                                    </section>
 
-                                                    <section
-                                                        aria-labelledby="asset-heading"
-                                                        className="space-y-3"
-                                                    >
-                                                        <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
-                                                            <div>
-                                                                <h3
-                                                                    id="asset-heading"
-                                                                    className="font-semibold text-ink"
-                                                                >
-                                                                    Assets
-                                                                </h3>
-                                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                                    Trucks,
-                                                                    cranes, and
-                                                                    equipment
-                                                                    ready for
-                                                                    the window.
-                                                                </p>
+                                                        <section
+                                                            aria-labelledby="personnel-heading"
+                                                            className="space-y-3"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                                                                <div>
+                                                                    <h3
+                                                                        id="personnel-heading"
+                                                                        className="font-semibold text-ink"
+                                                                    >
+                                                                        People
+                                                                    </h3>
+                                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                                        Field
+                                                                        workers
+                                                                        and
+                                                                        certified
+                                                                        operators
+                                                                        who can
+                                                                        respond
+                                                                        to this
+                                                                        assignment.
+                                                                    </p>
+                                                                </div>
+                                                                <Users
+                                                                    className="h-5 w-5 shrink-0 text-ink-soft"
+                                                                    aria-hidden="true"
+                                                                />
                                                             </div>
-                                                            <Truck
-                                                                className="h-5 w-5 shrink-0 text-ink-soft"
-                                                                aria-hidden="true"
+                                                            <PersonnelCandidates
+                                                                candidates={
+                                                                    personnelCandidates
+                                                                }
+                                                                selectedIds={form.data.personnel.map(
+                                                                    (
+                                                                        assignment,
+                                                                    ) =>
+                                                                        assignment.user_id,
+                                                                )}
+                                                                canAssign={
+                                                                    capabilities.assign_resources
+                                                                }
+                                                                onToggle={
+                                                                    togglePersonnel
+                                                                }
+                                                                page={
+                                                                    isCandidatePage<PersonnelCandidateViewModel>(
+                                                                        personnelCandidatePage,
+                                                                    )
+                                                                        ? personnelCandidatePage
+                                                                        : undefined
+                                                                }
                                                             />
-                                                        </div>
-                                                        <AssetCandidates
-                                                            candidates={
-                                                                assetCandidates
-                                                            }
-                                                            selectedIds={form.data.assets.map(
-                                                                (assignment) =>
-                                                                    assignment.operational_asset_id,
-                                                            )}
-                                                            canAssign={
-                                                                capabilities.assign_resources
-                                                            }
-                                                            onToggle={
-                                                                toggleAsset
-                                                            }
-                                                            assetCatalogAccess={{
-                                                                fleet: canViewFleetAssets,
-                                                                equipment:
-                                                                    canViewEquipmentAssets,
-                                                            }}
-                                                        />
-                                                    </section>
+                                                        </section>
 
-                                                    <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 shadow-2xs">
-                                                        <Button
-                                                            type="button"
-                                                            variant="secondary"
-                                                            onClick={() =>
-                                                                setActiveStep(1)
-                                                            }
+                                                        <section
+                                                            aria-labelledby="asset-heading"
+                                                            className="space-y-3"
                                                         >
-                                                            <ArrowLeft className="h-4 w-4" />
-                                                            Previous: Review
-                                                            context
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant="primary"
-                                                            onClick={() =>
-                                                                setActiveStep(3)
-                                                            }
-                                                        >
-                                                            Next: Activation
-                                                            review
-                                                            <ArrowRight className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </form>
+                                                            <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                                                                <div>
+                                                                    <h3
+                                                                        id="asset-heading"
+                                                                        className="font-semibold text-ink"
+                                                                    >
+                                                                        Assets
+                                                                    </h3>
+                                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                                        Trucks,
+                                                                        cranes,
+                                                                        and
+                                                                        equipment
+                                                                        ready
+                                                                        for the
+                                                                        window.
+                                                                    </p>
+                                                                </div>
+                                                                <Truck
+                                                                    className="h-5 w-5 shrink-0 text-ink-soft"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </div>
+                                                            <AssetCandidates
+                                                                candidates={
+                                                                    assetCandidates
+                                                                }
+                                                                selectedIds={form.data.assets.map(
+                                                                    (
+                                                                        assignment,
+                                                                    ) =>
+                                                                        assignment.operational_asset_id,
+                                                                )}
+                                                                canAssign={
+                                                                    capabilities.assign_resources
+                                                                }
+                                                                onToggle={
+                                                                    toggleAsset
+                                                                }
+                                                                assetCatalogAccess={{
+                                                                    fleet: canViewFleetAssets,
+                                                                    equipment:
+                                                                        canViewEquipmentAssets,
+                                                                }}
+                                                                page={
+                                                                    isCandidatePage<AssetCandidateViewModel>(
+                                                                        assetCandidatePage,
+                                                                    )
+                                                                        ? assetCandidatePage
+                                                                        : undefined
+                                                                }
+                                                            />
+                                                        </section>
+
+                                                        <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 shadow-2xs">
+                                                            <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                onClick={() =>
+                                                                    setActiveStep(
+                                                                        1,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <ArrowLeft className="h-4 w-4" />
+                                                                Previous: Review
+                                                                context
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="primary"
+                                                                onClick={() =>
+                                                                    setActiveStep(
+                                                                        3,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Next: Activation
+                                                                review
+                                                                <ArrowRight className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <CandidateDeferredState
+                                                        error={candidateError}
+                                                        onRetry={() =>
+                                                            router.reload({
+                                                                only: reloadCandidateProps,
+                                                                preserveErrors: true,
+                                                            })
+                                                        }
+                                                    />
+                                                )
                                             ) : (
                                                 <Panel>
                                                     <EmptyState
@@ -614,5 +727,85 @@ export default function DispatchDetail({
                 </main>
             </div>
         </>
+    );
+}
+
+function isCandidatePage<T>(
+    value: unknown,
+): value is CandidatePageViewModel<T> {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'data' in value &&
+        Array.isArray(value.data)
+    );
+}
+
+function hasCandidateData(value: unknown): boolean {
+    return (
+        (isCandidatePage(value) && value.error === null) || Array.isArray(value)
+    );
+}
+
+function candidatePageVersion(value: unknown): number | null {
+    return isCandidatePage(value) && typeof value.job_version === 'number'
+        ? value.job_version
+        : null;
+}
+
+function candidateData<T>(value: unknown): T[] {
+    return isCandidatePage<T>(value)
+        ? value.data
+        : Array.isArray(value)
+          ? value
+          : [];
+}
+
+function candidatePageError(value: unknown): string | null {
+    return isCandidatePage(value) && typeof value.error === 'string'
+        ? value.error
+        : null;
+}
+
+function CandidateDeferredState({
+    error,
+    onRetry,
+}: {
+    error: string | null;
+    onRetry: () => void;
+}) {
+    return (
+        <Panel>
+            <div
+                className="space-y-3 p-5"
+                aria-busy={error === null}
+                aria-live="polite"
+            >
+                {error === null ? (
+                    <>
+                        <div className="h-5 w-48 animate-pulse rounded bg-surface-subtle" />
+                        <div className="h-4 w-72 animate-pulse rounded bg-surface-subtle" />
+                        <p className="sr-only">
+                            Loading candidate evaluations.
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <p className="font-semibold text-danger">{error}</p>
+                        <p className="text-sm text-ink-soft">
+                            No resource is selectable until the server completes
+                            its authoritative evaluation.
+                        </p>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onRetry}
+                        >
+                            Retry evaluation
+                        </Button>
+                    </>
+                )}
+            </div>
+        </Panel>
     );
 }

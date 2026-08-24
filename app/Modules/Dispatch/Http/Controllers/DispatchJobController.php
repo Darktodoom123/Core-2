@@ -3,26 +3,27 @@
 namespace App\Modules\Dispatch\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Assignment\Data\CandidatePage;
+use App\Modules\Assignment\Http\Requests\ListDispatchCandidatesRequest;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
-use App\Modules\Assignment\Services\DispatchResourceEligibility;
-use App\Modules\Assignment\ViewModels\DispatchAssignmentWorkspaceViewModel;
+use App\Modules\Assignment\Queries\AssetCandidateQuery;
+use App\Modules\Assignment\Queries\DispatchActivationReadinessQuery;
+use App\Modules\Assignment\Queries\PersonnelCandidateQuery;
 use App\Modules\Dispatch\Actions\ConvertServiceRequestToDispatch;
 use App\Modules\Dispatch\Actions\CreateManualDispatchHandoff;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Http\Requests\StoreDispatchJobRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
-use App\Modules\Dispatch\ViewModels\DispatchActivationWorkspaceViewModel;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
 use App\Platform\Identity\Enums\PermissionName;
-use App\Platform\Identity\Enums\RoleName;
-use App\Platform\Identity\Models\User;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
-use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class DispatchJobController extends Controller
 {
@@ -81,8 +82,13 @@ final class DispatchJobController extends Controller
         ]);
     }
 
-    public function show(int $dispatchJob, DispatchResourceEligibility $eligibility): Response
-    {
+    public function show(
+        int $dispatchJob,
+        ListDispatchCandidatesRequest $filters,
+        DispatchActivationReadinessQuery $readiness,
+        PersonnelCandidateQuery $personnelCandidates,
+        AssetCandidateQuery $assetCandidates,
+    ): Response {
         $user = request()->user();
         $canViewCandidates = $user->can(PermissionName::AssignmentsViewAll->value);
         $job = DispatchJob::query()
@@ -99,12 +105,14 @@ final class DispatchJobController extends Controller
                         'user.personnelProfile',
                         'user.personnelCredentials',
                         'user.dispatchAssignments' => fn ($query) => $query
-                            ->whereNull('active_until')
-                            ->with('job'),
+                            ->where(function ($assignment): void {
+                                $assignment->whereNull('active_until')->orWhere('active_until', '>', now());
+                            })
+                            ->with('job:id,reference,scheduled_start,scheduled_end'),
                     ]),
                 'assetAssignments' => fn ($query) => $query
                     ->whereNull('active_until')
-                    ->with('asset.maintenanceWorkOrders'),
+                    ->with('asset:id,code,name,kind,status,deleted_at'),
                 'source',
                 'serviceRequest:id,reference',
                 'approvals',
@@ -122,42 +130,27 @@ final class DispatchJobController extends Controller
             ], true);
         $canUpdateOwnStatus = Gate::forUser($user)->allows('updateOwnStatus', $job);
 
-        $personnel = $canViewCandidates
-            ? User::query()
-                ->whereHas('roles', fn ($query) => $query->whereIn('name', [
-                    RoleName::Driver->value,
-                    RoleName::CraneOperator->value,
-                    RoleName::FieldTechnician->value,
-                ]))
-                ->with([
-                    'roles:id,name',
-                    'personnelProfile',
-                    'personnelCredentials',
-                    'dispatchAssignments' => fn ($query) => $query
-                        ->whereNull('active_until')
-                        ->with('job'),
-                ])
-                ->orderBy('name')
-                ->limit(200)
-                ->get()
-            : collect();
-        $assets = $canViewCandidates
-            ? OperationalAsset::query()
-                ->whereIn('kind', ['truck', 'crane', 'mobile_crane', 'equipment'])
-                ->orderBy('code')
-                ->limit(200)
-                ->get()
-            : collect();
-
         $canRespondAssignment = $job->personnelAssignments->contains(
             fn (DispatchPersonnelAssignment $assignment): bool => Gate::forUser($user)->allows('respond', $assignment),
         );
 
         return Inertia::render('dispatch-detail', [
             'job' => OperationsWorkspaceViewModel::job($job),
-            'personnel_candidates' => DispatchAssignmentWorkspaceViewModel::personnelCandidates($personnel, $job, $eligibility),
-            'asset_candidates' => DispatchAssignmentWorkspaceViewModel::assetCandidates($assets, $job, $eligibility),
-            'activation' => DispatchActivationWorkspaceViewModel::make($job, $eligibility),
+            'personnel_candidates' => $canViewCandidates
+                ? Inertia::defer(fn (): array => $this->rescueCandidatePage(
+                    fn (): CandidatePage => $personnelCandidates->page($job, $filters),
+                    $job,
+                    'personnel',
+                ), 'dispatch-candidates')
+                : [],
+            'asset_candidates' => $canViewCandidates
+                ? Inertia::defer(fn (): array => $this->rescueCandidatePage(
+                    fn (): CandidatePage => $assetCandidates->page($job, $filters),
+                    $job,
+                    'assets',
+                ), 'dispatch-candidates')
+                : [],
+            'activation' => $readiness->make($job),
             'progression' => $canUpdateOwnStatus
                 ? DispatchFieldProgressionViewModel::make($job)
                 : null,
@@ -175,5 +168,29 @@ final class DispatchJobController extends Controller
                 'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value),
             ],
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function rescueCandidatePage(callable $query, DispatchJob $job, string $resource): array
+    {
+        request()->attributes->set('workspace_inertia_mode', 'deferred');
+
+        try {
+            /** @var CandidatePage<array<string, mixed>> $page */
+            $page = $query();
+
+            request()->attributes->set('candidate_page_size', $page->pagination['per_page']);
+            request()->attributes->set('candidate_result_count', count($page->data));
+            request()->attributes->set('candidate_resource', $resource);
+
+            return $page->toArray();
+        } catch (Throwable $exception) {
+            Log::warning('dispatch.candidate_deferred_failed', [
+                'resource' => $resource,
+                'exception' => $exception::class,
+            ]);
+
+            return CandidatePage::error($job, 'Candidate data is temporarily unavailable. Retry to evaluate it again.')->toArray();
+        }
     }
 }

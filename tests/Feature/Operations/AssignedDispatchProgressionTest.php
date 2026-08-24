@@ -80,13 +80,14 @@ it('shows field users only their active assignments with the next valid action',
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('workspace')
-            ->has('jobs', 1)
-            ->where('jobs.0.reference', 'FIELD-1001')
-            ->where('jobs.0.requirements', ['Hard hat', 'Site induction'])
-            ->has('jobs.0.personnel_assignments', 1)
-            ->where('jobs.0.personnel_assignments.0.name', 'Assigned Driver')
             ->where('navigation.1.label', "Today's work")
             ->where('capabilities.update_assigned_dispatch_status', true)
+            ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
+                ->has('jobs', 1)
+                ->where('jobs.0.reference', 'FIELD-1001')
+                ->where('jobs.0.requirements', ['Hard hat', 'Site induction'])
+                ->has('jobs.0.personnel_assignments', 1)
+                ->where('jobs.0.personnel_assignments.0.name', 'Assigned Driver'))
         );
 
     $this->actingAs($driver)

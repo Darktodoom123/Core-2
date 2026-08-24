@@ -33,6 +33,22 @@ final class OperationsWorkspaceController extends Controller
 {
     private const int WORKSPACE_STALE_AFTER_SECONDS = 120;
 
+    /** @var array<string, list<string>> */
+    private const SECTION_PROPS = [
+        'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'approvals', 'users', 'gptRecommendations'],
+        'assets' => ['assets', 'locations'],
+        'tracking' => ['assets', 'locations'],
+        'fuel' => ['fuelRequests'],
+        'approvals' => ['approvals'],
+        'reports' => ['jobReports', 'reportExports', 'jobs'],
+        'notifications' => ['notifications'],
+        'archive' => ['archivedJobs'],
+        'gpt-recommendations' => ['gptRecommendations', 'jobs'],
+        'users' => ['users', 'auditEvents'],
+        'audit' => ['auditEvents'],
+    ];
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
@@ -41,10 +57,122 @@ final class OperationsWorkspaceController extends Controller
         $canViewSalesHandoffs = $canCreateDispatch && $user->can(PermissionName::SalesView->value);
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
         $refreshedAt = now();
-        $locations = $this->fetchLocations($user);
         $navigation = OperationsWorkspaceViewModel::navigation($user);
+        $initialSection = $this->initialSection($request, $navigation);
+        $sectionCache = null;
+        $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments): array {
+            request()->attributes->set('workspace_inertia_mode', 'deferred');
 
-        return Inertia::render('workspace', [
+            return $sectionCache ??= $this->loadSection(
+                $initialSection,
+                $user,
+                $canCreateDispatch,
+                $canViewRentalHandoffs,
+                $canViewSalesHandoffs,
+                $canViewAllAssignments,
+            );
+        };
+
+        $props = [
+            'navigation' => $navigation,
+            'initial_section' => $initialSection,
+            'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
+            'badges' => $this->fetchBadges($user),
+            'workspace' => [
+                'refreshed_at' => $refreshedAt->toIso8601String(),
+                'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
+                'tracking' => $this->trackingFreshness($user, $refreshedAt),
+            ],
+        ];
+
+        foreach ($this->allSectionProps() as $prop) {
+            $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments);
+            $props[$prop] = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true)
+                ? Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none'))
+                : Inertia::optional($resolver);
+        }
+
+        return Inertia::render('workspace', $props);
+    }
+
+    /** @return list<string> */
+    private function allSectionProps(): array
+    {
+        return array_values(array_unique(array_merge(...array_values(self::SECTION_PROPS))));
+    }
+
+    /** @return array<string, mixed> */
+    private function loadSection(
+        ?string $section,
+        User $user,
+        bool $canCreateDispatch,
+        bool $canViewRentalHandoffs,
+        bool $canViewSalesHandoffs,
+        bool $canViewAllAssignments,
+    ): array {
+        return match ($section) {
+            'overview' => [
+                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments, 6)),
+                'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
+                'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user, 50)),
+                'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+                'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+                'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+                'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user, 50)),
+                'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
+                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+            ],
+            'dispatch' => [
+                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+                'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
+                'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+                'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
+                'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
+                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+                'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+                'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
+                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+            ],
+            'assets', 'tracking' => [
+                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+                'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+            ],
+            'fuel' => ['fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user))],
+            'approvals' => ['approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user)],
+            'reports' => [
+                'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
+                'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
+                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+            ],
+            'notifications' => ['notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user))],
+            'archive' => ['archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user))],
+            'gpt-recommendations' => [
+                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+            ],
+            'users' => [
+                'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
+                'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
+            ],
+            'audit' => ['auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user))],
+            default => [],
+        };
+    }
+
+    private function resolveSectionProp(string $prop, callable $loadSection, User $user, bool $canCreateDispatch, bool $canViewRentalHandoffs, bool $canViewSalesHandoffs, bool $canViewAllAssignments): mixed
+    {
+        $data = $loadSection();
+        if (array_key_exists($prop, $data)) {
+            return $data[$prop];
+        }
+
+        return $this->standaloneProp($prop, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments);
+    }
+
+    private function standaloneProp(string $prop, User $user, bool $canCreateDispatch, bool $canViewRentalHandoffs, bool $canViewSalesHandoffs, bool $canViewAllAssignments): mixed
+    {
+        return match ($prop) {
             'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
             'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
             'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
@@ -52,7 +180,7 @@ final class OperationsWorkspaceController extends Controller
             'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
-            'locations' => OperationsWorkspaceViewModel::locations($locations),
+            'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
@@ -61,15 +189,8 @@ final class OperationsWorkspaceController extends Controller
             'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
             'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
-            'navigation' => $navigation,
-            'initial_section' => $this->initialSection($request, $navigation),
-            'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
-            'workspace' => [
-                'refreshed_at' => $refreshedAt->toIso8601String(),
-                'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
-                'tracking' => $this->trackingFreshness($user, $refreshedAt),
-            ],
-        ]);
+            default => [],
+        };
     }
 
     /** @param array<int, array{id: string, label: string}> $navigation */
@@ -145,7 +266,7 @@ final class OperationsWorkspaceController extends Controller
     }
 
     /** @return Collection<int, DispatchJob> */
-    private function fetchJobs(User $user, bool $canViewAllAssignments): Collection
+    private function fetchJobs(User $user, bool $canViewAllAssignments, int $limit = 100): Collection
     {
         if (! Gate::forUser($user)->allows('viewAny', DispatchJob::class)) {
             return collect();
@@ -169,12 +290,12 @@ final class OperationsWorkspaceController extends Controller
                 'canonicalHandoff',
             ])
             ->orderBy('scheduled_start')
-            ->limit(100)
+            ->limit($limit)
             ->get();
     }
 
     /** @return Collection<int, OperationalAsset> */
-    private function fetchAssets(User $user): Collection
+    private function fetchAssets(User $user, int $limit = 100): Collection
     {
         if (! Gate::forUser($user)->allows('viewAny', OperationalAsset::class)) {
             return collect();
@@ -188,7 +309,7 @@ final class OperationsWorkspaceController extends Controller
                 'maintenanceWorkOrders' => fn ($query) => $query->latest('created_at')->limit(10),
             ])
             ->orderBy('code')
-            ->limit(100)
+            ->limit($limit)
             ->get();
     }
 
@@ -248,7 +369,7 @@ final class OperationsWorkspaceController extends Controller
     }
 
     /** @return Collection<int, User> */
-    private function fetchUsers(User $user): Collection
+    private function fetchUsers(User $user, int $limit = 200): Collection
     {
         if (! $user->can(PermissionName::UsersManage->value)) {
             return collect();
@@ -257,8 +378,49 @@ final class OperationsWorkspaceController extends Controller
         return User::query()
             ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials'])
             ->orderBy('name')
-            ->limit(200)
+            ->limit($limit)
             ->get();
+    }
+
+    /** @return array{jobs: int, pending_approvals: int, unread_notifications: int, blocking_assets: int} */
+    private function fetchBadges(User $user): array
+    {
+        $jobs = Gate::forUser($user)->allows('viewAny', DispatchJob::class)
+            ? DispatchJob::query()->visibleTo($user)->count()
+            : 0;
+        $approvalKinds = array_values(array_filter([
+            $user->can(PermissionName::AssignmentsApprove->value) ? 'assignment_override' : null,
+            $user->can(PermissionName::AssignmentsApprove->value) ? 'reassignment_override' : null,
+            $user->can(PermissionName::DispatchApprovePriority->value) ? 'dispatch_activation' : null,
+        ]));
+        $pendingApprovals = $approvalKinds === []
+            ? 0
+            : ApprovalRequest::query()
+                ->whereIn('kind', $approvalKinds)
+                ->where('status', 'pending')
+                ->where('subject_type', (new DispatchJob)->getMorphClass())
+                ->whereIn('subject_id', DispatchJob::query()->visibleTo($user)->select('id'))
+                ->count();
+        $unreadNotifications = Notification::query()
+            ->where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->id)
+            ->where(function ($query): void {
+                $query->where('status', '!=', 'read')->orWhereNull('read_at');
+            })
+            ->count();
+        $blockingAssets = Gate::forUser($user)->allows('viewAny', OperationalAsset::class)
+            ? OperationalAsset::query()
+                ->visibleTo($user)
+                ->whereHas('maintenanceWorkOrders', fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at'))
+                ->count()
+            : 0;
+
+        return [
+            'jobs' => $jobs,
+            'pending_approvals' => $pendingApprovals,
+            'unread_notifications' => $unreadNotifications,
+            'blocking_assets' => $blockingAssets,
+        ];
     }
 
     /** @return Collection<int, AuditEvent> */

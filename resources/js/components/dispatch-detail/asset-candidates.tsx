@@ -1,9 +1,12 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Search, Truck } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import type { AssetCandidateViewModel } from '@/types/workspace';
+import type {
+    AssetCandidateViewModel,
+    CandidatePageViewModel,
+} from '@/types/workspace';
 import { ConflictDetails, EligibilityBadge } from './dispatch-detail-helpers';
 
 export function AssetCandidates({
@@ -12,6 +15,7 @@ export function AssetCandidates({
     canAssign,
     onToggle,
     assetCatalogAccess,
+    page,
 }: {
     candidates: AssetCandidateViewModel[];
     selectedIds: number[];
@@ -21,9 +25,15 @@ export function AssetCandidates({
         fleet: boolean;
         equipment: boolean;
     };
+    page?: CandidatePageViewModel<AssetCandidateViewModel>;
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showEligibleOnly, setShowEligibleOnly] = useState(false);
+    const [typeFilter, setTypeFilter] = useState<
+        'all' | AssetCandidateViewModel['assignment_type']
+    >('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const initialLoad = useRef(true);
 
     const groups: Array<{
         type: AssetCandidateViewModel['assignment_type'];
@@ -31,10 +41,37 @@ export function AssetCandidates({
     }> = [
         { type: 'truck', label: 'Trucks' },
         { type: 'crane', label: 'Cranes' },
+        { type: 'mobile_crane', label: 'Mobile cranes' },
         { type: 'equipment', label: 'Equipment' },
     ];
 
     const eligibleCount = candidates.filter((c) => c.eligible).length;
+
+    useEffect(() => {
+        if (initialLoad.current) {
+            initialLoad.current = false;
+
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            router.cancelAll();
+            router.reload({
+                only: ['asset_candidates'],
+                data: {
+                    resource: 'assets',
+                    type: typeFilter === 'all' ? undefined : typeFilter,
+                    search: searchQuery.trim() || undefined,
+                    page: currentPage,
+                    per_page: 25,
+                    eligible_only: showEligibleOnly,
+                },
+                preserveErrors: true,
+            });
+        }, 275);
+
+        return () => window.clearTimeout(timeout);
+    }, [currentPage, searchQuery, showEligibleOnly, typeFilter]);
 
     return (
         <div className="space-y-4">
@@ -48,12 +85,34 @@ export function AssetCandidates({
                         type="text"
                         placeholder="Search assets by code or name…"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            setCurrentPage(1);
+                            setSearchQuery(e.target.value);
+                        }}
                         className="w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft/70 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
                         aria-label="Search asset candidates"
                     />
                 </div>
                 <div className="flex items-center gap-3 text-xs">
+                    <label className="sr-only" htmlFor="asset-type-filter">
+                        Filter asset type
+                    </label>
+                    <select
+                        id="asset-type-filter"
+                        value={typeFilter}
+                        onChange={(event) => {
+                            setCurrentPage(1);
+                            setTypeFilter(
+                                event.target.value as typeof typeFilter,
+                            );
+                        }}
+                        className="min-h-9 rounded-md border border-line bg-surface px-2 text-xs text-ink"
+                    >
+                        <option value="all">All types</option>
+                        <option value="truck">Trucks</option>
+                        <option value="crane">Cranes</option>
+                        <option value="equipment">Equipment</option>
+                    </select>
                     <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-ink-soft select-none hover:text-ink">
                         <input
                             type="checkbox"
@@ -74,7 +133,14 @@ export function AssetCandidates({
             <div className="grid gap-4 2xl:grid-cols-3">
                 {groups.map((group) => {
                     const groupCandidates = candidates.filter(
-                        (candidate) => candidate.assignment_type === group.type,
+                        (candidate) =>
+                            (typeFilter === 'all' ||
+                                (typeFilter === 'crane' &&
+                                    ['crane', 'mobile_crane'].includes(
+                                        candidate.assignment_type,
+                                    )) ||
+                                candidate.assignment_type === typeFilter) &&
+                            candidate.assignment_type === group.type,
                     );
                     const catalogAccess =
                         group.type === 'truck'
@@ -187,6 +253,53 @@ export function AssetCandidates({
                     );
                 })}
             </div>
+            {page?.error && (
+                <p
+                    className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger"
+                    role="alert"
+                >
+                    {page.error}
+                </p>
+            )}
+            {page && page.pagination.last_page > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink-soft">
+                    <p aria-live="polite">
+                        Showing {page.pagination.from ?? 0}–
+                        {page.pagination.to ?? 0} of {page.pagination.total}{' '}
+                        assets · evaluated{' '}
+                        {new Date(page.evaluated_at).toLocaleTimeString()}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
+                            disabled={currentPage <= 1}
+                            onClick={() =>
+                                setCurrentPage((current) =>
+                                    Math.max(1, current - 1),
+                                )
+                            }
+                        >
+                            Previous
+                        </button>
+                        <button
+                            type="button"
+                            className="min-h-9 rounded-md border border-line px-3 font-medium disabled:opacity-50"
+                            disabled={currentPage >= page.pagination.last_page}
+                            onClick={() =>
+                                setCurrentPage((current) =>
+                                    Math.min(
+                                        page.pagination.last_page,
+                                        current + 1,
+                                    ),
+                                )
+                            }
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
