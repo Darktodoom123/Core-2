@@ -110,7 +110,7 @@ export function AssetTypeMultiSelect({
                 type="button"
                 onClick={() => setIsOpen((open) => !open)}
                 className={cn(
-                    'inline-flex min-h-9 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors',
+                    'inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors',
                     allTypesSelected
                         ? 'bg-brand-strong font-semibold text-white shadow-xs'
                         : 'bg-brand-soft font-semibold text-brand-strong ring-1 ring-brand-strong/20',

@@ -176,7 +176,7 @@ export function GptRecommendationsSurface({
     };
 
     return (
-        <div>
+        <div className="workspace-width-contained">
             <PageHeading
                 title="GPT AI Advisory & Resource Recommendations"
                 description="Review explainable AI dispatch and resource proposals. All recommendations are purely advisory and require explicit human confirmation to apply."
@@ -398,7 +398,12 @@ export function GptRecommendationsSurface({
                         </Panel>
                     ) : (
                         <Panel className="overflow-hidden">
-                            <div className="overflow-x-auto">
+                            <div
+                                className="workspace-scroll-region"
+                                role="region"
+                                aria-label="GPT recommendations table scroll region"
+                                tabIndex={0}
+                            >
                                 <table className="w-full text-left text-sm">
                                     <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
                                         <tr>

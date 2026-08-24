@@ -33,6 +33,8 @@ import type {
     WorkspaceSection,
 } from '@/types/workspace';
 
+const WORKSPACE_SIDEBAR_BREAKPOINT = 840;
+
 const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     overview: LayoutDashboard,
     dispatch: ClipboardList,
@@ -171,7 +173,9 @@ export function LiveWorkspaceShell({
     }, [mobileOpen]);
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia('(min-width: 768px)');
+        const mediaQuery = window.matchMedia(
+            `(min-width: ${WORKSPACE_SIDEBAR_BREAKPOINT}px)`,
+        );
         const closeOnDesktop = () => {
             if (mediaQuery.matches) {
                 closeMobileNavigation();
@@ -186,7 +190,7 @@ export function LiveWorkspaceShell({
 
     return (
         <MotionConfig reducedMotion="user">
-            <div className="min-h-screen bg-canvas text-ink md:grid md:grid-cols-[auto_minmax(0,1fr)]">
+            <div className="min-h-screen min-w-0 bg-canvas text-ink min-[840px]:grid min-[840px]:grid-cols-[auto_minmax(0,1fr)]">
                 <a
                     href="#workspace-content"
                     className="sr-only z-[70] rounded-lg bg-ink px-4 py-3 text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
@@ -202,7 +206,7 @@ export function LiveWorkspaceShell({
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
                             type="button"
-                            className="fixed inset-0 z-40 bg-ink/35 md:hidden"
+                            className="fixed inset-0 z-40 bg-ink/35 min-[840px]:hidden"
                             onClick={closeMobileNavigation}
                             aria-label="Close navigation"
                             tabIndex={-1}
@@ -218,9 +222,9 @@ export function LiveWorkspaceShell({
                     aria-label={mobileOpen ? 'Workspace navigation' : undefined}
                     tabIndex={mobileOpen ? -1 : undefined}
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-white/10 bg-ink text-white transition-transform duration-200 ease-out md:sticky md:top-0 md:translate-x-0',
+                        'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-white/10 bg-ink text-white transition-transform duration-200 ease-out min-[840px]:sticky min-[840px]:top-0 min-[840px]:translate-x-0',
                         mobileOpen ? 'translate-x-0' : '-translate-x-full',
-                        collapsed && 'md:w-[4.75rem]',
+                        collapsed && 'min-[840px]:w-[4.75rem]',
                     )}
                 >
                     <div
@@ -244,7 +248,7 @@ export function LiveWorkspaceShell({
                             type="button"
                             ref={mobileCloseButtonRef}
                             onClick={closeMobileNavigation}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white md:hidden"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white min-[840px]:hidden"
                             aria-label="Close navigation"
                         >
                             <X className="h-5 w-5" aria-hidden="true" />
@@ -369,7 +373,7 @@ export function LiveWorkspaceShell({
                             type="button"
                             onClick={() => setCollapsed((value) => !value)}
                             className={cn(
-                                'hidden min-h-11 w-full items-center rounded-lg text-sm text-white/65 hover:bg-white/5 hover:text-white md:flex',
+                                'hidden min-h-11 w-full items-center rounded-lg text-sm text-white/65 hover:bg-white/5 hover:text-white min-[840px]:flex',
                                 collapsed ? 'justify-center' : 'gap-3 px-3',
                             )}
                             aria-label={
@@ -402,12 +406,12 @@ export function LiveWorkspaceShell({
                     inert={mobileOpen || undefined}
                     aria-hidden={mobileOpen ? true : undefined}
                 >
-                    <header className="sticky top-0 z-30 flex min-h-[4.5rem] items-center gap-2 border-b border-line bg-surface px-4 md:px-6">
+                    <header className="sticky top-0 z-30 flex min-h-[4.5rem] items-center gap-2 border-b border-line bg-surface px-4 min-[840px]:px-6">
                         <button
                             type="button"
                             ref={mobileMenuButtonRef}
                             onClick={openMobileNavigation}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-subtle md:hidden"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-subtle min-[840px]:hidden"
                             aria-label="Open navigation"
                             aria-expanded={mobileOpen}
                             aria-controls="workspace-navigation"
@@ -444,11 +448,11 @@ export function LiveWorkspaceShell({
                                 </h1>
                                 <p className="truncate text-xs text-ink-soft">
                                     {stale ? (
-                                        <span className="font-medium text-warning-strong">
+                                        <span className="block max-w-full truncate font-medium text-warning-strong">
                                             Data may be stale · Refresh to sync
                                         </span>
                                     ) : (
-                                        <span>
+                                        <span className="block max-w-full truncate">
                                             {auth.user?.name ?? 'User'} ·{' '}
                                             {auth.role_label ?? 'Operations'}
                                         </span>
@@ -529,7 +533,7 @@ export function LiveWorkspaceShell({
 
                     <main
                         id="workspace-content"
-                        className="max-w-full min-w-0 overflow-x-clip"
+                        className="min-w-0"
                         tabIndex={-1}
                     >
                         {children}

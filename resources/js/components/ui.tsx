@@ -37,7 +37,7 @@ export function Button({
                     'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                 variant === 'danger' &&
                     'bg-danger text-danger-contrast hover:bg-danger-strong',
-                size === 'sm' && 'min-h-10 px-3 text-sm',
+                size === 'sm' && 'min-h-11 px-3 text-sm',
                 size === 'md' && 'px-4 text-sm',
                 size === 'icon' && 'h-11 w-11 p-0',
                 className,
@@ -69,8 +69,8 @@ export function PageHeading({
     actions?: ReactNode;
 }) {
     return (
-        <div className="flex flex-col gap-4 border-b border-line px-5 py-5 md:flex-row md:items-center md:justify-between md:px-7">
-            <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-4 border-b border-line px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-7">
+            <div className="min-w-0 lg:flex-1">
                 <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
                     {title}
                 </h1>
@@ -79,7 +79,7 @@ export function PageHeading({
                 </p>
             </div>
             {actions && (
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:max-w-[55%] lg:shrink">
                     {actions}
                 </div>
             )}

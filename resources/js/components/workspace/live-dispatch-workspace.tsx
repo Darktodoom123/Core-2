@@ -591,7 +591,7 @@ export function LiveDispatchWorkspace({
     );
 
     return (
-        <div className="max-w-full min-w-0">
+        <div className="workspace-width-contained">
             <PageHeading
                 title={
                     fieldMode ? "Today's assigned work" : 'Dispatch workspace'
@@ -605,7 +605,7 @@ export function LiveDispatchWorkspace({
                     <div className="flex flex-wrap items-center gap-2">
                         {!fieldMode && (
                             <div
-                                className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-surface p-1"
+                                className="flex max-w-full flex-wrap rounded-lg border border-line bg-surface p-1"
                                 role="group"
                                 aria-label="Workspace views"
                             >
@@ -765,10 +765,10 @@ export function LiveDispatchWorkspace({
             {/* VIEW MODE: BOARD */}
             {viewMode === 'board' && !fieldMode && (
                 <section
-                    className="p-4 md:p-6"
+                    className="min-w-0 p-4 md:p-6"
                     aria-label="Schedule board section"
                 >
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+                    <div className="mb-4 flex flex-col items-start gap-3 border-b border-line pb-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
                                 {boardPeriod === 'day'
@@ -800,7 +800,7 @@ export function LiveDispatchWorkspace({
                         </div>
                         {boardPeriod === 'day' && (
                             <div
-                                className="flex min-h-11 items-center gap-1"
+                                className="flex min-h-11 flex-wrap items-center gap-1"
                                 role="group"
                                 aria-label="Schedule board day navigation"
                             >
@@ -871,7 +871,7 @@ export function LiveDispatchWorkspace({
                                         aria-pressed={boardPeriod === period}
                                         onClick={() => setBoardPeriod(period)}
                                         className={cn(
-                                            'inline-flex min-h-11 items-center justify-center rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                            'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors',
                                             boardPeriod === period
                                                 ? 'bg-brand-soft font-semibold text-brand-strong'
                                                 : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -898,7 +898,7 @@ export function LiveDispatchWorkspace({
                                         setQuery(event.target.value)
                                     }
                                     placeholder="Filter jobs or resources"
-                                    className="h-11 w-64 rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-xs placeholder:text-ink-soft"
+                                    className="h-11 w-full max-w-full rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-xs placeholder:text-ink-soft sm:w-64"
                                 />
                             </label>
 
@@ -917,7 +917,7 @@ export function LiveDispatchWorkspace({
                                         type="button"
                                         onClick={() => setBoardCategory(cat)}
                                         className={cn(
-                                            'inline-flex min-h-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                                            'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors',
                                             boardCategory === cat
                                                 ? 'bg-brand-soft font-semibold text-brand-strong'
                                                 : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -929,7 +929,7 @@ export function LiveDispatchWorkspace({
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
                             <Button
                                 size="sm"
                                 variant={
@@ -1000,7 +1000,7 @@ export function LiveDispatchWorkspace({
             {/* VIEW MODE: CONFLICTS */}
             {viewMode === 'conflicts' && !fieldMode && (
                 <section
-                    className="p-4 md:p-6"
+                    className="min-w-0 p-4 md:p-6"
                     aria-label="Conflict review section"
                 >
                     <div className="mb-4 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
@@ -1079,7 +1079,7 @@ export function LiveDispatchWorkspace({
                                 aria-controls="conflict-results"
                                 onClick={() => setConflictFilter(filter)}
                                 className={cn(
-                                    'inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                                    'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 py-1 text-xs font-medium transition-colors',
                                     conflictFilter === filter
                                         ? 'bg-brand-soft font-semibold text-brand-strong'
                                         : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
@@ -1115,7 +1115,7 @@ export function LiveDispatchWorkspace({
             {(viewMode === 'list' || fieldMode) && (
                 <div
                     className={cn(
-                        'min-h-[calc(100vh-9rem)] max-w-full min-w-0',
+                        'workspace-width-contained min-h-[calc(100vh-9rem)]',
                         !fieldMode &&
                             'grid lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]',
                     )}
@@ -1166,7 +1166,7 @@ export function LiveDispatchWorkspace({
                                                     .value as typeof sourceFilter,
                                             )
                                         }
-                                        className="h-10 w-full rounded-lg border border-line-strong bg-surface-subtle px-3 text-xs font-medium text-ink"
+                                        className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle px-3 text-xs font-medium text-ink"
                                     >
                                         <option value="all">
                                             All operational sources
@@ -1655,7 +1655,12 @@ function ScheduleBoardTable({
                     </div>
                 </div>
             )}
-            <div className="overflow-x-auto">
+            <div
+                className="workspace-scroll-region"
+                role="region"
+                aria-label={`Daily schedule for ${label}`}
+                tabIndex={0}
+            >
                 <div style={{ minWidth: `${minWidthRem}rem` }}>
                     {/* Header */}
                     <div className="grid grid-cols-[16rem_minmax(0,1fr)] border-b border-line bg-surface-subtle text-xs font-semibold">

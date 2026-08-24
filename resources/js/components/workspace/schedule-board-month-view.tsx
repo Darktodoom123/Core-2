@@ -152,7 +152,7 @@ export function ScheduleBoardMonthView({
                     <button
                         type="button"
                         onClick={() => goToMonth(-1)}
-                        className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
                         aria-label="Show previous month"
                     >
                         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -169,7 +169,7 @@ export function ScheduleBoardMonthView({
                     <button
                         type="button"
                         onClick={() => goToMonth(1)}
-                        className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-brand-soft hover:text-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
                         aria-label="Show next month"
                     >
                         <span className="hidden sm:inline">Next</span>
@@ -178,7 +178,12 @@ export function ScheduleBoardMonthView({
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div
+                className="workspace-scroll-region"
+                role="region"
+                aria-label={`${monthHeading} dispatch schedule scroll region`}
+                tabIndex={0}
+            >
                 <div className="min-w-[44rem]">
                     <div
                         className="grid grid-cols-7 border-b border-line bg-surface-subtle"
@@ -245,7 +250,7 @@ export function ScheduleBoardMonthView({
                                                         onSelectDate(day.key)
                                                     }
                                                     className={cn(
-                                                        'flex min-h-10 w-full items-start justify-between gap-1 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                        'flex min-h-11 w-full items-start justify-between gap-1 rounded-md px-1.5 py-1 text-left text-xs transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
                                                         !isCurrentMonth &&
                                                             'text-ink-soft/70',
                                                         isSelected &&
@@ -323,7 +328,7 @@ export function ScheduleBoardMonthView({
                                                                         )
                                                                     }
                                                                     className={cn(
-                                                                        'block min-h-9 w-full rounded-md border px-1.5 py-1 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                                        'block min-h-11 w-full rounded-md border px-1.5 py-1 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
                                                                         monthJobTone(
                                                                             job,
                                                                             hasConflict,

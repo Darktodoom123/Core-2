@@ -123,7 +123,7 @@ export function NotificationsSurface({
     };
 
     return (
-        <div>
+        <div className="workspace-width-contained">
             <PageHeading
                 title="System & dispatch notifications"
                 description="Track live operational alerts, schedule updates, dispatch assignments, safety events, and fuel authorization notices."
@@ -223,7 +223,7 @@ export function NotificationsSurface({
                                     type="button"
                                     onClick={() => setCategoryFilter(cat.id)}
                                     className={cn(
-                                        'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                         categoryFilter === cat.id
                                             ? 'bg-brand-strong text-white shadow-sm'
                                             : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
@@ -245,13 +245,13 @@ export function NotificationsSurface({
                         </div>
 
                         {/* Read status filter and Bulk Read Action */}
-                        <div className="flex items-center gap-2">
-                            <div className="inline-flex rounded-lg border border-line p-0.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="inline-flex flex-wrap rounded-lg border border-line p-0.5">
                                 <button
                                     type="button"
                                     onClick={() => setReadFilter('all')}
                                     className={cn(
-                                        'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                        'min-h-11 min-w-11 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         readFilter === 'all'
                                             ? 'bg-brand-soft text-brand-strong'
                                             : 'text-ink-soft hover:text-ink',
@@ -263,7 +263,7 @@ export function NotificationsSurface({
                                     type="button"
                                     onClick={() => setReadFilter('unread')}
                                     className={cn(
-                                        'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                        'min-h-11 min-w-11 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         readFilter === 'unread'
                                             ? 'bg-brand-soft text-brand-strong'
                                             : 'text-ink-soft hover:text-ink',
@@ -297,13 +297,13 @@ export function NotificationsSurface({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search notifications by keyword or reference…"
-                            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                            className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery('')}
-                                className="absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-soft hover:text-ink"
+                                className="absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink"
                                 aria-label="Clear search"
                             >
                                 <X className="h-3.5 w-3.5" />

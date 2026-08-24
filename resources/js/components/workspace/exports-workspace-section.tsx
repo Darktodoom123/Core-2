@@ -75,7 +75,7 @@ export function ExportsSurface({
     };
 
     return (
-        <div className="mt-8 space-y-6">
+        <div className="workspace-width-contained mt-8 space-y-6">
             {/* Heading & Trigger */}
             <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -151,7 +151,7 @@ export function ExportsSurface({
                 </Panel>
             ) : (
                 <Panel className="overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-line px-4 py-3 font-semibold text-ink">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 font-semibold text-ink">
                         <span>Export Tasks & Downloads ({exports.length})</span>
                         {stats.processing > 0 && (
                             <span className="inline-flex items-center gap-1.5 text-xs text-brand-strong">
@@ -160,7 +160,12 @@ export function ExportsSurface({
                             </span>
                         )}
                     </div>
-                    <div className="overflow-x-auto">
+                    <div
+                        className="workspace-scroll-region"
+                        role="region"
+                        aria-label="Export tasks table scroll region"
+                        tabIndex={0}
+                    >
                         <table className="w-full text-left text-sm">
                             <thead className="bg-surface-subtle text-xs tracking-wider text-ink-soft uppercase">
                                 <tr>
@@ -273,7 +278,7 @@ export function ExportsSurface({
                                                                 exp.download_url
                                                             }
                                                             download
-                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-brand px-3 py-1 text-xs font-semibold text-white shadow-xs hover:bg-brand-strong"
+                                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-brand px-3 py-1 text-xs font-semibold text-white shadow-xs hover:bg-brand-strong"
                                                         >
                                                             <Download className="h-3.5 w-3.5" />
                                                             Download
@@ -291,7 +296,7 @@ export function ExportsSurface({
                                                             disabled={
                                                                 isRetrying
                                                             }
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface-subtle disabled:opacity-60"
+                                                            className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface-subtle disabled:opacity-60"
                                                         >
                                                             <RefreshCw
                                                                 className={cn(
@@ -340,7 +345,7 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
 
     return (
         <Panel className="p-4 md:p-6">
-            <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
                 <div>
                     <h4 className="text-base font-semibold text-ink">
                         New Asynchronous Data Export Request
@@ -353,7 +358,7 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                 <button
                     type="button"
                     onClick={onDone}
-                    className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
                     aria-label="Close export form"
                 >
                     <X className="h-4 w-4" />

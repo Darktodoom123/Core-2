@@ -135,7 +135,7 @@ export function ReportsSurface({
     }, [reports, filteredReports, selectedReportId]);
 
     return (
-        <div>
+        <div className="workspace-width-contained">
             <PageHeading
                 title="Job reports & attachments"
                 description="Review field progress, submitted completion summaries, work logs, SHA-256 validated attachments, and operational records."
@@ -221,7 +221,7 @@ export function ReportsSurface({
 
                 {/* Submit Action Bar */}
                 {capabilities.create_job_report && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-ink-soft">
                             Submit field completion reports and evidence
                             attachments for active or completed dispatches.
@@ -290,7 +290,7 @@ export function ReportsSurface({
                                 type="button"
                                 onClick={() => setStatusFilter(tab.id)}
                                 className={cn(
-                                    'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                                    'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                                     statusFilter === tab.id
                                         ? 'bg-brand-strong text-white shadow-sm'
                                         : 'bg-surface-subtle text-ink-soft hover:bg-surface-subtle/80 hover:text-ink',
@@ -318,13 +318,13 @@ export function ReportsSurface({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search reports or author…"
-                            className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                            className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery('')}
-                                className="absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-soft hover:text-ink"
+                                className="absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink"
                                 aria-label="Clear search"
                             >
                                 <X className="h-3.5 w-3.5" />
@@ -354,7 +354,7 @@ export function ReportsSurface({
                         {/* Reports List Column */}
                         <div className="lg:col-span-5 xl:col-span-4">
                             <Panel className="overflow-hidden">
-                                <div className="flex items-center justify-between border-b border-line px-4 py-3 font-semibold text-ink">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 font-semibold text-ink">
                                     <span>
                                         Reports ({filteredReports.length})
                                     </span>
@@ -547,7 +547,7 @@ function SubmitJobReportForm({
 
     return (
         <Panel id="report-submit-form" className="p-4 md:p-6">
-            <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
                 <div>
                     <h3 className="text-base font-semibold text-ink">
                         Submit Job Completion Report
@@ -560,7 +560,7 @@ function SubmitJobReportForm({
                 <button
                     type="button"
                     onClick={onDone}
-                    className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
                     aria-label="Close form"
                 >
                     <X className="h-4 w-4" />
@@ -1054,7 +1054,7 @@ function ReportDetailPane({
                                                         onClick={() =>
                                                             copyChecksum(file)
                                                         }
-                                                        className="text-[10px] text-ink-soft hover:text-brand-strong"
+                                                        className="flex h-11 w-11 shrink-0 items-center justify-center text-[10px] text-ink-soft hover:text-brand-strong"
                                                         title="Copy full SHA-256 hash"
                                                     >
                                                         {isCopied ? (
@@ -1075,7 +1075,7 @@ function ReportDetailPane({
                                         <a
                                             href={file.download_url}
                                             download
-                                            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
+                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
                                         >
                                             <Download className="h-3.5 w-3.5" />
                                             Download
@@ -1113,7 +1113,7 @@ function ReportDetailPane({
                                     reviewForm.setData('reason', e.target.value)
                                 }
                                 placeholder="Optional decision notes, quality checks, or rejection reason"
-                                className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                                className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
                             />
                             <div className="flex flex-wrap gap-3">
                                 <Button

@@ -202,7 +202,7 @@ export function NotificationCenterPopover({
                             type="button"
                             onClick={() => setFilter(option)}
                             aria-pressed={selected}
-                            className={`min-h-11 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none ${
+                            className={`min-h-11 min-w-11 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none ${
                                 selected
                                     ? 'bg-brand-soft text-brand-strong'
                                     : 'text-ink-soft hover:bg-surface-subtle hover:text-ink'

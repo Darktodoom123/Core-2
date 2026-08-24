@@ -45,7 +45,7 @@ export function ArchiveSurface({
     }, [jobs, searchQuery]);
 
     return (
-        <div>
+        <div className="workspace-width-contained">
             <PageHeading
                 title="Archived & canceled dispatches"
                 description="View soft-deleted operational dispatches, review archive reasons, and restore dispatches to active state."
@@ -53,7 +53,7 @@ export function ArchiveSurface({
             <div className="space-y-6 p-4 md:p-6">
                 {/* Search Bar */}
                 {jobs.length > 0 && (
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="relative w-full sm:w-72">
                             <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-soft" />
                             <input
@@ -61,13 +61,13 @@ export function ArchiveSurface({
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search by reference, client, or reason…"
-                                className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                             />
                             {searchQuery && (
                                 <button
                                     type="button"
                                     onClick={() => setSearchQuery('')}
-                                    className="absolute top-1/2 right-2.5 -translate-y-1/2 text-ink-soft hover:text-ink"
+                                    className="absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-ink-soft hover:text-ink"
                                     aria-label="Clear search"
                                 >
                                     <X className="h-3.5 w-3.5" />
@@ -98,7 +98,12 @@ export function ArchiveSurface({
                     </Panel>
                 ) : (
                     <Panel className="overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div
+                            className="workspace-scroll-region"
+                            role="region"
+                            aria-label="Archived dispatches table scroll region"
+                            tabIndex={0}
+                        >
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
                                     <tr>

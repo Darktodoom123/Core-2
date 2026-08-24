@@ -142,7 +142,7 @@ export function OperationsOverviewDashboard(
     const canonicalRole = auth?.role ?? 'operations_manager';
 
     return (
-        <div>
+        <div className="workspace-width-contained">
             {/* Perspective Header */}
             <DashboardHeader
                 role={canonicalRole}
@@ -218,9 +218,9 @@ function DashboardHeader({
 
     return (
         <div className="border-b border-line bg-surface px-4 py-5 md:px-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                         <h1 className="text-xl font-bold tracking-tight text-ink md:text-2xl">
                             Operations overview
                         </h1>
@@ -238,7 +238,7 @@ function DashboardHeader({
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-3 lg:w-auto">
                     {/* Quick Action Button */}
                     {isSystemAdmin && canOpenUsers ? (
                         <Button
@@ -454,7 +454,7 @@ function OperationsManagerDashboardView({
                             <button
                                 type="button"
                                 onClick={() => setActionFilter('all')}
-                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                     actionFilter === 'all'
                                         ? 'bg-surface text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink'
@@ -466,7 +466,7 @@ function OperationsManagerDashboardView({
                                 <button
                                     type="button"
                                     onClick={() => setActionFilter('approvals')}
-                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                         actionFilter === 'approvals'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'
@@ -480,7 +480,7 @@ function OperationsManagerDashboardView({
                                 <button
                                     type="button"
                                     onClick={() => setActionFilter('assets')}
-                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                         actionFilter === 'assets'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'
@@ -494,7 +494,7 @@ function OperationsManagerDashboardView({
                                 <button
                                     type="button"
                                     onClick={() => setActionFilter('fuel')}
-                                    className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                         actionFilter === 'fuel'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'
@@ -563,7 +563,7 @@ function OperationsManagerDashboardView({
                             <button
                                 type="button"
                                 onClick={() => setJobView('all')}
-                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                     jobView === 'all'
                                         ? 'bg-surface text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink'
@@ -574,7 +574,7 @@ function OperationsManagerDashboardView({
                             <button
                                 type="button"
                                 onClick={() => setJobView('active')}
-                                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                     jobView === 'active'
                                         ? 'bg-surface text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink'
@@ -1129,7 +1129,7 @@ function DispatcherDashboardView({
                                 <button
                                     type="button"
                                     onClick={() => setJobView('all')}
-                                    className={`min-h-10 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                         jobView === 'all'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'
@@ -1140,7 +1140,7 @@ function DispatcherDashboardView({
                                 <button
                                     type="button"
                                     onClick={() => setJobView('active')}
-                                    className={`min-h-10 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
                                         jobView === 'active'
                                             ? 'bg-surface text-ink shadow-xs'
                                             : 'text-ink-soft hover:text-ink'

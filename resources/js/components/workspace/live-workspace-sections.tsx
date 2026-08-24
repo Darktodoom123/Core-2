@@ -3331,7 +3331,12 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                     </Panel>
                 ) : (
                     <Panel className="overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div
+                            className="workspace-scroll-region"
+                            role="region"
+                            aria-label="Users table scroll region"
+                            tabIndex={0}
+                        >
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
                                     <tr>
@@ -4467,7 +4472,12 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                     </Panel>
                 ) : (
                     <Panel className="overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div
+                            className="workspace-scroll-region"
+                            role="region"
+                            aria-label="Audit trail table scroll region"
+                            tabIndex={0}
+                        >
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
                                     <tr>
@@ -4700,7 +4710,12 @@ export function ResponsiveTable({
                     </dl>
                 ))}
             </div>
-            <div className="hidden overflow-x-auto md:block">
+            <div
+                className="workspace-scroll-region hidden md:block"
+                role="region"
+                aria-label="Responsive data table scroll region"
+                tabIndex={0}
+            >
                 <table className="w-full text-left text-sm">
                     <thead className="bg-surface-subtle text-ink-soft">
                         <tr>

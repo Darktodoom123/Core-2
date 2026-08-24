@@ -525,7 +525,12 @@ export function ScheduleBoardWeekView({
                         announce
                     />
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div
+                        className="workspace-scroll-region"
+                        role="region"
+                        aria-label="Weekly resource schedule scroll region"
+                        tabIndex={0}
+                    >
                         <div
                             className="min-w-[72rem]"
                             role="grid"

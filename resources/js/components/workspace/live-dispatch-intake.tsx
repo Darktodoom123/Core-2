@@ -158,7 +158,7 @@ export function LiveDispatchIntake({
                 className="direct-dispatch-view border-b border-line bg-surface px-4 py-5 md:px-6"
                 aria-labelledby="direct-dispatch-title"
             >
-                <div className="mx-auto max-w-7xl">
+                <div className="workspace-width-contained mx-auto max-w-7xl">
                     <DirectDispatchView
                         clients={clients}
                         capabilities={capabilities}
@@ -201,7 +201,7 @@ export function LiveDispatchIntake({
             className="border-b border-line bg-surface px-4 py-5 md:px-6"
             aria-labelledby="dispatch-intake-title"
         >
-            <div className="mx-auto max-w-7xl">
+            <div className="workspace-width-contained mx-auto max-w-7xl">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2
@@ -499,8 +499,8 @@ function ServiceIntakeSection({
                         multi-phase work requires.
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex rounded-lg border border-line bg-surface p-1">
+                <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
+                    <div className="flex max-w-full flex-wrap rounded-lg border border-line bg-surface p-1">
                         {canCreateRequest && (
                             <button
                                 type="button"
