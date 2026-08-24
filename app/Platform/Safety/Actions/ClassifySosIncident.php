@@ -26,7 +26,8 @@ final class ClassifySosIncident
             }
 
             $before = $incident->auditSnapshot();
-            $context = $this->context->resolve($actor, $incident->dispatch_job_id, $assetId);
+            $assetId ??= $incident->operational_asset_id;
+            $this->context->resolve($actor, $incident->dispatch_job_id, $assetId);
             if ($category === SosIncidentCategory::CriticalAssetMalfunction && $assetId === null) {
                 throw ValidationException::withMessages(['operational_asset_id' => 'A currently assigned asset is required for this category.']);
             }

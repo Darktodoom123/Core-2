@@ -15,6 +15,20 @@ final class TriggerSosIncidentRequest extends FormRequest
         if (! $this->filled('command_id') && $this->header('Idempotency-Key') !== null) {
             $this->merge(['command_id' => $this->header('Idempotency-Key')]);
         }
+
+        if (! $this->filled('worker_note') && $this->filled('note')) {
+            $this->merge(['worker_note' => $this->input('note')]);
+        }
+
+        $location = $this->input('location');
+        if (is_array($location)) {
+            $this->merge([
+                'latitude' => $location['latitude'] ?? $this->input('latitude'),
+                'longitude' => $location['longitude'] ?? $this->input('longitude'),
+                'accuracy_metres' => $location['accuracy_metres'] ?? $this->input('accuracy_metres'),
+            ]);
+        }
+
         $this->merge(['category' => $this->input('category', 'unclassified')]);
     }
 

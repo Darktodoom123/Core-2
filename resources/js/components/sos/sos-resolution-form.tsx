@@ -6,9 +6,12 @@ import { Button } from '@/components/ui';
 import type { SosIncidentViewModel } from '@/types/workspace';
 
 const RESOLUTION_OPTIONS = [
-    { value: 'assistance_provided', label: 'Assistance provided' },
-    { value: 'medical_response', label: 'Medical response coordinated' },
-    { value: 'site_secured', label: 'Site secured' },
+    { value: 'worker_safe', label: 'Worker safe' },
+    { value: 'medical_assistance', label: 'Medical assistance' },
+    {
+        value: 'emergency_services_contacted',
+        label: 'Emergency services contacted',
+    },
     { value: 'asset_secured', label: 'Asset secured' },
     { value: 'other', label: 'Other outcome' },
 ] as const;
@@ -73,7 +76,7 @@ export function SosResolutionForm({ incident }: SosResolutionFormProps) {
         setError(null);
         router.post(
             `/operations/sos-incidents/${incident.id}/cancel`,
-            { reason: cancellationReason.trim() },
+            { cancellation_reason: cancellationReason.trim() },
             {
                 preserveScroll: true,
                 onError: () =>

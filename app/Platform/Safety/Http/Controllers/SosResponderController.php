@@ -13,6 +13,7 @@ use App\Platform\Safety\Http\Requests\ResolveSosIncidentRequest;
 use App\Platform\Safety\Http\Resources\SosIncidentResource;
 use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -33,14 +34,14 @@ final class SosResponderController extends Controller
         return response()->json(['data' => new SosIncidentResource($sosIncident->load(['reporter', 'dispatchJob', 'operationalAsset', 'acknowledgedBy']))]);
     }
 
-    public function acknowledge(AcknowledgeSosIncidentRequest $request, SosIncident $sosIncident, AcknowledgeSosIncident $action): JsonResponse
+    public function acknowledge(AcknowledgeSosIncidentRequest $request, SosIncident $sosIncident, AcknowledgeSosIncident $action): JsonResponse|RedirectResponse
     {
         $updated = $action->handle($request->user(), $sosIncident)->load(['dispatchJob', 'operationalAsset', 'acknowledgedBy']);
 
-        return response()->json(['data' => new SosIncidentResource($updated)]);
+        return $this->respond($request, $updated, 'Emergency acknowledged.');
     }
 
-    public function resolve(ResolveSosIncidentRequest $request, SosIncident $sosIncident, ResolveSosIncident $action): JsonResponse
+    public function resolve(ResolveSosIncidentRequest $request, SosIncident $sosIncident, ResolveSosIncident $action): JsonResponse|RedirectResponse
     {
         $updated = $action->handle(
             $request->user(),
@@ -49,14 +50,26 @@ final class SosResponderController extends Controller
             (string) $request->validated('resolution_notes'),
         )->load(['dispatchJob', 'operationalAsset', 'acknowledgedBy']);
 
-        return response()->json(['data' => new SosIncidentResource($updated)]);
+        return $this->respond($request, $updated, 'Emergency resolved.');
     }
 
-    public function cancel(CancelSosIncidentRequest $request, SosIncident $sosIncident, CancelSosIncident $action): JsonResponse
+    public function cancel(CancelSosIncidentRequest $request, SosIncident $sosIncident, CancelSosIncident $action): JsonResponse|RedirectResponse
     {
         $updated = $action->handle($request->user(), $sosIncident, (string) $request->validated('cancellation_reason'))
             ->load(['dispatchJob', 'operationalAsset', 'acknowledgedBy']);
 
-        return response()->json(['data' => new SosIncidentResource($updated)]);
+        return $this->respond($request, $updated, 'False alarm recorded.');
+    }
+
+    private function respond(Request $request, SosIncident $incident, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->wantsJson()) {
+            return response()->json(['data' => new SosIncidentResource($incident)]);
+        }
+
+        return redirect()->back()->with('flash', [
+            'type' => 'success',
+            'message' => $message,
+        ]);
     }
 }

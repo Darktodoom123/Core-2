@@ -23,9 +23,11 @@ use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -588,13 +590,17 @@ final class OperationsWorkspaceController extends Controller
             return [];
         }
 
-        /** @var Collection<int, object> $incidents */
+        if (! Schema::hasTable('sos_incidents')) {
+            return [];
+        }
+
+        /** @var Collection<int, Model> $incidents */
         $incidents = $modelClass::query()
             ->whereIn('status', ['active', 'escalated', 'acknowledged'])
             ->with([
                 'reporter:id,name,phone',
                 'dispatchJob:id,reference,title,site',
-                'asset:id,code,name',
+                'operationalAsset:id,code,name',
                 'acknowledgedBy:id,name,phone',
                 'resolvedBy:id,name,phone',
                 'deliveryAttempts',

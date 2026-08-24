@@ -79,12 +79,12 @@ describe('Emergency SOS sheet', () => {
 
         const button = view.getByTestId('activate-emergency-sos');
         fireEvent(button, 'pressIn');
-        await act(() => {
+        await act(async () => {
             jest.advanceTimersByTime(1_999);
         });
         expect(onActivate).not.toHaveBeenCalled();
 
-        await act(() => {
+        await act(async () => {
             jest.advanceTimersByTime(1);
         });
 

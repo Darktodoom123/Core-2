@@ -28,6 +28,7 @@ use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Models\OperationalAsset;
 use BackedEnum;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -654,17 +655,17 @@ final class OperationsWorkspaceViewModel
     }
 
     /**
-     * @param  Collection<int, object>  $incidents
+     * @param  Collection<int, Model>  $incidents
      * @return array<int, array<string, mixed>>
      */
     public static function activeSosIncidents(Collection $incidents, bool $canRespond): array
     {
-        return $incidents->map(static function (object $incident) use ($canRespond): array {
+        return $incidents->map(static function (Model $incident) use ($canRespond): array {
             $reporter = self::sosRelation($incident, 'reporter');
             $acknowledgedBy = self::sosRelation($incident, 'acknowledgedBy');
             $resolvedBy = self::sosRelation($incident, 'resolvedBy');
             $dispatch = self::sosRelation($incident, 'dispatchJob');
-            $asset = self::sosRelation($incident, 'asset');
+            $asset = self::sosRelation($incident, 'operationalAsset');
             $location = self::sosRelation($incident, 'location');
 
             $status = self::sosEnumValue($incident, 'status');
@@ -714,18 +715,19 @@ final class OperationsWorkspaceViewModel
         })->values()->all();
     }
 
-    private static function sosRelation(object $model, string $relation): ?object
+    private static function sosRelation(Model $model, string $relation): ?Model
     {
-        if (! method_exists($model, 'relationLoaded') || ! $model->relationLoaded($relation)) {
+        if (! $model->relationLoaded($relation)) {
             return null;
         }
 
         $value = $model->getRelationValue($relation);
 
-        return is_object($value) ? $value : null;
+        return $value instanceof Model ? $value : null;
     }
 
-    private static function sosPerson(?object $person): array
+    /** @return array{id: int, name: string, phone: mixed} */
+    private static function sosPerson(?Model $person): array
     {
         return [
             'id' => $person === null ? 0 : (int) $person->getKey(),
@@ -734,14 +736,14 @@ final class OperationsWorkspaceViewModel
         ];
     }
 
-    private static function sosEnumValue(object $model, string $attribute): string
+    private static function sosEnumValue(Model $model, string $attribute): string
     {
         $value = $model->getAttribute($attribute);
 
         return $value instanceof BackedEnum ? (string) $value->value : (string) $value;
     }
 
-    private static function sosEnumLabel(object $model, string $attribute, string $value): string
+    private static function sosEnumLabel(Model $model, string $attribute, string $value): string
     {
         $enum = $model->getAttribute($attribute);
 
@@ -750,7 +752,7 @@ final class OperationsWorkspaceViewModel
             : str_replace('_', ' ', ucfirst($value));
     }
 
-    private static function sosDate(object $model, string $attribute): ?string
+    private static function sosDate(Model $model, string $attribute): ?string
     {
         $value = $model->getAttribute($attribute);
 
@@ -758,7 +760,7 @@ final class OperationsWorkspaceViewModel
     }
 
     /** @return array<string, mixed>|null */
-    private static function sosLocation(object $model): ?array
+    private static function sosLocation(Model $model): ?array
     {
         $latitude = $model->getAttribute('latitude');
         $longitude = $model->getAttribute('longitude');
@@ -782,9 +784,9 @@ final class OperationsWorkspaceViewModel
     }
 
     /** @return array<int, array<string, mixed>> */
-    private static function sosDeliveryAttempts(object $incident): array
+    private static function sosDeliveryAttempts(Model $incident): array
     {
-        if (! method_exists($incident, 'relationLoaded') || ! $incident->relationLoaded('deliveryAttempts')) {
+        if (! $incident->relationLoaded('deliveryAttempts')) {
             return [];
         }
 
@@ -794,7 +796,8 @@ final class OperationsWorkspaceViewModel
             return [];
         }
 
-        return $attempts->map(static fn (object $attempt): array => [
+        /** @var Collection<int, Model> $attempts */
+        return $attempts->map(static fn (Model $attempt): array => [
             'channel' => (string) $attempt->getAttribute('channel'),
             'target' => (string) ($attempt->getAttribute('target_type') ?? 'responder'),
             'status' => (string) ($attempt->getAttribute('status') ?? $attempt->getAttribute('state')),

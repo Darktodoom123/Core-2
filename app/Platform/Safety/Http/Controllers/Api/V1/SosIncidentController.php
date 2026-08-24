@@ -101,7 +101,9 @@ final class SosIncidentController extends Controller
         return response()->json(['data' => [
             'enabled' => (bool) config('sos.enabled'),
             'mobile_freshness_seconds' => (int) config('sos.mobile_freshness_seconds'),
+            'automatic_retry_window_minutes' => (int) ceil(((int) config('sos.mobile_freshness_seconds')) / 60),
             'local_emergency_actions' => $actions,
+            'actions' => $actions,
             'automatic_public_authority_contact' => false,
         ]]);
     }
