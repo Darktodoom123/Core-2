@@ -1,3 +1,4 @@
+import type { CancelToken } from '@inertiajs/core';
 import { router } from '@inertiajs/react';
 import { Search, UserRound } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,12 +16,14 @@ import {
 
 export function PersonnelCandidates({
     candidates,
+    onCandidatesSeen,
     selectedIds,
     canAssign,
     onToggle,
     page,
 }: {
     candidates: PersonnelCandidateViewModel[];
+    onCandidatesSeen: (candidates: PersonnelCandidateViewModel[]) => void;
     selectedIds: number[];
     canAssign: boolean;
     onToggle: (candidate: PersonnelCandidateViewModel) => void;
@@ -33,6 +36,16 @@ export function PersonnelCandidates({
     >('all');
     const [currentPage, setCurrentPage] = useState(1);
     const initialLoad = useRef(true);
+    const candidateVisit = useRef<{
+        id: number;
+        cancel: CancelToken['cancel'];
+    } | null>(null);
+    const candidateVisitSequence = useRef(0);
+
+    const cancelCandidateVisit = React.useCallback(() => {
+        candidateVisit.current?.cancel();
+        candidateVisit.current = null;
+    }, []);
 
     const groups: Array<{
         type: PersonnelCandidateViewModel['assignment_type'];
@@ -42,6 +55,10 @@ export function PersonnelCandidates({
         { type: 'crane_operator', label: 'Crane operators' },
         { type: 'field_technician', label: 'Field technicians' },
     ];
+
+    useEffect(() => {
+        onCandidatesSeen(candidates);
+    }, [candidates, onCandidatesSeen]);
 
     const eligibleCount = candidates.filter((c) => c.eligible).length;
 
@@ -53,7 +70,9 @@ export function PersonnelCandidates({
         }
 
         const timeout = window.setTimeout(() => {
-            router.cancelAll();
+            cancelCandidateVisit();
+            const visitId = ++candidateVisitSequence.current;
+
             router.reload({
                 only: ['personnel_candidates'],
                 data: {
@@ -64,12 +83,33 @@ export function PersonnelCandidates({
                     per_page: 25,
                     eligible_only: showEligibleOnly,
                 },
+                preserveUrl: true,
                 preserveErrors: true,
+                onCancelToken: (cancelToken) => {
+                    candidateVisit.current = {
+                        id: visitId,
+                        cancel: cancelToken.cancel,
+                    };
+                },
+                onFinish: () => {
+                    if (candidateVisit.current?.id === visitId) {
+                        candidateVisit.current = null;
+                    }
+                },
             });
         }, 275);
 
-        return () => window.clearTimeout(timeout);
-    }, [currentPage, searchQuery, showEligibleOnly, typeFilter]);
+        return () => {
+            window.clearTimeout(timeout);
+            cancelCandidateVisit();
+        };
+    }, [
+        cancelCandidateVisit,
+        currentPage,
+        searchQuery,
+        showEligibleOnly,
+        typeFilter,
+    ]);
 
     return (
         <div className="space-y-4">

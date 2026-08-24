@@ -86,11 +86,20 @@ export default function DispatchDetail({
         setActiveStep,
         selectedCount,
         hasPendingSelections,
+        selectedPersonnelCandidates,
+        selectedAssetCandidates,
+        personnelCandidatesForConsumers,
+        assetCandidatesForConsumers,
+        rememberPersonnelCandidates,
+        rememberAssetCandidates,
         togglePersonnel,
         toggleAsset,
         submit,
         confirmLeave,
-    } = useDispatchAssignment(job.id);
+    } = useDispatchAssignment(job.id, {
+        personnel: personnelCandidates,
+        assets: assetCandidates,
+    });
 
     const assignmentSaved = isAssignmentSuccessFlash(flash);
     const hasCurrentAssignments =
@@ -298,6 +307,7 @@ export default function DispatchDetail({
                                                                         router.reload(
                                                                             {
                                                                                 only: reloadCandidateProps,
+                                                                                preserveUrl: true,
                                                                                 preserveErrors: true,
                                                                             },
                                                                         )
@@ -380,6 +390,9 @@ export default function DispatchDetail({
                                                                 candidates={
                                                                     personnelCandidates
                                                                 }
+                                                                onCandidatesSeen={
+                                                                    rememberPersonnelCandidates
+                                                                }
                                                                 selectedIds={form.data.personnel.map(
                                                                     (
                                                                         assignment,
@@ -432,6 +445,9 @@ export default function DispatchDetail({
                                                             <AssetCandidates
                                                                 candidates={
                                                                     assetCandidates
+                                                                }
+                                                                onCandidatesSeen={
+                                                                    rememberAssetCandidates
                                                                 }
                                                                 selectedIds={form.data.assets.map(
                                                                     (
@@ -495,6 +511,7 @@ export default function DispatchDetail({
                                                         onRetry={() =>
                                                             router.reload({
                                                                 only: reloadCandidateProps,
+                                                                preserveUrl: true,
                                                                 preserveErrors: true,
                                                             })
                                                         }
@@ -630,22 +647,8 @@ export default function DispatchDetail({
                                                 ? 'assignment-selection-form'
                                                 : undefined
                                         }
-                                        personnel={personnelCandidates.filter(
-                                            (candidate) =>
-                                                form.data.personnel.some(
-                                                    (assignment) =>
-                                                        assignment.user_id ===
-                                                        candidate.id,
-                                                ),
-                                        )}
-                                        assets={assetCandidates.filter(
-                                            (candidate) =>
-                                                form.data.assets.some(
-                                                    (assignment) =>
-                                                        assignment.operational_asset_id ===
-                                                        candidate.id,
-                                                ),
-                                        )}
+                                        personnel={selectedPersonnelCandidates}
+                                        assets={selectedAssetCandidates}
                                         selectedCount={selectedCount}
                                         processing={form.processing}
                                         canAssign={
@@ -699,9 +702,11 @@ export default function DispatchDetail({
                                         }
                                         pendingSelectionCount={selectedCount}
                                         personnelCandidates={
-                                            personnelCandidates
+                                            personnelCandidatesForConsumers
                                         }
-                                        assetCandidates={assetCandidates}
+                                        assetCandidates={
+                                            assetCandidatesForConsumers
+                                        }
                                     />
                                     {capabilities.activate && (
                                         <ActivationPanel
