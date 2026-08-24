@@ -367,4 +367,92 @@ describe('CommandOutboxManager', () => {
         await outbox.discardCommand(command.id);
         assert.equal(outbox.getCommand(command.id), undefined);
     });
+
+    test('processes an emergency activation ahead of a failed ordinary job command', async () => {
+        const outbox = await createOutbox(21);
+        await outbox.enqueueTransitionStatus(88, 'working', 1);
+        const emergency = await outbox.enqueueActivateSos({
+            category: 'unclassified',
+            device_activated_at: new Date().toISOString(),
+            dispatch_job_id: 88,
+            operational_asset_id: null,
+            location: null,
+        });
+        const calls: string[] = [];
+        const apiClient = {
+            activateSosIncident: async (
+                _payload: unknown,
+                commandId: string,
+            ) => {
+                calls.push(`sos:${commandId}`);
+
+                return { id: 'sos-1', delivery_state: 'delivered' };
+            },
+            transitionStatus: async () => {
+                calls.push('ordinary');
+
+                throw new TypeError('Network unavailable');
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+
+        assert.equal(calls[0], `sos:${emergency.id}`);
+        assert.equal(emergency.state, 'completed');
+    });
+
+    test('retains the SOS UUID for retry and expires without a stale delivery attempt', async () => {
+        let currentTime = new Date('2026-08-01T00:00:00.000Z');
+        const outbox = await createOutbox(22, {
+            now: () => currentTime,
+            baseRetryDelayMs: 1_000,
+        });
+        const emergency = await outbox.enqueueActivateSos({
+            category: 'unclassified',
+            device_activated_at: currentTime.toISOString(),
+            location: null,
+        });
+        const ids: string[] = [];
+        const apiClient = {
+            activateSosIncident: async (
+                _payload: unknown,
+                commandId: string,
+            ) => {
+                ids.push(commandId);
+
+                throw new TypeError('Network unavailable');
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+        assert.equal(emergency.state, 'queued');
+        assert.equal(emergency.attempts, 1);
+        assert.deepEqual(ids, [emergency.id]);
+
+        currentTime = new Date('2026-08-01T00:15:00.000Z');
+        await outbox.processQueue(apiClient);
+
+        assert.equal(emergency.state, 'expired');
+        assert.equal(emergency.error?.code, 'SOS_EXPIRED');
+        assert.deepEqual(ids, [emergency.id]);
+    });
+
+    test('restores a pending emergency command after a cold restart with actor isolation', async () => {
+        const repository = new MemoryOutboxRepository();
+        const firstProcess = await createOutbox(31, { repository });
+        const emergency = await firstProcess.enqueueActivateSos({
+            category: 'other_immediate_danger',
+            device_activated_at: '2026-08-01T00:00:00.000Z',
+            location: null,
+        });
+        firstProcess.deactivateActor();
+
+        const otherActor = await createOutbox(32, { repository });
+        assert.deepEqual(otherActor.getCommands(), []);
+        otherActor.deactivateActor();
+
+        const restarted = await createOutbox(31, { repository });
+        assert.equal(restarted.getCommand(emergency.id)?.id, emergency.id);
+        assert.equal(restarted.getCommand(emergency.id)?.priority, 'emergency');
+    });
 });

@@ -7,9 +7,11 @@ import type {
     PayloadHasher,
 } from '../storage/outboxRepository';
 import type {
+    ActivateSosIncidentPayload,
     DispatchJob,
     LocationSharePayload,
     OutboxCommand,
+    OutboxCommandPriority,
     OutboxCommandType,
 } from '../types/index';
 import type { FieldApiClient } from './apiClient';
@@ -35,6 +37,8 @@ export interface CommandOutboxOptions {
 
 const completedRetentionMs = 8 * 60 * 60 * 1000;
 const maxRetryDelayMs = 5 * 60 * 1000;
+export const sosRetryWindowMs = 15 * 60 * 1000;
+const sosMaxRetryDelayMs = 30 * 1000;
 
 export async function createCommandId(): Promise<string> {
     if (
@@ -65,6 +69,10 @@ export async function createCommandId(): Promise<string> {
 }
 
 function commandScope(command: OutboxCommand): string {
+    if (command.type === 'activate_sos') {
+        return `sos:${command.id}`;
+    }
+
     return command.jobId === null || command.jobId === undefined
         ? `command:${command.id}`
         : `job:${command.jobId}`;
@@ -219,6 +227,10 @@ export class CommandOutboxManager {
         assignmentId: number | null | undefined,
         payload: Record<string, unknown>,
         expectedVersion?: number | null,
+        options?: {
+            priority?: OutboxCommandPriority;
+            expiresAt?: string | null;
+        },
     ): Promise<OutboxCommand> {
         const actorId = this.requireActor();
         const payloadHash = await this.payloadHash(
@@ -257,6 +269,8 @@ export class CommandOutboxManager {
             payload,
             payloadHash,
             expectedVersion: expectedVersion ?? null,
+            priority: options?.priority ?? 'ordinary',
+            expiresAt: options?.expiresAt ?? null,
             state: 'queued',
             createdAt: now,
             updatedAt: now,
@@ -317,6 +331,27 @@ export class CommandOutboxManager {
         );
     }
 
+    public enqueueActivateSos(
+        payload: ActivateSosIncidentPayload,
+    ): Promise<OutboxCommand> {
+        const activatedAt = Date.parse(payload.device_activated_at);
+        const baseTime = Number.isNaN(activatedAt)
+            ? this.now().getTime()
+            : activatedAt;
+
+        return this.enqueue(
+            'activate_sos',
+            null,
+            null,
+            payload as unknown as Record<string, unknown>,
+            null,
+            {
+                priority: 'emergency',
+                expiresAt: new Date(baseTime + sosRetryWindowMs).toISOString(),
+            },
+        );
+    }
+
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
@@ -341,8 +376,36 @@ export class CommandOutboxManager {
         const blockedScopes = new Set<string>();
 
         try {
-            for (const command of this.getCommands()) {
+            for (const command of this.getCommands().sort((left, right) => {
+                const leftPriority = left.priority === 'emergency' ? 0 : 1;
+                const rightPriority = right.priority === 'emergency' ? 0 : 1;
+
+                return (
+                    leftPriority - rightPriority ||
+                    Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
+                    left.id.localeCompare(right.id)
+                );
+            })) {
                 if (command.state !== 'queued') {
+                    continue;
+                }
+
+                if (
+                    command.type === 'activate_sos' &&
+                    command.expiresAt &&
+                    Date.parse(command.expiresAt) <= this.now().getTime()
+                ) {
+                    command.state = 'expired';
+                    command.nextAttemptAt = null;
+                    command.error = {
+                        code: 'SOS_EXPIRED',
+                        message:
+                            'Expired — not delivered. Start a new SOS if help is still needed.',
+                        retryable: false,
+                    };
+                    await this.persist(command);
+                    result.failed += 1;
+
                     continue;
                 }
 
@@ -402,6 +465,7 @@ export class CommandOutboxManager {
             command.state === 'completed' ||
             command.state === 'conflict' ||
             command.state === 'syncing' ||
+            command.state === 'expired' ||
             (command.state === 'failed' && command.error?.retryable !== true)
         ) {
             return result;
@@ -496,9 +560,14 @@ export class CommandOutboxManager {
                     command.expectedVersion ?? 1,
                     command.id,
                 );
-            } else {
+            } else if (command.type === 'share_location') {
                 response = await apiClient.shareLocation(
                     command.payload as unknown as LocationSharePayload,
+                    command.id,
+                );
+            } else if (command.type === 'activate_sos') {
+                response = await apiClient.activateSosIncident(
+                    command.payload as unknown as ActivateSosIncidentPayload,
                     command.id,
                 );
             }
@@ -606,6 +675,25 @@ export class CommandOutboxManager {
         command: OutboxCommand,
         result: OutboxProcessResult,
     ): Promise<void> {
+        if (
+            command.type === 'activate_sos' &&
+            command.expiresAt &&
+            Date.parse(command.expiresAt) <= this.now().getTime()
+        ) {
+            command.state = 'expired';
+            command.nextAttemptAt = null;
+            command.error = {
+                code: 'SOS_EXPIRED',
+                message:
+                    'Expired — not delivered. Start a new SOS if help is still needed.',
+                retryable: false,
+            };
+            result.failed += 1;
+            await this.persist(command);
+
+            return;
+        }
+
         if (command.attempts >= this.maxAutomaticAttempts) {
             command.state = 'failed';
             command.nextAttemptAt = null;
@@ -619,7 +707,9 @@ export class CommandOutboxManager {
         } else {
             const delay = Math.min(
                 this.baseRetryDelayMs * 2 ** (command.attempts - 1),
-                maxRetryDelayMs,
+                command.type === 'activate_sos'
+                    ? sosMaxRetryDelayMs
+                    : maxRetryDelayMs,
             );
             command.state = 'queued';
             command.nextAttemptAt = new Date(

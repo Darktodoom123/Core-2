@@ -79,4 +79,62 @@ describe('FieldApiClient', () => {
             assert.equal((err.serverSnapshot as any).version, 5);
         }
     });
+
+    test('sends the typed SOS activation contract with idempotency headers', async () => {
+        let captured: {
+            body?: Record<string, unknown>;
+            headers?: Headers;
+            method?: string;
+            url?: string;
+        } = {};
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000/',
+            getToken: () => 'token',
+            fetchFn: async (input, init) => {
+                captured = {
+                    body: JSON.parse(String(init?.body)),
+                    headers: new Headers(init?.headers),
+                    method: init?.method,
+                    url: input.toString(),
+                };
+
+                return new Response(
+                    JSON.stringify({
+                        data: {
+                            id: 'sos-123',
+                            category: 'unclassified',
+                            status: 'active',
+                            delivery_state: 'delivered',
+                            device_activated_at: '2026-08-01T00:00:00.000Z',
+                        },
+                    }),
+                    { status: 201 },
+                );
+            },
+        });
+
+        const incident = await client.activateSosIncident(
+            {
+                category: 'unclassified',
+                device_activated_at: '2026-08-01T00:00:00.000Z',
+                dispatch_job_id: 9,
+                operational_asset_id: 44,
+                location: null,
+            },
+            'sos-command-123',
+        );
+
+        assert.equal(incident.id, 'sos-123');
+        assert.equal(captured.method, 'POST');
+        assert.equal(
+            captured.url,
+            'http://localhost:8000/api/v1/sos-incidents',
+        );
+        assert.equal(captured.body?.command_id, 'sos-command-123');
+        assert.equal(captured.body?.dispatch_job_id, 9);
+        assert.equal(
+            captured.headers?.get('idempotency-key'),
+            'sos-command-123',
+        );
+    });
 });

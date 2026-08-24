@@ -29,7 +29,10 @@ import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { ApiClientError } from '../services/apiClient';
-import { CommandOutboxManager } from '../services/commandOutbox';
+import {
+    CommandOutboxManager,
+    createCommandId,
+} from '../services/commandOutbox';
 import { LocationSharingService } from '../services/locationService';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
 import type {
@@ -40,11 +43,63 @@ import type {
     DispatchJob,
     DispatchStatus,
     OutboxCommand,
+    ActivateSosIncidentPayload,
+    SosConfiguration,
+    SosDeliveryState,
+    SosIncident,
+    SosIncidentCategory,
     ShiftInfo,
     ShiftStatus,
 } from '../types/index';
+import { EmergencySosButton, EmergencySosSheet } from '../components/sos';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
+
+const SOS_LOCATION_TIMEOUT_MS = 750;
+
+async function captureBoundedEmergencyLocation(
+    getLocation: () => Promise<{
+        latitude: number;
+        longitude: number;
+        accuracyMetres?: number | null;
+    }>,
+): Promise<{
+    latitude: number;
+    longitude: number;
+    accuracy_metres?: number | null;
+    captured_at: string;
+} | null> {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+        const location = await Promise.race([
+            getLocation(),
+            new Promise<null>((resolve) => {
+                timeout = setTimeout(
+                    () => resolve(null),
+                    SOS_LOCATION_TIMEOUT_MS,
+                );
+            }),
+        ]);
+
+        if (!location) {
+            return null;
+        }
+
+        return {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy_metres: location.accuracyMetres ?? null,
+            captured_at: new Date().toISOString(),
+        };
+    } catch {
+        return null;
+    } finally {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+    }
+}
 
 interface ErrorBoundaryProps {
     children: ReactNode;
@@ -137,6 +192,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const [isOnline, setIsOnline] = useState<boolean | null>(null);
     const [isOutboxReady, setIsOutboxReady] = useState(false);
     const [locationSharingActive, setLocationSharingActive] = useState(true);
+    const [sosSheetOpen, setSosSheetOpen] = useState(false);
+    const [activeSosIncident, setActiveSosIncident] =
+        useState<SosIncident | null>(null);
+    const [sosConfiguration, setSosConfiguration] = useState<SosConfiguration>({
+        automatic_retry_window_minutes: 15,
+        actions: [],
+    });
+    const [isSosActivating, setIsSosActivating] = useState(false);
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
         startedAt: '08:00 AM',
@@ -167,6 +230,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [],
     );
 
+    const refreshActiveSosIncident = useCallback(async () => {
+        if (status !== 'authenticated') {
+            return;
+        }
+
+        try {
+            setActiveSosIncident(await apiClient.fetchActiveSosIncident());
+        } catch {
+            // SOS refresh is best-effort. The local delivery state remains
+            // visible until the server can be reached again.
+        }
+    }, [apiClient, status]);
+
     useEffect(
         () => commandOutbox.subscribe(setOutboxCommands),
         [commandOutbox],
@@ -194,6 +270,39 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             unsubscribe();
         };
     }, [connectivity]);
+
+    useEffect(() => {
+        if (status !== 'authenticated' || !user) {
+            setActiveSosIncident(null);
+
+            return;
+        }
+
+        void refreshActiveSosIncident();
+        void apiClient
+            .fetchSosConfiguration()
+            .then((configuration) => setSosConfiguration(configuration))
+            .catch(() => undefined);
+    }, [apiClient, refreshActiveSosIncident, status, user]);
+
+    useEffect(() => {
+        if (
+            status !== 'authenticated' ||
+            !activeSosIncident ||
+            activeSosIncident.status === 'resolved' ||
+            activeSosIncident.status === 'cancelled'
+        ) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            if (isOnline === true) {
+                void refreshActiveSosIncident();
+            }
+        }, 30_000);
+
+        return () => clearInterval(interval);
+    }, [activeSosIncident, isOnline, refreshActiveSosIncident, status]);
 
     useEffect(() => {
         const reconnected =
@@ -270,6 +379,93 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         logout,
         status,
     ]);
+
+    const handleActivateSos = useCallback(
+        async (payload: ActivateSosIncidentPayload) => {
+            setIsSosActivating(true);
+
+            try {
+                const command = await commandOutbox.enqueueActivateSos(payload);
+
+                // Start the server attempt before location enrichment. GPS is
+                // useful context, never a prerequisite for an emergency alert.
+                const processPromise =
+                    isOnline === true
+                        ? commandOutbox.processQueue(apiClient)
+                        : Promise.resolve(null);
+                const locationPromise =
+                    captureBoundedEmergencyLocation(getCurrentLocation);
+                const result = await processPromise;
+
+                if (result?.requiresAuthentication) {
+                    await logout();
+
+                    return;
+                }
+
+                if (result && result.completed > 0) {
+                    const incident = await apiClient.fetchActiveSosIncident();
+                    setActiveSosIncident(incident);
+
+                    const location = await locationPromise;
+
+                    if (incident && location) {
+                        try {
+                            setActiveSosIncident(
+                                await apiClient.updateSosLocation(
+                                    incident.id,
+                                    location,
+                                    command.id,
+                                ),
+                            );
+                        } catch {
+                            // Delivery remains truthful; an optional location
+                            // enrichment failure does not undo the alert.
+                        }
+                    }
+                }
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Emergency SOS could not be saved on this device.',
+                );
+            } finally {
+                setIsSosActivating(false);
+            }
+        },
+        [
+            apiClient,
+            commandOutbox,
+            getCurrentLocation,
+            handleRequestFailure,
+            isOnline,
+            logout,
+        ],
+    );
+
+    const handleClassifySos = useCallback(
+        async (category: SosIncidentCategory) => {
+            if (!activeSosIncident) {
+                return;
+            }
+
+            try {
+                setActiveSosIncident(
+                    await apiClient.classifySosIncident(
+                        activeSosIncident.id,
+                        category,
+                        await createCommandId(),
+                    ),
+                );
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'SOS classification could not be saved. The alert remains active.',
+                );
+            }
+        },
+        [activeSosIncident, apiClient, handleRequestFailure],
+    );
 
     useEffect(() => {
         let active = true;
@@ -614,6 +810,32 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     }
 
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
+    const latestSosCommand = outboxCommands
+        .filter((command) => command.type === 'activate_sos')
+        .sort((left, right) =>
+            right.createdAt.localeCompare(left.createdAt),
+        )[0];
+    const sosDeliveryState: SosDeliveryState = activeSosIncident
+        ? activeSosIncident.delivery_state
+        : isSosActivating
+          ? 'sending'
+          : latestSosCommand?.state === 'completed'
+            ? 'delivered'
+            : latestSosCommand?.state === 'expired' ||
+                latestSosCommand?.error?.code === 'SOS_EXPIRED'
+              ? 'expired'
+              : latestSosCommand?.state === 'queued' ||
+                  latestSosCommand?.state === 'syncing' ||
+                  latestSosCommand?.state === 'failed'
+                ? isOnline === false
+                    ? 'not_delivered_offline'
+                    : latestSosCommand?.error?.code ===
+                        'NETWORK_RETRY_SCHEDULED'
+                      ? 'retrying'
+                      : 'sending'
+                : 'preparing';
+    const emergencyActions =
+        activeSosIncident?.available_actions ?? sosConfiguration.actions;
 
     return (
         <ErrorBoundary>
@@ -690,6 +912,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         )}
                     </View>
                 </View>
+                <View style={styles.sosAffordance}>
+                    <EmergencySosButton onPress={() => setSosSheetOpen(true)} />
+                </View>
+                <EmergencySosSheet
+                    actions={emergencyActions}
+                    activeIncident={activeSosIncident}
+                    deliveryState={sosDeliveryState}
+                    isOnline={isOnline}
+                    jobs={jobs}
+                    onActivate={handleActivateSos}
+                    onClassify={handleClassifySos}
+                    onClose={() => setSosSheetOpen(false)}
+                    visible={sosSheetOpen}
+                />
             </SafeAreaView>
         </ErrorBoundary>
     );
@@ -702,6 +938,11 @@ const styles = StyleSheet.create({
     },
     appShell: {
         flex: 1,
+    },
+    sosAffordance: {
+        bottom: 88,
+        position: 'absolute',
+        right: 16,
     },
     mainContent: {
         flex: 1,
