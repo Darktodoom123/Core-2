@@ -28,6 +28,8 @@ export type IconName =
     | 'file-text'
     | 'close'
     | 'power'
+    | 'phone'
+    | 'message'
     | 'map'
     | 'list'
     | 'flag'
@@ -168,6 +170,12 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="close" size={size} color={color} />;
         case 'power':
             return <Ionicons name="power-outline" size={size} color={color} />;
+        case 'phone':
+            return <Ionicons name="call-outline" size={size} color={color} />;
+        case 'message':
+            return (
+                <Ionicons name="chatbubble-outline" size={size} color={color} />
+            );
         default:
             return (
                 <Ionicons

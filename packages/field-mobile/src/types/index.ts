@@ -114,11 +114,107 @@ export interface DispatchJob {
     capabilities: Capabilities;
 }
 
+export type SosIncidentCategory =
+    | 'unclassified'
+    | 'vehicular_accident'
+    | 'site_accident'
+    | 'critical_asset_malfunction'
+    | 'other_immediate_danger';
+
+export type SosIncidentStatus =
+    'active' | 'acknowledged' | 'escalated' | 'resolved' | 'cancelled';
+
+export type SosDeliveryState =
+    | 'preparing'
+    | 'sending'
+    | 'delivered'
+    | 'acknowledged'
+    | 'escalated'
+    | 'not_delivered_offline'
+    | 'retrying'
+    | 'expired'
+    | 'resolved'
+    | 'cancelled';
+
+export interface SosLocationSnapshot {
+    latitude: number;
+    longitude: number;
+    accuracy_metres?: number | null;
+    captured_at: string;
+}
+
+export interface SosContextSelection {
+    dispatch_job_id?: number | null;
+    operational_asset_id?: number | null;
+}
+
+export type SosEmergencyActionKind = 'call' | 'sms' | 'local_emergency_service';
+
+export interface SosEmergencyAction {
+    kind: SosEmergencyActionKind;
+    label: string;
+    uri: string;
+    hint?: string | null;
+}
+
+export interface SosConfiguration {
+    automatic_retry_window_minutes: number;
+    actions: SosEmergencyAction[];
+}
+
+export interface SosIncidentResponderSummary {
+    name?: string | null;
+    acknowledged_at?: string | null;
+}
+
+export interface SosIncident {
+    id: string;
+    category: SosIncidentCategory;
+    status: SosIncidentStatus;
+    delivery_state: SosDeliveryState;
+    device_activated_at: string;
+    received_at?: string | null;
+    escalation_due_at?: string | null;
+    acknowledged_at?: string | null;
+    escalated_at?: string | null;
+    resolved_at?: string | null;
+    cancelled_at?: string | null;
+    dispatch?: {
+        id: number;
+        reference: string;
+        label?: string | null;
+    } | null;
+    asset?: {
+        id: number;
+        code: string;
+        label?: string | null;
+    } | null;
+    location?: SosLocationSnapshot | null;
+    responder?: SosIncidentResponderSummary | null;
+    available_actions?: SosEmergencyAction[];
+}
+
+export interface ActivateSosIncidentPayload extends SosContextSelection {
+    category: SosIncidentCategory;
+    device_activated_at: string;
+    note?: string | null;
+    location?: SosLocationSnapshot | null;
+}
+
+export interface SosCommandPayload extends ActivateSosIncidentPayload {
+    command_id?: string;
+}
+
 export type OutboxCommandType =
-    'respond_assignment' | 'transition_status' | 'share_location';
+    | 'respond_assignment'
+    | 'transition_status'
+    | 'share_location'
+    | 'activate_sos';
 
 export type OutboxCommandState =
-    'queued' | 'syncing' | 'failed' | 'conflict' | 'completed';
+    'queued' | 'syncing' | 'failed' | 'conflict' | 'completed' | 'expired';
+
+export type OutboxCommandPriority = 'ordinary' | 'emergency';
 
 export interface CommandErrorDetails {
     message: string;
@@ -136,6 +232,8 @@ export interface OutboxCommand {
     assignmentId?: number | null;
     payload: Record<string, unknown>;
     payloadHash: string;
+    priority?: OutboxCommandPriority;
+    expiresAt?: string | null;
     expectedVersion?: number | null;
     state: OutboxCommandState;
     error?: CommandErrorDetails | null;

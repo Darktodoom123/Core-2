@@ -4,6 +4,8 @@ import { AlertTriangle, Check, Info, LockKeyhole, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
+import { ActiveSosBanner } from '@/components/sos/active-sos-banner';
+import { SosResponseQueue } from '@/components/sos/sos-response-queue';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
@@ -62,6 +64,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
     'gpt-recommendations': ['gptRecommendations', 'jobs'],
     users: ['users', 'auditEvents'],
     audit: ['auditEvents'],
+    sos: [],
 };
 
 function hasSectionProps(
@@ -213,6 +216,7 @@ export default function Workspace(props: WorkspacePageProps) {
                 only: [
                     'workspace',
                     'badges',
+                    'activeSosIncidents',
                     ...(scope === 'tracking'
                         ? ['locations']
                         : availableSection
@@ -335,10 +339,15 @@ export default function Workspace(props: WorkspacePageProps) {
                 refreshRef.current('workspace', 'realtime');
             });
 
+        echo.private('operations.sos').listen('.SosIncidentChanged', () => {
+            refreshRef.current('workspace', 'realtime');
+        });
+
         return () => {
             window.clearTimeout(initialStateSync);
             unsubscribeConnection();
             echo.leave('operations.workspace');
+            echo.leave('operations.sos');
         };
     }, []);
 
@@ -390,7 +399,12 @@ export default function Workspace(props: WorkspacePageProps) {
         const url = new URL(window.location.href);
         url.searchParams.set('view', nextSection);
         router.visit(url.toString(), {
-            only: ['workspace', 'badges', ...SECTION_PROPS[nextSection]],
+            only: [
+                'workspace',
+                'badges',
+                'activeSosIncidents',
+                ...SECTION_PROPS[nextSection],
+            ],
             preserveState: true,
             preserveScroll: true,
             preserveErrors: true,
@@ -415,6 +429,7 @@ export default function Workspace(props: WorkspacePageProps) {
                     only: [
                         'workspace',
                         'badges',
+                        'activeSosIncidents',
                         ...SECTION_PROPS[nextSection],
                     ],
                     preserveErrors: true,
@@ -591,6 +606,12 @@ export default function Workspace(props: WorkspacePageProps) {
                 onRefresh={refreshWorkspace}
                 onShareLocation={shareLocation}
             >
+                {props.capabilities.view_sos && (
+                    <ActiveSosBanner
+                        incidents={props.activeSosIncidents}
+                        onOpenQueue={() => changeSection('sos')}
+                    />
+                )}
                 {(flash ||
                     locationError ||
                     validationErrorCount > 0 ||
@@ -658,6 +679,12 @@ export default function Workspace(props: WorkspacePageProps) {
                     </div>
                 ) : !sectionReady ? (
                     <WorkspaceSectionLoading section={availableSection} />
+                ) : availableSection === 'sos' ? (
+                    <SosResponseQueue
+                        incidents={props.activeSosIncidents}
+                        refreshing={refreshing}
+                        onRefresh={refreshWorkspace}
+                    />
                 ) : availableSection === 'overview' ? (
                     <OperationsOverviewDashboard
                         jobs={props.jobs ?? []}

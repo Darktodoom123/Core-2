@@ -15,3 +15,4 @@ require app_path('Platform/Reporting/Routes/web.php');
 require app_path('Platform/Tracking/Routes/web.php');
 require app_path('Platform/Gpt/Routes/web.php');
 require app_path('Platform/Workspace/Routes/web.php');
+require app_path('Platform/Safety/Routes/web.php');

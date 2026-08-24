@@ -5,6 +5,8 @@ use App\Platform\Gpt\Jobs\PruneGptRecommendationsJob;
 use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
 use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
+use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
+use App\Platform\Safety\Jobs\SweepSosEscalationsJob;
 use App\Platform\Security\Http\Middleware\EnforceSecurityHeaders;
 use App\Platform\Workspace\Http\Middleware\CollectWorkspacePerformance;
 use App\Platform\Workspace\Http\Middleware\HandleInertiaRequests;
@@ -29,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new PruneExpiredExportsJob)->dailyAt('02:30')->withoutOverlapping()->name('reports:prune-expired');
         $schedule->job(new PruneGptRecommendationsJob)->dailyAt('02:45')->withoutOverlapping()->name('gpt:prune-retention');
         $schedule->job(new PruneExpiredAttachmentsJob)->dailyAt('03:00')->withoutOverlapping()->name('attachments:prune-expired');
+        $schedule->job(new SweepSosEscalationsJob)->everyMinute()->withoutOverlapping()->name('sos:escalation-sweep');
+        $schedule->job(new PruneSosIncidentCoordinatesJob)->dailyAt('03:15')->withoutOverlapping()->name('sos:prune-coordinates');
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

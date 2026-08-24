@@ -1,7 +1,12 @@
 import type {
+    ActivateSosIncidentPayload,
     ApiErrorResponse,
     DispatchJob,
     LocationSharePayload,
+    SosConfiguration,
+    SosIncident,
+    SosIncidentCategory,
+    SosLocationSnapshot,
     User,
 } from '../types/index';
 
@@ -231,6 +236,74 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<unknown>(response);
+    }
+
+    public async activateSosIncident(
+        payload: ActivateSosIncidentPayload,
+        commandId: string,
+    ): Promise<SosIncident> {
+        const url = `${this.baseUrl}/api/v1/sos-incidents`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify({ ...payload, command_id: commandId }),
+        });
+
+        return this.handleResponse<SosIncident>(response);
+    }
+
+    public async fetchActiveSosIncident(): Promise<SosIncident | null> {
+        const url = `${this.baseUrl}/api/v1/sos-incidents/active`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        if (response.status === 404) {
+            return null;
+        }
+
+        return this.handleResponse<SosIncident | null>(response);
+    }
+
+    public async classifySosIncident(
+        incidentId: string,
+        category: SosIncidentCategory,
+        commandId: string,
+    ): Promise<SosIncident> {
+        const url = `${this.baseUrl}/api/v1/sos-incidents/${encodeURIComponent(incidentId)}/classification`;
+        const response = await this.fetchFn(url, {
+            method: 'PATCH',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify({ category, command_id: commandId }),
+        });
+
+        return this.handleResponse<SosIncident>(response);
+    }
+
+    public async updateSosLocation(
+        incidentId: string,
+        location: SosLocationSnapshot,
+        commandId: string,
+    ): Promise<SosIncident> {
+        const url = `${this.baseUrl}/api/v1/sos-incidents/${encodeURIComponent(incidentId)}/location`;
+        const response = await this.fetchFn(url, {
+            method: 'PATCH',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify({ ...location, command_id: commandId }),
+        });
+
+        return this.handleResponse<SosIncident>(response);
+    }
+
+    public async fetchSosConfiguration(): Promise<SosConfiguration> {
+        const url = `${this.baseUrl}/api/v1/sos-configuration`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<SosConfiguration>(response);
     }
 
     // ==========================================

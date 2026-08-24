@@ -36,6 +36,7 @@ const commandTypes: OutboxCommandType[] = [
     'respond_assignment',
     'transition_status',
     'share_location',
+    'activate_sos',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',
@@ -43,6 +44,7 @@ const commandStates: OutboxCommandState[] = [
     'failed',
     'conflict',
     'completed',
+    'expired',
 ];
 
 interface OutboxRow {
@@ -55,6 +57,8 @@ interface OutboxRow {
     payload_hash: string;
     expected_version: number | null;
     state: string;
+    priority?: string | null;
+    expires_at?: string | null;
     attempts: number;
     error_json: string | null;
     created_at: string;
@@ -101,6 +105,8 @@ function deserializeRow(row: OutboxRow): OutboxCommand {
             payloadHash: row.payload_hash,
             expectedVersion: row.expected_version,
             state,
+            priority: row.priority === 'emergency' ? 'emergency' : 'ordinary',
+            expiresAt: row.expires_at ?? null,
             attempts: Math.max(0, row.attempts),
             error,
             createdAt: safeTimestamp(row.created_at, fallbackTimestamp),
@@ -120,6 +126,8 @@ function deserializeRow(row: OutboxRow): OutboxCommand {
             payloadHash: row.payload_hash || 'invalid',
             expectedVersion: row.expected_version,
             state: 'failed',
+            priority: row.priority === 'emergency' ? 'emergency' : 'ordinary',
+            expiresAt: row.expires_at ?? null,
             attempts: Math.max(0, row.attempts),
             error: {
                 code: 'MALFORMED_COMMAND',
@@ -271,6 +279,8 @@ export class SqliteOutboxRepository implements OutboxRepository {
                 payload_hash TEXT NOT NULL,
                 expected_version INTEGER,
                 state TEXT NOT NULL,
+                priority TEXT NOT NULL DEFAULT 'ordinary',
+                expires_at TEXT,
                 attempts INTEGER NOT NULL DEFAULT 0,
                 error_json TEXT,
                 created_at TEXT NOT NULL,
@@ -284,6 +294,25 @@ export class SqliteOutboxRepository implements OutboxRepository {
             CREATE INDEX IF NOT EXISTS field_command_outbox_actor_job_idx
                 ON field_command_outbox (actor_id, job_id, created_at);
         `);
+
+        // Existing field installs predate emergency priority. SQLite does not
+        // support IF NOT EXISTS for columns, so these guarded migrations keep
+        // ordinary outbox data intact during a cold start upgrade.
+        try {
+            await database.execAsync(
+                "ALTER TABLE field_command_outbox ADD COLUMN priority TEXT NOT NULL DEFAULT 'ordinary'",
+            );
+        } catch {
+            // Column already exists.
+        }
+
+        try {
+            await database.execAsync(
+                'ALTER TABLE field_command_outbox ADD COLUMN expires_at TEXT',
+            );
+        } catch {
+            // Column already exists.
+        }
     }
 
     public async listForActor(actorId: number): Promise<OutboxCommand[]> {
@@ -307,9 +336,9 @@ export class SqliteOutboxRepository implements OutboxRepository {
             `INSERT INTO field_command_outbox (
                 id, actor_id, command_type, job_id, assignment_id,
                 payload_json, payload_hash, expected_version, state, attempts,
-                error_json, created_at, updated_at, last_attempt_at,
-                next_attempt_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                priority, expires_at, error_json, created_at, updated_at,
+                last_attempt_at, next_attempt_at, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 actor_id = excluded.actor_id,
                 command_type = excluded.command_type,
@@ -319,6 +348,8 @@ export class SqliteOutboxRepository implements OutboxRepository {
                 payload_hash = excluded.payload_hash,
                 expected_version = excluded.expected_version,
                 state = excluded.state,
+                priority = excluded.priority,
+                expires_at = excluded.expires_at,
                 attempts = excluded.attempts,
                 error_json = excluded.error_json,
                 updated_at = excluded.updated_at,
@@ -336,6 +367,8 @@ export class SqliteOutboxRepository implements OutboxRepository {
                 command.expectedVersion ?? null,
                 command.state,
                 command.attempts,
+                command.priority ?? 'ordinary',
+                command.expiresAt ?? null,
                 command.error ? JSON.stringify(command.error) : null,
                 command.createdAt,
                 command.updatedAt,

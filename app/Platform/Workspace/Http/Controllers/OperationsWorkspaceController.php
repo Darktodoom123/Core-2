@@ -23,9 +23,11 @@ use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -47,6 +49,7 @@ final class OperationsWorkspaceController extends Controller
         'gpt-recommendations' => ['gptRecommendations', 'jobs'],
         'users' => ['users', 'auditEvents'],
         'audit' => ['auditEvents'],
+        'sos' => [],
     ];
 
     public function __invoke(Request $request): Response
@@ -83,6 +86,9 @@ final class OperationsWorkspaceController extends Controller
                 'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
                 'tracking' => $this->trackingFreshness($user, $refreshedAt),
             ],
+            // SOS is intentionally eager. Responders must see a current
+            // emergency regardless of the selected deferred workspace section.
+            'activeSosIncidents' => $this->fetchActiveSosIncidents($user),
         ];
 
         foreach ($this->allSectionProps() as $prop) {
@@ -156,6 +162,7 @@ final class OperationsWorkspaceController extends Controller
                 'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             ],
             'audit' => ['auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user))],
+            'sos' => [],
             default => [],
         };
     }
@@ -566,6 +573,46 @@ final class OperationsWorkspaceController extends Controller
             ->latest('deleted_at')
             ->limit(100)
             ->get();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function fetchActiveSosIncidents(User $user): array
+    {
+        if (! $user->can('sos.view')) {
+            return [];
+        }
+
+        $modelClass = 'App\\Platform\\Safety\\Models\\SosIncident';
+
+        // The workspace can be deployed ahead of the safety migration. Keep
+        // the prop safely empty until that server boundary is available.
+        if (! class_exists($modelClass)) {
+            return [];
+        }
+
+        if (! Schema::hasTable('sos_incidents')) {
+            return [];
+        }
+
+        /** @var Collection<int, Model> $incidents */
+        $incidents = $modelClass::query()
+            ->whereIn('status', ['active', 'escalated', 'acknowledged'])
+            ->with([
+                'reporter:id,name,phone',
+                'dispatchJob:id,reference,title,site',
+                'operationalAsset:id,code,name',
+                'acknowledgedBy:id,name,phone',
+                'resolvedBy:id,name,phone',
+                'deliveryAttempts',
+            ])
+            ->latest('received_at')
+            ->limit(100)
+            ->get();
+
+        return OperationsWorkspaceViewModel::activeSosIncidents(
+            $incidents,
+            $user->can('sos.respond'),
+        );
     }
 
     /** @return Collection<int, ReportExport> */

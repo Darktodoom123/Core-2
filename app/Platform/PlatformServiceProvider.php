@@ -25,6 +25,7 @@ use App\Platform\Notifications\Models\Notification;
 use App\Platform\Notifications\Policies\NotificationPolicy;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Policies\JobReportPolicy;
+use App\Platform\Safety\Models\SosIncident;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\Observers\WorkspaceResourceObserver;
 use App\Shared\Assets\Models\Inspection;
@@ -76,6 +77,7 @@ final class PlatformServiceProvider extends ServiceProvider
             'App\\Models\\PersonnelProfile' => PersonnelProfile::class,
             'App\\Models\\ServiceRequest' => ServiceRequest::class,
             'App\\Models\\User' => User::class,
+            'sos_incident' => SosIncident::class,
         ]);
     }
 }

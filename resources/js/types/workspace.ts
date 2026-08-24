@@ -33,6 +33,18 @@ export type AssetStatusValue =
 
 export type ApprovalStatusValue = 'pending' | 'approved' | 'rejected';
 
+export type SosIncidentCategoryValue =
+    | 'unclassified'
+    | 'vehicular_accident'
+    | 'site_accident'
+    | 'critical_asset_malfunction'
+    | 'other_immediate_danger';
+
+export type SosIncidentStatusValue =
+    'active' | 'escalated' | 'acknowledged' | 'resolved' | 'cancelled';
+
+export type SosLocationFreshness = 'fresh' | 'delayed' | 'stale' | 'offline';
+
 export type ReportExportStatusValue =
     'queued' | 'processing' | 'completed' | 'failed' | 'expired';
 
@@ -537,7 +549,8 @@ export type WorkspaceSection =
     | 'archive'
     | 'gpt-recommendations'
     | 'users'
-    | 'audit';
+    | 'audit'
+    | 'sos';
 
 export interface WorkspaceNavigationItem {
     id: WorkspaceSection;
@@ -579,6 +592,68 @@ export interface WorkspaceCapabilities {
     manage_notifications: boolean;
     view_archive: boolean;
     restore_dispatch: boolean;
+    view_sos: boolean;
+    respond_sos: boolean;
+}
+
+export interface SosPersonViewModel {
+    id: number;
+    name: string;
+    phone: string | null;
+}
+
+export interface SosIncidentLocationViewModel {
+    latitude: number | null;
+    longitude: number | null;
+    accuracy_metres: number | null;
+    captured_at: string | null;
+    freshness_status: SosLocationFreshness;
+    context: string | null;
+}
+
+export interface SosDeliveryAttemptViewModel {
+    channel: 'database' | 'realtime' | 'email' | 'sms' | string;
+    target: string;
+    status: 'pending' | 'sent' | 'delivered' | 'failed' | string;
+    attempted_at: string | null;
+    delivered_at: string | null;
+    failure_code: string | null;
+}
+
+export interface SosIncidentViewModel {
+    id: string;
+    category: StatusViewModel<SosIncidentCategoryValue>;
+    status: StatusViewModel<SosIncidentStatusValue>;
+    note: string | null;
+    worker: SosPersonViewModel;
+    received_at: string;
+    device_activated_at: string | null;
+    escalation_due_at: string | null;
+    escalated_at: string | null;
+    acknowledged_at: string | null;
+    acknowledged_by: SosPersonViewModel | null;
+    resolved_at: string | null;
+    resolved_by: SosPersonViewModel | null;
+    resolution_code: string | null;
+    resolution_notes: string | null;
+    cancelled_at: string | null;
+    cancellation_reason: string | null;
+    dispatch: {
+        id: number;
+        reference: string;
+        title: string;
+        site: string | null;
+    } | null;
+    asset: {
+        id: number;
+        code: string;
+        name: string;
+    } | null;
+    location: SosIncidentLocationViewModel | null;
+    delivery_attempts: SosDeliveryAttemptViewModel[];
+    can_acknowledge: boolean;
+    can_resolve: boolean;
+    can_cancel: boolean;
 }
 
 export interface WorkspaceFreshness {
@@ -706,6 +781,7 @@ export interface WorkspacePageProps {
         unread_notifications: number;
         blocking_assets: number;
     };
+    activeSosIncidents: SosIncidentViewModel[];
 }
 
 export interface AssignmentScheduleConflictViewModel {
