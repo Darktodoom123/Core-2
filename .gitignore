@@ -83,6 +83,11 @@ Desktop.ini
 storage/framework/testing/*
 !storage/framework/testing/.gitignore
 /Docs
+!/Docs/
+/Docs/*
+!/Docs/architecture/
+/Docs/architecture/*
+!/Docs/architecture/docker.md
 .ai-reports/
 /test-results/
 .devswarm-temp/

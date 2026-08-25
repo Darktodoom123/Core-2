@@ -27,3 +27,74 @@ Before production enablement, add and run PostgreSQL concurrency tests for first
 ## Release decision
 
 `SOS_ENABLED=false` remains required until all provider, roster, monitoring, realtime, staging, physical-device, and live-map SOS-ring acceptance gates pass.
+
+## Docker modernization — 2026-08-25
+
+### Did you build this the most secure way?
+
+The image uses pinned Docker Official Image digests, a current Dockerfile syntax
+directive, separate build/runtime stages, explicit Alpine packages without
+`apk upgrade`, locked Composer/npm installs, and no runtime `.env` creation.
+The production stage copies only application runtime paths, vendor files, and
+built assets. The startup boundary validates required database, application,
+Reverb, and conditional Redis settings; storage, cache, and database paths are
+owned by `www-data` with `0770` directories and `0660` files. No `chmod 777` or
+build-time runtime secret is used. Supervisor remains root only for named-volume
+ownership setup and Nginx port 80; PHP-FPM workers, Nginx workers, queue,
+scheduler, and Reverb are unprivileged.
+
+The final runtime image was inspected: it contains no project `.env` or
+`.env.example`, no world-writable project paths, and no application/database
+credentials in image configuration. Named-volume paths are `0770`; the image
+and non-volume application paths are not world-writable. The public Reverb
+identifier is intentionally available to the browser bundle; the private
+Reverb secret is runtime-only.
+
+Residual security work is vulnerability scanning and regular review. The build
+still obtains Alpine packages from the pinned base image's configured
+repositories rather than pinning every APK package version; weekly image
+refreshes, secret rotation, and CI scanning remain necessary.
+
+### Did you build this the most efficient way?
+
+The PHP extension layer is shared by Composer, frontend, and test stages.
+Composer and npm dependency layers are isolated before source changes and use
+BuildKit cache mounts. The production stage excludes tests, mobile sources,
+documentation, CI metadata, and frontend build-tool manifests. The concurrency
+test target is intentionally self-contained, which removes host `vendor/` and
+bind-mount variability at the cost of a larger test image.
+
+### What regressions could this introduce?
+
+The main behavior-sensitive areas are the PHP 8.4.24/Alpine 3.24 extension
+build, PHP-aware Wayfinder/Vite generation without an `.env`, Supervisor signal
+handling, Nginx worker ownership, and the test entrypoint's creation and
+migration of `core2_concurrency_test`. External PostgreSQL users may still see
+the bundled local `db` service start because the Compose file preserves the
+existing local topology; the app itself honors the configured external host.
+The test profile assumes the supplied local PostgreSQL user can create the
+concurrency database or that it is pre-provisioned. The profile intentionally
+runs R6 before R3 and resets only its dedicated test database so R3's
+`DatabaseMigrations` cleanup cannot remove R6's migrated schema; this does not
+change application behavior.
+
+### What tests do we need to write before we ship this?
+
+The Docker workflow adds Dockerfile parsing, quiet Compose validation, fresh
+production and test-target builds, a bounded health check for app/PostgreSQL/
+Redis, an `/up` request, and the profile-gated Concurrency Pest suite using
+dummy non-secret values. Local static checks also include YAML/JSON parsing,
+shell syntax, image-reference verification, security-pattern review, and
+`git diff --check`.
+
+Local verification completed with Docker Desktop's Linux daemon: `docker
+build --check .` passed with no warnings; `docker compose config --quiet`
+passed with dummy values and printed no resolved secrets; production and
+test-runner targets built with locked dependencies; the isolated Compose stack
+reached healthy app/PostgreSQL/Redis; `/up` returned HTTP 200; and the exact
+profile command completed the two intended concurrency files with exit 0,
+17 existing warnings, and 91 assertions. Shell syntax, Composer validation,
+security-pattern checks, and `git diff --check` also passed. The isolated
+project was stopped with `docker compose down` without `--volumes`, preserving
+its named volumes. The test suite's warnings and the normal need for image
+vulnerability scanning remain release risks.

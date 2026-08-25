@@ -6,12 +6,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_REVERB_APP_KEY: "${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}"
+        VITE_PUBLIC_REVERB_IDENTIFIER: "${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}"
         VITE_REVERB_HOST: "${VITE_REVERB_HOST:-localhost}"
         VITE_REVERB_PORT: "${VITE_REVERB_PORT:-8080}"
         VITE_REVERB_SCHEME: "${VITE_REVERB_SCHEME:-http}"
-    container_name: core2-app
     restart: unless-stopped
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     ports:
       - "${PORT:-8000}:80"
       - "${REVERB_FORWARD_PORT:-8080}:8080"
@@ -40,6 +42,7 @@ services:
       REVERB_PORT: 8080
       REVERB_SCHEME: http
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
+      CACHE_CONFIG: "${CACHE_CONFIG:-true}"
     volumes:
       - storage-data:/var/www/html/storage
     depends_on:
@@ -53,12 +56,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
-      start_period: 30s
+      start_period: 40s
 
   db:
-    image: postgres:16-alpine
-    container_name: core2-db
+    image: postgres:16.15-alpine3.24@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     environment:
       POSTGRES_DB: "${DB_DATABASE:?Set DB_DATABASE in .env}"
       POSTGRES_USER: "${DB_USERNAME:?Set DB_USERNAME in .env}"
@@ -70,11 +74,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   redis:
-    image: redis:7-alpine
-    container_name: core2-redis
+    image: redis:7.4.11-alpine3.21@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 15s
     volumes:
       - redis-data:/data
     healthcheck:
@@ -82,6 +88,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   test:
     build:
@@ -90,8 +97,17 @@ services:
       target: test-runner
     profiles: ["test"]
     working_dir: /var/www/html
-    entrypoint: []
-    command: ["php", "vendor/bin/pest", "--configuration=phpunit.concurrency.xml", "--testsuite=Concurrency"]
+    # R6 expects a migrated schema; R3's DatabaseMigrations cleanup runs after
+    # its file, so keep R6 first in this single test process.
+    command:
+      - php
+      - vendor/bin/pest
+      - --configuration=phpunit.concurrency.xml
+      - tests/Concurrency/RentalSalesAssetUsageConcurrencyTest.php
+      - tests/Concurrency/GptRecommendationRowLockConcurrencyTest.php
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     environment:
       APP_ENV: testing
       APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -99,6 +115,7 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_DATABASE: core2_concurrency_test
+      DB_ADMIN_DATABASE: postgres
       DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
       DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env}"
       DB_SSLMODE: disable
@@ -108,8 +125,6 @@ services:
       PULSE_ENABLED: "false"
       TELESCOPE_ENABLED: "false"
       NIGHTWATCH_ENABLED: "false"
-    volumes:
-      - .:/var/www/html
     depends_on:
       db:
         condition: service_healthy

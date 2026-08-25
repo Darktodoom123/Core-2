@@ -86,25 +86,47 @@ Open your browser and navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:80
 
 ## 🐳 Running with Docker
 
-The repository includes a production-ready Docker Compose stack with Laravel 13, built Inertia/React assets, Nginx, Supervisor background workers, Laravel Reverb (WebSockets), PostgreSQL 16, and Redis 7.
+The repository includes a production-style Docker Compose reference stack with
+Laravel 13, built Inertia/React assets, Nginx, Supervisor background workers,
+Laravel Reverb (WebSockets), PostgreSQL 16, and Redis 7. It is suitable for
+local development and staging validation; production still needs an approved
+secret store, TLS/reverse proxy, backups, observability, and an operational
+deployment boundary.
 
 ### 1. Configure Environment
-Copy `.env.example` to `.env` and configure your secrets (`APP_KEY`, `DB_PASSWORD`, `REVERB_APP_KEY`, etc.):
+Copy `.env.example` to `.env` and configure the required values (`APP_KEY`,
+`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and the Reverb values). Generate
+the application key without committing it:
+
+```bash
+php artisan key:generate --show
+```
+
+Paste the printed value into the untracked `.env`. For Docker's bundled local
+database, use `DB_CONNECTION=pgsql` and `DB_HOST=db`; do not use `127.0.0.1`
+for a database running in another Compose service.
 
 - **Local Database (Default)**: Keep `DB_HOST=db` to use the bundled local PostgreSQL 16 container.
 - **Cloud Database (Supabase, AWS RDS, Neon)**: Set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE=require` in `.env` to connect to your remote cloud database.
+- **Reverb**: `REVERB_APP_KEY` is a public browser identifier used at asset-build time; `REVERB_APP_SECRET` remains server-only and is never a Docker build argument.
 
 ### 2. Build & Launch Stack
 
 ```bash
 docker compose config --quiet
+docker buildx build --check .
 docker compose up -d --build
 ```
 
+The Dockerfile and Compose service images use verified patch-level tags with
+immutable digests. Dependabot proposes weekly digest updates; major PHP,
+PostgreSQL, and Redis changes require an explicit compatibility review.
+
 ### 3. Access Services & Operations
 
-- Web Application: **[http://localhost:8000](http://localhost:8000)**
-- Reverb WebSocket Server: **`ws://localhost:8080`**
+- Web Application: **[http://localhost:8000](http://localhost:8000)** (`PORT` changes the host port)
+- Reverb WebSocket Server: **`ws://localhost:8080`** (`REVERB_FORWARD_PORT` changes the host port)
+- Internal services: PostgreSQL is `db:5432`; Redis is `redis:6379`.
 
 To seed default development data:
 
@@ -112,11 +134,33 @@ To seed default development data:
 docker compose exec --user www-data app php artisan db:seed
 ```
 
+Run the profile-gated PostgreSQL concurrency suite. The test image contains
+its locked development dependencies, recreates the disposable
+`core2_concurrency_test` schema, and runs the R6 file before the R3 file so
+Laravel's migration-managed R3 cleanup cannot remove the R6 schema:
+
+```bash
+docker compose --profile test run --build --rm test
+```
+
 To stop the stack while preserving volumes:
 
 ```bash
 docker compose down
 ```
+
+Do not add `--volumes` unless you intentionally want to destroy the named
+`storage-data`, `postgres-data`, and `redis-data` state.
+
+For runtime troubleshooting, inspect `docker compose logs -f app`, then check
+that `RUN_MIGRATIONS` and `CACHE_CONFIG` are explicitly set as intended. The
+entrypoint validates required environment variables, initializes the named
+storage volume as `www-data`, and uses `0770` directories/`0660` files rather
+than world-writable permissions. Supervisor remains root only to prepare the
+volume and bind Nginx to port 80; Nginx workers, PHP-FPM workers, queue,
+scheduler, and Reverb run unprivileged. See the [Docker operations guide](Docs/architecture/docker.md)
+for the complete permission, validation, update, external database, and
+production-boundary notes.
 
 ---
 

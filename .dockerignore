@@ -7,6 +7,8 @@
 .impeccable
 AGENTS.md
 PENCIL_PROMPTS.md
+.ai-reports
+Docs
 
 .android-sdk
 .expo-sprint2
@@ -22,6 +24,7 @@ nimbalyst-local
 .env.*
 !.env.example
 
+storage
 storage/*.key
 storage/framework/cache/*
 storage/framework/sessions/*

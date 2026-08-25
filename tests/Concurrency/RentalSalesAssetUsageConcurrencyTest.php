@@ -93,7 +93,9 @@ function r6ConcurrentReservation(User $actor, Client $client, array $assetIds, R
         'status' => $status,
         'start_date' => CarbonImmutable::tomorrow()->toDateString(),
         'end_date' => CarbonImmutable::tomorrow()->addDay()->toDateString(),
-        'fulfillment_mode' => 'delivery',
+        // Direct checkout has no dispatch fixture; delivery rentals must use
+        // the dispatch handoff path before the application permits checkout.
+        'fulfillment_mode' => 'pickup',
         'total_cents' => count($assetIds) * 100,
     ]);
     foreach ($assetIds as $assetId) {
