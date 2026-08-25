@@ -56,6 +56,7 @@ import type {
     AssetViewModel,
     ClientViewModel,
     DispatchJobViewModel,
+    DispatchPriorityValue,
     DispatchSourceViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
@@ -74,7 +75,18 @@ type ConflictTypeFilter =
     | 'maintenance'
     | 'approvals'
     | 'responses'
-    | 'unassigned';
+    | 'unassigned'
+    | 'advisories';
+
+const ATTENTION_FILTERS: ConflictTypeFilter[] = [
+    'all',
+    'overlaps',
+    'maintenance',
+    'approvals',
+    'responses',
+    'unassigned',
+    'advisories',
+];
 
 const FIELD_USER_ROLES = new Set([
     'driver',
@@ -88,7 +100,13 @@ function isFieldUser(user: WorkspaceUserViewModel): boolean {
 
 interface DerivedConflict {
     id: string;
-    type: 'overlap' | 'maintenance' | 'approval' | 'response' | 'unassigned';
+    type:
+        | 'overlap'
+        | 'maintenance'
+        | 'approval'
+        | 'response'
+        | 'unassigned'
+        | 'advisory';
     severity: 'danger' | 'warning' | 'info';
     title: string;
     description: string;
@@ -98,15 +116,27 @@ interface DerivedConflict {
     approvalId?: number;
     canDecide?: boolean;
     decisionBlocker?: string | null;
+    jobTitle?: string;
+    client?: string;
+    source?: string;
+    site?: string;
+    priority?: string;
+    priorityValue?: DispatchPriorityValue;
+    missingResourceTypes?: string[];
+    assignedResources?: string[];
+    freshness?: string;
+    scheduledAt?: string | null;
+    scheduledEnd?: string | null;
 }
 
 const conflictFilterLabels: Record<ConflictTypeFilter, string> = {
-    all: 'All conflicts',
+    all: 'All attention',
     overlaps: 'Overlaps',
     maintenance: 'Maintenance',
     approvals: 'Approvals',
     responses: 'Responses',
     unassigned: 'Unassigned',
+    advisories: 'Advisories',
 };
 
 function conflictFilterForType(
@@ -128,10 +158,14 @@ function conflictFilterForType(
         return 'responses';
     }
 
+    if (type === 'advisory') {
+        return 'advisories';
+    }
+
     return 'unassigned';
 }
 
-function conflictSeverityLabel(severity: DerivedConflict['severity']) {
+function conflictSeverityLabel(severity: DerivedConflict['severity']): string {
     if (severity === 'danger') {
         return 'Blocking';
     }
@@ -141,6 +175,99 @@ function conflictSeverityLabel(severity: DerivedConflict['severity']) {
     }
 
     return 'Action needed';
+}
+
+const severityRank: Record<DerivedConflict['severity'], number> = {
+    danger: 0,
+    warning: 1,
+    info: 2,
+};
+
+const priorityRank: Record<string, number> = {
+    emergency: 0,
+    priority: 1,
+    routine: 2,
+};
+
+function scheduledTime(value: string | null | undefined): number {
+    if (!value) {
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+    const timestamp = Date.parse(value);
+
+    return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
+
+function attentionSortKey(conflict: DerivedConflict) {
+    return [
+        severityRank[conflict.severity],
+        scheduledTime(conflict.scheduledAt),
+        priorityRank[conflict.priorityValue ?? ''] ?? 3,
+        conflict.id,
+    ] as const;
+}
+
+function compareAttention(a: DerivedConflict, b: DerivedConflict): number {
+    const aKey = attentionSortKey(a);
+    const bKey = attentionSortKey(b);
+
+    for (let index = 0; index < aKey.length; index += 1) {
+        if (aKey[index] < bKey[index]) {
+            return -1;
+        }
+
+        if (aKey[index] > bKey[index]) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+function unassignedSeverity(
+    job: DispatchJobViewModel,
+): DerivedConflict['severity'] {
+    const start = scheduledTime(job.scheduled_start);
+    const hoursUntilStart = (start - Date.now()) / 3_600_000;
+
+    if (
+        job.status.value === 'pending_approval' ||
+        job.priority.value === 'emergency' ||
+        hoursUntilStart <= 0
+    ) {
+        return 'danger';
+    }
+
+    if (job.priority.value === 'priority' || hoursUntilStart <= 24) {
+        return 'warning';
+    }
+
+    return 'info';
+}
+
+function attentionActionLabel(type: DerivedConflict['type']): string {
+    if (type === 'overlap') {
+        return 'Resolve schedule overlap';
+    }
+
+    if (type === 'maintenance') {
+        return 'Replace asset';
+    }
+
+    if (type === 'approval') {
+        return 'Open dispatch context';
+    }
+
+    if (type === 'response') {
+        return 'Reassign resources';
+    }
+
+    if (type === 'advisory') {
+        return 'Review recommendation';
+    }
+
+    return 'Assign resources';
 }
 
 export function LiveDispatchWorkspace({
@@ -277,6 +404,9 @@ export function LiveDispatchWorkspace({
     );
     const [conflictFilter, setConflictFilter] =
         useState<ConflictTypeFilter>('all');
+    const conflictTabRefs = useRef<
+        Partial<Record<ConflictTypeFilter, HTMLButtonElement>>
+    >({});
 
     const role = props.auth?.role;
     const isFieldRole =
@@ -487,11 +617,11 @@ export function LiveDispatchWorkspace({
                 conflicts.push({
                     id: `unassigned-${job.id}`,
                     type: 'unassigned',
-                    severity: 'info',
+                    severity: unassignedSeverity(job),
                     title: 'Resource assignment needed',
                     description: `Job ${job.reference} · ${job.title} has no personnel or assets assigned yet.`,
                     actionRequired:
-                        'Open the assignment workspace to select qualified candidates.',
+                        'Assign qualified personnel and assets before activation.',
                     jobId: job.id,
                     jobReference: job.reference,
                 });
@@ -507,7 +637,7 @@ export function LiveDispatchWorkspace({
             ) {
                 conflicts.push({
                     id: `gpt-rec-${rec.id}`,
-                    type: 'unassigned',
+                    type: 'advisory',
                     severity: 'info',
                     title: 'GPT Recommendation Advisory Note',
                     description: `AI dispatch recommendation #${rec.id} reported ${rec.conflicts.length} potential constraint note(s).`,
@@ -518,7 +648,52 @@ export function LiveDispatchWorkspace({
             }
         }
 
-        return conflicts;
+        const jobsById = new Map(jobs.map((job) => [job.id, job]));
+        const approvalsById = new Map(
+            approvals.map((approval) => [approval.id, approval]),
+        );
+
+        return conflicts
+            .map((conflict) => {
+                const job = conflict.jobId
+                    ? jobsById.get(conflict.jobId)
+                    : undefined;
+                const approval = conflict.approvalId
+                    ? approvalsById.get(conflict.approvalId)
+                    : undefined;
+                const subject = job ?? approval?.subject;
+                const personnel = job?.personnel_assignments ?? [];
+                const assetsForJob = job?.asset_assignments ?? [];
+                const missingResourceTypes = job
+                    ? [
+                          personnel.length === 0 ? 'Personnel' : null,
+                          assetsForJob.length === 0 ? 'Assets' : null,
+                      ].filter((value): value is string => value !== null)
+                    : [];
+                const assignedResources = [
+                    ...personnel.map((person) => person.name),
+                    ...assetsForJob.map((asset) => asset.code),
+                ];
+
+                return {
+                    ...conflict,
+                    jobTitle: subject?.title ?? undefined,
+                    client: job?.client,
+                    source: job
+                        ? (job.source?.label ?? 'Direct intake')
+                        : undefined,
+                    site: subject?.site ?? undefined,
+                    priority: subject?.priority?.label ?? undefined,
+                    priorityValue: subject?.priority?.value ?? undefined,
+                    missingResourceTypes,
+                    assignedResources,
+                    freshness:
+                        job?.updated_at ?? approval?.created_at ?? undefined,
+                    scheduledAt: subject?.scheduled_start,
+                    scheduledEnd: subject?.scheduled_end,
+                };
+            })
+            .sort(compareAttention);
     }, [jobs, assets, approvals, gptRecommendations]);
 
     const conflictCounts = useMemo<Record<ConflictTypeFilter, number>>(() => {
@@ -529,6 +704,7 @@ export function LiveDispatchWorkspace({
             approvals: 0,
             responses: 0,
             unassigned: 0,
+            advisories: 0,
         };
 
         for (const conflict of derivedConflicts) {
@@ -616,7 +792,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'list'
-                                            ? 'bg-brand text-ink shadow-xs'
+                                            ? 'bg-brand-soft text-brand-strong shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -633,7 +809,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'board'
-                                            ? 'bg-brand text-ink shadow-xs'
+                                            ? 'bg-brand-soft text-brand-strong shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -650,7 +826,7 @@ export function LiveDispatchWorkspace({
                                     className={cn(
                                         'inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors',
                                         viewMode === 'conflicts'
-                                            ? 'bg-brand text-ink shadow-xs'
+                                            ? 'bg-brand-soft text-brand-strong shadow-xs'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
@@ -658,14 +834,14 @@ export function LiveDispatchWorkspace({
                                         className="h-3.5 w-3.5"
                                         aria-hidden="true"
                                     />
-                                    Conflicts
+                                    Operational attention
                                     {derivedConflicts.length > 0 && (
                                         <span
                                             className={cn(
                                                 'ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold',
                                                 conflictBadgeClass,
                                             )}
-                                            aria-label={`${derivedConflicts.length} active conflicts`}
+                                            aria-label={`${derivedConflicts.length} operational attention items`}
                                         >
                                             {derivedConflicts.length}
                                         </span>
@@ -1001,25 +1177,24 @@ export function LiveDispatchWorkspace({
             {viewMode === 'conflicts' && !fieldMode && (
                 <section
                     className="min-w-0 p-4 md:p-6"
-                    aria-label="Conflict review section"
+                    aria-label="Operational attention section"
                 >
                     <div className="mb-4 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
                         <div>
-                            <div className="mb-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                                <span>Conflict queue</span>
-                                <span className="rounded-full bg-surface-subtle px-2 py-0.5 tracking-normal text-ink normal-case">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                                    Operational attention
+                                </h2>
+                                <span className="rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-semibold tracking-normal text-ink normal-case">
                                     {derivedConflicts.length}{' '}
                                     {derivedConflicts.length === 1
                                         ? 'active item'
                                         : 'active items'}
                                 </span>
                             </div>
-                            <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                                Operational conflict review
-                            </h2>
                             <p className="mt-0.5 text-xs text-ink-soft">
-                                Prioritized schedule, resource, and approval
-                                checks that need an operational decision.
+                                A prioritized queue of blockers, approvals,
+                                rejected responses, and assignment gaps.
                             </p>
                         </div>
 
@@ -1058,25 +1233,58 @@ export function LiveDispatchWorkspace({
                     <div
                         className="mb-5 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1"
                         role="tablist"
-                        aria-label="Conflict filters"
+                        aria-label="Operational attention filters"
                     >
-                        {(
-                            [
-                                'all',
-                                'overlaps',
-                                'maintenance',
-                                'approvals',
-                                'responses',
-                                'unassigned',
-                            ] as ConflictTypeFilter[]
-                        ).map((filter) => (
+                        {ATTENTION_FILTERS.map((filter) => (
                             <button
                                 key={filter}
                                 type="button"
                                 id={`conflict-tab-${filter}`}
                                 role="tab"
                                 aria-selected={conflictFilter === filter}
+                                tabIndex={conflictFilter === filter ? 0 : -1}
                                 aria-controls="conflict-results"
+                                ref={(element) => {
+                                    conflictTabRefs.current[filter] =
+                                        element ?? undefined;
+                                }}
+                                onKeyDown={(event) => {
+                                    if (
+                                        ![
+                                            'ArrowRight',
+                                            'ArrowDown',
+                                            'ArrowLeft',
+                                            'ArrowUp',
+                                            'Home',
+                                            'End',
+                                        ].includes(event.key)
+                                    ) {
+                                        return;
+                                    }
+
+                                    event.preventDefault();
+                                    const filters = ATTENTION_FILTERS;
+                                    const currentIndex =
+                                        filters.indexOf(filter);
+                                    const nextIndex =
+                                        event.key === 'Home'
+                                            ? 0
+                                            : event.key === 'End'
+                                              ? filters.length - 1
+                                              : (currentIndex +
+                                                    (event.key ===
+                                                        'ArrowLeft' ||
+                                                    event.key === 'ArrowUp'
+                                                        ? -1
+                                                        : 1) +
+                                                    filters.length) %
+                                                filters.length;
+                                    const next = filters[nextIndex];
+                                    setConflictFilter(next);
+                                    requestAnimationFrame(() =>
+                                        conflictTabRefs.current[next]?.focus(),
+                                    );
+                                }}
                                 onClick={() => setConflictFilter(filter)}
                                 className={cn(
                                     'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 py-1 text-xs font-medium transition-colors',
@@ -1100,9 +1308,21 @@ export function LiveDispatchWorkspace({
                         ))}
                     </div>
 
+                    <div
+                        className="sr-only"
+                        aria-live="polite"
+                        aria-atomic="true"
+                        aria-label="Operational attention status"
+                    >
+                        {conflictCounts.all} operational attention{' '}
+                        {conflictCounts.all === 1 ? 'item' : 'items'};{' '}
+                        {conflictCounts[conflictFilter]} shown.
+                    </div>
+
                     <ConflictReviewList
                         conflicts={derivedConflicts}
                         filter={conflictFilter}
+                        returnTo={returnTo}
                         onOpenDispatch={(jobId) => {
                             setSelectedJobId(jobId);
                             setViewMode('list');
@@ -1824,10 +2044,12 @@ function ScheduleBoardTable({
 function ConflictReviewList({
     conflicts,
     filter,
+    returnTo,
     onOpenDispatch,
 }: {
     conflicts: DerivedConflict[];
     filter: ConflictTypeFilter;
+    returnTo: string;
     onOpenDispatch: (jobId: number) => void;
 }) {
     const filtered = useMemo(() => {
@@ -1852,7 +2074,7 @@ function ConflictReviewList({
                     icon={ShieldCheck}
                     title={
                         filter === 'all'
-                            ? 'All conflict checks are clear'
+                            ? 'No operational attention items'
                             : `${conflictFilterLabels[filter]} checks are clear`
                     }
                     message="There are no active items in this queue. New issues will appear here when the workspace detects them."
@@ -1874,27 +2096,32 @@ function ConflictReviewList({
     return (
         <div className="space-y-4">
             <div
-                className="grid gap-3 sm:grid-cols-3"
-                aria-label="Conflict summary"
+                className="flex flex-wrap gap-2"
+                aria-label="Attention summary"
             >
-                <ConflictSummaryCard
-                    label="Blocking"
-                    count={blockingCount}
-                    detail="Stops safe dispatch progression"
-                    tone="danger"
-                />
-                <ConflictSummaryCard
-                    label="Review"
-                    count={reviewCount}
-                    detail="Needs a manager decision"
-                    tone="warning"
-                />
-                <ConflictSummaryCard
-                    label="Action needed"
-                    count={actionCount}
-                    detail="Ready for operational follow-up"
-                    tone="info"
-                />
+                {(
+                    [
+                        ['Blocking', blockingCount, 'danger'],
+                        ['Review', reviewCount, 'warning'],
+                        ['Action needed', actionCount, 'info'],
+                    ] as const
+                )
+                    .filter(([, count]) => count > 0)
+                    .map(([label, count, tone]) => (
+                        <ConflictSummaryCard
+                            key={label}
+                            label={label}
+                            count={count}
+                            detail={
+                                label === 'Blocking'
+                                    ? 'Stops safe dispatch progression'
+                                    : label === 'Review'
+                                      ? 'Needs an operational decision'
+                                      : 'Needs operational follow-up'
+                            }
+                            tone={tone}
+                        />
+                    ))}
             </div>
 
             <Panel
@@ -1905,16 +2132,13 @@ function ConflictReviewList({
             >
                 <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line bg-surface-subtle px-4 py-4 md:px-5">
                     <div>
-                        <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-soft uppercase">
-                            Review queue
-                        </p>
-                        <h3 className="mt-1 text-base font-semibold text-ink">
+                        <h3 className="text-base font-semibold text-ink">
                             {filtered.length}{' '}
                             {filtered.length === 1 ? 'item' : 'items'} to review
                         </h3>
                         <p className="mt-1 text-xs text-ink-soft">
                             {filter === 'all'
-                                ? 'Start with blocking items, then clear review and assignment gaps.'
+                                ? 'Blocking items are first; then review approvals, responses, and assignment gaps.'
                                 : `Showing ${conflictFilterLabels[filter].toLowerCase()} that need attention.`}
                         </p>
                     </div>
@@ -1924,102 +2148,250 @@ function ConflictReviewList({
                 </div>
 
                 <div className="divide-y divide-line">
-                    {filtered.map((conflict) => (
-                        <article
-                            key={conflict.id}
-                            data-conflict-row="true"
-                            className="p-4 md:p-5"
-                        >
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="flex min-w-0 items-start gap-3.5">
-                                    <div
-                                        className={cn(
-                                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                                            conflict.severity === 'danger' &&
-                                                'bg-danger-soft text-danger',
-                                            conflict.severity === 'warning' &&
-                                                'bg-warning-soft text-warning-strong',
-                                            conflict.severity === 'info' &&
-                                                'bg-info-soft text-info-strong',
-                                        )}
-                                    >
-                                        <AlertTriangle
-                                            className="h-5 w-5"
-                                            aria-hidden="true"
-                                        />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-soft uppercase">
-                                                {
-                                                    conflictFilterLabels[
-                                                        conflictFilterForType(
-                                                            conflict.type,
-                                                        )
-                                                    ]
-                                                }
-                                            </span>
-                                            <span
-                                                className={cn(
-                                                    'rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                                                    conflict.severity ===
-                                                        'danger' &&
-                                                        'bg-danger-soft text-danger',
-                                                    conflict.severity ===
-                                                        'warning' &&
-                                                        'bg-warning-soft text-warning-strong',
-                                                    conflict.severity ===
-                                                        'info' &&
-                                                        'bg-info-soft text-info-strong',
-                                                )}
-                                            >
-                                                {conflictSeverityLabel(
-                                                    conflict.severity,
-                                                )}
-                                            </span>
-                                        </div>
-                                        <h4 className="mt-1 text-sm font-semibold text-ink">
-                                            {conflict.title}
-                                        </h4>
-                                        <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                                            {conflict.description}
-                                        </p>
-                                    </div>
-                                </div>
+                    {filtered.map((conflict) => {
+                        const actionLabel = attentionActionLabel(conflict.type);
+                        const opensWorkspace = conflict.type === 'advisory';
+                        const actionHref = opensWorkspace
+                            ? '/?view=dispatch'
+                            : conflict.jobId
+                              ? assignmentWorkspaceUrl(conflict.jobId, returnTo)
+                              : '/?view=dispatch';
 
-                                <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto lg:items-end">
-                                    {conflict.type === 'approval' &&
-                                        conflict.approvalId &&
-                                        (conflict.canDecide ? (
-                                            <ApprovalConflictActions
-                                                approvalId={conflict.approvalId}
-                                            />
-                                        ) : (
-                                            <p className="w-full rounded-md bg-danger-soft px-3 py-2 text-xs font-medium text-danger lg:max-w-xs">
-                                                {conflict.decisionBlocker}
-                                            </p>
-                                        ))}
-
-                                    {conflict.jobId && (
-                                        <Link
-                                            href="/?view=dispatch"
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                onOpenDispatch(conflict.jobId!);
-                                            }}
-                                            className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none lg:w-auto"
+                        return (
+                            <article
+                                key={conflict.id}
+                                data-conflict-row="true"
+                                data-attention-severity={conflict.severity}
+                                data-attention-scheduled-at={
+                                    conflict.scheduledAt ?? ''
+                                }
+                                data-attention-priority={
+                                    conflict.priorityValue ?? ''
+                                }
+                                data-attention-id={conflict.id}
+                                className="p-4 md:p-5"
+                            >
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="flex min-w-0 items-start gap-3.5">
+                                        <div
+                                            className={cn(
+                                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                                                conflict.severity ===
+                                                    'danger' &&
+                                                    'bg-danger-soft text-danger',
+                                                conflict.severity ===
+                                                    'warning' &&
+                                                    'bg-warning-soft text-warning-strong',
+                                                conflict.severity === 'info' &&
+                                                    'bg-info-soft text-info-strong',
+                                            )}
                                         >
-                                            Open dispatch
-                                            <ChevronRight
-                                                className="h-3.5 w-3.5"
+                                            <AlertTriangle
+                                                className="h-5 w-5"
                                                 aria-hidden="true"
                                             />
-                                        </Link>
-                                    )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="text-[11px] font-semibold tracking-[0.1em] text-ink-soft uppercase">
+                                                    {
+                                                        conflictFilterLabels[
+                                                            conflictFilterForType(
+                                                                conflict.type,
+                                                            )
+                                                        ]
+                                                    }
+                                                </span>
+                                                <span
+                                                    className={cn(
+                                                        'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                                        conflict.severity ===
+                                                            'danger' &&
+                                                            'bg-danger-soft text-danger',
+                                                        conflict.severity ===
+                                                            'warning' &&
+                                                            'bg-warning-soft text-warning-strong',
+                                                        conflict.severity ===
+                                                            'info' &&
+                                                            'bg-info-soft text-info-strong',
+                                                    )}
+                                                >
+                                                    {conflictSeverityLabel(
+                                                        conflict.severity,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <h4 className="mt-1 text-sm font-semibold text-ink">
+                                                {conflict.title}
+                                            </h4>
+                                            <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+                                                {conflict.description}
+                                            </p>
+                                            <p className="mt-2 text-xs font-medium text-ink">
+                                                Next action:{' '}
+                                                <span className="font-normal text-ink-soft">
+                                                    {conflict.actionRequired}
+                                                </span>
+                                            </p>
+                                            <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs text-ink-soft sm:grid-cols-2 xl:grid-cols-4">
+                                                {conflict.jobReference && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Record:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {
+                                                                conflict.jobReference
+                                                            }
+                                                            {conflict.jobTitle
+                                                                ? ` · ${conflict.jobTitle}`
+                                                                : ''}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.client && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Client:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {conflict.client}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.source && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Source:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {conflict.source}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.scheduledAt && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Schedule:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {formatDateTime(
+                                                                conflict.scheduledAt,
+                                                            )}
+                                                            {conflict.scheduledEnd
+                                                                ? ` – ${formatDateTime(conflict.scheduledEnd)}`
+                                                                : ''}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.site && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Site:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {conflict.site}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.priority && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Priority:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {conflict.priority}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                                {conflict.missingResourceTypes &&
+                                                    conflict
+                                                        .missingResourceTypes
+                                                        .length > 0 && (
+                                                        <div>
+                                                            <dt className="inline font-semibold text-ink">
+                                                                Missing:
+                                                            </dt>{' '}
+                                                            <dd className="inline">
+                                                                {conflict.missingResourceTypes.join(
+                                                                    ', ',
+                                                                )}
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                {conflict.assignedResources &&
+                                                    conflict.assignedResources
+                                                        .length > 0 && (
+                                                        <div>
+                                                            <dt className="inline font-semibold text-ink">
+                                                                Assigned:
+                                                            </dt>{' '}
+                                                            <dd className="inline">
+                                                                {conflict.assignedResources.join(
+                                                                    ', ',
+                                                                )}
+                                                            </dd>
+                                                        </div>
+                                                    )}
+                                                {conflict.freshness && (
+                                                    <div>
+                                                        <dt className="inline font-semibold text-ink">
+                                                            Updated:
+                                                        </dt>{' '}
+                                                        <dd className="inline">
+                                                            {formatDateTime(
+                                                                conflict.freshness,
+                                                            )}
+                                                        </dd>
+                                                    </div>
+                                                )}
+                                            </dl>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto lg:items-end">
+                                        {conflict.type === 'approval' &&
+                                            conflict.approvalId &&
+                                            (conflict.canDecide ? (
+                                                <ApprovalConflictActions
+                                                    approvalId={
+                                                        conflict.approvalId
+                                                    }
+                                                />
+                                            ) : (
+                                                <p className="w-full rounded-md bg-danger-soft px-3 py-2 text-xs font-medium text-danger lg:max-w-xs">
+                                                    {conflict.decisionBlocker}
+                                                </p>
+                                            ))}
+
+                                        {conflict.jobId && (
+                                            <Link
+                                                href={actionHref}
+                                                onClick={
+                                                    opensWorkspace
+                                                        ? (event) => {
+                                                              event.preventDefault();
+                                                              onOpenDispatch(
+                                                                  conflict.jobId!,
+                                                              );
+                                                          }
+                                                        : undefined
+                                                }
+                                                aria-label={`${actionLabel} for ${conflict.jobReference ?? conflict.title}`}
+                                                className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand-strong/40 focus-visible:outline-none lg:w-auto"
+                                            >
+                                                {actionLabel}
+                                                <ChevronRight
+                                                    className="h-3.5 w-3.5"
+                                                    aria-hidden="true"
+                                                />
+                                            </Link>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </article>
-                    ))}
+                            </article>
+                        );
+                    })}
                 </div>
             </Panel>
         </div>
@@ -2038,7 +2410,7 @@ function ConflictSummaryCard({
     tone: 'danger' | 'warning' | 'info';
 }) {
     return (
-        <div className="flex items-start gap-3 rounded-lg border border-line bg-surface p-3.5">
+        <div className="flex min-w-44 items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5">
             <span
                 className={cn(
                     'mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full',

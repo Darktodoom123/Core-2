@@ -445,10 +445,10 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByText('Source', { exact: true }).first(),
         ).toBeVisible();
+        await expect(page.getByText('Priority', { exact: true })).toBeVisible();
         await expect(
-            page.getByText('Priority', { exact: true }),
+            page.getByText('Version 1', { exact: true }),
         ).toBeVisible();
-        await expect(page.getByText('Version 1', { exact: true })).toBeVisible();
 
         await expect(
             page.getByRole('heading', { name: 'GPT dispatch advisory' }),
@@ -761,41 +761,142 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(page).toHaveURL(/\/\?view=dispatch$/);
     });
 
-    test('conflict review presents a prioritized, filterable action queue', async ({
+    test('operational attention presents a prioritized, filterable action queue', async ({
         page,
     }) => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await page.goto('/?view=dispatch');
-        await page.getByRole('button', { name: /Conflicts/ }).click();
+        await page
+            .getByRole('button', { name: /Operational attention/ })
+            .click();
 
         await expect(
             page.getByRole('heading', {
-                name: 'Operational conflict review',
+                name: 'Operational attention',
             }),
         ).toBeVisible();
         await expect(
-            page.getByRole('tablist', { name: 'Conflict filters' }),
+            page.getByRole('tablist', {
+                name: 'Operational attention filters',
+            }),
         ).toBeVisible();
         await expect(
-            page.getByRole('tab', { name: /All conflicts/ }),
+            page.getByRole('tab', { name: /All attention/ }),
         ).toHaveAttribute('aria-selected', 'true');
-        await expect(page.getByText('Review queue')).toBeVisible();
-        await expect(page.locator('[data-conflict-row="true"]')).not.toHaveCount(
-            0,
-        );
+        await expect(
+            page.getByRole('heading', { name: /items? to review/ }),
+        ).toBeVisible();
+        await expect(
+            page.locator('[data-conflict-row="true"]'),
+        ).not.toHaveCount(0);
+
+        const attentionOrder = await page
+            .locator('[data-conflict-row="true"]')
+            .evaluateAll((rows) =>
+                rows.map((row) => ({
+                    severity: row.getAttribute('data-attention-severity') ?? '',
+                    scheduledAt:
+                        row.getAttribute('data-attention-scheduled-at') ?? '',
+                    priority: row.getAttribute('data-attention-priority') ?? '',
+                    id: row.getAttribute('data-attention-id') ?? '',
+                })),
+            );
+        const severityRank = { danger: 0, warning: 1, info: 2 } as const;
+        const priorityRank = { emergency: 0, priority: 1, routine: 2 } as const;
+        const expectedOrder = [...attentionOrder].sort((left, right) => {
+            const severityDifference =
+                severityRank[left.severity as keyof typeof severityRank] -
+                severityRank[right.severity as keyof typeof severityRank];
+
+            if (severityDifference !== 0) {
+                return severityDifference;
+            }
+
+            const leftSchedule = left.scheduledAt
+                ? Date.parse(left.scheduledAt)
+                : Number.MAX_SAFE_INTEGER;
+            const rightSchedule = right.scheduledAt
+                ? Date.parse(right.scheduledAt)
+                : Number.MAX_SAFE_INTEGER;
+            const normalizedLeftSchedule = Number.isNaN(leftSchedule)
+                ? Number.MAX_SAFE_INTEGER
+                : leftSchedule;
+            const normalizedRightSchedule = Number.isNaN(rightSchedule)
+                ? Number.MAX_SAFE_INTEGER
+                : rightSchedule;
+
+            if (normalizedLeftSchedule !== normalizedRightSchedule) {
+                return normalizedLeftSchedule - normalizedRightSchedule;
+            }
+
+            const priorityDifference =
+                (priorityRank[left.priority as keyof typeof priorityRank] ??
+                    3) -
+                (priorityRank[right.priority as keyof typeof priorityRank] ??
+                    3);
+
+            return priorityDifference !== 0
+                ? priorityDifference
+                : left.id.localeCompare(right.id);
+        });
+        expect(attentionOrder).toEqual(expectedOrder);
+
+        const allTab = page.getByRole('tab', { name: /All attention/ });
+        await allTab.focus();
+        await page.keyboard.press('ArrowRight');
+        await expect(page.getByRole('tab', { name: /Overlaps/ })).toBeFocused();
+        await expect(
+            page.getByText('Overlaps checks are clear', { exact: true }),
+        ).toBeVisible();
+        await expect(
+            page.getByLabel('Operational attention status'),
+        ).toContainText('operational attention');
 
         const unassignedTab = page.getByRole('tab', { name: /Unassigned/ });
         await unassignedTab.click();
         await expect(unassignedTab).toHaveAttribute('aria-selected', 'true');
         await expect(
-            page.getByRole('link', { name: 'Open dispatch' }).first(),
+            page.getByRole('link', { name: /Assign resources for/ }).first(),
         ).toBeVisible();
-        await page.getByRole('link', { name: 'Open dispatch' }).first().click();
+        await page
+            .getByRole('link', { name: /Assign resources for/ })
+            .first()
+            .click();
+        await expect(page).toHaveURL(/\/operations\/dispatch-jobs\/\d+/);
         await expect(
-            page.getByText('Dispatch job', { exact: true }),
+            page.getByRole('heading', {
+                name: 'Prepare this dispatch for activation',
+            }),
         ).toBeVisible();
+    });
+
+    test('operational attention remains usable at mobile and desktop widths', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+
+        for (const width of [390, 1280]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto('/?view=dispatch');
+            await page
+                .getByRole('button', { name: /Operational attention/ })
+                .click();
+
+            await expect(
+                page.locator('[data-conflict-row="true"]').first(),
+            ).toBeVisible();
+            const hasHorizontalOverflow = await page.evaluate(
+                () => document.documentElement.scrollWidth > window.innerWidth,
+            );
+            expect(hasHorizontalOverflow).toBe(false);
+        }
+
+        const results = await new AxeBuilder({ page }).analyze();
+        expect(results.violations).toEqual([]);
     });
 
     test('assignment workspace stays usable across mobile, tablet, and desktop widths', async ({
