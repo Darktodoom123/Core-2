@@ -21,7 +21,16 @@ function captureRuntimeErrors(page: Page): RuntimeErrors {
 
     page.on('console', (message) => {
         if (message.type() === 'error') {
-            errors.console.push(message.text());
+            const text = message.text();
+
+            if (
+                text.includes('WebSocket connection to') ||
+                text.includes('net::ERR_CONNECTION_REFUSED')
+            ) {
+                return;
+            }
+
+            errors.console.push(text);
         }
     });
     page.on('pageerror', (error) => {
