@@ -693,6 +693,12 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 name: 'Dispatch setup progress',
             }),
         ).toBeVisible();
+        await page
+            .getByRole('button', {
+                name: /Next: Assign resources|2.*Assign resources/i,
+            })
+            .first()
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Assignment plan' }),
         ).toBeVisible();
@@ -788,9 +794,11 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.goto('/?view=dispatch');
         await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
 
-        const assignResources = page.getByRole('link', {
-            name: 'Assign resources',
-        });
+        const assignResources = page
+            .getByRole('link', {
+                name: /Assign resources|Resolve in assignment workspace/i,
+            })
+            .first();
         await expect(assignResources).toBeVisible();
         await expect(assignResources).toHaveAttribute(
             'href',
