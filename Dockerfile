@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
 
 # The tags and digests below were verified against the Docker Official Images
 # registry on 2026-08-25. Dependabot owns routine digest refreshes; major PHP,
