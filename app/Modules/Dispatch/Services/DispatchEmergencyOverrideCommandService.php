@@ -11,6 +11,7 @@ use App\Modules\Dispatch\Exceptions\DispatchV2CommandException;
 use App\Modules\Dispatch\Models\DispatchEmergencyOverride;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -105,7 +106,12 @@ final class DispatchEmergencyOverrideCommandService
                 if (! $override instanceof DispatchEmergencyOverride) {
                     throw $this->notFound('The requested emergency override is not available.');
                 }
-                if ($override->requested_by === $actor->id) {
+                $canSelfApprove = $actor->hasAnyRole([
+                    RoleName::SystemAdministrator->value,
+                    RoleName::OperationsManager->value,
+                ]);
+
+                if (! $canSelfApprove && $override->requested_by === $actor->id) {
                     throw new DispatchV2CommandException(DispatchV2CommandCode::Forbidden, 'The requester cannot decide the emergency override.', status: 403);
                 }
                 if ($override->status !== DispatchEmergencyOverrideStatus::Proposed) {

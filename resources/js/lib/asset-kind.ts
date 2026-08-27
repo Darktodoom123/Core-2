@@ -55,8 +55,6 @@ export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
         text.includes('rig') ||
         text.includes('gen') ||
         text.includes('pump') ||
-        text.includes('tech') ||
-        text.includes('technician') ||
         text.includes('mechanic')
     ) {
         return 'equipment';

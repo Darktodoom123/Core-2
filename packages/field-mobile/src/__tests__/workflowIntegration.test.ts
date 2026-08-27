@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import type { FieldApiClient } from '../services/apiClient';
 import { ApiClientError } from '../services/apiClient';
@@ -13,10 +13,10 @@ describe('Field Mobile Workflow Integration', () => {
         });
     const activeWorker: User = {
         id: 1,
-        name: 'Field Technician Alex',
+        name: 'Crane Operator Alex',
         username: 'alex',
         email: 'alex@example.com',
-        role: 'field_technician',
+        role: 'crane_operator',
         is_active: true,
     };
 

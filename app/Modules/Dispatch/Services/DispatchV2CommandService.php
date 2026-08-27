@@ -18,6 +18,7 @@ use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanRequirementSlot;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
 use App\Modules\Dispatch\Queries\DispatchReadinessEvaluator;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -323,7 +324,12 @@ final class DispatchV2CommandService
                 if (! $approval instanceof DispatchPlanApproval) {
                     $approval = $this->ensurePendingApproval($plan, $plan->submitted_by === null ? $plan->created_by : (int) $plan->submitted_by, null);
                 }
-                if ($approval->requested_by === $actor->id) {
+                $canSelfApprove = $actor->hasAnyRole([
+                    RoleName::SystemAdministrator->value,
+                    RoleName::OperationsManager->value,
+                ]);
+
+                if (! $canSelfApprove && $approval->requested_by === $actor->id) {
                     throw new DispatchV2CommandException(DispatchV2CommandCode::Forbidden, 'The plan requester cannot decide their own approval.', status: 403);
                 }
 

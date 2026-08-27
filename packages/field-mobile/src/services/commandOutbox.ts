@@ -9,6 +9,7 @@ import type {
 import type {
     ActivateSosIncidentPayload,
     DispatchJob,
+    JobReportCommandPayload,
     LocationSharePayload,
     OutboxCommand,
     OutboxCommandPriority,
@@ -364,6 +365,18 @@ export class CommandOutboxManager {
         );
     }
 
+    public enqueueSubmitJobReport(
+        jobId: number,
+        payload: JobReportCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_job_report',
+            jobId,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
@@ -580,6 +593,11 @@ export class CommandOutboxManager {
             } else if (command.type === 'activate_sos') {
                 response = await apiClient.activateSosIncident(
                     command.payload as unknown as ActivateSosIncidentPayload,
+                    command.id,
+                );
+            } else if (command.type === 'submit_job_report') {
+                response = await apiClient.submitJobReport(
+                    command.payload as unknown as JobReportCommandPayload,
                     command.id,
                 );
             }

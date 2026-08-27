@@ -536,7 +536,7 @@ STRICT CONSTRAINTS:
 {
   "summary": "String concise summary of recommendation",
   "proposed_personnel": [
-    { "user_id": 123, "assignment_type": "driver|crane_operator|field_technician" }
+    { "user_id": 123, "assignment_type": "driver|crane_operator" }
   ],
   "proposed_assets": [
     { "operational_asset_id": 456, "assignment_type": "truck|crane|equipment" }

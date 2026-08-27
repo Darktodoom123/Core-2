@@ -9,16 +9,13 @@ import {
     Clock3,
     ClipboardList,
     CloudOff,
-    FileText,
     Home,
     Map,
     MapPin,
     Menu,
     Navigation,
-    PackageCheck,
     Play,
     Route,
-    ScanLine,
     ShieldCheck,
     Signature,
     TriangleAlert,
@@ -61,13 +58,6 @@ const operatorNavigation: Array<[AppSection, string, typeof Home]> = [
     ['issues', 'Issues', Wrench],
 ];
 
-const technicianNavigation: Array<[AppSection, string, typeof Home]> = [
-    ['tasks', 'Tasks', ClipboardList],
-    ['job', 'Work order', Wrench],
-    ['equipment', 'Assets', ScanLine],
-    ['issues', 'Handover', CheckCircle2],
-];
-
 function MobileFrame({
     role,
     section,
@@ -87,12 +77,7 @@ function MobileFrame({
     onSync: () => void;
     children: React.ReactNode;
 }) {
-    const nav =
-        role === 'driver'
-            ? driverNavigation
-            : role === 'operator'
-              ? operatorNavigation
-              : technicianNavigation;
+    const nav = role === 'driver' ? driverNavigation : operatorNavigation;
 
     return (
         <div className="min-h-[calc(100vh-4.5rem)] bg-[#e8edf2] px-0 py-0 md:p-6">
@@ -743,267 +728,28 @@ function OperatorSurface({
     );
 }
 
-function TechnicianSurface({
-    section,
-    tasks,
-    onAdvanceTask,
-}: {
-    section: AppSection;
-    tasks: FieldTask[];
-    onAdvanceTask: (taskId: string, status: FieldTask['status']) => void;
-}) {
-    const [selectedTaskId, setSelectedTaskId] = useState(tasks[0]?.id ?? '');
-    const selected =
-        tasks.find((task) => task.id === selectedTaskId) ?? tasks[0];
-
-    if (section === 'equipment') {
-        return (
-            <div>
-                <MobileSectionTitle
-                    title="Find an asset"
-                    subtitle="Scan an equipment code or search the register before starting service."
-                />
-                <div className="space-y-3 px-4 pb-6">
-                    <Button className="h-28 w-full" variant="primary">
-                        <ScanLine className="h-6 w-6" aria-hidden="true" />
-                        Scan asset code
-                    </Button>
-                    <Panel className="p-4">
-                        <label className="text-sm font-semibold text-ink">
-                            Search the equipment register
-                            <input
-                                type="search"
-                                className="mt-2 h-11 w-full rounded-lg border border-line bg-surface px-3 font-normal"
-                                placeholder="Example: CR-250-04"
-                            />
-                        </label>
-                    </Panel>
-                    <InlineNotice tone="info" title="Recent asset">
-                        CR-250-04 · Grove GMK5250 · North Yard, Bay 3
-                    </InlineNotice>
-                </div>
-            </div>
-        );
-    }
-
-    if (!selected) {
-        return (
-            <div>
-                <MobileSectionTitle
-                    title="Assigned tasks"
-                    subtitle="Prioritized maintenance and breakdown work for today."
-                />
-                <div className="px-4 pb-6">
-                    <Panel>
-                        <EmptyState
-                            compact
-                            icon={Wrench}
-                            title="No service tasks assigned"
-                            message="New maintenance and breakdown work will appear here when it is assigned to you."
-                        />
-                    </Panel>
-                </div>
-            </div>
-        );
-    }
-
-    if (section === 'issues') {
-        return (
-            <div>
-                <MobileSectionTitle
-                    title="Service handover"
-                    subtitle="Record the final operating state and remaining restrictions."
-                />
-                <div className="space-y-3 px-4 pb-6">
-                    <Panel className="p-4">
-                        <h2 className="font-semibold text-ink">
-                            {selected?.assetCode}
-                        </h2>
-                        <label className="mt-4 block text-sm font-semibold text-ink">
-                            Return-to-service state
-                            <select className="mt-2 h-11 w-full rounded-lg border border-line bg-surface px-3 font-normal">
-                                <option>Operational</option>
-                                <option>Operational with restrictions</option>
-                                <option>Keep out of service</option>
-                            </select>
-                        </label>
-                        <label className="mt-4 block text-sm font-semibold text-ink">
-                            Handover notes
-                            <textarea
-                                className="mt-2 min-h-28 w-full rounded-lg border border-line p-3 font-normal"
-                                placeholder="State the completed work and any follow-up"
-                            />
-                        </label>
-                    </Panel>
-                    {selected && (
-                        <Button
-                            className="w-full"
-                            variant="primary"
-                            onClick={() =>
-                                onAdvanceTask(selected.id, 'Completed')
-                            }
-                        >
-                            <PackageCheck
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                            />
-                            Complete handover
-                        </Button>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
-    if (section === 'job' && selected) {
-        const nextStatus: Partial<
-            Record<FieldTask['status'], FieldTask['status']>
-        > = {
-            Assigned: 'Diagnosing',
-            Diagnosing: 'Repairing',
-            Repairing: 'Testing',
-            Testing: 'Completed',
-            'Waiting for parts': 'Repairing',
-        };
-        const next = nextStatus[selected.status] ?? 'Diagnosing';
-
-        return (
-            <div>
-                <MobileSectionTitle
-                    title={selected.reference}
-                    subtitle={selected.title}
-                />
-                <div className="space-y-3 px-4 pb-6">
-                    <Panel className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <p className="text-xs text-ink-soft">Asset</p>
-                                <p className="mt-1 font-semibold text-ink">
-                                    {selected.assetCode}
-                                </p>
-                            </div>
-                            <StatusBadge status={selected.status} />
-                        </div>
-                        <dl className="mt-3 divide-y divide-line">
-                            <DataPair
-                                label="Location"
-                                value={selected.location}
-                            />
-                            <DataPair
-                                label="Schedule"
-                                value={selected.scheduledAt}
-                            />
-                            <DataPair
-                                label="Priority"
-                                value={
-                                    <StatusBadge status={selected.priority} />
-                                }
-                            />
-                        </dl>
-                    </Panel>
-                    <Panel className="p-4">
-                        <ProgressBar
-                            value={
-                                (selected.checklistCompleted /
-                                    selected.checklistTotal) *
-                                100
-                            }
-                            label={`${selected.checklistCompleted} of ${selected.checklistTotal} service checks`}
-                        />
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                            <Button>
-                                <Camera
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                                Add photos
-                            </Button>
-                            <Button>
-                                <FileText
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                                Add notes
-                            </Button>
-                        </div>
-                    </Panel>
-                    <Button
-                        className="w-full"
-                        variant="primary"
-                        onClick={() => onAdvanceTask(selected.id, next)}
-                    >
-                        Move task to {next}
-                    </Button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div>
-            <MobileSectionTitle
-                title="Assigned tasks"
-                subtitle="Prioritized maintenance and breakdown work for today."
-            />
-            <div className="space-y-3 px-4 pb-6">
-                {tasks.map((task) => (
-                    <button
-                        key={task.id}
-                        type="button"
-                        onClick={() => setSelectedTaskId(task.id)}
-                        className={cn(
-                            'w-full rounded-xl border bg-surface p-4 text-left',
-                            task.id === selectedTaskId
-                                ? 'border-brand ring-2 ring-brand/15'
-                                : 'border-line hover:bg-surface-subtle',
-                        )}
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <p className="text-xs text-ink-soft">
-                                    {task.reference} · {task.assetCode}
-                                </p>
-                                <p className="mt-1 leading-5 font-semibold text-ink">
-                                    {task.title}
-                                </p>
-                            </div>
-                            <StatusBadge status={task.priority} />
-                        </div>
-                        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-ink-soft">
-                            <span>{task.location}</span>
-                            <StatusBadge status={task.status} />
-                        </div>
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 export function FieldMobileApp({
     role,
     section,
     jobs,
-    fieldTasks,
     connectivity,
     queuedActions,
     onSectionChange,
     onConnectivityChange,
     onSync,
     onAdvanceJob,
-    onAdvanceTask,
 }: {
-    role: 'driver' | 'operator' | 'technician';
+    role: 'driver' | 'operator';
     section: AppSection;
     jobs: DispatchJob[];
-    fieldTasks: FieldTask[];
+    fieldTasks?: FieldTask[];
     connectivity: ConnectivityState;
     queuedActions: number;
     onSectionChange: (section: AppSection) => void;
     onConnectivityChange: (state: ConnectivityState) => void;
     onSync: () => void;
     onAdvanceJob: (jobId: string, status: PrototypeDispatchStatusLabel) => void;
-    onAdvanceTask: (taskId: string, status: FieldTask['status']) => void;
+    onAdvanceTask?: (taskId: string, status: FieldTask['status']) => void;
 }) {
     const assignedJob =
         jobs.find((job) => job.reference === 'CON-1251') ?? jobs[0];
@@ -1018,13 +764,7 @@ export function FieldMobileApp({
             onConnectivityChange={onConnectivityChange}
             onSync={onSync}
         >
-            {role === 'technician' ? (
-                <TechnicianSurface
-                    section={section}
-                    tasks={fieldTasks}
-                    onAdvanceTask={onAdvanceTask}
-                />
-            ) : !assignedJob ? (
+            {!assignedJob ? (
                 <div>
                     <MobileSectionTitle
                         title="Assigned work"

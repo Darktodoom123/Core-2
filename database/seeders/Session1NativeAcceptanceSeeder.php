@@ -38,7 +38,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
 
         $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
         $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
-        $technician = User::query()->where('email', 'technician@example.com')->firstOrFail();
+        $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
         $fixturePassword = getenv('SESSION1_NATIVE_PASSWORD');
 
         if (! is_string($fixturePassword) || strlen($fixturePassword) < 24) {
@@ -47,7 +47,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             );
         }
 
-        foreach ([$dispatcher, $driver, $technician] as $user) {
+        foreach ([$dispatcher, $driver, $operator] as $user) {
             $user->forceFill(['password' => Hash::make($fixturePassword)])->save();
         }
 
@@ -94,10 +94,10 @@ final class Session1NativeAcceptanceSeeder extends Seeder
         DispatchPersonnelAssignment::query()->updateOrCreate(
             [
                 'dispatch_job_id' => $forbiddenJob->id,
-                'user_id' => $technician->id,
+                'user_id' => $operator->id,
             ],
             [
-                'assignment_type' => 'field_technician',
+                'assignment_type' => 'crane_operator',
                 'assigned_by' => $dispatcher->id,
                 'response_status' => AssignmentResponse::Pending,
                 'active_from' => now()->subMinute(),

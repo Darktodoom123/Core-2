@@ -311,7 +311,7 @@ it('requires a reason for approval and rejection decisions', function (string $s
     ApprovalStatus::Rejected->value,
 ]);
 
-it('prevents a privileged requester from deciding their own exceptional work', function () {
+it('allows a privileged requester to decide their own exceptional work', function () {
     $administrator = exceptionalWorkflowUser(RoleName::SystemAdministrator, 'Requesting Administrator');
     $job = exceptionalWorkflowJob($administrator, 'CON-6401', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $administrator, '6401');
@@ -320,14 +320,18 @@ it('prevents a privileged requester from deciding their own exceptional work', f
     $this->actingAs($administrator)
         ->post("/operations/approval-requests/{$approval->id}/decision", [
             'status' => ApprovalStatus::Approved->value,
-            'reason' => 'Attempted self approval.',
+            'reason' => 'Authorized self approval by administrator.',
         ])
-        ->assertForbidden();
+        ->assertRedirect('/')
+        ->assertSessionHas('flash', [
+            'tone' => 'success',
+            'message' => 'Approval request was approved.',
+        ]);
 
     expect($approval->refresh())
-        ->status->toBe(ApprovalStatus::Pending)
-        ->decided_by->toBeNull()
-        ->and(AuditEvent::query()->where('action', 'approval.decided')->count())->toBe(0);
+        ->status->toBe(ApprovalStatus::Approved)
+        ->decided_by->toBe($administrator->id)
+        ->and(AuditEvent::query()->where('action', 'approval.decided')->count())->toBe(1);
 });
 
 it('forbids unauthorized decision and activation access while auditing the activation attempt', function () {
@@ -356,28 +360,17 @@ it('forbids unauthorized decision and activation access while auditing the activ
         ->and($attempt->after)->toBe(['requested_version' => 1]);
 });
 
-it('prohibits an operations manager from approving their own requested approval', function () {
+it('allows an operations manager to approve their own requested approval', function () {
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Requester Manager');
-    $otherManager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Decider Manager');
     $job = exceptionalWorkflowJob($manager, 'CON-6503', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $manager, '6503');
     $approval = requestExceptionalWorkflowApproval($job, $manager, $resources['driver'], $resources['asset']);
 
-    // Requester manager cannot decide their own approval
+    // Requester manager can decide their own approval
     $this->actingAs($manager)
         ->post("/operations/approval-requests/{$approval->id}/decision", [
             'status' => ApprovalStatus::Approved->value,
-            'reason' => 'Self-approving my own request.',
-        ])
-        ->assertForbidden();
-
-    expect($approval->refresh()->status)->toBe(ApprovalStatus::Pending);
-
-    // Another manager can decide it
-    $this->actingAs($otherManager)
-        ->post("/operations/approval-requests/{$approval->id}/decision", [
-            'status' => ApprovalStatus::Approved->value,
-            'reason' => 'Independent approval by second manager.',
+            'reason' => 'Self-approving my own request as authorized manager.',
         ])
         ->assertRedirect('/')
         ->assertSessionHas('flash', [
@@ -386,7 +379,29 @@ it('prohibits an operations manager from approving their own requested approval'
         ]);
 
     expect($approval->refresh()->status)->toBe(ApprovalStatus::Approved)
-        ->and($approval->decided_by)->toBe($otherManager->id);
+        ->and($approval->decided_by)->toBe($manager->id);
+});
+
+it('allows a system administrator to approve their own requested approval', function () {
+    $admin = exceptionalWorkflowUser(RoleName::SystemAdministrator, 'Requester Admin');
+    $job = exceptionalWorkflowJob($admin, 'CON-6503-A', DispatchPriority::Priority);
+    $resources = assignExceptionalWorkflowResources($job, $admin, '6503A');
+    $approval = requestExceptionalWorkflowApproval($job, $admin, $resources['driver'], $resources['asset']);
+
+    // Requester admin can decide their own approval
+    $this->actingAs($admin)
+        ->post("/operations/approval-requests/{$approval->id}/decision", [
+            'status' => ApprovalStatus::Approved->value,
+            'reason' => 'Self-approving my own request as administrator.',
+        ])
+        ->assertRedirect('/')
+        ->assertSessionHas('flash', [
+            'tone' => 'success',
+            'message' => 'Approval request was approved.',
+        ]);
+
+    expect($approval->refresh()->status)->toBe(ApprovalStatus::Approved)
+        ->and($approval->decided_by)->toBe($admin->id);
 });
 
 it('allows an operations manager to approve and activate a priority dispatch atomically', function () {
@@ -458,7 +473,7 @@ it('rejects a stale activation version with a refresh and review error and audit
 
 it('revalidates changed asset safety at activation time and audits the blocked attempt', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Safety Dispatcher');
-    $technician = exceptionalWorkflowUser(RoleName::FieldTechnician, 'Safety Technician');
+    $technician = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Technician');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Manager');
     $statusJob = exceptionalWorkflowJob($dispatcher, 'CON-6701');
     $statusResources = assignExceptionalWorkflowResources($statusJob, $dispatcher, '6701');
@@ -559,7 +574,7 @@ it('provides managers enough context to independently review each pending reques
         );
 });
 
-it('marks self-requested approvals as reviewable but not decidable in the live UI contract', function () {
+it('marks self-requested approvals as decidable for administrators in the live UI contract', function () {
     $administrator = exceptionalWorkflowUser(RoleName::SystemAdministrator, 'UI Requester');
     $job = exceptionalWorkflowJob($administrator, 'CON-6802', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $administrator, '6802');
@@ -571,8 +586,8 @@ it('marks self-requested approvals as reviewable but not decidable in the live U
         ->assertInertia(fn (Assert $page) => $page
             ->loadDeferredProps('workspace-overview', fn (Assert $section) => $section
                 ->has('approvals', 1)
-                ->where('approvals.0.can_decide', false)
-                ->where('approvals.0.decision_blocker', 'You requested this exceptional work. Another authorized manager must decide it.')
+                ->where('approvals.0.can_decide', true)
+                ->where('approvals.0.decision_blocker', null)
             )
         );
 });

@@ -38,6 +38,8 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::TrackingShareOwn->value,
                 PermissionName::SosTrigger->value,
                 PermissionName::SosRespond->value,
+                PermissionName::FuelRequest->value,
+                PermissionName::FuelRecord->value,
             ], true)
         ));
 
@@ -62,10 +64,13 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::AssignmentsCreate, PermissionName::AssignmentsReassign,
                 PermissionName::AssignmentsApprove, PermissionName::AssignmentsOverride,
                 PermissionName::FleetViewAll, PermissionName::FleetUpdateStatus,
+                PermissionName::FleetInspect, PermissionName::FleetMaintain,
                 PermissionName::EquipmentViewAll, PermissionName::EquipmentUpdateStatus,
-                PermissionName::FuelViewAll, PermissionName::FuelForward, PermissionName::FuelApprove, PermissionName::FuelMonitor,
+                PermissionName::EquipmentInspect, PermissionName::EquipmentMaintain,
+                PermissionName::FuelViewAll, PermissionName::FuelForward, PermissionName::FuelApprove,
+                PermissionName::FuelVerify, PermissionName::FuelMonitor,
                 PermissionName::FuelReport, PermissionName::TrackingViewAll, PermissionName::GptUseOperations,
-                PermissionName::ReportsViewAll, PermissionName::ReportsExport,
+                PermissionName::ReportsViewAll, PermissionName::ReportsViewMaintenance, PermissionName::ReportsExport,
                 PermissionName::RentalView, PermissionName::RentalApprove, PermissionName::RentalAssignOperator, PermissionName::RentalCheckout,
                 PermissionName::RentalReturn, PermissionName::SalesView, PermissionName::SalesCatalogManage,
                 PermissionName::SalesCreateQuote,
@@ -84,15 +89,6 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::AssignmentsViewOwn, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
                 PermissionName::FuelViewOwn, PermissionName::FuelRequest, PermissionName::FuelRecord,
                 PermissionName::TrackingShareOwn, PermissionName::ReportsViewOwn,
-                PermissionName::SosTrigger,
-            ]),
-            RoleName::FieldTechnician->value => self::values([
-                PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::AssignmentsViewOwn,
-                PermissionName::FleetViewAssigned, PermissionName::FleetUpdateStatus, PermissionName::FleetInspect,
-                PermissionName::FleetMaintain, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
-                PermissionName::EquipmentInspect, PermissionName::EquipmentMaintain, PermissionName::FuelViewOwn,
-                PermissionName::FuelRecord, PermissionName::FuelVerify, PermissionName::TrackingShareOwn,
-                PermissionName::GptUseMaintenance, PermissionName::ReportsViewMaintenance, PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,
             ]),
         ];

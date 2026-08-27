@@ -88,11 +88,7 @@ const ATTENTION_FILTERS: ConflictTypeFilter[] = [
     'advisories',
 ];
 
-const FIELD_USER_ROLES = new Set([
-    'driver',
-    'crane_operator',
-    'field_technician',
-]);
+const FIELD_USER_ROLES = new Set(['driver', 'crane_operator']);
 
 function isFieldUser(user: WorkspaceUserViewModel): boolean {
     return user.role !== null && FIELD_USER_ROLES.has(user.role);
@@ -409,10 +405,7 @@ export function LiveDispatchWorkspace({
     >({});
 
     const role = props.auth?.role;
-    const isFieldRole =
-        role === 'driver' ||
-        role === 'crane_operator' ||
-        role === 'field_technician';
+    const isFieldRole = role === 'driver' || role === 'crane_operator';
     const fieldMode =
         isFieldRole && capabilities.update_assigned_dispatch_status;
     const scheduleBoardUsers = useMemo(

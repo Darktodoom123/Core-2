@@ -87,7 +87,6 @@ it('assigns every supported personnel and asset type atomically and records the 
     $dispatcher = operationsUser(RoleName::Dispatcher);
     $driver = operationsUser(RoleName::Driver);
     $operator = operationsUser(RoleName::CraneOperator);
-    $technician = operationsUser(RoleName::FieldTechnician);
     addWorkflowCredential($driver, 'driver_license');
     addWorkflowCredential($operator, 'operator_certification');
     $job = workflowDispatchJob($dispatcher, 'CON-1101');
@@ -100,7 +99,6 @@ it('assigns every supported personnel and asset type atomically and records the 
             'personnel' => [
                 ['user_id' => $driver->id, 'assignment_type' => 'driver'],
                 ['user_id' => $operator->id, 'assignment_type' => 'crane_operator'],
-                ['user_id' => $technician->id, 'assignment_type' => 'field_technician'],
             ],
             'assets' => [
                 ['operational_asset_id' => $truck->id, 'assignment_type' => 'truck'],
@@ -111,7 +109,7 @@ it('assigns every supported personnel and asset type atomically and records the 
         ->assertRedirect("/operations/dispatch-jobs/{$job->id}");
 
     expect($job->personnelAssignments()->pluck('assignment_type')->sort()->values()->all())
-        ->toBe(['crane_operator', 'driver', 'field_technician'])
+        ->toBe(['crane_operator', 'driver'])
         ->and($job->assetAssignments()->pluck('assignment_type')->sort()->values()->all())
         ->toBe(['crane', 'equipment', 'truck']);
 
@@ -122,7 +120,7 @@ it('assigns every supported personnel and asset type atomically and records the 
         ->sole();
 
     expect($audit->actor_id)->toBe($dispatcher->id)
-        ->and($audit->after['personnel'])->toHaveCount(3)
+        ->and($audit->after['personnel'])->toHaveCount(2)
         ->and($audit->after['assets'])->toHaveCount(3);
 });
 
@@ -240,13 +238,13 @@ it('rejects unavailable, suspended, and role-mismatched personnel', function () 
     $suspendedDriver = operationsUser(RoleName::Driver);
     $suspendedDriver->update(['suspended_at' => now()]);
     addWorkflowCredential($suspendedDriver, 'driver_license');
-    $technician = operationsUser(RoleName::FieldTechnician);
+    $operator = operationsUser(RoleName::CraneOperator);
     $job = workflowDispatchJob($dispatcher, 'CON-1401');
 
     foreach ([
         [$unavailableDriver, 'driver', 'leave'],
         [$suspendedDriver, 'driver', 'suspended'],
-        [$technician, 'driver', 'role'],
+        [$operator, 'driver', 'role'],
     ] as [$person, $assignmentType, $expectedConflict]) {
         $response = $this->actingAs($dispatcher)
             ->from("/operations/dispatch-jobs/{$job->id}")
@@ -266,7 +264,7 @@ it('rejects blocking maintenance and mismatched asset kinds', function () {
     $job = workflowDispatchJob($dispatcher, 'CON-1501');
     $blockedCrane = OperationalAsset::query()->create(['code' => 'CR-1501', 'name' => 'Blocked crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $blockedCrane->maintenanceWorkOrders()->create([
-        'technician_id' => operationsUser(RoleName::FieldTechnician)->id,
+        'technician_id' => operationsUser(RoleName::OperationsManager)->id,
         'status' => 'open',
         'defect' => 'Boom inspection required',
         'dispatch_blocking' => true,
@@ -355,8 +353,9 @@ it('rejects duplicate resources before entering the assignment transaction', fun
 it('revalidates a stale eligible resource snapshot and rolls back the whole assignment batch', function () {
     $dispatcher = operationsUser(RoleName::Dispatcher);
     $driver = operationsUser(RoleName::Driver);
-    $technician = operationsUser(RoleName::FieldTechnician);
+    $operator = operationsUser(RoleName::CraneOperator);
     addWorkflowCredential($driver, 'driver_license');
+    addWorkflowCredential($operator, 'operator_certification');
     $targetJob = workflowDispatchJob($dispatcher, 'CON-1801');
     $conflictingJob = workflowDispatchJob($dispatcher, 'CON-1800');
     $truck = OperationalAsset::query()->create(['code' => 'TR-1801', 'name' => 'Truck', 'kind' => 'truck', 'status' => AssetStatus::Available]);
@@ -376,7 +375,7 @@ it('revalidates a stale eligible resource snapshot and rolls back the whole assi
         ->from("/operations/dispatch-jobs/{$targetJob->id}")
         ->post("/operations/dispatch-jobs/{$targetJob->id}/assignments", [
             'personnel' => [
-                ['user_id' => $technician->id, 'assignment_type' => 'field_technician'],
+                ['user_id' => $operator->id, 'assignment_type' => 'crane_operator'],
                 ['user_id' => $driver->id, 'assignment_type' => 'driver'],
             ],
             'assets' => [['operational_asset_id' => $truck->id, 'assignment_type' => 'truck']],

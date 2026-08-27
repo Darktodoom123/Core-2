@@ -406,29 +406,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
                                             <Pressable
                                                 onPress={() => {
-                                                    setUsername('technician');
-                                                    setPassword('password');
-                                                }}
-                                                disabled={formDisabled}
-                                                style={({ pressed }) => [
-                                                    styles.devButton,
-                                                    pressed && styles.pressed,
-                                                    formDisabled &&
-                                                        styles.disabledButton,
-                                                ]}
-                                                accessibilityRole="button"
-                                                accessibilityLabel="Fill Technician dev credentials"
-                                                testID="dev-login-technician"
-                                            >
-                                                <Text
-                                                    style={styles.devButtonText}
-                                                >
-                                                    Technician
-                                                </Text>
-                                            </Pressable>
-
-                                            <Pressable
-                                                onPress={() => {
                                                     setUsername('operator');
                                                     setPassword('password');
                                                 }}

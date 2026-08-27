@@ -6,14 +6,19 @@ import {
     Clock,
     Copy,
     Download,
+    Edit3,
     ExternalLink,
     FileCheck,
     FileImage,
     FileText,
     FileX,
     Filter,
+    Gauge,
+    MapPin,
     Paperclip,
     Plus,
+    RotateCcw,
+    Save,
     Search,
     ShieldAlert,
     ShieldCheck,
@@ -35,7 +40,8 @@ import type {
     WorkspaceCapabilities,
 } from '@/types/workspace';
 
-type ReportFilterStatus = 'all' | 'submitted' | 'approved' | 'rejected';
+type ReportFilterStatus =
+    'all' | 'draft' | 'submitted' | 'approved' | 'rejected';
 
 export function ReportsSurface({
     reports = [],
@@ -73,6 +79,7 @@ export function ReportsSurface({
     // Summary statistics
     const stats = useMemo(() => {
         const total = reports.length;
+        const drafts = reports.filter((r) => r.status.value === 'draft').length;
         const submitted = reports.filter(
             (r) => r.status.value === 'submitted',
         ).length;
@@ -87,7 +94,14 @@ export function ReportsSurface({
             0,
         );
 
-        return { total, submitted, approved, rejected, totalAttachments };
+        return {
+            total,
+            drafts,
+            submitted,
+            approved,
+            rejected,
+            totalAttachments,
+        };
     }, [reports]);
 
     // Filtered reports
@@ -268,6 +282,15 @@ export function ReportsSurface({
                         {(
                             [
                                 { id: 'all', label: 'All', count: stats.total },
+                                ...(stats.drafts > 0
+                                    ? [
+                                          {
+                                              id: 'draft' as const,
+                                              label: 'Drafts',
+                                              count: stats.drafts,
+                                          },
+                                      ]
+                                    : []),
                                 {
                                     id: 'submitted',
                                     label: 'Pending Review',
@@ -338,7 +361,7 @@ export function ReportsSurface({
                         <EmptyState
                             icon={FileText}
                             title="No job reports found"
-                            message="Submitted job reports and attached documents will appear here once filed by field technicians or dispatchers."
+                            message="Submitted job reports and attached documents will appear here once filed by field operators or dispatchers."
                         />
                     </Panel>
                 ) : filteredReports.length === 0 ? (
@@ -475,6 +498,7 @@ function SubmitJobReportForm({
     const [fileValidationError, setFileValidationError] = useState<
         string | null
     >(null);
+    const [gpsCapturing, setGpsCapturing] = useState(false);
 
     const form = useForm({
         dispatch_job_id: initialJobId ? String(initialJobId) : '',
@@ -482,8 +506,42 @@ function SubmitJobReportForm({
         remarks: '',
         started_at: '',
         ended_at: '',
+        ending_meter_value: '',
+        meter_type: 'odometer_km',
+        latitude: '',
+        longitude: '',
+        is_draft: false,
         attachments: [] as File[],
     });
+
+    const captureLocation = () => {
+        if (typeof window === 'undefined' || !navigator.geolocation) {
+            setFileValidationError(
+                'Geolocation is not supported by your browser.',
+            );
+
+            return;
+        }
+
+        setGpsCapturing(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                form.setData((data) => ({
+                    ...data,
+                    latitude: pos.coords.latitude.toFixed(6),
+                    longitude: pos.coords.longitude.toFixed(6),
+                }));
+                setGpsCapturing(false);
+            },
+            (err) => {
+                setFileValidationError(
+                    `GPS location capture failed: ${err.message}`,
+                );
+                setGpsCapturing(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000 },
+        );
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFileValidationError(null);
@@ -520,9 +578,13 @@ function SubmitJobReportForm({
         );
     };
 
-    const submit = (e: FormEvent) => {
+    const submitAsFinal = (e: FormEvent) => {
         e.preventDefault();
         setFileValidationError(null);
+        form.transform((data) => ({
+            ...data,
+            is_draft: false,
+        }));
 
         form.post('/operations/job-reports', {
             preserveScroll: true,
@@ -534,7 +596,14 @@ function SubmitJobReportForm({
         });
     };
 
-    const retry = () => {
+    const submitAsDraft = (e: FormEvent) => {
+        e.preventDefault();
+        setFileValidationError(null);
+        form.transform((data) => ({
+            ...data,
+            is_draft: true,
+        }));
+
         form.post('/operations/job-reports', {
             preserveScroll: true,
             forceFormData: true,
@@ -553,7 +622,7 @@ function SubmitJobReportForm({
                         Submit Job Completion Report
                     </h3>
                     <p className="text-xs text-ink-soft">
-                        Record field progress, operational details, and attach
+                        Record field progress, telemetry readings, and attach
                         verified proof documents.
                     </p>
                 </div>
@@ -568,7 +637,7 @@ function SubmitJobReportForm({
             </div>
 
             <form
-                onSubmit={submit}
+                onSubmit={submitAsFinal}
                 className="mt-4 space-y-4"
                 noValidate
                 aria-busy={form.processing}
@@ -650,7 +719,8 @@ function SubmitJobReportForm({
                     </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                {/* Timing & Telemetry Readings */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                         <label className="block text-xs font-semibold text-ink uppercase">
                             Started At (Optional)
@@ -677,6 +747,68 @@ function SubmitJobReportForm({
                             className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
                         />
                     </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Ending Meter Value
+                        </label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            value={form.data.ending_meter_value}
+                            onChange={(e) =>
+                                form.setData(
+                                    'ending_meter_value',
+                                    e.target.value,
+                                )
+                            }
+                            placeholder="e.g. 50120.5"
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Meter Type
+                        </label>
+                        <select
+                            value={form.data.meter_type}
+                            onChange={(e) =>
+                                form.setData('meter_type', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        >
+                            <option value="odometer_km">Odometer (km)</option>
+                            <option value="engine_hours">
+                                Engine Hours (hrs)
+                            </option>
+                            <option value="none">None / Not Applicable</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Geolocation Stamp */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface-subtle p-3">
+                    <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-brand-strong" />
+                        <div>
+                            <span className="text-xs font-semibold text-ink">
+                                Geofence Stamp:
+                            </span>{' '}
+                            <span className="text-xs text-ink-soft">
+                                {form.data.latitude && form.data.longitude
+                                    ? `Lat: ${form.data.latitude}, Lon: ${form.data.longitude}`
+                                    : 'No coordinates stamped'}
+                            </span>
+                        </div>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        className="text-xs"
+                        onClick={captureLocation}
+                        disabled={gpsCapturing}
+                    >
+                        {gpsCapturing ? 'Locating…' : 'Stamp Current GPS'}
+                    </Button>
                 </div>
 
                 <div>
@@ -808,13 +940,327 @@ function SubmitJobReportForm({
                             Unable to submit job report. Please check the
                             highlighted fields and try again.
                         </p>
-                        <button
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                    <Button type="button" variant="secondary" onClick={onDone}>
+                        Cancel
+                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Button
                             type="button"
-                            className="mt-1.5 font-semibold underline hover:text-danger-strong"
-                            onClick={retry}
+                            variant="secondary"
+                            onClick={submitAsDraft}
+                            disabled={
+                                form.processing ||
+                                !form.data.dispatch_job_id ||
+                                !form.data.work_summary.trim()
+                            }
                         >
-                            Retry submission
-                        </button>
+                            <Save className="mr-1.5 h-4 w-4" />
+                            Save as Draft
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={
+                                form.processing ||
+                                !form.data.dispatch_job_id ||
+                                !form.data.work_summary.trim()
+                            }
+                        >
+                            {form.processing
+                                ? 'Submitting…'
+                                : 'Submit Job Report'}
+                        </Button>
+                    </div>
+                </div>
+            </form>
+        </Panel>
+    );
+}
+
+function ResubmitJobReportModal({
+    report,
+    capabilities,
+    onDone,
+}: {
+    report: JobReportViewModel;
+    capabilities: WorkspaceCapabilities;
+    onDone: () => void;
+}) {
+    const maxBytes = capabilities.attachment_policy?.max_bytes || 15728640;
+    const maxCount = capabilities.attachment_policy?.max_count || 10;
+    const acceptedMimeTypes = capabilities.attachment_policy
+        ?.accepted_mime_types || [
+        'image/jpeg',
+        'image/png',
+        'image/heic',
+        'image/heif',
+        'application/pdf',
+    ];
+
+    const [fileValidationError, setFileValidationError] = useState<
+        string | null
+    >(null);
+
+    const form = useForm({
+        work_summary: report.work_summary || '',
+        remarks: report.remarks || '',
+        started_at: report.started_at ? report.started_at.substring(0, 16) : '',
+        ended_at: report.ended_at ? report.ended_at.substring(0, 16) : '',
+        ending_meter_value:
+            report.ending_meter_value !== null &&
+            report.ending_meter_value !== undefined
+                ? String(report.ending_meter_value)
+                : '',
+        meter_type: report.meter_type || 'odometer_km',
+        latitude:
+            report.latitude !== null && report.latitude !== undefined
+                ? String(report.latitude)
+                : '',
+        longitude:
+            report.longitude !== null && report.longitude !== undefined
+                ? String(report.longitude)
+                : '',
+        attachments: [] as File[],
+    });
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFileValidationError(null);
+        const incomingFiles = Array.from(e.target.files ?? []);
+
+        if (incomingFiles.length + form.data.attachments.length > maxCount) {
+            setFileValidationError(
+                `You cannot attach more than ${maxCount} files per report.`,
+            );
+
+            return;
+        }
+
+        for (const file of incomingFiles) {
+            if (file.size > maxBytes) {
+                setFileValidationError(
+                    `File "${file.name}" exceeds ${Math.round(maxBytes / 1024 / 1024)} MiB.`,
+                );
+
+                return;
+            }
+        }
+
+        form.setData('attachments', [
+            ...form.data.attachments,
+            ...incomingFiles,
+        ]);
+    };
+
+    const removeAttachment = (idx: number) => {
+        form.setData(
+            'attachments',
+            form.data.attachments.filter((_, i) => i !== idx),
+        );
+    };
+
+    const submit = (e: FormEvent) => {
+        e.preventDefault();
+        setFileValidationError(null);
+
+        form.post(`/operations/job-reports/${report.id}/resubmit`, {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: () => {
+                onDone();
+            },
+        });
+    };
+
+    return (
+        <Panel className="p-4 md:p-6">
+            <div className="flex items-start justify-between border-b border-line pb-3">
+                <div>
+                    <h3 className="text-base font-semibold text-ink">
+                        Edit & Resubmit Job Report #{report.id}
+                    </h3>
+                    <p className="text-xs text-ink-soft">
+                        Amend report details per reviewer feedback and resubmit
+                        for verification.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onDone}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    aria-label="Close modal"
+                >
+                    <X className="h-4 w-4" />
+                </button>
+            </div>
+
+            {report.rejection_reason && (
+                <div className="mt-4 rounded-lg border border-danger/30 bg-danger-soft/40 p-3.5 text-xs text-danger-strong">
+                    <div className="flex items-center gap-1.5 font-bold">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>Manager Feedback / Reason for Return:</span>
+                    </div>
+                    <p className="mt-1 text-sm text-ink">
+                        {report.rejection_reason}
+                    </p>
+                </div>
+            )}
+
+            <form
+                onSubmit={submit}
+                className="mt-4 space-y-4"
+                noValidate
+                aria-busy={form.processing}
+            >
+                <div>
+                    <label className="block text-xs font-semibold text-ink uppercase">
+                        Work Summary *
+                    </label>
+                    <textarea
+                        value={form.data.work_summary}
+                        onChange={(e) =>
+                            form.setData('work_summary', e.target.value)
+                        }
+                        className="mt-1 h-28 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                        required
+                    />
+                    {form.errors.work_summary && (
+                        <p className="mt-1 text-xs text-danger">
+                            {form.errors.work_summary}
+                        </p>
+                    )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Started At
+                        </label>
+                        <input
+                            type="datetime-local"
+                            value={form.data.started_at}
+                            onChange={(e) =>
+                                form.setData('started_at', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Ended At
+                        </label>
+                        <input
+                            type="datetime-local"
+                            value={form.data.ended_at}
+                            onChange={(e) =>
+                                form.setData('ended_at', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Ending Meter Reading
+                        </label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            value={form.data.ending_meter_value}
+                            onChange={(e) =>
+                                form.setData(
+                                    'ending_meter_value',
+                                    e.target.value,
+                                )
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Meter Type
+                        </label>
+                        <select
+                            value={form.data.meter_type}
+                            onChange={(e) =>
+                                form.setData('meter_type', e.target.value)
+                            }
+                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
+                        >
+                            <option value="odometer_km">Odometer (km)</option>
+                            <option value="engine_hours">
+                                Engine Hours (hrs)
+                            </option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-semibold text-ink uppercase">
+                        Remarks & Action Taken
+                    </label>
+                    <textarea
+                        value={form.data.remarks}
+                        onChange={(e) =>
+                            form.setData('remarks', e.target.value)
+                        }
+                        placeholder="Explain adjustments made to address reviewer notes"
+                        className="mt-1 h-20 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm focus:border-brand focus:outline-none"
+                    />
+                </div>
+
+                {capabilities.attachment_upload && (
+                    <div className="rounded-lg border border-line bg-surface-subtle p-3.5">
+                        <label className="block text-xs font-semibold text-ink uppercase">
+                            Add Additional Proof Attachments
+                        </label>
+                        <input
+                            type="file"
+                            multiple
+                            accept={acceptedMimeTypes.join(',')}
+                            onChange={handleFileChange}
+                            className="mt-2 block w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs text-ink file:mr-3 file:rounded-md file:border-0 file:bg-brand-soft file:px-3 file:py-1.5 file:font-semibold file:text-ink"
+                        />
+
+                        {fileValidationError && (
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-danger">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                <span>{fileValidationError}</span>
+                            </div>
+                        )}
+
+                        {form.data.attachments.length > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                                <span className="text-xs font-medium text-ink">
+                                    Newly Attached Files (
+                                    {form.data.attachments.length}):
+                                </span>
+                                <ul className="space-y-1 text-xs">
+                                    {form.data.attachments.map((file, idx) => (
+                                        <li
+                                            key={`${file.name}-${idx}`}
+                                            className="flex items-center justify-between rounded border border-line bg-surface px-3 py-1.5"
+                                        >
+                                            <span className="truncate font-medium text-ink">
+                                                {file.name}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeAttachment(idx)
+                                                }
+                                                className="ml-2 text-danger hover:text-danger-strong"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -826,12 +1272,11 @@ function SubmitJobReportForm({
                         type="submit"
                         variant="primary"
                         disabled={
-                            form.processing ||
-                            !form.data.dispatch_job_id ||
-                            !form.data.work_summary.trim()
+                            form.processing || !form.data.work_summary.trim()
                         }
                     >
-                        {form.processing ? 'Submitting…' : 'Submit Job Report'}
+                        <RotateCcw className="mr-1.5 h-4 w-4" />
+                        {form.processing ? 'Resubmitting…' : 'Resubmit Report'}
                     </Button>
                 </div>
             </form>
@@ -855,6 +1300,7 @@ function ReportDetailPane({
     const [reviewStatus, setReviewStatus] = useState<
         'approved' | 'rejected' | null
     >(null);
+    const [showResubmitModal, setShowResubmitModal] = useState(false);
 
     const reviewForm = useForm({
         status: 'approved',
@@ -883,6 +1329,16 @@ function ReportDetailPane({
         setTimeout(() => setCopiedChecksumId(null), 2000);
     };
 
+    if (showResubmitModal) {
+        return (
+            <ResubmitJobReportModal
+                report={report}
+                capabilities={capabilities}
+                onDone={() => setShowResubmitModal(false)}
+            />
+        );
+    }
+
     return (
         <Panel className="space-y-6 p-4 md:p-6">
             {/* Header / Meta */}
@@ -901,6 +1357,13 @@ function ReportDetailPane({
                             <ExternalLink className="h-4 w-4 text-ink-soft transition-colors group-hover:text-brand-strong" />
                         </a>
                         <CanonicalStatusBadge status={report.status} />
+                        {report.resubmitted_count !== undefined &&
+                            report.resubmitted_count > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
+                                    <RotateCcw className="h-3 w-3" />
+                                    Amended {report.resubmitted_count}x
+                                </span>
+                            )}
                     </div>
                     {report.job?.title && (
                         <p className="mt-0.5 text-sm font-medium text-ink-soft">
@@ -914,7 +1377,7 @@ function ReportDetailPane({
                                 {report.author?.name ?? 'Unknown Author'}
                             </strong>
                         </span>
-                        {report.submitted_at && (
+                        {report.submitted_at ? (
                             <>
                                 <span>•</span>
                                 <span>
@@ -922,42 +1385,97 @@ function ReportDetailPane({
                                     {formatDateTime(report.submitted_at)}
                                 </span>
                             </>
+                        ) : (
+                            <>
+                                <span>•</span>
+                                <span className="font-medium text-warning-strong">
+                                    Unsubmitted Draft
+                                </span>
+                            </>
                         )}
                     </div>
                 </div>
 
-                <div className="text-right text-xs text-ink-soft">
+                <div className="flex items-center gap-2 text-xs text-ink-soft">
+                    {report.can_be_resubmitted && isAuthor && (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setShowResubmitModal(true)}
+                            className="border-brand/40 text-xs text-brand-strong hover:bg-brand-soft"
+                        >
+                            <Edit3 className="mr-1.5 h-3.5 w-3.5" />
+                            {report.status.value === 'draft'
+                                ? 'Resume Draft'
+                                : 'Edit & Resubmit'}
+                        </Button>
+                    )}
                     <span className="rounded bg-surface-subtle px-2 py-1 font-mono">
-                        Report ID: #{report.id}
+                        Report #{report.id}
                     </span>
                 </div>
             </div>
 
-            {/* Execution Timing */}
-            {(report.started_at || report.ended_at) && (
-                <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-2">
-                    <div>
-                        <span className="font-semibold text-ink">
-                            Started Work:
-                        </span>{' '}
-                        <span className="text-ink-soft">
-                            {report.started_at
-                                ? formatDateTime(report.started_at)
-                                : 'Not recorded'}
-                        </span>
+            {/* Rejection Alert Banner if report was returned */}
+            {report.rejection_reason && report.status.value === 'rejected' && (
+                <div className="rounded-lg border border-danger/30 bg-danger-soft/40 p-4 text-xs">
+                    <div className="flex items-center gap-2 font-bold text-danger-strong">
+                        <ShieldAlert className="h-4 w-4" />
+                        <span>Reviewer Note / Return Reason:</span>
                     </div>
-                    <div>
-                        <span className="font-semibold text-ink">
-                            Ended Work:
-                        </span>{' '}
-                        <span className="text-ink-soft">
-                            {report.ended_at
-                                ? formatDateTime(report.ended_at)
-                                : 'Not recorded'}
-                        </span>
-                    </div>
+                    <p className="mt-1.5 text-sm font-medium text-ink">
+                        {report.rejection_reason}
+                    </p>
                 </div>
             )}
+
+            {/* Execution Timing & Telemetry Readings */}
+            <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-4">
+                <div>
+                    <span className="font-semibold text-ink">
+                        Started Work:
+                    </span>{' '}
+                    <span className="block text-ink-soft">
+                        {report.started_at
+                            ? formatDateTime(report.started_at)
+                            : 'Not recorded'}
+                    </span>
+                </div>
+                <div>
+                    <span className="font-semibold text-ink">Ended Work:</span>{' '}
+                    <span className="block text-ink-soft">
+                        {report.ended_at
+                            ? formatDateTime(report.ended_at)
+                            : 'Not recorded'}
+                    </span>
+                </div>
+                <div>
+                    <span className="flex items-center gap-1 font-semibold text-ink">
+                        <Gauge className="h-3.5 w-3.5 text-brand-strong" />
+                        Ending Meter:
+                    </span>
+                    <span className="block font-mono text-ink-soft">
+                        {report.ending_meter_value !== null &&
+                        report.ending_meter_value !== undefined
+                            ? `${report.ending_meter_value.toLocaleString()} ${report.meter_type === 'engine_hours' ? 'hrs' : 'km'}`
+                            : 'Not recorded'}
+                    </span>
+                </div>
+                <div>
+                    <span className="flex items-center gap-1 font-semibold text-ink">
+                        <MapPin className="h-3.5 w-3.5 text-brand-strong" />
+                        Geofence Stamp:
+                    </span>
+                    <span className="block font-mono text-ink-soft">
+                        {report.latitude !== null &&
+                        report.latitude !== undefined &&
+                        report.longitude !== null &&
+                        report.longitude !== undefined
+                            ? `${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}`
+                            : 'Not stamped'}
+                    </span>
+                </div>
+            </div>
 
             {/* Work Summary */}
             <div>
@@ -1034,7 +1552,6 @@ function ReportDetailPane({
                                                     {file.mime_type}
                                                 </span>
                                             </div>
-                                            {/* SHA-256 Checksum Badge */}
                                             {file.checksum_sha256 && (
                                                 <div className="mt-1.5 flex items-center gap-1.5">
                                                     <span

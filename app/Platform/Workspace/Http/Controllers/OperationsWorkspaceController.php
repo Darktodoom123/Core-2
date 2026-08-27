@@ -332,7 +332,7 @@ final class OperationsWorkspaceController extends Controller
             ->with([
                 'requester:id,name',
                 'job:id,reference,title',
-                'asset:id,code,name',
+                'asset:id,code,name,meter_type,meter_value,baseline_burn_rate,burn_rate_unit',
                 'logs.recorder:id,name',
             ])
             ->latest()

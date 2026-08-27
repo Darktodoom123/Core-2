@@ -42,7 +42,7 @@ class DispatchJobV2Controller extends Controller
             ])
             ->latest('id');
 
-        if ($actor->hasRole('driver') || $actor->hasRole('technician') || $actor->hasRole('operator')) {
+        if ($actor->hasRole('driver') || $actor->hasRole('operator') || $actor->hasRole('crane_operator')) {
             $query->where(function ($q) use ($actor) {
                 $q->whereHas('personnelAssignments', function ($aq) use ($actor) {
                     $aq->where('user_id', $actor->id);
@@ -337,7 +337,7 @@ class DispatchJobV2Controller extends Controller
 
     private function authorizeView(User $actor, DispatchJob $job): void
     {
-        if ($actor->hasRole('driver') || $actor->hasRole('technician') || $actor->hasRole('operator')) {
+        if ($actor->hasRole('driver') || $actor->hasRole('operator') || $actor->hasRole('crane_operator')) {
             $isAssigned = $job->personnelAssignments()->where('user_id', $actor->id)->exists()
                 || $job->attempts()->whereHas('offers', fn ($q) => $q->where('user_id', $actor->id))->exists();
 

@@ -23,6 +23,7 @@ import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
+import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import { EmergencySosButton, EmergencySosSheet } from '../components/sos';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
@@ -660,10 +661,30 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     );
 
     const handleTransitionStatus = useCallback(
-        async (jobId: number, nextStatus: DispatchStatus, version: number) => {
+        async (
+            jobId: number,
+            nextStatus: DispatchStatus,
+            version: number,
+            signatureData?: DigitalSignatureData,
+        ) => {
             setIsLoadingJobs(true);
 
             try {
+                if (nextStatus === 'completed' && signatureData) {
+                    await commandOutbox.enqueueSubmitJobReport(jobId, {
+                        dispatch_job_id: jobId,
+                        work_summary:
+                            signatureData.workSummary ||
+                            'Dispatched crane and site operational tasks completed in full.',
+                        remarks: `Signed off by: ${signatureData.signerName} (${signatureData.signerRole})`,
+                        ending_meter_value: signatureData.endingMeterValue,
+                        meter_type: signatureData.meterType,
+                        signer_name: signatureData.signerName,
+                        signer_role: signatureData.signerRole,
+                        signed_at: signatureData.signedAt,
+                    });
+                }
+
                 await commandOutbox.enqueueTransitionStatus(
                     jobId,
                     nextStatus,

@@ -147,7 +147,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
             ) : null}
 
             {/* Checklist items container */}
-            <View style={styles.listContainer}>
+            <View style={styles.checkList}>
                 {filteredChecks.map((item) => {
                     const isPass = item.status === 'good';
                     const isAttention = item.status === 'attention';
@@ -157,12 +157,12 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                         <View
                             key={item.id}
                             style={[
-                                styles.checkRow,
-                                isDarkHud && styles.darkCheckRow,
+                                styles.checkRowContainer,
+                                isDarkHud && styles.darkCheckRowContainer,
                                 isPass &&
                                     (isDarkHud
-                                        ? styles.darkCheckRowGood
-                                        : styles.checkRowGood),
+                                        ? styles.darkCheckRowPass
+                                        : styles.checkRowPass),
                                 isAttention &&
                                     (isDarkHud
                                         ? styles.darkCheckRowAttention
@@ -220,7 +220,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             </Pressable>
 
                             {/* Glove-Friendly Tri-State Rocker Segmented Control */}
-                            <View style={styles.rockerContainer}>
+                            <View style={styles.segmentedRockerRail}>
                                 <Pressable
                                     accessibilityLabel={`Mark ${item.label} as Pass`}
                                     accessibilityRole="button"

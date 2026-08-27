@@ -144,7 +144,7 @@ it('requires reasons and safety checks when updating asset status', function () 
 
 it('records inspection submissions and updates status on non-passing outcomes', function () {
     $technician = User::factory()->create();
-    $technician->syncRoles([RoleName::FieldTechnician->value]);
+    $technician->syncRoles([RoleName::OperationsManager->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'TRK-202',
@@ -174,7 +174,7 @@ it('records inspection submissions and updates status on non-passing outcomes', 
 
 it('handles maintenance order creation and verified release after post-repair passing inspection', function () {
     $technician = User::factory()->create();
-    $technician->syncRoles([RoleName::FieldTechnician->value]);
+    $technician->syncRoles([RoleName::OperationsManager->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'CRN-77',

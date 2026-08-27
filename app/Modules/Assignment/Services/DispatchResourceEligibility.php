@@ -183,7 +183,6 @@ final class DispatchResourceEligibility
         return match (true) {
             $user->hasRole(RoleName::Driver->value) => RoleName::Driver->value,
             $user->hasRole(RoleName::CraneOperator->value) => RoleName::CraneOperator->value,
-            $user->hasRole(RoleName::FieldTechnician->value) => RoleName::FieldTechnician->value,
             default => null,
         };
     }
@@ -193,7 +192,6 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'driver' => 'Driver',
             'crane_operator' => 'Crane operator',
-            'field_technician' => 'Field technician',
             default => 'Personnel',
         };
     }
@@ -214,7 +212,6 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'driver' => RoleName::Driver,
             'crane_operator' => RoleName::CraneOperator,
-            'field_technician' => RoleName::FieldTechnician,
             default => null,
         };
     }

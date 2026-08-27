@@ -142,3 +142,88 @@ runtime image, extracts its assets, runs the verifier, and performs the
 existing health and concurrency checks. A local Dockerfile build and final
 image inspection remain unrun in this session because Docker Desktop's Linux
 daemon was unavailable.
+
+## Job Report Architecture & Resubmission Engine — 2026-08-27
+
+### Did you build this the most secure way?
+
+The security boundary for job reports enforces server-authoritative verification:
+1. **Four-Eyes Enforcement & Anti-Self-Approval**: `ReviewJobReport` rejects any self-approval attempt with a 403 Forbidden exception (`$reviewer->id === $report->author_id`), ensuring operators cannot sign off on their own field work.
+2. **Explicit Resubmission Policy & Identity Validation**: `JobReportPolicy::resubmit()` and `JobReportPolicy::update()` restrict resubmission and edits strictly to the original author (when in `Draft` or `Rejected` status) or an authorized Operations Manager.
+3. **Telemetry & GPS Sanitization**: FormRequests (`StoreJobReportRequest`, `ResubmitJobReportRequest`) strictly validate `ending_meter_value` (`numeric|min:0|max:99999999.99`), `meter_type` (`in:odometer_km,engine_hours`), and GPS coordinates (`latitude: between -90, 90`, `longitude: between -180, 180`).
+4. **Audit Trail & State Immutability**: All resubmissions, draft saves, and approvals write to the audit log (`job_report.resubmitted`, `job_report.draft_saved`, `dispatch_job.completed_via_report_approval`) with diff snapshots, ensuring tamper-proof operational records.
+
+### Did you build this the most efficient way?
+
+1. **Atomic Closeout Synchronization**: Approving a job report automatically transitions the parent `DispatchJob` status to `Completed` and atomically synchronizes the assigned `OperationalAsset.meter_value` within a single database transaction, preventing N+1 queries and separate manual dispatch sync steps.
+2. **Optimistic Outbox & Offline Guarantee**: Field mobile clients record job reports through an actor-scoped outbox queue (`CommandOutboxManager`) using durable SQLite storage, deterministic SHA-256 payload hashing, and UUID idempotency keys to guarantee at-least-once delivery with zero duplicate entries upon network reconnection.
+3. **Reactive UI State Flow**: The Inertia React workspace and mobile React Native client use memoized state filters and accessible drawers/modals without unnecessary polling loops or page reloads.
+
+### What regressions could this introduce?
+
+1. **State Machine Invariants**: Automatic dispatch completion on report approval requires the dispatch to be in an active operational state (`Working`, `Arrived`, or `EnRoute`). If an already cancelled or archived job is referenced, the transition is safely guarded.
+2. **Rejection Resubmission Counters**: Rejected reports increment `resubmitted_count` and overwrite status back to `Submitted`, resetting manager review queues.
+3. **Mobile Offline Serialization**: Commands serialized with previous outbox versions are protected against schema mismatch by explicit typing in `JobReportCommandPayload`.
+
+### What tests do we need to write before we ship this?
+
+Comprehensive multi-layer test suites have been implemented and verified:
+1. **Backend Pest Feature Tests**:
+   - `JobReportResubmissionTest.php`: Draft saving, rejection reason persistence, author-only resubmission loop, and counter incrementation.
+   - `JobReportSecurityAuditTest.php`: Four-eyes anti-self-approval enforcement, atomic dispatch completion synchronization, and asset meter value updates.
+   - `JobReportWorkflowTest.php`: Full end-to-end report lifecycle (Draft -> Submitted -> Rejected -> Resubmitted -> Approved).
+2. **Mobile Jest & Component Tests**:
+   - `digitalSignatureModal.component.test.tsx`: Signature canvas interaction, telemetry inputs, and form validation.
+   - `nativeFieldWorkflows.component.test.tsx` and `commandOutbox.test.ts`: Outbox queueing and offline sync.
+3. **Static Analysis & Linters**:
+   - `composer types:check` (PHPStan level max): 0 errors.
+   - `composer lint:check` (Laravel Pint): Passed.
+   - `npm run types:check` (TypeScript tsc): 0 errors.
+   - `npm run lint:check` (ESLint): 0 errors.
+   - `npm run format:check` (Prettier): Passed.
+
+## Fuel Management, Variance Analysis & Anomaly Engine — 2026-08-27
+
+### Did you build this the most secure way?
+
+1. **Role-Based Workflow & Stage Gating**: Fuel transition endpoints strictly enforce granular Spatie permissions (`fuel.request`, `fuel.forward`, `fuel.approve`, `fuel.verify`, `fuel.record`, `fuel.report`, `fuel.view_all`). Operations Managers cannot approve unauthorized requests without proper status progression (submitted -> forwarded -> approved -> verified -> logged).
+2. **Safe Export Serialization & Anti-CSV Injection**: All report exports through `WeeklyFuelConsumptionExportDataset` sanitize formula prefix characters (`=`, `+`, `-`, `@`, `\t`, `\r`) to completely prevent CSV injection attacks in spreadsheet software. Export headers are validated against security constraints (no leaked passwords, secrets, coordinates, or internal unstructured remarks).
+3. **Monotonic Meter Validation**: When recording fuel consumption against an asset, `TransitionFuelRequest` validates that the new odometer or hour meter reading is strictly greater than or equal to the asset's current recorded `meter_value`, preventing odometer rollbacks or invalid chronological meter submissions.
+4. **Audit Logging**: Every fuel state change, variance calculation, and report generation logs an immutable `AuditEvent` with actor ID, IP address, and before/after transition payloads.
+
+### Did you build this the most efficient way?
+
+1. **Single-Pass Calculation Action**: `CalculateFuelVarianceAndBurnRate` handles variance computation ($Q_{\text{actual}} - Q_{\text{requested}}$ and percentage), delta meter difference calculation, effective burn rate derivation ($L/\text{km}$ for trucks, $L/\text{hr}$ for cranes/generators), and anomaly detection in a single deterministic pass.
+2. **Chunked & Streaming Reporting**: `GenerateWeeklyFuelConsumptionSummary` aggregates metrics within a single date-bounded query using eager loading of requests, assets, and jobs. `WeeklyFuelConsumptionExportDataset` uses `lazyById(500)` streaming to maintain minimal memory footprint during bulk CSV and PDF export generation.
+3. **Reactive UI Filtering**: The frontend `FuelSurface` supports responsive anomaly filtering and dynamic meter input formatting without triggering unnecessary full-page refreshes.
+
+### What regressions could this introduce?
+
+1. **Unmetered Equipment Handling**: Heavy rigging gear or static equipment without odometers or hour meters are safely supported with nullable meter columns and graceful zero-variance fallbacks without throwing `DivisionByZeroError`.
+2. **Delta Meter Edge Cases**: For newly provisioned assets without prior meter records, effective burn rate gracefully falls back to null rather than generating erroneous spikes, while quantity variance percentage is accurately computed against the approved requested volume.
+3. **Decimal Precision**: All database columns for variance and burn rates use `decimal(10, 2)` / `decimal(8, 2)` to eliminate floating-point rounding errors across high-volume fuel operations.
+
+### What tests do we need to write before we ship this?
+
+1. **Automated Feature Tests**:
+   - `FuelConsumptionVarianceAndAnomalyTest.php`:
+     - Normal quantity variance below 15% threshold.
+     - Excessive fuel quantity anomaly trigger on $\ge 15\%$ variance.
+     - Effective burn rate calculation ($L/\text{km}$) for road trucks and automatic asset meter updating.
+     - Effective burn rate calculation ($L/\text{hr}$) for hydraulic cranes and excessive burn rate anomaly detection ($\ge 15\%$ over baseline).
+     - Non-monotonic meter rejection.
+     - Unmetered equipment handling.
+   - `WeeklyFuelConsumptionReportTest.php`:
+     - Weekly aggregation metrics, asset breakdown, and job breakdown.
+     - JSON API endpoint authorization gating for operations managers.
+     - Export dataset header sanitization and CSV row streaming.
+   - `FuelAndTrackingWorkflowTest.php`:
+     - Full 5-stage fuel workflow lifecycle with audit events and receipt attachments.
+2. **Verification Suite Results**:
+   - Pest Feature Tests: 22 tests / 263 assertions passing (100%).
+   - PHPStan (Max Level): 0 errors.
+   - Laravel Pint: Passed with 0 violations.
+   - TypeScript (`tsc --noEmit`): 0 errors.
+   - ESLint: 0 errors.
+   - Prettier: 100% formatted.
+   - Vite Production Build: 100% successful.

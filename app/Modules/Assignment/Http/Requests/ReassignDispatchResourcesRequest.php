@@ -29,7 +29,7 @@ final class ReassignDispatchResourcesRequest extends FormRequest
             'end_asset_assignment_ids.*' => ['integer', 'distinct', 'exists:dispatch_asset_assignments,id'],
             'personnel' => ['sometimes', 'array'],
             'personnel.*.user_id' => ['required', 'integer', 'distinct', 'exists:users,id'],
-            'personnel.*.assignment_type' => ['required', 'string', Rule::in(['driver', 'crane_operator', 'field_technician'])],
+            'personnel.*.assignment_type' => ['required', 'string', Rule::in(['driver', 'crane_operator'])],
             'assets' => ['sometimes', 'array'],
             'assets.*.operational_asset_id' => ['required', 'integer', 'distinct', 'exists:operational_assets,id'],
             'assets.*.assignment_type' => ['required', 'string', Rule::in(['truck', 'crane', 'mobile_crane', 'equipment'])],

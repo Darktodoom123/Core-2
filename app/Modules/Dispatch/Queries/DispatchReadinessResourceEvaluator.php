@@ -244,11 +244,9 @@ final class DispatchReadinessResourceEvaluator
         return match ($assignmentType) {
             'driver' => $user->hasRole(RoleName::Driver->value),
             'crane_operator' => $user->hasRole(RoleName::CraneOperator->value),
-            'field_technician' => $user->hasRole(RoleName::FieldTechnician->value),
             'lead' => $user->hasAnyRole([
                 RoleName::Driver->value,
                 RoleName::CraneOperator->value,
-                RoleName::FieldTechnician->value,
             ]),
             default => false,
         };

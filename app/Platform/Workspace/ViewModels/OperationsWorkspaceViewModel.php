@@ -481,7 +481,6 @@ final class OperationsWorkspaceViewModel
         $fieldRole = in_array($user->operationalRole(), [
             RoleName::Driver,
             RoleName::CraneOperator,
-            RoleName::FieldTechnician,
         ], true);
 
         $items = [
@@ -920,6 +919,13 @@ final class OperationsWorkspaceViewModel
             ],
             'work_summary' => $report->work_summary,
             'remarks' => $report->remarks,
+            'rejection_reason' => $report->rejection_reason,
+            'ending_meter_value' => $report->ending_meter_value !== null ? (float) $report->ending_meter_value : null,
+            'meter_type' => $report->meter_type,
+            'latitude' => $report->latitude !== null ? (float) $report->latitude : null,
+            'longitude' => $report->longitude !== null ? (float) $report->longitude : null,
+            'resubmitted_count' => (int) $report->resubmitted_count,
+            'can_be_resubmitted' => $report->canBeResubmitted(),
             'started_at' => $report->started_at?->toIso8601String(),
             'ended_at' => $report->ended_at?->toIso8601String(),
             'submitted_at' => $report->submitted_at?->toIso8601String(),
@@ -988,7 +994,6 @@ final class OperationsWorkspaceViewModel
     {
         return match ($user->operationalRole()) {
             RoleName::CraneOperator => 'Assigned equipment',
-            RoleName::FieldTechnician => 'Service assets',
             default => 'Assigned vehicle',
         };
     }

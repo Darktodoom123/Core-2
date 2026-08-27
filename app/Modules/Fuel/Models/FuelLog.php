@@ -4,6 +4,7 @@ namespace App\Modules\Fuel\Models;
 
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Identity\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -21,13 +22,37 @@ use Illuminate\Support\Carbon;
  * @property string|null $fuel_station
  * @property string|null $remarks
  * @property string|null $receipt_path
+ * @property string|null $variance_litres
+ * @property string|null $variance_percentage
+ * @property string|null $effective_burn_rate
+ * @property string|null $burn_rate_unit
+ * @property bool $is_anomaly
+ * @property string|null $anomaly_reason
  * @property Carbon|null $recorded_at
  * @property FuelRequest $request
  * @property User $recorder
  */
 class FuelLog extends Model
 {
-    protected $fillable = ['fuel_request_id', 'recorded_by', 'quantity_litres', 'odometer_km', 'hour_meter', 'receipt_path', 'recorded_at', 'price_per_litre', 'total_cost', 'fuel_station', 'remarks'];
+    protected $fillable = [
+        'fuel_request_id',
+        'recorded_by',
+        'quantity_litres',
+        'odometer_km',
+        'hour_meter',
+        'receipt_path',
+        'recorded_at',
+        'price_per_litre',
+        'total_cost',
+        'fuel_station',
+        'remarks',
+        'variance_litres',
+        'variance_percentage',
+        'effective_burn_rate',
+        'burn_rate_unit',
+        'is_anomaly',
+        'anomaly_reason',
+    ];
 
     protected function casts(): array
     {
@@ -36,8 +61,41 @@ class FuelLog extends Model
             'hour_meter' => 'decimal:2',
             'price_per_litre' => 'decimal:2',
             'total_cost' => 'decimal:2',
+            'variance_litres' => 'decimal:2',
+            'variance_percentage' => 'decimal:2',
+            'effective_burn_rate' => 'decimal:2',
+            'is_anomaly' => 'boolean',
             'recorded_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @param  Builder<FuelLog>  $query
+     * @return Builder<FuelLog>
+     */
+    public function scopeAnomalies(Builder $query): Builder
+    {
+        return $query->where('is_anomaly', true);
+    }
+
+    /**
+     * @param  Builder<FuelLog>  $query
+     * @return Builder<FuelLog>
+     */
+    public function scopeForPeriod(Builder $query, Carbon $start, Carbon $end): Builder
+    {
+        return $query->whereBetween('recorded_at', [$start, $end]);
+    }
+
+    /**
+     * @param  Builder<FuelLog>  $query
+     * @return Builder<FuelLog>
+     */
+    public function scopeForWeek(Builder $query, ?Carbon $date = null): Builder
+    {
+        $target = $date ?? now();
+
+        return $query->whereBetween('recorded_at', [$target->copy()->startOfWeek(), $target->copy()->endOfWeek()]);
     }
 
     /** @return BelongsTo<FuelRequest, $this> */

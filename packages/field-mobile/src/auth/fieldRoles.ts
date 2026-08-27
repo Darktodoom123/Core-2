@@ -1,4 +1,4 @@
-const FIELD_ROLES = new Set(['driver', 'crane_operator', 'field_technician']);
+const FIELD_ROLES = new Set(['driver', 'crane_operator']);
 
 export function isAuthorizedFieldRole(role?: string | null): boolean {
     return role ? FIELD_ROLES.has(role.toLowerCase()) : false;

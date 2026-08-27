@@ -484,7 +484,7 @@ it('rejects generic operational restoration after ownership transfer', function 
 
 it('rejects transferred asset restoration through inspection and maintenance status writers', function (): void {
     $manager = r0StateUser(RoleName::OperationsManager);
-    $technician = r0StateUser(RoleName::FieldTechnician);
+    $technician = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-TERMINAL-WRITERS-'.fake()->unique()->numerify('###'), AssetStatus::Unavailable);
     $catalog = SalesCatalogItem::query()->create([

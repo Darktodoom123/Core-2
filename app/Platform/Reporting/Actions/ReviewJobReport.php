@@ -2,6 +2,7 @@
 
 namespace App\Platform\Reporting\Actions;
 
+use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\DispatchCompletionNotification;
@@ -47,8 +48,34 @@ class ReviewJobReport
 
             $report->update([
                 'status' => $newStatus,
+                'rejection_reason' => $status === 'rejected' ? $reason : null,
                 'remarks' => $remarks,
             ]);
+
+            // Synchronize parent dispatch status on approval
+            if ($newStatus === JobReportStatus::Approved) {
+                $job = $report->job;
+                if (in_array($job->status, [DispatchStatus::Working, DispatchStatus::Arrived, DispatchStatus::EnRoute], true)) {
+                    $job->update([
+                        'status' => DispatchStatus::Completed,
+                        'version' => $job->version + 1,
+                    ]);
+
+                    AuditEvent::query()->create([
+                        'actor_id' => $reviewer->id,
+                        'subject_type' => $job->getMorphClass(),
+                        'subject_id' => $job->id,
+                        'action' => 'dispatch_job.completed_via_report_approval',
+                        'after_state' => [
+                            'status' => DispatchStatus::Completed->value,
+                            'job_report_id' => $report->id,
+                        ],
+                        'request_id' => request()->header('X-Request-ID') ?? request()->ip(),
+                        'ip_address' => request()->ip(),
+                        'occurred_at' => now(),
+                    ]);
+                }
+            }
 
             AuditEvent::query()->create([
                 'actor_id' => $reviewer->id,

@@ -59,7 +59,6 @@ it('bootstraps production administration without creating or re-enabling fixture
                 'manager@example.com',
                 'driver@example.com',
                 'operator@example.com',
-                'technician@example.com',
                 'browser.dispatcher@example.com',
                 'browser.manager@example.com',
                 'browser.driver@example.com',
@@ -106,9 +105,8 @@ it('keeps local developer seeding idempotent and usable', function (): void {
                 'manager@example.com',
                 'driver@example.com',
                 'operator@example.com',
-                'technician@example.com',
-            ])->count())->toBe(5)
-            ->and(DB::table('location_updates')->count())->toBe(3);
+            ])->count())->toBe(4)
+            ->and(DB::table('location_updates')->count())->toBe(2);
 
         $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
         expect(Hash::check('password', $dispatcher->getRawOriginal('password')))->toBeTrue()

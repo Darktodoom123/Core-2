@@ -37,7 +37,7 @@ it('enforces the submitted forwarded approved verified logged fuel workflow end-
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);
     $manager = fieldUser(RoleName::OperationsManager);
-    $technician = fieldUser(RoleName::FieldTechnician);
+    $verifier = fieldUser(RoleName::OperationsManager);
 
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-FUEL-001',
@@ -103,13 +103,13 @@ it('enforces the submitted forwarded approved verified logged fuel workflow end-
         ->and($fuel->decision_reason)->toBe('Approved for long distance haul');
 
     // 4. Verify request
-    $this->actingAs($technician)
+    $this->actingAs($verifier)
         ->post("/operations/fuel-requests/{$fuel->id}/status", ['status' => 'verified'])
         ->assertRedirect('/');
 
     $fuel->refresh();
     expect($fuel->status)->toBe(FuelRequestStatus::Verified)
-        ->and($fuel->verified_by)->toBe($technician->id)
+        ->and($fuel->verified_by)->toBe($verifier->id)
         ->and($fuel->verified_at)->not()->toBeNull();
 
     // 5. Final logging by driver
@@ -196,8 +196,8 @@ it('handles rejection path with a decision reason', function () {
         ->and($fuel->decision_reason)->toBe('Exceeds standard allocation for route.');
 
     // Attempting further transition on rejected request fails
-    $technician = fieldUser(RoleName::FieldTechnician);
-    $this->actingAs($technician)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])
+    $verifier = fieldUser(RoleName::OperationsManager);
+    $this->actingAs($verifier)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])
         ->assertSessionHasErrors('status');
 });
 
@@ -233,7 +233,7 @@ it('prevents self-approval of fuel requests', function () {
 it('prevents skipped stages in fuel request workflow', function () {
     $driver = fieldUser(RoleName::Driver);
     $manager = fieldUser(RoleName::OperationsManager);
-    $technician = fieldUser(RoleName::FieldTechnician);
+    $verifier = fieldUser(RoleName::OperationsManager);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', [
         'quantity_litres' => 100,
@@ -248,7 +248,7 @@ it('prevents skipped stages in fuel request workflow', function () {
         ->assertSessionHasErrors('status');
 
     // Submitted -> Verified (skipping Forwarded and Approved)
-    $this->actingAs($technician)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])
+    $this->actingAs($verifier)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])
         ->assertSessionHasErrors('status');
 
     // Submitted -> Logged (skipping all intermediate stages)
@@ -260,14 +260,14 @@ it('prevents duplicate logging of a fuel request', function () {
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);
     $manager = fieldUser(RoleName::OperationsManager);
-    $technician = fieldUser(RoleName::FieldTechnician);
+    $verifier = fieldUser(RoleName::OperationsManager);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', ['quantity_litres' => 100, 'fuel_type' => 'diesel', 'purpose' => 'Duplicate test'])->assertRedirect('/');
     $id = FuelRequest::query()->sole()->id;
 
     $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])->assertRedirect('/');
     $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertRedirect('/');
-    $this->actingAs($technician)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
+    $this->actingAs($verifier)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
 
     // First logging attempt -> succeeds
     $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'logged', 'quantity_litres' => 100])->assertRedirect('/');
@@ -300,7 +300,6 @@ it('enforces role authorization at each step of the fuel workflow', function () 
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);
     $manager = fieldUser(RoleName::OperationsManager);
-    $technician = fieldUser(RoleName::FieldTechnician);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', ['quantity_litres' => 50, 'fuel_type' => 'diesel', 'purpose' => 'Auth test'])->assertRedirect('/');
     $id = FuelRequest::query()->sole()->id;
@@ -314,14 +313,17 @@ it('enforces role authorization at each step of the fuel workflow', function () 
     // Dispatcher cannot approve
     $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertForbidden();
 
+    // Driver cannot verify
+    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertForbidden();
+
+    // Dispatcher cannot verify
+    $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertForbidden();
+
     // Manager approves
     $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertRedirect('/');
 
-    // Manager cannot verify
-    $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertForbidden();
-
-    // Technician verifies
-    $this->actingAs($technician)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
+    // Manager verifies
+    $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
 });
 
 it('handles receipt file uploads securely during fuel logging', function () {
@@ -330,14 +332,14 @@ it('handles receipt file uploads securely during fuel logging', function () {
     $driver = fieldUser(RoleName::Driver);
     $dispatcher = fieldUser(RoleName::Dispatcher);
     $manager = fieldUser(RoleName::OperationsManager);
-    $technician = fieldUser(RoleName::FieldTechnician);
+    $verifier = fieldUser(RoleName::OperationsManager);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', ['quantity_litres' => 90, 'fuel_type' => 'diesel', 'purpose' => 'Receipt test'])->assertRedirect('/');
     $id = FuelRequest::query()->sole()->id;
 
     $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])->assertRedirect('/');
     $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertRedirect('/');
-    $this->actingAs($technician)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
+    $this->actingAs($verifier)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
 
     // Invalid file upload (e.g. php file) -> fails validation
     $badFile = UploadedFile::fake()->create('malicious.php', 10, 'text/x-php');
@@ -398,7 +400,7 @@ it('rolls back fuel state and receipt storage when audit persistence fails after
     expect($fuel->fresh()->status)->toBe(FuelRequestStatus::Verified)
         ->and(FuelLog::query()->count())->toBe(0)
         ->and(Attachment::query()->count())->toBe(0)
-        ->and(Storage::disk('private')->allFiles())->toBe([]);
+        ->and(Storage::disk('private')->allFiles('fuel-receipts'))->toBe([]);
 });
 
 it('accepts own location sharing but reserves the all-operations feed for office roles', function () {

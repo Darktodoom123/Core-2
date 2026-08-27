@@ -61,15 +61,15 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
         'expires_at' => now()->subDay(),
         'status' => 'active',
     ]);
-    $technician = assignmentWorkspaceUser(RoleName::FieldTechnician, 'Unavailable Technician');
-    $technician->personnelProfile()->create(['availability_status' => 'unavailable']);
+    $unavailableDriver = assignmentWorkspaceUser(RoleName::Driver, 'Unavailable Driver');
+    $unavailableDriver->personnelProfile()->create(['availability_status' => 'unavailable']);
 
     $job = assignmentWorkspaceJob($dispatcher, 'CON-5101');
     $conflictingJob = assignmentWorkspaceJob($dispatcher, 'CON-5100');
     $readyTruck = OperationalAsset::query()->create(['code' => 'TR-5101', 'name' => 'Ready Truck', 'kind' => 'truck', 'status' => AssetStatus::ReadyForService]);
     $blockedCrane = OperationalAsset::query()->create(['code' => 'CR-5101', 'name' => 'Blocked Crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $blockedCrane->maintenanceWorkOrders()->create([
-        'technician_id' => $technician->id,
+        'technician_id' => $unavailableDriver->id,
         'status' => 'open',
         'defect' => 'Hydraulic leak',
         'dispatch_blocking' => true,
@@ -102,7 +102,7 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
                 ->where('personnel_candidates.data.1.name', 'Expired Operator')
                 ->where('personnel_candidates.data.1.credential.status', 'expired')
                 ->where('personnel_candidates.data.1.eligible', false)
-                ->where('personnel_candidates.data.2.name', 'Unavailable Technician')
+                ->where('personnel_candidates.data.2.name', 'Unavailable Driver')
                 ->where('personnel_candidates.data.2.availability.value', 'unavailable')
                 ->where('personnel_candidates.data.2.eligible', false)
                 ->has('asset_candidates.data', 3)

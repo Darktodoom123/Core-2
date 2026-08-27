@@ -24,6 +24,21 @@ final class FuelRequestResource extends JsonResource
             'purpose' => $this->purpose,
             'status' => $this->status->value,
             'decision_reason' => $this->decision_reason,
+            'logs' => $this->whenLoaded('logs', fn () => $this->logs->map(fn ($log) => [
+                'id' => $log->id,
+                'quantity_litres' => $log->quantity_litres,
+                'odometer_km' => $log->odometer_km,
+                'hour_meter' => $log->hour_meter,
+                'variance_litres' => $log->variance_litres,
+                'variance_percentage' => $log->variance_percentage,
+                'effective_burn_rate' => $log->effective_burn_rate,
+                'burn_rate_unit' => $log->burn_rate_unit,
+                'is_anomaly' => $log->is_anomaly,
+                'anomaly_reason' => $log->anomaly_reason,
+                'total_cost' => $log->total_cost,
+                'fuel_station' => $log->fuel_station,
+                'recorded_at' => $log->recorded_at?->toISOString(),
+            ])),
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

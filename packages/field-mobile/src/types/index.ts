@@ -209,7 +209,23 @@ export type OutboxCommandType =
     | 'respond_assignment'
     | 'transition_status'
     | 'share_location'
-    | 'activate_sos';
+    | 'activate_sos'
+    | 'submit_job_report';
+
+export interface JobReportCommandPayload {
+    dispatch_job_id: number;
+    work_summary: string;
+    remarks?: string | null;
+    started_at?: string | null;
+    ended_at?: string | null;
+    ending_meter_value?: number | null;
+    meter_type?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    signer_name?: string;
+    signer_role?: string;
+    signed_at?: string;
+}
 
 export type OutboxCommandState =
     'queued' | 'syncing' | 'failed' | 'conflict' | 'completed' | 'expired';

@@ -32,8 +32,13 @@ class StoreJobReportRequest extends FormRequest
             'dispatch_job_id' => ['required', 'integer', 'exists:dispatch_jobs,id'],
             'started_at' => ['nullable', 'date'],
             'ended_at' => ['nullable', 'date', 'after_or_equal:started_at'],
+            'ending_meter_value' => ['nullable', 'numeric', 'min:0'],
+            'meter_type' => ['nullable', 'string', 'in:odometer_km,engine_hours,none'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'work_summary' => ['required', 'string', 'max:5000'],
             'remarks' => ['nullable', 'string', 'max:2000'],
+            'is_draft' => ['nullable', 'boolean'],
             'attachments' => ['nullable', 'array', 'max:10'],
             'attachments.*' => ['file', 'max:15360'], // 15 MiB
         ];

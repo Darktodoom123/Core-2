@@ -17,12 +17,7 @@
  */
 
 export type UserRole =
-    | 'administrator'
-    | 'dispatcher'
-    | 'manager'
-    | 'driver'
-    | 'operator'
-    | 'technician';
+    'administrator' | 'dispatcher' | 'manager' | 'driver' | 'operator';
 
 export type AppSection =
     | 'overview'
@@ -130,19 +125,12 @@ export interface OperatorResource extends ResourceBase {
     liftsLast90Days: number;
 }
 
-export interface TechnicianResource extends ResourceBase {
-    kind: 'technician';
-    specialty: string;
-    openTasks: number;
-}
-
 export type Resource =
     | TruckResource
     | CraneResource
     | EquipmentResource
     | DriverResource
-    | OperatorResource
-    | TechnicianResource;
+    | OperatorResource;
 
 export interface GptProposal {
     id: string;
@@ -165,7 +153,7 @@ export interface TelemetryPoint {
     id: string;
     resourceId: string;
     label: string;
-    kind: 'truck' | 'crane' | 'technician';
+    kind: 'truck' | 'crane' | 'operator';
     x: number;
     y: number;
     freshness: TelemetryFreshness;
@@ -270,5 +258,4 @@ export const roleLabels: Record<UserRole, string> = {
     manager: 'Operations Manager',
     driver: 'Driver',
     operator: 'Crane Operator',
-    technician: 'Field Technician',
 };

@@ -163,21 +163,15 @@ export function OperationsOverviewDashboard(
                 {canonicalRole === 'system_administrator' && (
                     <SystemAdminDashboardView {...props} />
                 )}
-                {[
-                    'driver',
-                    'crane_operator',
-                    'field_technician',
-                    'field_worker',
-                ].includes(canonicalRole) && (
-                    <FieldWorkerDashboardView {...props} />
-                )}
+                {['driver', 'crane_operator', 'field_worker'].includes(
+                    canonicalRole,
+                ) && <FieldWorkerDashboardView {...props} />}
                 {![
                     'operations_manager',
                     'dispatcher',
                     'system_administrator',
                     'driver',
                     'crane_operator',
-                    'field_technician',
                     'field_worker',
                 ].includes(canonicalRole) && (
                     <OperationsManagerDashboardView {...props} />
@@ -2153,9 +2147,9 @@ function SystemAdminDashboardView({
                                             Compliance
                                         </p>
                                         <p>
-                                            All registered operators,
-                                            technicians, and drivers possess
-                                            verified, non-expired credentials.
+                                            All registered operators and drivers
+                                            possess verified, non-expired
+                                            credentials.
                                         </p>
                                     </div>
                                 </div>
@@ -2448,10 +2442,7 @@ function SystemAdminDashboardView({
                                 value={String(
                                     (rolesDistribution['driver'] ?? 0) +
                                         (rolesDistribution['crane_operator'] ??
-                                            0) +
-                                        (rolesDistribution[
-                                            'field_technician'
-                                        ] ?? 0),
+                                            0),
                                 )}
                                 detail="Field execution & assignment role"
                                 icon={Truck}
@@ -2983,6 +2974,22 @@ function buildDashboardActions({
             section: 'fuel',
             icon: Fuel,
             tone: 'info',
+            category: 'fuel',
+        });
+    }
+
+    const anomalyFuelLogs = fuelRequests.flatMap(
+        (request) => request.logs?.filter((log) => log.is_anomaly) ?? [],
+    );
+
+    if (anomalyFuelLogs.length > 0) {
+        actions.push({
+            title: `${anomalyFuelLogs.length} fuel consumption anomal${anomalyFuelLogs.length === 1 ? 'y' : 'ies'} detected`,
+            description:
+                'Excessive variance or high burn rate requires operational review.',
+            section: 'fuel',
+            icon: Fuel,
+            tone: 'danger',
             category: 'fuel',
         });
     }

@@ -922,7 +922,7 @@ try {
     $env:FORBIDDEN_JOB_REFERENCE = 'SESSION1-FORBIDDEN-002'
     $env:ASSIGNED_JOB_REFERENCE = 'SESSION1-DRIVER-001'
     $env:NON_FIELD_TEST_USERNAME = 'dispatcher'
-    $env:SECOND_FIELD_TEST_USERNAME = 'technician'
+    $env:SECOND_FIELD_TEST_USERNAME = 'operator'
     $env:CI = '1'
 
     if ($SmokeOnly) {

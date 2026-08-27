@@ -84,7 +84,7 @@ final class SosIncidentController extends Controller
     public function configuration(Request $request): JsonResponse
     {
         abort_unless(
-            in_array($request->user()->operationalRole(), [RoleName::Driver, RoleName::CraneOperator, RoleName::FieldTechnician], true)
+            in_array($request->user()->operationalRole(), [RoleName::Driver, RoleName::CraneOperator], true)
                 && $request->user()->can(PermissionName::SosTrigger->value),
             403,
         );

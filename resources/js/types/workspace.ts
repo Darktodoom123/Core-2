@@ -275,6 +275,8 @@ export interface AssetViewModel {
     capacity_unit: string | null;
     meter_type: string | null;
     meter_value: string | number | null;
+    baseline_burn_rate?: string | number | null;
+    burn_rate_unit?: string | null;
     location: string | null;
     specifications: Record<string, unknown>;
     status: StatusViewModel<AssetStatusValue>;
@@ -293,6 +295,12 @@ export interface FuelLogViewModel {
     total_cost: string | null;
     fuel_station: string | null;
     remarks: string | null;
+    variance_litres?: string | null;
+    variance_percentage?: string | null;
+    effective_burn_rate?: string | null;
+    burn_rate_unit?: string | null;
+    is_anomaly?: boolean;
+    anomaly_reason?: string | null;
     receipt_path: string | null;
     recorded_by: {
         id: number;
@@ -317,6 +325,10 @@ export interface FuelRequestViewModel {
         id: number;
         code: string;
         name?: string;
+        meter_type?: string | null;
+        meter_value?: string | null;
+        baseline_burn_rate?: string | null;
+        burn_rate_unit?: string | null;
     } | null;
     quantity_litres: string;
     fuel_type: string;
@@ -481,9 +493,16 @@ export interface JobReportViewModel {
         id: number;
         name: string;
     } | null;
-    status: StatusViewModel<'submitted' | 'approved' | 'rejected'>;
+    status: StatusViewModel<'draft' | 'submitted' | 'approved' | 'rejected'>;
     work_summary: string;
     remarks: string | null;
+    rejection_reason?: string | null;
+    ending_meter_value?: number | null;
+    meter_type?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    resubmitted_count?: number;
+    can_be_resubmitted?: boolean;
     started_at: string | null;
     ended_at: string | null;
     submitted_at: string | null;
@@ -794,7 +813,7 @@ export interface AssignmentScheduleConflictViewModel {
 export interface PersonnelCandidateViewModel {
     id: number;
     name: string;
-    assignment_type: 'driver' | 'crane_operator' | 'field_technician';
+    assignment_type: 'driver' | 'crane_operator';
     assignment_label: string;
     eligible: boolean;
     reasons: string[];

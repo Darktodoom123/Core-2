@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Reporting\Actions\GenerateDailyOperationsSummary;
+use App\Platform\Reporting\Actions\GenerateWeeklyFuelConsumptionSummary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class OperationsSummaryController extends Controller
 {
@@ -33,6 +35,40 @@ class OperationsSummaryController extends Controller
             'action' => 'reports.daily_summary_viewed',
             'after_state' => [
                 'summary_date' => $summary['summary_date'],
+            ],
+            'request_id' => $request->header('X-Request-ID') ?? $request->ip(),
+            'ip_address' => $request->ip(),
+            'occurred_at' => now(),
+        ]);
+
+        return response()->json(['data' => $summary]);
+    }
+
+    public function weeklyFuelSummary(Request $request, GenerateWeeklyFuelConsumptionSummary $action): JsonResponse
+    {
+        $user = $request->user();
+
+        if (
+            ! $user->can(PermissionName::FuelReport->value)
+            && ! $user->can(PermissionName::FuelViewAll->value)
+            && ! $user->can(PermissionName::ReportsViewAll->value)
+        ) {
+            abort(403, 'Unauthorized to view weekly fuel consumption summary.');
+        }
+
+        $dateParam = $request->query('date');
+        $date = is_string($dateParam) && $dateParam !== '' ? Carbon::parse($dateParam) : null;
+
+        $summary = $action->execute($user, $date);
+
+        AuditEvent::query()->create([
+            'actor_id' => $user->id,
+            'subject_type' => $user->getMorphClass(),
+            'subject_id' => $user->id,
+            'action' => 'reports.weekly_fuel_summary_viewed',
+            'after_state' => [
+                'week_starting' => $summary['week_starting'],
+                'week_ending' => $summary['week_ending'],
             ],
             'request_id' => $request->header('X-Request-ID') ?? $request->ip(),
             'ip_address' => $request->ip(),

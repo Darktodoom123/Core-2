@@ -178,35 +178,35 @@ it('allows dispatcher to view job reports but forbids them from reviewing or app
     expect(OperationsWorkspaceViewModel::capabilities($dispatcher)['review_job_report'])->toBeFalse();
 });
 
-it('allows field technician to view navigation and submit job report for assigned work', function (): void {
-    $technician = createReportUser(RoleName::FieldTechnician);
-    $job = createReportJob($technician);
+it('allows crane operator to view navigation and submit job report for assigned work', function (): void {
+    $operator = createReportUser(RoleName::CraneOperator);
+    $job = createReportJob($operator);
 
     DispatchPersonnelAssignment::query()->create([
         'dispatch_job_id' => $job->id,
-        'user_id' => $technician->id,
-        'assignment_type' => 'mechanic',
-        'assigned_by' => $technician->id,
+        'user_id' => $operator->id,
+        'assignment_type' => 'crane_operator',
+        'assigned_by' => $operator->id,
         'active_from' => now()->subHour(),
     ]);
 
     // Navigation includes reports
-    $nav = OperationsWorkspaceViewModel::navigation($technician);
+    $nav = OperationsWorkspaceViewModel::navigation($operator);
     $hasReportsNav = collect($nav)->contains('id', 'reports');
     expect($hasReportsNav)->toBeTrue();
 
-    // Field technician submits report
-    $this->actingAs($technician)
+    // Crane operator submits report
+    $this->actingAs($operator)
         ->post('/operations/job-reports', [
             'dispatch_job_id' => $job->id,
             'started_at' => now()->subHour()->toIso8601String(),
             'ended_at' => now()->toIso8601String(),
-            'work_summary' => 'Technician field inspection and repair completed.',
+            'work_summary' => 'Operator field inspection and lift completed.',
             'remarks' => 'Hydraulic pressure test passed.',
         ])
         ->assertRedirect('/');
 
-    $report = JobReport::query()->where('author_id', $technician->id)->first();
+    $report = JobReport::query()->where('author_id', $operator->id)->first();
     expect($report)->not()->toBeNull()
         ->and($report->dispatch_job_id)->toBe($job->id)
         ->and($report->status)->toBe(JobReportStatus::Submitted);

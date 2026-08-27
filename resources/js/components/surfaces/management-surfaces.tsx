@@ -59,13 +59,6 @@ const prototypeUsers = [
         status: 'Active',
         lastSeen: '12 min ago',
     },
-    {
-        name: 'Ana Dizon',
-        email: 'ana@ctms.example',
-        role: 'Field Technician',
-        status: 'Invited',
-        lastSeen: 'Invitation sent',
-    },
 ];
 
 export function AdministratorOverview({

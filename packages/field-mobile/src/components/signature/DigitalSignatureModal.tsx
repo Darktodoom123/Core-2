@@ -22,6 +22,9 @@ export type SignatureStroke = SignaturePoint[];
 export interface DigitalSignatureData {
     signerName: string;
     signerRole: string;
+    workSummary?: string;
+    endingMeterValue?: number | null;
+    meterType?: string;
     strokes: SignatureStroke[];
     pointCount: number;
     signedAt: string;
@@ -46,6 +49,11 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
 }) => {
     const [signerName, setSignerName] = useState('');
     const [signerRole, setSignerRole] = useState('Site Supervisor');
+    const [workSummary, setWorkSummary] = useState(
+        'Dispatched operational tasks and crane lifts completed safely per site plan.',
+    );
+    const [endingMeterValue, setEndingMeterValue] = useState('');
+    const [meterType, setMeterType] = useState('odometer_km');
     const [strokes, setStrokes] = useState<SignatureStroke[]>([]);
 
     const panResponder = useMemo(
@@ -97,15 +105,23 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
             return;
         }
 
+        const meterNum = endingMeterValue.trim()
+            ? parseFloat(endingMeterValue.trim())
+            : null;
+
         onConfirmSignature({
             signerName: signerName.trim(),
             signerRole: signerRole.trim() || 'Site Representative',
+            workSummary: workSummary.trim(),
+            endingMeterValue: Number.isNaN(meterNum) ? null : meterNum,
+            meterType,
             strokes,
             pointCount: totalPoints,
             signedAt: new Date().toISOString(),
         });
         handleClear();
         setSignerName('');
+        setEndingMeterValue('');
     };
 
     return (
@@ -175,6 +191,91 @@ export const DigitalSignatureModal: React.FC<DigitalSignatureModalProps> = ({
                                 style={styles.input}
                                 value={signerRole}
                                 testID={`${testID}-role-input`}
+                            />
+
+                            <Text style={styles.label}>Work Summary</Text>
+                            <TextInput
+                                accessibilityLabel="Work summary"
+                                multiline
+                                numberOfLines={2}
+                                onChangeText={setWorkSummary}
+                                placeholder="Brief overview of completed operational tasks"
+                                placeholderTextColor={colors.muted}
+                                style={[styles.input, { minHeight: 60 }]}
+                                value={workSummary}
+                                testID={`${testID}-summary-input`}
+                            />
+
+                            <Text style={styles.label}>
+                                Ending Meter Reading (Optional)
+                            </Text>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    gap: 8,
+                                    marginBottom: 6,
+                                }}
+                            >
+                                <Pressable
+                                    accessibilityLabel="Select Odometer (km)"
+                                    accessibilityRole="button"
+                                    onPress={() => setMeterType('odometer_km')}
+                                    style={[
+                                        styles.canvasActionBtn,
+                                        meterType === 'odometer_km' && {
+                                            backgroundColor: colors.amber,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.canvasActionText,
+                                            meterType === 'odometer_km' && {
+                                                color: '#0f172a',
+                                                fontWeight: '700',
+                                            },
+                                        ]}
+                                    >
+                                        Odometer (km)
+                                    </Text>
+                                </Pressable>
+                                <Pressable
+                                    accessibilityLabel="Select Engine Hours"
+                                    accessibilityRole="button"
+                                    onPress={() => setMeterType('engine_hours')}
+                                    style={[
+                                        styles.canvasActionBtn,
+                                        meterType === 'engine_hours' && {
+                                            backgroundColor: colors.amber,
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.canvasActionText,
+                                            meterType === 'engine_hours' && {
+                                                color: '#0f172a',
+                                                fontWeight: '700',
+                                            },
+                                        ]}
+                                    >
+                                        Engine Hours (hrs)
+                                    </Text>
+                                </Pressable>
+                            </View>
+                            <TextInput
+                                accessibilityLabel="Ending meter reading"
+                                keyboardType="numeric"
+                                onChangeText={setEndingMeterValue}
+                                placeholder={
+                                    meterType === 'odometer_km'
+                                        ? 'e.g. 50125.5 km'
+                                        : 'e.g. 1420.5 hrs'
+                                }
+                                placeholderTextColor={colors.muted}
+                                style={styles.input}
+                                value={endingMeterValue}
+                                testID={`${testID}-meter-input`}
                             />
                         </View>
 

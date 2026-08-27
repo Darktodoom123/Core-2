@@ -20,7 +20,8 @@ final class TransitionFuelRequest
 {
     public function __construct(
         private RecordAuditEvent $audit,
-        private UploadAttachmentAction $uploadAttachment
+        private UploadAttachmentAction $uploadAttachment,
+        private CalculateFuelVarianceAndBurnRate $calculateVariance,
     ) {}
 
     /**
@@ -49,7 +50,7 @@ final class TransitionFuelRequest
         try {
             return DB::transaction(function () use ($actor, $fuel, $next, $reason, $requiredPreviousStatus, $logDetails, &$receiptAttachment): FuelRequest {
                 /** @var FuelRequest $fuel */
-                $fuel = FuelRequest::query()->lockForUpdate()->findOrFail($fuel->id);
+                $fuel = FuelRequest::query()->with('asset')->lockForUpdate()->findOrFail($fuel->id);
 
                 if ($fuel->status !== $requiredPreviousStatus) {
                     throw ValidationException::withMessages(['status' => 'The fuel request is not at the required stage.']);
@@ -81,22 +82,61 @@ final class TransitionFuelRequest
                         throw ValidationException::withMessages(['quantity_litres' => 'Fuel quantity must be greater than zero.']);
                     }
 
+                    $odometerKm = isset($logDetails['odometer_km']) && $logDetails['odometer_km'] !== '' ? (int) $logDetails['odometer_km'] : null;
+                    $hourMeter = isset($logDetails['hour_meter']) && $logDetails['hour_meter'] !== '' ? (float) $logDetails['hour_meter'] : null;
                     $pricePerLitre = isset($logDetails['price_per_litre']) && $logDetails['price_per_litre'] !== '' ? (float) $logDetails['price_per_litre'] : null;
                     $totalCost = isset($logDetails['total_cost']) && $logDetails['total_cost'] !== '' ? (float) $logDetails['total_cost'] : ($pricePerLitre !== null ? round($pricePerLitre * $quantityLitres, 2) : null);
+
+                    $asset = $fuel->asset;
+                    if ($asset !== null) {
+                        $isOdometer = in_array($asset->meter_type, ['odometer', 'odometer_km'], true);
+                        $isHourMeter = in_array($asset->meter_type, ['hour_meter', 'engine_hours'], true);
+
+                        if ($isOdometer && $odometerKm !== null && $asset->meter_value !== null && $odometerKm < (float) $asset->meter_value) {
+                            throw ValidationException::withMessages([
+                                'odometer_km' => "Odometer reading ({$odometerKm} km) cannot be less than current asset meter ({$asset->meter_value} km).",
+                            ]);
+                        }
+
+                        if ($isHourMeter && $hourMeter !== null && $asset->meter_value !== null && $hourMeter < (float) $asset->meter_value) {
+                            throw ValidationException::withMessages([
+                                'hour_meter' => "Hour meter reading ({$hourMeter} hrs) cannot be less than current asset meter ({$asset->meter_value} hrs).",
+                            ]);
+                        }
+                    }
+
+                    $varianceResult = $this->calculateVariance->execute($fuel, $quantityLitres, $odometerKm, $hourMeter);
 
                     $fuelLog = FuelLog::query()->create([
                         'fuel_request_id' => $fuel->id,
                         'recorded_by' => $actor->id,
                         'quantity_litres' => $quantityLitres,
-                        'odometer_km' => isset($logDetails['odometer_km']) && $logDetails['odometer_km'] !== '' ? (int) $logDetails['odometer_km'] : null,
-                        'hour_meter' => isset($logDetails['hour_meter']) && $logDetails['hour_meter'] !== '' ? (float) $logDetails['hour_meter'] : null,
+                        'odometer_km' => $odometerKm,
+                        'hour_meter' => $hourMeter,
                         'price_per_litre' => $pricePerLitre,
                         'total_cost' => $totalCost,
                         'fuel_station' => isset($logDetails['fuel_station']) && is_string($logDetails['fuel_station']) ? $logDetails['fuel_station'] : null,
                         'remarks' => isset($logDetails['remarks']) && is_string($logDetails['remarks']) ? $logDetails['remarks'] : null,
+                        'variance_litres' => $varianceResult->varianceLitres,
+                        'variance_percentage' => $varianceResult->variancePercentage,
+                        'effective_burn_rate' => $varianceResult->effectiveBurnRate,
+                        'burn_rate_unit' => $varianceResult->burnRateUnit,
+                        'is_anomaly' => $varianceResult->isAnomaly,
+                        'anomaly_reason' => $varianceResult->anomalyReason,
                         'receipt_path' => null,
                         'recorded_at' => now(),
                     ]);
+
+                    if ($asset !== null) {
+                        $isOdometer = in_array($asset->meter_type, ['odometer', 'odometer_km'], true);
+                        $isHourMeter = in_array($asset->meter_type, ['hour_meter', 'engine_hours'], true);
+
+                        if ($isOdometer && $odometerKm !== null && ($asset->meter_value === null || $odometerKm > (float) $asset->meter_value)) {
+                            $asset->update(['meter_value' => $odometerKm]);
+                        } elseif ($isHourMeter && $hourMeter !== null && ($asset->meter_value === null || $hourMeter > (float) $asset->meter_value)) {
+                            $asset->update(['meter_value' => $hourMeter]);
+                        }
+                    }
 
                     if (isset($logDetails['receipt']) && $logDetails['receipt'] instanceof UploadedFile) {
                         $receiptAttachment = $this->uploadAttachment->execute($actor, $fuelLog, $logDetails['receipt'], 'fuel_receipt');

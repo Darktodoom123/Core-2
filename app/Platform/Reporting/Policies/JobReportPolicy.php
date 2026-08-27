@@ -53,4 +53,20 @@ class JobReportPolicy
 
         return $user->can(PermissionName::ReportsViewAll->value);
     }
+
+    public function resubmit(User $user, JobReport $report): bool
+    {
+        if ($user->id === $report->author_id) {
+            return $user->can(PermissionName::ReportsViewOwn->value)
+                || $user->can(PermissionName::DispatchUpdateOwnStatus->value)
+                || $user->can(PermissionName::ReportsViewAll->value);
+        }
+
+        return $user->can(PermissionName::ReportsViewAll->value);
+    }
+
+    public function update(User $user, JobReport $report): bool
+    {
+        return $this->resubmit($user, $report);
+    }
 }

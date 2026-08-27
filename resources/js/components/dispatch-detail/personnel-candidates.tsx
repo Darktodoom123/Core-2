@@ -53,7 +53,6 @@ export function PersonnelCandidates({
     }> = [
         { type: 'driver', label: 'Drivers' },
         { type: 'crane_operator', label: 'Crane operators' },
-        { type: 'field_technician', label: 'Field technicians' },
     ];
 
     useEffect(() => {
@@ -149,9 +148,6 @@ export function PersonnelCandidates({
                         <option value="all">All types</option>
                         <option value="driver">Drivers</option>
                         <option value="crane_operator">Crane operators</option>
-                        <option value="field_technician">
-                            Field technicians
-                        </option>
                     </select>
                     <label className="inline-flex cursor-pointer items-center gap-2 font-medium text-ink-soft select-none hover:text-ink">
                         <input

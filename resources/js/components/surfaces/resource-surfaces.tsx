@@ -55,11 +55,6 @@ function resourceDetail(resource: Resource) {
                 ['Certification', resource.certification],
                 ['Recent lifts', `${resource.liftsLast90Days} in 90 days`],
             ];
-        case 'technician':
-            return [
-                ['Specialty', resource.specialty],
-                ['Open tasks', String(resource.openTasks)],
-            ];
     }
 }
 
@@ -82,7 +77,7 @@ export function ResourceDirectory({
     const allowedKinds =
         mode === 'fleet'
             ? ['truck', 'driver']
-            : ['crane', 'equipment', 'operator', 'technician'];
+            : ['crane', 'equipment', 'operator'];
     const modeResources = resources.filter((resource) =>
         allowedKinds.includes(resource.kind),
     );

@@ -338,7 +338,7 @@ function OperationsMapContent({
         markersRef.current = [];
 
         points.forEach((point) => {
-            const kind = point.kind === 'technician' ? 'personnel' : point.kind;
+            const kind = point.kind === 'operator' ? 'personnel' : point.kind;
             const markerElement = createAssetMarker({
                 kind,
                 freshness: point.freshness,

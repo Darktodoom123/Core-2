@@ -387,7 +387,7 @@ export default function Operations() {
         }
     };
 
-    const fieldRole = ['driver', 'operator', 'technician'].includes(state.role);
+    const fieldRole = ['driver', 'operator'].includes(state.role);
 
     return (
         <>
@@ -405,9 +405,7 @@ export default function Operations() {
             >
                 {fieldRole ? (
                     <FieldMobileApp
-                        role={
-                            state.role as 'driver' | 'operator' | 'technician'
-                        }
+                        role={state.role as 'driver' | 'operator'}
                         section={state.section}
                         jobs={state.jobs}
                         fieldTasks={state.fieldTasks}

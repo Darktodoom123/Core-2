@@ -5,13 +5,23 @@ namespace App\Modules\Dispatch\Policies;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 
 final class ApprovalRequestPolicy
 {
     public function decide(User $user, ApprovalRequest $approval): bool
     {
-        if ($approval->status !== ApprovalStatus::Pending || $approval->requested_by === $user->id) {
+        if ($approval->status !== ApprovalStatus::Pending) {
+            return false;
+        }
+
+        $canSelfApprove = $user->hasAnyRole([
+            RoleName::SystemAdministrator->value,
+            RoleName::OperationsManager->value,
+        ]);
+
+        if (! $canSelfApprove && $approval->requested_by === $user->id) {
             return false;
         }
 

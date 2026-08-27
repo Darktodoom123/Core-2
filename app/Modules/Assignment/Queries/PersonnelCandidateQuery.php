@@ -81,8 +81,7 @@ final class PersonnelCandidateQuery
                 'personnelCredentials' => function ($query) use ($filters): void {
                     $query->select(['id', 'user_id', 'kind', 'issued_at', 'expires_at', 'status'])
                         ->when($filters->type() === 'driver', fn (Builder $credential): Builder => $credential->where('kind', 'driver_license'))
-                        ->when($filters->type() === 'crane_operator', fn (Builder $credential): Builder => $credential->where('kind', 'operator_certification'))
-                        ->when($filters->type() === 'field_technician', fn (Builder $credential): Builder => $credential->where('kind', 'qualification'));
+                        ->when($filters->type() === 'crane_operator', fn (Builder $credential): Builder => $credential->where('kind', 'operator_certification'));
                 },
                 'dispatchAssignments' => function ($query) use ($scheduledStart, $scheduledEnd): void {
                     $query->where(function (Builder $assignment): void {

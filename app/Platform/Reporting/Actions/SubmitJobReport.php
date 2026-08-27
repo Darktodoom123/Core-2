@@ -20,7 +20,7 @@ class SubmitJobReport
     ) {}
 
     /**
-     * @param  array{dispatch_job_id: int, started_at?: string|null, ended_at?: string|null, work_summary: string, remarks?: string|null, attachments?: array<int, mixed>}  $data
+     * @param  array{dispatch_job_id: int, started_at?: string|null, ended_at?: string|null, ending_meter_value?: float|int|null, meter_type?: string|null, latitude?: float|null, longitude?: float|null, work_summary: string, remarks?: string|null, attachments?: array<int, mixed>}  $data
      */
     public function execute(User $author, array $data): JobReport
     {
@@ -32,6 +32,10 @@ class SubmitJobReport
                 'author_id' => $author->id,
                 'started_at' => $data['started_at'] ?? null,
                 'ended_at' => $data['ended_at'] ?? null,
+                'ending_meter_value' => $data['ending_meter_value'] ?? null,
+                'meter_type' => $data['meter_type'] ?? null,
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
                 'work_summary' => $data['work_summary'],
                 'remarks' => $data['remarks'] ?? null,
                 'status' => JobReportStatus::Submitted,
@@ -42,6 +46,30 @@ class SubmitJobReport
                 foreach ($data['attachments'] as $file) {
                     if ($file instanceof UploadedFile) {
                         $this->uploadAttachmentAction->execute($author, $report, $file, 'report_attachment');
+                    }
+                }
+            }
+
+            if (! empty($data['ending_meter_value'])) {
+                foreach ($job->assetAssignments()->whereNull('active_until')->with('asset')->get() as $assignment) {
+                    $asset = $assignment->asset;
+                    if ($asset->meter_value === null || (float) $data['ending_meter_value'] > (float) $asset->meter_value) {
+                        $asset->update([
+                            'meter_value' => $data['ending_meter_value'],
+                        ]);
+                        AuditEvent::query()->create([
+                            'actor_id' => $author->id,
+                            'subject_type' => $asset->getMorphClass(),
+                            'subject_id' => $asset->id,
+                            'action' => 'asset.meter_updated_from_report',
+                            'after_state' => [
+                                'meter_value' => (float) $data['ending_meter_value'],
+                                'job_report_id' => $report->id,
+                            ],
+                            'request_id' => request()->header('X-Request-ID') ?? request()->ip(),
+                            'ip_address' => request()->ip(),
+                            'occurred_at' => now(),
+                        ]);
                     }
                 }
             }

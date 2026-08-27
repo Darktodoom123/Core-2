@@ -124,8 +124,7 @@ final class DispatchLeadCommandService
         $roleOkay = match ($assignmentType) {
             'driver' => $user->hasRole(RoleName::Driver->value),
             'crane_operator' => $user->hasRole(RoleName::CraneOperator->value),
-            'field_technician' => $user->hasRole(RoleName::FieldTechnician->value),
-            'lead' => $user->hasAnyRole([RoleName::Driver->value, RoleName::CraneOperator->value, RoleName::FieldTechnician->value]),
+            'lead' => $user->hasAnyRole([RoleName::Driver->value, RoleName::CraneOperator->value]),
             default => false,
         };
         if (! $roleOkay) {

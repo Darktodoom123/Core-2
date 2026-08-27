@@ -55,6 +55,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 'capacity_unit' => 'tonnes',
                 'meter_type' => 'hour_meter',
                 'meter_value' => 1420.5,
+                'baseline_burn_rate' => 18.50,
+                'burn_rate_unit' => 'L/hr',
                 'location' => 'Central Depot Yard (Bay 3)',
                 'specifications' => ['boom_length' => '40m', 'counterweight' => '12t', 'outrigger_spread' => '6.3m'],
             ],
@@ -71,6 +73,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 'capacity_unit' => 'tonnes',
                 'meter_type' => 'odometer',
                 'meter_value' => 48200.0,
+                'baseline_burn_rate' => 0.35,
+                'burn_rate_unit' => 'L/km',
                 'location' => 'South Staging Yard',
                 'specifications' => ['engine' => '750 HP', 'fifth_wheel_rating' => '32t'],
             ],
@@ -87,6 +91,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 'capacity_unit' => 'tonnes',
                 'meter_type' => 'odometer',
                 'meter_value' => 31450.0,
+                'baseline_burn_rate' => 0.28,
+                'burn_rate_unit' => 'L/km',
                 'location' => 'En Route - Coastal Expressway',
                 'specifications' => ['deck_length' => '12m', 'winch_capacity' => '15t'],
             ],
@@ -103,6 +109,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 'capacity_unit' => 'tonnes',
                 'meter_type' => 'hour_meter',
                 'meter_value' => 2190.0,
+                'baseline_burn_rate' => 22.00,
+                'burn_rate_unit' => 'L/hr',
                 'location' => 'Port Terminal Sector 7',
                 'specifications' => ['max_radius' => '47m', 'jib_extension' => '17m'],
             ],
@@ -119,6 +127,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 'capacity_unit' => 'tonnes',
                 'meter_type' => null,
                 'meter_value' => null,
+                'baseline_burn_rate' => null,
+                'burn_rate_unit' => null,
                 'location' => 'Central Tool Crib',
                 'specifications' => ['max_span' => '14m', 'shackle_size' => '85t'],
             ],
@@ -134,7 +144,6 @@ final class LocalDevelopmentSeeder extends Seeder
 
         $driver = $users[RoleName::Driver->value] ?? null;
         $operator = $users[RoleName::CraneOperator->value] ?? null;
-        $tech = $users[RoleName::FieldTechnician->value] ?? null;
 
         // Seed location telemetry for fleet assets
         if ($driver !== null) {
@@ -165,25 +174,6 @@ final class LocalDevelopmentSeeder extends Seeder
                     'accuracy_metres' => 3.2,
                     'speed' => 0.0,
                     'remarks' => 'Stationary at Central Depot Yard',
-                    'sharing_enabled' => true,
-                    'source' => 'field_mobile',
-                    'captured_at' => now(),
-                    'received_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            );
-        }
-
-        if ($tech !== null) {
-            DB::table('location_updates')->updateOrInsert(
-                ['user_id' => $tech->id, 'operational_asset_id' => $createdAssets['CRN-102']->id],
-                [
-                    'latitude' => 14.5360,
-                    'longitude' => 120.9820,
-                    'accuracy_metres' => 5.0,
-                    'speed' => 12.5,
-                    'remarks' => 'Positioning on-site at Port Terminal',
                     'sharing_enabled' => true,
                     'source' => 'field_mobile',
                     'captured_at' => now(),
@@ -230,12 +220,6 @@ final class LocalDevelopmentSeeder extends Seeder
                 'username' => Username::fromEmail('operator@example.com'),
                 'email' => 'operator@example.com',
                 'role' => RoleName::CraneOperator,
-            ],
-            [
-                'name' => 'Dev Field Technician',
-                'username' => Username::fromEmail('technician@example.com'),
-                'email' => 'technician@example.com',
-                'role' => RoleName::FieldTechnician,
             ],
         ];
     }

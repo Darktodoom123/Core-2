@@ -2,6 +2,7 @@ import type {
     ActivateSosIncidentPayload,
     ApiErrorResponse,
     DispatchJob,
+    JobReportCommandPayload,
     LocationSharePayload,
     SosConfiguration,
     SosIncident,
@@ -224,6 +225,25 @@ export class FieldApiClient {
         commandId: string,
     ): Promise<unknown> {
         const url = `${this.baseUrl}/api/v1/locations`;
+        const bodyPayload = {
+            ...payload,
+            command_id: commandId,
+        };
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(bodyPayload),
+        });
+
+        return this.handleResponse<unknown>(response);
+    }
+
+    public async submitJobReport(
+        payload: JobReportCommandPayload,
+        commandId: string,
+    ): Promise<unknown> {
+        const url = `${this.baseUrl}/operations/job-reports`;
         const bodyPayload = {
             ...payload,
             command_id: commandId,

@@ -20,6 +20,7 @@ import { FieldProgressionStepper } from '../components/layout/FieldProgressionSt
 import { colors, shadows } from '../components/nativeStyles';
 import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -62,6 +63,7 @@ export interface JobDetailScreenProps {
         jobId: number,
         nextStatus: DispatchStatus,
         version: number,
+        signatureData?: DigitalSignatureData,
     ) => void;
     onAcceptServerState: (commandId: string) => void;
     onRetryNewVersion: (commandId: string, newVersion: number) => void;
@@ -103,9 +105,9 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
         onTransitionStatus(jobId, nextStatus, version);
     };
 
-    const handleConfirmSignature = () => {
+    const handleConfirmSignature = (data: DigitalSignatureData) => {
         setSignatureModalOpen(false);
-        onTransitionStatus(job.id, 'completed', job.version);
+        onTransitionStatus(job.id, 'completed', job.version, data);
     };
 
     useEffect(() => {

@@ -14,7 +14,7 @@ beforeEach(function (): void {
 
 it('requires post-repair passing inspection before a blocking work order can release an asset', function () {
     $technician = User::factory()->create();
-    $technician->syncRoles([RoleName::FieldTechnician->value]);
+    $technician->syncRoles([RoleName::OperationsManager->value]);
     $asset = OperationalAsset::query()->create(['code' => 'CR-99', 'name' => 'Crane 99', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $response = $this->actingAs($technician)->postJson("/operations/assets/{$asset->id}/maintenance", ['defect' => 'Hydraulic pressure loss', 'dispatch_blocking' => true])->assertCreated();
     $workId = $response->json('data.id');

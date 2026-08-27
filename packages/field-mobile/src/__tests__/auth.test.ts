@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { describe, it, beforeEach } from 'node:test';
 import { resolveApiBaseUrl } from '../auth/config';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -196,10 +196,10 @@ describe('Field Mobile Authentication Shell', () => {
                     JSON.stringify({
                         data: {
                             id: 99,
-                            name: 'Sam Tech',
-                            username: 'sam.tech',
-                            email: 'tech@example.com',
-                            role: 'field_technician',
+                            name: 'Sam Operator',
+                            username: 'sam.operator',
+                            email: 'operator@example.com',
+                            role: 'crane_operator',
                             is_active: true,
                         },
                     }),
@@ -221,8 +221,8 @@ describe('Field Mobile Authentication Shell', () => {
 
         const user = await client.fetchMe();
         assert.equal(user.id, 99);
-        assert.equal(user.name, 'Sam Tech');
-        assert.equal(user.role, 'field_technician');
+        assert.equal(user.name, 'Sam Operator');
+        assert.equal(user.role, 'crane_operator');
     });
 
     it('revokes device token on logout', async () => {
@@ -269,7 +269,7 @@ describe('Field Mobile Authentication Shell', () => {
     it('validates authorized field mobile roles', () => {
         assert.equal(isAuthorizedFieldRole('driver'), true);
         assert.equal(isAuthorizedFieldRole('crane_operator'), true);
-        assert.equal(isAuthorizedFieldRole('field_technician'), true);
+        assert.equal(isAuthorizedFieldRole('field_technician'), false);
         assert.equal(isAuthorizedFieldRole('dispatcher'), false);
         assert.equal(isAuthorizedFieldRole('operations_manager'), false);
         assert.equal(isAuthorizedFieldRole('system_administrator'), false);

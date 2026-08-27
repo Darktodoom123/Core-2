@@ -290,17 +290,6 @@ export const resources: Resource[] = [
         certification: 'Rough-terrain crane · 120 ton',
         liftsLast90Days: 21,
     },
-    {
-        id: 'tech-ana',
-        code: 'FT-012',
-        name: 'Ana Dizon',
-        kind: 'technician',
-        status: 'Assigned',
-        location: 'North Yard',
-        utilization: 77,
-        specialty: 'Hydraulics and crane controls',
-        openTasks: 3,
-    },
 ];
 
 export const gptProposal: GptProposal = {
@@ -391,18 +380,6 @@ export const telemetry: TelemetryPoint[] = [
         updatedAt: '09:48',
         destination: 'Balintawak Substation',
         eta: 'Signal 26 min old',
-    },
-    {
-        id: 'tel-tech',
-        resourceId: 'tech-ana',
-        label: 'FT-012',
-        kind: 'technician',
-        x: 27,
-        y: 43,
-        freshness: 'Offline',
-        updatedAt: 'Yesterday, 17:04',
-        destination: 'North Yard',
-        eta: 'Offline',
     },
 ];
 

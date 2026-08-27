@@ -262,7 +262,7 @@ export const HeavyCraneDriveModeModal: React.FC<
                     {delayReported ? (
                         <View style={styles.reportedDelayCard}>
                             <Text style={styles.reportedDelayTitle}>
-                                Delay reported to Dispatch:
+                                ✓ Delay reported to Dispatch:
                             </Text>
                             <Text style={styles.reportedDelayText}>
                                 {delayReported}
