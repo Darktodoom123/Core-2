@@ -72,7 +72,7 @@ export function useDirectDispatchForm({
     onDirtyChange,
     onSubmitted,
 }: UseDirectDispatchFormOptions = {}) {
-    const form = useForm<DirectDispatchFormData>('DirectDispatchView', {
+    const form = useForm<DirectDispatchFormData>({
         ...DEFAULT_FORM_DATA,
         ...initialData,
         requirements:

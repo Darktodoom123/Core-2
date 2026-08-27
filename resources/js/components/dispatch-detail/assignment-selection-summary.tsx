@@ -93,10 +93,14 @@ export function AssignmentSelectionSummary({
 
             <div className="space-y-4 px-4 py-4">
                 <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold tracking-tight text-ink">
+                    <span
+                        className="text-3xl font-bold tracking-tight text-ink"
+                        aria-hidden="true"
+                    >
                         {visibleCount}
                     </span>
                     <span className="text-sm font-medium text-ink-soft">
+                        <span className="sr-only">{visibleCount} </span>
                         {visibleCountLabel}
                     </span>
                 </div>
