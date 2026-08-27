@@ -36,6 +36,12 @@ env:
   VITE_REVERB_HOST: localhost
   VITE_REVERB_PORT: "18080"
   VITE_REVERB_SCHEME: http
+  VITE_MAP_PROVIDER: stadia
+  VITE_MAP_PLAN: starter
+  VITE_MAP_USE_CASE: commercial
+  VITE_MAP_STYLE_URL: https://tiles.stadiamaps.com/styles/core2-ci.json
+  VITE_MAP_ATTRIBUTION: Core2 CI map attribution
+  VITE_STADIA_MAPS_API_KEY: core2-ci-public-map-key
   PORT: "18000"
   REVERB_FORWARD_PORT: "18080"
   RUN_MIGRATIONS: "true"
@@ -66,13 +72,40 @@ jobs:
           file: ./Dockerfile
           target: runtime
           push: false
+          load: true
+          tags: core2/runtime:ci
           build-args: |
             VITE_PUBLIC_REVERB_IDENTIFIER=${{ env.REVERB_APP_KEY }}
             VITE_REVERB_HOST=${{ env.VITE_REVERB_HOST }}
             VITE_REVERB_PORT=${{ env.VITE_REVERB_PORT }}
             VITE_REVERB_SCHEME=${{ env.VITE_REVERB_SCHEME }}
+            VITE_MAP_PROVIDER=${{ env.VITE_MAP_PROVIDER }}
+            VITE_MAP_PLAN=${{ env.VITE_MAP_PLAN }}
+            VITE_MAP_USE_CASE=${{ env.VITE_MAP_USE_CASE }}
+            VITE_MAP_STYLE_URL=${{ env.VITE_MAP_STYLE_URL }}
+            VITE_MAP_ATTRIBUTION=${{ env.VITE_MAP_ATTRIBUTION }}
+            VITE_STADIA_MAPS_API_KEY=${{ env.VITE_STADIA_MAPS_API_KEY }}
           cache-from: type=gha,scope=core2-runtime
           cache-to: type=gha,mode=max,scope=core2-runtime
+
+      - name: Verify production frontend map configuration
+        shell: bash
+        env:
+          VITE_MAP_PROVIDER: ${{ env.VITE_MAP_PROVIDER }}
+          VITE_MAP_PLAN: ${{ env.VITE_MAP_PLAN }}
+          VITE_MAP_USE_CASE: ${{ env.VITE_MAP_USE_CASE }}
+          VITE_MAP_STYLE_URL: ${{ env.VITE_MAP_STYLE_URL }}
+          VITE_MAP_ATTRIBUTION: ${{ env.VITE_MAP_ATTRIBUTION }}
+          VITE_STADIA_MAPS_API_KEY: ${{ env.VITE_STADIA_MAPS_API_KEY }}
+          CORE2_SERVER_SECRET: ${{ env.REVERB_APP_SECRET }}
+        run: |
+          set -Eeuo pipefail
+          rm -rf frontend-build
+          mkdir -p frontend-build
+          container="$(docker create core2/runtime:ci)"
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/var/www/html/public/build/." frontend-build/
+          node scripts/verify-frontend-build.cjs frontend-build
 
       - name: Build concurrency test image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0

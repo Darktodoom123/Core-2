@@ -19,6 +19,7 @@
         "test:a11y": "playwright test tests/Browser/accessibility.spec.ts",
         "types:check:mobile": "npm --prefix packages/field-mobile run types:check",
         "test:mobile": "npm --prefix packages/field-mobile run test",
+        "verify:frontend-build": "node scripts/verify-frontend-build.cjs",
         "mobile:doctor": "npm --prefix packages/field-mobile run doctor",
         "mobile:start": "npm --prefix packages/field-mobile run start -- --dev-client",
         "mobile:api": "php artisan serve --host=0.0.0.0 --port=8000",

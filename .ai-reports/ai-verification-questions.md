@@ -98,3 +98,47 @@ security-pattern checks, and `git diff --check` also passed. The isolated
 project was stopped with `docker compose down` without `--volumes`, preserving
 its named volumes. The test suite's warnings and the normal need for image
 vulnerability scanning remain release risks.
+
+## Docker frontend map build configuration — 2026-08-26
+
+### Did you build this the most secure way?
+
+The six map values are explicitly public browser configuration because Vite
+embeds `VITE_*` values in client assets. The Dockerfile forwards them only to
+the frontend-builder stage and does not persist them as runtime `ENV` values.
+Server-only `APP_KEY`, database credentials, and `REVERB_APP_SECRET` remain
+runtime configuration; the frontend build command no longer uses shell
+tracing, so the public map key is not echoed in build logs. CI passes a dummy
+public map key and rejects the configured private Reverb secret if it appears
+in the extracted production bundle.
+
+### Did you build this the most efficient way?
+
+Compose and the production CI build share one explicit map-argument contract,
+and a small Node verifier scans the final production assets rather than
+rebuilding the frontend a second time. The map provider, plan, and use case
+are retained in the map configuration metadata so the verification covers
+the complete browser-facing configuration, while the final image still copies
+only the compiled assets.
+
+### What regressions could this introduce?
+
+Changing any `VITE_*` value still requires an image rebuild; a runtime-only
+container recreation cannot update compiled assets. Empty or incorrectly
+restricted public map keys can still produce unavailable tiles, and custom
+providers remain responsible for supplying a compatible style URL. The new
+map data attributes are public diagnostics and should not be treated as a
+security boundary. Docker image verification remains dependent on a working
+Linux Docker daemon.
+
+### What tests do we need to write before we ship this?
+
+The focused build gate is `scripts/verify-frontend-build.cjs`, which checks
+all six map values in the final production bundle and rejects a server-only
+credential. The local sentinel build passed with Vite, the verifier found all
+six values across 25 assets, and formatting, ESLint, and TypeScript checks
+passed. The GitHub Docker workflow additionally validates Compose, builds the
+runtime image, extracts its assets, runs the verifier, and performs the
+existing health and concurrency checks. A local Dockerfile build and final
+image inspection remain unrun in this session because Docker Desktop's Linux
+daemon was unavailable.

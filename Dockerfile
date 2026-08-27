@@ -115,8 +115,16 @@ ARG VITE_PUBLIC_REVERB_IDENTIFIER=core2-local-key
 ARG VITE_REVERB_HOST=localhost
 ARG VITE_REVERB_PORT=8080
 ARG VITE_REVERB_SCHEME=http
+ARG VITE_MAP_PROVIDER=stadia
+ARG VITE_MAP_PLAN=free
+ARG VITE_MAP_USE_CASE=commercial
+ARG VITE_MAP_STYLE_URL=
+ARG VITE_MAP_ATTRIBUTION=
+ARG VITE_STADIA_MAPS_API_KEY=
 
-RUN set -eux; \
+# The VITE_* values are public browser configuration and are intentionally
+# compiled into public/build. Keep server-only credentials out of this stage.
+RUN set -eu; \
     touch database/database.sqlite; \
     mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs; \
     export APP_ENV=local \
@@ -127,7 +135,13 @@ RUN set -eux; \
         VITE_REVERB_APP_KEY="$VITE_PUBLIC_REVERB_IDENTIFIER" \
         VITE_REVERB_HOST="$VITE_REVERB_HOST" \
         VITE_REVERB_PORT="$VITE_REVERB_PORT" \
-        VITE_REVERB_SCHEME="$VITE_REVERB_SCHEME"; \
+        VITE_REVERB_SCHEME="$VITE_REVERB_SCHEME" \
+        VITE_MAP_PROVIDER="$VITE_MAP_PROVIDER" \
+        VITE_MAP_PLAN="$VITE_MAP_PLAN" \
+        VITE_MAP_USE_CASE="$VITE_MAP_USE_CASE" \
+        VITE_MAP_STYLE_URL="$VITE_MAP_STYLE_URL" \
+        VITE_MAP_ATTRIBUTION="$VITE_MAP_ATTRIBUTION" \
+        VITE_STADIA_MAPS_API_KEY="$VITE_STADIA_MAPS_API_KEY"; \
     npm run build; \
     rm -f database/database.sqlite
 

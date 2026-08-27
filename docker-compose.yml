@@ -10,6 +10,12 @@ services:
         VITE_REVERB_HOST: "${VITE_REVERB_HOST:-localhost}"
         VITE_REVERB_PORT: "${VITE_REVERB_PORT:-8080}"
         VITE_REVERB_SCHEME: "${VITE_REVERB_SCHEME:-http}"
+        VITE_MAP_PROVIDER: "${VITE_MAP_PROVIDER:-stadia}"
+        VITE_MAP_PLAN: "${VITE_MAP_PLAN:-free}"
+        VITE_MAP_USE_CASE: "${VITE_MAP_USE_CASE:-commercial}"
+        VITE_MAP_STYLE_URL: "${VITE_MAP_STYLE_URL:-}"
+        VITE_MAP_ATTRIBUTION: "${VITE_MAP_ATTRIBUTION:-}"
+        VITE_STADIA_MAPS_API_KEY: "${VITE_STADIA_MAPS_API_KEY:-}"
     restart: unless-stopped
     init: true
     stop_signal: SIGTERM

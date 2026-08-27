@@ -44,14 +44,24 @@ REVERB_APP_SECRET=<server-only-secret>
 VITE_REVERB_HOST=localhost
 VITE_REVERB_PORT=8080
 VITE_REVERB_SCHEME=http
+# Public browser map configuration; these values are compiled into the bundle.
+VITE_MAP_PROVIDER=stadia
+VITE_MAP_PLAN=starter
+VITE_MAP_USE_CASE=commercial
+VITE_MAP_STYLE_URL=
+VITE_MAP_ATTRIBUTION=
+VITE_STADIA_MAPS_API_KEY=<public-browser-key>
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
 ```
 
 Generate `APP_KEY` with `php artisan key:generate --show` after the PHP
 dependencies are installed, or with an approved local key-generation process.
-Do not commit `.env`, place credentials in build arguments, or add generated
-secrets to the Dockerfile.
+Do not commit `.env`, place server-only credentials in build arguments, or add
+generated secrets to the Dockerfile. Every `VITE_*` value is public in the
+browser bundle; the Stadia key is a public browser credential and should be
+restricted by domain/referrer in the provider dashboard. `REVERB_APP_SECRET`,
+database credentials, and `APP_KEY` remain runtime-only.
 
 For the bundled services, keep `DB_HOST=db` and `REDIS_HOST=redis`. The
 server-side Reverb process runs inside `app`, so Compose sets its host to
@@ -145,9 +155,11 @@ the seeders before using it against shared data:
 docker compose exec --user www-data app php artisan db:seed
 ```
 
-Changes to `VITE_*` values require an image rebuild because they are compiled
-into the browser bundle. Runtime-only environment changes require recreating
-the app container:
+Changes to `VITE_*` values require an image rebuild because Compose forwards the
+configured values to the frontend build stage and Vite compiles them into the
+browser bundle. This includes the map provider, plan, use case, style URL,
+attribution, and Stadia browser key. Runtime-only environment changes require
+recreating the app container:
 
 ```bash
 docker compose up -d --build
@@ -181,9 +193,11 @@ or production database.
 
 `.github/workflows/docker.yml` checks the Dockerfile, runs quiet Compose
 validation with dummy non-secret values, builds both the production and test
-targets with official Docker Buildx actions, and runs a bounded health/`/up`
-smoke check plus the concurrency profile. The workflow always runs
-`docker compose down` without `--volumes`.
+targets with official Docker Buildx actions, extracts the final production
+bundle, verifies all six public map values are present, rejects the private
+Reverb secret if it appears, and runs a bounded health/`/up` smoke check plus
+the concurrency profile. The workflow always runs `docker compose down`
+without `--volumes`.
 
 For local image review after a successful build, confirm that the final image
 does not contain a project `.env` or world-writable paths. The final stage
@@ -215,7 +229,13 @@ claimed as passed.
 - If the browser cannot connect to Reverb, rebuild after changing the public
   `REVERB_APP_KEY`/`VITE_REVERB_*` values and verify the host port.
 - If the browser uses stale frontend settings, rebuild the `app` image after
-  changing any `VITE_*` value.
+  changing any `VITE_*` value. The CI-equivalent bundle check is:
+
+  ```bash
+  node scripts/verify-frontend-build.cjs public/build
+  ```
+
+  when the six `VITE_*` values are set in the current shell.
 - If ports are busy, set `PORT` or `REVERB_FORWARD_PORT`; fixed
   `container_name` values are intentionally not used, so Compose project
   names and scaling remain available.

@@ -231,6 +231,9 @@ export function LiveTrackingMap({
         <div
             ref={fullscreenSurfaceRef}
             data-testid="live-tracking-map"
+            data-map-provider={provider.provider}
+            data-map-plan={provider.plan}
+            data-map-use-case={provider.useCase}
             role={isFullscreen ? 'dialog' : undefined}
             aria-modal={isFullscreen ? 'true' : undefined}
             aria-label={

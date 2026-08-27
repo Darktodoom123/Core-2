@@ -10,6 +10,8 @@ const STADIA_ATTRIBUTION =
 
 export type MapProviderConfiguration = {
     provider: string;
+    plan: string;
+    useCase: string;
     styleUrl: string | null;
     attribution: string;
     isDevelopmentOnly: boolean;
@@ -44,11 +46,15 @@ export function getMapProviderConfiguration(
 ): MapProviderConfiguration {
     const provider = import.meta.env.VITE_MAP_PROVIDER?.trim() || 'stadia';
     const plan = import.meta.env.VITE_MAP_PLAN?.trim() || 'free';
+    const useCase =
+        import.meta.env.VITE_MAP_USE_CASE?.trim().toLowerCase() || 'commercial';
     const configuredStyleUrl = import.meta.env.VITE_MAP_STYLE_URL?.trim();
 
     if (configuredStyleUrl) {
         return {
             provider,
+            plan,
+            useCase,
             styleUrl:
                 provider === 'stadia'
                     ? withStadiaApiKey(configuredStyleUrl)
@@ -63,6 +69,8 @@ export function getMapProviderConfiguration(
     if (provider !== 'stadia') {
         return {
             provider,
+            plan,
+            useCase,
             styleUrl: null,
             attribution: '',
             isDevelopmentOnly: false,
@@ -71,6 +79,8 @@ export function getMapProviderConfiguration(
 
     return {
         provider: 'stadia',
+        plan,
+        useCase,
         styleUrl: withStadiaApiKey(STADIA_STYLE_URLS[variant]),
         attribution:
             import.meta.env.VITE_MAP_ATTRIBUTION?.trim() || STADIA_ATTRIBUTION,
