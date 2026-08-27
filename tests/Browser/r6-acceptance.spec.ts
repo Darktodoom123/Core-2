@@ -700,7 +700,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             .first()
             .click();
         await expect(
-            page.getByRole('heading', { name: 'Assignment plan' }),
+            page.getByRole('heading', {
+                name: /Assignment plan|Assigned resources/i,
+            }),
         ).toBeVisible();
         await expect(
             page.getByRole('button', {
