@@ -265,7 +265,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect((await submitResponse).status()).toBeGreaterThanOrEqual(300);
         await page.unroute('**/operations/job-reports');
         await expect(
-            page.getByRole('button', { name: 'Submit job report' }),
+            page.locator('#report-submit-toggle'),
         ).toBeFocused();
     });
 

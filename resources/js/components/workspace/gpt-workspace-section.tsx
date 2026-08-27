@@ -999,6 +999,10 @@ export function AcceptGptModal({
 }) {
     const [processing, setProcessing] = useState(false);
 
+    useEffect(() => {
+        document.getElementById('accept-gpt-cancel-btn')?.focus();
+    }, []);
+
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         setProcessing(true);
@@ -1062,6 +1066,8 @@ export function AcceptGptModal({
                     className="flex justify-end gap-3 pt-2"
                 >
                     <Button
+                        id="accept-gpt-cancel-btn"
+                        autoFocus
                         type="button"
                         variant="secondary"
                         onClick={onClose}
