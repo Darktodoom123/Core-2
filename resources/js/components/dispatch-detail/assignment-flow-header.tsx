@@ -83,9 +83,9 @@ export function AssignmentFlowHeader({
                             <span className="min-w-0">
                                 <span
                                     className={cn(
-                                        'block text-[11px] font-semibold tracking-wider uppercase',
+                                        'block text-[11px] font-bold tracking-wider uppercase',
                                         activeStep === 1
-                                            ? 'text-brand-strong'
+                                            ? 'text-ink'
                                             : 'text-success-strong',
                                     )}
                                 >
@@ -96,7 +96,14 @@ export function AssignmentFlowHeader({
                                 <span className="block font-semibold text-ink transition-colors group-hover:text-brand-strong">
                                     Review dispatch
                                 </span>
-                                <span className="block truncate text-xs text-ink-soft">
+                                <span
+                                    className={cn(
+                                        'block truncate text-xs',
+                                        activeStep === 1
+                                            ? 'text-ink'
+                                            : 'text-ink-soft',
+                                    )}
+                                >
                                     Context and requirements
                                 </span>
                             </span>
@@ -138,9 +145,9 @@ export function AssignmentFlowHeader({
                             <span className="min-w-0">
                                 <span
                                     className={cn(
-                                        'block text-[11px] font-semibold tracking-wider uppercase',
+                                        'block text-[11px] font-bold tracking-wider uppercase',
                                         activeStep === 2
-                                            ? 'text-brand-strong'
+                                            ? 'text-ink'
                                             : 'text-ink-soft',
                                     )}
                                 >
@@ -157,7 +164,7 @@ export function AssignmentFlowHeader({
                                     className={cn(
                                         'block truncate text-xs font-medium',
                                         activeStep === 2
-                                            ? 'text-brand-strong'
+                                            ? 'text-ink'
                                             : 'text-ink-soft',
                                     )}
                                 >
@@ -193,9 +200,9 @@ export function AssignmentFlowHeader({
                                 <span className="min-w-0">
                                     <span
                                         className={cn(
-                                            'block text-[11px] font-semibold tracking-wider uppercase',
+                                            'block text-[11px] font-bold tracking-wider uppercase',
                                             activeStep === 3
-                                                ? 'text-brand-strong'
+                                                ? 'text-ink'
                                                 : 'text-ink-soft',
                                         )}
                                     >
@@ -206,7 +213,14 @@ export function AssignmentFlowHeader({
                                     <span className="block font-semibold text-ink transition-colors group-hover:text-brand-strong">
                                         Activate dispatch
                                     </span>
-                                    <span className="block truncate text-xs text-ink-soft">
+                                    <span
+                                        className={cn(
+                                            'block truncate text-xs',
+                                            activeStep === 3
+                                                ? 'text-ink'
+                                                : 'text-ink-soft',
+                                        )}
+                                    >
                                         {activation.ready
                                             ? 'Ready to activate'
                                             : 'Server readiness check'}
@@ -221,9 +235,9 @@ export function AssignmentFlowHeader({
                                 <span className="min-w-0">
                                     <span
                                         className={cn(
-                                            'block text-[11px] font-semibold tracking-wider uppercase',
+                                            'block text-[11px] font-bold tracking-wider uppercase',
                                             activeStep === 3
-                                                ? 'text-brand-strong'
+                                                ? 'text-ink'
                                                 : 'text-ink-soft',
                                         )}
                                     >
@@ -238,7 +252,7 @@ export function AssignmentFlowHeader({
                                         className={cn(
                                             'block truncate text-xs',
                                             activeStep === 3
-                                                ? 'text-brand-strong'
+                                                ? 'text-ink'
                                                 : 'text-ink-soft',
                                         )}
                                     >
