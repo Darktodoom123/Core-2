@@ -962,6 +962,8 @@ function SubmitJobReportForm({
                             Save as Draft
                         </Button>
                         <Button
+                            id="submit-job-report-btn"
+                            data-testid="submit-job-report-btn"
                             type="submit"
                             variant="primary"
                             disabled={

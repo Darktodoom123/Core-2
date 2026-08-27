@@ -131,7 +131,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.url().endsWith('/operations/job-reports') &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Submit report' }).click();
+        await page.locator('#submit-job-report-btn').click();
         expect((await uploadResponse).status()).toBeGreaterThanOrEqual(300);
         await expect(page.getByText('r6-upload.png')).toBeVisible();
 
@@ -166,7 +166,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.url().endsWith('/operations/job-reports') &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Submit report' }).click();
+        await page.locator('#submit-job-report-btn').click();
         expect((await deniedUploadResponse).status()).toBe(403);
     });
 
@@ -213,7 +213,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.url().endsWith('/operations/job-reports') &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Submit report' }).click();
+        await page.locator('#submit-job-report-btn').click();
         expect((await invalidResponse).status()).toBe(302);
         await expect(
             page.getByRole('alert').filter({ hasText: 'We could not submit' }),
@@ -231,7 +231,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.url().endsWith('/operations/job-reports') &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Submit report' }).click();
+        await page.locator('#submit-job-report-btn').click();
         expect((await countResponse).status()).toBe(302);
         await expect(
             page.getByRole('alert').filter({ hasText: 'We could not submit' }),
@@ -252,10 +252,10 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.url().endsWith('/operations/job-reports') &&
                 response.request().method() === 'POST',
         );
-        await page.getByRole('button', { name: 'Submit report' }).click();
+        await page.locator('#submit-job-report-btn').click();
         await expect(page.locator('form[aria-busy="true"]')).toBeVisible();
         await expect(
-            page.locator('#report-submit-form button[type="submit"]'),
+            page.locator('#submit-job-report-btn'),
         ).toBeDisabled();
         releaseRequest();
         expect((await submitResponse).status()).toBeGreaterThanOrEqual(300);
