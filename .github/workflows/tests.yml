@@ -50,7 +50,7 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
           coverage: xdebug
-          extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl
+          extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
 
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
