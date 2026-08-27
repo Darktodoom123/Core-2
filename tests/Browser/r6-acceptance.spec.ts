@@ -481,14 +481,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await page.goto('/?view=dispatch');
-        await page.getByRole('button', { name: /R6-BROWSER-001/ }).click();
+        await page.getByRole('button', { name: /R6-BROWSER-004/ }).click();
 
         await expect(
             page.getByText('Dispatch job', { exact: true }),
         ).toBeVisible();
         await expect(
             page.getByRole('heading', {
-                name: 'Deterministic browser acceptance lift',
+                name: 'AI Assisted browser fixture lift',
             }),
         ).toBeVisible();
         await expect(

@@ -150,8 +150,6 @@ final class BrowserAcceptanceSeeder extends Seeder
             'created_by' => $dispatcher->id,
         ]);
 
-        $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview);
-
         $recommendations = [
             'pending_accept' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
             'pending_reject' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
