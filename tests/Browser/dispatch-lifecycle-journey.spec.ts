@@ -37,9 +37,11 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         await expect(eligibleBadges.first()).toBeVisible();
 
         // 3. Selection of candidates
-        const checkboxes = page.getByRole('checkbox', {
-            name: /^Select /i,
-        });
+        const checkboxes = page
+            .getByRole('checkbox', {
+                name: /^Select /i,
+            })
+            .filter({ hasNot: page.locator('[disabled]') });
         const availableCount = await checkboxes.count();
         expect(availableCount).toBeGreaterThan(0);
 

@@ -125,6 +125,8 @@ export function DirectDispatchView({
 
     return (
         <section
+            id="direct-dispatch-subview"
+            data-testid="direct-dispatch-subview"
             className="max-w-full min-w-0 overflow-x-clip rounded-xl border border-line bg-surface"
             aria-labelledby="direct-dispatch-title"
         >

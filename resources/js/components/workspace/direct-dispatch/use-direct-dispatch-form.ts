@@ -249,6 +249,41 @@ export function useDirectDispatchForm({
                 return;
             }
 
+            const clientErrors: DirectDispatchFormErrors = {};
+
+            if (!form.data.client.trim()) {
+                clientErrors.client = 'The client field is required.';
+            }
+
+            if (!form.data.title.trim()) {
+                clientErrors.title = 'The title field is required.';
+            }
+
+            if (!form.data.site.trim()) {
+                clientErrors.site = 'The site field is required.';
+            }
+
+            if (!form.data.scheduled_start) {
+                clientErrors.scheduled_start =
+                    'The scheduled start field is required.';
+            }
+
+            if (!form.data.scheduled_end) {
+                clientErrors.scheduled_end =
+                    'The scheduled end field is required.';
+            }
+
+            if (Object.keys(clientErrors).length > 0) {
+                form.setError(
+                    clientErrors as Parameters<typeof form.setError>[0],
+                );
+                window.requestAnimationFrame(() => {
+                    focusFirstError(clientErrors);
+                });
+
+                return;
+            }
+
             submittingRef.current = true;
             form.post('/operations/dispatch-jobs', {
                 preserveState: true,
