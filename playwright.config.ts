@@ -24,6 +24,8 @@ export default defineConfig({
               url: baseURL,
               reuseExistingServer: false,
               timeout: 120_000,
+              stdout: 'pipe',
+              stderr: 'pipe',
           },
     projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

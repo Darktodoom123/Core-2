@@ -41,10 +41,19 @@ chdir($root);
 
 $php = escapeshellarg(PHP_BINARY);
 
-passthru($php.' artisan migrate:fresh --seed --seeder=BrowserAcceptanceSeeder --force', $migrationStatus);
+$migrationCommand = sprintf(
+    '%s artisan migrate:fresh --seed --seeder=BrowserAcceptanceSeeder --force --ansi --database=sqlite',
+    $php
+);
+
+passthru($migrationCommand, $migrationStatus);
 
 if ($migrationStatus !== 0) {
     fwrite(STDERR, "Database migration and seeding failed with status {$migrationStatus}\n");
+    $logFile = $root.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'logs'.DIRECTORY_SEPARATOR.'laravel.log';
+    if (file_exists($logFile)) {
+        fwrite(STDERR, "=== Laravel Log ===\n".file_get_contents($logFile)."\n");
+    }
     exit($migrationStatus);
 }
 
