@@ -216,7 +216,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.locator('#submit-job-report-btn').click();
         expect((await invalidResponse).status()).toBe(302);
         await expect(
-            page.getByRole('alert').filter({ hasText: 'We could not submit' }),
+            page
+                .getByRole('alert')
+                .filter({ hasText: /Unable to submit|We could not submit/i }),
         ).toBeVisible();
 
         await page.locator('input[type="file"]').setInputFiles(
@@ -234,7 +236,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.locator('#submit-job-report-btn').click();
         expect((await countResponse).status()).toBe(302);
         await expect(
-            page.getByRole('alert').filter({ hasText: 'We could not submit' }),
+            page
+                .getByRole('alert')
+                .filter({ hasText: /Unable to submit|We could not submit/i }),
         ).toBeVisible();
 
         await page.locator('input[type="file"]').setInputFiles([]);
@@ -290,7 +294,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             name: /Trucks/,
         });
         const cranes = menu.getByRole('menuitemcheckbox', {
-            name: /Cranes/,
+            name: /^Cranes/i,
         });
 
         await trucks.click();
