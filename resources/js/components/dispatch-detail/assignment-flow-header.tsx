@@ -219,13 +219,29 @@ export function AssignmentFlowHeader({
                                     3
                                 </span>
                                 <span className="min-w-0">
-                                    <span className="block text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                                        Step 3 · Next step
+                                    <span
+                                        className={cn(
+                                            'block text-[11px] font-semibold tracking-wider uppercase',
+                                            activeStep === 3
+                                                ? 'text-brand-strong'
+                                                : 'text-ink-soft',
+                                        )}
+                                    >
+                                        {activeStep === 3
+                                            ? 'Step 3 · Current step'
+                                            : 'Step 3 · Next step'}
                                     </span>
                                     <span className="block font-semibold text-ink">
                                         Activate dispatch
                                     </span>
-                                    <span className="block truncate text-xs text-ink-soft">
+                                    <span
+                                        className={cn(
+                                            'block truncate text-xs',
+                                            activeStep === 3
+                                                ? 'text-brand-strong'
+                                                : 'text-ink-soft',
+                                        )}
+                                    >
                                         Requires activation permission
                                     </span>
                                 </span>
