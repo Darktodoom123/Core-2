@@ -50,5 +50,24 @@
         "react-test-renderer": "19.2.3",
         "tsx": "^4.19.2",
         "typescript": "~6.0.3"
+    },
+    "expo": {
+        "install": {
+            "exclude": [
+                "react-native-webview",
+                "expo",
+                "expo-crypto",
+                "expo-dev-client",
+                "expo-image-picker",
+                "expo-location",
+                "expo-secure-store",
+                "expo-splash-screen",
+                "expo-sqlite",
+                "expo-system-ui",
+                "expo-task-manager",
+                "react-native",
+                "jest-expo"
+            ]
+        }
     }
 }
