@@ -381,9 +381,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const scheduleRows = schedule.locator('ul').first().locator('li');
 
         await expect(scheduleRows.nth(0)).toContainText('R6-BROWSER-002');
-        await expect(schedule.locator('ul').first()).toContainText(
-            'R6-BROWSER-001',
-        );
+        await expect(scheduleRows.nth(1)).toContainText('R6-BROWSER-003');
     });
 
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({

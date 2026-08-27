@@ -64,9 +64,21 @@ export function ReportsSurface({
         return params.get('job_id') || params.get('dispatch_id') || null;
     }, []);
 
-    const [showSubmitModal, setShowSubmitModal] = useState(
+    const { errors: pageErrors = {} } = usePage<{
+        errors?: Record<string, string>;
+    }>().props;
+
+    const [modalDismissed, setModalDismissed] = useState(false);
+    const [userOpenedModal, setUserOpenedModal] = useState(
         () => initialJobIdFromUrl !== null,
     );
+
+    const showSubmitModal =
+        (userOpenedModal ||
+            initialJobIdFromUrl !== null ||
+            Object.keys(pageErrors).length > 0) &&
+        !modalDismissed;
+
     const [prefilledJobId] = useState<string | number | null>(
         initialJobIdFromUrl,
     );
@@ -245,7 +257,15 @@ export function ReportsSurface({
                             variant={showSubmitModal ? 'secondary' : 'primary'}
                             aria-expanded={showSubmitModal}
                             aria-controls="report-submit-form"
-                            onClick={() => setShowSubmitModal(!showSubmitModal)}
+                            onClick={() => {
+                                if (showSubmitModal) {
+                                    setModalDismissed(true);
+                                    setUserOpenedModal(false);
+                                } else {
+                                    setModalDismissed(false);
+                                    setUserOpenedModal(true);
+                                }
+                            }}
                         >
                             <Plus className="mr-2 h-4 w-4" />
                             {showSubmitModal
@@ -262,7 +282,8 @@ export function ReportsSurface({
                         initialJobId={prefilledJobId ?? ''}
                         capabilities={capabilities}
                         onDone={() => {
-                            setShowSubmitModal(false);
+                            setModalDismissed(true);
+                            setUserOpenedModal(false);
                             window.setTimeout(() => {
                                 document
                                     .getElementById('report-submit-toggle')
