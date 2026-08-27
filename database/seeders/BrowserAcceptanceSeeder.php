@@ -77,7 +77,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $report = JobReport::query()->create([
             'dispatch_job_id' => $job->id,
-            'author_id' => $driver->id,
+            'author_id' => $manager->id,
             'started_at' => now()->subHour(),
             'ended_at' => now()->subMinutes(10),
             'work_summary' => 'Browser fixture report for authorized download coverage.',
@@ -89,7 +89,7 @@ final class BrowserAcceptanceSeeder extends Seeder
         $attachmentPath = 'attachments/browser/r6-report.txt';
         Storage::disk('local')->put($attachmentPath, 'R6 browser attachment fixture');
         $attachment = $report->attachments()->create([
-            'uploaded_by' => $driver->id,
+            'uploaded_by' => $manager->id,
             'kind' => 'document',
             'disk' => 'local',
             'path' => $attachmentPath,
