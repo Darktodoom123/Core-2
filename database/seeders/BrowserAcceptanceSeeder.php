@@ -137,13 +137,28 @@ final class BrowserAcceptanceSeeder extends Seeder
             'purge_at' => now()->addDays(2),
         ]);
 
+        $gptJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-004',
+            'client' => 'GPT Recommendations Client',
+            'title' => 'AI Assisted browser fixture lift',
+            'site' => 'AI fixture site',
+            'scheduled_start' => now()->addDay(),
+            'scheduled_end' => now()->addDay()->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => [],
+            'created_by' => $dispatcher->id,
+        ]);
+
+        $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview);
+
         $recommendations = [
-            'pending_accept' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview),
-            'pending_reject' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::PendingReview),
-            'failed' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
-            'stale' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Stale),
-            'accepted' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Accepted, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(3)]),
-            'rejected' => $this->recommendation($job, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
+            'pending_accept' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
+            'pending_reject' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
+            'failed' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
+            'stale' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Stale),
+            'accepted' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Accepted, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(3)]),
+            'rejected' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
         ];
 
         $truck = OperationalAsset::query()->firstOrCreate(

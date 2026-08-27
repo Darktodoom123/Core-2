@@ -1500,9 +1500,9 @@ function ReportDetailPane({
 
             {/* Work Summary */}
             <div>
-                <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                <h2 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                     Work Summary & Progress
-                </h3>
+                </h2>
                 <div className="mt-2 rounded-lg border border-line bg-surface p-3.5 text-sm leading-relaxed text-ink">
                     {report.work_summary}
                 </div>
@@ -1511,9 +1511,9 @@ function ReportDetailPane({
             {/* Remarks */}
             {report.remarks && (
                 <div>
-                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                    <h2 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                         Remarks & Site Observations
-                    </h3>
+                    </h2>
                     <div className="mt-2 rounded-lg bg-surface-subtle p-3.5 text-sm text-ink">
                         {report.remarks}
                     </div>
