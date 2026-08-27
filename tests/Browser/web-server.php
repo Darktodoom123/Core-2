@@ -11,6 +11,12 @@ putenv('CACHE_STORE=array');
 putenv('QUEUE_CONNECTION=sync');
 putenv('SESSION_DRIVER=file');
 putenv('OPENAI_FAKE=true');
+putenv('BROADCAST_CONNECTION=null');
+putenv('BROADCAST_DRIVER=null');
+putenv('MAIL_MAILER=array');
+putenv('PULSE_ENABLED=false');
+putenv('TELESCOPE_ENABLED=false');
+putenv('NIGHTWATCH_ENABLED=false');
 
 $_ENV['APP_ENV'] = 'testing';
 $_ENV['APP_DEBUG'] = 'true';
@@ -20,6 +26,12 @@ $_ENV['CACHE_STORE'] = 'array';
 $_ENV['QUEUE_CONNECTION'] = 'sync';
 $_ENV['SESSION_DRIVER'] = 'file';
 $_ENV['OPENAI_FAKE'] = 'true';
+$_ENV['BROADCAST_CONNECTION'] = 'null';
+$_ENV['BROADCAST_DRIVER'] = 'null';
+$_ENV['MAIL_MAILER'] = 'array';
+$_ENV['PULSE_ENABLED'] = 'false';
+$_ENV['TELESCOPE_ENABLED'] = 'false';
+$_ENV['NIGHTWATCH_ENABLED'] = 'false';
 
 $_SERVER['APP_ENV'] = 'testing';
 $_SERVER['APP_DEBUG'] = 'true';
@@ -29,6 +41,12 @@ $_SERVER['CACHE_STORE'] = 'array';
 $_SERVER['QUEUE_CONNECTION'] = 'sync';
 $_SERVER['SESSION_DRIVER'] = 'file';
 $_SERVER['OPENAI_FAKE'] = 'true';
+$_SERVER['BROADCAST_CONNECTION'] = 'null';
+$_SERVER['BROADCAST_DRIVER'] = 'null';
+$_SERVER['MAIL_MAILER'] = 'array';
+$_SERVER['PULSE_ENABLED'] = 'false';
+$_SERVER['TELESCOPE_ENABLED'] = 'false';
+$_SERVER['NIGHTWATCH_ENABLED'] = 'false';
 
 if (! is_dir(dirname($browserDatabase))) {
     mkdir(dirname($browserDatabase), 0777, true);
