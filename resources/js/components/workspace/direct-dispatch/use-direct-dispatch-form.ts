@@ -251,6 +251,7 @@ export function useDirectDispatchForm({
 
             submittingRef.current = true;
             form.post('/operations/dispatch-jobs', {
+                preserveState: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     resetDraft();
