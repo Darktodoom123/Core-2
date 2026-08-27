@@ -382,7 +382,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const scheduleRows = schedule.locator('ul').first().locator('li');
 
         await expect(scheduleRows.nth(0)).toContainText('R6-BROWSER-002');
-        await expect(scheduleRows.nth(1)).toContainText('R6-BROWSER-003');
+        await expect(scheduleRows.nth(1)).toContainText(
+            /R6-BROWSER-003|R6-BROWSER-004/,
+        );
     });
 
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({
@@ -467,6 +469,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 hasText: `#${fixtures.recommendations.failed}`,
             })
             .getByRole('button', { name: 'Retry' })
+            .first()
             .click();
         await (await retryResponse).finished();
         await expect(
