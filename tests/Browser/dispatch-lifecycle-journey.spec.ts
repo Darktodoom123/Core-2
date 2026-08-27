@@ -146,7 +146,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
 
         // 5. Verify banner updates to approved state
         await expect(
-            page.getByText(/Operations Manager approval granted/i),
+            page.getByText(/Approved by Operations Manager/i),
         ).toBeVisible();
 
         // 6. Verify accessibility
@@ -244,7 +244,9 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         await confirmCancel.click();
 
         // 4. Verify job status transitions to cancelled
-        await expect(page.getByText('Cancelled')).toBeVisible();
+        await expect(
+            page.getByText('Cancelled', { exact: true }),
+        ).toBeVisible();
 
         // 5. Reopen cancelled job
         await page.locator('#administrative-actions > summary').click();
@@ -257,7 +259,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             await page
                 .getByRole('button', { name: 'Confirm reopen to draft' })
                 .click();
-            await expect(page.getByText('Draft')).toBeVisible();
+            await expect(page.getByText('Draft', { exact: true })).toBeVisible();
         }
 
         // 6. Verify accessibility
