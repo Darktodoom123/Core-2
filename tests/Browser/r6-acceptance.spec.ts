@@ -383,7 +383,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await expect(scheduleRows.nth(0)).toContainText('R6-BROWSER-002');
         await expect(scheduleRows.nth(1)).toContainText(
-            /R6-BROWSER-003|R6-BROWSER-004/,
+            /R6-BROWSER-001|R6-BROWSER-003/,
         );
     });
 
