@@ -80,6 +80,14 @@ export default function DispatchDetail({
     const candidateError =
         candidatePageError(personnelCandidatePage) ??
         candidatePageError(assetCandidatePage);
+    const initialStep: 1 | 2 | 3 =
+        job.status.value === 'pending_approval' ||
+        job.status.value === 'scheduled' ||
+        activation.approval_status === 'pending' ||
+        Boolean(activation.approval_request_id)
+            ? 3
+            : 2;
+
     const {
         form,
         activeStep,
@@ -96,10 +104,14 @@ export default function DispatchDetail({
         toggleAsset,
         submit,
         confirmLeave,
-    } = useDispatchAssignment(job.id, {
-        personnel: personnelCandidates,
-        assets: assetCandidates,
-    });
+    } = useDispatchAssignment(
+        job.id,
+        {
+            personnel: personnelCandidates,
+            assets: assetCandidates,
+        },
+        initialStep,
+    );
 
     const assignmentSaved = isAssignmentSuccessFlash(flash);
     const hasCurrentAssignments =

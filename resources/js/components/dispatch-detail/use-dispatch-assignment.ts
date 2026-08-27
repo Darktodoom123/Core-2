@@ -35,12 +35,13 @@ function mergeCandidateDetails<T extends { id: number }>(
 export function useDispatchAssignment(
     jobId: number,
     candidates: CandidateSnapshotInputs,
+    initialStep: 1 | 2 | 3 = 2,
 ) {
     const form = useForm<AssignmentRequestPayload>({
         personnel: [],
         assets: [],
     });
-    const [activeStep, setActiveStep] = useState<1 | 2 | 3>(2);
+    const [activeStep, setActiveStep] = useState<1 | 2 | 3>(initialStep);
     const selectedCount = form.data.personnel.length + form.data.assets.length;
     const hasPendingSelections = selectedCount > 0;
     const skipNextNavigationGuard = useRef(false);
