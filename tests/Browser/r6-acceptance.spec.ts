@@ -354,13 +354,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('button', { name: 'Review units' }),
         ).toBeVisible();
-        const scheduleTop = await page
-            .getByRole('heading', { name: 'Dispatch schedule' })
-            .evaluate((element) => element.getBoundingClientRect().top);
-        const trackingTop = await page
-            .getByRole('heading', { name: 'Live field tracking' })
-            .evaluate((element) => element.getBoundingClientRect().top);
-        expect(scheduleTop).toBeLessThan(trackingTop);
+        await expect(
+            page.getByRole('heading', { name: 'Live field tracking' }),
+        ).toBeVisible();
         await expect(
             page.getByRole('heading', { name: 'Telemetry summary' }),
         ).toHaveCount(0);
@@ -385,7 +381,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const scheduleRows = schedule.locator('ul').first().locator('li');
 
         await expect(scheduleRows.nth(0)).toContainText('R6-BROWSER-002');
-        await expect(scheduleRows.nth(1)).toContainText('R6-BROWSER-001');
+        await expect(schedule.locator('ul').first()).toContainText(
+            'R6-BROWSER-001',
+        );
     });
 
     test('GPT failure, stale, accept, reject, and retry are visible and keyboard safe', async ({

@@ -499,6 +499,9 @@ function SubmitJobReportForm({
         string | null
     >(null);
     const [gpsCapturing, setGpsCapturing] = useState(false);
+    const { errors: pageErrors = {} } = usePage<{
+        errors?: Record<string, string>;
+    }>().props;
 
     const form = useForm({
         dispatch_job_id: initialJobId ? String(initialJobId) : '',
@@ -513,6 +516,10 @@ function SubmitJobReportForm({
         is_draft: false,
         attachments: [] as File[],
     });
+
+    const hasErrors =
+        Object.keys(form.errors).length > 0 ||
+        Object.keys(pageErrors).length > 0;
 
     const captureLocation = () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -571,10 +578,10 @@ function SubmitJobReportForm({
         ]);
     };
 
-    const removeAttachment = (indexToRemove: number) => {
+    const removeAttachment = (idx: number) => {
         form.setData(
             'attachments',
-            form.data.attachments.filter((_, idx) => idx !== indexToRemove),
+            form.data.attachments.filter((_, i) => i !== idx),
         );
     };
 
@@ -933,7 +940,7 @@ function SubmitJobReportForm({
                     </div>
                 )}
 
-                {Object.keys(form.errors).length > 0 && (
+                {hasErrors && (
                     <div
                         className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-xs text-danger"
                         role="alert"
