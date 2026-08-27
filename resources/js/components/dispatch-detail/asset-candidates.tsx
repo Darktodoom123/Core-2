@@ -233,21 +233,33 @@ export function AssetCandidates({
                                         eligible of {groupCandidates.length}
                                     </p>
                                 </div>
-                                <span
-                                    className={cn(
-                                        'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                        groupCandidates.some((c) => c.eligible)
-                                            ? 'bg-success-soft text-success-strong'
-                                            : 'bg-surface-subtle text-ink-soft',
+                                <div className="flex items-center gap-2">
+                                    {catalogAccess && (
+                                        <Link
+                                            href={catalogHref}
+                                            className="text-xs font-medium text-brand-strong hover:underline"
+                                        >
+                                            {catalogLabel}
+                                        </Link>
                                     )}
-                                >
-                                    {
-                                        groupCandidates.filter(
-                                            (c) => c.eligible,
-                                        ).length
-                                    }{' '}
-                                    ready
-                                </span>
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                            groupCandidates.some(
+                                                (c) => c.eligible,
+                                            )
+                                                ? 'bg-success-soft text-success-strong'
+                                                : 'bg-surface-subtle text-ink-soft',
+                                        )}
+                                    >
+                                        {
+                                            groupCandidates.filter(
+                                                (c) => c.eligible,
+                                            ).length
+                                        }{' '}
+                                        ready
+                                    </span>
+                                </div>
                             </div>
                             {filtered.length === 0 ? (
                                 <EmptyState
