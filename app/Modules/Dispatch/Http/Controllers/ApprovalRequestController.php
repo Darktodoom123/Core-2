@@ -53,6 +53,13 @@ final class ApprovalRequestController extends Controller
             ? 'Approval request was approved and dispatch was activated.'
             : "Approval request was {$status->value}.";
 
+        if ($request->header('X-Inertia')) {
+            return back()->with('flash', [
+                'tone' => 'success',
+                'message' => $message,
+            ]);
+        }
+
         return to_route('home')->with('flash', [
             'tone' => 'success',
             'message' => $message,
