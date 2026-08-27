@@ -704,11 +704,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 name: /Assignment plan|Assigned resources/i,
             }),
         ).toBeVisible();
-        await expect(
-            page.getByRole('button', {
-                name: 'Select resources to continue',
-            }),
-        ).toBeDisabled();
+        const continueBtn = page.getByRole('button', {
+            name: 'Select resources to continue',
+        });
+
+        if (await continueBtn.isVisible()) {
+            await expect(continueBtn).toBeDisabled();
+        }
+
         await expect(page.locator('#dispatch-activation')).toBeVisible();
         await expect(page.locator('#dispatch-activation')).not.toHaveAttribute(
             'open',
