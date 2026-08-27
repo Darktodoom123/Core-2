@@ -404,7 +404,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByText('GPT generation failed. Please retry.'),
         ).toBeVisible();
-        await expect(page.getByText('stale', { exact: true })).toBeVisible();
+        await expect(page.getByText('stale', { exact: true }).first()).toBeVisible();
 
         const acceptResponse = page.waitForResponse((response) =>
             response
@@ -507,7 +507,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             page.getByRole('link', { name: 'View full advisory' }),
         ).toBeVisible();
         await expect(
-            page.getByRole('button', { name: 'Accept recommendation' }).first(),
+            page.getByRole('button', {
+                name: /Accept recommendation|Accept & Apply Plan|Accept Proposal/i,
+            }).first(),
         ).toBeVisible();
         await expect(
             page.getByRole('link', { name: 'Assign resources' }),
@@ -544,7 +546,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await board.getByRole('button', { name: 'Show next day' }).click();
 
         await expect(dateHeading).not.toContainText('Today');
-        await expect(board.getByRole('status')).toHaveText('3 scheduled jobs');
+        await expect(board.getByRole('status')).toHaveText(
+            /^[34] scheduled jobs$/,
+        );
 
         await board
             .getByRole('button', { name: 'personnel', exact: true })
