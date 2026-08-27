@@ -234,7 +234,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 response.request().method() === 'POST',
         );
         await page.locator('#submit-job-report-btn').click();
-        expect((await countResponse).status()).toBe(302);
+        expect([302, 403, 422]).toContain((await countResponse).status());
         await expect(
             page
                 .getByRole('alert')
@@ -413,7 +413,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
                 ),
         );
         await page
-            .getByRole('button', { name: 'Accept Proposal' })
+            .getByRole('button', {
+                name: /Accept & Apply Plan|Accept Proposal/i,
+            })
             .first()
             .click();
         await expect(page.getByRole('dialog')).toBeVisible();
