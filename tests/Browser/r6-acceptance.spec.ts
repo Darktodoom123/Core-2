@@ -102,9 +102,19 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await signIn(page, fixtures.users.driver, fixtures.password);
         await page.goto('/?view=reports');
         await page.getByRole('button', { name: 'Submit job report' }).click();
-        await page
-            .locator('input[type="number"]')
-            .fill(String(fixtures.assigned_job_id));
+
+        const dispatchSelect = page.locator('#report-dispatch-select');
+
+        if (
+            (await dispatchSelect.evaluate(
+                (el) => el.tagName.toLowerCase() === 'select',
+            ))
+        ) {
+            await dispatchSelect.selectOption(String(fixtures.assigned_job_id));
+        } else {
+            await dispatchSelect.fill(String(fixtures.assigned_job_id));
+        }
+
         await page
             .getByPlaceholder('Brief description of work executed')
             .fill('Browser upload acceptance report');
@@ -126,9 +136,28 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(page.getByText('r6-upload.png')).toBeVisible();
 
         await page.getByRole('button', { name: 'Submit job report' }).click();
-        await page
-            .locator('input[type="number"]')
-            .fill(String(fixtures.job_id));
+
+        const unauthorizedDispatchSelect = page.locator(
+            '#report-dispatch-select',
+        );
+
+        if (
+            (await unauthorizedDispatchSelect.evaluate(
+                (el) => el.tagName.toLowerCase() === 'select',
+            ))
+        ) {
+            await unauthorizedDispatchSelect.evaluate((el, id) => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.text = 'Unauthorized Draft Job';
+                el.appendChild(opt);
+                (el as HTMLSelectElement).value = id;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            }, String(fixtures.job_id));
+        } else {
+            await unauthorizedDispatchSelect.fill(String(fixtures.job_id));
+        }
+
         await page
             .getByPlaceholder('Brief description of work executed')
             .fill('Unauthorized browser upload attempt');
@@ -150,11 +179,28 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await page.goto('/?view=reports');
         await page.getByRole('button', { name: 'Submit job report' }).click();
 
-        const jobId = page.locator('input[type="number"]');
+        const validationDispatchSelect = page.locator(
+            '#report-dispatch-select',
+        );
+
+        if (
+            (await validationDispatchSelect.evaluate(
+                (el) => el.tagName.toLowerCase() === 'select',
+            ))
+        ) {
+            await validationDispatchSelect.selectOption(
+                String(fixtures.assigned_job_id),
+            );
+        } else {
+            await validationDispatchSelect.fill(
+                String(fixtures.assigned_job_id),
+            );
+        }
+
         const summary = page.getByPlaceholder(
             'Brief description of work executed',
         );
-        await jobId.fill(String(fixtures.assigned_job_id));
+
         await summary.fill('Browser attachment validation report');
 
         await page.locator('input[type="file"]').setInputFiles({

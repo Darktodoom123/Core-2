@@ -146,9 +146,9 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
 
         // 5. Verify banner updates to approved state
         await expect(
-            page.getByText(
-                /Operations Manager approval granted|Approved by Operations Manager/i,
-            ),
+            approvalBanner.getByRole('heading', {
+                name: /Operations Manager approval granted/i,
+            }),
         ).toBeVisible();
 
         // 6. Verify accessibility
