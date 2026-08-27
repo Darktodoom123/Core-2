@@ -587,6 +587,7 @@ function SubmitJobReportForm({
         }));
 
         form.post('/operations/job-reports', {
+            preserveState: true,
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
@@ -605,6 +606,7 @@ function SubmitJobReportForm({
         }));
 
         form.post('/operations/job-reports', {
+            preserveState: true,
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
@@ -1069,6 +1071,7 @@ function ResubmitJobReportModal({
         setFileValidationError(null);
 
         form.post(`/operations/job-reports/${report.id}/resubmit`, {
+            preserveState: true,
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
