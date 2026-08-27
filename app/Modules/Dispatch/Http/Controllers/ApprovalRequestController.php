@@ -53,11 +53,7 @@ final class ApprovalRequestController extends Controller
             ? 'Approval request was approved and dispatch was activated.'
             : "Approval request was {$status->value}.";
 
-        $redirectTarget = $approvalRequest->subject instanceof DispatchJob
-            ? to_route('dispatch-jobs.show', $approvalRequest->subject)
-            : to_route('home');
-
-        return $redirectTarget->with('flash', [
+        return to_route('home')->with('flash', [
             'tone' => 'success',
             'message' => $message,
         ]);
