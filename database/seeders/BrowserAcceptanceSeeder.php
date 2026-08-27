@@ -191,6 +191,19 @@ final class BrowserAcceptanceSeeder extends Seeder
             'requested_changes' => ['notes' => 'Site crane ready, priority response needed.'],
         ]);
 
+        $lifecycleJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-005',
+            'client' => 'Lifecycle Journey Client',
+            'title' => 'Lifecycle testing fixture lift',
+            'site' => 'Lifecycle fixture site',
+            'scheduled_start' => now()->addDays(3),
+            'scheduled_end' => now()->addDays(3)->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => [],
+            'created_by' => $dispatcher->id,
+        ]);
+
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
@@ -204,6 +217,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'assigned_job_id' => $assignedJob->id,
             'approval_job_id' => $approvalJob->id,
             'approval_request_id' => $approvalRequest->id,
+            'lifecycle_job_id' => $lifecycleJob->id,
             'truck_id' => $truck->id,
             'crane_id' => $crane->id,
             'report_id' => $report->id,

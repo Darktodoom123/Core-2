@@ -214,7 +214,9 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+        await page.goto(
+            `/operations/dispatch-jobs/${fixtures.lifecycle_job_id ?? fixtures.job_id}`,
+        );
 
         // 1. Open administrative lifecycle panel
         const adminSummary = page.locator('#administrative-actions > summary');

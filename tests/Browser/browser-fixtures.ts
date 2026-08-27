@@ -14,6 +14,7 @@ export type BrowserFixtures = {
     assigned_job_id: number;
     approval_job_id?: number;
     approval_request_id?: number;
+    lifecycle_job_id?: number;
     truck_id?: number;
     crane_id?: number;
     report_id: number;
