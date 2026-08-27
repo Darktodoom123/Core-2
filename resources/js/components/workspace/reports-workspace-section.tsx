@@ -579,8 +579,6 @@ function SubmitJobReportForm({
             setFileValidationError(
                 `You cannot attach more than ${maxCount} files per job report.`,
             );
-
-            return;
         }
 
         for (const file of incomingFiles) {
@@ -588,8 +586,6 @@ function SubmitJobReportForm({
                 setFileValidationError(
                     `File "${file.name}" exceeds the maximum allowed size of ${(maxBytes / 1024 / 1024).toFixed(0)} MiB.`,
                 );
-
-                return;
             }
         }
 
@@ -982,11 +978,7 @@ function SubmitJobReportForm({
                             type="button"
                             variant="secondary"
                             onClick={submitAsDraft}
-                            disabled={
-                                form.processing ||
-                                !form.data.dispatch_job_id ||
-                                !form.data.work_summary.trim()
-                            }
+                            disabled={form.processing}
                         >
                             <Save className="mr-1.5 h-4 w-4" />
                             Save as Draft
@@ -996,11 +988,7 @@ function SubmitJobReportForm({
                             data-testid="submit-job-report-btn"
                             type="submit"
                             variant="primary"
-                            disabled={
-                                form.processing ||
-                                !form.data.dispatch_job_id ||
-                                !form.data.work_summary.trim()
-                            }
+                            disabled={form.processing}
                         >
                             {form.processing
                                 ? 'Submitting…'
