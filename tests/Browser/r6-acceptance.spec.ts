@@ -727,11 +727,13 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             }),
         ).toBeVisible();
         await expect(
-            page.getByRole('button', {
-                name: 'Select resources',
-                exact: true,
-            }),
+            page.locator('#mobile-assignment-action-bar button'),
         ).toBeVisible();
+        await expect(
+            page.locator('#mobile-assignment-action-bar button'),
+        ).toContainText(
+            /Select resources|Assign resources|Activate dispatch|Review .*blocker|Review activation/,
+        );
         await expect(
             page.locator('#mobile-assignment-action-bar'),
         ).toBeVisible();
