@@ -14,12 +14,12 @@ class StoreJobReportRequest extends FormRequest
     {
         $jobId = $this->input('dispatch_job_id');
         if (! $jobId) {
-            return false;
+            return true;
         }
 
         $job = DispatchJob::query()->find($jobId);
         if (! $job) {
-            return false;
+            return true;
         }
 
         return $this->user()->can('create', [JobReport::class, $job]);
