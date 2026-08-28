@@ -274,10 +274,35 @@ function OperationsManagerDashboardView({
     const upcomingJobs = (
         jobView === 'active'
             ? activeJobs
-            : jobs.filter(
-                  (job) =>
-                      !['completed', 'cancelled'].includes(job.status.value),
-              )
+            : [...jobs]
+                  .filter(
+                      (job) =>
+                          !['completed', 'cancelled'].includes(
+                              job.status.value,
+                          ),
+                  )
+                  .sort((a, b) => {
+                      const aActive = [
+                          'dispatched',
+                          'accepted',
+                          'en_route',
+                          'arrived',
+                          'working',
+                      ].includes(a.status.value)
+                          ? 0
+                          : 1;
+                      const bActive = [
+                          'dispatched',
+                          'accepted',
+                          'en_route',
+                          'arrived',
+                          'working',
+                      ].includes(b.status.value)
+                          ? 0
+                          : 1;
+
+                      return aActive - bActive;
+                  })
     ).slice(0, 6);
 
     const totalAssets = assets.length;

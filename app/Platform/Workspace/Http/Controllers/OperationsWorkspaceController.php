@@ -203,7 +203,7 @@ final class OperationsWorkspaceController extends Controller
     /** @param array<int, array{id: string, label: string}> $navigation */
     private function initialSection(Request $request, array $navigation): ?string
     {
-        $requested = $request->query('view');
+        $requested = $request->query('view') ?? $request->query('section');
 
         if (is_string($requested) && collect($navigation)->contains('id', $requested)) {
             return $requested;
@@ -298,7 +298,9 @@ final class OperationsWorkspaceController extends Controller
             ])
             ->orderBy('scheduled_start')
             ->limit($limit)
-            ->get();
+            ->get()
+            ->sortBy(fn (DispatchJob $job): int => in_array($job->status->value, ['working', 'arrived', 'en_route', 'accepted', 'dispatched'], true) ? 0 : 1)
+            ->values();
     }
 
     /** @return Collection<int, OperationalAsset> */
@@ -378,7 +380,11 @@ final class OperationsWorkspaceController extends Controller
     /** @return Collection<int, User> */
     private function fetchUsers(User $user, int $limit = 200): Collection
     {
-        if (! $user->can(PermissionName::UsersManage->value)) {
+        if (
+            ! $user->can(PermissionName::UsersManage->value) &&
+            ! $user->can(PermissionName::AssignmentsViewAll->value) &&
+            ! $user->can(PermissionName::DispatchViewAll->value)
+        ) {
             return collect();
         }
 

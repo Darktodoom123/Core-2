@@ -119,11 +119,14 @@ test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', (
         // 11. Capture high-resolution screenshots
         await expect(page.locator('.maplibregl-canvas')).toBeVisible({ timeout: 10_000 });
         await page.waitForTimeout(1000);
+        const screenshotDir = process.env.CI
+            ? 'storage/framework/testing'
+            : 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9';
         await picker.screenshot({
-            path: 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9/multi_crane_planned_slots.png',
+            path: `${screenshotDir}/multi_crane_planned_slots.png`,
         });
         await page.screenshot({
-            path: 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9/multi_crane_planned_slots_full.png',
+            path: `${screenshotDir}/multi_crane_planned_slots_full.png`,
             fullPage: true,
         });
     });

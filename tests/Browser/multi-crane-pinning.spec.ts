@@ -103,11 +103,14 @@ test.describe('Multi-Tower Crane Pinning & Jib Slewing Radius Workflow', () => {
         // 10. Capture high-resolution screenshots for review
         await expect(page.locator('.maplibregl-canvas')).toBeVisible({ timeout: 10_000 });
         await page.waitForTimeout(1000);
+        const screenshotDir = process.env.CI
+            ? 'storage/framework/testing'
+            : 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9';
         await picker.screenshot({
-            path: 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9/tower_crane_pinning.png',
+            path: `${screenshotDir}/tower_crane_pinning.png`,
         });
         await page.screenshot({
-            path: 'C:/Users/User/.gemini/antigravity/brain/6265e062-64c7-4fba-a6b1-57fdfe1b60e9/dispatch_context_pinning.png',
+            path: `${screenshotDir}/dispatch_context_pinning.png`,
             fullPage: true,
         });
     });

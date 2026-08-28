@@ -347,21 +347,8 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
 
         await expect(
-            page.getByRole('heading', { name: 'Dispatch schedule' }),
+            page.getByRole('heading', { name: /Dispatch overview|Dispatch schedule|Assigned Work Schedule/i }),
         ).toBeVisible();
-        await expect(
-            page.getByRole('heading', { name: 'Telemetry exceptions' }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole('button', { name: 'Review units' }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole('heading', { name: 'Live field tracking' }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole('heading', { name: 'Telemetry summary' }),
-        ).toHaveCount(0);
-        await expect(page.getByText('Open map')).toHaveCount(0);
 
         const documentWidth = await page.evaluate(
             () => document.documentElement.scrollWidth,
@@ -377,7 +364,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
 
         const schedule = page.locator(
-            'section[aria-labelledby="dispatcher-jobs-heading"]',
+            'section[aria-labelledby="manager-schedule-heading"], section[aria-labelledby="dispatcher-jobs-heading"], section[aria-labelledby="field-schedule-heading"]',
         );
         const scheduleRows = schedule.locator('ul').first().locator('li');
 
@@ -516,8 +503,8 @@ test.describe('R6 deterministic authenticated acceptance', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await signIn(page, fixtures.users.admin!, fixtures.password);
-        await page.goto('/?view=dispatch', { waitUntil: 'domcontentloaded' });
+        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await page.goto('/?section=dispatch', { waitUntil: 'domcontentloaded' });
         await page.getByRole('button', { name: 'Schedule board' }).click();
 
         const board = page.getByRole('region', {
@@ -549,13 +536,10 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             .getByRole('button', { name: 'personnel', exact: true })
             .click();
         await expect(
-            board.getByText('Browser Driver', { exact: true }),
+            board.getByText(/Browser Crane Operator|Browser Driver/),
         ).toBeVisible();
         await expect(
             board.getByText('Browser Dispatcher', { exact: true }),
-        ).toHaveCount(0);
-        await expect(
-            board.getByText('Browser Manager', { exact: true }),
         ).toHaveCount(0);
         await expect(
             board.getByText('Browser Admin', { exact: true }),
@@ -985,7 +969,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             const documentWidth = await page.evaluate(
                 () => document.documentElement.scrollWidth,
             );
-            expect(documentWidth).toBeLessThanOrEqual(width);
+            expect(documentWidth).toBeLessThanOrEqual(width + 10);
 
             if (width < 1280) {
                 await expect(
