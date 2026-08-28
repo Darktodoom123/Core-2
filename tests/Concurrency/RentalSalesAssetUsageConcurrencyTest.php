@@ -31,7 +31,7 @@ beforeEach(function (): void {
     }
 
     if (! Schema::hasTable('rental_reservations')) {
-        throw new RuntimeException('R6 concurrency tests require an already migrated PostgreSQL database.');
+        $this->artisan('migrate', ['--database' => 'pgsql', '--force' => true]);
     }
 
     $this->seed(RolePermissionSeeder::class);
