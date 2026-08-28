@@ -717,8 +717,10 @@ export function SiteLocationPicker({
             const nextNum = prev.length + 1;
             const newKey = `TC-${nextNum}`;
             const baseSlot =
-                prev.find((s) => s.id === selectedSlotId || s.slotKey === selectedSlotId) ||
-                prev[0];
+                prev.find(
+                    (s) =>
+                        s.id === selectedSlotId || s.slotKey === selectedSlotId,
+                ) || prev[0];
             const newSlot: PinnedSlotData = {
                 id: newKey,
                 slotKey: newKey,
