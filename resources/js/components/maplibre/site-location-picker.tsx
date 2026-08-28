@@ -692,47 +692,52 @@ export function SiteLocationPicker({
 
         const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
 
-        const updated = slotsState.map((s, idx) => {
-            const matches =
-                s.id === targetId ||
-                s.slotKey === targetId ||
-                (slotsState.length === 1 && idx === 0);
+        setSlotsState((prev) =>
+            prev.map((s, idx) => {
+                const matches =
+                    s.id === targetId ||
+                    s.slotKey === targetId ||
+                    (prev.length === 1 && idx === 0);
 
-            return matches
-                ? {
-                      ...s,
-                      latitude: lat,
-                      longitude: lon,
-                      jibRadiusMeters: jibRadiusInput,
-                      name: slotNameInput,
-                  }
-                : s;
-        });
+                return matches
+                    ? {
+                          ...s,
+                          latitude: lat,
+                          longitude: lon,
+                      }
+                    : s;
+            }),
+        );
 
-        setSlotsState(updated);
         onChange({ latitude: lat, longitude: lon });
     };
 
     const handleAddSlot = () => {
-        const nextNum = slotsState.length + 1;
-        const newKey = `TC-${nextNum}`;
-        const newSlot: PinnedSlotData = {
-            id: newKey,
-            slotKey: newKey,
-            name: `Tower Crane Position ${nextNum}`,
-            latitude: activeSlot?.latitude
-                ? Number((activeSlot.latitude + 0.0004).toFixed(7))
-                : (latitude ?? null),
-            longitude: activeSlot?.longitude
-                ? Number((activeSlot.longitude + 0.0004).toFixed(7))
-                : (longitude ?? null),
-            jibRadiusMeters: 60,
-        };
+        setSlotsState((prev) => {
+            const nextNum = prev.length + 1;
+            const newKey = `TC-${nextNum}`;
+            const baseSlot =
+                prev.find((s) => s.id === selectedSlotId || s.slotKey === selectedSlotId) ||
+                prev[0];
+            const newSlot: PinnedSlotData = {
+                id: newKey,
+                slotKey: newKey,
+                name: `Tower Crane Position ${nextNum}`,
+                latitude:
+                    typeof baseSlot?.latitude === 'number'
+                        ? Number((baseSlot.latitude + 0.0004).toFixed(7))
+                        : (latitude ?? 14.5768),
+                longitude:
+                    typeof baseSlot?.longitude === 'number'
+                        ? Number((baseSlot.longitude + 0.0004).toFixed(7))
+                        : (longitude ?? 121.0856),
+                jibRadiusMeters: 60,
+            };
 
-        const updated = [...slotsState, newSlot];
+            setSelectedSlotId(newKey);
 
-        setSlotsState(updated);
-        setSelectedSlotId(newKey);
+            return [...prev, newSlot];
+        });
     };
 
     const handleRemoveSlot = (slotId: string, ev: React.MouseEvent) => {
