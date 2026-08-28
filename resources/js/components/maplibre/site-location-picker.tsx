@@ -91,9 +91,9 @@ const PHILIPPINE_SITE_CATALOG: Record<string, { lat: number; lon: number }> = {
 function resolveSiteCoordinates(siteName?: string | null): {
     lat: number;
     lon: number;
-} | null {
+} {
     if (!siteName) {
-        return null;
+        return { lat: 14.5764, lon: 121.0851 };
     }
 
     const lower = siteName.toLowerCase();
@@ -104,7 +104,7 @@ function resolveSiteCoordinates(siteName?: string | null): {
         }
     }
 
-    return null;
+    return { lat: 14.5764, lon: 121.0851 };
 }
 
 /**
