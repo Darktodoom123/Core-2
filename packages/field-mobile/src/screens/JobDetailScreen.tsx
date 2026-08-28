@@ -92,6 +92,21 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     const [craneSetupState, setCraneSetupState] =
         useState<CraneSetupState | null>(null);
 
+    const primaryAsset = job.asset_assignments?.[0] ?? null;
+    const isTowerCrane =
+        job.asset_assignments?.some(
+            (a) =>
+                a.asset_kind === 'tower_crane' ||
+                a.asset_name.toLowerCase().includes('tower') ||
+                a.asset_code.toLowerCase().startsWith('twr'),
+        ) ?? false;
+    const isMovingCrane =
+        (primaryAsset?.asset_kind === 'crane' ||
+            primaryAsset?.asset_kind === 'mobile_crane' ||
+            primaryAsset?.asset_kind === 'truck') &&
+        !isTowerCrane;
+    const isCrane = isTowerCrane || isMovingCrane;
+
     const handleProgressionTransition = (
         jobId: number,
         nextStatus: DispatchStatus,
@@ -178,20 +193,6 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
         (command) => command.type === 'transition_status',
     );
 
-    const primaryAsset = job.asset_assignments?.[0] ?? null;
-    const isTowerCrane =
-        job.asset_assignments?.some(
-            (a) =>
-                a.asset_kind === 'tower_crane' ||
-                a.asset_name.toLowerCase().includes('tower') ||
-                a.asset_code.toLowerCase().startsWith('twr'),
-        ) ?? false;
-    const isMovingCrane =
-        (primaryAsset?.asset_kind === 'crane' ||
-            primaryAsset?.asset_kind === 'mobile_crane' ||
-            primaryAsset?.asset_kind === 'truck') &&
-        !isTowerCrane;
-    const isCrane = isTowerCrane || isMovingCrane;
     const isResponsePending = job.my_assignment?.response_status === 'pending';
     const isArrived =
         job.status.value === 'arrived' ||
