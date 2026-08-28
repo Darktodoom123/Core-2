@@ -31,6 +31,7 @@ import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-previ
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
     AssetViewModel,
@@ -639,45 +640,55 @@ function OperationsManagerDashboardView({
                                 id="manager-schedule-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Dispatch overview & tri-modal schedule
+                                Dispatch overview &amp; tri-modal schedule
                             </h2>
                             <p className="mt-1 text-sm text-ink-soft">
                                 Active workload tracking across Service, Rental,
                                 and Sales dispatches.
                             </p>
                         </div>
-                        <div className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
+                        <div
+                            className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs"
+                            role="group"
+                            aria-label="Filter schedule"
+                        >
                             <button
                                 type="button"
+                                aria-pressed={jobFilter === 'all'}
                                 onClick={() => setJobFilter('all')}
-                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={cn(
+                                    'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     jobFilter === 'all'
-                                        ? 'bg-surface text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink'
-                                }`}
+                                        ? 'bg-surface font-semibold text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
                             >
                                 All ({jobs.length})
                             </button>
                             <button
                                 type="button"
+                                aria-pressed={jobFilter === 'active'}
                                 onClick={() => setJobFilter('active')}
-                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={cn(
+                                    'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     jobFilter === 'active'
-                                        ? 'bg-surface text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink'
-                                }`}
+                                        ? 'bg-surface font-semibold text-brand-strong shadow-xs'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
                             >
                                 Active ({activeJobs.length})
                             </button>
                             {serviceJobs.length > 0 && (
                                 <button
                                     type="button"
+                                    aria-pressed={jobFilter === 'service'}
                                     onClick={() => setJobFilter('service')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         jobFilter === 'service'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
                                     Service ({serviceJobs.length})
                                 </button>
@@ -685,12 +696,14 @@ function OperationsManagerDashboardView({
                             {rentalJobs.length > 0 && (
                                 <button
                                     type="button"
+                                    aria-pressed={jobFilter === 'rental'}
                                     onClick={() => setJobFilter('rental')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         jobFilter === 'rental'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
                                     Rental ({rentalJobs.length})
                                 </button>
@@ -698,12 +711,14 @@ function OperationsManagerDashboardView({
                             {salesJobs.length > 0 && (
                                 <button
                                     type="button"
+                                    aria-pressed={jobFilter === 'sales'}
                                     onClick={() => setJobFilter('sales')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                         jobFilter === 'sales'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
                                     Sales ({salesJobs.length})
                                 </button>
@@ -712,12 +727,96 @@ function OperationsManagerDashboardView({
                     </div>
 
                     <Panel className="overflow-hidden">
-                        {filteredJobs.length === 0 ? (
+                        {jobs.length === 0 ? (
+                            <div className="p-6 text-center md:p-8">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-strong">
+                                    <CalendarClock className="h-6 w-6" />
+                                </div>
+                                <h3 className="mt-3 text-base font-bold text-ink">
+                                    No active dispatches scheduled
+                                </h3>
+                                <p className="mx-auto mt-1 max-w-md text-xs text-ink-soft">
+                                    Deploy crane equipment, dispatch rigging
+                                    crews, or mobilize rental units across
+                                    Service, Rental, and Hauling modes.
+                                </p>
+
+                                <div className="mt-5 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-3">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onSectionChange('dispatch')
+                                        }
+                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
+                                    >
+                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
+                                            🏗️ Crane Service
+                                        </span>
+                                        <p className="mt-0.5 text-[11px] text-ink-soft">
+                                            Direct crane &amp; crew job dispatch
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onSectionChange('dispatch')
+                                        }
+                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
+                                    >
+                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
+                                            🚜 Rental Mobilization
+                                        </span>
+                                        <p className="mt-0.5 text-[11px] text-ink-soft">
+                                            Bare &amp; manned rental handoffs
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onSectionChange('dispatch')
+                                        }
+                                        className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
+                                    >
+                                        <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
+                                            🚚 Transport &amp; Haul
+                                        </span>
+                                        <p className="mt-0.5 text-[11px] text-ink-soft">
+                                            Lowboy &amp; flatbed freight
+                                            delivery
+                                        </p>
+                                    </button>
+                                </div>
+
+                                {canOpenDispatch && (
+                                    <div className="mt-5">
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={() =>
+                                                onSectionChange('dispatch')
+                                            }
+                                        >
+                                            <CalendarClock className="mr-1.5 h-4 w-4" />
+                                            Launch New Dispatch
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : filteredJobs.length === 0 ? (
                             <EmptyState
                                 compact
                                 icon={CalendarClock}
                                 title="No scheduled work matches filter"
-                                message="Dispatches matching your selected criteria will appear here."
+                                message="Try switching your filter above to view other dispatch modes."
+                                primaryAction={
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => setJobFilter('all')}
+                                    >
+                                        Show all dispatches ({jobs.length})
+                                    </Button>
+                                }
                             />
                         ) : (
                             <ul className="divide-y divide-line">
@@ -743,13 +842,61 @@ function OperationsManagerDashboardView({
                                 id="manager-readiness-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Governance & Fleet Breakdown
+                                Governance &amp; Fleet Breakdown
                             </h2>
                             <p className="mt-1 text-sm text-ink-soft">
                                 Safety and resource status breakdown.
                             </p>
                         </div>
                         <Panel className="divide-y divide-line">
+                            {/* Readiness Progress Bar Header */}
+                            <div className="bg-surface-subtle/50 px-4 py-3">
+                                <div className="flex items-center justify-between text-xs font-semibold">
+                                    <span className="text-ink">
+                                        Operational Readiness
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            'font-bold',
+                                            readinessPercentage === null
+                                                ? 'text-ink-soft'
+                                                : readinessPercentage >= 80
+                                                  ? 'text-success-strong'
+                                                  : readinessPercentage >= 60
+                                                    ? 'text-warning-strong'
+                                                    : 'text-danger-strong',
+                                        )}
+                                    >
+                                        {readinessPercentage === null
+                                            ? '0%'
+                                            : `${readinessPercentage}%`}
+                                    </span>
+                                </div>
+                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
+                                    <div
+                                        className={cn(
+                                            'h-full rounded-full transition-all duration-500',
+                                            readinessPercentage === null ||
+                                                readinessPercentage === 0
+                                                ? 'bg-transparent'
+                                                : readinessPercentage >= 80
+                                                  ? 'bg-success'
+                                                  : readinessPercentage >= 60
+                                                    ? 'bg-warning'
+                                                    : 'bg-danger',
+                                        )}
+                                        style={{
+                                            width: `${readinessPercentage ?? 0}%`,
+                                        }}
+                                    />
+                                </div>
+                                <p className="mt-1.5 text-[10px] text-ink-soft">
+                                    {dispatchableAssets} of {totalAssets} units
+                                    cleared with passing pre-shift safety
+                                    inspections.
+                                </p>
+                            </div>
+
                             <ReadinessRow
                                 label="Fleet Available"
                                 value={`${dispatchableAssets} / ${totalAssets}`}
@@ -759,6 +906,17 @@ function OperationsManagerDashboardView({
                                         : `${readinessPercentage}% ready for deployment`
                                 }
                                 icon={Truck}
+                                tone={
+                                    readinessPercentage &&
+                                    readinessPercentage >= 80
+                                        ? 'success'
+                                        : 'default'
+                                }
+                                onClick={
+                                    canOpenAssets
+                                        ? () => onSectionChange('assets')
+                                        : undefined
+                                }
                             />
                             <ReadinessRow
                                 label="Safety Maintenance Blockers"
@@ -772,6 +930,11 @@ function OperationsManagerDashboardView({
                                 tone={
                                     blockingAssets > 0 ? 'warning' : 'default'
                                 }
+                                onClick={
+                                    canOpenAssets
+                                        ? () => onSectionChange('assets')
+                                        : undefined
+                                }
                             />
                             {activeSosIncidents.length > 0 && (
                                 <ReadinessRow
@@ -780,6 +943,11 @@ function OperationsManagerDashboardView({
                                     detail="Critical field emergencies reported"
                                     icon={AlertTriangle}
                                     tone="warning"
+                                    onClick={
+                                        canOpenSos
+                                            ? () => onSectionChange('sos')
+                                            : undefined
+                                    }
                                 />
                             )}
                             <ReadinessRow
@@ -787,6 +955,14 @@ function OperationsManagerDashboardView({
                                 value={`${freshLocations} fresh pings`}
                                 detail={`${locations.length} total active devices`}
                                 icon={Radio}
+                                tone={
+                                    freshLocations > 0 ? 'success' : 'default'
+                                }
+                                onClick={
+                                    canOpenTracking
+                                        ? () => onSectionChange('assets')
+                                        : undefined
+                                }
                             />
                         </Panel>
                     </section>
@@ -2160,20 +2336,33 @@ function ReadinessRow({
     detail,
     icon: Icon,
     tone = 'default',
+    onClick,
 }: {
     label: string;
     value: string;
     detail: string;
     icon: LucideIcon;
-    tone?: 'default' | 'warning';
+    tone?: 'default' | 'warning' | 'success';
+    onClick?: () => void;
 }) {
+    const Component = onClick ? 'button' : 'div';
+
     return (
-        <div className="flex items-center gap-3 px-4 py-3">
+        <Component
+            type={onClick ? 'button' : undefined}
+            onClick={onClick}
+            className={cn(
+                'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
+                onClick && 'cursor-pointer hover:bg-surface-subtle/70',
+            )}
+        >
             <span
                 className={
                     tone === 'warning'
                         ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong'
-                        : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft'
+                        : tone === 'success'
+                          ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong'
+                          : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft'
                 }
             >
                 <Icon className="h-4 w-4" aria-hidden="true" />
@@ -2186,10 +2375,10 @@ function ReadinessRow({
                     {detail}
                 </span>
             </span>
-            <span className="text-xl font-semibold tracking-tight tabular-nums">
+            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
                 {value}
             </span>
-        </div>
+        </Component>
     );
 }
 
