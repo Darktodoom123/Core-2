@@ -2,6 +2,7 @@ name: core2
 
 services:
   app:
+    image: "${CORE2_APP_IMAGE:-core2/runtime:ci}"
     build:
       context: .
       dockerfile: Dockerfile
@@ -97,6 +98,7 @@ services:
       start_period: 10s
 
   test:
+    image: "${CORE2_TEST_IMAGE:-core2/test-runner:ci}"
     build:
       context: .
       dockerfile: Dockerfile

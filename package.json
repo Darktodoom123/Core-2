@@ -17,6 +17,7 @@
         "test:e2e": "playwright test",
         "test:e2e:maplibre": "playwright test tests/Browser/maplibre-tracking.spec.ts",
         "test:a11y": "playwright test tests/Browser/accessibility.spec.ts",
+        "test:unit": "vitest run",
         "types:check:mobile": "npm --prefix packages/field-mobile run types:check",
         "test:mobile": "npm --prefix packages/field-mobile run test",
         "verify:frontend-build": "node scripts/verify-frontend-build.cjs",
@@ -44,6 +45,8 @@
         "@laravel/vite-plugin-wayfinder": "^0.1.3",
         "@playwright/test": "^1.62.1",
         "@stylistic/eslint-plugin": "^5.10.0",
+        "@testing-library/jest-dom": "^7.0.1",
+        "@testing-library/react": "^16.3.3",
         "@types/node": "^22.13.5",
         "babel-plugin-react-compiler": "^1.0.0",
         "eslint": "^9.17.0",
@@ -53,10 +56,12 @@
         "eslint-plugin-react": "^7.37.3",
         "eslint-plugin-react-hooks": "^7.0.0",
         "fontaine": "^0.8.0",
+        "jsdom": "^29.1.1",
         "prettier": "^3.4.2",
         "prettier-plugin-tailwindcss": "^0.6.11",
         "react-native": "0.86.2",
-        "typescript-eslint": "^8.23.0"
+        "typescript-eslint": "^8.23.0",
+        "vitest": "^4.1.11"
     },
     "dependencies": {
         "@inertiajs/react": "^3.0.0",
