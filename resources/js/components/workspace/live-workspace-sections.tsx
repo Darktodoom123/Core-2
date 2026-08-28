@@ -1718,7 +1718,7 @@ function FuelSurface({
                         <button
                             type="button"
                             onClick={() => setFilterMode('all')}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            className={`inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                                 filterMode === 'all'
                                     ? 'bg-brand text-white shadow-sm'
                                     : 'border border-line-strong bg-surface text-ink-soft hover:bg-surface-subtle'
@@ -1729,7 +1729,7 @@ function FuelSurface({
                         <button
                             type="button"
                             onClick={() => setFilterMode('anomalies')}
-                            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            className={`inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                                 filterMode === 'anomalies'
                                     ? 'bg-danger text-white shadow-sm'
                                     : totalAnomalies > 0
