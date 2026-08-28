@@ -223,9 +223,22 @@ npm run mobile:android
 
 ---
 
+## 🌐 Production Deployment & Hosting
+
+Core-2 is deployed on **HostForge Platform** ([https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform)) under the primary domain **`alibaton-ph.com`**, serving this project on the dedicated subdomain:
+
+- **Web Workspace & API**: **[https://core-2.alibaton-ph.com](https://core-2.alibaton-ph.com)**
+- **Mobile REST API Base**: `https://core-2.alibaton-ph.com/api/v1`
+- **Reverb WebSocket Stream**: `wss://core-2.alibaton-ph.com/app`
+
+For detailed production environment configuration, SSL/TLS reverse proxy setup, and database orchestration, see the [Deployment & Hosting Architecture Guide](Docs/architecture/deployment.md).
+
+---
+
 ## 📖 Project Documentation
 
-Detailed architecture, business rules, product requirements, database design, and API specs are documented in `Docs/`:
+Detailed architecture, business rules, product requirements, database design, API specs, and deployment guides are documented in `Docs/`:
 
 - Read [`Docs/README.md`](Docs/README.md) for the complete index of product & architecture documentation.
+- Read the [Deployment & Hosting Guide](Docs/architecture/deployment.md) for production hosting on HostForge Platform, domain mapping, and runtime environment.
 - Read the [Docker operations guide](Docs/architecture/docker.md) for container setup, runtime commands, persistence, and troubleshooting.

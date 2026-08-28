@@ -4,11 +4,12 @@
 
 This repository uses one production-style application image. Supervisor keeps
 Nginx, PHP-FPM, the Laravel queue worker, the Laravel scheduler, and Reverb in
-that image; Compose supplies PostgreSQL 16 and Redis 7. This topology is kept
-for the current application boundary. It is a local/staging reference, not a
-complete production platform: production still needs an approved secret
-manager, TLS/reverse proxy, backups, centralized logs/metrics, resource
-limits, and an explicit deployment/rollback process.
+that image; Compose supplies PostgreSQL 16 and Redis 7. This topology is used
+both for local/staging verification and containerized production deployment on
+**HostForge Platform** ([https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform))
+under domain **`alibaton-ph.com`** and subdomain **`core-2.alibaton-ph.com`**
+(`https://core-2.alibaton-ph.com`). For production deployment details, see the
+[Deployment & Hosting Guide](./deployment.md).
 
 ## Prerequisites and setup
 

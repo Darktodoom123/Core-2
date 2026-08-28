@@ -88,6 +88,7 @@ storage/framework/testing/*
 !/Docs/architecture/
 /Docs/architecture/*
 !/Docs/architecture/docker.md
+!/Docs/architecture/deployment.md
 .ai-reports/
 /test-results/
 .devswarm-temp/
