@@ -144,9 +144,12 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
+          DB_DATABASE: core2_concurrency_test
           DB_USERNAME: core2_app
           DB_PASSWORD: core2_app
-        run: vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency
+        run: |
+          php artisan migrate --force --database=pgsql
+          vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency
 
       - name: PostgreSQL Rental and Sales RLS/grant tests
         env:
