@@ -482,15 +482,16 @@ export function SiteLocationPicker({
         }
 
         if (assignedCranes && assignedCranes.length > 0) {
-            return assignedCranes
-                .filter((a) => {
-                    return (
-                        a.kind?.toLowerCase().includes('crane') ||
-                        a.subtype?.toLowerCase().includes('tower') ||
-                        a.type?.toLowerCase().includes('crane')
-                    );
-                })
-                .map((a, idx) => ({
+            const filteredCranes = assignedCranes.filter((a) => {
+                return (
+                    a.kind?.toLowerCase().includes('crane') ||
+                    a.subtype?.toLowerCase().includes('tower') ||
+                    a.type?.toLowerCase().includes('crane')
+                );
+            });
+
+            if (filteredCranes.length > 0) {
+                return filteredCranes.map((a, idx) => ({
                     id: `assigned-${a.id}`,
                     slotKey: a.code || `TC-${idx + 1}`,
                     name: a.name || `Tower Crane ${idx + 1}`,
@@ -500,6 +501,7 @@ export function SiteLocationPicker({
                     longitude: a.site_longitude ?? longitude ?? null,
                     jibRadiusMeters: a.jib_length_meters || 60,
                 }));
+            }
         }
 
         // Default single crane position
@@ -559,8 +561,31 @@ export function SiteLocationPicker({
     ) => {
         const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
 
-        setSlotsState((prev) =>
-            prev.map((s, idx) => {
+        setSlotsState((prev) => {
+            if (prev.length === 0) {
+                return [
+                    {
+                        id: 'TC-1',
+                        slotKey: 'TC-1',
+                        name:
+                            field === 'name'
+                                ? String(value)
+                                : 'Main Tower Crane Anchor',
+                        latitude:
+                            field === 'lat'
+                                ? parseFloat(String(value)) || null
+                                : null,
+                        longitude:
+                            field === 'lon'
+                                ? parseFloat(String(value)) || null
+                                : null,
+                        jibRadiusMeters:
+                            field === 'radius' ? Number(value) || 60 : 60,
+                    },
+                ];
+            }
+
+            return prev.map((s, idx) => {
                 const matches =
                     s.id === targetId ||
                     s.slotKey === targetId ||
@@ -608,8 +633,8 @@ export function SiteLocationPicker({
                     jibRadiusMeters: nextRadius,
                     name: nextName,
                 };
-            }),
-        );
+            });
+        });
     };
 
     // Check anti-collision slewing overlap between any 2 pinned slots
@@ -675,7 +700,7 @@ export function SiteLocationPicker({
         [siteName],
     );
 
-    const defaultCenter: LngLat = useMemo(() => {
+    const defaultCenter: [number, number] = useMemo(() => {
         if (activeSlot?.longitude && activeSlot?.latitude) {
             return [activeSlot.longitude, activeSlot.latitude];
         }
@@ -692,8 +717,21 @@ export function SiteLocationPicker({
 
         const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
 
-        setSlotsState((prev) =>
-            prev.map((s, idx) => {
+        setSlotsState((prev) => {
+            if (prev.length === 0) {
+                return [
+                    {
+                        id: 'TC-1',
+                        slotKey: 'TC-1',
+                        name: 'Main Tower Crane Anchor',
+                        latitude: lat,
+                        longitude: lon,
+                        jibRadiusMeters: 60,
+                    },
+                ];
+            }
+
+            return prev.map((s, idx) => {
                 const matches =
                     s.id === targetId ||
                     s.slotKey === targetId ||
@@ -706,8 +744,8 @@ export function SiteLocationPicker({
                           longitude: lon,
                       }
                     : s;
-            }),
-        );
+            });
+        });
 
         onChange({ latitude: lat, longitude: lon });
     };
