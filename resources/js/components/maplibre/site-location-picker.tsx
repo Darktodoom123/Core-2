@@ -517,29 +517,24 @@ export function SiteLocationPicker({
 
     const [slotsState, setSlotsState] =
         useState<PinnedSlotData[]>(initialSlots);
-    const [selectedSlotId, setSelectedSlotId] = useState<string>(
-        initialSlots[0]?.id || 'TC-1',
+    const [selectedSlotIdState, setSelectedSlotId] = useState<string | null>(
+        null,
     );
 
     const plannedJson = JSON.stringify(plannedSlots);
     const assignedJson = JSON.stringify(assignedCranes);
-    const prevPlannedJson = useRef(plannedJson);
-    const prevAssignedJson = useRef(assignedJson);
+    const [prevPlannedJson, setPrevPlannedJson] = useState(plannedJson);
+    const [prevAssignedJson, setPrevAssignedJson] = useState(assignedJson);
 
-    // Sync state only when external plannedSlots or assignedCranes prop changes from backend
-    useEffect(() => {
-        if (
-            prevPlannedJson.current !== plannedJson ||
-            prevAssignedJson.current !== assignedJson
-        ) {
-            prevPlannedJson.current = plannedJson;
-            prevAssignedJson.current = assignedJson;
-            setSlotsState(initialSlots);
-            if (initialSlots[0]?.id) {
-                setSelectedSlotId(initialSlots[0].id);
-            }
-        }
-    }, [assignedJson, initialSlots, plannedJson]);
+    // Adjust state during render when props change (official React recommended pattern)
+    if (prevPlannedJson !== plannedJson || prevAssignedJson !== assignedJson) {
+        setPrevPlannedJson(plannedJson);
+        setPrevAssignedJson(assignedJson);
+        setSlotsState(initialSlots);
+        setSelectedSlotId(initialSlots[0]?.id || 'TC-1');
+    }
+
+    const selectedSlotId = selectedSlotIdState || slotsState[0]?.id || 'TC-1';
 
     const activeSlot = useMemo(() => {
         return (
