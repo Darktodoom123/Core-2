@@ -95,7 +95,7 @@ it('derives sales totals, reserves inventory, and makes sold equipment unavailab
 });
 
 it('keeps rental and sales writes behind their dedicated permissions', function (): void {
-    $fieldWorker = workflowUser(RoleName::Driver);
+    $fieldWorker = workflowUser(RoleName::CraneOperator);
     $client = workflowClient();
 
     $this->actingAs($fieldWorker)

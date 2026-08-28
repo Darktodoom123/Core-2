@@ -79,7 +79,7 @@ it('allows authorized dispatcher to request GPT recommendation and queues backgr
 });
 
 it('prevents unauthorized field driver from requesting GPT recommendation', function (): void {
-    $driver = createGptUser(RoleName::Driver);
+    $driver = createGptUser(RoleName::CraneOperator);
     $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
@@ -330,7 +330,7 @@ it('retries a terminal recommendation by creating a fresh recommendation and pre
 it('denies retry when the actor cannot view the recommendation subject', function (): void {
     Queue::fake();
     $dispatcher = createGptUser(RoleName::OperationsManager);
-    $driver = createGptUser(RoleName::Driver);
+    $driver = createGptUser(RoleName::CraneOperator);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $recommendation = GptRecommendation::query()->create([
         'subject_type' => $job->getMorphClass(),

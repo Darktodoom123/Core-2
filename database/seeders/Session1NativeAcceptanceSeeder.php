@@ -37,7 +37,6 @@ final class Session1NativeAcceptanceSeeder extends Seeder
         ]);
 
         $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
-        $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
         $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
         $fixturePassword = getenv('SESSION1_NATIVE_PASSWORD');
 
@@ -47,7 +46,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             );
         }
 
-        foreach ([$manager, $driver, $operator] as $user) {
+        foreach ([$manager, $operator] as $user) {
             $user->forceFill(['password' => Hash::make($fixturePassword)])->save();
         }
 
@@ -55,7 +54,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             ['reference' => self::ASSIGNED_JOB_REFERENCE],
             [
                 'client' => 'Session 1 Local Client',
-                'title' => 'Driver native acceptance assignment',
+                'title' => 'Operator native acceptance assignment',
                 'site' => 'Local Android Test Site',
                 'priority' => DispatchPriority::Routine,
                 'status' => DispatchStatus::Dispatched,
@@ -80,20 +79,6 @@ final class Session1NativeAcceptanceSeeder extends Seeder
         DispatchPersonnelAssignment::query()->updateOrCreate(
             [
                 'dispatch_job_id' => $assignedJob->id,
-                'user_id' => $driver->id,
-            ],
-            [
-                'assignment_type' => 'driver',
-                'assigned_by' => $manager->id,
-                'response_status' => AssignmentResponse::Pending,
-                'active_from' => now()->subMinute(),
-                'active_until' => null,
-            ],
-        );
-
-        DispatchPersonnelAssignment::query()->updateOrCreate(
-            [
-                'dispatch_job_id' => $forbiddenJob->id,
                 'user_id' => $operator->id,
             ],
             [

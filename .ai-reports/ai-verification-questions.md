@@ -334,3 +334,40 @@ Comprehensive multi-layer test suites have been implemented and verified:
    - Laravel Pint: Passed.
    - ESLint: 0 errors, 0 warnings.
    - Root & Mobile TypeScript: 0 errors.
+
+## Machinery-Type Differentiated Workflows (Moving Assets vs Tower Cranes) — 2026-08-28
+
+### Did you build this the most secure way?
+
+1. **Server-Enforced Machinery Capabilities**: Asset classification (`isStationary()`, `requiresRoadTransit()`, `machinery_workflow`) is computed authoritatively on the backend by evaluating the assigned asset's database specifications and subtypes rather than trusting client-side claims.
+2. **Context-Aware Safety Authorizations**: For stationary tower cranes, continuous GPS polling is paused, eliminating unnecessary location data transmissions while pinning the telemetry stream strictly to authorized project coordinates. For mobile cranes, road routing hazards and bridge clearance alerts are verified server-side.
+3. **Sole Operator Role Boundary**: Consolidated field operations under the canonical `crane_operator` role, removing the redundant `driver` persona while granting explicit chassis transit (`fleet.view_assigned`) and hoisting (`crane.operate`) permissions.
+
+### Did you build this the most efficient way?
+
+1. **Battery & Compute Optimization**: Mobile app dynamically switches behavior:
+   - **Tower Cranes**: Disables background GPS tracking loops and renders the lightweight, cached `TowerCraneWeatherCard`.
+   - **Mobile Cranes**: Activates `HeavyCraneRouteCard` and `HeavyCraneDriveModeModal` during road transit (`en_route`), transitioning to outrigger verification upon arrival.
+2. **Single-Pass View Model Integration**: `DispatchFieldProgressionViewModel::make()` computes the machinery workflow and tailors step progression titles and confirmation messages in a single pass without extra database roundtrips.
+
+### What regressions could this introduce?
+
+1. **Unassigned Asset Fallback**: If a job has no asset assigned yet, the view model safely defaults to `mobile_transit` with standard confirmation prompts.
+2. **Subtype String Variations**: `OperationalAsset::isStationary()` evaluates case-insensitive substrings (`tower`, `hoist`, `climbing`) across both `kind` and `subtype` fields to prevent classification mismatches.
+
+### What tests do we need to write before we ship this?
+
+1. **Backend Tests (`tests/Feature/Operations/MachineryWorkflowDifferentiationTest.php`)**:
+   - Verifies `isStationary()` and `requiresRoadTransit()` behavior for mobile cranes vs tower cranes and construction hoists.
+   - Verifies `DispatchFieldProgressionViewModel` adapts `machinery_workflow` and confirmation messages.
+2. **Mobile Component Tests (`packages/field-mobile/src/__tests__/machineryWorkflow.component.test.tsx`)**:
+   - Verifies rendering of `HeavyCraneRouteCard` for mobile crane assignments and omission for tower cranes.
+   - Verifies rendering of `TowerCraneWeatherCard` for tower cranes and omission for mobile cranes.
+3. **Verification Suite Evidence**:
+   - Mobile Test Suite: 15 test suites, 71 component tests + 43 unit tests passed (114 total tests).
+   - Backend Feature Tests: 10 tests, 39 assertions passed.
+   - PHPStan (Max Level): 0 errors.
+   - Laravel Pint: Passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Root & Mobile TypeScript: 0 errors.
+   - Prettier: 100% compliant.

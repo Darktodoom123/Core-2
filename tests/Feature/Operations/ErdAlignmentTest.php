@@ -129,7 +129,7 @@ it('stores personnel availability and verified credentials through administratio
     $administrator = User::factory()->create();
     $administrator->syncRoles([RoleName::SystemAdministrator->value]);
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
 
     $this->actingAs($administrator)->patchJson("/operations/users/{$driver->id}/personnel-profile", [
         'employee_number' => 'DRV-001',

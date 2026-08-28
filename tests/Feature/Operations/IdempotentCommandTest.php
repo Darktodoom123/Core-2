@@ -45,7 +45,7 @@ function assignLocationJob(User $driver): DispatchJob
 
 it('replays cached responses for duplicate command submissions with identical command_id', function () {
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $job = assignLocationJob($driver);
 
     $commandId = (string) Str::uuid();
@@ -92,7 +92,7 @@ it('replays cached responses for duplicate command submissions with identical co
 
 it('logs command details in command_logs table', function () {
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $job = assignLocationJob($driver);
 
     $commandId = (string) Str::uuid();
@@ -114,7 +114,7 @@ it('logs command details in command_logs table', function () {
 
 it('rejects a non-UUID idempotency header before writing the location or command log', function (): void {
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $job = assignLocationJob($driver);
 
     $response = $this->actingAs($driver)
@@ -135,7 +135,7 @@ it('rejects a non-UUID idempotency header before writing the location or command
 
 it('fails closed for legacy idempotency records without a payload hash', function (): void {
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $job = assignLocationJob($driver);
     $commandId = (string) Str::uuid();
 

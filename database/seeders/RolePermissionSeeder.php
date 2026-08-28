@@ -67,13 +67,6 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::SalesApproveOrder, PermissionName::SalesFulfill, PermissionName::SalesTransferOwnership,
                 PermissionName::SosView, PermissionName::SosRespond,
             ]),
-            RoleName::Driver->value => self::values([
-                PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::RentalOperate,
-                PermissionName::AssignmentsViewOwn, PermissionName::FleetViewAssigned, PermissionName::FuelViewOwn,
-                PermissionName::FuelRequest, PermissionName::FuelRecord, PermissionName::TrackingShareOwn,
-                PermissionName::ReportsViewOwn,
-                PermissionName::SosTrigger,
-            ]),
             RoleName::CraneOperator->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::RentalOperate,
                 PermissionName::AssignmentsViewOwn, PermissionName::FleetViewAssigned, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,

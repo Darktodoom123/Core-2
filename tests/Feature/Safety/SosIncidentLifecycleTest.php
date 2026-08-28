@@ -75,7 +75,7 @@ function triggerSafety(User $worker, array $payload = [], ?string $token = null)
 
 it('keeps SOS disabled unless explicitly enabled', function (): void {
     config(['sos.enabled' => false]);
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
 
     triggerSafety($worker)->assertStatus(503)->assertJsonPath('error', 'sos_disabled');
     expect(SosIncident::query()->count())->toBe(0);
@@ -84,7 +84,7 @@ it('keeps SOS disabled unless explicitly enabled', function (): void {
 it('accepts a field SOS without a dispatch and snapshots dispatcher and manager recipients', function (): void {
     $dispatcher = safetyUser(RoleName::OperationsManager, 'Synthetic dispatcher');
     $manager = safetyUser(RoleName::OperationsManager, 'Synthetic manager');
-    $worker = safetyUser(RoleName::Driver, 'Synthetic field worker');
+    $worker = safetyUser(RoleName::CraneOperator, 'Synthetic field worker');
 
     triggerSafety($worker, ['worker_note' => 'Synthetic test note'])
         ->assertCreated()
@@ -99,7 +99,7 @@ it('accepts a field SOS without a dispatch and snapshots dispatcher and manager 
 });
 
 it('replays the same command and reuses a different command while an incident is unresolved', function (): void {
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     $firstCommand = (string) Str::uuid();
 
     triggerSafety($worker, ['command_id' => $firstCommand])->assertCreated();
@@ -118,8 +118,8 @@ it('denies office roles even if the trigger permission is manually granted', fun
 });
 
 it('returns not found for a dispatch outside the worker assignment scope', function (): void {
-    $worker = safetyUser(RoleName::Driver);
-    $otherWorker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
+    $otherWorker = safetyUser(RoleName::CraneOperator);
     $dispatcher = safetyUser(RoleName::OperationsManager);
     $assignment = safetyAssignment($otherWorker, $dispatcher);
 
@@ -129,7 +129,7 @@ it('returns not found for a dispatch outside the worker assignment scope', funct
 
 it('allows the worker to classify an active incident and attach only an assigned asset', function (): void {
     $dispatcher = safetyUser(RoleName::OperationsManager);
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     $assignment = safetyAssignment($worker, $dispatcher, 'SOS-DSP-CLASSIFY');
     $assetId = DB::table('operational_assets')->insertGetId([
         'code' => 'SOS-ASSET-001', 'name' => 'Synthetic safety asset', 'kind' => 'vehicle', 'status' => 'available',
@@ -152,7 +152,7 @@ it('allows the worker to classify an active incident and attach only an assigned
 
 it('acknowledges without resolving, then requires a code and note to resolve', function (): void {
     $dispatcher = safetyUser(RoleName::OperationsManager);
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     $incident = tap(triggerSafety($worker)->assertCreated(), fn () => null);
     $model = SosIncident::query()->sole();
 
@@ -168,7 +168,7 @@ it('acknowledges without resolving, then requires a code and note to resolve', f
 
 it('escalates once at the server deadline and preserves the acknowledgement history', function (): void {
     $dispatcher = safetyUser(RoleName::OperationsManager);
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     triggerSafety($worker)->assertCreated();
     $incident = SosIncident::query()->sole();
     $incident->update(['escalation_due_at' => now()->subSecond()]);
@@ -185,7 +185,7 @@ it('escalates once at the server deadline and preserves the acknowledgement hist
 });
 
 it('cancels rather than deletes a delivered false alarm', function (): void {
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     triggerSafety($worker)->assertCreated();
     $incident = SosIncident::query()->sole();
 
@@ -198,7 +198,7 @@ it('cancels rather than deletes a delivered false alarm', function (): void {
 });
 
 it('prunes precise coordinates while retaining the incident record', function (): void {
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     triggerSafety($worker, ['latitude' => 14.5995, 'longitude' => 120.9842, 'accuracy_metres' => 12])->assertCreated();
     $incident = SosIncident::query()->sole();
     $incident->update(['location_captured_at' => now()->subDays(31)]);
@@ -233,7 +233,7 @@ it('returns deliberate call and SMS actions only for a validated configured numb
         'sos.local_emergency_label' => 'Duty officer',
         'sos.local_emergency_number' => '+15550000002',
     ]);
-    $worker = safetyUser(RoleName::Driver);
+    $worker = safetyUser(RoleName::CraneOperator);
     $token = $worker->createToken('Synthetic SOS configuration device')->plainTextToken;
 
     test()->withToken($token)->getJson('/api/v1/sos-configuration')

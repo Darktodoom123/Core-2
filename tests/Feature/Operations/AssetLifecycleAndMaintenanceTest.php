@@ -52,7 +52,7 @@ it('keeps imported Core 3 assets assignable through the normal dispatch workflow
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
         'credential_number' => 'CORE3-DL-101',

@@ -142,29 +142,9 @@ final class LocalDevelopmentSeeder extends Seeder
             );
         }
 
-        $driver = $users[RoleName::Driver->value] ?? null;
         $operator = $users[RoleName::CraneOperator->value] ?? null;
 
         // Seed location telemetry for fleet assets
-        if ($driver !== null) {
-            DB::table('location_updates')->updateOrInsert(
-                ['user_id' => $driver->id, 'operational_asset_id' => $createdAssets['TRK-202']->id],
-                [
-                    'latitude' => 14.5839,
-                    'longitude' => 120.9794,
-                    'accuracy_metres' => 4.5,
-                    'speed' => 48.0,
-                    'remarks' => 'En route delivery',
-                    'sharing_enabled' => true,
-                    'source' => 'field_mobile',
-                    'captured_at' => now(),
-                    'received_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            );
-        }
-
         if ($operator !== null) {
             DB::table('location_updates')->updateOrInsert(
                 ['user_id' => $operator->id, 'operational_asset_id' => $createdAssets['CRN-101']->id],
@@ -202,12 +182,6 @@ final class LocalDevelopmentSeeder extends Seeder
                 'username' => Username::fromEmail('manager@example.com'),
                 'email' => 'manager@example.com',
                 'role' => RoleName::OperationsManager,
-            ],
-            [
-                'name' => 'Dev Driver',
-                'username' => Username::fromEmail('driver@example.com'),
-                'email' => 'driver@example.com',
-                'role' => RoleName::Driver,
             ],
             [
                 'name' => 'Dev Crane Operator',

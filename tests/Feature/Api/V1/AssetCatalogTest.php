@@ -60,7 +60,7 @@ it('exposes fleet and equipment catalogs through their module APIs', function ()
 it('limits assigned-only fleet access to the user’s current assets', function (): void {
     /** @var User $driver */
     $driver = User::factory()->create(['is_active' => true]);
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $token = $driver->createToken('Mobile Token')->plainTextToken;
 
     $assignedTruck = OperationalAsset::query()->create([
@@ -111,12 +111,12 @@ it('limits assigned-only fleet access to the user’s current assets', function 
 it('exposes only the caller’s fuel requests through the fuel module API', function (): void {
     /** @var User $driver */
     $driver = User::factory()->create(['is_active' => true]);
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $token = $driver->createToken('Mobile Token')->plainTextToken;
 
     /** @var User $otherDriver */
     $otherDriver = User::factory()->create(['is_active' => true]);
-    $otherDriver->syncRoles([RoleName::Driver->value]);
+    $otherDriver->syncRoles([RoleName::CraneOperator->value]);
 
     $ownFuelRequest = FuelRequest::query()->create([
         'reference' => 'FUEL-MOBILE-OWN-01',

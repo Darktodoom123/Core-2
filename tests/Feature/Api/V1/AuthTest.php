@@ -159,7 +159,7 @@ it('throttles excessive login attempts with 429 Too Many Requests', function ():
 it('allows current user profile retrieval with valid bearer token', function (): void {
     /** @var User $user */
     $user = User::factory()->create(['email' => 'driver@example.com', 'is_active' => true]);
-    $user->syncRoles([RoleName::Driver->value]);
+    $user->syncRoles([RoleName::CraneOperator->value]);
     $token = $user->createToken('Mobile Phone')->plainTextToken;
 
     $response = $this->withToken($token)
@@ -171,7 +171,7 @@ it('allows current user profile retrieval with valid bearer token', function ():
                 'id' => $user->id,
                 'username' => $user->username,
                 'email' => 'driver@example.com',
-                'role' => RoleName::Driver->value,
+                'role' => RoleName::CraneOperator->value,
                 'is_active' => true,
             ],
         ]);

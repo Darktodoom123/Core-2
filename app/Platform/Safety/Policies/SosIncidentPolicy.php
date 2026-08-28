@@ -11,7 +11,7 @@ final class SosIncidentPolicy
 {
     public function trigger(User $user): bool
     {
-        return in_array($user->operationalRole(), [RoleName::Driver, RoleName::CraneOperator], true)
+        return $user->operationalRole() === RoleName::CraneOperator
             && $user->can(PermissionName::SosTrigger->value);
     }
 

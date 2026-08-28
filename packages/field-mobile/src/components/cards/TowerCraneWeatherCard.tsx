@@ -16,6 +16,8 @@ import { Icon } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 
 export interface TowerCraneWeatherCardProps {
+    jobId?: number;
+    siteName?: string;
     weather?: SiteWeatherTelemetry | null;
     isLoading?: boolean;
     isStandbyModalVisible?: boolean;
@@ -29,6 +31,8 @@ export interface TowerCraneWeatherCardProps {
 }
 
 export const TowerCraneWeatherCard: React.FC<TowerCraneWeatherCardProps> = ({
+    jobId,
+    siteName,
     weather,
     isLoading = false,
     isStandbyModalVisible,
@@ -71,9 +75,17 @@ export const TowerCraneWeatherCard: React.FC<TowerCraneWeatherCardProps> = ({
             <View style={styles.header}>
                 <View style={styles.headerTitleRow}>
                     <Icon name="speed" size={18} color={colors.text} />
-                    <Text style={styles.headerTitle}>
-                        Tower Masthead Weather
-                    </Text>
+                    <View>
+                        <Text style={styles.headerTitle}>
+                            Tower Masthead Weather
+                        </Text>
+                        {siteName ? (
+                            <Text style={styles.headerSubtitle}>
+                                {siteName}
+                                {jobId ? ` · Job #${jobId}` : ''}
+                            </Text>
+                        ) : null}
+                    </View>
                 </View>
                 {onRefresh && (
                     <Pressable
@@ -357,6 +369,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
         color: colors.text,
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: colors.muted,
+        marginTop: 1,
     },
     refreshButton: {
         padding: 6,

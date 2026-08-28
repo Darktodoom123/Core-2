@@ -44,7 +44,7 @@ function createWebAdapterFixture(): array
 
     /** @var User $worker */
     $worker = User::factory()->create(['name' => 'Web Worker', 'is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
 
     PersonnelCredential::query()->create([
         'user_id' => $worker->id,

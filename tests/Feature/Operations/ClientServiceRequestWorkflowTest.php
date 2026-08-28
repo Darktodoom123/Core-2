@@ -280,7 +280,7 @@ it('validates intake boundaries and only accepts active clients', function () {
 });
 
 it('forbids client, service request, and linked dispatch creation without dispatch create permission', function (string $path, array $payload) {
-    $driver = intakeUser(RoleName::Driver);
+    $driver = intakeUser(RoleName::CraneOperator);
 
     $this->actingAs($driver)->post($path, $payload)->assertForbidden();
 

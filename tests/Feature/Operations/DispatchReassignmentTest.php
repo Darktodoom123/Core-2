@@ -57,7 +57,7 @@ test('authorized dispatcher can end active personnel and asset assignments prese
     $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
-    $driver = createReassignmentUser(RoleName::Driver, 'Driver Bob');
+    $driver = createReassignmentUser(RoleName::CraneOperator, 'Driver Bob');
     $asset = OperationalAsset::query()->create([
         'code' => 'TR-100',
         'name' => 'Flatbed Truck 100',
@@ -106,7 +106,7 @@ test('reassignment validates replacement resource eligibility server-side', func
     $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Beta');
     $job = createReassignmentJob($dispatcher);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
@@ -115,7 +115,7 @@ test('reassignment validates replacement resource eligibility server-side', func
     ]);
 
     // Unlicensed driver candidate
-    $unlicensedDriver = createReassignmentUser(RoleName::Driver, 'Unlicensed Driver');
+    $unlicensedDriver = createReassignmentUser(RoleName::CraneOperator, 'Unlicensed Driver');
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/reassign", [
         'end_personnel_assignment_ids' => [$oldAssignment->id],
@@ -137,7 +137,7 @@ test('reassignment succeeds when replacing with eligible driver and asset', func
     $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
@@ -145,7 +145,7 @@ test('reassignment succeeds when replacing with eligible driver and asset', func
         'active_from' => $job->scheduled_start,
     ]);
 
-    $newDriver = createReassignmentUser(RoleName::Driver, 'New Driver');
+    $newDriver = createReassignmentUser(RoleName::CraneOperator, 'New Driver');
     PersonnelCredential::query()->create([
         'user_id' => $newDriver->id,
         'kind' => 'driver_license',
@@ -191,7 +191,7 @@ test('stale job version rejects reassignment request', function (): void {
     $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Delta');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-STALE', DispatchStatus::Scheduled, DispatchPriority::Routine, 2);
 
-    $driver = createReassignmentUser(RoleName::Driver, 'Driver Delta');
+    $driver = createReassignmentUser(RoleName::CraneOperator, 'Driver Delta');
     $assignment = $job->personnelAssignments()->create([
         'user_id' => $driver->id,
         'assignment_type' => 'driver',
@@ -219,7 +219,7 @@ test('post-activation reassignment creates approval request when actor lacks ove
     ]);
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-POST', DispatchStatus::Dispatched);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Active Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Active Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
@@ -227,7 +227,7 @@ test('post-activation reassignment creates approval request when actor lacks ove
         'active_from' => $job->scheduled_start,
     ]);
 
-    $newDriver = createReassignmentUser(RoleName::Driver, 'Replacement Driver');
+    $newDriver = createReassignmentUser(RoleName::CraneOperator, 'Replacement Driver');
     PersonnelCredential::query()->create([
         'user_id' => $newDriver->id,
         'kind' => 'driver_license',
@@ -276,14 +276,14 @@ test('approved reassignment applies atomically with requester and approver attri
     $manager = createReassignmentUser(RoleName::OperationsManager, 'Manager Approval');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-APPROVED', DispatchStatus::Dispatched);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Approved Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Approved Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
         'assigned_by' => $dispatcher->id,
         'active_from' => $job->scheduled_start,
     ]);
-    $newDriver = createReassignmentUser(RoleName::Driver, 'New Approved Driver');
+    $newDriver = createReassignmentUser(RoleName::CraneOperator, 'New Approved Driver');
     PersonnelCredential::query()->create([
         'user_id' => $newDriver->id,
         'kind' => 'driver_license',
@@ -349,14 +349,14 @@ test('manager approval fails closed when the staged dispatch version is stale', 
     $manager = createReassignmentUser(RoleName::OperationsManager, 'Manager Stale Approval');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-STALE-APPROVAL', DispatchStatus::Dispatched);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Stale Approval Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Stale Approval Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
         'assigned_by' => $dispatcher->id,
         'active_from' => $job->scheduled_start,
     ]);
-    $newDriver = createReassignmentUser(RoleName::Driver, 'New Stale Approval Driver');
+    $newDriver = createReassignmentUser(RoleName::CraneOperator, 'New Stale Approval Driver');
     PersonnelCredential::query()->create([
         'user_id' => $newDriver->id,
         'kind' => 'driver_license',
@@ -396,14 +396,14 @@ test('replacement assignment requires a scheduled dispatch and a version', funct
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-VALIDATION');
     $job->update(['scheduled_start' => null, 'scheduled_end' => null]);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Validation Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Validation Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
         'assigned_by' => $dispatcher->id,
         'active_from' => now(),
     ]);
-    $newDriver = createReassignmentUser(RoleName::Driver, 'New Validation Driver');
+    $newDriver = createReassignmentUser(RoleName::CraneOperator, 'New Validation Driver');
     PersonnelCredential::query()->create([
         'user_id' => $newDriver->id,
         'kind' => 'driver_license',
@@ -439,7 +439,7 @@ test('actor with override permission executes post-activation reassignment direc
 
     $job = createReassignmentJob($manager, 'DSP-REASSIGN-MGR', DispatchStatus::Dispatched);
 
-    $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Active Driver');
+    $oldDriver = createReassignmentUser(RoleName::CraneOperator, 'Old Active Driver');
     $oldAssignment = $job->personnelAssignments()->create([
         'user_id' => $oldDriver->id,
         'assignment_type' => 'driver',
@@ -462,7 +462,7 @@ test('actor with override permission executes post-activation reassignment direc
 });
 
 test('unauthorized user cannot end or reassign resources', function (): void {
-    $driver = createReassignmentUser(RoleName::Driver, 'Driver Unauthorized');
+    $driver = createReassignmentUser(RoleName::CraneOperator, 'Driver Unauthorized');
     $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Eta');
     $job = createReassignmentJob($dispatcher);
 
@@ -488,7 +488,7 @@ test('completed or cancelled jobs reject reassignment attempts', function (): vo
     $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Theta');
     $job = createReassignmentJob($dispatcher, 'DSP-COMPLETED', DispatchStatus::Completed);
 
-    $driver = createReassignmentUser(RoleName::Driver, 'Finished Driver');
+    $driver = createReassignmentUser(RoleName::CraneOperator, 'Finished Driver');
     $pAssignment = $job->personnelAssignments()->create([
         'user_id' => $driver->id,
         'assignment_type' => 'driver',

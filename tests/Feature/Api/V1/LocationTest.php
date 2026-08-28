@@ -20,7 +20,7 @@ beforeEach(function (): void {
 it('allows field workers with tracking permission to share location', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */

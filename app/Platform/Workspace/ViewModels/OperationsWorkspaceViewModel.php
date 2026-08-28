@@ -478,10 +478,7 @@ final class OperationsWorkspaceViewModel
     /** @return array<int, array{id: string, label: string}> */
     public static function navigation(User $user): array
     {
-        $fieldRole = in_array($user->operationalRole(), [
-            RoleName::Driver,
-            RoleName::CraneOperator,
-        ], true);
+        $fieldRole = $user->operationalRole() === RoleName::CraneOperator;
 
         $items = [
             [

@@ -242,12 +242,7 @@ final class DispatchReadinessResourceEvaluator
     private function hasRequiredRole(User $user, string $assignmentType): bool
     {
         return match ($assignmentType) {
-            'driver' => $user->hasRole(RoleName::Driver->value),
-            'crane_operator' => $user->hasRole(RoleName::CraneOperator->value),
-            'lead' => $user->hasAnyRole([
-                RoleName::Driver->value,
-                RoleName::CraneOperator->value,
-            ]),
+            'crane_operator', 'operator', 'lead', 'driver' => $user->hasRole(RoleName::CraneOperator->value),
             default => false,
         };
     }

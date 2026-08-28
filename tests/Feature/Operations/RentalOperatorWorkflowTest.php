@@ -123,7 +123,7 @@ it('assigns a qualified operator to a reserved rental item', function (): void {
 
 it('rejects an operator whose role and credential do not match the rented asset', function (): void {
     $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
-    $operator = rentalOperatorUser(RoleName::Driver, 'Rental driver');
+    $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental driver');
     rentalOperatorCredential($operator, RentalOperatorType::Driver);
     $reservation = rentalOperatorReservation($dispatcher, rentalOperatorAsset());
     $item = $reservation->items->sole();

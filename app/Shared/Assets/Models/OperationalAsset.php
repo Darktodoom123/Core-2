@@ -72,4 +72,21 @@ class OperationalAsset extends Model
                 ->whereNull('personnel_assignments.active_until');
         });
     }
+
+    public function isStationary(): bool
+    {
+        $subtype = strtolower((string) $this->subtype);
+        $kind = strtolower((string) $this->kind);
+
+        return str_contains($subtype, 'tower')
+            || str_contains($subtype, 'hoist')
+            || str_contains($subtype, 'climbing')
+            || $kind === 'tower_crane'
+            || $kind === 'hoist';
+    }
+
+    public function requiresRoadTransit(): bool
+    {
+        return ! $this->isStationary();
+    }
 }

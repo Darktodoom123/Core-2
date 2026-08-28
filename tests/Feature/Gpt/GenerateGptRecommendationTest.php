@@ -77,7 +77,7 @@ test('authorized dispatcher can initiate async gpt recommendation request', func
 });
 
 test('unauthorized user cannot request gpt recommendation', function (): void {
-    $driver = gptUser(RoleName::Driver);
+    $driver = gptUser(RoleName::CraneOperator);
     $job = gptDispatchJob($driver);
 
     $response = $this->actingAs($driver)->post('/operations/gpt-recommendations', [

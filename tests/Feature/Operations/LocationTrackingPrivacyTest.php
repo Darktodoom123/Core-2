@@ -27,8 +27,8 @@ function createFieldUser(RoleName $role): User
 }
 
 it('enforces role-scoped location access control and cross-worker isolation', function () {
-    $driver1 = createFieldUser(RoleName::Driver);
-    $driver2 = createFieldUser(RoleName::Driver);
+    $driver1 = createFieldUser(RoleName::CraneOperator);
+    $driver2 = createFieldUser(RoleName::CraneOperator);
     $dispatcher = createFieldUser(RoleName::OperationsManager);
 
     // Driver 1 creates location update
@@ -74,7 +74,7 @@ it('enforces role-scoped location access control and cross-worker isolation', fu
 });
 
 it('handles sharing-off and consent state updates', function () {
-    $driver = createFieldUser(RoleName::Driver);
+    $driver = createFieldUser(RoleName::CraneOperator);
 
     // Post location update with sharing disabled
     $this->actingAs($driver)->post('/operations/locations', [
@@ -97,7 +97,7 @@ it('handles sharing-off and consent state updates', function () {
 });
 
 it('requires a currently active assignment window for precise location sharing', function () {
-    $driver = createFieldUser(RoleName::Driver);
+    $driver = createFieldUser(RoleName::CraneOperator);
     $job = DispatchJob::query()->create([
         'reference' => 'LOC-FUTURE-001',
         'client' => 'Location Client',
@@ -129,7 +129,7 @@ it('requires a currently active assignment window for precise location sharing',
 });
 
 it('correctly calculates location freshness status categories', function () {
-    $driver = createFieldUser(RoleName::Driver);
+    $driver = createFieldUser(RoleName::CraneOperator);
 
     $fresh = LocationUpdate::query()->create([
         'user_id' => $driver->id,
@@ -174,7 +174,7 @@ it('correctly calculates location freshness status categories', function () {
 });
 
 it('uses server receive time rather than device capture time for freshness', function () {
-    $driver = createFieldUser(RoleName::Driver);
+    $driver = createFieldUser(RoleName::CraneOperator);
 
     $delayedByServer = LocationUpdate::query()->create([
         'user_id' => $driver->id,
@@ -200,7 +200,7 @@ it('uses server receive time rather than device capture time for freshness', fun
 
 it('prevents system administrators from having location sharing permissions', function () {
     $admin = createFieldUser(RoleName::SystemAdministrator);
-    $driver = createFieldUser(RoleName::Driver);
+    $driver = createFieldUser(RoleName::CraneOperator);
 
     expect($admin->can(PermissionName::TrackingShareOwn->value))->toBeFalse()
         ->and($admin->can(PermissionName::TrackingViewAll->value))->toBeTrue()

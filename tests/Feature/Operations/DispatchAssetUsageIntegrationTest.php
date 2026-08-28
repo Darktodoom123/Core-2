@@ -150,7 +150,7 @@ function r4SalesOrder(User $actor, OperationalAsset $asset, SalesOrderStatus $st
 function r4Driver(User $dispatcher, DispatchJob $job): User
 {
     $driver = User::factory()->create(['name' => 'R4 Driver']);
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
         'credential_number' => 'R4-DL-'.strtoupper(Str::random(8)),

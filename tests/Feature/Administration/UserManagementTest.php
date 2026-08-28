@@ -63,7 +63,7 @@ it('revokes device tokens when an administrator changes an account role', functi
     $admin = User::factory()->create();
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
     $user = User::factory()->create(['is_active' => true]);
-    $user->syncRoles([RoleName::Driver->value]);
+    $user->syncRoles([RoleName::CraneOperator->value]);
     $token = $user->createToken('Mobile Phone')->plainTextToken;
 
     $this->actingAs($admin)
@@ -105,7 +105,7 @@ it('allows administrator to reset a user password and invalidate tokens', functi
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
 
     $operator = User::factory()->create(['email' => 'driver1@core.test']);
-    $operator->syncRoles([RoleName::Driver->value]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
     $token = $operator->createToken('Field App')->plainTextToken;
 
     $response = $this->actingAs($admin)
@@ -121,7 +121,7 @@ it('allows administrator to manage and delete personnel credentials with qualifi
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
 
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
 
     // 1. Create Credential
     $createResponse = $this->actingAs($admin)->postJson("/operations/users/{$driver->id}/credentials", [

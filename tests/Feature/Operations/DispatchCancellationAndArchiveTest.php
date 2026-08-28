@@ -47,7 +47,7 @@ function createTestJob(User $creator, DispatchStatus $status = DispatchStatus::D
 
 it('allows authorized user to cancel a job with a required reason and closes active assignments', function () {
     $dispatcher = createTestUser(RoleName::OperationsManager);
-    $driver = createTestUser(RoleName::Driver);
+    $driver = createTestUser(RoleName::CraneOperator);
     $asset = OperationalAsset::query()->create([
         'code' => 'TR-99',
         'name' => 'Heavy Hauler',
@@ -134,7 +134,7 @@ it('prevents cancellation of completed or already cancelled jobs', function () {
 });
 
 it('prevents unauthorized user from cancelling a job', function () {
-    $driver = createTestUser(RoleName::Driver);
+    $driver = createTestUser(RoleName::CraneOperator);
     $dispatcher = createTestUser(RoleName::OperationsManager);
     $job = createTestJob($dispatcher, DispatchStatus::Scheduled);
 
@@ -145,7 +145,7 @@ it('prevents unauthorized user from cancelling a job', function () {
 });
 
 it('restricts reopen, archive, and restore to their administrative capabilities', function () {
-    $driver = createTestUser(RoleName::Driver);
+    $driver = createTestUser(RoleName::CraneOperator);
     $dispatcher = createTestUser(RoleName::OperationsManager);
     $manager = createTestUser(RoleName::OperationsManager);
     $cancelledJob = createTestJob($dispatcher, DispatchStatus::Cancelled);
@@ -231,7 +231,7 @@ it('prevents reopening jobs that are not cancelled', function () {
 it('allows authorized administrative user to archive and restore jobs using soft delete', function () {
     $sysAdmin = createTestUser(RoleName::SystemAdministrator);
     $dispatcher = createTestUser(RoleName::OperationsManager);
-    $driver = createTestUser(RoleName::Driver);
+    $driver = createTestUser(RoleName::CraneOperator);
     $asset = OperationalAsset::query()->create([
         'code' => 'TR-100',
         'name' => 'Archive Test Truck',
@@ -295,7 +295,7 @@ it('allows authorized administrative user to archive and restore jobs using soft
 it('rolls back archive, assignment closure, and audit history when auditing fails', function () {
     $sysAdmin = createTestUser(RoleName::SystemAdministrator);
     $dispatcher = createTestUser(RoleName::OperationsManager);
-    $driver = createTestUser(RoleName::Driver);
+    $driver = createTestUser(RoleName::CraneOperator);
     $job = createTestJob($dispatcher, DispatchStatus::Draft);
     $assignment = DispatchPersonnelAssignment::query()->create([
         'dispatch_job_id' => $job->id,

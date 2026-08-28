@@ -45,7 +45,7 @@ function createReportJob(User $creator): DispatchJob
 }
 
 it('allows assigned worker to submit job report and records audit history', function (): void {
-    $driver = createReportUser(RoleName::Driver);
+    $driver = createReportUser(RoleName::CraneOperator);
     $job = createReportJob($driver);
 
     DispatchPersonnelAssignment::query()->create([
@@ -78,7 +78,7 @@ it('allows assigned worker to submit job report and records audit history', func
 
 it('allows manager to review and approve job report but prevents author self-approval', function (): void {
     $manager = createReportUser(RoleName::OperationsManager);
-    $driver = createReportUser(RoleName::Driver);
+    $driver = createReportUser(RoleName::CraneOperator);
     $job = createReportJob($driver);
 
     $report = JobReport::query()->create([
@@ -112,7 +112,7 @@ it('allows manager to review and approve job report but prevents author self-app
 
 it('requires a reason when rejecting a job report', function (): void {
     $manager = createReportUser(RoleName::OperationsManager);
-    $driver = createReportUser(RoleName::Driver);
+    $driver = createReportUser(RoleName::CraneOperator);
     $job = createReportJob($driver);
 
     $report = JobReport::query()->create([
@@ -147,7 +147,7 @@ it('requires a reason when rejecting a job report', function (): void {
 
 it('allows operations manager to review and approve job reports but forbids field workers', function (): void {
     $manager = createReportUser(RoleName::OperationsManager);
-    $driver = createReportUser(RoleName::Driver);
+    $driver = createReportUser(RoleName::CraneOperator);
     $job = createReportJob($manager);
 
     $report = JobReport::query()->create([

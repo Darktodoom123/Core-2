@@ -26,7 +26,7 @@ function createNotifUser(RoleName $role): User
 }
 
 it('delivers notification to recipient and ensures queue retry idempotency', function (): void {
-    $driver = createNotifUser(RoleName::Driver);
+    $driver = createNotifUser(RoleName::CraneOperator);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-NTF-001',
         'client' => 'Client',
@@ -57,8 +57,8 @@ it('delivers notification to recipient and ensures queue retry idempotency', fun
 });
 
 it('allows recipient to list and mark notification as read while protecting cross-user access', function (): void {
-    $userA = createNotifUser(RoleName::Driver);
-    $userB = createNotifUser(RoleName::Driver);
+    $userA = createNotifUser(RoleName::CraneOperator);
+    $userB = createNotifUser(RoleName::CraneOperator);
 
     $notifA = Notification::query()->create([
         'type' => 'App\Platform\Notifications\DispatchAssignmentNotification',

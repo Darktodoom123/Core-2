@@ -55,7 +55,7 @@ function trackingContractJob(User $driver): DispatchJob
 }
 
 it('broadcasts one tracking workspace update for each successful location write', function (): void {
-    $driver = trackingContractUser(RoleName::Driver);
+    $driver = trackingContractUser(RoleName::CraneOperator);
     $job = trackingContractJob($driver);
     Event::fake([WorkspaceUpdated::class]);
 
@@ -94,7 +94,7 @@ it('broadcasts one tracking workspace update for each successful location write'
 });
 
 it('exposes scope-aware tracking freshness and only the authenticated user sharing state', function (): void {
-    $driver = trackingContractUser(RoleName::Driver);
+    $driver = trackingContractUser(RoleName::CraneOperator);
     $dispatcher = trackingContractUser(RoleName::OperationsManager);
 
     $update = LocationUpdate::query()->create([

@@ -223,7 +223,7 @@ it('keeps sales pickup orders out of dispatch', function (): void {
 it('rejects sales delivery acceptance without a location and protects handoff routes', function (): void {
     $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
-    $fieldWorker = handoffUser(RoleName::Driver);
+    $fieldWorker = handoffUser(RoleName::CraneOperator);
     $client = handoffClient();
     $catalog = SalesCatalogItem::query()->create([
         'sku' => 'SKU-HANDOFF-VALIDATION',

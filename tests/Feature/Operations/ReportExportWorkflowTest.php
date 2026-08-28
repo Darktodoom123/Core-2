@@ -224,7 +224,7 @@ it('allows authorized manager to request report export and queues generation job
 });
 
 it('prevents unauthorized driver from requesting report export', function (): void {
-    $driver = createExportUser(RoleName::Driver);
+    $driver = createExportUser(RoleName::CraneOperator);
 
     $this->actingAs($driver)
         ->post('/operations/reports/exports', [
@@ -509,8 +509,8 @@ it('omits report export rows outside the validated date range', function (): voi
 });
 
 it('omits report export rows outside the requesting actor scope', function (): void {
-    $actor = createExportUser(RoleName::Driver);
-    $otherActor = createExportUser(RoleName::Driver);
+    $actor = createExportUser(RoleName::CraneOperator);
+    $otherActor = createExportUser(RoleName::CraneOperator);
     createExportReport($actor, 'visible report', now());
     createExportReport($otherActor, 'cross-scope report', now());
 

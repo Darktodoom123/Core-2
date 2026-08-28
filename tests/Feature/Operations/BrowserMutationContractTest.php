@@ -75,7 +75,7 @@ it('returns browser validation errors without creating a dispatch', function () 
 });
 
 it('forbids dispatch creation when the capability is missing', function () {
-    $driver = browserMutationUser(RoleName::Driver);
+    $driver = browserMutationUser(RoleName::CraneOperator);
 
     $this->actingAs($driver)
         ->post('/operations/dispatch-jobs', [

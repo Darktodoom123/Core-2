@@ -36,7 +36,7 @@ function createWeeklyReportUser(RoleName $role): User
 
 it('generates weekly fuel consumption summary with aggregated metrics, breakdowns, and anomalies', function () {
     $manager = createWeeklyReportUser(RoleName::OperationsManager);
-    $driver = createWeeklyReportUser(RoleName::Driver);
+    $driver = createWeeklyReportUser(RoleName::CraneOperator);
 
     $truck = OperationalAsset::query()->create([
         'code' => 'TRK-WEEKLY-01',
@@ -149,7 +149,7 @@ it('generates weekly fuel consumption summary with aggregated metrics, breakdown
 
 it('streams formatted rows and headers in WeeklyFuelConsumptionExportDataset', function () {
     $manager = createWeeklyReportUser(RoleName::OperationsManager);
-    $driver = createWeeklyReportUser(RoleName::Driver);
+    $driver = createWeeklyReportUser(RoleName::CraneOperator);
 
     $truck = OperationalAsset::query()->create([
         'code' => 'TRK-EXP-01',
@@ -201,7 +201,7 @@ it('streams formatted rows and headers in WeeklyFuelConsumptionExportDataset', f
 
 it('enforces RBAC authorization for weekly fuel consumption export requests', function () {
     $manager = createWeeklyReportUser(RoleName::OperationsManager);
-    $driver = createWeeklyReportUser(RoleName::Driver);
+    $driver = createWeeklyReportUser(RoleName::CraneOperator);
 
     // Manager with fuel.view_all can request export
     $this->actingAs($manager)->post('/operations/reports/exports', [

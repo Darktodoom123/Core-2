@@ -22,7 +22,7 @@ function createSummaryUser(RoleName $role): User
 
 it('provides permission-scoped daily operations summary and logs access audit', function (): void {
     $manager = createSummaryUser(RoleName::OperationsManager);
-    $driver = createSummaryUser(RoleName::Driver);
+    $driver = createSummaryUser(RoleName::CraneOperator);
 
     // Manager summary
     $res = $this->actingAs($manager)

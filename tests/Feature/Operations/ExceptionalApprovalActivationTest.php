@@ -56,7 +56,7 @@ function assignExceptionalWorkflowResources(
     User $dispatcher,
     string $suffix,
 ): array {
-    $driver = exceptionalWorkflowUser(RoleName::Driver, "Driver {$suffix}");
+    $driver = exceptionalWorkflowUser(RoleName::CraneOperator, "Driver {$suffix}");
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
         'credential_number' => "DL-{$suffix}",
@@ -158,7 +158,7 @@ it('activates a ready routine dispatch through the browser and records the actor
 
 it('prevents activation without both active personnel and asset assignments', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Assignment Dispatcher');
-    $driver = exceptionalWorkflowUser(RoleName::Driver, 'Only Driver');
+    $driver = exceptionalWorkflowUser(RoleName::CraneOperator, 'Only Driver');
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
         'credential_number' => 'DL-6002',
@@ -336,7 +336,7 @@ it('allows a privileged requester to decide their own exceptional work', functio
 
 it('forbids unauthorized decision and activation access while auditing the activation attempt', function () {
     $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Authorized Dispatcher');
-    $driver = exceptionalWorkflowUser(RoleName::Driver, 'Unauthorized Driver');
+    $driver = exceptionalWorkflowUser(RoleName::CraneOperator, 'Unauthorized Driver');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6501', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6501');
     $approval = requestExceptionalWorkflowApproval($job, $dispatcher, $resources['driver'], $resources['asset']);

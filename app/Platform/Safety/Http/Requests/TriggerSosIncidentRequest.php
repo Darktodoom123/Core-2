@@ -38,9 +38,8 @@ final class TriggerSosIncidentRequest extends FormRequest
         if (! $user instanceof User) {
             return false;
         }
-        $role = $user->operationalRole();
 
-        return in_array($role, [RoleName::Driver, RoleName::CraneOperator], true)
+        return $user->operationalRole() === RoleName::CraneOperator
             && $user->can(PermissionName::SosTrigger->value);
     }
 

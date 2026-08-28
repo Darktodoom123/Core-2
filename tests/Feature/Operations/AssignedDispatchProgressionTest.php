@@ -62,8 +62,8 @@ function assignProgressionWorker(DispatchJob $job, User $worker, User $dispatche
 
 it('shows field users only their active assignments with the next valid action', function () {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $driver = progressionUser(RoleName::Driver, 'Assigned Driver');
-    $otherDriver = progressionUser(RoleName::Driver, 'Other Driver');
+    $driver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
+    $otherDriver = progressionUser(RoleName::CraneOperator, 'Other Driver');
     $operator = progressionUser(RoleName::CraneOperator, 'Former Operator');
 
     $assignedJob = progressionJob($dispatcher, 'FIELD-1001');
@@ -124,7 +124,7 @@ it('allows each adjacent field progression and records one attributable audit ev
     string $label,
 ) {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $driver = progressionUser(RoleName::Driver, 'Assigned Driver');
+    $driver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
     $job = progressionJob($dispatcher, "FIELD-{$current->value}", $current, 7);
     assignProgressionWorker($job, $driver, $dispatcher);
 
@@ -167,7 +167,7 @@ it('rejects skipped, reversed, and terminal field transitions without an audit e
     DispatchStatus $attempted,
 ) {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $driver = progressionUser(RoleName::Driver, 'Assigned Driver');
+    $driver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
     $job = progressionJob($dispatcher, "FIELD-SKIP-{$current->value}", $current, 3);
     assignProgressionWorker($job, $driver, $dispatcher);
 
@@ -192,8 +192,8 @@ it('rejects skipped, reversed, and terminal field transitions without an audit e
 
 it('prevents another or formerly assigned worker from changing the job', function () {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $assignedDriver = progressionUser(RoleName::Driver, 'Assigned Driver');
-    $otherDriver = progressionUser(RoleName::Driver, 'Other Driver');
+    $assignedDriver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
+    $otherDriver = progressionUser(RoleName::CraneOperator, 'Other Driver');
     $formerOperator = progressionUser(RoleName::CraneOperator, 'Former Operator');
     $job = progressionJob($dispatcher, 'FIELD-UNAUTHORIZED');
 
@@ -223,7 +223,7 @@ it('prevents another or formerly assigned worker from changing the job', functio
 
 it('rolls back the status and version when its audit event cannot be recorded', function () {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $driver = progressionUser(RoleName::Driver, 'Assigned Driver');
+    $driver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
     $job = progressionJob($dispatcher, 'FIELD-AUDIT-ROLLBACK', DispatchStatus::Dispatched, 2);
     assignProgressionWorker($job, $driver, $dispatcher);
 
@@ -251,7 +251,7 @@ it('rolls back the status and version when its audit event cannot be recorded', 
 
 it('rejects a stale optimistic version with a refreshable conflict and no audit event', function () {
     $dispatcher = progressionUser(RoleName::OperationsManager, 'Dispatch Lead');
-    $driver = progressionUser(RoleName::Driver, 'Assigned Driver');
+    $driver = progressionUser(RoleName::CraneOperator, 'Assigned Driver');
     $job = progressionJob($dispatcher, 'FIELD-STALE', DispatchStatus::Dispatched, 4);
     assignProgressionWorker($job, $driver, $dispatcher);
 

@@ -43,11 +43,11 @@ function createV1CompatFixture(): array
 
     /** @var User $leadWorker */
     $leadWorker = User::factory()->create(['name' => 'V1 Lead Worker', 'is_active' => true]);
-    $leadWorker->syncRoles([RoleName::Driver->value]);
+    $leadWorker->syncRoles([RoleName::CraneOperator->value]);
 
     /** @var User $otherWorker */
     $otherWorker = User::factory()->create(['name' => 'V1 Other Worker', 'is_active' => true]);
-    $otherWorker->syncRoles([RoleName::Driver->value]);
+    $otherWorker->syncRoles([RoleName::CraneOperator->value]);
 
     foreach ([$leadWorker, $otherWorker] as $worker) {
         PersonnelCredential::query()->create([

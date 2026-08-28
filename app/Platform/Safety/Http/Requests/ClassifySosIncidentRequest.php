@@ -20,7 +20,7 @@ final class ClassifySosIncidentRequest extends FormRequest
 
         return $incident instanceof SosIncident
             && $incident->reporter_id === $user->id
-            && in_array($user->operationalRole(), [RoleName::Driver, RoleName::CraneOperator], true)
+            && $user->operationalRole() === RoleName::CraneOperator
             && $user->can(PermissionName::SosTrigger->value);
     }
 

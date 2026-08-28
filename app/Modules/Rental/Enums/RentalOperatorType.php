@@ -12,10 +12,7 @@ enum RentalOperatorType: string
 
     public function role(): RoleName
     {
-        return match ($this) {
-            self::Driver => RoleName::Driver,
-            self::CraneOperator => RoleName::CraneOperator,
-        };
+        return RoleName::CraneOperator;
     }
 
     public function credentialKind(): string

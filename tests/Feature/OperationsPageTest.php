@@ -111,7 +111,7 @@ it('serves canonical live dispatch view models and capability navigation', funct
 
 it('adapts live navigation labels for assigned field work without exposing unavailable modules', function () {
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
 
     $this->actingAs($driver)->get('/')
         ->assertOk()
@@ -175,9 +175,9 @@ it('serves only the latest visible location per worker in the workspace feed', f
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $secondDriver = User::factory()->create();
-    $secondDriver->syncRoles([RoleName::Driver->value]);
+    $secondDriver->syncRoles([RoleName::CraneOperator->value]);
 
     LocationUpdate::query()->create([
         'user_id' => $driver->id,

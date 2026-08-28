@@ -43,7 +43,7 @@ function createResubmitJob(User $creator): DispatchJob
 }
 
 it('allows worker to save an in-progress job report as draft', function (): void {
-    $driver = createResubmitUser(RoleName::Driver);
+    $driver = createResubmitUser(RoleName::CraneOperator);
     $job = createResubmitJob($driver);
 
     DispatchPersonnelAssignment::query()->create([
@@ -122,7 +122,7 @@ it('supports full rejection, note capture, and author resubmission cycle', funct
         ->and($report->canBeResubmitted())->toBeTrue();
 
     // 3. Unauthorized other driver cannot resubmit
-    $otherDriver = createResubmitUser(RoleName::Driver);
+    $otherDriver = createResubmitUser(RoleName::CraneOperator);
     $this->actingAs($otherDriver)
         ->post("/operations/job-reports/{$report->id}/resubmit", [
             'work_summary' => 'Attempted hijack of resubmission',

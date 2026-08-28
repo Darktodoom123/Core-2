@@ -228,8 +228,8 @@ it('enforces maximum limit of 10 attachments per owner record', function (): voi
 });
 
 it('enforces file isolation preventing unauthorized user from downloading private attachment', function (): void {
-    $uploader = createAttachUser(RoleName::Driver);
-    $otherDriver = createAttachUser(RoleName::Driver);
+    $uploader = createAttachUser(RoleName::CraneOperator);
+    $otherDriver = createAttachUser(RoleName::CraneOperator);
     $manager = createAttachUser(RoleName::OperationsManager);
 
     $job = DispatchJob::query()->create([
@@ -379,7 +379,7 @@ it('prunes expired generic attachments idempotently and records an audit event',
 });
 
 it('prunes expired fuel receipts and clears the fuel log path', function (): void {
-    $user = createAttachUser(RoleName::Driver);
+    $user = createAttachUser(RoleName::CraneOperator);
     $fuel = FuelRequest::query()->create([
         'reference' => 'FUEL-ATT-RETENTION',
         'requester_id' => $user->id,

@@ -44,7 +44,7 @@ function createSprint7User(RoleName $role): User
 }
 
 it('enforces endpoint-specific rate limiters for location, uploads, exports, and gpt', function (): void {
-    $driver = createSprint7User(RoleName::Driver);
+    $driver = createSprint7User(RoleName::CraneOperator);
     $manager = createSprint7User(RoleName::OperationsManager);
 
     // 1. Location Telemetry throttle (60 req/min)
@@ -170,7 +170,7 @@ it('authorizes private attachment downloads correctly', function (): void {
 });
 
 it('serializes API V1 JsonResource responses predictably', function (): void {
-    $user = createSprint7User(RoleName::Driver);
+    $user = createSprint7User(RoleName::CraneOperator);
     $userResource = (new UserResource($user))->resolve();
 
     expect($userResource)->toHaveKeys(['id', 'name', 'email', 'role']);

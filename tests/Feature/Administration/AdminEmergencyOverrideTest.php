@@ -23,7 +23,7 @@ it('allows system administrator to emergency force-abort a dispatch and release 
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
 
     $driver = User::factory()->create();
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'CRANE-01',

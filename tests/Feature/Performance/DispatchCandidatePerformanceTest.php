@@ -46,7 +46,7 @@ function candidatePerformanceJob(User $dispatcher, string $reference = 'CAND-100
 it('does not create deferred candidate work for an assigned field user', function (): void {
     $dispatcher = candidatePerformanceDispatcher();
     $driver = User::factory()->create(['name' => 'Assigned field user']);
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     $job = candidatePerformanceJob($dispatcher, 'CAND-1002');
     $job->personnelAssignments()->create([
         'user_id' => $driver->id,

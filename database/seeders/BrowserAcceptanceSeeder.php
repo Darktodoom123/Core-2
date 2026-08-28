@@ -39,7 +39,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $admin = $this->user('Browser Admin', 'browser.admin@example.com', RoleName::SystemAdministrator);
         $manager = $this->user('Browser Manager', 'browser.manager@example.com', RoleName::OperationsManager);
-        $driver = $this->user('Browser Driver', 'browser.driver@example.com', RoleName::Driver);
+        $operator = $this->user('Browser Crane Operator', 'browser.operator@example.com', RoleName::CraneOperator);
 
         $job = DispatchJob::query()->create([
             'reference' => 'R6-BROWSER-001',
@@ -67,8 +67,8 @@ final class BrowserAcceptanceSeeder extends Seeder
         ]);
         DispatchPersonnelAssignment::query()->create([
             'dispatch_job_id' => $assignedJob->id,
-            'user_id' => $driver->id,
-            'assignment_type' => 'driver',
+            'user_id' => $operator->id,
+            'assignment_type' => 'operator',
             'response_status' => AssignmentResponse::Accepted,
             'assigned_by' => $manager->id,
             'active_from' => now()->subMinute(),
@@ -207,9 +207,8 @@ final class BrowserAcceptanceSeeder extends Seeder
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
                 'admin' => $admin->username,
-                'dispatcher' => $manager->username,
                 'manager' => $manager->username,
-                'driver' => $driver->username,
+                'operator' => $operator->username,
             ],
             'password' => 'password',
             'job_id' => $job->id,

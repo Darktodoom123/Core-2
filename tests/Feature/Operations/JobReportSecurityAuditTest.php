@@ -31,7 +31,7 @@ function createSecUser(RoleName $role): User
 
 it('synchronizes dispatch job to completed upon manager report approval', function (): void {
     $manager = createSecUser(RoleName::OperationsManager);
-    $driver = createSecUser(RoleName::Driver);
+    $driver = createSecUser(RoleName::CraneOperator);
 
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-SYNC-'.rand(100, 999),
@@ -71,7 +71,7 @@ it('synchronizes dispatch job to completed upon manager report approval', functi
 });
 
 it('atomically updates assigned asset meter reading from report submission', function (): void {
-    $driver = createSecUser(RoleName::Driver);
+    $driver = createSecUser(RoleName::CraneOperator);
     $dispatcher = createSecUser(RoleName::OperationsManager);
 
     $asset = OperationalAsset::query()->create([

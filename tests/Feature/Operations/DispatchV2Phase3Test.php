@@ -50,7 +50,7 @@ function phase3Aggregate(bool $approved = false): array
 {
     $dispatcher = phase3User(RoleName::OperationsManager, 'Phase 3 Dispatcher');
     $manager = phase3User(RoleName::OperationsManager, 'Phase 3 Manager');
-    $worker = phase3User(RoleName::Driver, 'Phase 3 Worker');
+    $worker = phase3User(RoleName::CraneOperator, 'Phase 3 Worker');
     PersonnelCredential::query()->create([
         'user_id' => $worker->id,
         'kind' => 'driver_license',
@@ -141,7 +141,7 @@ it('enforces the typed offer lifecycle, actor scope, expected version, replay ow
     $offer = $commands->offer($aggregate['dispatcher'], $offer, phase3Mutation(2, 'offer-send', 'Offer sent'));
     expect($offer->status)->toBe(DispatchAssignmentOfferStatus::Offered);
 
-    $otherWorker = phase3User(RoleName::Driver, 'Other Worker');
+    $otherWorker = phase3User(RoleName::CraneOperator, 'Other Worker');
     expect(fn (): DispatchAssignmentOffer => $commands->acceptOffer($otherWorker, $offer, phase3Mutation(3, 'offer-accept-wrong', 'Accept')))
         ->toThrow(fn (DispatchV2CommandException $exception): bool => $exception->getErrorCode() === DispatchV2CommandCode::Forbidden);
 
@@ -190,7 +190,7 @@ it('requires an explicit accepted lead, serializes designation and replacement, 
     $dispatched = $commands->dispatch($aggregate['dispatcher'], $aggregate['attempt'], phase3Mutation(2));
     expect($dispatched->status)->toBe(DispatchAttemptStatus::Dispatched);
 
-    $nonLead = phase3User(RoleName::Driver, 'Non Lead');
+    $nonLead = phase3User(RoleName::CraneOperator, 'Non Lead');
     expect(fn (): DispatchExecutionAttempt => $commands->progress($nonLead, $dispatched, DispatchAttemptStatus::EnRoute, phase3Mutation(3, null, 'I am not the lead')))
         ->toThrow(fn (DispatchV2CommandException $exception): bool => $exception->getErrorCode() === DispatchV2CommandCode::Forbidden);
 
@@ -220,7 +220,7 @@ it('keeps optional declines non-blocking while reporting authoritative personnel
         'attempt_id' => $aggregate['attempt']->id,
         'plan_version_id' => $aggregate['plan']->id,
         'workspace_key' => 'operations',
-        'user_id' => phase3User(RoleName::Driver, 'Optional Decline')->id,
+        'user_id' => phase3User(RoleName::CraneOperator, 'Optional Decline')->id,
         'assignment_type' => 'driver',
         'is_mandatory' => false,
         'status' => DispatchAssignmentOfferStatus::Rejected,
@@ -331,7 +331,7 @@ it('consumes an approved emergency waiver only when it waives the matching soft 
         'status' => DispatchAssignmentOfferStatus::Accepted,
         'accepted_at' => now(),
     ]);
-    $unaccepted = phase3User(RoleName::Driver, 'Pending Emergency Worker');
+    $unaccepted = phase3User(RoleName::CraneOperator, 'Pending Emergency Worker');
     $pendingOffer = DispatchAssignmentOffer::query()->create([
         'attempt_id' => $aggregate['attempt']->id,
         'plan_version_id' => $aggregate['plan']->id,

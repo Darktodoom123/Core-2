@@ -22,12 +22,12 @@ beforeEach(function (): void {
 it('allows field workers to view only their active assigned jobs', function (): void {
     /** @var User $worker1 */
     $worker1 = User::factory()->create(['is_active' => true]);
-    $worker1->syncRoles([RoleName::Driver->value]);
+    $worker1->syncRoles([RoleName::CraneOperator->value]);
     $token1 = $worker1->createToken('Mobile Token')->plainTextToken;
 
     /** @var User $worker2 */
     $worker2 = User::factory()->create(['is_active' => true]);
-    $worker2->syncRoles([RoleName::Driver->value]);
+    $worker2->syncRoles([RoleName::CraneOperator->value]);
 
     /** @var DispatchJob $job1 */
     $job1 = DispatchJob::query()->create([
@@ -81,7 +81,7 @@ it('allows field workers to view only their active assigned jobs', function (): 
 it('returns detailed dispatch job information for active assigned worker', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var OperationalAsset $asset */
@@ -136,12 +136,12 @@ it('returns detailed dispatch job information for active assigned worker', funct
 it('does not expose co-worker personnel assignments through the mobile boundary', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var User $coWorker */
     $coWorker = User::factory()->create(['is_active' => true]);
-    $coWorker->syncRoles([RoleName::Driver->value]);
+    $coWorker->syncRoles([RoleName::CraneOperator->value]);
 
     /** @var DispatchJob $job */
     $job = DispatchJob::query()->create([
@@ -184,7 +184,7 @@ it('does not expose co-worker personnel assignments through the mobile boundary'
 it('handles assignment accept and reject with version control and idempotency', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -282,7 +282,7 @@ it('handles assignment accept and reject with version control and idempotency', 
 it('returns 409 conflict when responding with an outdated version', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -325,7 +325,7 @@ it('returns 409 conflict when responding with an outdated version', function ():
 it('enforces forward-only status progression using API command contract', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -387,11 +387,11 @@ it('enforces forward-only status progression using API command contract', functi
 it('denies status transitions for unassigned workers', function (): void {
     /** @var User $worker1 */
     $worker1 = User::factory()->create(['is_active' => true]);
-    $worker1->syncRoles([RoleName::Driver->value]);
+    $worker1->syncRoles([RoleName::CraneOperator->value]);
 
     /** @var User $worker2 */
     $worker2 = User::factory()->create(['is_active' => true]);
-    $worker2->syncRoles([RoleName::Driver->value]);
+    $worker2->syncRoles([RoleName::CraneOperator->value]);
     $token2 = $worker2->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -429,7 +429,7 @@ it('denies status transitions for unassigned workers', function (): void {
 it('excludes assignments after their active window from the mobile boundary', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -467,7 +467,7 @@ it('excludes assignments after their active window from the mobile boundary', fu
 it('requires an idempotency key for mobile commands', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */
@@ -504,7 +504,7 @@ it('requires an idempotency key for mobile commands', function (): void {
 it('keeps malformed mobile versions as validation errors instead of conflicts', function (): void {
     /** @var User $worker */
     $worker = User::factory()->create(['is_active' => true]);
-    $worker->syncRoles([RoleName::Driver->value]);
+    $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
     /** @var DispatchJob $job */

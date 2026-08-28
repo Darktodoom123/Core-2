@@ -24,7 +24,7 @@ beforeEach(function (): void {
 function setupEligibleDriver(string $licenseNo = 'D-12345'): User
 {
     $driver = User::factory()->create(['name' => 'John Driver', 'is_active' => true]);
-    $driver->syncRoles([RoleName::Driver->value]);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
     PersonnelProfile::query()->create([
         'user_id' => $driver->id,
         'availability_status' => 'available',

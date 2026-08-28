@@ -15,6 +15,7 @@ import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveMod
 import { HeavyCraneRouteCard } from '../components/cards/HeavyCraneRouteCard';
 import { LocationSharingCard } from '../components/cards/LocationSharingCard';
 import { ParkedSecuredCard } from '../components/cards/ParkedSecuredCard';
+import { TowerCraneWeatherCard } from '../components/cards/TowerCraneWeatherCard';
 import { Icon } from '../components/common/Icon';
 import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
 import { colors, shadows } from '../components/nativeStyles';
@@ -177,9 +178,19 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
     );
 
     const primaryAsset = job.asset_assignments?.[0] ?? null;
-    const isCrane =
-        primaryAsset?.asset_kind === 'crane' ||
-        primaryAsset?.asset_kind === 'mobile_crane';
+    const isTowerCrane =
+        job.asset_assignments?.some(
+            (a) =>
+                a.asset_kind === 'tower_crane' ||
+                a.asset_name.toLowerCase().includes('tower') ||
+                a.asset_code.toLowerCase().startsWith('twr'),
+        ) ?? false;
+    const isMovingCrane =
+        (primaryAsset?.asset_kind === 'crane' ||
+            primaryAsset?.asset_kind === 'mobile_crane' ||
+            primaryAsset?.asset_kind === 'truck') &&
+        !isTowerCrane;
+    const isCrane = isTowerCrane || isMovingCrane;
     const isResponsePending = job.my_assignment?.response_status === 'pending';
     const isArrived =
         job.status.value === 'arrived' ||
@@ -425,8 +436,17 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 onTransitionStatus={handleProgressionTransition}
             />
 
-            {/* 3. Heavy Crane Route Preview & Drive Mode */}
-            {isCrane ? (
+            {/* 3a. Tower Crane Live Masthead Weather & Wind Monitoring HUD */}
+            {isTowerCrane ? (
+                <TowerCraneWeatherCard
+                    jobId={job.id}
+                    siteName={job.site}
+                    testID="tower-crane-weather-card"
+                />
+            ) : null}
+
+            {/* 3b. Heavy Crane Route Preview & Drive Mode (For Moving Assets) */}
+            {isMovingCrane && primaryAsset ? (
                 <HeavyCraneRouteCard
                     assetLabel={`${primaryAsset.asset_code} · ${primaryAsset.asset_name}`}
                     destinationLabel={job.site}
@@ -436,19 +456,25 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             ) : null}
 
             {/* 4. Parked & Secured Confirmation Gate (Upon Arrival) */}
-            <ParkedSecuredCard
-                isArrived={isArrived}
-                onConfirm={handleConfirmParkedSecured}
-                state={parkedSecuredState}
-            />
+            {isMovingCrane ? (
+                <ParkedSecuredCard
+                    isArrived={isArrived}
+                    onConfirm={handleConfirmParkedSecured}
+                    state={parkedSecuredState}
+                />
+            ) : null}
 
-            {/* 5. Crane Setup Safety Mode Card (After Parked & Secured) */}
-            <CraneSetupSafetyCard
-                isCraneAsset={isCrane}
-                isParkedAndSecured={parkedSecuredState?.isConfirmed ?? false}
-                onVerifySetup={handleVerifyCraneSetup}
-                state={craneSetupState}
-            />
+            {/* 5. Crane Setup Safety Mode Card (Outriggers for Mobile Cranes) */}
+            {isMovingCrane ? (
+                <CraneSetupSafetyCard
+                    isCraneAsset={isCrane}
+                    isParkedAndSecured={
+                        parkedSecuredState?.isConfirmed ?? false
+                    }
+                    onVerifySetup={handleVerifyCraneSetup}
+                    state={craneSetupState}
+                />
+            ) : null}
 
             {/* 5b. Construction Working Shift Execution Card */}
             {job.status.value === 'working' ? (

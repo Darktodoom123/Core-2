@@ -58,8 +58,8 @@ function createV2Fixture(bool $approved = true, bool $acceptedOffers = true): ar
 {
     $dispatcher = createV2User(RoleName::OperationsManager, 'V2 Dispatcher');
     $manager = createV2User(RoleName::OperationsManager, 'V2 Manager');
-    $leadWorker = createV2User(RoleName::Driver, 'V2 Lead Driver');
-    $secondWorker = createV2User(RoleName::Driver, 'V2 Second Driver');
+    $leadWorker = createV2User(RoleName::CraneOperator, 'V2 Lead Driver');
+    $secondWorker = createV2User(RoleName::CraneOperator, 'V2 Second Driver');
 
     foreach ([$leadWorker, $secondWorker] as $worker) {
         PersonnelCredential::query()->create([

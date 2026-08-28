@@ -181,7 +181,6 @@ final class DispatchResourceEligibility
     public function personnelAssignmentType(User $user): ?string
     {
         return match (true) {
-            $user->hasRole(RoleName::Driver->value) => RoleName::Driver->value,
             $user->hasRole(RoleName::CraneOperator->value) => RoleName::CraneOperator->value,
             default => null,
         };
@@ -190,8 +189,7 @@ final class DispatchResourceEligibility
     public function personnelAssignmentLabel(string $assignmentType): string
     {
         return match ($assignmentType) {
-            'driver' => 'Driver',
-            'crane_operator' => 'Crane operator',
+            'crane_operator', 'operator' => 'Crane operator',
             default => 'Personnel',
         };
     }
@@ -210,8 +208,7 @@ final class DispatchResourceEligibility
     private function personnelRole(string $assignmentType): ?RoleName
     {
         return match ($assignmentType) {
-            'driver' => RoleName::Driver,
-            'crane_operator' => RoleName::CraneOperator,
+            'crane_operator', 'operator' => RoleName::CraneOperator,
             default => null,
         };
     }

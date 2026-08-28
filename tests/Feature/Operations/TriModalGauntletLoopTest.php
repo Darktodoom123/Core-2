@@ -132,7 +132,7 @@ it('Gate 4: captures baseline and return condition diffs on Rental handover', fu
 });
 
 it('Gate 5: completes job report, records audit trail, and notifies operations', function (): void {
-    $driver = gauntletUser(RoleName::Driver);
+    $driver = gauntletUser(RoleName::CraneOperator);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-G5-AUDIT',
         'client' => 'Gauntlet Mining Co',
