@@ -35,7 +35,7 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
 
     test('authenticated operations workspace passes axe accessibility audit', async ({ page }) => {
         const fixtures = browserFixtures();
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto('/');
         await expect(page.locator('#workspace-navigation')).toBeVisible();
         await expect(page.locator('#workspace-content')).toBeVisible();
@@ -45,7 +45,7 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
 
     test('authenticated dispatch detail workspace passes axe accessibility audit', async ({ page }) => {
         const fixtures = browserFixtures();
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto('/operations/dispatch-jobs/' + fixtures.job_id);
         await expect(page.getByRole('heading', { name: 'Prepare this dispatch for activation' })).toBeVisible();
         const results = await new AxeBuilder({ page }).disableRules(['color-contrast']).analyze();

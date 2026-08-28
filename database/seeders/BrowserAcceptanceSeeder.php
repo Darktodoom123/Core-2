@@ -209,6 +209,8 @@ final class BrowserAcceptanceSeeder extends Seeder
                 'admin' => $admin->username,
                 'manager' => $manager->username,
                 'operator' => $operator->username,
+                'dispatcher' => $manager->username,
+                'driver' => $operator->username,
             ],
             'password' => 'password',
             'job_id' => $job->id,

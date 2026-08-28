@@ -58,7 +58,7 @@ async function stubStadiaStyle(
 async function openTracking(page: Page) {
     const fixtures = browserFixtures();
 
-    await signIn(page, fixtures.users.dispatcher, fixtures.password);
+    await signIn(page, fixtures.users.manager, fixtures.password);
     await page.goto('/?view=assets');
     await page.getByRole('button', { name: 'Fleet map view' }).click();
 }

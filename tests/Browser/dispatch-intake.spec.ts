@@ -188,7 +188,7 @@ test.describe('New dispatch direct-intake contract', () => {
         captureRuntimeErrors(page);
 
         const fixtures = browserFixtures();
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.manager, fixtures.password);
     });
 
     test.afterEach(async ({ page }) => {

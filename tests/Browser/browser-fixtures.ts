@@ -30,10 +30,22 @@ export function browserFixtures(): BrowserFixtures {
     return JSON.parse(readFileSync(path, 'utf8')) as BrowserFixtures;
 }
 
-export async function signIn(page: Page, username: string, password: string) {
+export async function signIn(
+    page: Page,
+    username?: string,
+    password?: string,
+) {
+    const fixtures = browserFixtures();
+    const resolvedUser =
+        username ||
+        fixtures.users.manager ||
+        fixtures.users.dispatcher ||
+        'manager';
+    const resolvedPass = password || fixtures.password || 'password';
+
     await page.goto('/login');
-    await page.getByLabel('Username').fill(username);
-    await page.getByLabel('Password').fill(password);
+    await page.getByLabel('Username').fill(resolvedUser);
+    await page.getByLabel('Password').fill(resolvedPass);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL(/\/$/);
 }

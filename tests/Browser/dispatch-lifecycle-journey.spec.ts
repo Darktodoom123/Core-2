@@ -8,7 +8,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
 
         // 1. Verify workspace headers and flow setup
@@ -166,7 +166,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         const fixtures = browserFixtures();
 
         await page.setViewportSize({ width: 390, height: 844 });
-        await signIn(page, fixtures.users.driver, fixtures.password);
+        await signIn(page, fixtures.users.operator, fixtures.password);
         await page.goto(
             `/operations/dispatch-jobs/${fixtures.assigned_job_id}`,
         );
@@ -217,7 +217,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
     }) => {
         const fixtures = browserFixtures();
 
-        await signIn(page, fixtures.users.dispatcher, fixtures.password);
+        await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto(
             `/operations/dispatch-jobs/${fixtures.lifecycle_job_id ?? fixtures.job_id}`,
         );
