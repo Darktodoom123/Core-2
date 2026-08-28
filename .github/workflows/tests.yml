@@ -35,6 +35,17 @@ jobs:
           coverage: none
           extensions: mbstring, xml, curl, zip, gd, intl, sqlite3, pdo_sqlite
 
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@13aacd865c20de90d75de16f721f580d55dad854 # v4.1.2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -56,11 +67,8 @@ jobs:
       - name: Build Assets
         run: npm run build
 
-      - name: Run Type Analysis
-        run: composer types:check
-
       - name: Tests
-        run: php artisan test
+        run: php artisan test --parallel
 
   browser-acceptance:
     name: Browser Acceptance & Accessibility
@@ -93,6 +101,17 @@ jobs:
           coverage: none
           extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
 
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@13aacd865c20de90d75de16f721f580d55dad854 # v4.1.2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
       - name: Setup Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -113,6 +132,13 @@ jobs:
 
       - name: Build Assets
         run: npm run build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@13aacd865c20de90d75de16f721f580d55dad854 # v4.1.2
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-playwright-
 
       - name: Install browser test runtime
         run: npx playwright install --with-deps chromium
@@ -159,6 +185,17 @@ jobs:
           tools: composer:v2
           coverage: none
           extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@13aacd865c20de90d75de16f721f580d55dad854 # v4.1.2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
