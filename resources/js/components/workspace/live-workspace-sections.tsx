@@ -1,23 +1,32 @@
 import { router, useForm } from '@inertiajs/react';
 import {
+    AlertTriangle,
     Award,
     Bot,
     Check,
     CheckCircle2,
+    ClipboardCheck,
+    Clock,
     Compass,
     Copy,
     Download,
+    Droplets,
     FileText,
     Fuel,
+    Gauge,
     Key,
     MapPin,
     Navigation,
     Radio,
+    Search,
+    SearchX,
     ShieldAlert,
+    ShieldCheck,
     Trash2,
     Truck,
     UserPlus,
     Users,
+    Wrench,
     X,
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
@@ -30,6 +39,7 @@ import {
     Panel,
     Skeleton,
 } from '@/components/ui';
+import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { ArchiveSurface } from '@/components/workspace/archive-workspace-section';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { GptRecommendationsSurface } from '@/components/workspace/gpt-workspace-section';
@@ -198,12 +208,123 @@ function AssetsSurface({
     initialViewMode?: 'list' | 'map';
 }) {
     const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<
+        'all' | 'cranes' | 'trucks' | 'available' | 'maintenance'
+    >('all');
     const [selectedAssetId, setSelectedAssetId] = useState<number | null>(
         assets.length > 0 ? assets[0].id : null,
     );
 
+    const kpis = useMemo(() => {
+        let ready = 0;
+        let working = 0;
+        let maintenance = 0;
+        let cranes = 0;
+        let trucks = 0;
+
+        for (const a of assets) {
+            const v = a.status?.value;
+            const k = (a.kind || '').toLowerCase();
+            const sub = (a.subtype || '').toLowerCase();
+
+            if (k.includes('crane') || sub.includes('crane')) {
+                cranes += 1;
+            } else if (
+                k.includes('truck') ||
+                k.includes('vehicle') ||
+                k.includes('trailer') ||
+                sub.includes('truck') ||
+                sub.includes('trailer')
+            ) {
+                trucks += 1;
+            }
+
+            if (
+                (v === 'available' || v === 'ready_for_service') &&
+                a.blocking_work_orders_count === 0
+            ) {
+                ready += 1;
+            } else if (
+                v === 'working' ||
+                v === 'assigned' ||
+                v === 'in_transit' ||
+                v === 'on_site'
+            ) {
+                working += 1;
+            } else if (
+                v === 'maintenance' ||
+                v === 'out_of_service' ||
+                v === 'under_maintenance' ||
+                a.blocking_work_orders_count > 0
+            ) {
+                maintenance += 1;
+            }
+        }
+
+        return {
+            total: assets.length,
+            ready,
+            working,
+            maintenance,
+            cranes,
+            trucks,
+        };
+    }, [assets]);
+
+    const filteredAssets = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+
+        return assets.filter((asset) => {
+            const kindLower = (asset.kind || '').toLowerCase();
+            const subtypeLower = (asset.subtype || '').toLowerCase();
+            const isCrane =
+                kindLower.includes('crane') || subtypeLower.includes('crane');
+            const isTruck =
+                kindLower.includes('truck') ||
+                kindLower.includes('vehicle') ||
+                kindLower.includes('trailer') ||
+                subtypeLower.includes('truck') ||
+                subtypeLower.includes('trailer');
+            const isAvailable =
+                (asset.status?.value === 'available' ||
+                    asset.status?.value === 'ready_for_service') &&
+                asset.blocking_work_orders_count === 0;
+            const isMaintenance =
+                asset.status?.value === 'maintenance' ||
+                asset.status?.value === 'out_of_service' ||
+                asset.status?.value === 'under_maintenance' ||
+                asset.blocking_work_orders_count > 0;
+
+            const matchesCategory =
+                categoryFilter === 'all'
+                    ? true
+                    : categoryFilter === 'cranes'
+                      ? isCrane
+                      : categoryFilter === 'trucks'
+                        ? isTruck
+                        : categoryFilter === 'available'
+                          ? isAvailable
+                          : categoryFilter === 'maintenance'
+                            ? isMaintenance
+                            : true;
+
+            const matchesQuery =
+                q === '' ||
+                `${asset.code} ${asset.name} ${asset.model ?? ''} ${asset.manufacturer ?? ''} ${asset.registration_number ?? ''} ${asset.kind} ${asset.subtype ?? ''} ${asset.rated_capacity ?? ''}`
+                    .toLowerCase()
+                    .includes(q);
+
+            return matchesCategory && matchesQuery;
+        });
+    }, [assets, categoryFilter, searchQuery]);
+
     const selectedAsset =
-        assets.find((a) => a.id === selectedAssetId) ?? assets[0];
+        filteredAssets.find((a) => a.id === selectedAssetId) ??
+        filteredAssets[0] ??
+        assets.find((a) => a.id === selectedAssetId) ??
+        assets[0] ??
+        null;
 
     const selectedAssetLocation = useMemo(
         () =>
@@ -233,6 +354,72 @@ function AssetsSurface({
                 description="Core 3 assets, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
+                {/* Fleet Health & Readiness KPI Strip */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                Total Fleet
+                            </span>
+                            <Truck className="h-4 w-4 text-ink-soft" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.total}{' '}
+                            <span className="text-xs font-normal text-ink-soft">
+                                units
+                            </span>
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            {kpis.cranes} Cranes · {kpis.trucks} Transport
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
+                                Ready to Deploy
+                            </span>
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.ready}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Certified &amp; available
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
+                                Active on Jobs
+                            </span>
+                            <Radio className="h-4 w-4 animate-pulse text-brand" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.working}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Working or in transit
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
+                                Maintenance Holds
+                            </span>
+                            <Wrench className="h-4 w-4 text-warning" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.maintenance}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Work orders or holds
+                        </p>
+                    </div>
+                </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex rounded-lg border border-line bg-surface-subtle p-1 shadow-xs">
                         <button
@@ -317,97 +504,242 @@ function AssetsSurface({
                     <div className="grid gap-6 lg:grid-cols-12">
                         <div className="lg:col-span-5 xl:col-span-4">
                             <Panel className="overflow-hidden">
-                                <div className="border-b border-line px-4 py-3 font-semibold text-ink">
-                                    Operational assets ({assets.length})
-                                </div>
-                                <ul className="divide-y divide-line">
-                                    {assets.map((asset) => {
-                                        const isSelected =
-                                            asset.id === selectedAsset?.id;
-                                        const matchingLoc = locations.find(
-                                            (l) => l.asset?.id === asset.id,
-                                        );
-                                        const hasLiveGps =
-                                            matchingLoc &&
-                                            matchingLoc.latitude !== null &&
-                                            matchingLoc.longitude !== null;
+                                <div className="space-y-3 border-b border-line p-3.5">
+                                    <label className="relative block">
+                                        <span className="sr-only">
+                                            Search assets
+                                        </span>
+                                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+                                        <input
+                                            type="search"
+                                            value={searchQuery}
+                                            onChange={(e) =>
+                                                setSearchQuery(e.target.value)
+                                            }
+                                            placeholder="Search code, model, plate, tons…"
+                                            className="h-9 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-xs placeholder:text-ink-soft"
+                                        />
+                                    </label>
 
-                                        return (
-                                            <li key={asset.id}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSelectedAssetId(
-                                                            asset.id,
-                                                        )
-                                                    }
-                                                    className={cn(
-                                                        'w-full px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
-                                                        isSelected &&
-                                                            'bg-brand-soft/60',
-                                                    )}
-                                                    aria-pressed={isSelected}
-                                                >
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="font-semibold text-ink">
-                                                            {asset.code}
-                                                        </span>
-                                                        <CanonicalStatusBadge
-                                                            status={
-                                                                asset.status
-                                                            }
-                                                        />
-                                                    </div>
-                                                    <p className="mt-1 text-sm font-medium text-ink-soft">
-                                                        {asset.name}
-                                                    </p>
-                                                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
-                                                        <span>
-                                                            {humanize(
-                                                                asset.kind,
-                                                            )}
-                                                        </span>
-                                                        <span>·</span>
-                                                        {hasLiveGps ? (
-                                                            <span className="inline-flex items-center gap-1 font-semibold text-brand-strong">
-                                                                <Radio className="h-3 w-3 animate-pulse text-success-strong" />
-                                                                GPS Live
-                                                                {matchingLoc.speed !==
-                                                                    null &&
-                                                                matchingLoc.speed >
-                                                                    0
-                                                                    ? ` (${matchingLoc.speed} km/h)`
-                                                                    : ''}
-                                                            </span>
-                                                        ) : (
-                                                            <span>
-                                                                {asset.location ??
-                                                                    'Location not set'}
-                                                            </span>
+                                    {/* 1-Click Category Filter Pills */}
+                                    <div
+                                        className="flex flex-wrap gap-1"
+                                        role="group"
+                                        aria-label="Filter fleet assets"
+                                    >
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                categoryFilter === 'all'
+                                            }
+                                            onClick={() =>
+                                                setCategoryFilter('all')
+                                            }
+                                            className={cn(
+                                                'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                categoryFilter === 'all'
+                                                    ? 'bg-ink font-semibold text-canvas'
+                                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            )}
+                                        >
+                                            All ({kpis.total})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                categoryFilter === 'cranes'
+                                            }
+                                            onClick={() =>
+                                                setCategoryFilter('cranes')
+                                            }
+                                            className={cn(
+                                                'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                categoryFilter === 'cranes'
+                                                    ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            )}
+                                        >
+                                            Cranes ({kpis.cranes})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                categoryFilter === 'trucks'
+                                            }
+                                            onClick={() =>
+                                                setCategoryFilter('trucks')
+                                            }
+                                            className={cn(
+                                                'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                categoryFilter === 'trucks'
+                                                    ? 'border border-line-strong bg-surface-subtle font-semibold text-ink'
+                                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            )}
+                                        >
+                                            Transport ({kpis.trucks})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                categoryFilter === 'available'
+                                            }
+                                            onClick={() =>
+                                                setCategoryFilter('available')
+                                            }
+                                            className={cn(
+                                                'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                categoryFilter === 'available'
+                                                    ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
+                                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            )}
+                                        >
+                                            Ready ({kpis.ready})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                categoryFilter === 'maintenance'
+                                            }
+                                            onClick={() =>
+                                                setCategoryFilter('maintenance')
+                                            }
+                                            className={cn(
+                                                'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                categoryFilter === 'maintenance'
+                                                    ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
+                                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            )}
+                                        >
+                                            Holds ({kpis.maintenance})
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {filteredAssets.length === 0 ? (
+                                    <EmptyState
+                                        compact
+                                        icon={SearchX}
+                                        title="No matching assets"
+                                        message="Try another asset code, model, or filter category."
+                                        primaryAction={
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setSearchQuery('');
+                                                    setCategoryFilter('all');
+                                                }}
+                                            >
+                                                Clear filters
+                                            </Button>
+                                        }
+                                    />
+                                ) : (
+                                    <ul className="divide-y divide-line">
+                                        {filteredAssets.map((asset) => {
+                                            const isSelected =
+                                                asset.id === selectedAsset?.id;
+                                            const matchingLoc = locations.find(
+                                                (l) => l.asset?.id === asset.id,
+                                            );
+                                            const hasLiveGps =
+                                                matchingLoc &&
+                                                matchingLoc.latitude !== null &&
+                                                matchingLoc.longitude !== null;
+
+                                            return (
+                                                <li key={asset.id}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setSelectedAssetId(
+                                                                asset.id,
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle',
+                                                            isSelected &&
+                                                                'bg-brand-soft/60 ring-1 ring-brand/30',
                                                         )}
+                                                        aria-pressed={
+                                                            isSelected
+                                                        }
+                                                    >
+                                                        <div className="flex items-center justify-between gap-1.5">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-xs font-bold text-ink">
+                                                                    {asset.code}
+                                                                </span>
+                                                                {asset.rated_capacity && (
+                                                                    <span className="py-0.2 rounded border border-line bg-surface-subtle px-1.5 font-mono text-[10px] font-semibold text-ink-soft">
+                                                                        {
+                                                                            asset.rated_capacity
+                                                                        }{' '}
+                                                                        {asset.capacity_unit ??
+                                                                            'MT'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <CanonicalStatusBadge
+                                                                status={
+                                                                    asset.status
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <p className="mt-0.5 truncate text-xs font-semibold text-ink">
+                                                            {asset.name}
+                                                        </p>
+                                                        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[11px] text-ink-soft">
+                                                            <span className="truncate">
+                                                                {humanize(
+                                                                    asset.subtype ||
+                                                                        asset.kind,
+                                                                )}
+                                                            </span>
+                                                            {hasLiveGps ? (
+                                                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-strong">
+                                                                    <Radio className="h-2.5 w-2.5 animate-pulse text-success" />
+                                                                    GPS Live{' '}
+                                                                    {matchingLoc.speed !==
+                                                                        null &&
+                                                                    matchingLoc.speed >
+                                                                        0
+                                                                        ? `(${matchingLoc.speed} km/h)`
+                                                                        : ''}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="max-w-[110px] truncate text-[10px]">
+                                                                    {asset.location ??
+                                                                        'Base Yard'}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {asset.blocking_work_orders_count >
                                                             0 && (
-                                                            <>
-                                                                <span>·</span>
-                                                                <span className="font-medium text-danger">
-                                                                    {
-                                                                        asset.blocking_work_orders_count
-                                                                    }{' '}
-                                                                    blocking
-                                                                </span>
-                                                            </>
+                                                            <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-danger">
+                                                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                                                {
+                                                                    asset.blocking_work_orders_count
+                                                                }{' '}
+                                                                blocking work
+                                                                order
+                                                                {asset.blocking_work_orders_count >
+                                                                1
+                                                                    ? 's'
+                                                                    : ''}
+                                                            </div>
                                                         )}
-                                                    </div>
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
                             </Panel>
                         </div>
 
                         <div className="lg:col-span-7 xl:col-span-8">
-                            {selectedAsset && (
+                            {selectedAsset ? (
                                 <AssetDetailPane
                                     asset={selectedAsset}
                                     assetLocation={selectedAssetLocation}
@@ -417,6 +749,14 @@ function AssetsSurface({
                                         setViewMode('map')
                                     }
                                 />
+                            ) : (
+                                <Panel>
+                                    <EmptyState
+                                        icon={Truck}
+                                        title="Select an asset"
+                                        message="Choose a crane or transport unit to review its telematics, specifications, and maintenance records."
+                                    />
+                                </Panel>
                             )}
                         </div>
                     </div>
@@ -630,26 +970,27 @@ function AssetDetailPane({
                     type="button"
                     onClick={() => setActiveTab('overview')}
                     className={cn(
-                        'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
                         activeTab === 'overview'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
                     )}
                 >
-                    Specifications & metrics
+                    <Gauge className="h-4 w-4" />
+                    Overview &amp; Specs
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('telemetry')}
                     className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
                         activeTab === 'telemetry'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
                     )}
                 >
                     <MapPin className="h-4 w-4" />
-                    Live GPS & Telemetry
+                    Live Telemetry
                     {hasLiveGps && (
                         <span className="h-2 w-2 animate-pulse rounded-full bg-success-strong" />
                     )}
@@ -658,37 +999,62 @@ function AssetDetailPane({
                     type="button"
                     onClick={() => setActiveTab('status')}
                     className={cn(
-                        'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
                         activeTab === 'status'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
                     )}
                 >
-                    Status management
+                    <ShieldCheck className="h-4 w-4" />
+                    Readiness &amp; Status
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('inspections')}
                     className={cn(
-                        'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
                         activeTab === 'inspections'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
                     )}
                 >
-                    Inspections ({asset.inspections.length})
+                    <ClipboardCheck className="h-4 w-4" />
+                    Inspections
+                    <span
+                        className={cn(
+                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                            asset.inspections.length > 0
+                                ? 'bg-brand-soft text-brand-strong'
+                                : 'border border-line bg-surface-subtle text-ink-soft',
+                        )}
+                    >
+                        {asset.inspections.length}
+                    </span>
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('maintenance')}
                     className={cn(
-                        'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
                         activeTab === 'maintenance'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
                     )}
                 >
-                    Work orders ({asset.maintenance_work_orders.length})
+                    <Wrench className="h-4 w-4" />
+                    Work Orders
+                    <span
+                        className={cn(
+                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                            asset.blocking_work_orders_count > 0
+                                ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                : asset.maintenance_work_orders.length > 0
+                                  ? 'bg-brand-soft text-brand-strong'
+                                  : 'border border-line bg-surface-subtle text-ink-soft',
+                        )}
+                    >
+                        {asset.maintenance_work_orders.length}
+                    </span>
                 </button>
             </div>
 
@@ -982,6 +1348,15 @@ function AssetTelemetrySection({
                     />
                 </Suspense>
             </div>
+
+            {/* Hyper-local Site Weather & Wind Safety at Crane GPS Location */}
+            <WeatherSafetyTelemetry
+                variant="site"
+                latitude={location.latitude}
+                longitude={location.longitude}
+                locationLabel={`${asset.code} Current Telemetry Location`}
+                className="mt-3"
+            />
 
             {onViewFullTracking && (
                 <div className="flex justify-end pt-1">
@@ -1570,7 +1945,10 @@ function FuelSurface({
 }) {
     const [pendingAction, setPendingAction] = useState<string | null>(null);
     const [activeLogId, setActiveLogId] = useState<number | null>(null);
-    const [filterMode, setFilterMode] = useState<'all' | 'anomalies'>('all');
+    const [filterStatus, setFilterStatus] = useState<
+        'all' | 'pending' | 'approved' | 'logged' | 'anomalies'
+    >('all');
+    const [searchQuery, setSearchQuery] = useState('');
     const [decisionReason, setDecisionReason] = useState<
         Record<number, string>
     >({});
@@ -1634,34 +2012,162 @@ function FuelSurface({
         });
     };
 
-    const totalAnomalies = requests.reduce(
-        (acc, req) =>
-            acc + (req.logs?.filter((l) => l.is_anomaly)?.length ?? 0),
-        0,
-    );
+    const kpis = useMemo(() => {
+        let pending = 0;
+        let approved = 0;
+        let logged = 0;
+        let totalLitres = 0;
+        let anomalies = 0;
 
-    const filteredRequests =
-        filterMode === 'anomalies'
-            ? requests.filter((req) => req.logs?.some((l) => l.is_anomaly))
-            : requests;
+        for (const req of requests) {
+            const v = req.status.value;
+            const litres = Number(req.quantity_litres) || 0;
+            totalLitres += litres;
+
+            if (v === 'submitted' || v === 'forwarded') {
+                pending += 1;
+            } else if (v === 'approved') {
+                approved += 1;
+            } else if (v === 'logged' || v === 'verified') {
+                logged += 1;
+            }
+
+            if (req.logs?.some((l) => l.is_anomaly)) {
+                anomalies += 1;
+            }
+        }
+
+        return {
+            total: requests.length,
+            pending,
+            approved,
+            logged,
+            anomalies,
+            totalLitres,
+        };
+    }, [requests]);
+
+    const filteredRequests = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+
+        return requests.filter((req) => {
+            const v = req.status.value;
+            const hasAnomaly = req.logs?.some((l) => l.is_anomaly);
+
+            const matchesStatus =
+                filterStatus === 'all'
+                    ? true
+                    : filterStatus === 'pending'
+                      ? v === 'submitted' || v === 'forwarded'
+                      : filterStatus === 'approved'
+                        ? v === 'approved'
+                        : filterStatus === 'logged'
+                          ? v === 'logged' || v === 'verified'
+                          : filterStatus === 'anomalies'
+                            ? hasAnomaly
+                            : true;
+
+            const matchesQuery =
+                q === '' ||
+                `${req.reference} ${req.requester.name} ${req.purpose} ${req.fuel_type} ${req.asset?.code ?? ''} ${req.asset?.name ?? ''} ${req.job?.reference ?? ''}`
+                    .toLowerCase()
+                    .includes(q);
+
+            return matchesStatus && matchesQuery;
+        });
+    }, [requests, filterStatus, searchQuery]);
 
     return (
         <div>
             <PageHeading
-                title="Fuel operations"
-                description="Requests move through the canonical submitted, forwarded, approved, verified, and logged workflow."
+                title="Fuel Operations"
+                description="Heavy equipment diesel governance, burn-rate variance tracking, and authorization workflows."
             />
-            <div className="space-y-5 p-4 md:p-6">
+            <div className="space-y-6 p-4 md:p-6">
+                {/* Fuel Operations & Governance KPI Strip */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
+                                Pending Sign-Off
+                            </span>
+                            <Clock className="h-4 w-4 text-warning" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.pending}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Awaiting manager decision
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
+                                Active / Dispensing
+                            </span>
+                            <Fuel className="h-4 w-4 text-brand" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.approved}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Approved for station refueling
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
+                                Verified &amp; Logged
+                            </span>
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.logged}
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Meters &amp; receipts attached
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                Fuel Volume
+                            </span>
+                            <Droplets className="h-4 w-4 text-ink-soft" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+                            {kpis.totalLitres.toLocaleString()}{' '}
+                            <span className="text-xs font-normal text-ink-soft">
+                                Litres
+                            </span>
+                        </p>
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            {kpis.anomalies > 0 ? (
+                                <span className="font-semibold text-danger">
+                                    ⚠️ {kpis.anomalies} burn-rate anomaly
+                                </span>
+                            ) : (
+                                'All within baseline burn rate'
+                            )}
+                        </p>
+                    </div>
+                </div>
+
                 {capabilities.request_fuel && (
-                    <Panel className="p-4">
-                        <h2 className="font-semibold">Submit fuel request</h2>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            The request remains scoped to its authenticated
-                            requester.
+                    <Panel className="p-4 md:p-5">
+                        <h2 className="text-sm font-bold text-ink">
+                            Submit Fuel Request
+                        </h2>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Submit equipment refueling requests scoped to your
+                            active assignments.
                         </p>
                         <form
                             onSubmit={submit}
-                            className="mt-4 grid gap-4 md:grid-cols-[12rem_12rem_minmax(16rem,1fr)_auto]"
+                            className="mt-4 grid gap-3 md:grid-cols-[12rem_12rem_minmax(16rem,1fr)_auto]"
                             noValidate
                         >
                             <FuelInput
@@ -1673,8 +2179,8 @@ function FuelSurface({
                                     form.setData('quantity_litres', value)
                                 }
                             />
-                            <label className="text-sm font-medium">
-                                Fuel type
+                            <label className="text-xs font-medium text-ink">
+                                Fuel Type
                                 <select
                                     value={form.data.fuel_type}
                                     onChange={(event) =>
@@ -1683,14 +2189,14 @@ function FuelSurface({
                                             event.target.value,
                                         )
                                     }
-                                    className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
+                                    className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
                                 >
                                     <option value="diesel">Diesel</option>
                                     <option value="gasoline">Gasoline</option>
                                 </select>
                             </label>
                             <FuelInput
-                                label="Purpose"
+                                label="Purpose & Equipment Code"
                                 value={form.data.purpose}
                                 error={form.errors.purpose}
                                 onChange={(value) =>
@@ -1712,140 +2218,340 @@ function FuelSurface({
                     </Panel>
                 )}
 
-                {/* Filter and Overview Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        className="flex flex-wrap gap-1"
+                        role="group"
+                        aria-label="Filter fuel requests"
+                    >
                         <button
                             type="button"
-                            onClick={() => setFilterMode('all')}
-                            className={`inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                                filterMode === 'all'
-                                    ? 'bg-brand text-white shadow-sm'
-                                    : 'border border-line-strong bg-surface text-ink-soft hover:bg-surface-subtle'
-                            }`}
+                            aria-pressed={filterStatus === 'all'}
+                            onClick={() => setFilterStatus('all')}
+                            className={cn(
+                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                filterStatus === 'all'
+                                    ? 'bg-ink font-semibold text-canvas'
+                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                            )}
                         >
-                            All Requests ({requests.length})
+                            All ({kpis.total})
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFilterMode('anomalies')}
-                            className={`inline-flex min-h-11 items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                                filterMode === 'anomalies'
-                                    ? 'bg-danger text-white shadow-sm'
-                                    : totalAnomalies > 0
-                                      ? 'border border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/80'
-                                      : 'border border-line-strong bg-surface text-ink-soft hover:bg-surface-subtle'
-                            }`}
+                            aria-pressed={filterStatus === 'pending'}
+                            onClick={() => setFilterStatus('pending')}
+                            className={cn(
+                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                filterStatus === 'pending'
+                                    ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
+                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                            )}
                         >
-                            ⚠️ Anomalies ({totalAnomalies})
+                            Pending Sign-Off ({kpis.pending})
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={filterStatus === 'approved'}
+                            onClick={() => setFilterStatus('approved')}
+                            className={cn(
+                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                filterStatus === 'approved'
+                                    ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                            )}
+                        >
+                            Approved ({kpis.approved})
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={filterStatus === 'logged'}
+                            onClick={() => setFilterStatus('logged')}
+                            className={cn(
+                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                filterStatus === 'logged'
+                                    ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
+                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                            )}
+                        >
+                            Logged ({kpis.logged})
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={filterStatus === 'anomalies'}
+                            onClick={() => setFilterStatus('anomalies')}
+                            className={cn(
+                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                filterStatus === 'anomalies'
+                                    ? 'border border-danger/40 bg-danger-soft font-semibold text-danger-strong'
+                                    : kpis.anomalies > 0
+                                      ? 'border border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/80'
+                                      : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                            )}
+                        >
+                            ⚠️ Anomalies ({kpis.anomalies})
                         </button>
                     </div>
+
+                    <label className="relative block sm:w-64">
+                        <span className="sr-only">Search fuel requests</span>
+                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+                        <input
+                            type="search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search reference, asset, purpose…"
+                            className="h-8 w-full rounded-lg border border-line bg-surface-subtle pr-3 pl-9 text-xs placeholder:text-ink-soft"
+                        />
+                    </label>
                 </div>
 
-                <Panel className="overflow-hidden">
-                    {filteredRequests.length === 0 ? (
-                        <EmptyState
-                            icon={Fuel}
-                            title={
-                                filterMode === 'anomalies'
-                                    ? 'No fuel anomalies detected'
-                                    : 'No fuel requests available'
-                            }
-                            message={
-                                filterMode === 'anomalies'
-                                    ? 'All recorded fuel consumption logs are within standard variance and burn rate baselines.'
-                                    : capabilities.request_fuel
-                                      ? 'Submit a request above when fuel is required for assigned work.'
-                                      : 'Requests visible to your role will appear here.'
-                            }
-                        />
-                    ) : (
-                        <ul className="divide-y divide-line">
-                            {filteredRequests.map((request) => {
-                                const nextAction = getFuelAction(
-                                    request,
-                                    capabilities,
-                                );
-                                const actionId = nextAction
-                                    ? `${request.id}:${nextAction.status}`
-                                    : null;
-                                const isLoggingThis =
-                                    activeLogId === request.id;
-                                const hasAnomaly = request.logs?.some(
-                                    (l) => l.is_anomaly,
-                                );
+                {requests.length === 0 ? (
+                    <Panel className="overflow-hidden p-6 md:p-8">
+                        <div className="mx-auto max-w-2xl text-center">
+                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-brand-soft/50 text-brand-strong shadow-xs">
+                                <Fuel className="h-7 w-7" />
+                            </div>
+                            <h3 className="mt-4 text-base font-bold tracking-tight text-ink md:text-lg">
+                                Fleet Fuel Telematics &amp; Authorizations
+                            </h3>
+                            <p className="mt-1.5 text-xs text-ink-soft md:text-sm">
+                                All mobile equipment refuel requests are
+                                governed by asset baseline burn-rate limits
+                                (L/hr). Field requests move through canonical
+                                authorization steps before fuel station
+                                disbursement.
+                            </p>
 
-                                return (
-                                    <li
-                                        key={request.id}
-                                        className={`flex flex-col gap-4 px-4 py-4 ${
-                                            hasAnomaly
-                                                ? 'bg-danger-soft/10'
-                                                : ''
-                                        }`}
+                            <div className="mt-6 grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
+                                <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                    <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                        1. Field Submit
+                                    </span>
+                                    <p className="mt-1 text-xs font-semibold text-ink">
+                                        Operator Request
+                                    </p>
+                                    <p className="text-[10px] text-ink-soft">
+                                        Litres &amp; job scope
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                    <span className="text-[10px] font-bold text-brand-strong uppercase">
+                                        2. Sign-Off
+                                    </span>
+                                    <p className="mt-1 text-xs font-semibold text-ink">
+                                        Manager Approval
+                                    </p>
+                                    <p className="text-[10px] text-ink-soft">
+                                        Burn-rate verified
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                    <span className="text-[10px] font-bold text-warning-strong uppercase">
+                                        3. Dispense
+                                    </span>
+                                    <p className="mt-1 text-xs font-semibold text-ink">
+                                        Station Fueling
+                                    </p>
+                                    <p className="text-[10px] text-ink-soft">
+                                        Pump allocation
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border border-line bg-surface-subtle p-3">
+                                    <span className="text-[10px] font-bold text-success-strong uppercase">
+                                        4. Audit Log
+                                    </span>
+                                    <p className="mt-1 text-xs font-semibold text-ink">
+                                        Meters &amp; Receipt
+                                    </p>
+                                    <p className="text-[10px] text-ink-soft">
+                                        Variance tracked
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Panel>
+                ) : (
+                    <Panel className="overflow-hidden">
+                        {filteredRequests.length === 0 ? (
+                            <EmptyState
+                                compact
+                                icon={SearchX}
+                                title="No matching fuel requests"
+                                message="Try adjusting your search query or status filter."
+                                primaryAction={
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setFilterStatus('all');
+                                        }}
                                     >
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <p className="font-semibold">
-                                                        {request.reference}
+                                        Clear filters
+                                    </Button>
+                                }
+                            />
+                        ) : (
+                            <ul className="divide-y divide-line">
+                                {filteredRequests.map((request) => {
+                                    const nextAction = getFuelAction(
+                                        request,
+                                        capabilities,
+                                    );
+                                    const actionId = nextAction
+                                        ? `${request.id}:${nextAction.status}`
+                                        : null;
+                                    const isLoggingThis =
+                                        activeLogId === request.id;
+                                    const hasAnomaly = request.logs?.some(
+                                        (l) => l.is_anomaly,
+                                    );
+
+                                    return (
+                                        <li
+                                            key={request.id}
+                                            className={`flex flex-col gap-4 px-4 py-4 ${
+                                                hasAnomaly
+                                                    ? 'bg-danger-soft/10'
+                                                    : ''
+                                            }`}
+                                        >
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="font-semibold">
+                                                            {request.reference}
+                                                        </p>
+                                                        <CanonicalStatusBadge
+                                                            status={
+                                                                request.status
+                                                            }
+                                                        />
+                                                        {hasAnomaly && (
+                                                            <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger-strong">
+                                                                ⚠️ Anomaly
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="mt-1 text-sm text-ink-soft">
+                                                        {
+                                                            request.quantity_litres
+                                                        }{' '}
+                                                        L ·{' '}
+                                                        {humanize(
+                                                            request.fuel_type,
+                                                        )}{' '}
+                                                        · {request.purpose}
                                                     </p>
-                                                    <CanonicalStatusBadge
-                                                        status={request.status}
-                                                    />
-                                                    {hasAnomaly && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger-strong">
-                                                            ⚠️ Anomaly
-                                                        </span>
+                                                    <p className="mt-1 text-xs text-ink-soft">
+                                                        Requested by{' '}
+                                                        {request.requester.name}
+                                                        {request.asset
+                                                            ? ` · Asset: ${request.asset.code} (${request.asset.name ?? 'Equipment'})`
+                                                            : ''}
+                                                        {request.job
+                                                            ? ` · Job: ${request.job.reference}`
+                                                            : ''}
+                                                        {request.asset
+                                                            ?.baseline_burn_rate
+                                                            ? ` · Baseline: ${request.asset.baseline_burn_rate} ${request.asset.burn_rate_unit ?? ''}`
+                                                            : ''}
+                                                    </p>
+                                                    {request.decision_reason && (
+                                                        <p className="mt-1 text-xs text-ink-soft italic">
+                                                            Reason:{' '}
+                                                            {
+                                                                request.decision_reason
+                                                            }
+                                                        </p>
                                                     )}
                                                 </div>
-                                                <p className="mt-1 text-sm text-ink-soft">
-                                                    {request.quantity_litres} L
-                                                    ·{' '}
-                                                    {humanize(
-                                                        request.fuel_type,
-                                                    )}{' '}
-                                                    · {request.purpose}
-                                                </p>
-                                                <p className="mt-1 text-xs text-ink-soft">
-                                                    Requested by{' '}
-                                                    {request.requester.name}
-                                                    {request.asset
-                                                        ? ` · Asset: ${request.asset.code} (${request.asset.name ?? 'Equipment'})`
-                                                        : ''}
-                                                    {request.job
-                                                        ? ` · Job: ${request.job.reference}`
-                                                        : ''}
-                                                    {request.asset
-                                                        ?.baseline_burn_rate
-                                                        ? ` · Baseline: ${request.asset.baseline_burn_rate} ${request.asset.burn_rate_unit ?? ''}`
-                                                        : ''}
-                                                </p>
-                                                {request.decision_reason && (
-                                                    <p className="mt-1 text-xs text-ink-soft italic">
-                                                        Reason:{' '}
-                                                        {
-                                                            request.decision_reason
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                {nextAction &&
-                                                    nextAction.status ===
-                                                        'approved' &&
-                                                    capabilities.approve_fuel && (
-                                                        <>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {nextAction &&
+                                                        nextAction.status ===
+                                                            'approved' &&
+                                                        capabilities.approve_fuel && (
+                                                            <>
+                                                                <Button
+                                                                    variant="secondary"
+                                                                    onClick={() =>
+                                                                        transition(
+                                                                            request.id,
+                                                                            'approved',
+                                                                            decisionReason[
+                                                                                request
+                                                                                    .id
+                                                                            ],
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        pendingAction !==
+                                                                        null
+                                                                    }
+                                                                >
+                                                                    {pendingAction ===
+                                                                    `${request.id}:approved`
+                                                                        ? 'Approving…'
+                                                                        : 'Approve'}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="danger"
+                                                                    onClick={() =>
+                                                                        transition(
+                                                                            request.id,
+                                                                            'rejected',
+                                                                            decisionReason[
+                                                                                request
+                                                                                    .id
+                                                                            ],
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        pendingAction !==
+                                                                        null
+                                                                    }
+                                                                >
+                                                                    {pendingAction ===
+                                                                    `${request.id}:rejected`
+                                                                        ? 'Rejecting…'
+                                                                        : 'Reject'}
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    {nextAction &&
+                                                        nextAction.status ===
+                                                            'logged' &&
+                                                        capabilities.record_fuel &&
+                                                        !isLoggingThis && (
+                                                            <Button
+                                                                variant="secondary"
+                                                                onClick={() => {
+                                                                    setActiveLogId(
+                                                                        request.id,
+                                                                    );
+                                                                    logForm.setData(
+                                                                        'quantity_litres',
+                                                                        request.quantity_litres,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Record fuel log
+                                                            </Button>
+                                                        )}
+                                                    {nextAction &&
+                                                        nextAction.status !==
+                                                            'approved' &&
+                                                        nextAction.status !==
+                                                            'logged' &&
+                                                        actionId && (
                                                             <Button
                                                                 variant="secondary"
                                                                 onClick={() =>
                                                                     transition(
                                                                         request.id,
-                                                                        'approved',
-                                                                        decisionReason[
-                                                                            request
-                                                                                .id
-                                                                        ],
+                                                                        nextAction.status,
                                                                     )
                                                                 }
                                                                 disabled={
@@ -1854,406 +2560,357 @@ function FuelSurface({
                                                                 }
                                                             >
                                                                 {pendingAction ===
-                                                                `${request.id}:approved`
-                                                                    ? 'Approving…'
-                                                                    : 'Approve'}
+                                                                actionId
+                                                                    ? `${nextAction.label}…`
+                                                                    : nextAction.label}
                                                             </Button>
-                                                            <Button
-                                                                variant="danger"
-                                                                onClick={() =>
-                                                                    transition(
-                                                                        request.id,
-                                                                        'rejected',
-                                                                        decisionReason[
-                                                                            request
-                                                                                .id
-                                                                        ],
-                                                                    )
+                                                        )}
+                                                </div>
+                                            </div>
+
+                                            {nextAction &&
+                                                nextAction.status ===
+                                                    'approved' &&
+                                                capabilities.approve_fuel && (
+                                                    <div className="mt-2">
+                                                        <label
+                                                            htmlFor={`fuel-decision-reason-${request.id}`}
+                                                            className="sr-only"
+                                                        >
+                                                            Decision reason for{' '}
+                                                            {request.reference}
+                                                        </label>
+                                                        <input
+                                                            id={`fuel-decision-reason-${request.id}`}
+                                                            type="text"
+                                                            placeholder="Decision reason (optional for approval, recommended for rejection)"
+                                                            value={
+                                                                decisionReason[
+                                                                    request.id
+                                                                ] || ''
+                                                            }
+                                                            onChange={(e) =>
+                                                                setDecisionReason(
+                                                                    {
+                                                                        ...decisionReason,
+                                                                        [request.id]:
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                    },
+                                                                )
+                                                            }
+                                                            className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-xs"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                            {isLoggingThis && (
+                                                <Panel className="mt-3 bg-surface-subtle p-4">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <h3 className="text-sm font-semibold">
+                                                            Record final fuel
+                                                            log
+                                                        </h3>
+                                                        {request.asset && (
+                                                            <span className="text-xs text-ink-soft">
+                                                                Asset:{' '}
+                                                                {
+                                                                    request
+                                                                        .asset
+                                                                        .code
                                                                 }
-                                                                disabled={
-                                                                    pendingAction !==
-                                                                    null
-                                                                }
-                                                            >
-                                                                {pendingAction ===
-                                                                `${request.id}:rejected`
-                                                                    ? 'Rejecting…'
-                                                                    : 'Reject'}
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                {nextAction &&
-                                                    nextAction.status ===
-                                                        'logged' &&
-                                                    capabilities.record_fuel &&
-                                                    !isLoggingThis && (
-                                                        <Button
-                                                            variant="secondary"
-                                                            onClick={() => {
-                                                                setActiveLogId(
-                                                                    request.id,
-                                                                );
+                                                                {request.asset
+                                                                    .meter_value
+                                                                    ? ` · Current meter: ${request.asset.meter_value} ${
+                                                                          request
+                                                                              .asset
+                                                                              .meter_type ===
+                                                                          'hour_meter'
+                                                                              ? 'hrs'
+                                                                              : 'km'
+                                                                      }`
+                                                                    : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <form
+                                                        onSubmit={(e) =>
+                                                            submitLog(
+                                                                e,
+                                                                request,
+                                                            )
+                                                        }
+                                                        className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3"
+                                                    >
+                                                        <FuelInput
+                                                            label="Litres"
+                                                            type="number"
+                                                            value={
+                                                                logForm.data
+                                                                    .quantity_litres
+                                                            }
+                                                            onChange={(val) =>
                                                                 logForm.setData(
                                                                     'quantity_litres',
-                                                                    request.quantity_litres,
-                                                                );
-                                                            }}
-                                                        >
-                                                            Record fuel log
-                                                        </Button>
-                                                    )}
-                                                {nextAction &&
-                                                    nextAction.status !==
-                                                        'approved' &&
-                                                    nextAction.status !==
-                                                        'logged' &&
-                                                    actionId && (
-                                                        <Button
-                                                            variant="secondary"
-                                                            onClick={() =>
-                                                                transition(
-                                                                    request.id,
-                                                                    nextAction.status,
+                                                                    val,
                                                                 )
                                                             }
-                                                            disabled={
-                                                                pendingAction !==
-                                                                null
+                                                        />
+                                                        <FuelInput
+                                                            label={
+                                                                request.asset
+                                                                    ?.meter_type ===
+                                                                'hour_meter'
+                                                                    ? 'Hour meter (hrs)'
+                                                                    : 'Odometer (km)'
                                                             }
-                                                        >
-                                                            {pendingAction ===
-                                                            actionId
-                                                                ? `${nextAction.label}…`
-                                                                : nextAction.label}
-                                                        </Button>
-                                                    )}
-                                            </div>
-                                        </div>
-
-                                        {nextAction &&
-                                            nextAction.status === 'approved' &&
-                                            capabilities.approve_fuel && (
-                                                <div className="mt-2">
-                                                    <label
-                                                        htmlFor={`fuel-decision-reason-${request.id}`}
-                                                        className="sr-only"
-                                                    >
-                                                        Decision reason for{' '}
-                                                        {request.reference}
-                                                    </label>
-                                                    <input
-                                                        id={`fuel-decision-reason-${request.id}`}
-                                                        type="text"
-                                                        placeholder="Decision reason (optional for approval, recommended for rejection)"
-                                                        value={
-                                                            decisionReason[
-                                                                request.id
-                                                            ] || ''
-                                                        }
-                                                        onChange={(e) =>
-                                                            setDecisionReason({
-                                                                ...decisionReason,
-                                                                [request.id]:
-                                                                    e.target
-                                                                        .value,
-                                                            })
-                                                        }
-                                                        className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-xs"
-                                                    />
-                                                </div>
+                                                            type="number"
+                                                            value={
+                                                                request.asset
+                                                                    ?.meter_type ===
+                                                                'hour_meter'
+                                                                    ? logForm
+                                                                          .data
+                                                                          .hour_meter
+                                                                    : logForm
+                                                                          .data
+                                                                          .odometer_km
+                                                            }
+                                                            onChange={(val) =>
+                                                                request.asset
+                                                                    ?.meter_type ===
+                                                                'hour_meter'
+                                                                    ? logForm.setData(
+                                                                          'hour_meter',
+                                                                          val,
+                                                                      )
+                                                                    : logForm.setData(
+                                                                          'odometer_km',
+                                                                          val,
+                                                                      )
+                                                            }
+                                                        />
+                                                        <FuelInput
+                                                            label="Price / Litre"
+                                                            type="number"
+                                                            value={
+                                                                logForm.data
+                                                                    .price_per_litre
+                                                            }
+                                                            onChange={(val) =>
+                                                                logForm.setData(
+                                                                    'price_per_litre',
+                                                                    val,
+                                                                )
+                                                            }
+                                                        />
+                                                        <FuelInput
+                                                            label="Total Cost"
+                                                            type="number"
+                                                            value={
+                                                                logForm.data
+                                                                    .total_cost
+                                                            }
+                                                            onChange={(val) =>
+                                                                logForm.setData(
+                                                                    'total_cost',
+                                                                    val,
+                                                                )
+                                                            }
+                                                        />
+                                                        <FuelInput
+                                                            label="Fuel Station"
+                                                            value={
+                                                                logForm.data
+                                                                    .fuel_station
+                                                            }
+                                                            onChange={(val) =>
+                                                                logForm.setData(
+                                                                    'fuel_station',
+                                                                    val,
+                                                                )
+                                                            }
+                                                        />
+                                                        <FuelInput
+                                                            label="Remarks"
+                                                            value={
+                                                                logForm.data
+                                                                    .remarks
+                                                            }
+                                                            onChange={(val) =>
+                                                                logForm.setData(
+                                                                    'remarks',
+                                                                    val,
+                                                                )
+                                                            }
+                                                        />
+                                                        <div className="col-span-full flex items-center justify-end gap-2 pt-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="quiet"
+                                                                onClick={() =>
+                                                                    setActiveLogId(
+                                                                        null,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                            <Button
+                                                                type="submit"
+                                                                variant="primary"
+                                                                disabled={
+                                                                    logForm.processing
+                                                                }
+                                                            >
+                                                                {logForm.processing
+                                                                    ? 'Saving log…'
+                                                                    : 'Submit fuel log'}
+                                                            </Button>
+                                                        </div>
+                                                    </form>
+                                                </Panel>
                                             )}
 
-                                        {isLoggingThis && (
-                                            <Panel className="mt-3 bg-surface-subtle p-4">
-                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                    <h3 className="text-sm font-semibold">
-                                                        Record final fuel log
-                                                    </h3>
-                                                    {request.asset && (
-                                                        <span className="text-xs text-ink-soft">
-                                                            Asset:{' '}
-                                                            {request.asset.code}
-                                                            {request.asset
-                                                                .meter_value
-                                                                ? ` · Current meter: ${request.asset.meter_value} ${
-                                                                      request
-                                                                          .asset
-                                                                          .meter_type ===
-                                                                      'hour_meter'
-                                                                          ? 'hrs'
-                                                                          : 'km'
-                                                                  }`
-                                                                : ''}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <form
-                                                    onSubmit={(e) =>
-                                                        submitLog(e, request)
-                                                    }
-                                                    className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3"
-                                                >
-                                                    <FuelInput
-                                                        label="Litres"
-                                                        type="number"
-                                                        value={
-                                                            logForm.data
-                                                                .quantity_litres
-                                                        }
-                                                        onChange={(val) =>
-                                                            logForm.setData(
-                                                                'quantity_litres',
-                                                                val,
-                                                            )
-                                                        }
-                                                    />
-                                                    <FuelInput
-                                                        label={
-                                                            request.asset
-                                                                ?.meter_type ===
-                                                            'hour_meter'
-                                                                ? 'Hour meter (hrs)'
-                                                                : 'Odometer (km)'
-                                                        }
-                                                        type="number"
-                                                        value={
-                                                            request.asset
-                                                                ?.meter_type ===
-                                                            'hour_meter'
-                                                                ? logForm.data
-                                                                      .hour_meter
-                                                                : logForm.data
-                                                                      .odometer_km
-                                                        }
-                                                        onChange={(val) =>
-                                                            request.asset
-                                                                ?.meter_type ===
-                                                            'hour_meter'
-                                                                ? logForm.setData(
-                                                                      'hour_meter',
-                                                                      val,
-                                                                  )
-                                                                : logForm.setData(
-                                                                      'odometer_km',
-                                                                      val,
-                                                                  )
-                                                        }
-                                                    />
-                                                    <FuelInput
-                                                        label="Price / Litre"
-                                                        type="number"
-                                                        value={
-                                                            logForm.data
-                                                                .price_per_litre
-                                                        }
-                                                        onChange={(val) =>
-                                                            logForm.setData(
-                                                                'price_per_litre',
-                                                                val,
-                                                            )
-                                                        }
-                                                    />
-                                                    <FuelInput
-                                                        label="Total Cost"
-                                                        type="number"
-                                                        value={
-                                                            logForm.data
-                                                                .total_cost
-                                                        }
-                                                        onChange={(val) =>
-                                                            logForm.setData(
-                                                                'total_cost',
-                                                                val,
-                                                            )
-                                                        }
-                                                    />
-                                                    <FuelInput
-                                                        label="Fuel Station"
-                                                        value={
-                                                            logForm.data
-                                                                .fuel_station
-                                                        }
-                                                        onChange={(val) =>
-                                                            logForm.setData(
-                                                                'fuel_station',
-                                                                val,
-                                                            )
-                                                        }
-                                                    />
-                                                    <FuelInput
-                                                        label="Remarks"
-                                                        value={
-                                                            logForm.data.remarks
-                                                        }
-                                                        onChange={(val) =>
-                                                            logForm.setData(
-                                                                'remarks',
-                                                                val,
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="col-span-full flex items-center justify-end gap-2 pt-2">
-                                                        <Button
-                                                            type="button"
-                                                            variant="quiet"
-                                                            onClick={() =>
-                                                                setActiveLogId(
-                                                                    null,
-                                                                )
-                                                            }
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                        <Button
-                                                            type="submit"
-                                                            variant="primary"
-                                                            disabled={
-                                                                logForm.processing
-                                                            }
-                                                        >
-                                                            {logForm.processing
-                                                                ? 'Saving log…'
-                                                                : 'Submit fuel log'}
-                                                        </Button>
-                                                    </div>
-                                                </form>
-                                            </Panel>
-                                        )}
-
-                                        {request.logs &&
-                                            request.logs.length > 0 && (
-                                                <div className="mt-2 space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="font-semibold text-ink">
-                                                            Fuel Log Details:
-                                                        </p>
-                                                    </div>
-                                                    {request.logs.map((log) => (
-                                                        <div
-                                                            key={log.id}
-                                                            className="space-y-2 rounded border border-line/60 bg-surface p-2.5"
-                                                        >
-                                                            <div className="grid grid-cols-2 gap-2 text-ink-soft sm:grid-cols-4">
-                                                                <span>
-                                                                    <strong>
-                                                                        Actual:
-                                                                    </strong>{' '}
-                                                                    {
-                                                                        log.quantity_litres
-                                                                    }{' '}
-                                                                    L
-                                                                </span>
-                                                                <span>
-                                                                    <strong>
-                                                                        Variance:
-                                                                    </strong>{' '}
-                                                                    <span
-                                                                        className={
-                                                                            log.is_anomaly
-                                                                                ? 'font-semibold text-danger'
-                                                                                : 'text-success'
-                                                                        }
-                                                                    >
-                                                                        {log.variance_litres !==
-                                                                        null
-                                                                            ? `${Number(log.variance_litres) > 0 ? '+' : ''}${log.variance_litres} L (${Number(log.variance_percentage) > 0 ? '+' : ''}${log.variance_percentage}%)`
-                                                                            : '0.00 L (0%)'}
-                                                                    </span>
-                                                                </span>
-                                                                <span>
-                                                                    <strong>
-                                                                        Cost:
-                                                                    </strong>{' '}
-                                                                    {log.total_cost
-                                                                        ? `$${log.total_cost}`
-                                                                        : 'N/A'}
-                                                                </span>
-                                                                <span>
-                                                                    <strong>
-                                                                        Station:
-                                                                    </strong>{' '}
-                                                                    {log.fuel_station ||
-                                                                        'N/A'}
-                                                                </span>
-                                                                {log.effective_burn_rate !==
-                                                                    null && (
-                                                                    <span>
-                                                                        <strong>
-                                                                            Burn
-                                                                            Rate:
-                                                                        </strong>{' '}
-                                                                        {
-                                                                            log.effective_burn_rate
-                                                                        }{' '}
-                                                                        {
-                                                                            log.burn_rate_unit
-                                                                        }
-                                                                    </span>
-                                                                )}
-                                                                {log.odometer_km !==
-                                                                    null && (
-                                                                    <span>
-                                                                        <strong>
-                                                                            Odometer:
-                                                                        </strong>{' '}
-                                                                        {
-                                                                            log.odometer_km
-                                                                        }{' '}
-                                                                        km
-                                                                    </span>
-                                                                )}
-                                                                {log.hour_meter !==
-                                                                    null && (
-                                                                    <span>
-                                                                        <strong>
-                                                                            Hours:
-                                                                        </strong>{' '}
-                                                                        {
-                                                                            log.hour_meter
-                                                                        }{' '}
-                                                                        hrs
-                                                                    </span>
-                                                                )}
-                                                                <span>
-                                                                    <strong>
-                                                                        Recorded
-                                                                        by:
-                                                                    </strong>{' '}
-                                                                    {log
-                                                                        .recorded_by
-                                                                        ?.name ||
-                                                                        'N/A'}
-                                                                </span>
-                                                            </div>
-
-                                                            {log.is_anomaly && (
-                                                                <div className="rounded border border-danger/25 bg-danger-soft/50 p-2 text-danger-strong">
-                                                                    <div className="flex items-center gap-1 font-semibold">
+                                            {request.logs &&
+                                                request.logs.length > 0 && (
+                                                    <div className="mt-2 space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                                                        <div className="flex items-center justify-between">
+                                                            <p className="font-semibold text-ink">
+                                                                Fuel Log
+                                                                Details:
+                                                            </p>
+                                                        </div>
+                                                        {request.logs.map(
+                                                            (log) => (
+                                                                <div
+                                                                    key={log.id}
+                                                                    className="space-y-2 rounded border border-line/60 bg-surface p-2.5"
+                                                                >
+                                                                    <div className="grid grid-cols-2 gap-2 text-ink-soft sm:grid-cols-4">
                                                                         <span>
-                                                                            ⚠️
-                                                                            Fuel
-                                                                            Consumption
-                                                                            Anomaly
-                                                                            Detected
+                                                                            <strong>
+                                                                                Actual:
+                                                                            </strong>{' '}
+                                                                            {
+                                                                                log.quantity_litres
+                                                                            }{' '}
+                                                                            L
+                                                                        </span>
+                                                                        <span>
+                                                                            <strong>
+                                                                                Variance:
+                                                                            </strong>{' '}
+                                                                            <span
+                                                                                className={
+                                                                                    log.is_anomaly
+                                                                                        ? 'font-semibold text-danger'
+                                                                                        : 'text-success'
+                                                                                }
+                                                                            >
+                                                                                {log.variance_litres !==
+                                                                                null
+                                                                                    ? `${Number(log.variance_litres) > 0 ? '+' : ''}${log.variance_litres} L (${Number(log.variance_percentage) > 0 ? '+' : ''}${log.variance_percentage}%)`
+                                                                                    : '0.00 L (0%)'}
+                                                                            </span>
+                                                                        </span>
+                                                                        <span>
+                                                                            <strong>
+                                                                                Cost:
+                                                                            </strong>{' '}
+                                                                            {log.total_cost
+                                                                                ? `$${log.total_cost}`
+                                                                                : 'N/A'}
+                                                                        </span>
+                                                                        <span>
+                                                                            <strong>
+                                                                                Station:
+                                                                            </strong>{' '}
+                                                                            {log.fuel_station ||
+                                                                                'N/A'}
+                                                                        </span>
+                                                                        {log.effective_burn_rate !==
+                                                                            null && (
+                                                                            <span>
+                                                                                <strong>
+                                                                                    Burn
+                                                                                    Rate:
+                                                                                </strong>{' '}
+                                                                                {
+                                                                                    log.effective_burn_rate
+                                                                                }{' '}
+                                                                                {
+                                                                                    log.burn_rate_unit
+                                                                                }
+                                                                            </span>
+                                                                        )}
+                                                                        {log.odometer_km !==
+                                                                            null && (
+                                                                            <span>
+                                                                                <strong>
+                                                                                    Odometer:
+                                                                                </strong>{' '}
+                                                                                {
+                                                                                    log.odometer_km
+                                                                                }{' '}
+                                                                                km
+                                                                            </span>
+                                                                        )}
+                                                                        {log.hour_meter !==
+                                                                            null && (
+                                                                            <span>
+                                                                                <strong>
+                                                                                    Hours:
+                                                                                </strong>{' '}
+                                                                                {
+                                                                                    log.hour_meter
+                                                                                }{' '}
+                                                                                hrs
+                                                                            </span>
+                                                                        )}
+                                                                        <span>
+                                                                            <strong>
+                                                                                Recorded
+                                                                                by:
+                                                                            </strong>{' '}
+                                                                            {log
+                                                                                .recorded_by
+                                                                                ?.name ||
+                                                                                'N/A'}
                                                                         </span>
                                                                     </div>
-                                                                    <p className="mt-0.5 text-xs text-danger-strong/90">
-                                                                        {
-                                                                            log.anomaly_reason
-                                                                        }
-                                                                    </p>
+
+                                                                    {log.is_anomaly && (
+                                                                        <div className="rounded border border-danger/25 bg-danger-soft/50 p-2 text-danger-strong">
+                                                                            <div className="flex items-center gap-1 font-semibold">
+                                                                                <span>
+                                                                                    ⚠️
+                                                                                    Fuel
+                                                                                    Consumption
+                                                                                    Anomaly
+                                                                                    Detected
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="mt-0.5 text-xs text-danger-strong/90">
+                                                                                {
+                                                                                    log.anomaly_reason
+                                                                                }
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                </Panel>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </Panel>
+                )}
             </div>
         </div>
     );

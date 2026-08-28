@@ -2,8 +2,9 @@ import { useForm, router } from '@inertiajs/react';
 import {
     CalendarDays,
     CheckCircle2,
-    ClipboardCheck,
     Package,
+    Plus,
+    Truck,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -75,6 +76,7 @@ export function LiveDispatchIntake({
     const canReviewService = capabilities.convert_service_request;
     const canReviewRental = capabilities.create_rental_dispatch;
     const canReviewSale = capabilities.create_sales_dispatch;
+    const canReconcile = canReviewService || canReviewRental || canReviewSale;
 
     const incomingItems = useMemo<IncomingWorkItem[]>(() => {
         const services = canReviewService
@@ -138,7 +140,11 @@ export function LiveDispatchIntake({
             return 'service';
         }
 
-        return initialMode;
+        if (initialMode) {
+            return initialMode;
+        }
+
+        return incomingItems.length > 0 ? null : 'manual';
     });
     const [selectedItemKey, setSelectedItemKey] = useState<string | null>(
         initialRequestId ? `service-${initialRequestId}` : null,
@@ -159,13 +165,46 @@ export function LiveDispatchIntake({
                 aria-labelledby="direct-dispatch-title"
             >
                 <div className="workspace-width-contained mx-auto max-w-7xl">
+                    {incomingItems.length > 0 && (
+                        <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-3">
+                            <div className="flex items-center gap-1 rounded-lg border border-line bg-surface-subtle p-1">
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-1.5 rounded-md bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-xs"
+                                >
+                                    <Truck className="h-3.5 w-3.5 text-brand" />
+                                    Direct Dispatch
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (onDirtyChange) {
+                                            onDirtyChange(false);
+                                        }
+
+                                        setMode(null);
+                                    }}
+                                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink"
+                                >
+                                    <Package className="h-3.5 w-3.5" />
+                                    Incoming Orders ({incomingItems.length})
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <DirectDispatchView
                         clients={clients}
                         capabilities={capabilities}
                         onBack={() => {
                             setShowClientIntake(false);
                             onDirtyChange?.(false);
-                            setMode(null);
+
+                            if (incomingItems.length > 0) {
+                                setMode(null);
+                            } else {
+                                onClose?.();
+                            }
                         }}
                         onClose={() => {
                             setShowClientIntake(false);
@@ -178,7 +217,8 @@ export function LiveDispatchIntake({
                             window.requestAnimationFrame(() => {
                                 document
                                     .getElementById(
-                                        reason === 'back'
+                                        reason === 'back' &&
+                                            incomingItems.length > 0
                                             ? 'create-direct-dispatch-trigger'
                                             : 'new-dispatch-trigger',
                                     )
@@ -211,14 +251,26 @@ export function LiveDispatchIntake({
                             New dispatch
                         </h2>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-ink-soft">
-                            Core 1 handoffs are routed to the right workflow
-                            automatically. Review the incoming work below, or
-                            create a direct operational dispatch when no
-                            upstream handoff exists.
+                            Review incoming customer orders ready for
+                            operational staging, or create an ad-hoc direct
+                            dispatch.
                         </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                        {canCreateManual && (
+                            <Button
+                                id="create-direct-dispatch-trigger"
+                                variant="primary"
+                                onClick={() => {
+                                    setSelectedItemKey(null);
+                                    setMode('manual');
+                                }}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create direct dispatch
+                            </Button>
+                        )}
                         {capabilities.create_client && (
                             <Button
                                 size="md"
@@ -250,6 +302,14 @@ export function LiveDispatchIntake({
                     </div>
                 </div>
 
+                {showClientIntake && (
+                    <div className="mt-4">
+                        <ClientIntakeForm
+                            onClose={() => setShowClientIntake(false)}
+                        />
+                    </div>
+                )}
+
                 <div
                     className="mt-5 rounded-xl border border-line bg-surface-subtle p-4"
                     aria-live="polite"
@@ -257,20 +317,21 @@ export function LiveDispatchIntake({
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                Incoming work
+                                Incoming customer orders
                             </p>
                             <h3 className="mt-1 text-base font-semibold text-ink">
-                                Incoming work queue
+                                Staging queue
                             </h3>
                             <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                                Select an incoming handoff to verify site
-                                details, assign equipment, and dispatch.
+                                Select an incoming customer order to verify site
+                                details, assign equipment, and stage for
+                                dispatch.
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
                             {incomingItems.length > 0
-                                ? `${incomingItems.length} needs review`
-                                : 'No handoffs waiting'}
+                                ? `${incomingItems.length} ready to stage`
+                                : 'No orders waiting'}
                         </span>
                     </div>
 
@@ -293,74 +354,63 @@ export function LiveDispatchIntake({
                             ))}
                         </div>
                     ) : (
-                        <EmptyState
-                            compact
-                            icon={ClipboardCheck}
-                            title="No Core 1 handoffs waiting"
-                            message="Use Direct operational dispatch for work that has not arrived from Core 1."
-                        />
+                        <div className="mt-4 rounded-lg border border-line bg-surface p-6 text-center">
+                            <Package className="mx-auto h-8 w-8 text-ink-soft" />
+                            <h4 className="mt-2 text-sm font-semibold text-ink">
+                                No incoming customer orders waiting
+                            </h4>
+                            <p className="mt-1 text-xs text-ink-soft">
+                                Use Direct Dispatch to create a new job from
+                                scratch.
+                            </p>
+                            <div className="mt-4">
+                                <Button
+                                    variant="primary"
+                                    onClick={() => {
+                                        setSelectedItemKey(null);
+                                        setMode('manual');
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Open Direct Dispatch Form
+                                </Button>
+                            </div>
+                        </div>
                     )}
                 </div>
 
-                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                            Direct operational fallback
-                        </p>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            For work without a Core 1 request or commercial
-                            handoff.
-                        </p>
-                    </div>
-                    {canCreateManual && (
-                        <Button
-                            id="create-direct-dispatch-trigger"
+                {canReconcile && (
+                    <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                Dispatch reconciliation
+                            </p>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                Review unmatched records before they can create
+                                a duplicate execution.
+                            </p>
+                        </div>
+                        <button
                             type="button"
-                            variant={
-                                incomingItems.length > 0
-                                    ? 'secondary'
-                                    : 'primary'
-                            }
+                            aria-pressed={mode === 'reconciliation'}
                             onClick={() => {
                                 setSelectedItemKey(null);
-                                setMode('manual');
+                                setMode('reconciliation');
                             }}
+                            className={cn(
+                                'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+                                mode === 'reconciliation'
+                                    ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
+                                    : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
                         >
-                            Create direct dispatch
-                        </Button>
-                    )}
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                            Dispatch review
-                        </p>
-                        <p className="mt-1 text-sm text-ink-soft">
-                            Review unmatched records before they can create a
-                            duplicate execution.
-                        </p>
+                            <span>Review unmatched orders</span>
+                            <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
+                                {unlinkedCount} to review
+                            </span>
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        aria-pressed={mode === 'reconciliation'}
-                        onClick={() => {
-                            setSelectedItemKey(null);
-                            setMode('reconciliation');
-                        }}
-                        className={cn(
-                            'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-left text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
-                            mode === 'reconciliation'
-                                ? 'border-info-strong bg-info-soft text-info-strong shadow-xs'
-                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                        )}
-                    >
-                        <span>Review unmatched handoffs</span>
-                        <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
-                            {unlinkedCount} to review
-                        </span>
-                    </button>
-                </div>
+                )}
 
                 {mode === 'client' && (
                     <ClientIntakeForm onClose={closeWorkflow} />

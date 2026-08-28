@@ -17,10 +17,12 @@ export interface DateTimePickerProps {
     onChange: (value: string) => void;
     error?: string;
     required?: boolean;
+    optional?: boolean;
     disabled?: boolean;
     placeholder?: string;
     className?: string;
     includeTime?: boolean;
+    showPresets?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -137,10 +139,12 @@ export function DateTimePicker({
     onChange,
     error,
     required,
+    optional,
     disabled,
     placeholder = 'Select date & time...',
     className,
     includeTime = true,
+    showPresets = includeTime,
 }: DateTimePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -367,6 +371,9 @@ export function DateTimePicker({
 
     const handleSelectDay = (gridDate: Date) => {
         commitValue(gridDate, hours, minutes, ampm);
+        if (!includeTime) {
+            setIsOpen(false);
+        }
     };
 
     const handleTimeChange = (newHour: number, newMin: number, newAmPm: 'AM' | 'PM') => {
@@ -392,7 +399,7 @@ export function DateTimePicker({
         }
     };
 
-    // Quick Presets
+    // Quick Presets for Date + Time
     const handlePreset = (preset: 'now' | 'today-9' | 'today-17' | 'plus-1h' | 'tomorrow-9') => {
         const now = new Date();
         let target = new Date();
@@ -424,6 +431,27 @@ export function DateTimePicker({
         );
 
         onChange(toLocalISOString(target, includeTime));
+    };
+
+    // Quick Presets for Date-Only selection
+    const handleDatePreset = (
+        preset: 'today' | 'yesterday' | 'start-of-month' | '30-days-ago',
+    ) => {
+        const target = new Date();
+
+        if (preset === 'yesterday') {
+            target.setDate(target.getDate() - 1);
+        } else if (preset === 'start-of-month') {
+            target.setDate(1);
+        } else if (preset === '30-days-ago') {
+            target.setDate(target.getDate() - 30);
+        }
+
+        setViewYear(target.getFullYear());
+        setViewMonth(target.getMonth());
+        setSelectedDate(target);
+        onChange(toLocalISOString(target, false));
+        setIsOpen(false);
     };
 
     const handleClear = () => {
@@ -461,44 +489,46 @@ export function DateTimePicker({
                     aria-label="Date and time picker"
                     className="max-w-[calc(100vw-24px)] overflow-y-auto rounded-xl border border-line bg-surface p-3.5 shadow-2xl ring-1 ring-black/10 dark:ring-white/10"
                 >
-                    {/* Quick Presets Bar */}
-                    <div className="mb-2.5 flex flex-wrap items-center gap-1 border-b border-line pb-2.5 text-xs">
-                        <button
-                            type="button"
-                            onClick={() => handlePreset('now')}
-                            className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
-                        >
-                            Now
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handlePreset('plus-1h')}
-                            className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
-                        >
-                            +1 Hour
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handlePreset('today-9')}
-                            className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
-                        >
-                            9:00 AM
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handlePreset('today-17')}
-                            className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
-                        >
-                            5:00 PM
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handlePreset('tomorrow-9')}
-                            className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
-                        >
-                            Tomorrow 9 AM
-                        </button>
-                    </div>
+                    {/* Quick Presets Bar (only when showPresets and includeTime are active) */}
+                    {showPresets && includeTime && (
+                        <div className="mb-2.5 flex flex-wrap items-center gap-1 border-b border-line pb-2.5 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => handlePreset('now')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                            >
+                                Now
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePreset('plus-1h')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                            >
+                                +1 Hour
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePreset('today-9')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                            >
+                                9:00 AM
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePreset('today-17')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                            >
+                                5:00 PM
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePreset('tomorrow-9')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-1 font-medium text-ink hover:bg-brand-soft hover:text-brand transition-colors"
+                            >
+                                Tomorrow 9 AM
+                            </button>
+                        </div>
+                    )}
 
                     {/* Month Header Navigation */}
                     <div className="mb-2 flex items-center justify-between">
@@ -672,12 +702,22 @@ export function DateTimePicker({
     return (
         <div className={cn('relative flex flex-col gap-1.5', className)}>
             {label && (
-                <label
-                    htmlFor={id}
-                    className="text-xs font-semibold uppercase tracking-wider text-ink-soft"
-                >
-                    {label} {required && <span className="text-danger">*</span>}
-                </label>
+                <div className="flex items-center justify-between">
+                    <label
+                        htmlFor={id}
+                        className="text-xs font-semibold uppercase tracking-wider text-ink-soft"
+                    >
+                        {label.replace(/\s*\((optional)\)/i, '').trim()}
+                        {required && (
+                            <span className="ml-0.5 text-danger">*</span>
+                        )}
+                    </label>
+                    {(optional || /\((optional)\)/i.test(label)) && (
+                        <span className="text-[11px] font-normal tracking-normal text-ink-soft lowercase">
+                            (optional)
+                        </span>
+                    )}
+                </div>
             )}
 
             {/* Input Trigger Button */}

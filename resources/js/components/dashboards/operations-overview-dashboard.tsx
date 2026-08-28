@@ -29,6 +29,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-preview';
 import { Button, EmptyState, Panel } from '@/components/ui';
+import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import type {
     ApprovalViewModel,
@@ -611,6 +612,9 @@ function OperationsManagerDashboardView({
                     )}
                 </Panel>
             </section>
+
+            {/* Regional Weather & Wind Safety Telemetry Cockpit */}
+            <WeatherSafetyTelemetry variant="cockpit" />
 
             {canOpenTracking && (
                 <LiveTrackingPreview

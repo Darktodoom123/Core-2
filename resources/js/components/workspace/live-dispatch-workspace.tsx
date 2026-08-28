@@ -10,6 +10,7 @@ import {
     ClipboardList,
     FileText,
     MapPin,
+    Package,
     Plus,
     RefreshCw,
     Search,
@@ -305,6 +306,10 @@ export function LiveDispatchWorkspace({
         | 'sales_order'
         | 'manual'
     >('all');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'draft' | 'scheduled' | 'active' | 'completed'
+    >('all');
+    const [dismissConflictAlert, setDismissConflictAlert] = useState(false);
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
@@ -715,6 +720,58 @@ export function LiveDispatchWorkspace({
           ? 'bg-warning text-ink'
           : 'bg-info text-white';
 
+    const dangerConflicts = useMemo(
+        () => derivedConflicts.filter((c) => c.severity === 'danger'),
+        [derivedConflicts],
+    );
+
+    const readyAssetsCount = useMemo(
+        () =>
+            assets.filter(
+                (a) =>
+                    a.status?.value === 'available' ||
+                    a.status?.value === 'ready_for_service' ||
+                    (a.blocking_work_orders_count === 0 &&
+                        a.status?.value !== 'maintenance' &&
+                        a.status?.value !== 'out_of_service' &&
+                        a.status?.value !== 'under_maintenance' &&
+                        a.status?.value !== 'awaiting_parts' &&
+                        a.status?.value !== 'unavailable'),
+            ).length,
+        [assets],
+    );
+
+    const statusCounts = useMemo(() => {
+        const counts = {
+            all: jobs.length,
+            draft: 0,
+            scheduled: 0,
+            active: 0,
+            completed: 0,
+        };
+
+        for (const job of jobs) {
+            const v = job.status?.value;
+
+            if (v === 'draft' || v === 'pending_approval') {
+                counts.draft += 1;
+            } else if (v === 'scheduled' || v === 'dispatched') {
+                counts.scheduled += 1;
+            } else if (
+                v === 'accepted' ||
+                v === 'en_route' ||
+                v === 'arrived' ||
+                v === 'working'
+            ) {
+                counts.active += 1;
+            } else if (v === 'completed') {
+                counts.completed += 1;
+            }
+        }
+
+        return counts;
+    }, [jobs]);
+
     const filteredJobs = useMemo(() => {
         const normalized = query.trim().toLowerCase();
 
@@ -728,15 +785,34 @@ export function LiveDispatchWorkspace({
                         job.source.type === 'manual' ||
                         Boolean(job.source.manual_intake)
                       : job.source?.type === sourceFilter;
+
+            const matchesStatus =
+                statusFilter === 'all'
+                    ? true
+                    : statusFilter === 'draft'
+                      ? job.status?.value === 'draft' ||
+                        job.status?.value === 'pending_approval'
+                      : statusFilter === 'scheduled'
+                        ? job.status?.value === 'scheduled' ||
+                          job.status?.value === 'dispatched'
+                        : statusFilter === 'active'
+                          ? job.status?.value === 'accepted' ||
+                            job.status?.value === 'en_route' ||
+                            job.status?.value === 'arrived' ||
+                            job.status?.value === 'working'
+                          : statusFilter === 'completed'
+                            ? job.status?.value === 'completed'
+                            : true;
+
             const matchesQuery =
                 normalized === '' ||
                 `${job.reference} ${job.client} ${job.title} ${job.site} ${job.source?.reference ?? ''}`
                     .toLowerCase()
                     .includes(normalized);
 
-            return matchesSource && matchesQuery;
+            return matchesSource && matchesStatus && matchesQuery;
         });
-    }, [jobs, query, sourceFilter]);
+    }, [jobs, query, sourceFilter, statusFilter]);
 
     const boardJobs = useMemo(
         () =>
@@ -919,7 +995,11 @@ export function LiveDispatchWorkspace({
                             capabilities={capabilities}
                             initialRequestId={initialServiceRequestId}
                             initialMode={
-                                initialServiceRequestId ? 'service' : null
+                                initialServiceRequestId
+                                    ? 'service'
+                                    : incomingWorkCount > 0
+                                      ? null
+                                      : 'manual'
                             }
                             onDirtyChange={setDirectIntakeDirty}
                             onClose={() => {
@@ -1326,330 +1406,695 @@ export function LiveDispatchWorkspace({
 
             {/* VIEW MODE: LIST (DEFAULT) */}
             {(viewMode === 'list' || fieldMode) && (
-                <div
-                    className={cn(
-                        'workspace-width-contained min-h-[calc(100vh-9rem)]',
+                <>
+                    {/* DANGER CONFLICT ALERT BANNER */}
+                    {viewMode === 'list' &&
                         !fieldMode &&
-                            'grid lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]',
-                    )}
-                >
-                    <aside
-                        className={cn(
-                            'min-w-0 border-b border-line bg-surface',
-                            fieldMode
-                                ? 'mx-auto w-full max-w-5xl'
-                                : 'lg:border-r lg:border-b-0',
+                        dangerConflicts.length > 0 &&
+                        !dismissConflictAlert && (
+                            <div className="workspace-width-contained px-4 pt-4 md:px-6">
+                                <div
+                                    role="alert"
+                                    className="flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft/40 p-3.5 text-danger-strong sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger text-white">
+                                            <AlertTriangle className="h-4 w-4" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold tracking-wider text-danger-strong uppercase">
+                                                Critical Operational Conflict
+                                                {dangerConflicts.length > 1
+                                                    ? 's'
+                                                    : ''}{' '}
+                                                Detected (
+                                                {dangerConflicts.length})
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-ink">
+                                                <span className="font-semibold">
+                                                    {dangerConflicts[0].title}:
+                                                </span>{' '}
+                                                {dangerConflicts[0].description}
+                                                {dangerConflicts.length > 1 && (
+                                                    <span className="ml-1 text-ink-soft">
+                                                        (+
+                                                        {dangerConflicts.length -
+                                                            1}{' '}
+                                                        more)
+                                                    </span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="danger"
+                                            onClick={() =>
+                                                setViewMode('conflicts')
+                                            }
+                                        >
+                                            Review Conflicts
+                                        </Button>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setDismissConflictAlert(true)
+                                            }
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                                            aria-label="Dismiss alert"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         )}
-                    >
-                        <div className="border-b border-line p-4">
-                            <label className="relative block">
-                                <span className="sr-only">
-                                    {fieldMode
-                                        ? 'Search assigned jobs'
-                                        : 'Search live dispatches'}
-                                </span>
-                                <Search
-                                    className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
-                                    aria-hidden="true"
-                                />
-                                <input
-                                    type="search"
-                                    value={query}
-                                    onChange={(event) =>
-                                        setQuery(event.target.value)
-                                    }
-                                    placeholder={
-                                        fieldMode
-                                            ? 'Search assigned jobs'
-                                            : 'Search jobs, clients, sites'
-                                    }
-                                    className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm placeholder:text-ink-soft"
-                                />
-                            </label>
-                            {!fieldMode && (
-                                <label className="mt-3 block">
-                                    <span className="sr-only">
-                                        Filter dispatch source
-                                    </span>
-                                    <select
-                                        value={sourceFilter}
-                                        onChange={(event) =>
-                                            setSourceFilter(
-                                                event.target
-                                                    .value as typeof sourceFilter,
-                                            )
-                                        }
-                                        className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle px-3 text-xs font-medium text-ink"
-                                    >
-                                        <option value="all">
-                                            All operational sources
-                                        </option>
-                                        <option value="service_request">
-                                            Service requests
-                                        </option>
-                                        <option value="rental_reservation">
-                                            Rental reservations
-                                        </option>
-                                        <option value="sales_order">
-                                            Sales delivery orders
-                                        </option>
-                                        <option value="manual">
-                                            Manual source · manual_intake
-                                        </option>
-                                    </select>
-                                </label>
-                            )}
-                            <p
-                                className="mt-2 text-xs text-ink-soft"
-                                role="status"
-                            >
-                                {refreshing
-                                    ? 'Refreshing live jobs…'
-                                    : `${filteredJobs.length} of ${jobs.length} jobs`}
-                            </p>
-                        </div>
 
-                        {refreshing ? (
-                            <DispatchListSkeleton />
-                        ) : filteredJobs.length === 0 ? (
-                            query.trim() === '' && sourceFilter === 'all' ? (
-                                <EmptyState
-                                    compact
-                                    icon={ClipboardList}
-                                    title={
-                                        fieldMode
-                                            ? 'No assigned jobs today'
-                                            : 'No dispatch jobs available'
-                                    }
-                                    message={
-                                        canCreate
-                                            ? 'Create a live draft to begin the dispatch workflow.'
-                                            : 'Jobs assigned or visible to your account will appear here.'
-                                    }
-                                    primaryAction={
-                                        canCreate ? (
+                    {/* ZERO-STATE: UNIFIED FLEET OPERATIONS HUB */}
+                    {!fieldMode &&
+                    jobs.length === 0 &&
+                    !refreshing &&
+                    query.trim() === '' &&
+                    sourceFilter === 'all' &&
+                    statusFilter === 'all' ? (
+                        <div className="workspace-width-contained p-4 md:p-6">
+                            <Panel className="overflow-hidden border border-line bg-surface shadow-xs">
+                                {/* Header Banner */}
+                                <div className="border-b border-line bg-surface-subtle px-6 py-6 text-center md:px-8">
+                                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-strong">
+                                        <ClipboardList className="h-6 w-6" />
+                                    </div>
+                                    <h2 className="mt-3 text-xl font-bold tracking-tight text-ink">
+                                        Fleet Operations Hub
+                                    </h2>
+                                    <p className="mx-auto mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft">
+                                        No active dispatches are currently
+                                        running. Review fleet availability
+                                        below, stage incoming commercial orders,
+                                        or create an ad-hoc direct dispatch to
+                                        mobilize equipment.
+                                    </p>
+                                </div>
+
+                                {/* Fleet Readiness KPIs */}
+                                <div className="grid divide-y divide-line border-b border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                                    <div className="p-5 text-center sm:p-6">
+                                        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-success-soft text-success-strong">
+                                            <Truck className="h-4 w-4" />
+                                        </div>
+                                        <p className="mt-2 text-2xl font-bold text-ink">
+                                            {readyAssetsCount}{' '}
+                                            <span className="text-sm font-normal text-ink-soft">
+                                                / {assets.length}
+                                            </span>
+                                        </p>
+                                        <p className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                            Fleet Units Ready
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-ink-soft">
+                                            Cranes, boom trucks &amp; transport
+                                            ready
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 text-center sm:p-6">
+                                        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                                            <Users className="h-4 w-4" />
+                                        </div>
+                                        <p className="mt-2 text-2xl font-bold text-ink">
+                                            {scheduleBoardUsers.length}
+                                        </p>
+                                        <p className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                            Crew On Duty
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-ink-soft">
+                                            Qualified operators &amp; riggers
+                                            available
+                                        </p>
+                                    </div>
+
+                                    <div className="p-5 text-center sm:p-6">
+                                        <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-warning-soft text-warning-strong">
+                                            <Package className="h-4 w-4" />
+                                        </div>
+                                        <p className="mt-2 text-2xl font-bold text-ink">
+                                            {incomingWorkCount}
+                                        </p>
+                                        <p className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                                            Pending Orders
+                                        </p>
+                                        <p className="mt-1 text-[11px] text-ink-soft">
+                                            Incoming commercial requests to
+                                            stage
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Action Triggers */}
+                                <div className="flex flex-col items-center justify-center gap-3 bg-surface p-6 sm:flex-row">
+                                    {canCreate && (
+                                        <>
+                                            {incomingWorkCount > 0 && (
+                                                <Button
+                                                    variant="primary"
+                                                    onClick={() =>
+                                                        setShowIntake(true)
+                                                    }
+                                                    className="w-full sm:w-auto"
+                                                >
+                                                    <Package className="mr-2 h-4 w-4" />
+                                                    Review &amp; Stage Incoming
+                                                    Orders ({incomingWorkCount})
+                                                </Button>
+                                            )}
                                             <Button
-                                                variant="primary"
+                                                variant={
+                                                    incomingWorkCount > 0
+                                                        ? 'secondary'
+                                                        : 'primary'
+                                                }
                                                 onClick={() =>
                                                     setShowIntake(true)
                                                 }
+                                                className="w-full sm:w-auto"
                                             >
-                                                New dispatch
+                                                <Plus className="mr-2 h-4 w-4" />
+                                                Create Direct Dispatch
                                             </Button>
-                                        ) : undefined
-                                    }
-                                />
-                            ) : (
-                                <EmptyState
-                                    compact
-                                    icon={SearchX}
-                                    title="No matching dispatches"
-                                    message="Try another reference, client, site, or operational source."
-                                    primaryAction={
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => {
-                                                setQuery('');
-                                                setSourceFilter('all');
-                                            }}
-                                        >
-                                            Clear filters
-                                        </Button>
-                                    }
-                                />
-                            )
-                        ) : (
-                            <ul className="divide-y divide-line">
-                                {filteredJobs.map((job) => {
-                                    const jobConflicts =
-                                        derivedConflicts.filter(
-                                            (c) => c.jobId === job.id,
-                                        );
-                                    const hasConflict = jobConflicts.length > 0;
-
-                                    return (
-                                        <li key={job.id}>
-                                            {fieldMode && (
-                                                <Link
-                                                    href={`/operations/dispatch-jobs/${job.id}`}
-                                                    className="flex min-h-24 w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle"
-                                                >
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                                                <p className="font-semibold text-ink">
-                                                                    {
-                                                                        job.reference
-                                                                    }
-                                                                </p>
-                                                                {job.priority &&
-                                                                    job.priority
-                                                                        .value !==
-                                                                        'routine' && (
-                                                                        <span
-                                                                            className={cn(
-                                                                                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
-                                                                                job
-                                                                                    .priority
-                                                                                    .value ===
-                                                                                    'emergency'
-                                                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
-                                                                                    : 'border border-warning/30 bg-warning-soft text-warning-strong',
-                                                                            )}
-                                                                        >
-                                                                            {
-                                                                                job
-                                                                                    .priority
-                                                                                    .label
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                                {job.source && (
-                                                                    <DispatchSourceBadge
-                                                                        source={
-                                                                            job.source
-                                                                        }
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <CanonicalStatusBadge
-                                                                status={
-                                                                    job.status
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <p className="mt-1 truncate text-sm">
-                                                            {job.title}
-                                                        </p>
-                                                        <p className="mt-1 truncate text-xs text-ink-soft">
-                                                            {job.client} —{' '}
-                                                            {formatDateTime(
-                                                                job.scheduled_start,
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                    <ChevronRight
-                                                        className="mt-1 h-4 w-4 shrink-0 text-ink-soft"
-                                                        aria-hidden="true"
-                                                    />
-                                                </Link>
-                                            )}
-                                            {!fieldMode && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setSelectedJobId(job.id)
-                                                    }
-                                                    className={cn(
-                                                        'flex min-h-24 w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
-                                                        job.id ===
-                                                            selectedJob?.id &&
-                                                            'bg-brand-soft',
-                                                    )}
-                                                    aria-current={
-                                                        job.id ===
-                                                        selectedJob?.id
-                                                            ? 'true'
-                                                            : undefined
-                                                    }
-                                                >
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                                                <p className="font-semibold text-ink">
-                                                                    {
-                                                                        job.reference
-                                                                    }
-                                                                </p>
-                                                                {job.priority &&
-                                                                    job.priority
-                                                                        .value !==
-                                                                        'routine' && (
-                                                                        <span
-                                                                            className={cn(
-                                                                                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
-                                                                                job
-                                                                                    .priority
-                                                                                    .value ===
-                                                                                    'emergency'
-                                                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
-                                                                                    : 'border border-warning/30 bg-warning-soft text-warning-strong',
-                                                                            )}
-                                                                        >
-                                                                            {
-                                                                                job
-                                                                                    .priority
-                                                                                    .label
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                                {job.source && (
-                                                                    <DispatchSourceBadge
-                                                                        source={
-                                                                            job.source
-                                                                        }
-                                                                    />
-                                                                )}
-                                                                {hasConflict && (
-                                                                    <AlertTriangle
-                                                                        className="h-3.5 w-3.5 shrink-0 text-danger"
-                                                                        aria-label="Job has active operational conflict"
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <CanonicalStatusBadge
-                                                                status={
-                                                                    job.status
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <p className="mt-1 truncate text-sm">
-                                                            {job.title}
-                                                        </p>
-                                                        <p className="mt-1 truncate text-xs text-ink-soft">
-                                                            {job.client} ·{' '}
-                                                            {formatDateTime(
-                                                                job.scheduled_start,
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                    <ChevronRight
-                                                        className="mt-1 h-4 w-4 shrink-0 text-ink-soft"
-                                                        aria-hidden="true"
-                                                    />
-                                                </button>
-                                            )}
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </aside>
-
-                    {!fieldMode && (
-                        <section className="min-w-0 bg-canvas p-4 md:p-6">
-                            {selectedJob ? (
-                                <DispatchDetails
-                                    job={selectedJob}
-                                    conflicts={derivedConflicts.filter(
-                                        (c) => c.jobId === selectedJob.id,
+                                        </>
                                     )}
-                                    recommendations={selectedJobRecommendations}
-                                    capabilities={capabilities}
-                                    returnTo={returnTo}
-                                />
-                            ) : (
-                                <Panel>
-                                    <EmptyState
-                                        icon={ClipboardList}
-                                        title="Select a dispatch"
-                                        message="Choose a live job from the list to review its schedule, site, and assignments."
-                                    />
-                                </Panel>
+                                </div>
+                            </Panel>
+                        </div>
+                    ) : (
+                        <div
+                            className={cn(
+                                'workspace-width-contained min-h-[calc(100vh-9rem)]',
+                                !fieldMode &&
+                                    'grid lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]',
                             )}
-                        </section>
+                        >
+                            <aside
+                                className={cn(
+                                    'min-w-0 border-b border-line bg-surface',
+                                    fieldMode
+                                        ? 'mx-auto w-full max-w-5xl'
+                                        : 'lg:border-r lg:border-b-0',
+                                )}
+                            >
+                                <div className="border-b border-line p-4">
+                                    <label className="relative block">
+                                        <span className="sr-only">
+                                            {fieldMode
+                                                ? 'Search assigned jobs'
+                                                : 'Search live dispatches'}
+                                        </span>
+                                        <Search
+                                            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
+                                            aria-hidden="true"
+                                        />
+                                        <input
+                                            type="search"
+                                            value={query}
+                                            onChange={(event) =>
+                                                setQuery(event.target.value)
+                                            }
+                                            placeholder={
+                                                fieldMode
+                                                    ? 'Search assigned jobs'
+                                                    : 'Search jobs, clients, sites'
+                                            }
+                                            className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-sm placeholder:text-ink-soft"
+                                        />
+                                    </label>
+                                    {!fieldMode && (
+                                        <label className="mt-3 block">
+                                            <span className="sr-only">
+                                                Filter dispatch source
+                                            </span>
+                                            <select
+                                                value={sourceFilter}
+                                                onChange={(event) =>
+                                                    setSourceFilter(
+                                                        event.target
+                                                            .value as typeof sourceFilter,
+                                                    )
+                                                }
+                                                className="h-11 w-full rounded-lg border border-line-strong bg-surface-subtle px-3 text-xs font-medium text-ink"
+                                            >
+                                                <option value="all">
+                                                    All operational sources
+                                                </option>
+                                                <option value="service_request">
+                                                    Service requests
+                                                </option>
+                                                <option value="rental_reservation">
+                                                    Rental reservations
+                                                </option>
+                                                <option value="sales_order">
+                                                    Sales delivery orders
+                                                </option>
+                                                <option value="manual">
+                                                    Manual source ·
+                                                    manual_intake
+                                                </option>
+                                            </select>
+                                        </label>
+                                    )}
+
+                                    {/* 1-Click Quick Status Filter Chips */}
+                                    {!fieldMode && jobs.length > 0 && (
+                                        <div
+                                            className="mt-3 flex flex-wrap gap-1"
+                                            role="group"
+                                            aria-label="Filter dispatches by status"
+                                        >
+                                            <button
+                                                type="button"
+                                                aria-pressed={
+                                                    statusFilter === 'all'
+                                                }
+                                                onClick={() =>
+                                                    setStatusFilter('all')
+                                                }
+                                                className={cn(
+                                                    'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                                    statusFilter === 'all'
+                                                        ? 'bg-ink font-semibold text-canvas'
+                                                        : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                                )}
+                                            >
+                                                All
+                                                <span className="py-0.2 ml-1 rounded-full bg-surface/20 px-1 text-[10px]">
+                                                    {statusCounts.all}
+                                                </span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={
+                                                    statusFilter === 'draft'
+                                                }
+                                                onClick={() =>
+                                                    setStatusFilter('draft')
+                                                }
+                                                className={cn(
+                                                    'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                                    statusFilter === 'draft'
+                                                        ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
+                                                        : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                                )}
+                                            >
+                                                Drafts
+                                                {statusCounts.draft > 0 && (
+                                                    <span className="py-0.2 ml-1 rounded-full bg-warning/20 px-1.5 text-[10px] font-bold text-warning-strong">
+                                                        {statusCounts.draft}
+                                                    </span>
+                                                )}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={
+                                                    statusFilter === 'scheduled'
+                                                }
+                                                onClick={() =>
+                                                    setStatusFilter('scheduled')
+                                                }
+                                                className={cn(
+                                                    'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                                    statusFilter === 'scheduled'
+                                                        ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                                        : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                                )}
+                                            >
+                                                Scheduled
+                                                {statusCounts.scheduled > 0 && (
+                                                    <span className="py-0.2 ml-1 rounded-full bg-brand/20 px-1.5 text-[10px] font-bold text-brand-strong">
+                                                        {statusCounts.scheduled}
+                                                    </span>
+                                                )}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={
+                                                    statusFilter === 'active'
+                                                }
+                                                onClick={() =>
+                                                    setStatusFilter('active')
+                                                }
+                                                className={cn(
+                                                    'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                                    statusFilter === 'active'
+                                                        ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
+                                                        : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                                )}
+                                            >
+                                                Active
+                                                {statusCounts.active > 0 && (
+                                                    <span className="py-0.2 ml-1 rounded-full bg-success/20 px-1.5 text-[10px] font-bold text-success-strong">
+                                                        {statusCounts.active}
+                                                    </span>
+                                                )}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={
+                                                    statusFilter === 'completed'
+                                                }
+                                                onClick={() =>
+                                                    setStatusFilter('completed')
+                                                }
+                                                className={cn(
+                                                    'inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                                    statusFilter === 'completed'
+                                                        ? 'border border-line-strong bg-surface-subtle font-semibold text-ink'
+                                                        : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                                )}
+                                            >
+                                                Done
+                                                {statusCounts.completed > 0 && (
+                                                    <span className="ml-1 text-[10px] text-ink-soft">
+                                                        {statusCounts.completed}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <p
+                                        className="mt-2 text-xs text-ink-soft"
+                                        role="status"
+                                    >
+                                        {refreshing
+                                            ? 'Refreshing live jobs…'
+                                            : `${filteredJobs.length} of ${jobs.length} jobs`}
+                                    </p>
+                                </div>
+
+                                {/* Incoming Commercial Handoffs Notice */}
+                                {!fieldMode &&
+                                    incomingWorkCount > 0 &&
+                                    jobs.length > 0 && (
+                                        <div className="flex items-center justify-between border-b border-brand/20 bg-brand-soft/40 px-4 py-2.5 text-xs text-brand-strong">
+                                            <div className="flex items-center gap-2">
+                                                <Package className="h-3.5 w-3.5 shrink-0 text-brand" />
+                                                <span className="font-semibold">
+                                                    {incomingWorkCount} incoming
+                                                    order
+                                                    {incomingWorkCount > 1
+                                                        ? 's'
+                                                        : ''}{' '}
+                                                    ready to stage
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowIntake(true)
+                                                }
+                                                className="font-bold text-brand hover:underline"
+                                            >
+                                                Stage drafts →
+                                            </button>
+                                        </div>
+                                    )}
+
+                                {refreshing ? (
+                                    <DispatchListSkeleton />
+                                ) : filteredJobs.length === 0 ? (
+                                    query.trim() === '' &&
+                                    sourceFilter === 'all' &&
+                                    statusFilter === 'all' ? (
+                                        <EmptyState
+                                            compact
+                                            icon={ClipboardList}
+                                            title={
+                                                fieldMode
+                                                    ? 'No assigned jobs today'
+                                                    : 'No dispatch jobs available'
+                                            }
+                                            message={
+                                                canCreate
+                                                    ? 'Create a live draft to begin the dispatch workflow.'
+                                                    : 'Jobs assigned or visible to your account will appear here.'
+                                            }
+                                            primaryAction={
+                                                canCreate ? (
+                                                    <Button
+                                                        variant="primary"
+                                                        onClick={() =>
+                                                            setShowIntake(true)
+                                                        }
+                                                    >
+                                                        New dispatch
+                                                    </Button>
+                                                ) : undefined
+                                            }
+                                        />
+                                    ) : (
+                                        <EmptyState
+                                            compact
+                                            icon={SearchX}
+                                            title="No matching dispatches"
+                                            message="Try another reference, client, site, or operational status."
+                                            primaryAction={
+                                                <Button
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        setQuery('');
+                                                        setSourceFilter('all');
+                                                        setStatusFilter('all');
+                                                    }}
+                                                >
+                                                    Clear filters
+                                                </Button>
+                                            }
+                                        />
+                                    )
+                                ) : (
+                                    <ul className="divide-y divide-line">
+                                        {filteredJobs.map((job) => {
+                                            const jobConflicts =
+                                                derivedConflicts.filter(
+                                                    (c) => c.jobId === job.id,
+                                                );
+                                            const hasConflict =
+                                                jobConflicts.length > 0;
+
+                                            return (
+                                                <li key={job.id}>
+                                                    {fieldMode && (
+                                                        <Link
+                                                            href={`/operations/dispatch-jobs/${job.id}`}
+                                                            className="flex min-h-[72px] w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle"
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-start justify-between gap-1.5">
+                                                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                                        <p className="text-xs font-bold text-ink">
+                                                                            {
+                                                                                job.reference
+                                                                            }
+                                                                        </p>
+                                                                        {job.priority &&
+                                                                            job
+                                                                                .priority
+                                                                                .value !==
+                                                                                'routine' && (
+                                                                                <span
+                                                                                    className={cn(
+                                                                                        'py-0.2 inline-flex items-center rounded px-1 text-[9px] font-bold tracking-wider uppercase',
+                                                                                        job
+                                                                                            .priority
+                                                                                            .value ===
+                                                                                            'emergency'
+                                                                                            ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                                                                            : 'border border-warning/30 bg-warning-soft text-warning-strong',
+                                                                                    )}
+                                                                                >
+                                                                                    {
+                                                                                        job
+                                                                                            .priority
+                                                                                            .label
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        {job.source && (
+                                                                            <DispatchSourceBadge
+                                                                                source={
+                                                                                    job.source
+                                                                                }
+                                                                            />
+                                                                        )}
+                                                                    </div>
+                                                                    <CanonicalStatusBadge
+                                                                        status={
+                                                                            job.status
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                                <p className="mt-0.5 truncate text-xs font-semibold text-ink">
+                                                                    {job.title}
+                                                                </p>
+                                                                <div className="mt-1 flex items-center justify-between gap-1 text-[11px] text-ink-soft">
+                                                                    <span className="truncate">
+                                                                        {
+                                                                            job.client
+                                                                        }
+                                                                        {job
+                                                                            .asset_assignments
+                                                                            .length >
+                                                                            0 &&
+                                                                            ` · ${job.asset_assignments[0].code}`}
+                                                                    </span>
+                                                                    <span className="shrink-0 text-[10px]">
+                                                                        {formatDateTime(
+                                                                            job.scheduled_start,
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <ChevronRight
+                                                                className="mt-2 h-3.5 w-3.5 shrink-0 text-ink-soft"
+                                                                aria-hidden="true"
+                                                            />
+                                                        </Link>
+                                                    )}
+                                                    {!fieldMode && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setSelectedJobId(
+                                                                    job.id,
+                                                                )
+                                                            }
+                                                            className={cn(
+                                                                'flex min-h-[72px] w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle',
+                                                                job.id ===
+                                                                    selectedJob?.id &&
+                                                                    'bg-brand-soft/60 ring-1 ring-brand/30',
+                                                            )}
+                                                            aria-current={
+                                                                job.id ===
+                                                                selectedJob?.id
+                                                                    ? 'true'
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-start justify-between gap-1.5">
+                                                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                                        <p className="text-xs font-bold text-ink">
+                                                                            {
+                                                                                job.reference
+                                                                            }
+                                                                        </p>
+                                                                        {job.priority &&
+                                                                            job
+                                                                                .priority
+                                                                                .value !==
+                                                                                'routine' && (
+                                                                                <span
+                                                                                    className={cn(
+                                                                                        'py-0.2 inline-flex items-center rounded px-1 text-[9px] font-bold tracking-wider uppercase',
+                                                                                        job
+                                                                                            .priority
+                                                                                            .value ===
+                                                                                            'emergency'
+                                                                                            ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                                                                            : 'border border-warning/30 bg-warning-soft text-warning-strong',
+                                                                                    )}
+                                                                                >
+                                                                                    {
+                                                                                        job
+                                                                                            .priority
+                                                                                            .label
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        {job.source && (
+                                                                            <DispatchSourceBadge
+                                                                                source={
+                                                                                    job.source
+                                                                                }
+                                                                            />
+                                                                        )}
+                                                                        {hasConflict && (
+                                                                            <AlertTriangle
+                                                                                className="h-3.5 w-3.5 shrink-0 text-danger"
+                                                                                aria-label="Job has active operational conflict"
+                                                                            />
+                                                                        )}
+                                                                    </div>
+                                                                    <CanonicalStatusBadge
+                                                                        status={
+                                                                            job.status
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                                <p className="mt-0.5 truncate text-xs font-semibold text-ink">
+                                                                    {job.title}
+                                                                </p>
+                                                                <div className="mt-1 flex items-center justify-between gap-1 text-[11px] text-ink-soft">
+                                                                    <span className="truncate">
+                                                                        {
+                                                                            job.client
+                                                                        }
+                                                                        {job
+                                                                            .asset_assignments
+                                                                            .length >
+                                                                            0 &&
+                                                                            ` · ${job.asset_assignments[0].code}`}
+                                                                    </span>
+                                                                    <span className="shrink-0 text-[10px]">
+                                                                        {formatDateTime(
+                                                                            job.scheduled_start,
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <ChevronRight
+                                                                className="mt-2 h-3.5 w-3.5 shrink-0 text-ink-soft"
+                                                                aria-hidden="true"
+                                                            />
+                                                        </button>
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </aside>
+
+                            {!fieldMode && (
+                                <section className="min-w-0 bg-canvas p-4 md:p-6">
+                                    {selectedJob ? (
+                                        <DispatchDetails
+                                            job={selectedJob}
+                                            conflicts={derivedConflicts.filter(
+                                                (c) =>
+                                                    c.jobId === selectedJob.id,
+                                            )}
+                                            recommendations={
+                                                selectedJobRecommendations
+                                            }
+                                            capabilities={capabilities}
+                                            returnTo={returnTo}
+                                        />
+                                    ) : (
+                                        <Panel>
+                                            <EmptyState
+                                                icon={ClipboardList}
+                                                title="Select a dispatch"
+                                                message="Choose a live job from the list to review its schedule, site, and assignments."
+                                            />
+                                        </Panel>
+                                    )}
+                                </section>
+                            )}
+                        </div>
                     )}
-                </div>
+                </>
             )}
         </div>
     );

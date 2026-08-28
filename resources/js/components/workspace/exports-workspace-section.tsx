@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, Panel } from '@/components/ui';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -431,32 +432,26 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label className="block text-xs font-semibold text-ink uppercase">
-                            Date From (Optional)
-                        </label>
-                        <input
-                            type="date"
-                            value={form.data.date_from}
-                            onChange={(e) =>
-                                form.setData('date_from', e.target.value)
-                            }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-ink uppercase">
-                            Date To (Optional)
-                        </label>
-                        <input
-                            type="date"
-                            value={form.data.date_to}
-                            onChange={(e) =>
-                                form.setData('date_to', e.target.value)
-                            }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                        />
-                    </div>
+                    <DateTimePicker
+                        id="export-date-from"
+                        label="Date From"
+                        optional
+                        value={form.data.date_from}
+                        includeTime={false}
+                        onChange={(value) => form.setData('date_from', value)}
+                        error={form.errors.date_from}
+                        placeholder="Select start date…"
+                    />
+                    <DateTimePicker
+                        id="export-date-to"
+                        label="Date To"
+                        optional
+                        value={form.data.date_to}
+                        includeTime={false}
+                        onChange={(value) => form.setData('date_to', value)}
+                        error={form.errors.date_to}
+                        placeholder="Select end date…"
+                    />
                 </div>
 
                 <div className="flex justify-end gap-3 border-t border-line pt-4">

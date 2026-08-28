@@ -3,6 +3,7 @@ import { CalendarDays, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import React, { useState } from 'react';
 import { SiteLocationPicker } from '@/components/maplibre/site-location-picker';
 import { Button, DataPair, Panel } from '@/components/ui';
+import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import type { DispatchDetailPageProps } from '@/types/workspace';
 
@@ -229,6 +230,15 @@ export function DispatchContext({
                     />
                 </div>
             )}
+
+            {/* Hyper-local Site Environmental & Wind Safety Telemetry */}
+            <WeatherSafetyTelemetry
+                variant="site"
+                latitude={currentLat}
+                longitude={currentLon}
+                locationLabel={job.site}
+                className="mt-4"
+            />
 
             <div className="mt-4 rounded-lg border border-line bg-surface-subtle/80 p-3">
                 <p className="text-xs font-semibold text-ink">Site note</p>

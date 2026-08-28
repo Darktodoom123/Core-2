@@ -28,6 +28,7 @@ import {
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
 import { formatDateTime } from '@/lib/formatters';
@@ -72,6 +73,7 @@ export function ReportsSurface({
     const [userOpenedModal, setUserOpenedModal] = useState(
         () => initialJobIdFromUrl !== null,
     );
+    const [showExportModal, setShowExportModal] = useState(false);
 
     const showSubmitModal =
         (userOpenedModal ||
@@ -115,6 +117,14 @@ export function ReportsSurface({
             totalAttachments,
         };
     }, [reports]);
+
+    const completedExportsCount = useMemo(
+        () =>
+            exports.filter(
+                (e) => e.status.value === 'completed' && !e.is_expired,
+            ).length,
+        [exports],
+    );
 
     // Filtered reports
     const filteredReports = useMemo(() => {
@@ -162,16 +172,95 @@ export function ReportsSurface({
 
     return (
         <div className="workspace-width-contained">
+            {/* Header with Title and Primary Actions */}
             <PageHeading
-                title="Job reports & attachments"
-                description="Review field progress, submitted completion summaries, work logs, SHA-256 validated attachments, and operational records."
+                title="Job reports & field verification"
+                description="Review operator telemetry readings, engine meter hours, digital customer sign-offs, and field evidence attachments."
+                actions={
+                    <>
+                        {capabilities.export_reports && (
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowExportModal(true)}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Export Records
+                                {completedExportsCount > 0 && (
+                                    <span className="ml-2 rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success-strong">
+                                        {completedExportsCount} ready
+                                    </span>
+                                )}
+                            </Button>
+                        )}
+                        {capabilities.create_job_report && (
+                            <Button
+                                id="report-submit-toggle"
+                                variant={
+                                    showSubmitModal ? 'secondary' : 'primary'
+                                }
+                                aria-expanded={showSubmitModal}
+                                aria-controls="report-submit-form"
+                                onClick={() => {
+                                    if (showSubmitModal) {
+                                        setModalDismissed(true);
+                                        setUserOpenedModal(false);
+                                    } else {
+                                        setModalDismissed(false);
+                                        setUserOpenedModal(true);
+                                    }
+                                }}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                {showSubmitModal
+                                    ? 'Close report form'
+                                    : 'File job report'}
+                            </Button>
+                        )}
+                    </>
+                }
             />
+
             <div className="space-y-6 p-4 md:p-6">
-                {/* Operational Summary Statistics Cards */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                {/* Commercial & Verification KPI Cards */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* 1. Pending Review */}
+                    <div
+                        onClick={() => setStatusFilter('submitted')}
+                        className={cn(
+                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
+                            statusFilter === 'submitted'
+                                ? 'border-warning bg-warning-soft/40 ring-2 ring-warning/30'
+                                : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30',
+                        )}
+                    >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink-soft">
+                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
+                                Pending Sign-Off
+                            </span>
+                            <Clock className="h-4 w-4 text-warning-strong" />
+                        </div>
+                        <p className="mt-2 text-2xl font-bold text-ink">
+                            {stats.submitted}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            {stats.submitted === 0
+                                ? 'All submissions up to date'
+                                : 'Awaiting manager verification'}
+                        </p>
+                    </div>
+
+                    {/* 2. Total Logged Across Fleet */}
+                    <div
+                        onClick={() => setStatusFilter('all')}
+                        className={cn(
+                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
+                            statusFilter === 'all'
+                                ? 'border-brand bg-brand-soft/40 ring-2 ring-brand/30'
+                                : 'border-line bg-surface hover:bg-surface-subtle',
+                        )}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
                                 Total Reports
                             </span>
                             <FileText className="h-4 w-4 text-brand-strong" />
@@ -180,29 +269,25 @@ export function ReportsSurface({
                             {stats.total}
                         </p>
                         <p className="mt-0.5 text-xs text-ink-soft">
-                            Logged across fleet
+                            {stats.totalAttachments > 0
+                                ? `${stats.totalAttachments} verified attachments`
+                                : 'Logged across active fleet'}
                         </p>
                     </div>
 
-                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                    {/* 3. Approved & Invoiced */}
+                    <div
+                        onClick={() => setStatusFilter('approved')}
+                        className={cn(
+                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
+                            statusFilter === 'approved'
+                                ? 'border-success bg-success-soft/40 ring-2 ring-success/30'
+                                : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30',
+                        )}
+                    >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-warning-strong">
-                                Pending Review
-                            </span>
-                            <Clock className="h-4 w-4 text-warning-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-warning-strong">
-                            {stats.submitted}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Requires manager review
-                        </p>
-                    </div>
-
-                    <div className="rounded-xl border border-success/30 bg-success-soft/30 p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-success-strong">
-                                Approved
+                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
+                                Approved & Closed
                             </span>
                             <FileCheck className="h-4 w-4 text-success-strong" />
                         </div>
@@ -210,14 +295,23 @@ export function ReportsSurface({
                             {stats.approved}
                         </p>
                         <p className="mt-0.5 text-xs text-ink-soft">
-                            Verified & closed
+                            Verified & ready for billing
                         </p>
                     </div>
 
-                    <div className="rounded-xl border border-danger/30 bg-danger-soft/30 p-3.5 shadow-sm">
+                    {/* 4. Needs Rework / Rejected */}
+                    <div
+                        onClick={() => setStatusFilter('rejected')}
+                        className={cn(
+                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
+                            statusFilter === 'rejected'
+                                ? 'border-danger bg-danger-soft/40 ring-2 ring-danger/30'
+                                : 'border-danger/30 bg-danger-soft/20 hover:bg-danger-soft/30',
+                        )}
+                    >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-danger-strong">
-                                Rejected
+                            <span className="text-xs font-semibold tracking-wider text-danger-strong uppercase">
+                                Needs Rework
                             </span>
                             <FileX className="h-4 w-4 text-danger-strong" />
                         </div>
@@ -225,57 +319,12 @@ export function ReportsSurface({
                             {stats.rejected}
                         </p>
                         <p className="mt-0.5 text-xs text-ink-soft">
-                            Returned for rework
-                        </p>
-                    </div>
-
-                    <div className="col-span-2 rounded-xl border border-line bg-surface p-3.5 shadow-sm sm:col-span-2 lg:col-span-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink-soft">
-                                Attachments
-                            </span>
-                            <Paperclip className="h-4 w-4 text-brand-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.totalAttachments}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            SHA-256 secure files
+                            Returned to operator for revision
                         </p>
                     </div>
                 </div>
 
-                {/* Submit Action Bar */}
-                {capabilities.create_job_report && (
-                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-ink-soft">
-                            Submit field completion reports and evidence
-                            attachments for active or completed dispatches.
-                        </p>
-                        <Button
-                            id="report-submit-toggle"
-                            variant={showSubmitModal ? 'secondary' : 'primary'}
-                            aria-expanded={showSubmitModal}
-                            aria-controls="report-submit-form"
-                            onClick={() => {
-                                if (showSubmitModal) {
-                                    setModalDismissed(true);
-                                    setUserOpenedModal(false);
-                                } else {
-                                    setModalDismissed(false);
-                                    setUserOpenedModal(true);
-                                }
-                            }}
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            {showSubmitModal
-                                ? 'Close report form'
-                                : 'Submit job report'}
-                        </Button>
-                    </div>
-                )}
-
-                {/* Submit Job Report Modal / Drawer Form */}
+                {/* Submit Job Report Drawer / Inline Form */}
                 {showSubmitModal && capabilities.create_job_report && (
                     <SubmitJobReportForm
                         jobs={jobs}
@@ -293,7 +342,7 @@ export function ReportsSurface({
                     />
                 )}
 
-                {/* Filter and Search Bar */}
+                {/* Search & Filter Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-1.5">
                         <span className="mr-1 flex items-center text-xs font-medium text-ink-soft">
@@ -324,7 +373,7 @@ export function ReportsSurface({
                                 },
                                 {
                                     id: 'rejected',
-                                    label: 'Rejected',
+                                    label: 'Needs Rework',
                                     count: stats.rejected,
                                 },
                             ] as const
@@ -355,13 +404,13 @@ export function ReportsSurface({
                         ))}
                     </div>
 
-                    <div className="relative w-full sm:w-64">
+                    <div className="relative w-full sm:w-72">
                         <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-soft" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search reports or author…"
+                            placeholder="Search by job, client, or crew…"
                             className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                         {searchQuery && (
@@ -377,30 +426,52 @@ export function ReportsSurface({
                     </div>
                 </div>
 
+                {/* Content Section: Empty vs Filtered Empty vs Master-Detail Review */}
                 {reports.length === 0 ? (
-                    <Panel>
-                        <EmptyState
-                            icon={FileText}
-                            title="No job reports found"
-                            message="Submitted job reports and attached documents will appear here once filed by field operators or managers."
-                        />
+                    <Panel className="p-8 text-center sm:p-12">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-strong shadow-xs">
+                            <FileCheck className="h-7 w-7" aria-hidden="true" />
+                        </div>
+                        <h3 className="mt-4 text-base font-bold text-ink">
+                            All field reports verified & signed off
+                        </h3>
+                        <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+                            When crane operators and drivers complete dispatches
+                            and submit digital work tickets or photos from the
+                            mobile app, they will appear here for manager review
+                            and sign-off.
+                        </p>
+                        {capabilities.create_job_report && (
+                            <div className="mt-6 flex justify-center">
+                                <Button
+                                    variant="primary"
+                                    onClick={() => {
+                                        setModalDismissed(false);
+                                        setUserOpenedModal(true);
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    File job report for past dispatch
+                                </Button>
+                            </div>
+                        )}
                     </Panel>
                 ) : filteredReports.length === 0 ? (
-                    <Panel>
+                    <Panel className="p-8 text-center sm:p-12">
                         <EmptyState
                             icon={Filter}
                             title="No matching reports"
-                            message="No job reports match the active filter or search query. Try clearing your filters."
+                            message="No job reports match the active filter or search query."
                         />
                     </Panel>
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-12">
-                        {/* Reports List Column */}
+                        {/* Reports Queue Column */}
                         <div className="lg:col-span-5 xl:col-span-4">
                             <Panel className="overflow-hidden">
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 font-semibold text-ink">
                                     <span>
-                                        Reports ({filteredReports.length})
+                                        Report Queue ({filteredReports.length})
                                     </span>
                                     {statusFilter !== 'all' && (
                                         <span className="text-xs font-normal text-ink-soft capitalize">
@@ -408,7 +479,7 @@ export function ReportsSurface({
                                         </span>
                                     )}
                                 </div>
-                                <ul className="max-h-[640px] divide-y divide-line overflow-y-auto">
+                                <ul className="max-h-[680px] divide-y divide-line overflow-y-auto">
                                     {filteredReports.map((report) => {
                                         const isSelected =
                                             selectedReport?.id === report.id;
@@ -475,7 +546,7 @@ export function ReportsSurface({
                             </Panel>
                         </div>
 
-                        {/* Report Details Column */}
+                        {/* Report Detail & Verification Pane */}
                         <div className="lg:col-span-7 xl:col-span-8">
                             {selectedReport && (
                                 <ReportDetailPane
@@ -486,10 +557,49 @@ export function ReportsSurface({
                         </div>
                     </div>
                 )}
-
-                {/* Asynchronous Data Exports Surface */}
-                <ExportsSurface exports={exports} capabilities={capabilities} />
             </div>
+
+            {/* Dedicated Background Data Exports Dialog */}
+            {showExportModal && capabilities.export_reports && (
+                <div
+                    className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-xs"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="export-dialog-title"
+                >
+                    <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-4">
+                            <div>
+                                <h2
+                                    id="export-dialog-title"
+                                    className="text-lg font-bold text-ink"
+                                >
+                                    Export Operational Records
+                                </h2>
+                                <p className="text-xs text-ink-soft">
+                                    Request background CSV and PDF exports for
+                                    dispatches, field reports, fuel logs, and
+                                    equipment telemetry.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowExportModal(false)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                aria-label="Close export dialog"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <ExportsSurface
+                                exports={exports}
+                                capabilities={capabilities}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -747,32 +857,22 @@ function SubmitJobReportForm({
 
                 {/* Timing & Telemetry Readings */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-ink uppercase">
-                            Started At (Optional)
-                        </label>
-                        <input
-                            type="datetime-local"
-                            value={form.data.started_at}
-                            onChange={(e) =>
-                                form.setData('started_at', e.target.value)
-                            }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-ink uppercase">
-                            Ended At (Optional)
-                        </label>
-                        <input
-                            type="datetime-local"
-                            value={form.data.ended_at}
-                            onChange={(e) =>
-                                form.setData('ended_at', e.target.value)
-                            }
-                            className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                        />
-                    </div>
+                    <DateTimePicker
+                        id="report-started-at"
+                        label="Started At (Optional)"
+                        value={form.data.started_at}
+                        onChange={(value) => form.setData('started_at', value)}
+                        error={form.errors.started_at}
+                        placeholder="Select start date & time…"
+                    />
+                    <DateTimePicker
+                        id="report-ended-at"
+                        label="Ended At (Optional)"
+                        value={form.data.ended_at}
+                        onChange={(value) => form.setData('ended_at', value)}
+                        error={form.errors.ended_at}
+                        placeholder="Select end date & time…"
+                    />
                     <div>
                         <label className="block text-xs font-semibold text-ink uppercase">
                             Ending Meter Value
