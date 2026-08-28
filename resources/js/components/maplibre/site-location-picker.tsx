@@ -637,10 +637,14 @@ export function SiteLocationPicker({
                 const s2 = slotsState[j];
 
                 if (
-                    s1?.latitude !== null &&
-                    s1?.longitude !== null &&
-                    s2?.latitude !== null &&
-                    s2?.longitude !== null
+                    typeof s1?.latitude === 'number' &&
+                    typeof s1?.longitude === 'number' &&
+                    typeof s2?.latitude === 'number' &&
+                    typeof s2?.longitude === 'number' &&
+                    !isNaN(s1.latitude) &&
+                    !isNaN(s1.longitude) &&
+                    !isNaN(s2.latitude) &&
+                    !isNaN(s2.longitude)
                 ) {
                     const dist = calculateDistanceMeters(
                         s1.latitude,
@@ -669,7 +673,13 @@ export function SiteLocationPicker({
     const isAllPinned = useMemo(() => {
         return (
             slotsState.length > 0 &&
-            slotsState.every((s) => s.latitude !== null && s.longitude !== null)
+            slotsState.every(
+                (s) =>
+                    typeof s.latitude === 'number' &&
+                    typeof s.longitude === 'number' &&
+                    !isNaN(s.latitude) &&
+                    !isNaN(s.longitude),
+            )
         );
     }, [slotsState]);
 
