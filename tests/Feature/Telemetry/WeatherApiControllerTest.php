@@ -9,12 +9,16 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    Cache::flush();
+    Config::set('services.tomorrow_io.key', 'test-api-key');
 });
 
 test('returns site weather telemetry for an active job', function (): void {

@@ -521,20 +521,22 @@ export function SiteLocationPicker({
         initialSlots[0]?.id || 'TC-1',
     );
 
-    const prevPlannedRef = useRef(plannedSlots);
-    const prevAssignedRef = useRef(assignedCranes);
+    const plannedJson = JSON.stringify(plannedSlots);
+    const assignedJson = JSON.stringify(assignedCranes);
+    const prevPlannedJson = useRef(plannedJson);
+    const prevAssignedJson = useRef(assignedJson);
 
     // Sync state only when external plannedSlots or assignedCranes prop changes from backend
     useEffect(() => {
         if (
-            prevPlannedRef.current !== plannedSlots ||
-            prevAssignedRef.current !== assignedCranes
+            prevPlannedJson.current !== plannedJson ||
+            prevAssignedJson.current !== assignedJson
         ) {
-            prevPlannedRef.current = plannedSlots;
-            prevAssignedRef.current = assignedCranes;
+            prevPlannedJson.current = plannedJson;
+            prevAssignedJson.current = assignedJson;
             setSlotsState(initialSlots);
         }
-    }, [assignedCranes, initialSlots, plannedSlots]);
+    }, [assignedJson, initialSlots, plannedJson]);
 
     const activeSlot = useMemo(() => {
         return (
@@ -582,8 +584,10 @@ export function SiteLocationPicker({
 
                     nextLat =
                         !isNaN(parsed) && parsed >= -90 && parsed <= 90
-                            ? Number(parsed.toFixed(7))
-                            : s.latitude;
+                            ? parsed
+                            : String(value).trim() === ''
+                              ? null
+                              : s.latitude;
                 }
 
                 if (field === 'lon') {
@@ -591,8 +595,10 @@ export function SiteLocationPicker({
 
                     nextLon =
                         !isNaN(parsed) && parsed >= -180 && parsed <= 180
-                            ? Number(parsed.toFixed(7))
-                            : s.longitude;
+                            ? parsed
+                            : String(value).trim() === ''
+                              ? null
+                              : s.longitude;
                 }
 
                 const nextRadius =
