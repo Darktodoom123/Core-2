@@ -43,4 +43,8 @@ return [
         'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),
     ],
 
+    'tomorrow_io' => [
+        'key' => env('TOMORROW_IO_API_KEY'),
+    ],
+
 ];

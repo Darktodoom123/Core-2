@@ -32,7 +32,7 @@ beforeEach(function (): void {
 function concurrentDispatcher(): User
 {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     return $dispatcher;
 }

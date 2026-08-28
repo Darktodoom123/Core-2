@@ -14,5 +14,6 @@ export * from './cards/ParkedSecuredCard';
 export * from './cards/CraneSetupSafetyCard';
 export * from './cards/LocationSharingCard';
 export * from './cards/ConstructionWorkingCard';
+export * from './cards/TowerCraneWeatherCard';
 export * from './common/Icon';
 export * from './sos';

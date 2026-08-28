@@ -57,7 +57,7 @@ test('workspace updated event returns correct broadcast payload', function () {
 
 test('active verified operational users can authenticate the private workspace channel', function () {
     $user = User::factory()->create();
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     $this->actingAs($user)
         ->post('/broadcasting/auth', [
@@ -70,7 +70,7 @@ test('active verified operational users can authenticate the private workspace c
 
 test('workspace channel authentication rejects users outside the workspace access boundary', function (array $attributes) {
     $user = User::factory()->create($attributes);
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     $this->actingAs($user)
         ->post('/broadcasting/auth', [

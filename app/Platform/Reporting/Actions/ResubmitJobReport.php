@@ -4,6 +4,7 @@ namespace App\Platform\Reporting\Actions;
 
 use App\Platform\Attachments\Actions\UploadAttachmentAction;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\DispatchCompletionNotification;
 use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
@@ -103,10 +104,10 @@ class ResubmitJobReport
                 'occurred_at' => now(),
             ]);
 
-            // Notify dispatchers and managers of resubmission
+            // Notify operations managers of resubmission
             $recipients = User::query()
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($q) => $q->whereIn('name', ['Dispatcher', 'OperationsManager']))
+                ->role(RoleName::OperationsManager->value)
                 ->get();
 
             foreach ($recipients as $recipient) {

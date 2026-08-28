@@ -39,7 +39,7 @@ function createAttachUser(RoleName $role): User
 }
 
 it('allows uploading a valid attachment and computes sha256 checksum', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-001',
         'client' => 'Attachment Client',
@@ -80,7 +80,7 @@ it('allows uploading a valid attachment and computes sha256 checksum', function 
 });
 
 it('rejects invalid upload types and oversized files', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-002',
         'client' => 'Client',
@@ -118,7 +118,7 @@ it('rejects invalid upload types and oversized files', function (): void {
 });
 
 it('rejects empty files and stores generated paths without traversal segments', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-BOUNDARY',
         'client' => 'Client',
@@ -157,7 +157,7 @@ it('rejects empty files and stores generated paths without traversal segments', 
 });
 
 it('uses the detected MIME type rather than the client-provided extension', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-MIME',
         'client' => 'Client',
@@ -185,7 +185,7 @@ it('uses the detected MIME type rather than the client-provided extension', func
 });
 
 it('enforces maximum limit of 10 attachments per owner record', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-003',
         'client' => 'Client',
@@ -288,7 +288,7 @@ it('enforces file isolation preventing unauthorized user from downloading privat
 });
 
 it('returns not found when an authorized attachment file is missing from private storage', function (): void {
-    $uploader = createAttachUser(RoleName::Dispatcher);
+    $uploader = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-MISSING',
         'client' => 'Client',
@@ -321,7 +321,7 @@ it('returns not found when an authorized attachment file is missing from private
 });
 
 it('prunes expired generic attachments idempotently and records an audit event', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-RETENTION',
         'client' => 'Client',
@@ -426,7 +426,7 @@ it('registers bounded attachment retention cleanup with the scheduler', function
 });
 
 it('removes the stored file when audit persistence fails after upload', function (): void {
-    $user = createAttachUser(RoleName::Dispatcher);
+    $user = createAttachUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-ATT-AUDIT-FAIL',
         'client' => 'Client',

@@ -83,7 +83,7 @@ it('keeps the forward schema contracts needed by R1', function (): void {
 
 it('accepts the maximum quote reference and persists its derived order reference on PostgreSQL', function (): void {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $manager = User::factory()->create();
     $manager->syncRoles([RoleName::OperationsManager->value]);
     $client = Client::query()->create([

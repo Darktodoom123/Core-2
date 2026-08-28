@@ -57,7 +57,7 @@ function createGptJob(User $creator, DispatchStatus $status = DispatchStatus::Dr
 it('allows authorized dispatcher to request GPT recommendation and queues background job', function (): void {
     Queue::fake();
 
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $this->actingAs($dispatcher)
@@ -80,7 +80,7 @@ it('allows authorized dispatcher to request GPT recommendation and queues backgr
 
 it('prevents unauthorized field driver from requesting GPT recommendation', function (): void {
     $driver = createGptUser(RoleName::Driver);
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $this->actingAs($driver)
@@ -93,7 +93,7 @@ it('prevents unauthorized field driver from requesting GPT recommendation', func
 });
 
 it('allows authorized dispatcher to accept valid GPT recommendation and record audit log', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $contextBuilder = app(BoundedContextBuilder::class);
@@ -129,7 +129,7 @@ it('allows authorized dispatcher to accept valid GPT recommendation and record a
 });
 
 it('rejects acceptance of expired GPT recommendation after 15 minutes', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $recommendation = GptRecommendation::query()->create([
@@ -155,7 +155,7 @@ it('rejects acceptance of expired GPT recommendation after 15 minutes', function
 });
 
 it('rejects acceptance when dispatch context hash changes (stale revalidation)', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $recommendation = GptRecommendation::query()->create([
@@ -181,7 +181,7 @@ it('rejects acceptance when dispatch context hash changes (stale revalidation)',
 });
 
 it('rejects acceptance when the dispatch version changes after recommendation generation', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
 
@@ -209,7 +209,7 @@ it('rejects acceptance when the dispatch version changes after recommendation ge
 });
 
 it('allows human actor to reject GPT recommendation with optional reason', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $recommendation = GptRecommendation::query()->create([
@@ -243,7 +243,7 @@ it('allows human actor to reject GPT recommendation with optional reason', funct
 it('increments the GPT user and system counters exactly once per request', function (): void {
     Queue::fake();
     Cache::flush();
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher);
 
     app(GenerateGptRecommendation::class)->handle(
@@ -259,7 +259,7 @@ it('increments the GPT user and system counters exactly once per request', funct
 });
 
 it('prevents a second terminal GPT decision', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
 
@@ -291,7 +291,7 @@ it('prevents a second terminal GPT decision', function (): void {
 it('retries a terminal recommendation by creating a fresh recommendation and preserving the original', function (): void {
     Queue::fake();
 
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $original = GptRecommendation::query()->create([
         'subject_type' => $job->getMorphClass(),
@@ -329,7 +329,7 @@ it('retries a terminal recommendation by creating a fresh recommendation and pre
 
 it('denies retry when the actor cannot view the recommendation subject', function (): void {
     Queue::fake();
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $driver = createGptUser(RoleName::Driver);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $recommendation = GptRecommendation::query()->create([
@@ -354,7 +354,7 @@ it('denies retry when the actor cannot view the recommendation subject', functio
 
 it('does not retry an accepted recommendation', function (): void {
     Queue::fake();
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $recommendation = GptRecommendation::query()->create([
         'subject_type' => $job->getMorphClass(),
@@ -376,7 +376,7 @@ it('does not retry an accepted recommendation', function (): void {
 
 it('deduplicates repeated GPT retries and records only safe retry metrics', function (): void {
     Queue::fake();
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $original = GptRecommendation::query()->create([
         'subject_type' => $job->getMorphClass(),
@@ -404,7 +404,7 @@ it('deduplicates repeated GPT retries and records only safe retry metrics', func
 });
 
 it('records bounded generation metrics without provider context', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
     $recommendation = GptRecommendation::query()->create([
@@ -433,7 +433,7 @@ it('records bounded generation metrics without provider context', function (): v
 });
 
 it('does not resurrect a recommendation rejected while its generation job is processing', function (): void {
-    $dispatcher = createGptUser(RoleName::Dispatcher);
+    $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
     $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
 

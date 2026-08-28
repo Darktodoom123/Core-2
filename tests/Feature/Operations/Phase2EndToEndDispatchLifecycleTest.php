@@ -53,7 +53,16 @@ function addPhase2Credential(User $user, string $kind): void
 }
 
 it('executes full happy path: dispatcher intake -> staffing -> manager approval -> dispatcher activation -> mobile field worker response & step progression to completion', function () {
-    $dispatcher = createPhase2User(RoleName::Dispatcher, 'Lead Dispatcher');
+    $dispatcher = User::factory()->create(['name' => 'Lead Dispatcher', 'is_active' => true]);
+    $dispatcher->givePermissionTo([
+        PermissionName::DispatchCreate->value,
+        PermissionName::DispatchUpdate->value,
+        PermissionName::DispatchViewAll->value,
+        PermissionName::DispatchActivate->value,
+        PermissionName::AssignmentsCreate->value,
+        PermissionName::AssignmentsViewAll->value,
+        PermissionName::AssignmentsReassign->value,
+    ]);
     $manager = createPhase2User(RoleName::OperationsManager, 'Ops Manager');
     $fieldDriver = createPhase2User(RoleName::Driver, 'Field Driver A');
     $fieldOperator = createPhase2User(RoleName::CraneOperator, 'Field Operator A');
@@ -263,7 +272,7 @@ it('executes full happy path: dispatcher intake -> staffing -> manager approval 
 });
 
 it('handles field worker rejection, dispatcher reassignment, and second worker completion', function () {
-    $dispatcher = createPhase2User(RoleName::Dispatcher, 'Reassign Dispatcher');
+    $dispatcher = createPhase2User(RoleName::OperationsManager, 'Reassign Dispatcher');
     $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $worker1 = createPhase2User(RoleName::Driver, 'Driver Worker 1');
     $worker2 = createPhase2User(RoleName::Driver, 'Driver Worker 2');
@@ -376,7 +385,7 @@ it('handles field worker rejection, dispatcher reassignment, and second worker c
 });
 
 it('handles cancellation, reopen, archive, and restoration cycle with assignment cleanup', function () {
-    $dispatcher = createPhase2User(RoleName::Dispatcher, 'Cancel Dispatcher');
+    $dispatcher = createPhase2User(RoleName::OperationsManager, 'Cancel Dispatcher');
     $manager = createPhase2User(RoleName::OperationsManager, 'Cancel Manager');
     $sysAdmin = createPhase2User(RoleName::SystemAdministrator, 'Admin User');
     $worker = createPhase2User(RoleName::Driver, 'Cancel Worker');
@@ -456,7 +465,7 @@ it('handles cancellation, reopen, archive, and restoration cycle with assignment
 });
 
 it('enforces stale version, out-of-order transition, and rejection validation errors safely', function () {
-    $dispatcher = createPhase2User(RoleName::Dispatcher, 'Safety Dispatcher');
+    $dispatcher = createPhase2User(RoleName::OperationsManager, 'Safety Dispatcher');
     $worker = createPhase2User(RoleName::Driver, 'Safety Driver');
     $token = $worker->createToken('Mobile Token')->plainTextToken;
 
@@ -517,7 +526,7 @@ it('enforces stale version, out-of-order transition, and rejection validation er
 });
 
 it('guarantees transactional rollback when audit event recording fails', function () {
-    $dispatcher = createPhase2User(RoleName::Dispatcher, 'Rollback Dispatcher');
+    $dispatcher = createPhase2User(RoleName::OperationsManager, 'Rollback Dispatcher');
     $worker = createPhase2User(RoleName::Driver, 'Rollback Driver');
 
     /** @var DispatchJob $job */

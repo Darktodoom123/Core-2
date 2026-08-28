@@ -72,7 +72,7 @@ it('synchronizes dispatch job to completed upon manager report approval', functi
 
 it('atomically updates assigned asset meter reading from report submission', function (): void {
     $driver = createSecUser(RoleName::Driver);
-    $dispatcher = createSecUser(RoleName::Dispatcher);
+    $dispatcher = createSecUser(RoleName::OperationsManager);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'TRK-'.rand(100, 999),

@@ -234,7 +234,7 @@ export function GptRecommendationsSurface({
 
                         <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
                             <span className="text-xs font-medium text-ink-soft">
-                                Dispatcher Acceptance
+                                Manager Acceptance
                             </span>
                             <p className="mt-1 text-2xl font-bold text-ink">
                                 {telemetry.acceptance_rate}%
@@ -300,7 +300,7 @@ export function GptRecommendationsSurface({
                             <EmptyState
                                 icon={Sparkles}
                                 title="No pending AI recommendations"
-                                message="When dispatchers request AI assistance during resource planning, pending proposed plans will appear here for human evaluation."
+                                message="When operators request AI assistance during resource planning, pending proposed plans will appear here for human evaluation."
                             />
                         </Panel>
                     ) : (

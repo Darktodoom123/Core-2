@@ -27,7 +27,7 @@ it('disables local asset registration for every operational role without changin
         'status' => AssetStatus::Available,
     ]);
 
-    foreach ([RoleName::Dispatcher, RoleName::OperationsManager, RoleName::SystemAdministrator] as $role) {
+    foreach ([RoleName::OperationsManager, RoleName::OperationsManager, RoleName::SystemAdministrator] as $role) {
         $user = User::factory()->create();
         $user->syncRoles([$role->value]);
 
@@ -50,7 +50,7 @@ it('disables local asset registration for every operational role without changin
 
 it('keeps imported Core 3 assets assignable through the normal dispatch workflow', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $driver = User::factory()->create();
     $driver->syncRoles([RoleName::Driver->value]);
     $driver->personnelCredentials()->create([

@@ -53,7 +53,7 @@ function createReassignmentJob(
 }
 
 test('authorized dispatcher can end active personnel and asset assignments preserving history', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Alpha');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Alpha');
     $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
@@ -103,7 +103,7 @@ test('authorized dispatcher can end active personnel and asset assignments prese
 });
 
 test('reassignment validates replacement resource eligibility server-side', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Beta');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Beta');
     $job = createReassignmentJob($dispatcher);
 
     $oldDriver = createReassignmentUser(RoleName::Driver, 'Old Driver');
@@ -133,7 +133,7 @@ test('reassignment validates replacement resource eligibility server-side', func
 });
 
 test('reassignment succeeds when replacing with eligible driver and asset', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Gamma');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Gamma');
     $dispatcher->givePermissionTo(PermissionName::AssignmentsOverride->value);
     $job = createReassignmentJob($dispatcher);
 
@@ -188,7 +188,7 @@ test('reassignment succeeds when replacing with eligible driver and asset', func
 });
 
 test('stale job version rejects reassignment request', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Delta');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Delta');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-STALE', DispatchStatus::Scheduled, DispatchPriority::Routine, 2);
 
     $driver = createReassignmentUser(RoleName::Driver, 'Driver Delta');
@@ -211,7 +211,12 @@ test('stale job version rejects reassignment request', function (): void {
 });
 
 test('post-activation reassignment creates approval request when actor lacks override permission', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Epsilon');
+    $dispatcher = User::factory()->create(['name' => 'Dispatcher Epsilon']);
+    $dispatcher->givePermissionTo([
+        PermissionName::AssignmentsReassign->value,
+        PermissionName::AssignmentsViewAll->value,
+        PermissionName::DispatchViewAll->value,
+    ]);
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-POST', DispatchStatus::Dispatched);
 
     $oldDriver = createReassignmentUser(RoleName::Driver, 'Active Driver');
@@ -262,7 +267,12 @@ test('post-activation reassignment creates approval request when actor lacks ove
 });
 
 test('approved reassignment applies atomically with requester and approver attribution', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Approval');
+    $dispatcher = User::factory()->create(['name' => 'Dispatcher Approval']);
+    $dispatcher->givePermissionTo([
+        PermissionName::AssignmentsReassign->value,
+        PermissionName::AssignmentsViewAll->value,
+        PermissionName::DispatchViewAll->value,
+    ]);
     $manager = createReassignmentUser(RoleName::OperationsManager, 'Manager Approval');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-APPROVED', DispatchStatus::Dispatched);
 
@@ -330,7 +340,12 @@ test('approved reassignment applies atomically with requester and approver attri
 });
 
 test('manager approval fails closed when the staged dispatch version is stale', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Stale Approval');
+    $dispatcher = User::factory()->create(['name' => 'Dispatcher Stale Approval']);
+    $dispatcher->givePermissionTo([
+        PermissionName::AssignmentsReassign->value,
+        PermissionName::AssignmentsViewAll->value,
+        PermissionName::DispatchViewAll->value,
+    ]);
     $manager = createReassignmentUser(RoleName::OperationsManager, 'Manager Stale Approval');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-STALE-APPROVAL', DispatchStatus::Dispatched);
 
@@ -377,7 +392,7 @@ test('manager approval fails closed when the staged dispatch version is stale', 
 });
 
 test('replacement assignment requires a scheduled dispatch and a version', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Validation');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Validation');
     $job = createReassignmentJob($dispatcher, 'DSP-REASSIGN-VALIDATION');
     $job->update(['scheduled_start' => null, 'scheduled_end' => null]);
 
@@ -448,7 +463,7 @@ test('actor with override permission executes post-activation reassignment direc
 
 test('unauthorized user cannot end or reassign resources', function (): void {
     $driver = createReassignmentUser(RoleName::Driver, 'Driver Unauthorized');
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Eta');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Eta');
     $job = createReassignmentJob($dispatcher);
 
     $pAssignment = $job->personnelAssignments()->create([
@@ -470,7 +485,7 @@ test('unauthorized user cannot end or reassign resources', function (): void {
 });
 
 test('completed or cancelled jobs reject reassignment attempts', function (): void {
-    $dispatcher = createReassignmentUser(RoleName::Dispatcher, 'Dispatcher Theta');
+    $dispatcher = createReassignmentUser(RoleName::OperationsManager, 'Dispatcher Theta');
     $job = createReassignmentJob($dispatcher, 'DSP-COMPLETED', DispatchStatus::Completed);
 
     $driver = createReassignmentUser(RoleName::Driver, 'Finished Driver');

@@ -82,7 +82,7 @@ it('keeps SOS disabled unless explicitly enabled', function (): void {
 });
 
 it('accepts a field SOS without a dispatch and snapshots dispatcher and manager recipients', function (): void {
-    $dispatcher = safetyUser(RoleName::Dispatcher, 'Synthetic dispatcher');
+    $dispatcher = safetyUser(RoleName::OperationsManager, 'Synthetic dispatcher');
     $manager = safetyUser(RoleName::OperationsManager, 'Synthetic manager');
     $worker = safetyUser(RoleName::Driver, 'Synthetic field worker');
 
@@ -120,7 +120,7 @@ it('denies office roles even if the trigger permission is manually granted', fun
 it('returns not found for a dispatch outside the worker assignment scope', function (): void {
     $worker = safetyUser(RoleName::Driver);
     $otherWorker = safetyUser(RoleName::Driver);
-    $dispatcher = safetyUser(RoleName::Dispatcher);
+    $dispatcher = safetyUser(RoleName::OperationsManager);
     $assignment = safetyAssignment($otherWorker, $dispatcher);
 
     triggerSafety($worker, ['dispatch_job_id' => $assignment['job']->id])->assertNotFound();
@@ -128,7 +128,7 @@ it('returns not found for a dispatch outside the worker assignment scope', funct
 });
 
 it('allows the worker to classify an active incident and attach only an assigned asset', function (): void {
-    $dispatcher = safetyUser(RoleName::Dispatcher);
+    $dispatcher = safetyUser(RoleName::OperationsManager);
     $worker = safetyUser(RoleName::Driver);
     $assignment = safetyAssignment($worker, $dispatcher, 'SOS-DSP-CLASSIFY');
     $assetId = DB::table('operational_assets')->insertGetId([
@@ -151,7 +151,7 @@ it('allows the worker to classify an active incident and attach only an assigned
 });
 
 it('acknowledges without resolving, then requires a code and note to resolve', function (): void {
-    $dispatcher = safetyUser(RoleName::Dispatcher);
+    $dispatcher = safetyUser(RoleName::OperationsManager);
     $worker = safetyUser(RoleName::Driver);
     $incident = tap(triggerSafety($worker)->assertCreated(), fn () => null);
     $model = SosIncident::query()->sole();
@@ -167,7 +167,7 @@ it('acknowledges without resolving, then requires a code and note to resolve', f
 });
 
 it('escalates once at the server deadline and preserves the acknowledgement history', function (): void {
-    $dispatcher = safetyUser(RoleName::Dispatcher);
+    $dispatcher = safetyUser(RoleName::OperationsManager);
     $worker = safetyUser(RoleName::Driver);
     triggerSafety($worker)->assertCreated();
     $incident = SosIncident::query()->sole();

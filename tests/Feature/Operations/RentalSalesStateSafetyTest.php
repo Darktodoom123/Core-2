@@ -142,7 +142,7 @@ function r0StateCommitment(
 }
 
 it('requires non-empty bounded condition evidence for checkout and return', function (string $operation, string $shape): void {
-    $actor = r0StateUser(RoleName::Dispatcher);
+    $actor = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-CONDITION-'.fake()->unique()->numerify('###'));
     $reservation = r0StateReservation(
@@ -202,7 +202,7 @@ it('requires non-empty bounded condition evidence for checkout and return', func
 ]);
 
 it('revalidates rental checkout after each operational blocker appears', function (string $blocker): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-LATE-'.fake()->unique()->numerify('###'));
@@ -244,7 +244,7 @@ it('revalidates rental checkout after each operational blocker appears', functio
 })->with(['unavailable', 'maintenance', 'sale', 'dispatch']);
 
 it('keeps confirmed, fulfilled, and transferred physical sales committed against rental approval', function (SalesOrderStatus $status): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-SALE-'.fake()->unique()->numerify('###'));
@@ -280,7 +280,7 @@ it('keeps committed physical sales out of dispatch eligibility', function (Sales
 ]);
 
 it('keeps rental reservations out of dispatch eligibility', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-RENT-DISPATCH-'.fake()->unique()->numerify('###'));
     r0StateReservation($dispatcher, $client, $asset, RentalReservationStatus::Requested);
@@ -293,7 +293,7 @@ it('keeps rental reservations out of dispatch eligibility', function (): void {
 });
 
 it('keeps dispatch assignments out of rental creation', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-DISPATCH-RENT-'.fake()->unique()->numerify('###'));
     $start = CarbonImmutable::now()->addDays(2)->startOfDay();
@@ -322,7 +322,7 @@ it('keeps dispatch assignments out of rental creation', function (): void {
 });
 
 it('rejects duplicate rental asset IDs before creating a reservation', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-DUPLICATE-'.fake()->unique()->numerify('###'));
     $start = CarbonImmutable::now()->addDays(2)->startOfDay();
@@ -346,7 +346,7 @@ it('rejects duplicate rental asset IDs before creating a reservation', function 
 });
 
 it('persists valid rental checkout and return condition evidence as JSON', function (): void {
-    $actor = r0StateUser(RoleName::Dispatcher);
+    $actor = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-EVIDENCE-'.fake()->unique()->numerify('###'));
     $reservation = r0StateReservation($actor, $client, $asset, RentalReservationStatus::Reserved, 'pickup');
@@ -374,7 +374,7 @@ it('persists valid rental checkout and return condition evidence as JSON', funct
 });
 
 it('does not restore a returned rental asset that became committed to a terminal sale', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-RETURN-SALE-'.fake()->unique()->numerify('###'), AssetStatus::Assigned);
@@ -399,7 +399,7 @@ it('does not restore a returned rental asset that became committed to a terminal
 });
 
 it('allows an exact dispatch end to rental start boundary', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-BOUNDARY-'.fake()->unique()->numerify('###'));
     $start = CarbonImmutable::now()->addDays(2)->startOfDay();
@@ -425,7 +425,7 @@ it('allows an exact dispatch end to rental start boundary', function (): void {
 });
 
 it('revalidates a linked asset before sales fulfillment', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-FULFILL-'.fake()->unique()->numerify('###'));
@@ -616,7 +616,7 @@ it('rejects a count above the signed integer maximum', function (): void {
 });
 
 it('accepts a 48-character quote reference and derives its order reference', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $catalog = SalesCatalogItem::query()->create([
@@ -642,7 +642,7 @@ it('accepts a 48-character quote reference and derives its order reference', fun
 });
 
 it('rejects quote line multiplication overflow before any quote or audit is written', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $catalog = SalesCatalogItem::query()->create([
         'sku' => 'SKU-R0-LINE-OVERFLOW',
@@ -667,7 +667,7 @@ it('rejects quote line multiplication overflow before any quote or audit is writ
 });
 
 it('rejects an expired quote before reservation, order, or success audit mutation', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $manager = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $catalog = SalesCatalogItem::query()->create([
@@ -706,7 +706,7 @@ it('rejects an expired quote before reservation, order, or success audit mutatio
 });
 
 it('rejects rental line multiplication overflow before persistence', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-RATE-OVERFLOW');
     $start = CarbonImmutable::now()->addDays(2);
@@ -725,7 +725,7 @@ it('rejects rental line multiplication overflow before persistence', function ()
 });
 
 it('accepts the maximum safe rental line total', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-RENTAL-MAX');
     $start = CarbonImmutable::now()->addDays(2);
@@ -747,7 +747,7 @@ it('accepts the maximum safe rental line total', function (): void {
 });
 
 it('rejects a rental rate above the signed integer maximum', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $asset = r0StateAsset('EQ-R0-RENTAL-OVER-MAX');
     $start = CarbonImmutable::now()->addDays(2);
@@ -768,7 +768,7 @@ it('rejects a rental rate above the signed integer maximum', function (): void {
 });
 
 it('rejects rental aggregate overflow before persistence', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $first = r0StateAsset('EQ-R0-RENTAL-AGG-1');
     $second = r0StateAsset('EQ-R0-RENTAL-AGG-2');
@@ -793,7 +793,7 @@ it('rejects rental aggregate overflow before persistence', function (): void {
 });
 
 it('rejects multi-line aggregate overflow before quote persistence', function (): void {
-    $dispatcher = r0StateUser(RoleName::Dispatcher);
+    $dispatcher = r0StateUser(RoleName::OperationsManager);
     $client = r0StateClient();
     $first = SalesCatalogItem::query()->create([
         'sku' => 'SKU-R0-AGG-1',

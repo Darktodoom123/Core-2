@@ -529,3 +529,34 @@ export interface TechnicianHandover {
     signatureConfirmed: boolean;
     timestamp: string;
 }
+
+export interface SiteWeatherTelemetry {
+    latitude: number;
+    longitude: number;
+    temperature_celsius: number;
+    wind_speed_kmh: number;
+    wind_gusts_kmh: number;
+    rain_intensity_mmh: number;
+    humidity_percent: number;
+    weather_description: string;
+    safety_level: 'safe_normal' | 'warning_caution' | 'critical_stop_work';
+    safety_message: string;
+    source: string;
+    fetched_at: string;
+    job_id?: number;
+    job_reference?: string;
+    site_name?: string;
+}
+
+export interface WeatherStandbyPayload {
+    anemometer_wind_kmh: number;
+    reason:
+        | 'high_wind'
+        | 'thunderstorm'
+        | 'heavy_rain'
+        | 'typhoon_signal'
+        | 'other_weather';
+    remarks?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+}

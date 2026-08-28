@@ -83,7 +83,7 @@ it('enforces endpoint-specific rate limiters for location, uploads, exports, and
         ->assertStatus(429);
 
     // 3. Private attachment upload throttle (20 req/min)
-    $dispatcher = createSprint7User(RoleName::Dispatcher);
+    $dispatcher = createSprint7User(RoleName::OperationsManager);
     for ($i = 0; $i < 20; $i++) {
         $job = DispatchJob::query()->create([
             'reference' => 'UPL-'.$i.'-'.uniqid(),

@@ -145,10 +145,10 @@ it('requires a reason when rejecting a job report', function (): void {
         ->and($report->remarks)->toContain('Review Note: Incomplete site photos.');
 });
 
-it('allows dispatcher to view job reports but forbids them from reviewing or approving', function (): void {
-    $dispatcher = createReportUser(RoleName::Dispatcher);
+it('allows operations manager to review and approve job reports but forbids field workers', function (): void {
+    $manager = createReportUser(RoleName::OperationsManager);
     $driver = createReportUser(RoleName::Driver);
-    $job = createReportJob($dispatcher);
+    $job = createReportJob($manager);
 
     $report = JobReport::query()->create([
         'dispatch_job_id' => $job->id,
@@ -160,22 +160,24 @@ it('allows dispatcher to view job reports but forbids them from reviewing or app
         'submitted_at' => now(),
     ]);
 
-    // Dispatcher can view the report
-    $this->actingAs($dispatcher)
+    // Operations Manager can view and review the report
+    $this->actingAs($manager)
         ->getJson('/operations/job-reports')
         ->assertOk()
         ->assertJsonFragment(['work_summary' => 'Driver field report']);
 
-    expect(Gate::forUser($dispatcher)->allows('review', $report))->toBeFalse();
+    expect(Gate::forUser($manager)->allows('review', $report))->toBeTrue()
+        ->and(Gate::forUser($driver)->allows('review', $report))->toBeFalse();
 
-    // Dispatcher is forbidden from reviewing/approving the report
-    $this->actingAs($dispatcher)
+    // Driver is forbidden from reviewing/approving the report
+    $this->actingAs($driver)
         ->post("/operations/job-reports/{$report->id}/review", [
             'status' => 'approved',
         ])
         ->assertStatus(403);
 
-    expect(OperationsWorkspaceViewModel::capabilities($dispatcher)['review_job_report'])->toBeFalse();
+    expect(OperationsWorkspaceViewModel::capabilities($manager)['review_job_report'])->toBeTrue()
+        ->and(OperationsWorkspaceViewModel::capabilities($driver)['review_job_report'])->toBeFalse();
 });
 
 it('allows crane operator to view navigation and submit job report for assigned work', function (): void {

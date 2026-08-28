@@ -34,8 +34,8 @@ it('can safely rerun the application seeder', function () {
 
 it('shares server-derived role and capabilities with inertia', function () {
     $user = User::factory()->create();
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
     $this->actingAs($user)->get('/?role=administrator')->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->component('workspace')->where('auth.role', RoleName::Dispatcher->value)->where('auth.prototype_role', 'dispatcher')
-        ->has('auth.permissions', count(RolePermissionSeeder::rolePermissions()[RoleName::Dispatcher->value])));
+        ->component('workspace')->where('auth.role', RoleName::OperationsManager->value)->where('auth.prototype_role', 'manager')
+        ->has('auth.permissions', count(RolePermissionSeeder::rolePermissions()[RoleName::OperationsManager->value])));
 });

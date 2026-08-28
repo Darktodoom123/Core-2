@@ -23,7 +23,7 @@ beforeEach(function (): void {
 function candidatePerformanceDispatcher(): User
 {
     $user = User::factory()->create(['name' => 'Candidate dispatcher']);
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     return $user;
 }

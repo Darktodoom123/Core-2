@@ -39,7 +39,7 @@ function workflowClient(): Client
 }
 
 it('completes an authorized rental reservation checkout and return with conflict protection', function (): void {
-    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $dispatcher = workflowUser(RoleName::OperationsManager);
     $manager = workflowUser(RoleName::OperationsManager);
     $client = workflowClient();
     $asset = OperationalAsset::query()->create(['code' => 'EQ-RENT-1', 'name' => 'Crawler crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
@@ -65,7 +65,7 @@ it('completes an authorized rental reservation checkout and return with conflict
 });
 
 it('derives sales totals, reserves inventory, and makes sold equipment unavailable', function (): void {
-    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $dispatcher = workflowUser(RoleName::OperationsManager);
     $manager = workflowUser(RoleName::OperationsManager);
     $client = workflowClient();
     $asset = OperationalAsset::query()->create(['code' => 'EQ-SALE-1', 'name' => 'Mobile crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
@@ -120,7 +120,7 @@ it('keeps rental and sales writes behind their dedicated permissions', function 
 });
 
 it('rechecks asset availability and quantity when approving a rental', function (): void {
-    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $dispatcher = workflowUser(RoleName::OperationsManager);
     $manager = workflowUser(RoleName::OperationsManager);
     $client = workflowClient();
     $asset = OperationalAsset::query()->create(['code' => 'EQ-RECHECK-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
@@ -137,7 +137,7 @@ it('rechecks asset availability and quantity when approving a rental', function 
 });
 
 it('rejects an approval when another reservation conflicts with the same unit', function (): void {
-    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $dispatcher = workflowUser(RoleName::OperationsManager);
     $manager = workflowUser(RoleName::OperationsManager);
     $client = workflowClient();
     $asset = OperationalAsset::query()->create(['code' => 'EQ-CONFLICT-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);
@@ -163,7 +163,7 @@ it('prevents serialized catalog overstock and records catalog creation audit', f
 });
 
 it('rejects a quote when its linked unit becomes unavailable and rejects duplicate lines', function (): void {
-    $dispatcher = workflowUser(RoleName::Dispatcher);
+    $dispatcher = workflowUser(RoleName::OperationsManager);
     $manager = workflowUser(RoleName::OperationsManager);
     $client = workflowClient();
     $asset = OperationalAsset::query()->create(['code' => 'EQ-QUOTE-1', 'name' => 'Crane', 'kind' => 'equipment', 'status' => AssetStatus::Available]);

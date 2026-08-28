@@ -4,11 +4,13 @@ import type {
     DispatchJob,
     JobReportCommandPayload,
     LocationSharePayload,
+    SiteWeatherTelemetry,
     SosConfiguration,
     SosIncident,
     SosIncidentCategory,
     SosLocationSnapshot,
     User,
+    WeatherStandbyPayload,
 } from '../types/index';
 
 export class ApiClientError extends Error {
@@ -581,5 +583,59 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<any>(response);
+    }
+
+    public async fetchSiteWeather(
+        jobId: number,
+        coords?: { lat: number; lon: number },
+    ): Promise<SiteWeatherTelemetry> {
+        let url = `${this.baseUrl}/api/v1/dispatch/jobs/${jobId}/weather`;
+
+        if (coords) {
+            url += `?lat=${coords.lat}&lon=${coords.lon}`;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<SiteWeatherTelemetry>(response);
+    }
+
+    public async reportWeatherStandby(
+        jobId: number,
+        payload: WeatherStandbyPayload,
+        commandId?: string,
+    ): Promise<{
+        message: string;
+        data: {
+            job_id: number;
+            job_reference: string;
+            anemometer_wind_kmh: number;
+            reason: string;
+            free_slew_required: boolean;
+            logged_at: string;
+        };
+    }> {
+        const url = `${this.baseUrl}/api/v1/dispatch/jobs/${jobId}/weather-standby`;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            data: {
+                job_id: number;
+                job_reference: string;
+                anemometer_wind_kmh: number;
+                reason: string;
+                free_slew_required: boolean;
+                logged_at: string;
+            };
+        }>(response);
     }
 }

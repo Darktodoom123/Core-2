@@ -61,7 +61,7 @@ function initialRouteState(role: UserRole) {
 
 export default function Operations() {
     const { auth } = usePage().props;
-    const authenticatedRole = (auth.prototype_role ?? 'dispatcher') as UserRole;
+    const authenticatedRole = (auth.prototype_role ?? 'manager') as UserRole;
     const initial = initialRouteState(authenticatedRole);
     const [state, dispatch] = useReducer(
         operationsReducer,

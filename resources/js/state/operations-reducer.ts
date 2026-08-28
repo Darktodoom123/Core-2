@@ -33,14 +33,13 @@ import type {
 
 export const defaultSectionForRole: Record<UserRole, AppSection> = {
     administrator: 'board',
-    dispatcher: 'board',
     manager: 'board',
     driver: 'today',
     operator: 'today',
 };
 
 export function createInitialState(
-    role: UserRole = 'dispatcher',
+    role: UserRole = 'manager',
     section: AppSection = defaultSectionForRole[role],
 ): OperationsState {
     return {

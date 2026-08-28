@@ -81,7 +81,7 @@ final class DispatchFieldProgressionViewModel
     private static function confirmationMessage(DispatchJob $job, DispatchStatus $current): string
     {
         return match ($current) {
-            DispatchStatus::Dispatched => "You are accepting responsibility for {$job->reference}. The dispatcher will see the job as accepted.",
+            DispatchStatus::Dispatched => "You are accepting responsibility for {$job->reference}. The operations team will see the job as accepted.",
             DispatchStatus::Accepted => "This marks {$job->reference} as en route. Confirm only when travel to the site has started.",
             DispatchStatus::EnRoute => "This marks {$job->reference} as arrived. Confirm only when you are at the job site.",
             DispatchStatus::Arrived => "This marks {$job->reference} as working. Confirm when field work has started.",

@@ -15,7 +15,7 @@ beforeEach(function (): void {
 function manualReferenceDispatcher(): User
 {
     $user = User::factory()->create();
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     return $user;
 }

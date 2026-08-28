@@ -56,7 +56,7 @@ function handoffAsset(string $code): OperationalAsset
 }
 
 it('creates and links a rental delivery dispatch only after approval', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $asset = handoffAsset('EQ-HANDOFF-RENTAL');
@@ -106,7 +106,7 @@ it('creates and links a rental delivery dispatch only after approval', function 
 });
 
 it('does not create dispatch work for a rental pickup', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $asset = handoffAsset('EQ-HANDOFF-PICKUP');
@@ -139,7 +139,7 @@ it('does not create dispatch work for a rental pickup', function (): void {
 });
 
 it('carries sales delivery intent into the confirmed order and dispatch handoff', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $catalog = SalesCatalogItem::query()->create([
@@ -182,7 +182,7 @@ it('carries sales delivery intent into the confirmed order and dispatch handoff'
 });
 
 it('keeps sales pickup orders out of dispatch', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $catalog = SalesCatalogItem::query()->create([
@@ -221,7 +221,7 @@ it('keeps sales pickup orders out of dispatch', function (): void {
 });
 
 it('rejects sales delivery acceptance without a location and protects handoff routes', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $fieldWorker = handoffUser(RoleName::Driver);
     $client = handoffClient();
@@ -265,7 +265,7 @@ it('rejects sales delivery acceptance without a location and protects handoff ro
 });
 
 it('requires a completed rental delivery dispatch before checkout', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $asset = handoffAsset('EQ-HANDOFF-CHECKOUT');
@@ -300,7 +300,7 @@ it('requires a completed rental delivery dispatch before checkout', function ():
 });
 
 it('requires a completed sales delivery dispatch before fulfillment', function (): void {
-    $dispatcher = handoffUser(RoleName::Dispatcher);
+    $dispatcher = handoffUser(RoleName::OperationsManager);
     $manager = handoffUser(RoleName::OperationsManager);
     $client = handoffClient();
     $catalog = SalesCatalogItem::query()->create([

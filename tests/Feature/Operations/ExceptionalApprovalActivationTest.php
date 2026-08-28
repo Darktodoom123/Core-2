@@ -112,7 +112,7 @@ function requestExceptionalWorkflowApproval(
 }
 
 it('activates a ready routine dispatch through the browser and records the actor and version', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Routine Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Routine Dispatcher');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Routine Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6001');
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6001');
@@ -157,7 +157,7 @@ it('activates a ready routine dispatch through the browser and records the actor
 });
 
 it('prevents activation without both active personnel and asset assignments', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Assignment Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Assignment Dispatcher');
     $driver = exceptionalWorkflowUser(RoleName::Driver, 'Only Driver');
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
@@ -211,7 +211,7 @@ it('requires an independent manager approval for exceptional dispatch activation
     string $priority,
     string $reference,
 ) {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, "Dispatcher {$reference}");
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, "Dispatcher {$reference}");
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, "Manager {$reference}");
     $job = exceptionalWorkflowJob($dispatcher, $reference, DispatchPriority::from($priority));
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, $reference);
@@ -243,7 +243,7 @@ it('requires an independent manager approval for exceptional dispatch activation
 ]);
 
 it('blocks activation of unapproved routine dispatches and requires operations approval', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Unapproved Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Unapproved Dispatcher');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6150', DispatchPriority::Routine);
     assignExceptionalWorkflowResources($job, $dispatcher, '6150');
 
@@ -259,7 +259,7 @@ it('blocks activation of unapproved routine dispatches and requires operations a
 });
 
 it('keeps rejected exceptional work inactive and preserves the rejection reason', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Rejected Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Rejected Dispatcher');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Rejecting Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6201', DispatchPriority::Emergency);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6201');
@@ -289,7 +289,7 @@ it('keeps rejected exceptional work inactive and preserves the rejection reason'
 });
 
 it('requires a reason for approval and rejection decisions', function (string $status) {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, "Reason Dispatcher {$status}");
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, "Reason Dispatcher {$status}");
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, "Reason Manager {$status}");
     $job = exceptionalWorkflowJob($dispatcher, "CON-63{$status}", DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, "63{$status}");
@@ -335,7 +335,7 @@ it('allows a privileged requester to decide their own exceptional work', functio
 });
 
 it('forbids unauthorized decision and activation access while auditing the activation attempt', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Authorized Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Authorized Dispatcher');
     $driver = exceptionalWorkflowUser(RoleName::Driver, 'Unauthorized Driver');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6501', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6501');
@@ -405,7 +405,7 @@ it('allows a system administrator to approve their own requested approval', func
 });
 
 it('allows an operations manager to approve and activate a priority dispatch atomically', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Atomic Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Atomic Dispatcher');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Atomic Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6504', DispatchPriority::Priority);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6504');
@@ -438,7 +438,7 @@ it('allows an operations manager to approve and activate a priority dispatch ato
 });
 
 it('requires activation capability and dispatch visibility for activation', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Visibility Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Visibility Dispatcher');
     $activator = User::factory()->create(['name' => 'Unscoped Activator']);
     $activator->givePermissionTo(PermissionName::DispatchActivate->value);
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6502');
@@ -452,7 +452,7 @@ it('requires activation capability and dispatch visibility for activation', func
 });
 
 it('rejects a stale activation version with a refresh and review error and audits the attempt', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Stale Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Stale Dispatcher');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6601', DispatchPriority::Routine, version: 2);
     assignExceptionalWorkflowResources($job, $dispatcher, '6601');
 
@@ -472,7 +472,7 @@ it('rejects a stale activation version with a refresh and review error and audit
 });
 
 it('revalidates changed asset safety at activation time and audits the blocked attempt', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Safety Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Dispatcher');
     $technician = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Technician');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Safety Manager');
     $statusJob = exceptionalWorkflowJob($dispatcher, 'CON-6701');
@@ -520,7 +520,7 @@ it('revalidates changed asset safety at activation time and audits the blocked a
 });
 
 it('revalidates assigned personnel eligibility at activation time', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Personnel Safety Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Personnel Safety Dispatcher');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6703');
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6703');
     $resources['driver']->update(['is_active' => false]);
@@ -544,7 +544,7 @@ it('revalidates assigned personnel eligibility at activation time', function () 
 });
 
 it('provides managers enough context to independently review each pending request', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Context Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Context Dispatcher');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Context Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6801', DispatchPriority::Emergency);
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6801');
@@ -593,7 +593,7 @@ it('marks self-requested approvals as decidable for administrators in the live U
 });
 
 it('limits the pending approval feed to kinds the reviewer is authorized to decide', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Scoped Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Scoped Dispatcher');
     $reviewer = User::factory()->create(['name' => 'Assignment Reviewer']);
     $reviewer->givePermissionTo([
         PermissionName::AssignmentsApprove->value,
@@ -622,7 +622,7 @@ it('limits the pending approval feed to kinds the reviewer is authorized to deci
 });
 
 it('does not expose pending approvals for dispatches outside the reviewer visibility scope', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Scoped Approval Requester');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Scoped Approval Requester');
     $reviewer = User::factory()->create(['name' => 'Assignment Reviewer Without Dispatch Visibility']);
     $reviewer->givePermissionTo(PermissionName::AssignmentsApprove->value);
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6804', DispatchPriority::Priority);
@@ -637,7 +637,7 @@ it('does not expose pending approvals for dispatches outside the reviewer visibi
 });
 
 it('exposes dispatcher activation readiness without treating UI visibility as authorization', function () {
-    $dispatcher = exceptionalWorkflowUser(RoleName::Dispatcher, 'Readiness Dispatcher');
+    $dispatcher = exceptionalWorkflowUser(RoleName::OperationsManager, 'Readiness Dispatcher');
     $manager = exceptionalWorkflowUser(RoleName::OperationsManager, 'Readiness Manager');
     $job = exceptionalWorkflowJob($dispatcher, 'CON-6901');
     $resources = assignExceptionalWorkflowResources($job, $dispatcher, '6901');

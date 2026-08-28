@@ -34,14 +34,14 @@ const prototypeUsers = [
     {
         name: 'Marco Villanueva',
         email: 'marco@ctms.example',
-        role: 'Dispatcher',
+        role: 'Operations Manager',
         status: 'Active',
         lastSeen: 'Now',
     },
     {
         name: 'Dianne Santos',
         email: 'dianne@ctms.example',
-        role: 'Operations Manager',
+        role: 'System Administrator',
         status: 'Active',
         lastSeen: '4 min ago',
     },

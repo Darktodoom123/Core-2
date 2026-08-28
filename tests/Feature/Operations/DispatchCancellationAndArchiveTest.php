@@ -46,7 +46,7 @@ function createTestJob(User $creator, DispatchStatus $status = DispatchStatus::D
 }
 
 it('allows authorized user to cancel a job with a required reason and closes active assignments', function () {
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $driver = createTestUser(RoleName::Driver);
     $asset = OperationalAsset::query()->create([
         'code' => 'TR-99',
@@ -105,7 +105,7 @@ it('allows authorized user to cancel a job with a required reason and closes act
 });
 
 it('rejects cancellation without a reason', function () {
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $job = createTestJob($dispatcher, DispatchStatus::Scheduled);
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/cancel", [
@@ -118,7 +118,7 @@ it('rejects cancellation without a reason', function () {
 });
 
 it('prevents cancellation of completed or already cancelled jobs', function () {
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $completedJob = createTestJob($dispatcher, DispatchStatus::Completed);
     $cancelledJob = createTestJob($dispatcher, DispatchStatus::Cancelled);
 
@@ -135,7 +135,7 @@ it('prevents cancellation of completed or already cancelled jobs', function () {
 
 it('prevents unauthorized user from cancelling a job', function () {
     $driver = createTestUser(RoleName::Driver);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $job = createTestJob($dispatcher, DispatchStatus::Scheduled);
 
     $this->actingAs($driver)->post("/operations/dispatch-jobs/{$job->id}/cancel", [
@@ -146,7 +146,7 @@ it('prevents unauthorized user from cancelling a job', function () {
 
 it('restricts reopen, archive, and restore to their administrative capabilities', function () {
     $driver = createTestUser(RoleName::Driver);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $manager = createTestUser(RoleName::OperationsManager);
     $cancelledJob = createTestJob($dispatcher, DispatchStatus::Cancelled);
     $draftJob = createTestJob($dispatcher, DispatchStatus::Draft);
@@ -169,7 +169,7 @@ it('restricts reopen, archive, and restore to their administrative capabilities'
 });
 
 it('rejects cancellation when the optimistic version is stale', function () {
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $job = createTestJob($dispatcher, DispatchStatus::Draft);
 
     $response = $this->actingAs($dispatcher)->post("/operations/dispatch-jobs/{$job->id}/cancel", [
@@ -182,7 +182,7 @@ it('rejects cancellation when the optimistic version is stale', function () {
 });
 
 it('allows an operations manager to reopen a cancelled job back to draft', function () {
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $manager = createTestUser(RoleName::OperationsManager);
 
     $job = createTestJob($dispatcher, DispatchStatus::Cancelled);
@@ -219,7 +219,7 @@ it('allows an operations manager to reopen a cancelled job back to draft', funct
 
 it('prevents reopening jobs that are not cancelled', function () {
     $manager = createTestUser(RoleName::OperationsManager);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $draftJob = createTestJob($dispatcher, DispatchStatus::Draft);
 
     $this->actingAs($manager)->post("/operations/dispatch-jobs/{$draftJob->id}/reopen", [
@@ -230,7 +230,7 @@ it('prevents reopening jobs that are not cancelled', function () {
 
 it('allows authorized administrative user to archive and restore jobs using soft delete', function () {
     $sysAdmin = createTestUser(RoleName::SystemAdministrator);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $driver = createTestUser(RoleName::Driver);
     $asset = OperationalAsset::query()->create([
         'code' => 'TR-100',
@@ -294,7 +294,7 @@ it('allows authorized administrative user to archive and restore jobs using soft
 
 it('rolls back archive, assignment closure, and audit history when auditing fails', function () {
     $sysAdmin = createTestUser(RoleName::SystemAdministrator);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $driver = createTestUser(RoleName::Driver);
     $job = createTestJob($dispatcher, DispatchStatus::Draft);
     $assignment = DispatchPersonnelAssignment::query()->create([
@@ -330,7 +330,7 @@ it('rolls back archive, assignment closure, and audit history when auditing fail
 
 it('prevents archiving active field jobs directly', function () {
     $sysAdmin = createTestUser(RoleName::SystemAdministrator);
-    $dispatcher = createTestUser(RoleName::Dispatcher);
+    $dispatcher = createTestUser(RoleName::OperationsManager);
     $activeJob = createTestJob($dispatcher, DispatchStatus::Working);
 
     $this->actingAs($sysAdmin)->post("/operations/dispatch-jobs/{$activeJob->id}/archive", [

@@ -20,7 +20,7 @@ it('redirects guests to the internal login page', function () {
 
 it('authenticates an active verified user', function () {
     $user = User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatch.admin']);
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
     $this->post('/login', ['username' => ' Dispatch.Admin ', 'password' => 'password'])->assertRedirect('/');
     $this->assertAuthenticatedAs($user);
 });

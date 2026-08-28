@@ -16,8 +16,7 @@
  * ============================================================================
  */
 
-export type UserRole =
-    'administrator' | 'dispatcher' | 'manager' | 'driver' | 'operator';
+export type UserRole = 'administrator' | 'manager' | 'driver' | 'operator';
 
 export type AppSection =
     | 'overview'
@@ -254,7 +253,6 @@ export type OperationsAction =
 
 export const roleLabels: Record<UserRole, string> = {
     administrator: 'System Administrator',
-    dispatcher: 'Dispatcher',
     manager: 'Operations Manager',
     driver: 'Driver',
     operator: 'Crane Operator',

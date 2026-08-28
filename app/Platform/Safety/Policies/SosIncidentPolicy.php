@@ -28,7 +28,7 @@ final class SosIncidentPolicy
 
     public function respond(User $user, SosIncident $incident): bool
     {
-        return in_array($user->operationalRole(), [RoleName::Dispatcher, RoleName::OperationsManager], true)
+        return $user->operationalRole() === RoleName::OperationsManager
             && $user->can(PermissionName::SosRespond->value)
             && $this->view($user, $incident);
     }

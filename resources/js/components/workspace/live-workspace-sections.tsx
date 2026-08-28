@@ -3114,9 +3114,6 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     <option value="crane_operator">
                                         Crane Operator (Mobile / All-Terrain)
                                     </option>
-                                    <option value="dispatcher">
-                                        Dispatcher
-                                    </option>
                                     <option value="operations_manager">
                                         Operations Manager
                                     </option>
@@ -3294,9 +3291,6 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     <option value="driver">Driver</option>
                                     <option value="crane_operator">
                                         Crane Operator
-                                    </option>
-                                    <option value="dispatcher">
-                                        Dispatcher
                                     </option>
                                     <option value="operations_manager">
                                         Operations Manager

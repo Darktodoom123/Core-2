@@ -127,11 +127,11 @@ it('requires authentication and an active verified account before Rental writes'
 
     $this->postJson('/operations/rental-reservations', $payload)->assertUnauthorized();
 
-    $inactive = r0AuthUser(RoleName::Dispatcher);
+    $inactive = r0AuthUser(RoleName::OperationsManager);
     $inactive->update(['is_active' => false]);
     $this->actingAs($inactive)->postJson('/operations/rental-reservations', $payload)->assertForbidden();
 
     $unverified = User::factory()->unverified()->create();
-    $unverified->syncRoles([RoleName::Dispatcher->value]);
+    $unverified->syncRoles([RoleName::OperationsManager->value]);
     $this->actingAs($unverified)->postJson('/operations/rental-reservations', $payload)->assertForbidden();
 });

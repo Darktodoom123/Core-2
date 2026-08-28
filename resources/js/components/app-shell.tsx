@@ -53,7 +53,7 @@ const coreModuleNavigation: NavItem[] = [
     },
     {
         section: 'dispatch',
-        label: 'Assign Driver/Operator and Equipment',
+        label: 'Assign Operator and Equipment',
         icon: Users,
         module: 2,
         anyPermission: ['assignments.view_all', 'assignments.view_own'],
@@ -83,7 +83,6 @@ const coreModuleNavigation: NavItem[] = [
 
 const navigationByRole: Record<UserRole, NavItem[]> = {
     administrator: coreModuleNavigation,
-    dispatcher: coreModuleNavigation,
     manager: coreModuleNavigation,
     driver: [
         { section: 'today', label: 'Today', icon: LayoutDashboard },

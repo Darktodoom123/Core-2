@@ -65,7 +65,7 @@ function setupEligibleTruck(string $code = 'TRK-101'): OperationalAsset
 
 test('authorized dispatcher can accept valid pending gpt recommendation', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $driver = setupEligibleDriver();
     $truck = setupEligibleTruck();
@@ -147,7 +147,7 @@ test('authorized dispatcher can accept valid pending gpt recommendation', functi
 
 test('accepting an expired recommendation fails closed and marks status expired', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $driver = setupEligibleDriver();
     $truck = setupEligibleTruck();
@@ -196,7 +196,7 @@ test('accepting an expired recommendation fails closed and marks status expired'
 
 test('accepting a recommendation with stale context hash fails closed and marks status stale', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $driver = setupEligibleDriver();
     $truck = setupEligibleTruck();
@@ -242,7 +242,7 @@ test('accepting a recommendation with stale context hash fails closed and marks 
 
 test('gpt recommendation cannot bypass priority approval requirement for emergency jobs', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $driver = setupEligibleDriver();
     $truck = setupEligibleTruck();

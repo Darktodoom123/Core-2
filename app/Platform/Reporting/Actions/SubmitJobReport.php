@@ -5,6 +5,7 @@ namespace App\Platform\Reporting\Actions;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Attachments\Actions\UploadAttachmentAction;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\DispatchCompletionNotification;
 use App\Platform\Notifications\Jobs\SendQueuedNotificationJob;
@@ -89,10 +90,10 @@ class SubmitJobReport
                 'occurred_at' => now(),
             ]);
 
-            // Notify dispatchers and managers
+            // Notify operations managers
             $recipients = User::query()
                 ->where('is_active', true)
-                ->whereHas('roles', fn ($q) => $q->whereIn('name', ['Dispatcher', 'OperationsManager']))
+                ->role(RoleName::OperationsManager->value)
                 ->get();
 
             foreach ($recipients as $recipient) {

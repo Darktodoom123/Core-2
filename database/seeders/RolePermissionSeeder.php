@@ -45,17 +45,6 @@ final class RolePermissionSeeder extends Seeder
 
         return [
             RoleName::SystemAdministrator->value => $adminPermissions,
-            RoleName::Dispatcher->value => self::values([
-                PermissionName::DispatchViewAll, PermissionName::DispatchCreate, PermissionName::DispatchUpdate,
-                PermissionName::DispatchActivate, PermissionName::DispatchCancel, PermissionName::AssignmentsViewAll, PermissionName::AssignmentsCreate,
-                PermissionName::AssignmentsReassign, PermissionName::FleetViewAll, PermissionName::FleetUpdateStatus,
-                PermissionName::EquipmentViewAll, PermissionName::EquipmentUpdateStatus, PermissionName::FuelViewAll,
-                PermissionName::FuelForward, PermissionName::FuelMonitor, PermissionName::TrackingViewAll,
-                PermissionName::GptUseDispatch, PermissionName::ReportsViewDispatch,
-                PermissionName::RentalView, PermissionName::RentalCreate, PermissionName::RentalAssignOperator, PermissionName::RentalCheckout,
-                PermissionName::RentalReturn, PermissionName::SalesView, PermissionName::SalesCreateQuote,
-                PermissionName::SosView, PermissionName::SosRespond,
-            ]),
             RoleName::OperationsManager->value => self::values([
                 PermissionName::DispatchViewAll, PermissionName::DispatchCreate, PermissionName::DispatchUpdate,
                 PermissionName::DispatchActivate, PermissionName::DispatchCancel,
@@ -69,9 +58,10 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::EquipmentInspect, PermissionName::EquipmentMaintain,
                 PermissionName::FuelViewAll, PermissionName::FuelForward, PermissionName::FuelApprove,
                 PermissionName::FuelVerify, PermissionName::FuelMonitor,
-                PermissionName::FuelReport, PermissionName::TrackingViewAll, PermissionName::GptUseOperations,
-                PermissionName::ReportsViewAll, PermissionName::ReportsViewMaintenance, PermissionName::ReportsExport,
-                PermissionName::RentalView, PermissionName::RentalApprove, PermissionName::RentalAssignOperator, PermissionName::RentalCheckout,
+                PermissionName::FuelReport, PermissionName::TrackingViewAll,
+                PermissionName::GptUseDispatch, PermissionName::GptUseOperations,
+                PermissionName::ReportsViewAll, PermissionName::ReportsViewDispatch, PermissionName::ReportsViewMaintenance, PermissionName::ReportsExport,
+                PermissionName::RentalView, PermissionName::RentalCreate, PermissionName::RentalApprove, PermissionName::RentalAssignOperator, PermissionName::RentalCheckout,
                 PermissionName::RentalReturn, PermissionName::SalesView, PermissionName::SalesCatalogManage,
                 PermissionName::SalesCreateQuote,
                 PermissionName::SalesApproveOrder, PermissionName::SalesFulfill, PermissionName::SalesTransferOwnership,
@@ -86,7 +76,7 @@ final class RolePermissionSeeder extends Seeder
             ]),
             RoleName::CraneOperator->value => self::values([
                 PermissionName::DispatchViewAssigned, PermissionName::DispatchRespondOwn, PermissionName::DispatchUpdateOwnStatus, PermissionName::RentalOperate,
-                PermissionName::AssignmentsViewOwn, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
+                PermissionName::AssignmentsViewOwn, PermissionName::FleetViewAssigned, PermissionName::EquipmentViewAssigned, PermissionName::EquipmentUpdateStatus,
                 PermissionName::FuelViewOwn, PermissionName::FuelRequest, PermissionName::FuelRecord,
                 PermissionName::TrackingShareOwn, PermissionName::ReportsViewOwn,
                 PermissionName::SosTrigger,

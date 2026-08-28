@@ -81,10 +81,10 @@ class ControlledNetworkMonitor implements NetworkMonitor {
 
 const driver: User = {
     id: 11,
-    name: 'Jane Driver',
-    username: 'driver',
-    email: 'driver@example.test',
-    role: 'driver',
+    name: 'Jane Operator',
+    username: 'operator',
+    email: 'operator@example.test',
+    role: 'crane_operator',
     is_active: true,
 };
 
@@ -99,10 +99,10 @@ const dispatcher: User = {
 
 const secondDriver: User = {
     id: 12,
-    name: 'John Driver',
-    username: 'second-driver',
-    email: 'second-driver@example.test',
-    role: 'driver',
+    name: 'John Operator',
+    username: 'second-operator',
+    email: 'second-operator@example.test',
+    role: 'crane_operator',
     is_active: true,
 };
 

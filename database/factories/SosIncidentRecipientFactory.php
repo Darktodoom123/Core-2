@@ -19,8 +19,8 @@ final class SosIncidentRecipientFactory extends Factory
         return [
             'sos_incident_id' => SosIncident::factory(),
             'user_id' => User::factory(),
-            'role_at_alert' => RoleName::Dispatcher->value,
-            'resolution_reason' => 'dispatcher_fallback',
+            'role_at_alert' => RoleName::OperationsManager->value,
+            'resolution_reason' => 'operations_manager_fallback',
         ];
     }
 }

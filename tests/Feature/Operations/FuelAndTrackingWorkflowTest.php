@@ -35,7 +35,7 @@ function fieldUser(RoleName $role): User
 
 it('enforces the submitted forwarded approved verified logged fuel workflow end-to-end with audit history', function () {
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $manager = fieldUser(RoleName::OperationsManager);
     $verifier = fieldUser(RoleName::OperationsManager);
 
@@ -172,7 +172,7 @@ it('allows an operations manager to forward a fuel request as fallback', functio
 
 it('handles rejection path with a decision reason', function () {
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $manager = fieldUser(RoleName::OperationsManager);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', [
@@ -206,7 +206,7 @@ it('prevents self-approval of fuel requests', function () {
     $manager = fieldUser(RoleName::OperationsManager);
     $manager->assignRole(RoleName::Driver->value);
     $otherManager = fieldUser(RoleName::OperationsManager);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
 
     // Manager submits request as requester
     $this->actingAs($manager)->post('/operations/fuel-requests', [
@@ -258,7 +258,7 @@ it('prevents skipped stages in fuel request workflow', function () {
 
 it('prevents duplicate logging of a fuel request', function () {
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $manager = fieldUser(RoleName::OperationsManager);
     $verifier = fieldUser(RoleName::OperationsManager);
 
@@ -298,31 +298,20 @@ it('validates quantities and meter readings during creation and logging', functi
 
 it('enforces role authorization at each step of the fuel workflow', function () {
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $manager = fieldUser(RoleName::OperationsManager);
 
     $this->actingAs($driver)->post('/operations/fuel-requests', ['quantity_litres' => 50, 'fuel_type' => 'diesel', 'purpose' => 'Auth test'])->assertRedirect('/');
     $id = FuelRequest::query()->sole()->id;
 
-    // Driver cannot forward
+    // Driver cannot forward, approve, or verify
     $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])->assertForbidden();
-
-    // Dispatcher forwards
-    $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])->assertRedirect('/');
-
-    // Dispatcher cannot approve
-    $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertForbidden();
-
-    // Driver cannot verify
+    $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertForbidden();
     $this->actingAs($driver)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertForbidden();
 
-    // Dispatcher cannot verify
-    $this->actingAs($dispatcher)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertForbidden();
-
-    // Manager approves
+    // Operations Manager can forward, approve, and verify
+    $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'forwarded'])->assertRedirect('/');
     $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'approved'])->assertRedirect('/');
-
-    // Manager verifies
     $this->actingAs($manager)->post("/operations/fuel-requests/{$id}/status", ['status' => 'verified'])->assertRedirect('/');
 });
 
@@ -330,7 +319,7 @@ it('handles receipt file uploads securely during fuel logging', function () {
     Storage::fake('private');
 
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $manager = fieldUser(RoleName::OperationsManager);
     $verifier = fieldUser(RoleName::OperationsManager);
 
@@ -405,7 +394,7 @@ it('rolls back fuel state and receipt storage when audit persistence fails after
 
 it('accepts own location sharing but reserves the all-operations feed for office roles', function () {
     $driver = fieldUser(RoleName::Driver);
-    $dispatcher = fieldUser(RoleName::Dispatcher);
+    $dispatcher = fieldUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-LOC-001',
         'client' => 'Location Client',

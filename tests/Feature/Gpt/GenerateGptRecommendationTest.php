@@ -52,7 +52,7 @@ function gptDispatchJob(User $creator): DispatchJob
 test('authorized dispatcher can initiate async gpt recommendation request', function (): void {
     Queue::fake();
 
-    $dispatcher = gptUser(RoleName::Dispatcher);
+    $dispatcher = gptUser(RoleName::OperationsManager);
     $job = gptDispatchJob($dispatcher);
 
     $response = $this->actingAs($dispatcher)->post('/operations/gpt-recommendations', [
@@ -90,7 +90,7 @@ test('unauthorized user cannot request gpt recommendation', function (): void {
 });
 
 test('async job processes context redaction and generates structured recommendation via fake client', function (): void {
-    $dispatcher = gptUser(RoleName::Dispatcher);
+    $dispatcher = gptUser(RoleName::OperationsManager);
     $job = gptDispatchJob($dispatcher);
 
     $recommendation = GptRecommendation::query()->create([
@@ -126,7 +126,7 @@ test('async job processes context redaction and generates structured recommendat
 });
 
 test('provider output is redacted before recommendation persistence', function (): void {
-    $dispatcher = gptUser(RoleName::Dispatcher);
+    $dispatcher = gptUser(RoleName::OperationsManager);
     $job = gptDispatchJob($dispatcher);
     $context = app(BoundedContextBuilder::class)->buildForDispatchJob($job);
 

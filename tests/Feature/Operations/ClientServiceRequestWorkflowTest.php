@@ -27,7 +27,7 @@ function intakeUser(RoleName $role): User
 }
 
 it('lets an authorized dispatcher create a client and service request through the browser contract', function () {
-    $dispatcher = intakeUser(RoleName::Dispatcher);
+    $dispatcher = intakeUser(RoleName::OperationsManager);
 
     $this->actingAs($dispatcher)
         ->from('/')
@@ -79,7 +79,7 @@ it('lets an authorized dispatcher create a client and service request through th
 });
 
 it('converts one service request into multiple distinct draft dispatches atomically and derives request-owned fields', function () {
-    $dispatcher = intakeUser(RoleName::Dispatcher);
+    $dispatcher = intakeUser(RoleName::OperationsManager);
     $client = Client::query()->create([
         'code' => 'CLI-4002',
         'company_name' => 'Northline Logistics',
@@ -131,7 +131,7 @@ it('converts one service request into multiple distinct draft dispatches atomica
 });
 
 it('rejects duplicate and invalid service request conversions without creating another job', function () {
-    $dispatcher = intakeUser(RoleName::Dispatcher);
+    $dispatcher = intakeUser(RoleName::OperationsManager);
     $client = Client::query()->create([
         'code' => 'CLI-4003',
         'company_name' => 'Apex Services',
@@ -192,7 +192,7 @@ it('rejects duplicate and invalid service request conversions without creating a
 });
 
 it('rolls back the dispatch, request state, and audit history when conversion auditing fails', function () {
-    $dispatcher = intakeUser(RoleName::Dispatcher);
+    $dispatcher = intakeUser(RoleName::OperationsManager);
     $client = Client::query()->create([
         'code' => 'CLI-4004',
         'company_name' => 'Safe Harbor',
@@ -232,7 +232,7 @@ it('rolls back the dispatch, request state, and audit history when conversion au
 });
 
 it('validates intake boundaries and only accepts active clients', function () {
-    $dispatcher = intakeUser(RoleName::Dispatcher);
+    $dispatcher = intakeUser(RoleName::OperationsManager);
     $inactiveClient = Client::query()->create([
         'code' => 'CLI-4005',
         'company_name' => 'Inactive Client',

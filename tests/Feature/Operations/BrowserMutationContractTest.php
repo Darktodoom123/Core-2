@@ -22,7 +22,7 @@ function browserMutationUser(RoleName $role): User
 }
 
 it('creates a dispatch through the browser redirect and typed flash contract', function () {
-    $dispatcher = browserMutationUser(RoleName::Dispatcher);
+    $dispatcher = browserMutationUser(RoleName::OperationsManager);
 
     $this->actingAs($dispatcher)
         ->from('/')
@@ -50,7 +50,7 @@ it('creates a dispatch through the browser redirect and typed flash contract', f
 });
 
 it('returns browser validation errors without creating a dispatch', function () {
-    $dispatcher = browserMutationUser(RoleName::Dispatcher);
+    $dispatcher = browserMutationUser(RoleName::OperationsManager);
 
     $this->actingAs($dispatcher)
         ->from('/')

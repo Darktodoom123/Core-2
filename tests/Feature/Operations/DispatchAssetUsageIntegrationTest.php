@@ -32,7 +32,7 @@ beforeEach(function (): void {
 function r4Dispatcher(string $name = 'R4 Dispatcher'): User
 {
     $dispatcher = User::factory()->create(['name' => $name]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     return $dispatcher;
 }

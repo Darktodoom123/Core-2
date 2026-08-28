@@ -382,7 +382,7 @@ export function ReportsSurface({
                         <EmptyState
                             icon={FileText}
                             title="No job reports found"
-                            message="Submitted job reports and attached documents will appear here once filed by field operators or dispatchers."
+                            message="Submitted job reports and attached documents will appear here once filed by field operators or managers."
                         />
                     </Panel>
                 ) : filteredReports.length === 0 ? (

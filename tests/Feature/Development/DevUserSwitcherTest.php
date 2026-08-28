@@ -13,13 +13,12 @@ beforeEach(function (): void {
     $this->seed(LocalDevelopmentSeeder::class);
 });
 
-it('lists only active system admin, operations manager, and dispatcher accounts', function (): void {
+it('lists only active system admin and operations manager accounts', function (): void {
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(3);
+    expect($response->json())->toHaveCount(2);
     expect(collect($response->json())->pluck('role_label')->sort()->values()->all())
         ->toEqual([
-            'Dispatcher',
             'Operations Manager',
             'System Administrator',
         ]);
@@ -27,7 +26,6 @@ it('lists only active system admin, operations manager, and dispatcher accounts'
 
 it('quick logs in allowed roles and rejects disallowed or suspended accounts', function (): void {
     $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
-    $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
     $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
     $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
     $suspendedUser = User::factory()->suspended()->create();
@@ -35,9 +33,6 @@ it('quick logs in allowed roles and rejects disallowed or suspended accounts', f
     // Allowed accounts can quick-login
     $this->post('/dev/login/'.$admin->id)->assertRedirect(route('home'));
     $this->assertAuthenticatedAs($admin);
-
-    $this->post('/dev/login/'.$dispatcher->id)->assertRedirect(route('home'));
-    $this->assertAuthenticatedAs($dispatcher);
 
     $this->post('/dev/login/'.$manager->id)->assertRedirect(route('home'));
     $this->assertAuthenticatedAs($manager);
@@ -57,14 +52,13 @@ it('excludes browser test fixtures from dev quick sign-in', function (): void {
 
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(3);
+    expect($response->json())->toHaveCount(2);
     expect(collect($response->json())->pluck('email')->sort()->values()->all())
         ->toEqual([
             'admin@example.com',
-            'dispatcher@example.com',
             'manager@example.com',
         ]);
 
-    $browserDispatcher = User::query()->where('email', 'browser.dispatcher@example.com')->firstOrFail();
-    $this->post('/dev/login/'.$browserDispatcher->id)->assertNotFound();
+    $browserManager = User::query()->where('email', 'browser.manager@example.com')->firstOrFail();
+    $this->post('/dev/login/'.$browserManager->id)->assertNotFound();
 });

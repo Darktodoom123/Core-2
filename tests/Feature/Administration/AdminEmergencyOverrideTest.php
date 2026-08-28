@@ -106,7 +106,7 @@ it('allows system administrator to enforce safety recall lockdown on an operatio
 
 it('denies emergency overrides to unauthorized roles', function (): void {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'CRANE-02',

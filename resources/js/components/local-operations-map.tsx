@@ -189,7 +189,7 @@ export function LocalOperationsMap({
                         className="mt-0.5 h-4 w-4 shrink-0"
                         aria-hidden="true"
                     />
-                    Stale and offline signals remain visible so dispatchers can
+                    Stale and offline signals remain visible so operators can
                     distinguish missing data from inactive assets.
                 </div>
             </aside>

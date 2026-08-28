@@ -22,7 +22,7 @@ beforeEach(function (): void {
 
 it('creates a source-linked rental dispatch and exposes its source in the workspace', function (): void {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $client = Client::query()->create([
         'code' => 'CLI-SRC-1',
         'company_name' => 'Source Client',
@@ -72,7 +72,7 @@ it('creates a source-linked rental dispatch and exposes its source in the worksp
 
 it('rejects a source type that does not match the source model', function (): void {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $client = Client::query()->create([
         'code' => 'CLI-SRC-2',
         'company_name' => 'Source Client',

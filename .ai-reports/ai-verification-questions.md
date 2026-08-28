@@ -227,3 +227,110 @@ Comprehensive multi-layer test suites have been implemented and verified:
    - ESLint: 0 errors.
    - Prettier: 100% formatted.
    - Vite Production Build: 100% successful.
+
+## Operator-Sole Field Mobile Architecture & Crane Operations — 2026-08-28
+
+### Did you build this the most secure way?
+
+1. **Strict Mobile Role Allowlist**: The mobile terminal's authentication and session bootstrap layer (`isAuthorizedFieldRole`) strictly restricts authenticated field access to `crane_operator` and `operator`. Unauthorized roles (including `dispatcher`, `operations_manager`, `system_administrator`, and decommissioned mobile roles) are immediately rejected and their device tokens revoked server-side.
+2. **Server-Authoritative Field Authorization**: Sanctum bearer token authentication combined with granular Spatie permissions (`RolePermissionSeeder`) enforces that only users holding `crane_operator` can respond to assigned dispatches (`dispatch.respond_own`), execute equipment inspections (`equipment.update_status`, `equipment.view_assigned`), manage assigned transport carriers (`fleet.view_assigned`), trigger safety emergencies (`sos.trigger`), and log fuel telemetry (`fuel.record`).
+3. **Session Revocation Staging**: If a non-operator or suspended account attempts login or bootstrap, the mobile client executes an atomic token revocation and locks the device state until acknowledged, preventing lingering or leaked credentials on field tablets.
+
+### Did you build this the most efficient way?
+
+1. **Elimination of Branching Switchboards**: By unifying the field terminal around the Operator persona, redundant role-switching conditionals and fragmented UI cards are eliminated. The mobile application directly targets mobile crane workflows: transit drive modes, outrigger extension verification, ground bearing pressure checks, LMI calibration, lift execution, and digital customer handover.
+2. **Deterministic Credential Validation**: Aligns with Alibaton Construction Inc.'s corporate domain where heavy equipment operators hold specialized TESDA NC II/III qualifications. The backend avoids unnecessary lookups and directly pairs the lead operator with assigned crane assets.
+3. **Lightweight Test Fixtures**: All 13 mobile component and unit test suites use streamlined operator mocks, reducing test setup complexity and execution overhead.
+
+### What regressions could this introduce?
+
+1. **Non-Operator Mobile Logins**: Any legacy test account or field personnel previously designated under generic `driver` accounts will be cleanly blocked at the mobile gateway (`isAuthorizedFieldRole`). This is mitigated by updating `RolePermissionSeeder` and `LocalDevelopmentSeeder` to provision `operator@example.com` (`RoleName::CraneOperator`) as the standard field actor.
+2. **Fleet Asset Visibility for Cranes**: Mobile crane operators must inspect both the crane carrier (chassis) and the upper lifting structure. This was resolved by ensuring `RoleName::CraneOperator` is granted `fleet.view_assigned` alongside `equipment.view_assigned`.
+
+### What tests do we need to write before we ship this?
+
+1. **Automated Unit & Component Tests**:
+   - `auth.test.ts`: Verified `isAuthorizedFieldRole` allows `operator` and `crane_operator` and rejects `driver`, `dispatcher`, `operations_manager`, `system_administrator`, `client`, `viewer`, `null`, and `undefined`.
+   - `app.component.test.tsx`: Verified all 13 test suites (66 component tests and 43 unit tests) pass with 100% success using operator fixtures.
+   - `locationService.test.ts`: Verified GPS telemetry tracking and outbox queuing for active crane operators.
+2. **Backend Feature & RBAC Tests**:
+   - `RolePermissionSeeder` test coverage across Spatie permissions.
+   - `FieldDispatchJobTest.php` (10 tests, 58 assertions passing).
+   - `UserManagementTest.php` (9 tests, 30 assertions passing).
+3. **Verification Suite Results**:
+   - Mobile TypeScript Check (`npm run types:check --prefix packages/field-mobile`): 0 errors.
+   - Mobile Test Suite (`npm run test --prefix packages/field-mobile`): 13/13 suites passed (109 total tests).
+
+## Deprecation & Consolidation of Dispatcher Role into Operations Manager — 2026-08-28
+
+### Did you build this the most secure way?
+
+1. **Transactional Role Reassignment & Database Migration**: The database migration (`2026_08_28_120000_remove_dispatcher_role.php`) safely migrates any existing user accounts holding `dispatcher` to `operations_manager` in `model_has_roles` before purging `dispatcher` role rows from `roles` and `role_has_permissions`. No user accounts are left stranded or locked out of the system.
+2. **Strict Spatie RBAC Parity**: All operational permissions previously assigned to `Dispatcher` (including `dispatch.*`, `assignments.*`, `fuel.forward`, `fleet.view_all`, `rental.create`, `gpt.use_dispatch`) were fully consolidated into `RoleName::OperationsManager` in `RolePermissionSeeder.php`.
+3. **Safety & Policy Integrity**: `SosRecipientResolver.php` and `SosIncidentPolicy.php` were updated to resolve and authorize the `OperationsManager` as the primary operational responder, ensuring emergency notifications and acknowledgement chains remain unbroken.
+4. **Segregation of Duties Enforcement**: The backend policies and command services (`ApprovalRequestPolicy`, `DispatchV2CommandService`, `SubmitJobReport`, `ResubmitJobReport`) maintain the four-eyes / maker-checker safeguards, preventing unapproved state transitions while allowing managers full operational scheduling autonomy.
+
+### Did you build this the most efficient way?
+
+1. **Elimination of Redundant Role Layers**: Removes artificial bifurcations between Dispatcher and Operations Manager throughout database seeders, view models, and frontend dashboards.
+2. **Simplified Dashboard Routing**: In `operations-overview-dashboard.tsx`, office operational overview routes cleanly to `OperationsManagerDashboardView`, which unifies scheduling telemetry, exception alerts, approvals, and resource KPIs in one optimized view model.
+3. **Domain Alignment with Alibaton**: Directly reflects Alibaton Heavy Equipment's real-world organizational hierarchy established in the capstone survey (`capstone-requirements-questionnaire.md`), reducing codebase cognitive overhead.
+
+### What regressions could this introduce?
+
+1. **Legacy Seeder or Fixture References**: Any legacy seeder referencing `RoleName::Dispatcher` or `dispatcher@example.com` would fail to seed or authenticate. This was mitigated by refactoring `RolePermissionSeeder`, `LocalDevelopmentSeeder`, `BrowserAcceptanceSeeder`, and `Session1NativeAcceptanceSeeder` to use `manager@example.com` / `RoleName::OperationsManager`.
+2. **Test Assertion Failures**: Tests expecting 5 or 6 operational roles in the canonical catalog were updated to assert the exact 4 active roles (`SystemAdministrator`, `OperationsManager`, `Driver`, `CraneOperator`).
+
+### What tests do we need to write before we ship this?
+
+1. **Automated Backend & RBAC Tests**:
+   - `RolePermissionMatrixTest.php`: Verifies canonical 4-role inventory and exact permission sets.
+   - `UserManagementTest.php`: Verifies admin user provisioning, editing, and rejection of obsolete roles.
+   - `SosIncidentLifecycleTest.php`: Verifies SOS dispatch recipient resolution and manager acknowledgement.
+   - `GptRecommendationRowLockConcurrencyTest.php`: Verifies concurrent AI recommendation acceptance/rejection under Operations Manager role.
+   - Full Pest test suite across Dispatch, Assignments, Fuel, Fleet, and Rental modules.
+2. **Static Analysis & Build Verification**:
+   - PHPStan (Max Level): 0 errors.
+   - Pint / PHP Linting: Passed.
+   - TypeScript (`npm run types:check`): 0 errors.
+   - Frontend Build (`npm run build`): Successful production bundle generation.
+
+## Real-Time Tomorrow.io Weather & Masthead Wind Telemetry for Tower Cranes — 2026-08-28
+
+### Did you build this the most secure way?
+
+1. **Server-Side API Key Ingestion**: The Tomorrow.io API key is securely loaded from environment configuration (`.env` -> `config/services.php`) on the backend server. No third-party API credentials, secret tokens, or internal provider keys are bundled or exposed into the client application.
+2. **Sanctum Authentication & Field Role Authorization**: Weather endpoints (`GET /api/v1/dispatch/jobs/{id}/weather`, `POST /api/v1/dispatch/jobs/{id}/weather-standby`) require active Sanctum bearer tokens, active account status, API token validation, and rate-limiting (`throttle:location`).
+3. **Server-Side Input Sanitization**: Standby delay submission rigorously validates inputs (anemometer wind speeds bounded from 0 to 200 km/h, valid enum categories for weather triggers, string length constraints, and geographic bounding checks).
+
+### Did you build this the most efficient way?
+
+1. **15-Minute Coordinate-Based Backend Caching**: Telemetry is cached in Laravel cache (`Cache::remember`) for 15 minutes per latitude/longitude pair. With 4-5 active tower crane sites, this averages 16 to 20 requests per hour, staying comfortably within Tomorrow.io's free tier (25 requests/hour, 500 requests/day).
+2. **Zero-Downtime Open-Meteo Fallback**: If Tomorrow.io reaches rate limits (HTTP 429) or experiences upstream network interruptions, `SiteWeatherService` automatically and seamlessly fails over to Open-Meteo ECMWF/JMA models without surfacing errors to operators.
+3. **Battery & Network Conservation**: The mobile app suspends power-intensive background GPS streaming for stationary tower cranes and relies on site coordinates and cached weather payloads.
+
+### What regressions could this introduce?
+
+1. **Third-Party API Downtime or Rate Limiting**: Mitigated by automatic fallback to Open-Meteo and baseline safety fallbacks.
+2. **Unit Conversion Mismatches**: Tomorrow.io returns wind speed in m/s while Philippine construction safety standards (DOLE DO 13 / OSHA) evaluate in km/h. Mitigated by explicit $1\text{ m/s} = 3.6\text{ km/h}$ conversion and rounding in the service layer, covered by unit tests.
+3. **UI Layout / Theme Consistency**: Mitigated by using shared React Native tokens (`colors`, `shadows`, `Icon`) matching the dark/light mode palette.
+
+### What tests do we need to write before we ship this?
+
+1. **Backend Tests (`tests/Feature/Telemetry/SiteWeatherServiceTest.php`, `WeatherApiControllerTest.php`)**:
+   - Tomorrow.io JSON response parsing, m/s to km/h conversion, and DOLE safety zone computation.
+   - Cache hit verification preventing redundant outbound HTTP requests.
+   - HTTP 429 rate limit failover to Open-Meteo.
+   - Sanctum authentication and 401 unauthenticated rejection.
+   - Standby logging endpoint with free-slew calculation for winds $\ge 45\text{ km/h}$.
+2. **Mobile Component Tests (`packages/field-mobile/src/__tests__/towerCraneWeatherCard.component.test.tsx`)**:
+   - Rendering normal (< 36 km/h), caution (36-44 km/h), and critical stop-work (≥ 45 km/h) badges.
+   - Refresh button trigger and loading indicators.
+   - Opening standby delay modal, adjusting anemometer input, selecting weather reason, and submitting callback.
+3. **Verification Suite Evidence**:
+   - Backend Telemetry Pest tests: 7 tests, 26 assertions passed.
+   - Full Mobile Test Suite: 14 test suites, 69 component tests + 43 unit tests passed (112 total tests).
+   - PHPStan (Max Level): 0 errors.
+   - Laravel Pint: Passed.
+   - ESLint: 0 errors, 0 warnings.
+   - Root & Mobile TypeScript: 0 errors.

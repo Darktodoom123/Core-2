@@ -35,7 +35,7 @@ function createV1CompatFixture(): array
 {
     /** @var User $dispatcher */
     $dispatcher = User::factory()->create(['name' => 'V1 Dispatcher', 'is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     /** @var User $manager */
     $manager = User::factory()->create(['name' => 'V1 Manager', 'is_active' => true]);

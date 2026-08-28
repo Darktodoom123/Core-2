@@ -42,7 +42,7 @@ function r0AuditClient(): Client
 }
 
 it('does not expose private Rental notes in transition audit snapshots', function (): void {
-    $dispatcher = r0AuditUser(RoleName::Dispatcher);
+    $dispatcher = r0AuditUser(RoleName::OperationsManager);
     $manager = r0AuditUser(RoleName::OperationsManager);
     $client = r0AuditClient();
     $asset = OperationalAsset::query()->create([
@@ -74,7 +74,7 @@ it('does not expose private Rental notes in transition audit snapshots', functio
 });
 
 it('does not create a success audit when checkout validation fails', function (): void {
-    $dispatcher = r0AuditUser(RoleName::Dispatcher);
+    $dispatcher = r0AuditUser(RoleName::OperationsManager);
     $client = r0AuditClient();
     $asset = OperationalAsset::query()->create([
         'code' => 'EQ-AUDIT-FAIL-'.fake()->unique()->numerify('###'),
@@ -108,7 +108,7 @@ it('does not create a success audit when checkout validation fails', function ()
 });
 
 it('uses one request id for the quote acceptance and order creation audit pair', function (): void {
-    $dispatcher = r0AuditUser(RoleName::Dispatcher);
+    $dispatcher = r0AuditUser(RoleName::OperationsManager);
     $manager = r0AuditUser(RoleName::OperationsManager);
     $client = r0AuditClient();
     $catalog = SalesCatalogItem::query()->create([

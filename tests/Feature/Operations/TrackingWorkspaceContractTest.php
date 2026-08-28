@@ -95,7 +95,7 @@ it('broadcasts one tracking workspace update for each successful location write'
 
 it('exposes scope-aware tracking freshness and only the authenticated user sharing state', function (): void {
     $driver = trackingContractUser(RoleName::Driver);
-    $dispatcher = trackingContractUser(RoleName::Dispatcher);
+    $dispatcher = trackingContractUser(RoleName::OperationsManager);
 
     $update = LocationUpdate::query()->create([
         'user_id' => $driver->id,

@@ -41,7 +41,7 @@ function assignmentWorkspaceJob(User $dispatcher, string $reference): DispatchJo
 }
 
 it('shows server-authoritative personnel eligibility, credentials, asset readiness, maintenance, and schedule conflicts', function () {
-    $dispatcher = assignmentWorkspaceUser(RoleName::Dispatcher, 'Dispatcher');
+    $dispatcher = assignmentWorkspaceUser(RoleName::OperationsManager, 'Dispatcher');
     $driver = assignmentWorkspaceUser(RoleName::Driver, 'Available Driver');
     $driver->personnelProfile()->create(['availability_status' => 'available']);
     $driver->personnelCredentials()->create([
@@ -119,7 +119,7 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
 });
 
 it('does not expose the assignment candidate pool to assigned field personnel', function () {
-    $dispatcher = assignmentWorkspaceUser(RoleName::Dispatcher, 'Dispatcher');
+    $dispatcher = assignmentWorkspaceUser(RoleName::OperationsManager, 'Dispatcher');
     $driver = assignmentWorkspaceUser(RoleName::Driver, 'Assigned Driver');
     $otherDriver = assignmentWorkspaceUser(RoleName::Driver, 'Other Driver');
     $job = assignmentWorkspaceJob($dispatcher, 'CON-5201');

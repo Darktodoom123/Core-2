@@ -36,7 +36,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             LocalDevelopmentSeeder::class,
         ]);
 
-        $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
+        $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
         $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
         $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
         $fixturePassword = getenv('SESSION1_NATIVE_PASSWORD');
@@ -47,7 +47,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             );
         }
 
-        foreach ([$dispatcher, $driver, $operator] as $user) {
+        foreach ([$manager, $driver, $operator] as $user) {
             $user->forceFill(['password' => Hash::make($fixturePassword)])->save();
         }
 
@@ -60,7 +60,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
                 'priority' => DispatchPriority::Routine,
                 'status' => DispatchStatus::Dispatched,
                 'version' => 1,
-                'created_by' => $dispatcher->id,
+                'created_by' => $manager->id,
             ],
         );
 
@@ -73,7 +73,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
                 'priority' => DispatchPriority::Routine,
                 'status' => DispatchStatus::Dispatched,
                 'version' => 1,
-                'created_by' => $dispatcher->id,
+                'created_by' => $manager->id,
             ],
         );
 
@@ -84,7 +84,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             ],
             [
                 'assignment_type' => 'driver',
-                'assigned_by' => $dispatcher->id,
+                'assigned_by' => $manager->id,
                 'response_status' => AssignmentResponse::Pending,
                 'active_from' => now()->subMinute(),
                 'active_until' => null,
@@ -98,7 +98,7 @@ final class Session1NativeAcceptanceSeeder extends Seeder
             ],
             [
                 'assignment_type' => 'crane_operator',
-                'assigned_by' => $dispatcher->id,
+                'assigned_by' => $manager->id,
                 'response_status' => AssignmentResponse::Pending,
                 'active_from' => now()->subMinute(),
                 'active_until' => null,

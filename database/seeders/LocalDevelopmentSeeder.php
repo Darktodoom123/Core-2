@@ -198,12 +198,6 @@ final class LocalDevelopmentSeeder extends Seeder
                 'role' => RoleName::SystemAdministrator,
             ],
             [
-                'name' => 'Dev Dispatcher',
-                'username' => Username::fromEmail('dispatcher@example.com'),
-                'email' => 'dispatcher@example.com',
-                'role' => RoleName::Dispatcher,
-            ],
-            [
                 'name' => 'Dev Operations Manager',
                 'username' => Username::fromEmail('manager@example.com'),
                 'email' => 'manager@example.com',

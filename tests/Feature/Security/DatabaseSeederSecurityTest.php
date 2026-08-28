@@ -101,16 +101,15 @@ it('keeps local developer seeding idempotent and usable', function (): void {
 
         expect(User::query()->where('email', 'admin@example.com')->count())->toBe(1)
             ->and(User::query()->whereIn('email', [
-                'dispatcher@example.com',
                 'manager@example.com',
                 'driver@example.com',
                 'operator@example.com',
-            ])->count())->toBe(4)
+            ])->count())->toBe(3)
             ->and(DB::table('location_updates')->count())->toBe(2);
 
-        $dispatcher = User::query()->where('email', 'dispatcher@example.com')->firstOrFail();
-        expect(Hash::check('password', $dispatcher->getRawOriginal('password')))->toBeTrue()
-            ->and($dispatcher->is_active)->toBeTrue();
+        $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
+        expect(Hash::check('password', $manager->getRawOriginal('password')))->toBeTrue()
+            ->and($manager->is_active)->toBeTrue();
     } finally {
         app()->detectEnvironment(fn () => $originalEnvironment);
     }

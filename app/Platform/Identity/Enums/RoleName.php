@@ -5,7 +5,6 @@ namespace App\Platform\Identity\Enums;
 enum RoleName: string
 {
     case SystemAdministrator = 'system_administrator';
-    case Dispatcher = 'dispatcher';
     case OperationsManager = 'operations_manager';
     case Driver = 'driver';
     case CraneOperator = 'crane_operator';
@@ -14,7 +13,6 @@ enum RoleName: string
     {
         return match ($this) {
             self::SystemAdministrator => 'System Administrator',
-            self::Dispatcher => 'Dispatcher',
             self::OperationsManager => 'Operations Manager',
             self::Driver => 'Driver',
             self::CraneOperator => 'Crane Operator',

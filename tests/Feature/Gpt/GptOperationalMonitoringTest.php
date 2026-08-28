@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 it('reports aggregate GPT queue status without recommendation context', function (): void {
     $this->seed(RolePermissionSeeder::class);
     $user = User::factory()->create();
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     $recommendation = GptRecommendation::query()->create([
         'subject_type' => 'dispatch_job',

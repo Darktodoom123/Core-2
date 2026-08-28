@@ -94,7 +94,7 @@ function rentalOperatorCredential(User $operator, RentalOperatorType $type, ?Car
 }
 
 it('assigns a qualified operator to a reserved rental item', function (): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental crane operator');
     rentalOperatorCredential($operator, RentalOperatorType::CraneOperator);
     $asset = rentalOperatorAsset();
@@ -122,7 +122,7 @@ it('assigns a qualified operator to a reserved rental item', function (): void {
 });
 
 it('rejects an operator whose role and credential do not match the rented asset', function (): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::Driver, 'Rental driver');
     rentalOperatorCredential($operator, RentalOperatorType::Driver);
     $reservation = rentalOperatorReservation($dispatcher, rentalOperatorAsset());
@@ -141,7 +141,7 @@ it('rejects an operator whose role and credential do not match the rented asset'
 });
 
 it('allows the assigned qualified operator to operate checked-out equipment during the rental window', function (): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental crane operator');
     rentalOperatorCredential($operator, RentalOperatorType::CraneOperator);
     $start = CarbonImmutable::now()->startOfDay();
@@ -174,7 +174,7 @@ it('allows the assigned qualified operator to operate checked-out equipment duri
 });
 
 it('blocks an unassigned operator even when the operator has the correct role', function (): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental crane operator');
     rentalOperatorCredential($operator, RentalOperatorType::CraneOperator);
     $start = CarbonImmutable::now()->startOfDay();
@@ -197,7 +197,7 @@ it('blocks an unassigned operator even when the operator has the correct role', 
 });
 
 it('blocks operation outside the inclusive rental dates', function (string $position): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental crane operator');
     rentalOperatorCredential($operator, RentalOperatorType::CraneOperator);
     $start = CarbonImmutable::now()->addDays(3)->startOfDay();
@@ -224,7 +224,7 @@ it('blocks operation outside the inclusive rental dates', function (string $posi
 })->with(['before', 'after']);
 
 it('rechecks operator qualification when operation is requested', function (): void {
-    $dispatcher = rentalOperatorUser(RoleName::Dispatcher, 'Rental dispatcher');
+    $dispatcher = rentalOperatorUser(RoleName::OperationsManager, 'Rental dispatcher');
     $operator = rentalOperatorUser(RoleName::CraneOperator, 'Rental crane operator');
     rentalOperatorCredential($operator, RentalOperatorType::CraneOperator);
     $start = CarbonImmutable::now()->startOfDay();

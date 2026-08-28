@@ -22,7 +22,7 @@ beforeEach(function (): void {
 
 it('serves canonical live dispatch view models and capability navigation', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     DispatchJob::query()->create([
         'reference' => 'CON-1001',
@@ -67,13 +67,15 @@ it('serves canonical live dispatch view models and capability navigation', funct
             ->where('navigation.2.label', 'Fleet Management')
             ->where('navigation.3.id', 'fuel')
             ->where('navigation.3.label', 'Fuel requests')
-            ->where('navigation.4.id', 'reports')
-            ->where('navigation.4.label', 'Job reports')
-            ->where('navigation.5.id', 'notifications')
-            ->where('navigation.5.label', 'Notifications')
-            ->where('navigation.6.id', 'sos')
-            ->where('navigation.6.label', 'Emergency SOS')
-            ->missing('navigation.7')
+            ->where('navigation.4.id', 'approvals')
+            ->where('navigation.4.label', 'Approvals')
+            ->where('navigation.5.id', 'reports')
+            ->where('navigation.5.label', 'Job reports')
+            ->where('navigation.6.id', 'notifications')
+            ->where('navigation.6.label', 'Notifications')
+            ->where('navigation.7.id', 'sos')
+            ->where('navigation.7.label', 'Emergency SOS')
+            ->missing('navigation.8')
             ->where('capabilities.create_dispatch', true)
             ->where('capabilities.create_client', true)
             ->where('capabilities.create_service_request', true)
@@ -171,7 +173,7 @@ it('serves operational overview workspace for Operations Manager and System Admi
 
 it('serves only the latest visible location per worker in the workspace feed', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $driver = User::factory()->create();
     $driver->syncRoles([RoleName::Driver->value]);
     $secondDriver = User::factory()->create();
@@ -217,7 +219,7 @@ it('serves only the latest visible location per worker in the workspace feed', f
 
 it('derives the initial workspace section from the authorized navigation', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $this->actingAs($dispatcher)->get('/?view=dispatch')
         ->assertOk()
@@ -238,7 +240,7 @@ it('derives the initial workspace section from the authorized navigation', funct
 
 it('projects canonical manual provenance independently from the reference prefix', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $job = app(CreateManualDispatchHandoff::class)->handle($dispatcher, [
         'client' => 'Canonical Manual Client',
@@ -268,7 +270,7 @@ it('projects canonical manual provenance independently from the reference prefix
 
 it('projects dispatch job counts from the rendered service request relationships', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $client = Client::query()->create([
         'code' => 'CLI-COUNT-1',
         'company_name' => 'Count Client',

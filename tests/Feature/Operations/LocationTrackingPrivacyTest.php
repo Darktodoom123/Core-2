@@ -29,7 +29,7 @@ function createFieldUser(RoleName $role): User
 it('enforces role-scoped location access control and cross-worker isolation', function () {
     $driver1 = createFieldUser(RoleName::Driver);
     $driver2 = createFieldUser(RoleName::Driver);
-    $dispatcher = createFieldUser(RoleName::Dispatcher);
+    $dispatcher = createFieldUser(RoleName::OperationsManager);
 
     // Driver 1 creates location update
     LocationUpdate::query()->create([

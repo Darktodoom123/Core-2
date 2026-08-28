@@ -18,6 +18,7 @@ use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
 use App\Modules\Dispatch\Queries\DispatchV2ReadinessQuery;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
@@ -47,7 +48,7 @@ function phase3User(RoleName $role, string $name): User
 /** @return array{attempt: DispatchExecutionAttempt, plan: DispatchPlanVersion, dispatcher: User, manager: User, worker: User} */
 function phase3Aggregate(bool $approved = false): array
 {
-    $dispatcher = phase3User(RoleName::Dispatcher, 'Phase 3 Dispatcher');
+    $dispatcher = phase3User(RoleName::OperationsManager, 'Phase 3 Dispatcher');
     $manager = phase3User(RoleName::OperationsManager, 'Phase 3 Manager');
     $worker = phase3User(RoleName::Driver, 'Phase 3 Worker');
     PersonnelCredential::query()->create([
@@ -274,6 +275,8 @@ it('does not let an optional unsafe asset block a dispatch with a valid designat
 
 it('uses maker-checker plan approval and supersedes prior material approval without losing reasons', function (): void {
     $aggregate = phase3Aggregate(false);
+    $aggregate['dispatcher']->roles()->detach();
+    $aggregate['dispatcher']->givePermissionTo([PermissionName::DispatchCreate->value, PermissionName::DispatchApproveChange->value]);
     $commands = app(DispatchV2Commands::class);
     $submitted = $commands->submitPlan($aggregate['dispatcher'], $aggregate['attempt'], phase3Mutation(1, null, 'Requester reason', [
         'snapshot' => ['mandatory_assignments' => [['slot' => 'driver', 'assignment_type' => 'driver']], 'assets' => []],

@@ -249,7 +249,7 @@ function RestoreJobModal({
                                 form.setData('reason', e.target.value)
                             }
                             className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                            placeholder="e.g. Accidental archive by dispatcher / Reopened with client approval"
+                            placeholder="e.g. Accidental archive / Reopened with client approval"
                             required
                         />
                         {form.errors.reason && (

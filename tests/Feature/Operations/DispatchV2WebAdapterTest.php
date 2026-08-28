@@ -36,7 +36,7 @@ function createWebAdapterFixture(): array
 {
     /** @var User $dispatcher */
     $dispatcher = User::factory()->create(['name' => 'Web Dispatcher', 'is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     /** @var User $manager */
     $manager = User::factory()->create(['name' => 'Web Manager', 'is_active' => true]);

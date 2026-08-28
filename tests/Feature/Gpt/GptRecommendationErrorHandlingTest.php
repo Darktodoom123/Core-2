@@ -27,7 +27,7 @@ afterEach(function (): void {
 
 test('rate limit prevents user from generating more than 10 recommendations per hour', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'JOB-RTL-001',
@@ -62,7 +62,7 @@ test('handles openai timeout gracefully and sets status failed', function (): vo
     ]);
 
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'JOB-TMO-001',
@@ -104,7 +104,7 @@ test('handles model refusal gracefully and sets status failed', function (): voi
     ]);
 
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'JOB-REF-001',

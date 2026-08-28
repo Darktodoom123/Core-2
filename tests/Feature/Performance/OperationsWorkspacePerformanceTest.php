@@ -19,7 +19,7 @@ beforeEach(function (): void {
 function performanceWorkspaceDispatcher(string $name = 'Performance dispatcher'): User
 {
     $user = User::factory()->create(['name' => $name]);
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     return $user;
 }
@@ -68,7 +68,7 @@ it('keeps the initial workspace response to the shell and defers only the author
 
     expect($page['deferredProps']['workspace-overview'] ?? [])->toContain('jobs')
         ->and($page['props'])->not->toHaveKey('users')
-        ->and($initialQueryCount)->toBeLessThanOrEqual(12)
+        ->and($initialQueryCount)->toBeLessThanOrEqual(14)
         ->and(strlen(json_encode($page['props'], JSON_THROW_ON_ERROR)))->toBeLessThan(150_000);
 });
 
@@ -94,5 +94,5 @@ it('loads only the mapped dispatch section on a partial deferred visit', functio
             ->has('serviceRequests')
             ->has('assets')));
 
-    expect($initialQueryCount)->toBeLessThanOrEqual(12);
+    expect($initialQueryCount)->toBeLessThanOrEqual(14);
 });

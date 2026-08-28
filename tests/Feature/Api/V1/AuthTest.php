@@ -22,7 +22,7 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
         'is_active' => true,
         'email_verified_at' => now(),
     ]);
-    $user->syncRoles([RoleName::Dispatcher->value]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
 
     $response = $this->postJson('/api/v1/auth/login', [
         'username' => ' Dispatcher ',
@@ -53,7 +53,7 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
     expect($data['token'])->toBeString()
         ->and($data['user']['username'])->toBe('dispatcher')
         ->and($data['user']['email'])->toBe('dispatcher@example.com')
-        ->and($data['user']['role'])->toBe(RoleName::Dispatcher->value);
+        ->and($data['user']['role'])->toBe(RoleName::OperationsManager->value);
 
     // Verify token does not expose password or remember_token
     $response->assertJsonMissingPath('data.user.password')

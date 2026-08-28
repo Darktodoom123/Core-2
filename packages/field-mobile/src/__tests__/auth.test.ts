@@ -55,7 +55,7 @@ describe('Field Mobile Authentication Shell', () => {
                 const body = JSON.parse(init?.body as string);
 
                 if (
-                    body.username === 'driver' &&
+                    body.username === 'operator' &&
                     body.password === 'password'
                 ) {
                     return new Response(
@@ -64,10 +64,10 @@ describe('Field Mobile Authentication Shell', () => {
                                 token: 'sample-sanctum-token-123',
                                 user: {
                                     id: 42,
-                                    name: 'Jane Driver',
-                                    username: 'driver',
-                                    email: 'driver@example.com',
-                                    role: 'driver',
+                                    name: 'Jane Operator',
+                                    username: 'operator',
+                                    email: 'operator@example.com',
+                                    role: 'crane_operator',
                                     is_active: true,
                                 },
                             },
@@ -92,10 +92,14 @@ describe('Field Mobile Authentication Shell', () => {
             fetchFn: mockFetch as typeof fetch,
         });
 
-        const result = await client.login('driver', 'password', 'Field Tablet');
+        const result = await client.login(
+            'operator',
+            'password',
+            'Field Tablet',
+        );
         assert.equal(result.token, 'sample-sanctum-token-123');
-        assert.equal(result.user.name, 'Jane Driver');
-        assert.equal(result.user.role, 'driver');
+        assert.equal(result.user.name, 'Jane Operator');
+        assert.equal(result.user.role, 'crane_operator');
 
         await tokenStorage.setToken(result.token);
         const storedToken = await tokenStorage.getToken();
@@ -267,13 +271,13 @@ describe('Field Mobile Authentication Shell', () => {
     });
 
     it('validates authorized field mobile roles', () => {
-        assert.equal(isAuthorizedFieldRole('driver'), true);
+        assert.equal(isAuthorizedFieldRole('operator'), true);
         assert.equal(isAuthorizedFieldRole('crane_operator'), true);
+        assert.equal(isAuthorizedFieldRole('driver'), false);
         assert.equal(isAuthorizedFieldRole('field_technician'), false);
         assert.equal(isAuthorizedFieldRole('dispatcher'), false);
         assert.equal(isAuthorizedFieldRole('operations_manager'), false);
         assert.equal(isAuthorizedFieldRole('system_administrator'), false);
-        assert.equal(isAuthorizedFieldRole('operator'), false);
         assert.equal(isAuthorizedFieldRole('technician'), false);
 
         assert.equal(isAuthorizedFieldRole('client'), false);

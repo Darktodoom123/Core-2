@@ -125,7 +125,7 @@ function v2Mutation(int $version, ?string $key = null, ?string $reason = null, a
 }
 
 it('executes the target lifecycle and never exposes job-level accepted', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'V2 Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'V2 Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'V2 Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     $commands = app(DispatchV2CommandService::class);
@@ -157,7 +157,7 @@ it('executes the target lifecycle and never exposes job-level accepted', functio
 });
 
 it('returns deterministic readiness blockers and derived labels without mutating lifecycle state', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Readiness Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Readiness Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Readiness Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     $aggregate['attempt']->update([
@@ -198,7 +198,7 @@ it('returns deterministic readiness blockers and derived labels without mutating
 });
 
 it('derives scheduled and awaiting approval labels from facts, never from lifecycle writes', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Derived Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Derived Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Derived Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     $aggregate['plan']->update(['status' => DispatchPlanVersionStatus::Submitted]);
@@ -213,7 +213,7 @@ it('derives scheduled and awaiting approval labels from facts, never from lifecy
 });
 
 it('submits and approves plan versions through the same aggregate version envelope', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Plan Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Plan Dispatcher');
     $manager = v2CommandUser(RoleName::OperationsManager, 'Plan Manager');
     $lead = v2CommandUser(RoleName::Driver, 'Plan Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
@@ -236,7 +236,7 @@ it('submits and approves plan versions through the same aggregate version envelo
 });
 
 it('enforces stale versions, replay ownership, payload mismatch, authorization, and object scope', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Conflict Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Conflict Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Conflict Lead');
     $intruder = User::factory()->create(['name' => 'Untrusted User', 'is_active' => true]);
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
@@ -263,7 +263,7 @@ it('enforces stale versions, replay ownership, payload mismatch, authorization, 
 });
 
 it('rolls back state, audit, lineage, and idempotency together when audit recording fails', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Rollback Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Rollback Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Rollback Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     $audit = Mockery::mock(AuditEventRecorder::class);
@@ -281,7 +281,7 @@ it('rolls back state, audit, lineage, and idempotency together when audit record
 });
 
 it('keeps domain events after commit and does not publish one for an idempotent replay', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Event Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Event Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Event Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     Event::fake([DispatchExecutionTransitioned::class]);
@@ -299,7 +299,7 @@ it('keeps domain events after commit and does not publish one for an idempotent 
 });
 
 it('reopens as a new draft attempt and archives only terminal records', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Archive Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Archive Dispatcher');
     $manager = v2CommandUser(RoleName::OperationsManager, 'Archive Manager');
     $admin = v2CommandUser(RoleName::SystemAdministrator, 'Archive Admin');
     $lead = v2CommandUser(RoleName::Driver, 'Archive Lead');
@@ -322,7 +322,7 @@ it('reopens as a new draft attempt and archives only terminal records', function
 });
 
 it('creates a canonical attempt and plan without changing the legacy adapter record', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Create Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Create Dispatcher');
     $job = DispatchJob::query()->create([
         'reference' => 'V2-CREATE-'.uniqid(),
         'client' => 'Create Customer',
@@ -349,7 +349,7 @@ it('creates a canonical attempt and plan without changing the legacy adapter rec
 });
 
 it('honors the command feature flag while leaving the legacy path available', function (): void {
-    $dispatcher = v2CommandUser(RoleName::Dispatcher, 'Flag Dispatcher');
+    $dispatcher = v2CommandUser(RoleName::OperationsManager, 'Flag Dispatcher');
     $lead = v2CommandUser(RoleName::Driver, 'Flag Lead');
     $aggregate = v2ReadyAggregate($dispatcher, $lead);
     config(['dispatch.v2_commands_enabled' => false]);

@@ -38,7 +38,6 @@ final class BrowserAcceptanceSeeder extends Seeder
         $this->call(RolePermissionSeeder::class);
 
         $admin = $this->user('Browser Admin', 'browser.admin@example.com', RoleName::SystemAdministrator);
-        $dispatcher = $this->user('Browser Dispatcher', 'browser.dispatcher@example.com', RoleName::Dispatcher);
         $manager = $this->user('Browser Manager', 'browser.manager@example.com', RoleName::OperationsManager);
         $driver = $this->user('Browser Driver', 'browser.driver@example.com', RoleName::Driver);
 
@@ -52,7 +51,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'priority' => DispatchPriority::Routine,
             'status' => DispatchStatus::Draft,
             'requirements' => [],
-            'created_by' => $dispatcher->id,
+            'created_by' => $manager->id,
         ]);
         $assignedJob = DispatchJob::query()->create([
             'reference' => 'R6-BROWSER-002',
@@ -64,14 +63,14 @@ final class BrowserAcceptanceSeeder extends Seeder
             'priority' => DispatchPriority::Routine,
             'status' => DispatchStatus::Dispatched,
             'requirements' => [],
-            'created_by' => $dispatcher->id,
+            'created_by' => $manager->id,
         ]);
         DispatchPersonnelAssignment::query()->create([
             'dispatch_job_id' => $assignedJob->id,
             'user_id' => $driver->id,
             'assignment_type' => 'driver',
             'response_status' => AssignmentResponse::Accepted,
-            'assigned_by' => $dispatcher->id,
+            'assigned_by' => $manager->id,
             'active_from' => now()->subMinute(),
         ]);
 
@@ -147,16 +146,16 @@ final class BrowserAcceptanceSeeder extends Seeder
             'priority' => DispatchPriority::Routine,
             'status' => DispatchStatus::Draft,
             'requirements' => [],
-            'created_by' => $dispatcher->id,
+            'created_by' => $manager->id,
         ]);
 
         $recommendations = [
-            'pending_accept' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
-            'pending_reject' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::PendingReview),
-            'failed' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
-            'stale' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Stale),
-            'accepted' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Accepted, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(3)]),
-            'rejected' => $this->recommendation($gptJob, $dispatcher, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
+            'pending_accept' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::PendingReview),
+            'pending_reject' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::PendingReview),
+            'failed' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::Failed, ['error_message' => 'GPT generation failed. Please retry.']),
+            'stale' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::Stale),
+            'accepted' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::Accepted, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(3)]),
+            'rejected' => $this->recommendation($gptJob, $manager, GptRecommendationStatus::Rejected, ['decided_by' => $manager->id, 'decided_at' => now()->subMinutes(2)]),
         ];
 
         $truck = OperationalAsset::query()->firstOrCreate(
@@ -178,13 +177,13 @@ final class BrowserAcceptanceSeeder extends Seeder
             'priority' => DispatchPriority::Emergency,
             'status' => DispatchStatus::Draft,
             'requirements' => ['Urgent crane lift'],
-            'created_by' => $dispatcher->id,
+            'created_by' => $manager->id,
         ]);
 
         $approvalRequest = ApprovalRequest::query()->create([
             'subject_type' => $approvalJob->getMorphClass(),
             'subject_id' => $approvalJob->id,
-            'requested_by' => $dispatcher->id,
+            'requested_by' => $manager->id,
             'kind' => 'dispatch_activation',
             'status' => ApprovalStatus::Pending,
             'reason' => 'Emergency priority activation requires manager authorization.',
@@ -201,14 +200,14 @@ final class BrowserAcceptanceSeeder extends Seeder
             'priority' => DispatchPriority::Routine,
             'status' => DispatchStatus::Draft,
             'requirements' => [],
-            'created_by' => $dispatcher->id,
+            'created_by' => $manager->id,
         ]);
 
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
                 'admin' => $admin->username,
-                'dispatcher' => $dispatcher->username,
+                'dispatcher' => $manager->username,
                 'manager' => $manager->username,
                 'driver' => $driver->username,
             ],

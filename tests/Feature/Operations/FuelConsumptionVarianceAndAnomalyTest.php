@@ -40,7 +40,7 @@ function progressFuelRequestToVerified(User $requester, User $dispatcher, User $
 
 it('calculates quantity variance and does not flag anomaly when within 15 percent threshold', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $fuel = progressFuelRequestToVerified($driver, $dispatcher, $manager, [
@@ -68,7 +68,7 @@ it('calculates quantity variance and does not flag anomaly when within 15 percen
 
 it('flags an anomaly when actual quantity exceeds requested quantity by 15 percent or more', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $fuel = progressFuelRequestToVerified($driver, $dispatcher, $manager, [
@@ -93,7 +93,7 @@ it('flags an anomaly when actual quantity exceeds requested quantity by 15 perce
 
 it('calculates effective burn rate in L/km for trucks and updates asset meter value', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $truck = OperationalAsset::query()->create([
@@ -135,7 +135,7 @@ it('calculates effective burn rate in L/km for trucks and updates asset meter va
 
 it('calculates effective burn rate in L/hr for cranes and stationary equipment', function () {
     $operator = createFuelUser(RoleName::CraneOperator);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $crane = OperationalAsset::query()->create([
@@ -176,7 +176,7 @@ it('calculates effective burn rate in L/hr for cranes and stationary equipment',
 
 it('flags an anomaly when effective burn rate exceeds asset baseline by 15 percent or more', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $truck = OperationalAsset::query()->create([
@@ -214,7 +214,7 @@ it('flags an anomaly when effective burn rate exceeds asset baseline by 15 perce
 
 it('rejects monotonic meter rollback when odometer is lower than asset current meter value', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $truck = OperationalAsset::query()->create([
@@ -247,7 +247,7 @@ it('rejects monotonic meter rollback when odometer is lower than asset current m
 
 it('rejects monotonic meter rollback when hour meter is lower than asset current meter value', function () {
     $operator = createFuelUser(RoleName::CraneOperator);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $crane = OperationalAsset::query()->create([
@@ -279,7 +279,7 @@ it('rejects monotonic meter rollback when hour meter is lower than asset current
 
 it('allows non-metered asset to log fuel cleanly without error', function () {
     $driver = createFuelUser(RoleName::Driver);
-    $dispatcher = createFuelUser(RoleName::Dispatcher);
+    $dispatcher = createFuelUser(RoleName::OperationsManager);
     $manager = createFuelUser(RoleName::OperationsManager);
 
     $riggingGear = OperationalAsset::query()->create([

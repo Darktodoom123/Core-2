@@ -55,7 +55,7 @@ function gauntletAsset(string $code, AssetStatus $status = AssetStatus::Availabl
 }
 
 it('Gate 1 & 2: enforces collision locks preventing double-booking across Service and Rental', function (): void {
-    $dispatcher = gauntletUser(RoleName::Dispatcher);
+    $dispatcher = gauntletUser(RoleName::OperationsManager);
     $manager = gauntletUser(RoleName::OperationsManager);
     $client = gauntletClient();
     $crane = gauntletAsset('CRANE-G2-001');
@@ -82,7 +82,7 @@ it('Gate 1 & 2: enforces collision locks preventing double-booking across Servic
 });
 
 it('Gate 4: captures baseline and return condition diffs on Rental handover', function (): void {
-    $dispatcher = gauntletUser(RoleName::Dispatcher);
+    $dispatcher = gauntletUser(RoleName::OperationsManager);
     $manager = gauntletUser(RoleName::OperationsManager);
     $client = gauntletClient();
     $asset = gauntletAsset('CRANE-G4-DIFF');

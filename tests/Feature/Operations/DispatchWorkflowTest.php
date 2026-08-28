@@ -61,7 +61,7 @@ function addWorkflowCredential(User $user, string $kind): void
 }
 
 it('lets a dispatcher create and assign a routine dispatch while preserving assigned-only scope', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     $driver->personnelCredentials()->create(['kind' => 'driver_license', 'credential_number' => 'DL-1001', 'credential_type' => 'professional', 'issued_at' => now()->subYear(), 'expires_at' => now()->addYear(), 'status' => 'active']);
     $other = operationsUser(RoleName::Driver);
@@ -84,7 +84,7 @@ it('lets a dispatcher create and assign a routine dispatch while preserving assi
 });
 
 it('assigns every supported personnel and asset type atomically and records the audit event', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     $operator = operationsUser(RoleName::CraneOperator);
     addWorkflowCredential($driver, 'driver_license');
@@ -125,7 +125,7 @@ it('assigns every supported personnel and asset type atomically and records the 
 });
 
 it('creates an independent approval request for priority resource assignments', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     addWorkflowCredential($driver, 'driver_license');
     $job = workflowDispatchJob($dispatcher, 'CON-1151', DispatchPriority::Priority);
@@ -146,7 +146,7 @@ it('creates an independent approval request for priority resource assignments', 
 });
 
 it('rolls back assignments and approval when audit persistence fails', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     addWorkflowCredential($driver, 'driver_license');
     $job = workflowDispatchJob($dispatcher, 'CON-1152', DispatchPriority::Priority);
@@ -172,7 +172,7 @@ it('rolls back assignments and approval when audit persistence fails', function 
 });
 
 it('forbids a user with assignment permission but without job visibility', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     $driver->givePermissionTo(PermissionName::AssignmentsCreate->value);
     addWorkflowCredential($driver, 'driver_license');
@@ -189,7 +189,7 @@ it('forbids a user with assignment permission but without job visibility', funct
 });
 
 it('rejects drivers with an expired credential at the dispatch schedule', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     $driver->personnelCredentials()->create([
         'kind' => 'driver_license',
@@ -214,7 +214,7 @@ it('rejects drivers with an expired credential at the dispatch schedule', functi
 });
 
 it('rejects crane operators with a missing credential', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $operator = operationsUser(RoleName::CraneOperator);
     $job = workflowDispatchJob($dispatcher, 'CON-1302');
 
@@ -231,7 +231,7 @@ it('rejects crane operators with a missing credential', function () {
 });
 
 it('rejects unavailable, suspended, and role-mismatched personnel', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $unavailableDriver = operationsUser(RoleName::Driver);
     $unavailableDriver->personnelProfile()->create(['availability_status' => 'on_leave']);
     addWorkflowCredential($unavailableDriver, 'driver_license');
@@ -260,7 +260,7 @@ it('rejects unavailable, suspended, and role-mismatched personnel', function () 
 });
 
 it('rejects blocking maintenance and mismatched asset kinds', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $job = workflowDispatchJob($dispatcher, 'CON-1501');
     $blockedCrane = OperationalAsset::query()->create(['code' => 'CR-1501', 'name' => 'Blocked crane', 'kind' => 'crane', 'status' => AssetStatus::Available]);
     $blockedCrane->maintenanceWorkOrders()->create([
@@ -291,7 +291,7 @@ it('rejects blocking maintenance and mismatched asset kinds', function () {
 });
 
 it('rejects overlapping personnel and asset schedules', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     addWorkflowCredential($driver, 'driver_license');
     $truck = OperationalAsset::query()->create(['code' => 'TR-1601', 'name' => 'Truck', 'kind' => 'truck', 'status' => AssetStatus::Available]);
@@ -331,7 +331,7 @@ it('rejects overlapping personnel and asset schedules', function () {
 });
 
 it('rejects duplicate resources before entering the assignment transaction', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     addWorkflowCredential($driver, 'driver_license');
     $job = workflowDispatchJob($dispatcher, 'CON-1701');
@@ -351,7 +351,7 @@ it('rejects duplicate resources before entering the assignment transaction', fun
 });
 
 it('revalidates a stale eligible resource snapshot and rolls back the whole assignment batch', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     $operator = operationsUser(RoleName::CraneOperator);
     addWorkflowCredential($driver, 'driver_license');
@@ -389,7 +389,7 @@ it('revalidates a stale eligible resource snapshot and rolls back the whole assi
 });
 
 it('requires independent manager approval before a priority dispatch activates', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $manager = operationsUser(RoleName::OperationsManager);
     $driver = operationsUser(RoleName::Driver);
     addWorkflowCredential($driver, 'driver_license');
@@ -405,7 +405,7 @@ it('requires independent manager approval before a priority dispatch activates',
 });
 
 it('blocks unsafe assets from assignment', function () {
-    $dispatcher = operationsUser(RoleName::Dispatcher);
+    $dispatcher = operationsUser(RoleName::OperationsManager);
     $job = DispatchJob::query()->create(['reference' => 'CON-3001', 'client' => 'Apex', 'title' => 'Lift', 'site' => 'Pasig', 'scheduled_start' => now()->addDay(), 'scheduled_end' => now()->addDay()->addHours(2), 'priority' => DispatchPriority::Routine, 'status' => DispatchStatus::Draft, 'created_by' => $dispatcher->id]);
     $asset = OperationalAsset::query()->create(['code' => 'CR-01', 'name' => 'Crane 01', 'kind' => 'crane', 'status' => AssetStatus::UnderMaintenance]);
     $this->actingAs($dispatcher)->postJson("/operations/dispatch-jobs/{$job->id}/assignments", ['assets' => [['operational_asset_id' => $asset->id, 'assignment_type' => 'crane']]])->assertUnprocessable();

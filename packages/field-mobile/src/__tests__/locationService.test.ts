@@ -11,10 +11,10 @@ const testHasher = {
 
 const activeUser: User = {
     id: 10,
-    name: 'Test Driver',
-    username: 'driver',
-    email: 'driver@example.com',
-    role: 'driver',
+    name: 'Test Operator',
+    username: 'operator',
+    email: 'operator@example.com',
+    role: 'crane_operator',
     is_active: true,
 };
 

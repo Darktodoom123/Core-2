@@ -92,7 +92,7 @@ function phase4Aggregate(User $actor): array
 
 it('creates one canonical source handoff and replays exact source retries without duplicate side effects', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
+    $dispatcher = phase4User(RoleName::OperationsManager);
     $client = Client::query()->create(['code' => 'P4-CLIENT', 'company_name' => 'P4 Customer', 'status' => 'active']);
     $reservation = RentalReservation::query()->create([
         'reference' => 'P4-RENTAL-1',
@@ -134,8 +134,8 @@ it('creates one canonical source handoff and replays exact source retries withou
 
 it('rejects source payload and owner reuse conflicts before creating writes', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
-    $other = phase4User(RoleName::Dispatcher, 'Other dispatcher');
+    $dispatcher = phase4User(RoleName::OperationsManager);
+    $other = phase4User(RoleName::OperationsManager, 'Other dispatcher');
     $aggregate = phase4Aggregate($dispatcher);
     $commands = app(DispatchV2CommandService::class);
     $payload = ['canonical_handoff' => ['source_type' => 'manual', 'source_id' => $aggregate['job']->id, 'external_reference' => $aggregate['job']->reference, 'allow_new_attempt' => true, 'replacement_policy' => 'source_replan', 'payload' => ['stable' => true]]];
@@ -162,7 +162,7 @@ it('rejects source payload and owner reuse conflicts before creating writes', fu
 
 it('rolls back canonical state, audit, lineage, receipt, and outbox intent together', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
+    $dispatcher = phase4User(RoleName::OperationsManager);
     $aggregate = phase4Aggregate($dispatcher);
     $recorder = Mockery::mock(DispatchOutboxRecorder::class);
     $recorder->shouldReceive('record')->once()->andThrow(new RuntimeException('outbox persistence failure'));
@@ -181,7 +181,7 @@ it('rolls back canonical state, audit, lineage, receipt, and outbox intent toget
 
 it('keeps replacement attempts monotonic and never reopens a completed predecessor', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
+    $dispatcher = phase4User(RoleName::OperationsManager);
     $manager = phase4User(RoleName::OperationsManager, 'P4 manager');
     $aggregate = phase4Aggregate($dispatcher);
     $commands = app(DispatchV2CommandService::class);
@@ -202,7 +202,7 @@ it('keeps replacement attempts monotonic and never reopens a completed predecess
 
 it('defers durable outbox delivery until commit and retries a failed handler without duplicating delivery', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
+    $dispatcher = phase4User(RoleName::OperationsManager);
     $aggregate = phase4Aggregate($dispatcher);
     DB::beginTransaction();
     app(DispatchV2CommandService::class)->cancel($dispatcher, $aggregate['attempt'], new DispatchV2Mutation(1, 'p4-after-commit', 'operations', 'after commit'));
@@ -232,7 +232,7 @@ it('defers durable outbox delivery until commit and retries a failed handler wit
 
 it('reconciles manual sources and reports canonical source payload drift idempotently', function (): void {
     Queue::fake();
-    $dispatcher = phase4User(RoleName::Dispatcher);
+    $dispatcher = phase4User(RoleName::OperationsManager);
     $client = Client::query()->create(['code' => 'P4-RECON', 'company_name' => 'P4 Recon Customer', 'status' => 'active']);
     $reservation = RentalReservation::query()->create([
         'reference' => 'P4-RECON-RENTAL',

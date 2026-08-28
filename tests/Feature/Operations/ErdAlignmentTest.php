@@ -87,7 +87,7 @@ it('contains the normalized physical mapping for every supplied ERD entity', fun
 
 it('creates a client request and linked dispatch without duplicating ERD identity records', function () {
     $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $clientId = $this->actingAs($dispatcher)->postJson('/operations/clients', [
         'code' => 'CLI-001',

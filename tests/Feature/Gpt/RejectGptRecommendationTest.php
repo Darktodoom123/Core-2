@@ -17,7 +17,7 @@ beforeEach(function (): void {
 
 test('authorized dispatcher can reject a pending gpt recommendation with reason', function (): void {
     $dispatcher = User::factory()->create(['is_active' => true]);
-    $dispatcher->syncRoles([RoleName::Dispatcher->value]);
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'JOB-REJ-001',

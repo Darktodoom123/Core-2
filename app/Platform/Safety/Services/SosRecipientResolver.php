@@ -18,26 +18,26 @@ final class SosRecipientResolver
         /** @var Collection<int, array{user: User, role_at_alert: string, resolution_reason: string}> $recipients */
         $recipients = collect();
 
-        $dispatcher = $job === null ? null : $this->assignedDispatcher($worker, $job);
-        $selectedDispatcher = $dispatcher;
-        if ($dispatcher === null && $job !== null) {
-            $dispatcher = $this->validDispatcher($job->creator()->first());
-            if ($dispatcher !== null) {
-                $recipients->push($this->recipient($dispatcher, 'dispatch_creator'));
-                $selectedDispatcher = $dispatcher;
+        $manager = $job === null ? null : $this->assignedManager($worker, $job);
+        $selectedManager = $manager;
+        if ($manager === null && $job !== null) {
+            $manager = $this->validManager($job->creator()->first());
+            if ($manager !== null) {
+                $recipients->push($this->recipient($manager, 'dispatch_creator'));
+                $selectedManager = $manager;
             }
-        } elseif ($dispatcher !== null) {
-            $recipients->push($this->recipient($dispatcher, 'assignment_dispatcher'));
+        } elseif ($manager !== null) {
+            $recipients->push($this->recipient($manager, 'assignment_dispatcher'));
         }
 
-        if ($selectedDispatcher === null) {
+        if ($selectedManager === null) {
             User::query()
-                ->role(RoleName::Dispatcher->value)
+                ->role(RoleName::OperationsManager->value)
                 ->where('is_active', true)
                 ->whereNull('suspended_at')
                 ->whereNotNull('email_verified_at')
                 ->get()
-                ->each(fn (User $user) => $recipients->push($this->recipient($user, 'dispatcher_fallback')));
+                ->each(fn (User $user) => $recipients->push($this->recipient($user, 'operations_manager_fallback')));
         }
 
         User::query()
@@ -51,7 +51,7 @@ final class SosRecipientResolver
         return $recipients->unique(fn (array $item): int => $item['user']->id)->values();
     }
 
-    private function assignedDispatcher(User $worker, DispatchJob $job): ?User
+    private function assignedManager(User $worker, DispatchJob $job): ?User
     {
         $assignment = DispatchPersonnelAssignment::query()
             ->where('dispatch_job_id', $job->id)
@@ -62,16 +62,16 @@ final class SosRecipientResolver
 
         return $assignment === null
             ? null
-            : $this->validDispatcher(User::query()->find($assignment->assigned_by));
+            : $this->validManager(User::query()->find($assignment->assigned_by));
     }
 
-    private function validDispatcher(?User $user): ?User
+    private function validManager(?User $user): ?User
     {
         return $user !== null
             && $user->is_active
             && $user->suspended_at === null
             && $user->email_verified_at !== null
-            && $user->hasRole(RoleName::Dispatcher->value)
+            && $user->hasRole(RoleName::OperationsManager->value)
             ? $user
             : null;
     }
@@ -83,7 +83,7 @@ final class SosRecipientResolver
 
         return [
             'user' => $user,
-            'role_at_alert' => $role === null ? RoleName::Dispatcher->value : $role->value,
+            'role_at_alert' => $role === null ? RoleName::OperationsManager->value : $role->value,
             'resolution_reason' => $reason,
         ];
     }

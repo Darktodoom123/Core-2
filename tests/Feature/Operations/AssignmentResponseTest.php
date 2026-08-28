@@ -64,7 +64,7 @@ function assignWorkerToJob(
 }
 
 it('allows an assigned field worker to accept their pending assignment', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driver = createResponseUser(RoleName::Driver, 'Assigned Driver');
     $job = createResponseJob($dispatcher, 'RESP-1001');
     $assignment = assignWorkerToJob($job, $driver, $dispatcher);
@@ -96,7 +96,7 @@ it('allows an assigned field worker to accept their pending assignment', functio
 });
 
 it('allows an assigned field worker to reject their pending assignment with a reason', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driver = createResponseUser(RoleName::Driver, 'Assigned Driver');
     $job = createResponseJob($dispatcher, 'RESP-1002');
     $assignment = assignWorkerToJob($job, $driver, $dispatcher);
@@ -135,7 +135,7 @@ it('allows an assigned field worker to reject their pending assignment with a re
 });
 
 it('requires a reason when rejecting an assignment', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driver = createResponseUser(RoleName::Driver, 'Assigned Driver');
     $job = createResponseJob($dispatcher, 'RESP-1003');
     $assignment = assignWorkerToJob($job, $driver, $dispatcher);
@@ -155,7 +155,7 @@ it('requires a reason when rejecting an assignment', function () {
 });
 
 it('prevents a worker from responding to another workers assignment', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driverA = createResponseUser(RoleName::Driver, 'Driver A');
     $driverB = createResponseUser(RoleName::Driver, 'Driver B');
     $job = createResponseJob($dispatcher, 'RESP-1004');
@@ -174,7 +174,7 @@ it('prevents a worker from responding to another workers assignment', function (
 });
 
 it('prevents responding to an assignment that is already responded to', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driver = createResponseUser(RoleName::Driver, 'Assigned Driver');
     $job = createResponseJob($dispatcher, 'RESP-1005');
     $assignment = assignWorkerToJob($job, $driver, $dispatcher, AssignmentResponse::Accepted);
@@ -193,7 +193,7 @@ it('prevents responding to an assignment that is already responded to', function
 });
 
 it('rejects stale optimistic version when responding', function () {
-    $dispatcher = createResponseUser(RoleName::Dispatcher, 'Dispatcher Lead');
+    $dispatcher = createResponseUser(RoleName::OperationsManager, 'Dispatcher Lead');
     $driver = createResponseUser(RoleName::Driver, 'Assigned Driver');
     $job = createResponseJob($dispatcher, 'RESP-1006', DispatchStatus::Dispatched, 2);
     $assignment = assignWorkerToJob($job, $driver, $dispatcher);

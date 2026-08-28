@@ -56,7 +56,7 @@ function createV2User(RoleName $role, string $name, string $workspace = 'operati
  */
 function createV2Fixture(bool $approved = true, bool $acceptedOffers = true): array
 {
-    $dispatcher = createV2User(RoleName::Dispatcher, 'V2 Dispatcher');
+    $dispatcher = createV2User(RoleName::OperationsManager, 'V2 Dispatcher');
     $manager = createV2User(RoleName::OperationsManager, 'V2 Manager');
     $leadWorker = createV2User(RoleName::Driver, 'V2 Lead Driver');
     $secondWorker = createV2User(RoleName::Driver, 'V2 Second Driver');
