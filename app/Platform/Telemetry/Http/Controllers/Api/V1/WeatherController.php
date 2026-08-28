@@ -20,9 +20,24 @@ final class WeatherController extends Controller
     {
         $job = DispatchJob::findOrFail($id);
 
-        // Resolve latitude and longitude from request query or default Metro Manila coordinates (14.5995, 120.9842)
-        $lat = (float) ($request->query('lat') ?? 14.5995);
-        $lon = (float) ($request->query('lon') ?? 120.9842);
+        $assetAssignment = null;
+        if ($request->filled('assignment_id')) {
+            $assetAssignment = $job->assetAssignments()->where('id', $request->query('assignment_id'))->first();
+        } elseif ($request->filled('asset_id')) {
+            $assetAssignment = $job->assetAssignments()->where('operational_asset_id', $request->query('asset_id'))->first();
+        }
+
+        // Prioritize pinned asset coordinates, then job site coordinates, then query params / default
+        $lat = ($assetAssignment !== null && $assetAssignment->site_latitude !== null)
+            ? (float) $assetAssignment->site_latitude
+            : ($job->site_latitude !== null ? (float) $job->site_latitude : (float) ($request->query('lat') ?? 14.5995));
+
+        $lon = ($assetAssignment !== null && $assetAssignment->site_longitude !== null)
+            ? (float) $assetAssignment->site_longitude
+            : ($job->site_longitude !== null ? (float) $job->site_longitude : (float) ($request->query('lon') ?? 120.9842));
+
+        $isPinned = ($assetAssignment !== null && $assetAssignment->site_latitude !== null && $assetAssignment->site_longitude !== null)
+            || ($job->site_latitude !== null && $job->site_longitude !== null);
 
         $weather = $this->weatherService->getSiteWeather($lat, $lon);
 
@@ -31,6 +46,11 @@ final class WeatherController extends Controller
                 'job_id' => $job->id,
                 'job_reference' => $job->reference,
                 'site_name' => $job->site,
+                'site_latitude' => $lat,
+                'site_longitude' => $lon,
+                'asset_id' => $assetAssignment?->operational_asset_id,
+                'assignment_id' => $assetAssignment?->id,
+                'is_pinned' => $isPinned,
             ]),
         ]);
     }

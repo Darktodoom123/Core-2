@@ -41,6 +41,8 @@ describe('Machinery-Type Differentiated Workflows (Mobile vs Tower Crane)', () =
             client: 'Megawide Construction',
             title: 'Steel Girder Erection',
             site: 'BGC Taguig Site',
+            site_latitude: 14.5503,
+            site_longitude: 121.0505,
             priority: { value: 'priority', label: 'Priority' },
             status: { value: 'accepted', label: 'Accepted' },
             version: 1,
@@ -88,6 +90,8 @@ describe('Machinery-Type Differentiated Workflows (Mobile vs Tower Crane)', () =
             client: 'Ayala Land Premier',
             title: 'High-Rise Core Wall Pour',
             site: 'Makati Central Tower 1',
+            site_latitude: 14.5571,
+            site_longitude: 121.0234,
             priority: { value: 'routine', label: 'Routine' },
             status: { value: 'working', label: 'Working' },
             version: 1,
@@ -125,5 +129,8 @@ describe('Machinery-Type Differentiated Workflows (Mobile vs Tower Crane)', () =
 
         // Highway route card is omitted for stationary tower crane
         expect(view.queryByText(/Heavy crane route/i)).toBeNull();
+
+        // GPS Auto-tracking is bypassed for stationary tower crane
+        expect(mockLocationService.startAutoTracking).not.toHaveBeenCalled();
     });
 });

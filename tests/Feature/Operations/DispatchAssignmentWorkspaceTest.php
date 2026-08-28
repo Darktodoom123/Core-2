@@ -45,9 +45,9 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
     $driver = assignmentWorkspaceUser(RoleName::CraneOperator, 'Available Driver');
     $driver->personnelProfile()->create(['availability_status' => 'available']);
     $driver->personnelCredentials()->create([
-        'kind' => 'driver_license',
+        'kind' => 'operator_certification',
         'credential_number' => 'DL-WORKSPACE',
-        'credential_type' => 'professional',
+        'credential_type' => 'mobile_crane',
         'issued_at' => now()->subYear(),
         'expires_at' => now()->addYear(),
         'status' => 'active',
@@ -95,7 +95,7 @@ it('shows server-authoritative personnel eligibility, credentials, asset readine
             ->loadDeferredProps('dispatch-candidates', fn (Assert $deferred) => $deferred
                 ->has('personnel_candidates.data', 3)
                 ->where('personnel_candidates.data.0.name', 'Available Driver')
-                ->where('personnel_candidates.data.0.assignment_type', 'driver')
+                ->where('personnel_candidates.data.0.assignment_type', 'crane_operator')
                 ->where('personnel_candidates.data.0.availability.label', 'Available')
                 ->where('personnel_candidates.data.0.credential.status', 'valid')
                 ->where('personnel_candidates.data.0.eligible', true)

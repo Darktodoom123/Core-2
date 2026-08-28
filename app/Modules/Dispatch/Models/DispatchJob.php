@@ -27,7 +27,10 @@ use Illuminate\Support\Carbon;
  * @property int $version
  * @property string|null $source_type
  * @property int|null $source_id
- * @property string|null $source_reference
+ * @property string|null $site
+ * @property string|null $site_notes
+ * @property float|null $site_latitude
+ * @property float|null $site_longitude
  * @property Carbon|null $scheduled_start
  * @property Carbon|null $scheduled_end
  * @property int|null $cancelled_by
@@ -37,11 +40,20 @@ class DispatchJob extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
+    protected $fillable = ['service_request_id', 'source_type', 'source_id', 'source_reference', 'reference', 'client', 'title', 'site', 'site_notes', 'site_latitude', 'site_longitude', 'planned_crane_slots', 'scheduled_start', 'scheduled_end', 'priority', 'status', 'requirements', 'created_by', 'activated_by', 'cancelled_by', 'cancellation_reason', 'version'];
 
     protected function casts(): array
     {
-        return ['scheduled_start' => 'datetime', 'scheduled_end' => 'datetime', 'priority' => DispatchPriority::class, 'status' => DispatchStatus::class, 'requirements' => 'array'];
+        return [
+            'site_latitude' => 'float',
+            'site_longitude' => 'float',
+            'planned_crane_slots' => 'array',
+            'scheduled_start' => 'datetime',
+            'scheduled_end' => 'datetime',
+            'priority' => DispatchPriority::class,
+            'status' => DispatchStatus::class,
+            'requirements' => 'array',
+        ];
     }
 
     /** @return BelongsTo<User, $this> */

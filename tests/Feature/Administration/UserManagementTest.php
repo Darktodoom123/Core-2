@@ -67,7 +67,7 @@ it('revokes device tokens when an administrator changes an account role', functi
     $token = $user->createToken('Mobile Phone')->plainTextToken;
 
     $this->actingAs($admin)
-        ->patchJson('/operations/users/'.$user->id, ['role' => RoleName::CraneOperator->value])
+        ->patchJson('/operations/users/'.$user->id, ['role' => RoleName::OperationsManager->value])
         ->assertOk();
 
     $this->app['auth']->forgetGuards();

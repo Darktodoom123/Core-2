@@ -48,6 +48,9 @@ final class DispatchJobResource extends JsonResource
             'title' => $this->title,
             'site' => $this->site,
             'site_notes' => $this->site_notes,
+            'site_latitude' => $this->site_latitude,
+            'site_longitude' => $this->site_longitude,
+            'planned_crane_slots' => $this->planned_crane_slots ?? [],
             'scheduled_start' => $this->scheduled_start?->toIso8601String(),
             'scheduled_end' => $this->scheduled_end?->toIso8601String(),
             'priority' => [

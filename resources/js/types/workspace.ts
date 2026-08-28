@@ -78,6 +78,20 @@ export interface DispatchAssetAssignmentViewModel {
     code: string;
     name: string;
     type: string;
+    kind?: string;
+    subtype?: string | null;
+    site_latitude?: number | null;
+    site_longitude?: number | null;
+    jib_length_meters?: number | null;
+}
+
+export interface PlannedCraneSlotViewModel {
+    slot_key: string;
+    name: string;
+    required_type?: string | null;
+    jib_radius_meters: number;
+    site_latitude?: number | null;
+    site_longitude?: number | null;
 }
 
 export type DispatchSourceType =
@@ -179,6 +193,9 @@ export interface DispatchJobViewModel {
     scheduled_end: string | null;
     requirements: string[];
     version: number;
+    site_latitude?: number | null;
+    site_longitude?: number | null;
+    planned_crane_slots?: PlannedCraneSlotViewModel[];
     updated_at: string | null;
     personnel_assignments: DispatchAssignmentViewModel[];
     asset_assignments: DispatchAssetAssignmentViewModel[];
@@ -452,7 +469,14 @@ export interface LocationUpdateViewModel {
         id: number;
         code: string;
         name: string;
-        kind: 'truck' | 'vehicle' | 'crane' | 'equipment';
+        kind:
+            | 'truck'
+            | 'vehicle'
+            | 'crane'
+            | 'mobile_crane'
+            | 'tower_crane'
+            | 'equipment'
+            | string;
     } | null;
     job: {
         id: number;

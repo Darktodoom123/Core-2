@@ -208,7 +208,7 @@ final class DispatchResourceEligibility
     private function personnelRole(string $assignmentType): ?RoleName
     {
         return match ($assignmentType) {
-            'crane_operator', 'operator' => RoleName::CraneOperator,
+            'crane_operator', 'operator', 'driver' => RoleName::CraneOperator,
             default => null,
         };
     }

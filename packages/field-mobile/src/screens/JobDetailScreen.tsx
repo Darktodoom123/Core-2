@@ -113,6 +113,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 
     useEffect(() => {
         if (
+            isTowerCrane ||
             !getCurrentLocation ||
             !locationService.canShareLocation(user, job)
         ) {
@@ -163,7 +164,7 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             locationService.stopAutoTracking();
             void stopBackgroundLocationUpdates().catch(() => undefined);
         };
-    }, [getCurrentLocation, job, locationService, user]);
+    }, [getCurrentLocation, isTowerCrane, job, locationService, user]);
 
     const jobConflicts = outboxCommands.filter(
         (command) => command.state === 'conflict' && command.jobId === job.id,
@@ -484,14 +485,16 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 />
             ) : null}
 
-            {/* 6. Location Sharing Card */}
-            <LocationSharingCard
-                getCurrentLocation={getCurrentLocation}
-                job={job}
-                locationService={locationService}
-                onLocationQueued={onLocationQueued}
-                user={user}
-            />
+            {/* 6. Location Sharing Card (Omitted for Stationary Tower Cranes to Save Battery) */}
+            {!isTowerCrane ? (
+                <LocationSharingCard
+                    getCurrentLocation={getCurrentLocation}
+                    job={job}
+                    locationService={locationService}
+                    onLocationQueued={onLocationQueued}
+                    user={user}
+                />
+            ) : null}
 
             {/* Team & Personnel */}
             <View style={styles.teamCard}>

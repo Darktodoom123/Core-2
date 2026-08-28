@@ -119,6 +119,9 @@ final class OperationsWorkspaceViewModel
             'title' => $job->title,
             'site' => $job->site,
             'site_notes' => $job->site_notes,
+            'site_latitude' => $job->site_latitude,
+            'site_longitude' => $job->site_longitude,
+            'planned_crane_slots' => $job->planned_crane_slots ?? [],
             'source' => self::dispatchSource($job),
             'priority' => [
                 'value' => $job->priority->value,
@@ -153,6 +156,13 @@ final class OperationsWorkspaceViewModel
                     'code' => $assignment->asset->code,
                     'name' => $assignment->asset->name,
                     'type' => $assignment->assignment_type,
+                    'kind' => $assignment->asset->kind,
+                    'subtype' => $assignment->asset->subtype,
+                    'site_latitude' => $assignment->site_latitude !== null ? (float) $assignment->site_latitude : null,
+                    'site_longitude' => $assignment->site_longitude !== null ? (float) $assignment->site_longitude : null,
+                    'jib_length_meters' => isset($assignment->asset->specifications['jib_length_meters'])
+                        ? (int) $assignment->asset->specifications['jib_length_meters']
+                        : 60,
                 ])->values()->all(),
         ];
     }

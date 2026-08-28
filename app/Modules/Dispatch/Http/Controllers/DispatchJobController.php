@@ -5,6 +5,7 @@ namespace App\Modules\Dispatch\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Assignment\Data\CandidatePage;
 use App\Modules\Assignment\Http\Requests\ListDispatchCandidatesRequest;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
 use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Assignment\Queries\AssetCandidateQuery;
 use App\Modules\Assignment\Queries\DispatchActivationReadinessQuery;
@@ -19,6 +20,7 @@ use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -192,5 +194,72 @@ final class DispatchJobController extends Controller
 
             return CandidatePage::error($job, 'Candidate data is temporarily unavailable. Retry to evaluate it again.')->toArray();
         }
+    }
+
+    public function updateSiteCoordinates(Request $request, DispatchJob $dispatchJob): RedirectResponse
+    {
+        Gate::authorize('update', $dispatchJob);
+
+        $validated = $request->validate([
+            'site_latitude' => ['required', 'numeric', 'between:-90,90'],
+            'site_longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $dispatchJob->update([
+            'site_latitude' => $validated['site_latitude'],
+            'site_longitude' => $validated['site_longitude'],
+        ]);
+
+        return back()->with('success', 'Project site coordinates updated successfully.');
+    }
+
+    public function updatePlannedCraneSlots(Request $request, DispatchJob $dispatchJob): RedirectResponse
+    {
+        Gate::authorize('update', $dispatchJob);
+
+        $validated = $request->validate([
+            'planned_crane_slots' => ['required', 'array'],
+            'planned_crane_slots.*.slot_key' => ['required', 'string', 'max:50'],
+            'planned_crane_slots.*.name' => ['required', 'string', 'max:100'],
+            'planned_crane_slots.*.required_type' => ['nullable', 'string', 'max:50'],
+            'planned_crane_slots.*.jib_radius_meters' => ['required', 'numeric', 'min:10', 'max:150'],
+            'planned_crane_slots.*.site_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'planned_crane_slots.*.site_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        /** @var list<array<string, mixed>> $slots */
+        $slots = $validated['planned_crane_slots'];
+
+        /** @var array<string, mixed>|null $firstSlotWithCoords */
+        $firstSlotWithCoords = collect($slots)->first(static fn (array $s): bool => ! empty($s['site_latitude']) && ! empty($s['site_longitude']));
+
+        $updates = ['planned_crane_slots' => $slots];
+        if ($firstSlotWithCoords !== null && ($dispatchJob->site_latitude === null || $dispatchJob->site_longitude === null)) {
+            $updates['site_latitude'] = $firstSlotWithCoords['site_latitude'];
+            $updates['site_longitude'] = $firstSlotWithCoords['site_longitude'];
+        }
+
+        $dispatchJob->update($updates);
+
+        return back()->with('success', 'Planned crane positions and site layout updated successfully.');
+    }
+
+    public function updateAssetSiteCoordinates(Request $request, DispatchJob $dispatchJob, DispatchAssetAssignment $assetAssignment): RedirectResponse
+    {
+        Gate::authorize('update', $dispatchJob);
+
+        abort_unless($assetAssignment->dispatch_job_id === $dispatchJob->id, 404);
+
+        $validated = $request->validate([
+            'site_latitude' => ['required', 'numeric', 'between:-90,90'],
+            'site_longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $assetAssignment->update([
+            'site_latitude' => $validated['site_latitude'],
+            'site_longitude' => $validated['site_longitude'],
+        ]);
+
+        return back()->with('success', 'Asset crane anchor coordinates updated successfully.');
     }
 }

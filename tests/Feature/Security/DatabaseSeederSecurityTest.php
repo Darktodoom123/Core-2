@@ -7,7 +7,6 @@ use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\LocalDevelopmentSeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
@@ -102,10 +101,8 @@ it('keeps local developer seeding idempotent and usable', function (): void {
         expect(User::query()->where('email', 'admin@example.com')->count())->toBe(1)
             ->and(User::query()->whereIn('email', [
                 'manager@example.com',
-                'driver@example.com',
                 'operator@example.com',
-            ])->count())->toBe(3)
-            ->and(DB::table('location_updates')->count())->toBe(2);
+            ])->count())->toBe(2);
 
         $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
         expect(Hash::check('password', $manager->getRawOriginal('password')))->toBeTrue()

@@ -27,7 +27,7 @@ it('lists only active system admin and operations manager accounts', function ()
 it('quick logs in allowed roles and rejects disallowed or suspended accounts', function (): void {
     $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
     $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
-    $driver = User::query()->where('email', 'driver@example.com')->firstOrFail();
+    $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
     $suspendedUser = User::factory()->suspended()->create();
 
     // Allowed accounts can quick-login
@@ -39,11 +39,11 @@ it('quick logs in allowed roles and rejects disallowed or suspended accounts', f
 
     // Non-allowed roles and suspended accounts are not in dev list
     $this->getJson('/dev/users')
-        ->assertJsonMissing(['id' => $driver->id])
+        ->assertJsonMissing(['id' => $operator->id])
         ->assertJsonMissing(['id' => $suspendedUser->id]);
 
     // Quick login is rejected for disallowed role or suspended account
-    $this->post('/dev/login/'.$driver->id)->assertNotFound();
+    $this->post('/dev/login/'.$operator->id)->assertNotFound();
     $this->post('/dev/login/'.$suspendedUser->id)->assertNotFound();
 });
 

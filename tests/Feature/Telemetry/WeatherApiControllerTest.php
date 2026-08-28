@@ -92,6 +92,52 @@ test('records high wind weather standby with free slew requirement calculation',
         ->assertJsonPath('data.free_slew_required', true);
 });
 
+test('automatically uses pinned site coordinates from dispatch job without requiring query parameters', function (): void {
+    Http::fake([
+        'https://api.tomorrow.io/v4/weather/realtime*' => Http::response([
+            'data' => [
+                'values' => [
+                    'windSpeed' => 6.0,
+                    'windGust' => 8.0,
+                    'temperature' => 29.5,
+                    'rainIntensity' => 0.0,
+                    'humidity' => 75,
+                    'weatherCode' => 1000,
+                ],
+            ],
+        ], 200),
+    ]);
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    /** @var DispatchJob $job */
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-TOWER-PINNED',
+        'client' => 'Ayala Land',
+        'title' => 'Core Wall Pouring',
+        'site' => 'Parklinks Tower 1, Pasig',
+        'site_latitude' => 14.5821,
+        'site_longitude' => 121.0645,
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Working,
+        'version' => 1,
+        'created_by' => $operator->id,
+    ]);
+
+    // Request without query params - backend resolves pinned site coordinates
+    $response = $this->withToken($token)
+        ->getJson("/api/v1/dispatch/jobs/{$job->id}/weather");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.job_id', $job->id)
+        ->assertJsonPath('data.is_pinned', true)
+        ->assertJsonPath('data.site_latitude', 14.5821)
+        ->assertJsonPath('data.site_longitude', 121.0645);
+});
+
 test('rejects unauthenticated weather requests with 401', function (): void {
     $response = $this->getJson('/api/v1/dispatch/jobs/999/weather');
     $response->assertStatus(401);

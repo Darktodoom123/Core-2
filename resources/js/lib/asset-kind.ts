@@ -1,10 +1,22 @@
 import type { LocationUpdateViewModel } from '@/types/workspace';
 
 export type AssetKind =
-    'truck' | 'crane' | 'mobile_crane' | 'equipment' | 'personnel';
+    | 'truck'
+    | 'crane'
+    | 'mobile_crane'
+    | 'tower_crane'
+    | 'equipment'
+    | 'personnel';
 
 export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
     if (location.asset?.kind) {
+        if (
+            location.asset.kind === 'tower_crane' ||
+            location.asset.kind === 'tower'
+        ) {
+            return 'tower_crane';
+        }
+
         return location.asset.kind === 'vehicle'
             ? 'truck'
             : (location.asset.kind as AssetKind);
@@ -20,6 +32,16 @@ export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
+
+    if (
+        text.includes('twr') ||
+        text.includes('tower crane') ||
+        text.includes('tower_crane') ||
+        text.includes('potain') ||
+        text.includes('topless')
+    ) {
+        return 'tower_crane';
+    }
 
     if (
         text.includes('mob') ||

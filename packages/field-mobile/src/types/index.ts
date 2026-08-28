@@ -95,6 +95,8 @@ export interface DispatchJob {
     title: string;
     site: string;
     site_notes?: string | null;
+    site_latitude?: number | null;
+    site_longitude?: number | null;
     scheduled_start?: string | null;
     scheduled_end?: string | null;
     priority: {

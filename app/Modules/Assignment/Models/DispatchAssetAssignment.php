@@ -16,11 +16,16 @@ use Illuminate\Support\Carbon;
  */
 class DispatchAssetAssignment extends Model
 {
-    protected $fillable = ['dispatch_job_id', 'operational_asset_id', 'assignment_type', 'assigned_by', 'approved_by', 'active_from', 'active_until'];
+    protected $fillable = ['dispatch_job_id', 'operational_asset_id', 'assignment_type', 'site_latitude', 'site_longitude', 'assigned_by', 'approved_by', 'active_from', 'active_until'];
 
     protected function casts(): array
     {
-        return ['active_from' => 'datetime', 'active_until' => 'datetime'];
+        return [
+            'active_from' => 'datetime',
+            'active_until' => 'datetime',
+            'site_latitude' => 'float',
+            'site_longitude' => 'float',
+        ];
     }
 
     /** @return BelongsTo<DispatchJob, $this> */

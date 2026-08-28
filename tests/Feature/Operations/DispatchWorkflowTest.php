@@ -238,13 +238,14 @@ it('rejects unavailable, suspended, and role-mismatched personnel', function () 
     $suspendedDriver = operationsUser(RoleName::CraneOperator);
     $suspendedDriver->update(['suspended_at' => now()]);
     addWorkflowCredential($suspendedDriver, 'driver_license');
-    $operator = operationsUser(RoleName::CraneOperator);
+    $admin = operationsUser(RoleName::SystemAdministrator);
+    addWorkflowCredential($admin, 'driver_license');
     $job = workflowDispatchJob($dispatcher, 'CON-1401');
 
     foreach ([
         [$unavailableDriver, 'driver', 'leave'],
         [$suspendedDriver, 'driver', 'suspended'],
-        [$operator, 'driver', 'role'],
+        [$admin, 'driver', 'role'],
     ] as [$person, $assignmentType, $expectedConflict]) {
         $response = $this->actingAs($dispatcher)
             ->from("/operations/dispatch-jobs/{$job->id}")

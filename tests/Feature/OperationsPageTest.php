@@ -121,7 +121,7 @@ it('adapts live navigation labels for assigned field work without exposing unava
             ->where('navigation.1.id', 'dispatch')
             ->where('navigation.1.label', "Today's work")
             ->where('navigation.2.id', 'assets')
-            ->where('navigation.2.label', 'Assigned vehicle')
+            ->where('navigation.2.label', 'Assigned equipment')
             ->where('navigation.3.id', 'fuel')
             ->where('navigation.3.label', 'Fuel requests')
             ->where('navigation.4.id', 'reports')

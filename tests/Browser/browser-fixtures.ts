@@ -5,9 +5,10 @@ import type { Page } from '@playwright/test';
 export type BrowserFixtures = {
     users: {
         admin?: string;
-        dispatcher: string;
         manager: string;
-        driver: string;
+        operator?: string;
+        dispatcher?: string;
+        driver?: string;
     };
     password: string;
     job_id: number;
