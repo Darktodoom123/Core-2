@@ -535,12 +535,17 @@ export function SiteLocationPicker({
             prevPlannedJson.current = plannedJson;
             prevAssignedJson.current = assignedJson;
             setSlotsState(initialSlots);
+            if (initialSlots[0]?.id) {
+                setSelectedSlotId(initialSlots[0].id);
+            }
         }
     }, [assignedJson, initialSlots, plannedJson]);
 
     const activeSlot = useMemo(() => {
         return (
-            slotsState.find((s) => s.id === selectedSlotId) ||
+            slotsState.find(
+                (s) => s.id === selectedSlotId || s.slotKey === selectedSlotId,
+            ) ||
             slotsState[0] ||
             null
         );
@@ -570,9 +575,16 @@ export function SiteLocationPicker({
         field: 'name' | 'lat' | 'lon' | 'radius',
         value: string | number,
     ) => {
+        const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
+
         setSlotsState((prev) =>
-            prev.map((s) => {
-                if (s.id !== selectedSlotId) {
+            prev.map((s, idx) => {
+                const matches =
+                    s.id === targetId ||
+                    s.slotKey === targetId ||
+                    (prev.length === 1 && idx === 0);
+
+                if (!matches) {
                     return s;
                 }
 
@@ -686,8 +698,15 @@ export function SiteLocationPicker({
     const handlePinDrop = (lat: number, lon: number) => {
         setError(null);
 
-        const updated = slotsState.map((s) =>
-            s.id === selectedSlotId
+        const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
+
+        const updated = slotsState.map((s, idx) => {
+            const matches =
+                s.id === targetId ||
+                s.slotKey === targetId ||
+                (slotsState.length === 1 && idx === 0);
+
+            return matches
                 ? {
                       ...s,
                       latitude: lat,
@@ -695,8 +714,8 @@ export function SiteLocationPicker({
                       jibRadiusMeters: jibRadiusInput,
                       name: slotNameInput,
                   }
-                : s,
-        );
+                : s;
+        });
 
         setSlotsState(updated);
         onChange({ latitude: lat, longitude: lon });
@@ -843,8 +862,15 @@ export function SiteLocationPicker({
             zoom: 16,
         });
 
-        const updatedSlots = slotsState.map((s) =>
-            s.id === selectedSlotId
+        const targetId = selectedSlotId || activeSlot?.id || slotsState[0]?.id;
+
+        const updatedSlots = slotsState.map((s, idx) => {
+            const matches =
+                s.id === targetId ||
+                s.slotKey === targetId ||
+                (slotsState.length === 1 && idx === 0);
+
+            return matches
                 ? {
                       ...s,
                       latitude: lat,
@@ -852,8 +878,8 @@ export function SiteLocationPicker({
                       jibRadiusMeters: jibRadiusInput,
                       name: slotNameInput,
                   }
-                : s,
-        );
+                : s;
+        });
 
         setSlotsState(updatedSlots);
         onChange({ latitude: lat, longitude: lon });
