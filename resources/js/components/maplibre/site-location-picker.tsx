@@ -757,7 +757,21 @@ export function SiteLocationPicker({
     };
 
     const handleCenterOnSite = async (queryText?: string) => {
-        const query = (queryText || searchInput || siteName || '').trim();
+        const domInput =
+            typeof document !== 'undefined'
+                ? (
+                      document.querySelector(
+                          '[data-testid="site-address-input"]',
+                      ) as HTMLInputElement | null
+                  )?.value
+                : undefined;
+        const query = (
+            queryText ||
+            domInput ||
+            searchInput ||
+            siteName ||
+            ''
+        ).trim();
 
         if (!query) {
             setError('Please enter a site name or address to locate.');
