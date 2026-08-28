@@ -147,6 +147,8 @@ jobs:
           DB_DATABASE: core2_concurrency_test
           DB_USERNAME: core2_app
           DB_PASSWORD: core2_app
+          BROADCAST_CONNECTION: 'null'
+          BROADCAST_DRIVER: 'null'
         run: |
           php artisan migrate --force --database=pgsql
           vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency
@@ -159,4 +161,6 @@ jobs:
           DB_USERNAME: core2_app
           DB_PASSWORD: core2_app
           DB_SSLMODE: disable
+          BROADCAST_CONNECTION: 'null'
+          BROADCAST_DRIVER: 'null'
         run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL
