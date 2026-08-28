@@ -76,11 +76,13 @@ final class OperationsWorkspaceController extends Controller
             );
         };
 
+        $activeSos = $this->fetchActiveSosIncidents($user);
+
         $props = [
             'navigation' => $navigation,
             'initial_section' => $initialSection,
             'capabilities' => OperationsWorkspaceViewModel::capabilities($user),
-            'badges' => $this->fetchBadges($user),
+            'badges' => $this->fetchBadges($user, count($activeSos)),
             'workspace' => [
                 'refreshed_at' => $refreshedAt->toIso8601String(),
                 'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
@@ -88,7 +90,7 @@ final class OperationsWorkspaceController extends Controller
             ],
             // SOS is intentionally eager. Responders must see a current
             // emergency regardless of the selected deferred workspace section.
-            'activeSosIncidents' => $this->fetchActiveSosIncidents($user),
+            'activeSosIncidents' => $activeSos,
         ];
 
         foreach ($this->allSectionProps() as $prop) {
@@ -395,8 +397,8 @@ final class OperationsWorkspaceController extends Controller
             ->get();
     }
 
-    /** @return array{jobs: int, pending_approvals: int, unread_notifications: int, blocking_assets: int} */
-    private function fetchBadges(User $user): array
+    /** @return array{jobs: int, pending_approvals: int, unread_notifications: int, blocking_assets: int, pending_fuel: int, active_sos: int} */
+    private function fetchBadges(User $user, int $activeSosCount = 0): array
     {
         $jobs = Gate::forUser($user)->allows('viewAny', DispatchJob::class)
             ? DispatchJob::query()->visibleTo($user)->count()
@@ -427,12 +429,17 @@ final class OperationsWorkspaceController extends Controller
                 ->whereHas('maintenanceWorkOrders', fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at'))
                 ->count()
             : 0;
+        $pendingFuel = Gate::forUser($user)->allows('viewAny', FuelRequest::class)
+            ? FuelRequest::query()->whereIn('status', ['forwarded', 'submitted'])->count()
+            : 0;
 
         return [
             'jobs' => $jobs,
             'pending_approvals' => $pendingApprovals,
             'unread_notifications' => $unreadNotifications,
             'blocking_assets' => $blockingAssets,
+            'pending_fuel' => $pendingFuel,
+            'active_sos' => $activeSosCount,
         ];
     }
 

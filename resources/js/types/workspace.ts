@@ -823,6 +823,8 @@ export interface WorkspacePageProps {
         pending_approvals: number;
         unread_notifications: number;
         blocking_assets: number;
+        pending_fuel?: number;
+        active_sos?: number;
     };
     activeSosIncidents: SosIncidentViewModel[];
 }

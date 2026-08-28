@@ -542,30 +542,12 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
-                'id' => 'approvals',
-                'label' => 'Approvals',
-                'permissions' => [
-                    PermissionName::AssignmentsApprove,
-                    PermissionName::DispatchApprovePriority,
-                ],
-            ],
-            [
                 'id' => 'reports',
                 'label' => 'Job reports',
                 'permissions' => [
                     PermissionName::ReportsViewAll,
                     PermissionName::ReportsViewDispatch,
                     PermissionName::ReportsViewOwn,
-                ],
-            ],
-            [
-                'id' => 'notifications',
-                'label' => 'Notifications',
-                'permissions' => [
-                    PermissionName::DispatchViewAll,
-                    PermissionName::DispatchViewAssigned,
-                    PermissionName::ReportsViewOwn,
-                    PermissionName::FuelViewOwn,
                 ],
             ],
             [

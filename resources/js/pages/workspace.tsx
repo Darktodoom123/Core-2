@@ -580,12 +580,33 @@ export default function Workspace(props: WorkspacePageProps) {
 
     const validationErrorCount = Object.keys(errors).length;
 
-    const unreadNotificationCount = (props.notifications ?? []).filter(
-        (n) => n.status !== 'read' && !n.read_at,
-    ).length;
-    const pendingApprovalCount = (props.approvals ?? []).filter(
-        (approval) => approval.status.value === 'pending',
-    ).length;
+    const unreadNotificationCount =
+        props.badges?.unread_notifications ??
+        (props.notifications ?? []).filter(
+            (n) => n.status !== 'read' && !n.read_at,
+        ).length;
+    const pendingApprovalCount =
+        props.badges?.pending_approvals ??
+        (props.approvals ?? []).filter(
+            (approval) => approval.status.value === 'pending',
+        ).length;
+    const pendingFuelCount =
+        props.badges?.pending_fuel ??
+        (props.fuelRequests ?? []).filter(
+            (r) =>
+                r.status.value === 'forwarded' ||
+                r.status.value === 'submitted',
+        ).length;
+    const activeSosCount =
+        (props.activeSosIncidents ?? []).filter(
+            (i) =>
+                i.status.value === 'active' || i.status.value === 'escalated',
+        ).length ||
+        (props.badges?.active_sos ?? 0);
+    const blockingAssetCount =
+        props.badges?.blocking_assets ??
+        (props.assets ?? []).filter((a) => a.blocking_work_orders_count > 0)
+            .length;
     const sectionReady =
         availableSection !== null && hasSectionProps(props, availableSection);
 
@@ -601,6 +622,9 @@ export default function Workspace(props: WorkspacePageProps) {
                 locationPending={locationPending}
                 unreadNotificationCount={unreadNotificationCount}
                 pendingApprovalCount={pendingApprovalCount}
+                pendingFuelCount={pendingFuelCount}
+                activeSosCount={activeSosCount}
+                blockingAssetCount={blockingAssetCount}
                 notifications={props.notifications ?? []}
                 onSectionChange={changeSection}
                 onRefresh={refreshWorkspace}

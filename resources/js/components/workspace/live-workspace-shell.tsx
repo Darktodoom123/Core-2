@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
 import { Button } from '@/components/ui';
@@ -52,6 +52,30 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     sos: Siren,
 };
 
+interface NavGroupDefinition {
+    id: string;
+    label: string;
+    sections: WorkspaceSection[];
+}
+
+const NAV_GROUPS: NavGroupDefinition[] = [
+    {
+        id: 'operations',
+        label: 'Core Operations',
+        sections: ['overview', 'dispatch', 'assets', 'fuel', 'tracking'],
+    },
+    {
+        id: 'governance',
+        label: 'Field Governance',
+        sections: ['reports', 'archive'],
+    },
+    {
+        id: 'safety_system',
+        label: 'Safety & System',
+        sections: ['sos', 'gpt-recommendations', 'users', 'audit'],
+    },
+];
+
 export function LiveWorkspaceShell({
     navigation,
     section,
@@ -61,6 +85,9 @@ export function LiveWorkspaceShell({
     locationPending,
     unreadNotificationCount = 0,
     pendingApprovalCount = 0,
+    pendingFuelCount = 0,
+    activeSosCount = 0,
+    blockingAssetCount = 0,
     notifications = [],
     onSectionChange,
     onRefresh,
@@ -75,6 +102,9 @@ export function LiveWorkspaceShell({
     locationPending: boolean;
     unreadNotificationCount?: number;
     pendingApprovalCount?: number;
+    pendingFuelCount?: number;
+    activeSosCount?: number;
+    blockingAssetCount?: number;
     notifications?: NotificationViewModel[];
     onSectionChange: (section: WorkspaceSection) => void;
     onRefresh: () => void;
@@ -190,6 +220,118 @@ export function LiveWorkspaceShell({
         return () => mediaQuery.removeEventListener('change', closeOnDesktop);
     }, [closeMobileNavigation]);
 
+    const getBadgeInfo = useCallback(
+        (id: WorkspaceSection) => {
+            if (id === 'sos') {
+                return {
+                    count: activeSosCount,
+                    label: 'active emergency',
+                    tone: 'danger' as const,
+                    pulse: true,
+                    display: activeSosCount > 9 ? '9+' : `${activeSosCount}`,
+                };
+            }
+
+            if (id === 'fuel') {
+                return {
+                    count: pendingFuelCount,
+                    label: 'pending fuel requests',
+                    tone: 'warning' as const,
+                    pulse: false,
+                    display:
+                        pendingFuelCount > 9 ? '9+' : `${pendingFuelCount}`,
+                };
+            }
+
+            if (id === 'approvals') {
+                return {
+                    count: pendingApprovalCount,
+                    label: 'pending approvals',
+                    tone: 'warning' as const,
+                    pulse: false,
+                    display:
+                        pendingApprovalCount > 9
+                            ? '9+'
+                            : `${pendingApprovalCount}`,
+                };
+            }
+
+            if (id === 'notifications') {
+                return {
+                    count: unreadNotificationCount,
+                    label: 'unread notifications',
+                    tone: 'danger' as const,
+                    pulse: false,
+                    display:
+                        unreadNotificationCount > 9
+                            ? '9+'
+                            : `${unreadNotificationCount}`,
+                };
+            }
+
+            if (id === 'assets' && blockingAssetCount > 0) {
+                return {
+                    count: blockingAssetCount,
+                    label: 'blocked assets',
+                    tone: 'danger' as const,
+                    pulse: false,
+                    display:
+                        blockingAssetCount > 9 ? '9+' : `${blockingAssetCount}`,
+                };
+            }
+
+            return null;
+        },
+        [
+            activeSosCount,
+            pendingFuelCount,
+            pendingApprovalCount,
+            unreadNotificationCount,
+            blockingAssetCount,
+        ],
+    );
+
+    const groupedNavigation = useMemo(() => {
+        const groups: Array<{
+            id: string;
+            label: string;
+            items: WorkspaceNavigationItem[];
+        }> = [];
+
+        const assignedSectionIds = new Set<WorkspaceSection>();
+
+        for (const groupDef of NAV_GROUPS) {
+            const matchingItems = navigation.filter((item) =>
+                groupDef.sections.includes(item.id),
+            );
+
+            if (matchingItems.length > 0) {
+                matchingItems.forEach((item) =>
+                    assignedSectionIds.add(item.id),
+                );
+                groups.push({
+                    id: groupDef.id,
+                    label: groupDef.label,
+                    items: matchingItems,
+                });
+            }
+        }
+
+        const unassignedItems = navigation.filter(
+            (item) => !assignedSectionIds.has(item.id),
+        );
+
+        if (unassignedItems.length > 0) {
+            groups.push({
+                id: 'other',
+                label: 'Other modules',
+                items: unassignedItems,
+            });
+        }
+
+        return groups;
+    }, [navigation]);
+
     return (
         <MotionConfig reducedMotion="user">
             <div className="min-h-screen min-w-0 bg-canvas text-ink min-[840px]:grid min-[840px]:grid-cols-[auto_minmax(0,1fr)]">
@@ -261,113 +403,159 @@ export function LiveWorkspaceShell({
                         className="flex-1 overflow-y-auto p-3"
                         aria-label="Available operations modules"
                     >
-                        {!collapsed && (
-                            <p className="px-3 pb-2 text-xs font-medium text-white/55">
-                                Available to your account
-                            </p>
-                        )}
-                        <ul className="space-y-1">
-                            {navigation.map((item) => {
-                                const Icon = sectionIcons[item.id];
-                                const active = item.id === section;
-                                const isNotifications =
-                                    item.id === 'notifications';
-                                const isApprovals = item.id === 'approvals';
-                                const badgeCount = isNotifications
-                                    ? unreadNotificationCount
-                                    : isApprovals
-                                      ? pendingApprovalCount
-                                      : 0;
-                                const badgeLabel = isNotifications
-                                    ? 'unread'
-                                    : 'pending';
-                                const showBadge = badgeCount > 0;
+                        <div className="space-y-4">
+                            {groupedNavigation.map((group, groupIndex) => (
+                                <div
+                                    key={group.id}
+                                    className={groupIndex > 0 ? 'pt-2' : ''}
+                                >
+                                    {!collapsed && (
+                                        <p className="px-3 pb-1.5 text-[10px] font-bold tracking-wider text-white/40 uppercase">
+                                            {group.label}
+                                        </p>
+                                    )}
+                                    {collapsed && groupIndex > 0 && (
+                                        <div
+                                            className="mx-2 mb-2 h-px bg-white/10"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    <ul className="space-y-1">
+                                        {group.items.map((item) => {
+                                            const Icon = sectionIcons[item.id];
+                                            const active = item.id === section;
+                                            const badge = getBadgeInfo(item.id);
+                                            const showBadge =
+                                                badge !== null &&
+                                                badge.count > 0;
 
-                                return (
-                                    <li key={item.id}>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onSectionChange(item.id);
-                                                closeMobileNavigation();
-                                            }}
-                                            className={cn(
-                                                'relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
-                                                collapsed
-                                                    ? 'justify-center'
-                                                    : 'gap-3 px-3',
-                                                active
-                                                    ? 'bg-white/10 text-white'
-                                                    : 'text-white/65 hover:bg-white/5 hover:text-white',
-                                            )}
-                                            aria-current={
-                                                active ? 'page' : undefined
-                                            }
-                                            aria-label={
-                                                collapsed
-                                                    ? showBadge
-                                                        ? `${item.label} (${badgeCount} ${badgeLabel})`
-                                                        : item.label
-                                                    : undefined
-                                            }
-                                            title={
-                                                collapsed
-                                                    ? showBadge
-                                                        ? `${item.label} (${badgeCount} ${badgeLabel})`
-                                                        : item.label
-                                                    : undefined
-                                            }
-                                        >
-                                            {active && (
-                                                <motion.span
-                                                    layoutId="active-nav-indicator"
-                                                    transition={{
-                                                        duration: 0.18,
-                                                        ease: 'easeOut',
-                                                    }}
-                                                    className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand"
-                                                    aria-hidden="true"
-                                                />
-                                            )}
-                                            {/* Icon + badge wrapper */}
-                                            <span className="relative shrink-0">
-                                                <Icon
-                                                    className="h-5 w-5"
-                                                    aria-hidden="true"
-                                                />
-                                                {showBadge && (
-                                                    <span
-                                                        className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white"
-                                                        aria-hidden="true"
+                                            return (
+                                                <li key={item.id}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onSectionChange(
+                                                                item.id,
+                                                            );
+                                                            closeMobileNavigation();
+                                                        }}
+                                                        className={cn(
+                                                            'relative flex min-h-11 w-full items-center rounded-lg text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                                            collapsed
+                                                                ? 'justify-center'
+                                                                : 'gap-3 px-3',
+                                                            active
+                                                                ? 'bg-white/10 text-white'
+                                                                : 'text-white/65 hover:bg-white/5 hover:text-white',
+                                                        )}
+                                                        aria-current={
+                                                            active
+                                                                ? 'page'
+                                                                : undefined
+                                                        }
+                                                        aria-label={
+                                                            collapsed
+                                                                ? showBadge
+                                                                    ? `${item.label} (${badge.count} ${badge.label})`
+                                                                    : item.label
+                                                                : undefined
+                                                        }
+                                                        title={
+                                                            collapsed
+                                                                ? showBadge
+                                                                    ? `${item.label} (${badge.count} ${badge.label})`
+                                                                    : item.label
+                                                                : undefined
+                                                        }
                                                     >
-                                                        {badgeCount > 9
-                                                            ? '9+'
-                                                            : badgeCount}
-                                                    </span>
-                                                )}
-                                            </span>
-                                            {!collapsed && (
-                                                <span className="flex flex-1 items-center justify-between text-left font-medium">
-                                                    {item.label}
-                                                    {showBadge && (
-                                                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white">
-                                                            {badgeCount > 9
-                                                                ? '9+'
-                                                                : badgeCount}
+                                                        {active && (
+                                                            <motion.span
+                                                                layoutId="active-nav-indicator"
+                                                                transition={{
+                                                                    duration: 0.18,
+                                                                    ease: 'easeOut',
+                                                                }}
+                                                                className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand"
+                                                                aria-hidden="true"
+                                                            />
+                                                        )}
+                                                        {/* Icon + badge wrapper */}
+                                                        <span className="relative shrink-0">
+                                                            <Icon
+                                                                className={cn(
+                                                                    'h-5 w-5',
+                                                                    item.id ===
+                                                                        'sos' &&
+                                                                        showBadge &&
+                                                                        'animate-pulse text-danger',
+                                                                )}
+                                                                aria-hidden="true"
+                                                            />
+                                                            {showBadge && (
+                                                                <span
+                                                                    className={cn(
+                                                                        'absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold text-white',
+                                                                        badge.tone ===
+                                                                            'danger'
+                                                                            ? 'bg-danger'
+                                                                            : 'bg-warning-strong text-white',
+                                                                        badge.pulse &&
+                                                                            'animate-pulse ring-2 ring-danger/40',
+                                                                    )}
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    {
+                                                                        badge.display
+                                                                    }
+                                                                </span>
+                                                            )}
                                                         </span>
-                                                    )}
-                                                </span>
-                                            )}
-                                            {showBadge && (
-                                                <span className="sr-only">
-                                                    {badgeCount} {badgeLabel}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                                        {!collapsed && (
+                                                            <span className="flex flex-1 items-center justify-between text-left font-medium">
+                                                                <span
+                                                                    className={
+                                                                        item.id ===
+                                                                            'sos' &&
+                                                                        showBadge
+                                                                            ? 'font-semibold text-danger'
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {item.label}
+                                                                </span>
+                                                                {showBadge && (
+                                                                    <span
+                                                                        className={cn(
+                                                                            'ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
+                                                                            badge.tone ===
+                                                                                'danger'
+                                                                                ? 'bg-danger text-white'
+                                                                                : 'bg-warning-soft text-warning-strong',
+                                                                            badge.pulse &&
+                                                                                'animate-pulse ring-2 ring-danger/40',
+                                                                        )}
+                                                                    >
+                                                                        {
+                                                                            badge.display
+                                                                        }
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                        {showBadge && (
+                                                            <span className="sr-only">
+                                                                {badge.count}{' '}
+                                                                {badge.label}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
                     </nav>
 
                     <div className="border-t border-white/10 p-3">
@@ -486,17 +674,14 @@ export function LiveWorkspaceShell({
                                 </Button>
                             )}
 
-                            {/* Bell notification button — only shown when notifications section is accessible */}
-                            {navigation.some(
-                                (n) => n.id === 'notifications',
-                            ) && (
-                                <NotificationCenterPopover
-                                    notifications={notifications}
-                                    onViewAll={() =>
-                                        onSectionChange('notifications')
-                                    }
-                                />
-                            )}
+                            {/* Bell notification button */}
+                            <NotificationCenterPopover
+                                notifications={notifications}
+                                onViewAll={() =>
+                                    onSectionChange('notifications')
+                                }
+                                onNavigate={onSectionChange}
+                            />
 
                             <Button
                                 size="icon"

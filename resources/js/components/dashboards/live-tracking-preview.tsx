@@ -119,6 +119,15 @@ export function LiveTrackingPreview({
         (location) => location.latitude !== null && location.longitude !== null,
     ).length;
 
+    const livePingsCount = filteredLocations.filter(
+        (location) => location.freshness_status === 'fresh',
+    ).length;
+    const idlePingsCount = filteredLocations.filter(
+        (location) =>
+            location.freshness_status === 'stale' ||
+            location.freshness_status === 'offline',
+    ).length;
+
     return (
         <section aria-labelledby="live-tracking-preview-heading">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
@@ -151,6 +160,12 @@ export function LiveTrackingPreview({
                         {latestReceivedAt ? (
                             <span className="text-xs text-ink-soft">
                                 Last signal: {formatAge(latestReceivedAt)}
+                                {filteredLocations.length > 0 && (
+                                    <span className="ml-1.5 font-medium">
+                                        · {livePingsCount} live ·{' '}
+                                        {idlePingsCount} idle
+                                    </span>
+                                )}
                             </span>
                         ) : (
                             <span className="text-xs text-ink-soft">

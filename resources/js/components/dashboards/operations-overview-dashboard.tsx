@@ -53,22 +53,11 @@ type DashboardAction = {
     section: WorkspaceSection;
     icon: LucideIcon;
     tone: 'warning' | 'danger' | 'info';
-    category: 'approvals' | 'assets' | 'fuel' | 'tracking';
+    category: 'sos' | 'approvals' | 'assets' | 'fuel';
 };
-
-type LocationFreshnessStatus = LocationUpdateViewModel['freshness_status'];
-
-const LOCATION_REVIEW_STATUSES: ReadonlyArray<LocationFreshnessStatus> = [
-    'stale',
-    'offline',
-];
 
 function isFreshLocation(location: LocationUpdateViewModel): boolean {
     return location.freshness_status === 'fresh';
-}
-
-function needsLocationReview(location: LocationUpdateViewModel): boolean {
-    return LOCATION_REVIEW_STATUSES.includes(location.freshness_status);
 }
 
 export interface OperationsOverviewDashboardProps {
@@ -106,6 +95,11 @@ export function OperationsOverviewDashboard(
     }>().props;
 
     const canonicalRole = auth?.role ?? 'operations_manager';
+    const actionableFuelCount = props.fuelRequests.filter((request) =>
+        canActOnFuelRequest(request, props.capabilities),
+    ).length;
+    const inboundActionCount =
+        actionableFuelCount + (props.activeSosIncidents?.length ?? 0);
 
     return (
         <div className="workspace-width-contained">
@@ -113,6 +107,7 @@ export function OperationsOverviewDashboard(
             <DashboardHeader
                 role={canonicalRole}
                 roleLabel={auth?.role_label}
+                inboundActionCount={inboundActionCount}
                 onSectionChange={props.onSectionChange}
                 availableSections={props.availableSections}
             />
@@ -148,11 +143,13 @@ export function OperationsOverviewDashboard(
 function DashboardHeader({
     role,
     roleLabel,
+    inboundActionCount = 0,
     onSectionChange,
     availableSections,
 }: {
     role: string;
     roleLabel?: string | null;
+    inboundActionCount?: number;
     onSectionChange: (section: WorkspaceSection) => void;
     availableSections: WorkspaceSection[];
 }) {
@@ -165,9 +162,10 @@ function DashboardHeader({
               : 'Field Operations');
 
     const isSystemAdmin = role === 'system_administrator';
+    const isOperationsManager = role === 'operations_manager';
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenUsers = availableSections.includes('users');
-    const canOpenApprovals = availableSections.includes('approvals');
+    const canOpenFuel = availableSections.includes('fuel');
 
     return (
         <div className="border-b border-line bg-surface px-4 py-5 md:px-6">
@@ -185,12 +183,12 @@ function DashboardHeader({
                     <p className="mt-1 text-sm text-ink-soft">
                         {isSystemAdmin
                             ? 'System security, user access governance, telemetry health, and audit trail stream.'
-                            : 'High-level operational governance, decision approvals queue, fleet readiness, and GPT advisory.'}
+                            : 'High-level operational command, fleet readiness, field authorizations, and live execution.'}
                     </p>
                 </div>
 
                 <div className="flex w-full min-w-0 flex-wrap items-center gap-3 lg:w-auto">
-                    {/* Quick Action Button */}
+                    {/* Dynamic Context-Aware Action Button */}
                     {isSystemAdmin && canOpenUsers ? (
                         <Button
                             variant="primary"
@@ -200,31 +198,33 @@ function DashboardHeader({
                             Manage users
                             <ArrowRight className="h-4 w-4" />
                         </Button>
-                    ) : canOpenApprovals ? (
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => onSectionChange('approvals')}
-                        >
-                            Review approvals
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
+                    ) : isOperationsManager ? (
+                        inboundActionCount > 0 && canOpenFuel ? (
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => onSectionChange('fuel')}
+                            >
+                                Review fuel requests ({inboundActionCount})
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        ) : canOpenDispatch ? (
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => onSectionChange('dispatch')}
+                            >
+                                Open dispatch workspace
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        ) : null
                     ) : canOpenDispatch ? (
                         <Button
                             variant="primary"
                             size="sm"
                             onClick={() => onSectionChange('dispatch')}
                         >
-                            Review dispatches
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
-                    ) : canOpenApprovals ? (
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => onSectionChange('approvals')}
-                        >
-                            Review approvals
+                            Open today's work
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     ) : null}
@@ -253,57 +253,115 @@ function OperationsManagerDashboardView({
     onSectionChange,
 }: OperationsOverviewDashboardProps) {
     const [actionFilter, setActionFilter] = useState<
-        'all' | 'approvals' | 'assets' | 'fuel' | 'tracking'
+        'all' | 'sos' | 'approvals' | 'assets' | 'fuel'
     >('all');
-    const [jobView, setJobView] = useState<'all' | 'active'>('all');
+    const [jobFilter, setJobFilter] = useState<
+        'all' | 'active' | 'service' | 'rental' | 'sales'
+    >('all');
 
-    const actions = buildDashboardActions({
-        assets,
-        fuelRequests,
-        locations,
-        approvals,
-        capabilities,
-    });
-
-    const activeJobs = jobs.filter((job) =>
-        ['dispatched', 'accepted', 'en_route', 'arrived', 'working'].includes(
-            job.status.value,
-        ),
+    const actions = useMemo(
+        () =>
+            buildDashboardActions({
+                assets,
+                fuelRequests,
+                approvals,
+                activeSosIncidents,
+                capabilities,
+            }),
+        [assets, fuelRequests, approvals, activeSosIncidents, capabilities],
     );
 
-    const upcomingJobs = (
-        jobView === 'active'
-            ? activeJobs
-            : [...jobs]
-                  .filter(
-                      (job) =>
-                          !['completed', 'cancelled'].includes(
-                              job.status.value,
-                          ),
-                  )
-                  .sort((a, b) => {
-                      const aActive = [
-                          'dispatched',
-                          'accepted',
-                          'en_route',
-                          'arrived',
-                          'working',
-                      ].includes(a.status.value)
-                          ? 0
-                          : 1;
-                      const bActive = [
-                          'dispatched',
-                          'accepted',
-                          'en_route',
-                          'arrived',
-                          'working',
-                      ].includes(b.status.value)
-                          ? 0
-                          : 1;
+    const activeJobs = useMemo(
+        () =>
+            jobs.filter((job) =>
+                [
+                    'dispatched',
+                    'accepted',
+                    'en_route',
+                    'arrived',
+                    'working',
+                ].includes(job.status.value),
+            ),
+        [jobs],
+    );
 
-                      return aActive - bActive;
-                  })
-    ).slice(0, 6);
+    const serviceJobs = useMemo(
+        () =>
+            jobs.filter(
+                (job) =>
+                    job.source?.type === 'service_request' ||
+                    job.source?.type === 'direct' ||
+                    job.source?.type === 'manual' ||
+                    (!job.source &&
+                        !job.title.toLowerCase().includes('rental') &&
+                        !job.title.toLowerCase().includes('sales')),
+            ),
+        [jobs],
+    );
+
+    const rentalJobs = useMemo(
+        () =>
+            jobs.filter(
+                (job) =>
+                    job.source?.type === 'rental_reservation' ||
+                    job.title.toLowerCase().includes('rental'),
+            ),
+        [jobs],
+    );
+
+    const salesJobs = useMemo(
+        () =>
+            jobs.filter(
+                (job) =>
+                    job.source?.type === 'sales_order' ||
+                    job.title.toLowerCase().includes('sales') ||
+                    job.title.toLowerCase().includes('delivery'),
+            ),
+        [jobs],
+    );
+
+    const filteredJobs = useMemo(() => {
+        let pool = jobs;
+
+        if (jobFilter === 'active') {
+            pool = activeJobs;
+        } else if (jobFilter === 'service') {
+            pool = serviceJobs;
+        } else if (jobFilter === 'rental') {
+            pool = rentalJobs;
+        } else if (jobFilter === 'sales') {
+            pool = salesJobs;
+        } else {
+            pool = jobs.filter(
+                (job) => !['completed', 'cancelled'].includes(job.status.value),
+            );
+        }
+
+        return [...pool]
+            .sort((a, b) => {
+                const aActive = [
+                    'dispatched',
+                    'accepted',
+                    'en_route',
+                    'arrived',
+                    'working',
+                ].includes(a.status.value)
+                    ? 0
+                    : 1;
+                const bActive = [
+                    'dispatched',
+                    'accepted',
+                    'en_route',
+                    'arrived',
+                    'working',
+                ].includes(b.status.value)
+                    ? 0
+                    : 1;
+
+                return aActive - bActive;
+            })
+            .slice(0, 8);
+    }, [jobs, activeJobs, serviceJobs, rentalJobs, salesJobs, jobFilter]);
 
     const totalAssets = assets.length;
     const dispatchableAssets = assets.filter((a) => a.is_dispatchable).length;
@@ -317,14 +375,18 @@ function OperationsManagerDashboardView({
     ).length;
     const freshLocations = locations.filter(isFreshLocation).length;
 
-    const pendingApprovalsCount = approvals.filter((a) => a.can_decide).length;
+    const actionableFuelRequests = fuelRequests.filter((request) =>
+        canActOnFuelRequest(request, capabilities),
+    );
+
     const activeGptRecommendations = gptRecommendations.filter(
         (rec) => rec.status === 'pending' || rec.is_advisory,
     );
 
     const canOpenDispatch = availableSections.includes('dispatch');
     const canOpenAssets = availableSections.includes('assets');
-    const canOpenApprovals = availableSections.includes('approvals');
+    const canOpenFuel = availableSections.includes('fuel');
+    const canOpenSos = availableSections.includes('sos');
     const canOpenTracking = availableSections.includes('assets');
 
     const categoriesInActions = Array.from(
@@ -338,21 +400,17 @@ function OperationsManagerDashboardView({
 
     return (
         <div className="space-y-6">
-            {/* Manager KPI Cards */}
+            {/* Manager Executive KPI Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KpiCard
-                    label="Decision Approvals"
-                    value={`${approvals.length}`}
-                    subtext={
-                        pendingApprovalsCount > 0
-                            ? `${pendingApprovalsCount} ready for your decision`
-                            : 'All reviews clear'
-                    }
-                    icon={ShieldCheck}
-                    tone={pendingApprovalsCount > 0 ? 'warning' : 'success'}
+                    label="Today's Dispatches"
+                    value={`${activeJobs.length}`}
+                    subtext={`${activeJobs.length} active · ${jobs.length} visible workloads`}
+                    icon={Activity}
+                    tone={activeJobs.length > 0 ? 'brand' : 'default'}
                     onClick={
-                        canOpenApprovals
-                            ? () => onSectionChange('approvals')
+                        canOpenDispatch
+                            ? () => onSectionChange('dispatch')
                             : undefined
                     }
                 />
@@ -367,7 +425,7 @@ function OperationsManagerDashboardView({
                     subtext={
                         readinessPercentage === null
                             ? 'No assets available'
-                            : `${dispatchableAssets} of ${totalAssets} assets ready`
+                            : `${dispatchableAssets} of ${totalAssets} units ready`
                     }
                     icon={Truck}
                     tone={
@@ -387,32 +445,55 @@ function OperationsManagerDashboardView({
                 />
 
                 <KpiCard
-                    label="Active Workloads"
-                    value={`${activeJobs.length}`}
-                    subtext={`of ${jobs.length} visible jobs active`}
-                    icon={Activity}
-                    tone={activeJobs.length > 0 ? 'brand' : 'default'}
+                    label="Field Inbound & Authorizations"
+                    value={`${actionableFuelRequests.length}`}
+                    subtext={
+                        actionableFuelRequests.length > 0
+                            ? `${actionableFuelRequests.length} fuel authorization(s) pending`
+                            : 'All field requests clear'
+                    }
+                    icon={ShieldCheck}
+                    tone={
+                        actionableFuelRequests.length > 0
+                            ? 'warning'
+                            : 'success'
+                    }
                     onClick={
-                        canOpenDispatch
-                            ? () => onSectionChange('dispatch')
+                        actionableFuelRequests.length > 0 && canOpenFuel
+                            ? () => onSectionChange('fuel')
                             : undefined
                     }
                 />
 
                 <KpiCard
-                    label="GPT Insights & Risk"
-                    value={`${activeGptRecommendations.length}`}
+                    label="Safety & Grounded Units"
+                    value={`${blockingAssets + activeSosIncidents.length}`}
                     subtext={
-                        blockingAssets > 0
-                            ? `${blockingAssets} maintenance blockers`
-                            : 'Operational risk normal'
+                        activeSosIncidents.length > 0
+                            ? `${activeSosIncidents.length} active emergency SOS`
+                            : blockingAssets > 0
+                              ? `${blockingAssets} maintenance blocker${blockingAssets === 1 ? '' : 's'}`
+                              : 'All units safe for service'
                     }
-                    icon={Sparkles}
-                    tone={blockingAssets > 0 ? 'warning' : 'brand'}
+                    icon={AlertTriangle}
+                    tone={
+                        activeSosIncidents.length > 0
+                            ? 'danger'
+                            : blockingAssets > 0
+                              ? 'warning'
+                              : 'success'
+                    }
+                    onClick={
+                        activeSosIncidents.length > 0 && canOpenSos
+                            ? () => onSectionChange('sos')
+                            : canOpenAssets
+                              ? () => onSectionChange('assets')
+                              : undefined
+                    }
                 />
             </div>
 
-            {/* Manager Decision Queue */}
+            {/* Manager Exception & Action Queue */}
             <section aria-labelledby="manager-queue-heading">
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -421,7 +502,7 @@ function OperationsManagerDashboardView({
                                 id="manager-queue-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Manager decision queue
+                                Manager action & exception queue
                             </h2>
                             {actions.length > 0 && (
                                 <span className="inline-flex items-center rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
@@ -430,8 +511,8 @@ function OperationsManagerDashboardView({
                             )}
                         </div>
                         <p className="mt-1 text-sm text-ink-soft">
-                            Priority dispatches, assignment overrides, and
-                            safety clearances requiring manager approval.
+                            Priority dispatches, inbound field fuel requests,
+                            maintenance releases, and emergency SOS alerts.
                         </p>
                     </div>
 
@@ -448,6 +529,20 @@ function OperationsManagerDashboardView({
                             >
                                 All ({actions.length})
                             </button>
+                            {categoriesInActions.includes('sos') && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActionFilter('sos')}
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        actionFilter === 'sos'
+                                            ? 'bg-danger-soft text-danger shadow-xs'
+                                            : 'text-danger hover:underline'
+                                    }`}
+                                >
+                                    Emergency SOS (
+                                    {countByCategory(actions, 'sos')})
+                                </button>
+                            )}
                             {categoriesInActions.includes('approvals') && (
                                 <button
                                     type="button"
@@ -472,8 +567,8 @@ function OperationsManagerDashboardView({
                                             : 'text-ink-soft hover:text-ink'
                                     }`}
                                 >
-                                    Assets ({countByCategory(actions, 'assets')}
-                                    )
+                                    Assets & Safety (
+                                    {countByCategory(actions, 'assets')})
                                 </button>
                             )}
                             {categoriesInActions.includes('fuel') && (
@@ -498,8 +593,8 @@ function OperationsManagerDashboardView({
                         <EmptyState
                             compact
                             icon={CircleCheck}
-                            title="No decision blockers requiring attention"
-                            message="All pending approvals, blocking assets, and fuel workflow reviews are clear."
+                            title="No operational blockers requiring attention"
+                            message="All inbound field requests, equipment safety releases, and approvals are clear."
                         />
                     ) : (
                         <ul className="divide-y divide-line">
@@ -527,9 +622,9 @@ function OperationsManagerDashboardView({
                 />
             )}
 
-            {/* Grid Layout: Schedule & GPT Recommendations */}
+            {/* Grid Layout: Tri-Modal Schedule & Side Governance */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">
-                {/* Work Schedule */}
+                {/* Tri-Modal Work Schedule */}
                 <section
                     className="min-w-0"
                     aria-labelledby="manager-schedule-heading"
@@ -540,18 +635,19 @@ function OperationsManagerDashboardView({
                                 id="manager-schedule-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Dispatch overview & schedule
+                                Dispatch overview & tri-modal schedule
                             </h2>
                             <p className="mt-1 text-sm text-ink-soft">
-                                Active workload tracking across visible jobs.
+                                Active workload tracking across Service, Rental,
+                                and Sales dispatches.
                             </p>
                         </div>
-                        <div className="flex gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
+                        <div className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs">
                             <button
                                 type="button"
-                                onClick={() => setJobView('all')}
+                                onClick={() => setJobFilter('all')}
                                 className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                    jobView === 'all'
+                                    jobFilter === 'all'
                                         ? 'bg-surface text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink'
                                 }`}
@@ -560,29 +656,68 @@ function OperationsManagerDashboardView({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setJobView('active')}
+                                onClick={() => setJobFilter('active')}
                                 className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
-                                    jobView === 'active'
+                                    jobFilter === 'active'
                                         ? 'bg-surface text-ink shadow-xs'
                                         : 'text-ink-soft hover:text-ink'
                                 }`}
                             >
                                 Active ({activeJobs.length})
                             </button>
+                            {serviceJobs.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setJobFilter('service')}
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        jobFilter === 'service'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Service ({serviceJobs.length})
+                                </button>
+                            )}
+                            {rentalJobs.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setJobFilter('rental')}
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        jobFilter === 'rental'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Rental ({rentalJobs.length})
+                                </button>
+                            )}
+                            {salesJobs.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setJobFilter('sales')}
+                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                        jobFilter === 'sales'
+                                            ? 'bg-surface text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink'
+                                    }`}
+                                >
+                                    Sales ({salesJobs.length})
+                                </button>
+                            )}
                         </div>
                     </div>
 
                     <Panel className="overflow-hidden">
-                        {upcomingJobs.length === 0 ? (
+                        {filteredJobs.length === 0 ? (
                             <EmptyState
                                 compact
                                 icon={CalendarClock}
-                                title="No scheduled work available"
-                                message="Jobs visible to your account will appear here."
+                                title="No scheduled work matches filter"
+                                message="Dispatches matching your selected criteria will appear here."
                             />
                         ) : (
                             <ul className="divide-y divide-line">
-                                {upcomingJobs.map((job) => (
+                                {filteredJobs.map((job) => (
                                     <JobOverviewRow
                                         key={job.id}
                                         job={job}
@@ -596,7 +731,7 @@ function OperationsManagerDashboardView({
                     </Panel>
                 </section>
 
-                {/* Readiness & GPT Panel */}
+                {/* Governance & GPT Assistant Panel */}
                 <div className="space-y-6">
                     <section aria-labelledby="manager-readiness-heading">
                         <div className="mb-3">
@@ -604,10 +739,10 @@ function OperationsManagerDashboardView({
                                 id="manager-readiness-heading"
                                 className="text-lg font-semibold tracking-tight text-ink"
                             >
-                                Governance & Fleet Readiness
+                                Governance & Fleet Breakdown
                             </h2>
                             <p className="mt-1 text-sm text-ink-soft">
-                                Safety and resource breakdown.
+                                Safety and resource status breakdown.
                             </p>
                         </div>
                         <Panel className="divide-y divide-line">
@@ -634,6 +769,15 @@ function OperationsManagerDashboardView({
                                     blockingAssets > 0 ? 'warning' : 'default'
                                 }
                             />
+                            {activeSosIncidents.length > 0 && (
+                                <ReadinessRow
+                                    label="Active Emergency SOS"
+                                    value={String(activeSosIncidents.length)}
+                                    detail="Critical field emergencies reported"
+                                    icon={AlertTriangle}
+                                    tone="warning"
+                                />
+                            )}
                             <ReadinessRow
                                 label="Telemetry Connection"
                                 value={`${freshLocations} fresh pings`}
@@ -643,7 +787,7 @@ function OperationsManagerDashboardView({
                         </Panel>
                     </section>
 
-                    {/* GPT Advisory Panel */}
+                    {/* GPT Advisory Assistant Panel */}
                     {activeGptRecommendations.length > 0 && (
                         <section aria-labelledby="gpt-advisory-heading">
                             <div className="mb-3 flex items-center justify-between">
@@ -652,7 +796,7 @@ function OperationsManagerDashboardView({
                                     className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
                                 >
                                     <Sparkles className="h-4 w-4 text-brand" />
-                                    GPT AI Recommendations
+                                    GPT AI Resource Advisory
                                 </h2>
                             </div>
                             <Panel className="space-y-3 p-4">
@@ -1894,13 +2038,32 @@ function JobOverviewRow({
 }) {
     const personnelCount = job.personnel_assignments.length;
     const assetCount = job.asset_assignments.length;
+    const leadOperator = job.personnel_assignments.find(
+        (p) =>
+            p.type === 'crane_operator' ||
+            p.type === 'lead_operator' ||
+            p.type === 'driver',
+    );
+    const primaryAsset = job.asset_assignments[0];
+
+    const sourceLabel =
+        job.source?.label ??
+        (job.source?.type === 'service_request'
+            ? 'Service'
+            : job.source?.type === 'rental_reservation'
+              ? 'Rental'
+              : job.source?.type === 'sales_order'
+                ? 'Sales'
+                : job.source?.type === 'manual'
+                  ? 'Manual'
+                  : null);
 
     return (
         <li>
             <button
                 type="button"
                 onClick={onClick}
-                className="group flex min-h-20 w-full flex-col justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none sm:flex-row sm:items-center"
+                className="group flex min-h-20 w-full flex-col justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none sm:flex-row sm:items-center"
             >
                 <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
                     <CalendarClock
@@ -1916,6 +2079,20 @@ function JobOverviewRow({
                                 <span className="inline-flex items-center gap-1 rounded-md bg-surface-subtle px-1.5 py-0.5 text-xs font-medium text-ink-soft">
                                     <Building2 className="h-3 w-3" />
                                     {job.client}
+                                </span>
+                            )}
+                            {sourceLabel && (
+                                <span
+                                    className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
+                                        job.source?.type ===
+                                        'rental_reservation'
+                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                            : job.source?.type === 'sales_order'
+                                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                    }`}
+                                >
+                                    {sourceLabel}
                                 </span>
                             )}
                             <CanonicalStatusBadge status={job.status} />
@@ -1939,16 +2116,19 @@ function JobOverviewRow({
                                 <MapPin className="h-3 w-3 shrink-0 text-muted" />
                                 {job.site}
                             </span>
-                            {personnelCount > 0 && (
+                            {leadOperator && (
                                 <span className="flex items-center gap-1 text-muted">
                                     <Users className="h-3 w-3 shrink-0" />
-                                    {personnelCount} personnel
+                                    {leadOperator.name}
+                                    {personnelCount > 1 &&
+                                        ` (+${personnelCount - 1})`}
                                 </span>
                             )}
-                            {assetCount > 0 && (
+                            {primaryAsset && (
                                 <span className="flex items-center gap-1 text-muted">
                                     <Truck className="h-3 w-3 shrink-0" />
-                                    {assetCount} assets
+                                    {primaryAsset.code} - {primaryAsset.name}
+                                    {assetCount > 1 && ` (+${assetCount - 1})`}
                                 </span>
                             )}
                         </div>
@@ -2012,14 +2192,14 @@ function ReadinessRow({
 function buildDashboardActions({
     assets,
     fuelRequests,
-    locations,
     approvals,
+    activeSosIncidents = [],
     capabilities,
 }: {
     assets: AssetViewModel[];
     fuelRequests: FuelRequestViewModel[];
-    locations: LocationUpdateViewModel[];
     approvals: ApprovalViewModel[];
+    activeSosIncidents?: SosIncidentViewModel[];
     capabilities: WorkspaceCapabilities;
 }): DashboardAction[] {
     const actions: DashboardAction[] = [];
@@ -2030,31 +2210,48 @@ function buildDashboardActions({
     const actionableFuelRequests = fuelRequests.filter((request) =>
         canActOnFuelRequest(request, capabilities),
     );
-    const staleLocations = locations.filter(needsLocationReview);
+    const anomalyFuelLogs = fuelRequests.flatMap(
+        (request) => request.logs?.filter((log) => log.is_anomaly) ?? [],
+    );
 
+    // 1. Emergency SOS incidents (highest priority)
+    if (activeSosIncidents.length > 0) {
+        actions.push({
+            title: `${activeSosIncidents.length} active emergency SOS incident${activeSosIncidents.length === 1 ? '' : 's'}`,
+            description:
+                'Critical field emergency reported. Acknowledge and dispatch emergency response immediately.',
+            section: 'sos',
+            icon: AlertTriangle,
+            tone: 'danger',
+            category: 'sos',
+        });
+    }
+
+    // 2. Approvals requiring manager decision
     if (approvals.length > 0) {
         const canDecideApproval = decisionReadyApprovals.length > 0;
 
         actions.push({
             title: canDecideApproval
                 ? `${decisionReadyApprovals.length} approval${decisionReadyApprovals.length === 1 ? '' : 's'} need your decision`
-                : `${approvals.length} approval${approvals.length === 1 ? '' : 's'} awaiting independent review`,
+                : `${approvals.length} approval${approvals.length === 1 ? '' : 's'} awaiting review`,
             description: canDecideApproval
-                ? 'Review the requester, affected work, and consequences before deciding.'
+                ? 'Review priority override, resource qualifications, and operational consequences before deciding.'
                 : (approvals[0]?.decision_blocker ??
                   'An authorized manager must decide this request.'),
-            section: 'approvals',
+            section: 'dispatch',
             icon: ShieldCheck,
             tone: canDecideApproval ? 'warning' : 'info',
             category: 'approvals',
         });
     }
 
+    // 3. Grounded / Maintenance blocked equipment
     if (blockedAssets.length > 0) {
         actions.push({
             title: `${blockedAssets.length} asset${blockedAssets.length === 1 ? '' : 's'} blocked from dispatch`,
             description:
-                'Safety evidence or a maintenance release is still required.',
+                'Safety evidence or post-repair maintenance sign-off is required before release.',
             section: 'assets',
             icon: AlertTriangle,
             tone: 'danger',
@@ -2062,22 +2259,20 @@ function buildDashboardActions({
         });
     }
 
+    // 4. Inbound Fuel Authorization requests
     if (actionableFuelRequests.length > 0) {
         actions.push({
-            title: `${actionableFuelRequests.length} fuel request${actionableFuelRequests.length === 1 ? '' : 's'} ready for your step`,
+            title: `${actionableFuelRequests.length} fuel request${actionableFuelRequests.length === 1 ? '' : 's'} ready for authorization`,
             description:
-                'Continue only the next authorized stage in the fuel workflow.',
+                'Authorize fuel volume/budget before field pump release and vendor verification.',
             section: 'fuel',
             icon: Fuel,
-            tone: 'info',
+            tone: 'warning',
             category: 'fuel',
         });
     }
 
-    const anomalyFuelLogs = fuelRequests.flatMap(
-        (request) => request.logs?.filter((log) => log.is_anomaly) ?? [],
-    );
-
+    // 5. Fuel anomalies
     if (anomalyFuelLogs.length > 0) {
         actions.push({
             title: `${anomalyFuelLogs.length} fuel consumption anomal${anomalyFuelLogs.length === 1 ? 'y' : 'ies'} detected`,
@@ -2087,18 +2282,6 @@ function buildDashboardActions({
             icon: Fuel,
             tone: 'danger',
             category: 'fuel',
-        });
-    }
-
-    if (staleLocations.length > 0) {
-        actions.push({
-            title: `${staleLocations.length} location update${staleLocations.length === 1 ? '' : 's'} need review`,
-            description:
-                'These records are stale or offline and must not be treated as live location data.',
-            section: 'assets',
-            icon: MapPin,
-            tone: 'warning',
-            category: 'tracking',
         });
     }
 

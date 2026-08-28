@@ -14,7 +14,10 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { NotificationViewModel } from '@/types/workspace';
+import type {
+    NotificationViewModel,
+    WorkspaceSection,
+} from '@/types/workspace';
 
 export type NotificationCategory =
     'all' | 'dispatch' | 'safety' | 'fuel' | 'system';
@@ -39,9 +42,11 @@ export const toneClasses: Record<NotificationTone, string> = {
 export function NotificationCenterPopover({
     notifications = [],
     onViewAll,
+    onNavigate,
 }: {
     notifications?: NotificationViewModel[];
     onViewAll: () => void;
+    onNavigate?: (section: WorkspaceSection) => void;
 }) {
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState<NotificationFilter>('all');
@@ -157,6 +162,28 @@ export function NotificationCenterPopover({
         onViewAll();
     };
 
+    const handleNotificationClick = (notification: NotificationViewModel) => {
+        if (isUnread(notification)) {
+            markAsRead(notification);
+        }
+
+        setOpen(false);
+
+        if (!onNavigate) {
+            return;
+        }
+
+        const category = categorizeNotification(notification);
+
+        if (notification.dispatch_job || category === 'dispatch') {
+            onNavigate('dispatch');
+        } else if (category === 'fuel') {
+            onNavigate('fuel');
+        } else if (category === 'safety') {
+            onNavigate('sos');
+        }
+    };
+
     const panel = (
         <div
             id="notification-center-popover"
@@ -239,7 +266,7 @@ export function NotificationCenterPopover({
                         return (
                             <li
                                 key={notification.id}
-                                className={`px-4 py-3 ${unread ? 'bg-brand-soft/25' : ''}`}
+                                className={`group px-4 py-3 transition-colors ${unread ? 'bg-brand-soft/25' : 'hover:bg-surface-subtle/50'}`}
                             >
                                 <div className="flex items-start gap-3">
                                     <span
@@ -251,59 +278,88 @@ export function NotificationCenterPopover({
                                         />
                                     </span>
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-semibold text-ink">
-                                                    {presentation.title}
-                                                </p>
-                                                {notification.dispatch_job && (
-                                                    <p className="mt-0.5 truncate font-mono text-xs text-ink-soft">
-                                                        {
-                                                            notification
-                                                                .dispatch_job
-                                                                .reference
-                                                        }
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() =>
+                                                handleNotificationClick(
+                                                    notification,
+                                                )
+                                            }
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    e.key === 'Enter' ||
+                                                    e.key === ' '
+                                                ) {
+                                                    e.preventDefault();
+                                                    handleNotificationClick(
+                                                        notification,
+                                                    );
+                                                }
+                                            }}
+                                            className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-ink group-hover:text-brand-strong">
+                                                        {presentation.title}
                                                     </p>
+                                                    {notification.dispatch_job && (
+                                                        <p className="mt-0.5 truncate font-mono text-xs text-ink-soft">
+                                                            {
+                                                                notification
+                                                                    .dispatch_job
+                                                                    .reference
+                                                            }
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                {unread && (
+                                                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-strong" />
                                                 )}
                                             </div>
+                                            <p className="mt-1 text-sm leading-5 text-ink">
+                                                {presentation.message}
+                                            </p>
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-between gap-2">
+                                            <p
+                                                className="text-xs text-ink-soft"
+                                                title={exactTimestamp(
+                                                    notification.created_at,
+                                                )}
+                                            >
+                                                {formatRelativeTime(
+                                                    notification.created_at,
+                                                )}
+                                                {unread && (
+                                                    <span className="sr-only">
+                                                        {' '}
+                                                        Unread.
+                                                    </span>
+                                                )}
+                                            </p>
                                             {unread && (
-                                                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-strong" />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        markAsRead(
+                                                            notification,
+                                                        );
+                                                    }}
+                                                    disabled={
+                                                        processingId !== null
+                                                    }
+                                                    className="inline-flex min-h-7 items-center rounded px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {processingId ===
+                                                    notification.id
+                                                        ? 'Marking…'
+                                                        : 'Mark read'}
+                                                </button>
                                             )}
                                         </div>
-                                        <p className="mt-1 text-sm leading-5 text-ink">
-                                            {presentation.message}
-                                        </p>
-                                        <p
-                                            className="mt-1 text-xs text-ink-soft"
-                                            title={exactTimestamp(
-                                                notification.created_at,
-                                            )}
-                                        >
-                                            {formatRelativeTime(
-                                                notification.created_at,
-                                            )}
-                                            {unread && (
-                                                <span className="sr-only">
-                                                    {' '}
-                                                    Unread.
-                                                </span>
-                                            )}
-                                        </p>
-                                        {unread && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    markAsRead(notification)
-                                                }
-                                                disabled={processingId !== null}
-                                                className="mt-2 inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                                            >
-                                                {processingId ===
-                                                notification.id
-                                                    ? 'Marking as read…'
-                                                    : 'Mark as read'}
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                             </li>
