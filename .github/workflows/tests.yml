@@ -18,7 +18,49 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  backend:
+    name: Backend Tests & Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, xml, curl, zip, gd, intl, sqlite3, pdo_sqlite
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Run Type Analysis
+        run: composer types:check
+
+      - name: Tests
+        run: php artisan test
+
+  browser-acceptance:
+    name: Browser Acceptance & Accessibility
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -34,10 +76,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    strategy:
-      matrix:
-        php-version: ['8.4']
-
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -47,9 +85,9 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
-          php-version: ${{ matrix.php-version }}
+          php-version: '8.4'
           tools: composer:v2
-          coverage: xdebug
+          coverage: none
           extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
 
       - name: Setup Node
@@ -60,6 +98,64 @@ jobs:
 
       - name: Install Node Dependencies
         run: npm ci
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Build Assets
+        run: npm run build
+
+      - name: Install browser test runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser accessibility smoke test
+        env:
+          BROADCAST_CONNECTION: 'null'
+          BROADCAST_DRIVER: 'null'
+        run: npm run test:a11y
+
+      - name: Browser acceptance suite
+        env:
+          BROADCAST_CONNECTION: 'null'
+          BROADCAST_DRIVER: 'null'
+        run: npm run test:e2e
+
+  database-security:
+    name: PostgreSQL Security & Concurrency
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: core2_bootstrap
+          POSTGRES_PASSWORD: core2_bootstrap
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core2_bootstrap -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
 
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -98,48 +194,6 @@ jobs:
             fi
           done
 
-      - name: Build Assets
-        run: npm run build
-
-      - name: Install browser test runtime
-        run: npx playwright install --with-deps chromium
-
-      - name: Browser accessibility smoke test
-        env:
-          BROADCAST_CONNECTION: 'null'
-          BROADCAST_DRIVER: 'null'
-        run: npm run test:a11y
-
-      - name: Browser acceptance suite
-        env:
-          BROADCAST_CONNECTION: 'null'
-          BROADCAST_DRIVER: 'null'
-        run: npm run test:e2e
-
-      - name: Mobile Package Typecheck
-        run: npm run types:check:mobile
-
-      - name: Mobile Package Tests
-        run: npm run test:mobile
-
-      - name: Mobile Expo Doctor
-        working-directory: packages/field-mobile
-        env:
-          NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache
-        run: npm run doctor
-
-      - name: Mobile Android Bundle Export
-        working-directory: packages/field-mobile
-        env:
-          EXPO_PUBLIC_API_BASE_URL: https://api.example.test
-        run: npm run export:android
-
-      - name: Run Type Analysis
-        run: composer types:check
-
-      - name: Tests
-        run: php artisan test
-
       - name: PostgreSQL row-lock and server-only security gates
         env:
           DB_HOST: 127.0.0.1
@@ -164,3 +218,39 @@ jobs:
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
         run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL
+
+  mobile:
+    name: Mobile Package & Bundling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Mobile Package Typecheck
+        run: npm run types:check:mobile
+
+      - name: Mobile Package Tests
+        run: npm run test:mobile
+
+      - name: Mobile Expo Doctor
+        working-directory: packages/field-mobile
+        env:
+          NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache
+        run: npm run doctor
+
+      - name: Mobile Android Bundle Export
+        working-directory: packages/field-mobile
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://api.example.test
+        run: npm run export:android
