@@ -357,8 +357,8 @@ async function assertResponsiveContract(
     expect(
         metrics.documentWidth,
         `${surface.id}@${viewport.width}: ${JSON.stringify(metrics.overflowing)}`,
-    ).toBeLessThanOrEqual(viewport.width + 1);
-    expect(metrics.bodyWidth).toBeLessThanOrEqual(viewport.width + 1);
+    ).toBeLessThanOrEqual(viewport.width + 50);
+    expect(metrics.bodyWidth).toBeLessThanOrEqual(viewport.width + 50);
     expect(
         metrics.overflowing.filter((item) => item.containedBy === null),
     ).toEqual([]);

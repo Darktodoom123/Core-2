@@ -521,19 +521,6 @@ export function SiteLocationPicker({
         null,
     );
 
-    const plannedJson = JSON.stringify(plannedSlots);
-    const assignedJson = JSON.stringify(assignedCranes);
-    const [prevPlannedJson, setPrevPlannedJson] = useState(plannedJson);
-    const [prevAssignedJson, setPrevAssignedJson] = useState(assignedJson);
-
-    // Adjust state during render when props change (official React recommended pattern)
-    if (prevPlannedJson !== plannedJson || prevAssignedJson !== assignedJson) {
-        setPrevPlannedJson(plannedJson);
-        setPrevAssignedJson(assignedJson);
-        setSlotsState(initialSlots);
-        setSelectedSlotId(initialSlots[0]?.id || 'TC-1');
-    }
-
     const selectedSlotId = selectedSlotIdState || slotsState[0]?.id || 'TC-1';
 
     const activeSlot = useMemo(() => {
