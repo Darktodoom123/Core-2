@@ -9,6 +9,7 @@ import {
     Clock3,
     ClipboardList,
     CloudOff,
+    HardHat,
     Home,
     Map,
     MapPin,
@@ -16,6 +17,7 @@ import {
     Navigation,
     Play,
     Route,
+    Shield,
     ShieldCheck,
     Signature,
     TriangleAlert,
@@ -23,6 +25,8 @@ import {
     Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
+import { FieldForemanSurface } from '@/components/surfaces/field-foreman-surface';
+import { SafetyOfficerSurface } from '@/components/surfaces/safety-officer-surface';
 import {
     Button,
     DataPair,
@@ -58,6 +62,18 @@ const operatorNavigation: Array<[AppSection, string, typeof Home]> = [
     ['issues', 'Issues', Wrench],
 ];
 
+const foremanNavigation: Array<[AppSection, string, typeof Home]> = [
+    ['today', 'Crew & TBM', HardHat],
+    ['job', 'Equipment', Truck],
+    ['issues', 'Safety', AlertTriangle],
+];
+
+const safetyOfficerNavigation: Array<[AppSection, string, typeof Home]> = [
+    ['today', 'Permits', ShieldCheck],
+    ['tasks', 'Inspections', Shield],
+    ['issues', 'Hazards', AlertTriangle],
+];
+
 function MobileFrame({
     role,
     section,
@@ -77,7 +93,14 @@ function MobileFrame({
     onSync: () => void;
     children: React.ReactNode;
 }) {
-    const nav = role === 'driver' ? driverNavigation : operatorNavigation;
+    const nav =
+        role === 'driver'
+            ? driverNavigation
+            : role === 'operator'
+              ? operatorNavigation
+              : role === 'foreman'
+                ? foremanNavigation
+                : safetyOfficerNavigation;
 
     return (
         <div className="min-h-[calc(100vh-4.5rem)] bg-[#e8edf2] px-0 py-0 md:p-6">
@@ -739,7 +762,7 @@ export function FieldMobileApp({
     onSync,
     onAdvanceJob,
 }: {
-    role: 'driver' | 'operator';
+    role: UserRole;
     section: AppSection;
     jobs: DispatchJob[];
     fieldTasks?: FieldTask[];
@@ -798,6 +821,10 @@ export function FieldMobileApp({
                         onAdvanceJob(assignedJob.id, status)
                     }
                 />
+            ) : role === 'foreman' ? (
+                <FieldForemanSurface />
+            ) : role === 'safety_officer' ? (
+                <SafetyOfficerSurface />
             ) : null}
         </MobileFrame>
     );

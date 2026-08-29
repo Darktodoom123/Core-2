@@ -50,6 +50,7 @@ final class OperationsWorkspaceController extends Controller
         'users' => ['users', 'auditEvents'],
         'audit' => ['auditEvents'],
         'sos' => [],
+        'safety' => [],
     ];
 
     public function __invoke(Request $request): Response

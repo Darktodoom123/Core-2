@@ -96,6 +96,16 @@ const navigationByRole: Record<UserRole, NavItem[]> = {
         { section: 'tasks', label: 'Safety', icon: ShieldCheck },
         { section: 'issues', label: 'Issues', icon: Wrench },
     ],
+    foreman: [
+        { section: 'today', label: 'Crew & TBM', icon: LayoutDashboard },
+        { section: 'job', label: 'Equipment Log', icon: Truck },
+        { section: 'issues', label: 'Safety & Delays', icon: ShieldCheck },
+    ],
+    safety_officer: [
+        { section: 'today', label: 'Lift Permits', icon: ShieldCheck },
+        { section: 'tasks', label: 'Site Audits', icon: Wrench },
+        { section: 'issues', label: 'Hazard Registry', icon: ShieldCheck },
+    ],
 };
 
 export function getNavigationForRole(

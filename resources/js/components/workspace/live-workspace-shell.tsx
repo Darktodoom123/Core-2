@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import {
     Archive,
     Bell,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     ClipboardList,
@@ -18,6 +19,7 @@ import {
     ShieldCheck,
     Truck,
     Users,
+    Volume2,
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -50,6 +52,7 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     users: Users,
     audit: History,
     sos: ShieldCheck,
+    safety: ShieldAlert,
 };
 
 interface NavGroupDefinition {
@@ -67,7 +70,7 @@ const NAV_GROUPS: NavGroupDefinition[] = [
     {
         id: 'governance',
         label: 'Field Governance',
-        sections: ['reports', 'archive'],
+        sections: ['safety', 'reports', 'archive'],
     },
     {
         id: 'safety_system',
@@ -113,10 +116,89 @@ export function LiveWorkspaceShell({
     const { auth } = usePage().props;
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [audioTested, setAudioTested] = useState(false);
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
     const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
     const navigationRef = useRef<HTMLElement>(null);
+    const userMenuRef = useRef<HTMLDivElement>(null);
     const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+
+    const handleHeaderAudioTest = useCallback(() => {
+        try {
+            const AudioContextClass =
+                window.AudioContext ||
+                (
+                    window as unknown as {
+                        webkitAudioContext: typeof AudioContext;
+                    }
+                ).webkitAudioContext;
+
+            if (AudioContextClass) {
+                const audioCtx = new AudioContextClass();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(
+                    440,
+                    audioCtx.currentTime + 0.35,
+                );
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(
+                    0.01,
+                    audioCtx.currentTime + 0.35,
+                );
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.35);
+            }
+        } catch {
+            // Audio context fallback
+        }
+
+        setAudioTested(true);
+        window.setTimeout(() => setAudioTested(false), 2500);
+    }, []);
+
+    useEffect(() => {
+        if (!userMenuOpen) {
+            return;
+        }
+
+        const handleOutsideClick = (e: MouseEvent) => {
+            if (
+                userMenuRef.current &&
+                !userMenuRef.current.contains(e.target as Node)
+            ) {
+                setUserMenuOpen(false);
+            }
+        };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setUserMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideClick);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [userMenuOpen]);
+
+    const userInitials = useMemo(() => {
+        const name = auth.user?.name || '';
+        const parts = name.trim().split(/\s+/);
+
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+
+        return (name.slice(0, 2) || 'OM').toUpperCase();
+    }, [auth.user?.name]);
 
     const openMobileNavigation = useCallback(() => {
         previouslyFocusedElementRef.current = mobileMenuButtonRef.current;
@@ -653,7 +735,37 @@ export function LiveWorkspaceShell({
                                 </p>
                             </div>
                         </div>
-                        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+                        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
+                            {/* Live Stream / Safety Status Pill */}
+                            {activeSosCount > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onSectionChange('sos')}
+                                    className="flex animate-pulse items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger-strong ring-1 ring-danger/40 hover:bg-danger-soft/80 focus-visible:ring-2 focus-visible:ring-danger focus-visible:outline-none"
+                                    title={`${activeSosCount} active emergency in queue · Click to open`}
+                                >
+                                    <span className="h-2 w-2 rounded-full bg-danger" />
+                                    <span>{activeSosCount} Active SOS</span>
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => onSectionChange('sos')}
+                                    className="hidden items-center gap-1.5 rounded-full border border-line bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink sm:flex"
+                                    title="Realtime Reverb Stream Connected · Click to view Safety Watch"
+                                >
+                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
+                                    <span className="text-[11px] font-semibold text-ink">
+                                        Live Stream
+                                    </span>
+                                </button>
+                            )}
+
+                            <div
+                                className="hidden h-4 w-px bg-line sm:block"
+                                aria-hidden="true"
+                            />
+
                             {canShareLocation && (
                                 <Button
                                     variant="quiet"
@@ -706,18 +818,105 @@ export function LiveWorkspaceShell({
                                     aria-hidden="true"
                                 />
                             </Button>
-                            <Button
-                                size="icon"
-                                variant="quiet"
-                                onClick={() => router.post('/logout')}
-                                aria-label="Sign out"
-                                title="Sign out"
-                            >
-                                <LogOut
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                            </Button>
+
+                            <div
+                                className="h-4 w-px bg-line"
+                                aria-hidden="true"
+                            />
+
+                            {/* User Avatar & Account Dropdown Menu */}
+                            <div className="relative" ref={userMenuRef}>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setUserMenuOpen((prev) => !prev)
+                                    }
+                                    className="flex items-center gap-2 rounded-lg p-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                    aria-expanded={userMenuOpen}
+                                    aria-haspopup="menu"
+                                    aria-label="User account menu"
+                                >
+                                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand/20">
+                                        {userInitials}
+                                    </span>
+                                    <div className="hidden leading-none md:block">
+                                        <span className="block max-w-[12rem] truncate text-xs font-semibold text-ink">
+                                            {auth.user?.name ?? 'User'}
+                                        </span>
+                                        <span className="mt-0.5 block max-w-[12rem] truncate text-[10px] text-ink-soft">
+                                            {auth.role_label ?? 'Operations'}
+                                        </span>
+                                    </div>
+                                    <ChevronDown
+                                        className="hidden h-3.5 w-3.5 text-ink-soft md:block"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+
+                                {userMenuOpen && (
+                                    <div
+                                        className="absolute top-full right-0 z-50 mt-2 w-60 space-y-1 rounded-xl border border-line bg-surface p-2 shadow-lg"
+                                        role="menu"
+                                        aria-label="User account options"
+                                    >
+                                        <div className="space-y-1 border-b border-line px-3 py-2">
+                                            <p className="truncate text-xs font-semibold text-ink">
+                                                {auth.user?.name ?? 'User'}
+                                            </p>
+                                            {auth.user?.email && (
+                                                <p className="truncate text-[11px] text-ink-soft">
+                                                    {auth.user.email}
+                                                </p>
+                                            )}
+                                            <div className="pt-0.5">
+                                                <span className="inline-block rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">
+                                                    {auth.role_label ??
+                                                        'Operations'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleHeaderAudioTest();
+                                            }}
+                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle"
+                                            role="menuitem"
+                                        >
+                                            <Volume2
+                                                className="h-4 w-4 text-ink-soft"
+                                                aria-hidden="true"
+                                            />
+                                            <span>
+                                                {audioTested
+                                                    ? 'Chime tested!'
+                                                    : 'Test station audio'}
+                                            </span>
+                                        </button>
+
+                                        <div
+                                            className="my-1 h-px bg-line"
+                                            aria-hidden="true"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                router.post('/logout')
+                                            }
+                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-danger transition-colors hover:bg-danger-soft/60"
+                                            role="menuitem"
+                                        >
+                                            <LogOut
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                            <span>Sign out</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </header>
 

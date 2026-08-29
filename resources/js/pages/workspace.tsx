@@ -6,6 +6,8 @@ import type { ReactNode } from 'react';
 import { OperationsOverviewDashboard } from '@/components/dashboards/operations-overview-dashboard';
 import { ActiveSosBanner } from '@/components/sos/active-sos-banner';
 import { SosResponseQueue } from '@/components/sos/sos-response-queue';
+import { FieldForemanSurface } from '@/components/surfaces/field-foreman-surface';
+import { SafetyOfficerSurface } from '@/components/surfaces/safety-officer-surface';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
@@ -65,6 +67,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
     users: ['users', 'auditEvents'],
     audit: ['auditEvents'],
     sos: [],
+    safety: [],
 };
 
 function hasSectionProps(
@@ -75,7 +78,7 @@ function hasSectionProps(
 }
 
 export default function Workspace(props: WorkspacePageProps) {
-    const { flash, errors } = usePage().props;
+    const { auth, flash, errors } = usePage().props;
     const [section, setSection] = useState<WorkspaceSection | null>(
         props.initial_section,
     );
@@ -716,26 +719,36 @@ export default function Workspace(props: WorkspacePageProps) {
                         onRefresh={refreshWorkspace}
                     />
                 ) : availableSection === 'overview' ? (
-                    <OperationsOverviewDashboard
-                        jobs={props.jobs ?? []}
-                        clients={props.clients ?? []}
-                        serviceRequests={props.serviceRequests ?? []}
-                        assets={props.assets ?? []}
-                        fuelRequests={props.fuelRequests ?? []}
-                        locations={props.locations ?? []}
-                        activeSosIncidents={props.activeSosIncidents}
-                        approvals={props.approvals ?? []}
-                        users={props.users ?? []}
-                        auditEvents={props.auditEvents ?? []}
-                        gptRecommendations={props.gptRecommendations ?? []}
-                        capabilities={props.capabilities}
-                        availableSections={props.navigation.map(
-                            (item) => item.id,
-                        )}
-                        refresh={refreshState.tracking}
-                        realtimeConnected={wsState === 'connected'}
-                        onSectionChange={changeSection}
-                    />
+                    auth?.role === 'safety_officer' ? (
+                        <div className="p-4 md:p-6">
+                            <SafetyOfficerSurface />
+                        </div>
+                    ) : auth?.role === 'field_foreman' ? (
+                        <div className="p-4 md:p-6">
+                            <FieldForemanSurface />
+                        </div>
+                    ) : (
+                        <OperationsOverviewDashboard
+                            jobs={props.jobs ?? []}
+                            clients={props.clients ?? []}
+                            serviceRequests={props.serviceRequests ?? []}
+                            assets={props.assets ?? []}
+                            fuelRequests={props.fuelRequests ?? []}
+                            locations={props.locations ?? []}
+                            activeSosIncidents={props.activeSosIncidents}
+                            approvals={props.approvals ?? []}
+                            users={props.users ?? []}
+                            auditEvents={props.auditEvents ?? []}
+                            gptRecommendations={props.gptRecommendations ?? []}
+                            capabilities={props.capabilities}
+                            availableSections={props.navigation.map(
+                                (item) => item.id,
+                            )}
+                            refresh={refreshState.tracking}
+                            realtimeConnected={wsState === 'connected'}
+                            onSectionChange={changeSection}
+                        />
+                    )
                 ) : availableSection === 'dispatch' ? (
                     <LiveDispatchWorkspace
                         jobs={props.jobs!}

@@ -593,7 +593,8 @@ export type WorkspaceSection =
     | 'gpt-recommendations'
     | 'users'
     | 'audit'
-    | 'sos';
+    | 'sos'
+    | 'safety';
 
 export interface WorkspaceNavigationItem {
     id: WorkspaceSection;

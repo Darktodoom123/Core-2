@@ -102,7 +102,12 @@ final class AdminOverrideController extends Controller
     public function safetyLockdownAsset(Request $request, OperationalAsset $asset, RecordAuditEvent $audit): JsonResponse
     {
         $actor = $request->user();
-        abort_unless($actor->hasRole(RoleName::SystemAdministrator->value) || $actor->can(PermissionName::SystemConfigure->value), 403);
+        abort_unless(
+            $actor->hasRole(RoleName::SystemAdministrator->value)
+            || $actor->hasRole(RoleName::SafetyOfficer->value)
+            || $actor->can(PermissionName::SystemConfigure->value),
+            403
+        );
 
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:6', 'max:500'],

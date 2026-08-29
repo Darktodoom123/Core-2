@@ -1,4 +1,4 @@
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     Award,
@@ -35,6 +35,8 @@ import {
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ApprovalsSurface } from '@/components/approvals';
+import { FieldForemanSurface } from '@/components/surfaces/field-foreman-surface';
+import { SafetyOfficerSurface } from '@/components/surfaces/safety-officer-surface';
 import {
     Button,
     DateTimePicker,
@@ -194,7 +196,29 @@ export function LiveWorkspaceSection({
             return <UsersSurface users={users} />;
         case 'audit':
             return <AuditSurface events={auditEvents} />;
+        case 'safety':
+            return <SafetyWorkspaceSection />;
     }
+}
+
+function SafetyWorkspaceSection() {
+    const { auth } = usePage().props;
+    const isForeman =
+        auth?.role === 'field_foreman' || auth?.prototype_role === 'foreman';
+
+    if (isForeman) {
+        return (
+            <div className="p-4 md:p-6">
+                <FieldForemanSurface />
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 md:p-6">
+            <SafetyOfficerSurface />
+        </div>
+    );
 }
 
 function AssetsSurface({
@@ -3873,9 +3897,17 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     <option value="crane_operator">
                                         Operator (Field crane & heavy equipment)
                                     </option>
+                                    <option value="field_foreman">
+                                        Field Foreman (Site supervision & crew
+                                        lead)
+                                    </option>
                                     <option value="operations_manager">
                                         Operations Manager (Dispatch &
                                         scheduling)
+                                    </option>
+                                    <option value="safety_officer">
+                                        Safety Officer (HSE, SOS response &
+                                        compliance)
                                     </option>
                                     <option value="system_administrator">
                                         System Administrator (Security &
@@ -4052,9 +4084,17 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     <option value="crane_operator">
                                         Operator (Field crane & heavy equipment)
                                     </option>
+                                    <option value="field_foreman">
+                                        Field Foreman (Site supervision & crew
+                                        lead)
+                                    </option>
                                     <option value="operations_manager">
                                         Operations Manager (Dispatch &
                                         scheduling)
+                                    </option>
+                                    <option value="safety_officer">
+                                        Safety Officer (HSE, SOS response &
+                                        compliance)
                                     </option>
                                     <option value="system_administrator">
                                         System Administrator (Security &
