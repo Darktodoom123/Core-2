@@ -9,6 +9,8 @@ export type BrowserFixtures = {
         operator?: string;
         dispatcher?: string;
         driver?: string;
+        safety_officer?: string;
+        foreman?: string;
     };
     password: string;
     job_id: number;
@@ -23,6 +25,9 @@ export type BrowserFixtures = {
     export_ids: string[];
     recommendations: Record<string, number>;
     sos_incident_id?: string;
+    lift_plan_id?: number;
+    tbm_id?: number;
+    hazard_id?: number;
 };
 
 export function browserFixtures(): BrowserFixtures {

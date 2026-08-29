@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { browserFixtures, signIn } from './browser-fixtures';
 
 test.describe('Safety & Response Hub E2E Workflow', () => {
@@ -25,7 +25,7 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
             .getByRole('button', { name: /Open emergency queue/i })
             .click();
         await expect(
-            page.getByRole('heading', { name: 'Safety & Response Hub' }),
+            page.getByRole('heading', { name: 'Emergency Response Queue' }),
         ).toBeVisible();
     });
 
@@ -34,7 +34,7 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
     }) => {
         await page.goto('/?section=sos');
         await expect(
-            page.getByRole('heading', { name: 'Safety & Response Hub' }),
+            page.getByRole('heading', { name: 'Emergency Response Queue' }),
         ).toBeVisible();
 
         // Check active incident list item
@@ -60,7 +60,7 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
     }) => {
         await page.goto('/?section=sos');
         await expect(
-            page.getByRole('heading', { name: 'Safety & Response Hub' }),
+            page.getByRole('heading', { name: 'Emergency Response Queue' }),
         ).toBeVisible();
 
         // Acknowledge the emergency
@@ -100,7 +100,7 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
     }) => {
         await page.goto('/?section=sos');
         await expect(
-            page.getByRole('heading', { name: 'Safety & Response Hub' }),
+            page.getByRole('heading', { name: 'Emergency Response Queue' }),
         ).toBeVisible();
 
         // Open false alarm details section
@@ -118,63 +118,64 @@ test.describe('Safety & Response Hub E2E Workflow', () => {
         }
     });
 
-    test('Scenario 5: Peace-time Safety Watch Center displays escalation roster, telemetry, and interactive drill', async ({
+    test('Scenario 5: Empty Emergency Response Queue displays calm All Clear zero state', async ({
         page,
     }) => {
-        // Resolve or navigate when 0 incidents exist
         await page.goto('/?section=sos');
 
-        // If in peace time or test drill available
-        const drillButton = page.getByRole('button', {
-            name: /Launch drill simulation/i,
+        // Check for All Systems Normal empty state
+        const allClear = page.getByText(
+            /All Systems Normal · Zero Active Emergencies/i,
+        );
+        const activeQueue = page.getByRole('heading', {
+            name: 'Emergency Response Queue',
         });
 
-        if (await drillButton.isVisible()) {
-            // Verify Peace-Time System Normal Banner
-            await expect(
-                page.getByText(/Safety Watch Active · All Systems Normal/i),
-            ).toBeVisible();
+        await expect(activeQueue).toBeVisible();
 
-            // Verify Escalation Contact Roster
+        if (await allClear.isVisible()) {
+            await expect(allClear).toBeVisible();
             await expect(
-                page.getByText(/Emergency Escalation Contact Roster/i),
-            ).toBeVisible();
-            await expect(page.getByText('John Tan')).toBeVisible();
-            await expect(page.getByText('Dr. Marcus Lim')).toBeVisible();
-
-            // Launch interactive compliance safety drill
-            await drillButton.click();
-
-            // Check drill modal
-            await expect(
-                page.getByRole('heading', {
-                    name: /Compliance Safety Drill Simulation/i,
+                page.getByRole('button', {
+                    name: 'Return to Operations Overview',
                 }),
             ).toBeVisible();
-            await expect(
-                page.getByText(/Training Simulation · No Live Emergency/i),
-            ).toBeVisible();
-
-            // Acknowledge drill
-            await page
-                .getByRole('button', { name: /Acknowledge drill emergency/i })
-                .click();
-            await expect(
-                page.getByText(/Drill acknowledged in/i),
-            ).toBeVisible();
-
-            // Complete drill
-            await page
-                .getByRole('button', { name: /Complete compliance drill/i })
-                .click();
-            await expect(
-                page.getByText(/Safety Drill Successfully Completed/i),
-            ).toBeVisible();
-
-            // Close modal
-            await page
-                .getByRole('button', { name: /Close simulation/i })
-                .click();
         }
+    });
+
+    test('Scenario 6: Top-right Industrial Header displays live stream pill and user profile dropdown', async ({
+        page,
+    }) => {
+        await page.goto('/');
+
+        // Verify Live Stream or Active SOS pill exists in header
+        const streamPill = page.getByRole('button', {
+            name: /Live Stream|Active SOS/i,
+        });
+        await expect(streamPill).toBeVisible();
+
+        // Check user account menu button in header
+        const userMenuButton = page.getByRole('button', {
+            name: 'User account menu',
+        });
+        await expect(userMenuButton).toBeVisible();
+
+        // Click to open user dropdown
+        await userMenuButton.click();
+        await expect(
+            page.getByRole('menu', { name: 'User account options' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('menuitem', { name: /Test station audio/i }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('menuitem', { name: /Sign out/i }),
+        ).toBeVisible();
+
+        // Press Escape to close dropdown
+        await page.keyboard.press('Escape');
+        await expect(
+            page.getByRole('menu', { name: 'User account options' }),
+        ).not.toBeVisible();
     });
 });

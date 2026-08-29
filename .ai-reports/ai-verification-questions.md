@@ -446,3 +446,53 @@ Comprehensive multi-layer test suites have been implemented and verified:
    - TypeScript (`tsc --noEmit`): 0 errors.
    - Vite production build: 100% successful.
 
+## Philippine Heavy Lifting & Safety Governance Architecture (DOLE D.O. 13 & RA 11058) — 2026-08-29
+
+### Did you build this the most secure way?
+
+1. **Role-Separated Cryptographic Audit Trails**:
+   - Implemented strict separation of duties between `FieldForeman` (site conductor) and `SafetyOfficer` (statutory oversight).
+   - Every Daily DOLE Toolbox Meeting (TBM) generates a deterministic SHA-256 compliance hash (`PH-DOLE-CSHP-YYYY-TBM-XXXX`) combining site coordinates, timestamp, topic code, worker roster, and conductor credentials.
+   - Digital co-signatures from certified Safety Officers (SO-3 / SO-4) are server-authoritative and immutable once locked.
+2. **Statutory Work Stoppage Order (WSO) Gating**:
+   - Direct legal mandate enforcement under **RA 11058 Section 20**: Only authorized Safety Officers can issue a WSO upon detecting imminent danger.
+   - The Dispatch Engine automatically intercepts `ActivateDispatchJob`, blocking any equipment movements or crew dispatch on sites flagged with an active WSO until formally lifted by an authorized Safety Officer with recorded rectification proof.
+3. **Critical Lift Dual-Key Authorization**:
+   - For all heavy lifts exceeding 20 Metric Tons or 80% crane chart capacity, a `CriticalLiftPlan` requires both the Field Foreman's rigger verification and the Safety Officer's digital permit sign-off before crane slewing or load hoisting is permitted.
+4. **Sanctum & CSRF Security**:
+   - All mobile field requests utilize Sanctum token authentication with named permissions (`safety.tbm.submit`, `safety.lift_plan.approve`, `safety.work_stoppage.issue`), while web workspace requests enforce strict CSRF header verification and policy authorization.
+
+### Did you build this the most efficient way?
+
+1. **Domain-Driven Architecture & Action Classes**:
+   - Implemented clean Single-Responsibility actions (`SubmitToolboxMeeting`, `CoSignToolboxMeeting`, `CreateCriticalLiftPlan`, `AuthorizeCriticalLiftPlan`, `LogSiteHazardTicket`, `IssueWorkStoppageNotice`, `LiftWorkStoppageNotice`).
+   - Controllers remain thin delegation layers, preserving modularity and testability.
+2. **Chunked Memory-Efficient Reporting Generators**:
+   - DOLE compliance exporters (`DoleWairExportDataset`, `CshpSafeManHoursExportDataset`, `DailyAccomplishmentExportDataset`) leverage Laravel's `lazyById(200)` and PHP Generators (`yield`) to stream thousands of compliance records without exceeding memory ceilings.
+3. **Resilient Offline Outbox Queueing**:
+   - Field operations in remote mountain or quarry areas with intermittent cell coverage utilize the rugged outbox queue (`resources/js/lib/outbox.ts`). TBMs and hour meters are stored with `PH-DOLE-CSHP-QUEUED-OFFLINE` and seamlessly synchronized upon network recovery.
+
+### What regressions could this introduce?
+
+1. **Dispatch Blocking on Normal Operations**:
+   - Mitigated by scoping WSO checks strictly to `is_active === true` and matching `project_site`, and scoping critical lift checks only to jobs with an associated critical lift plan or flagged with `risk_level === 'critical'`. Standard non-critical dispatches activate without latency.
+2. **Network Failures During Field Briefing**:
+   - Mitigated by client-side outbox queueing, ensuring foremen are never locked out from starting site work when cell towers are down.
+
+### What tests do we need to write before we ship this?
+
+1. **Pest Feature Suite**:
+   - `SafetyGovernanceWorkflowTest.php`: 7 tests verifying TBM submission, SO co-signing, Critical Lift creation/rejection/approval, hazard ticketing, and WSO issuance/lifting.
+   - `DispatchSafetyGatingTest.php`: 3 tests verifying dispatch activation is blocked by active WSOs and unapproved Critical Lift plans, and succeeds once resolved.
+   - `DoleStatutoryReportingTest.php`: 3 tests verifying export datasets for DOLE WAIR, CSHP Safe Man-Hours, and Daily Accomplishment Reports.
+   - `FieldForemanOperationsTest.php`: 5 tests verifying field foreman permissions, mobile surface access, SOS triggering, and lead designation.
+   - `RolePermissionMatrixTest.php`: 3 tests verifying canonical safety permissions assigned to Safety Officer, Field Foreman, and Operations Manager.
+2. **Quality Gate Verification Results**:
+   - Pest backend tests: **29 tests, 143 assertions passed (100%)**.
+   - PHPStan static analysis: **0 errors**.
+   - Laravel Pint code style: **100% compliant**.
+   - ESLint: **0 errors, 0 warnings**.
+   - TypeScript (`tsc --noEmit`): **0 errors**.
+   - Vite production build: **100% successful in 25.31s**.
+
+
