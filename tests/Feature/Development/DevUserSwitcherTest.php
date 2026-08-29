@@ -13,21 +13,20 @@ beforeEach(function (): void {
     $this->seed(LocalDevelopmentSeeder::class);
 });
 
-it('lists all active seeded development role accounts', function (): void {
+it('lists all active seeded development web role accounts', function (): void {
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(5);
+    expect($response->json())->toHaveCount(4);
     expect(collect($response->json())->pluck('role_label')->sort()->values()->all())
         ->toEqual([
             'Field Foreman',
             'Operations Manager',
-            'Operator',
             'Safety Officer',
             'System Administrator',
         ]);
 });
 
-it('quick logs in allowed roles and rejects disallowed or suspended accounts', function (): void {
+it('quick logs in allowed web roles and rejects mobile-only or suspended accounts', function (): void {
     $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
     $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
     $safetyOfficer = User::query()->where('email', 'so.morales@core2.ph')->firstOrFail();
@@ -35,17 +34,19 @@ it('quick logs in allowed roles and rejects disallowed or suspended accounts', f
     $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
     $suspendedUser = User::factory()->suspended()->create();
 
-    // All seeded role accounts can quick-login
-    foreach ([$admin, $manager, $safetyOfficer, $foreman, $operator] as $user) {
+    // All seeded web role accounts can quick-login
+    foreach ([$admin, $manager, $safetyOfficer, $foreman] as $user) {
         $this->post('/dev/login/'.$user->id)->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
     }
 
-    // Suspended accounts are not in dev list
+    // Mobile operator and suspended accounts are not in web dev list
     $this->getJson('/dev/users')
+        ->assertJsonMissing(['id' => $operator->id])
         ->assertJsonMissing(['id' => $suspendedUser->id]);
 
-    // Quick login is rejected for suspended account
+    // Quick login on web is rejected for mobile-only or suspended accounts
+    $this->post('/dev/login/'.$operator->id)->assertNotFound();
     $this->post('/dev/login/'.$suspendedUser->id)->assertNotFound();
 });
 
@@ -54,13 +55,12 @@ it('excludes browser test fixtures from dev quick sign-in', function (): void {
 
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(5);
+    expect($response->json())->toHaveCount(4);
     expect(collect($response->json())->pluck('email')->sort()->values()->all())
         ->toEqual([
             'admin@example.com',
             'foreman.delacruz@core2.ph',
             'manager@example.com',
-            'operator@example.com',
             'so.morales@core2.ph',
         ]);
 
