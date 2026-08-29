@@ -16,10 +16,9 @@ beforeEach(function (): void {
 it('lists all active seeded development web role accounts', function (): void {
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(4);
+    expect($response->json())->toHaveCount(3);
     expect(collect($response->json())->pluck('role_label')->sort()->values()->all())
         ->toEqual([
-            'Field Foreman',
             'Operations Manager',
             'Safety Officer',
             'System Administrator',
@@ -35,17 +34,19 @@ it('quick logs in allowed web roles and rejects mobile-only or suspended account
     $suspendedUser = User::factory()->suspended()->create();
 
     // All seeded web role accounts can quick-login
-    foreach ([$admin, $manager, $safetyOfficer, $foreman] as $user) {
+    foreach ([$admin, $manager, $safetyOfficer] as $user) {
         $this->post('/dev/login/'.$user->id)->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
     }
 
-    // Mobile operator and suspended accounts are not in web dev list
+    // Mobile field roles and suspended accounts are not in web dev list
     $this->getJson('/dev/users')
+        ->assertJsonMissing(['id' => $foreman->id])
         ->assertJsonMissing(['id' => $operator->id])
         ->assertJsonMissing(['id' => $suspendedUser->id]);
 
     // Quick login on web is rejected for mobile-only or suspended accounts
+    $this->post('/dev/login/'.$foreman->id)->assertNotFound();
     $this->post('/dev/login/'.$operator->id)->assertNotFound();
     $this->post('/dev/login/'.$suspendedUser->id)->assertNotFound();
 });
@@ -55,11 +56,10 @@ it('excludes browser test fixtures from dev quick sign-in', function (): void {
 
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(4);
+    expect($response->json())->toHaveCount(3);
     expect(collect($response->json())->pluck('email')->sort()->values()->all())
         ->toEqual([
             'admin@example.com',
-            'foreman.delacruz@core2.ph',
             'manager@example.com',
             'so.morales@core2.ph',
         ]);

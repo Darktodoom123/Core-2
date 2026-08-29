@@ -50,13 +50,11 @@ if (app()->environment(['local', 'testing'])) {
                     'admin@example.com',
                     'manager@example.com',
                     'so.morales@core2.ph',
-                    'foreman.delacruz@core2.ph',
                 ])
                 ->role([
                     RoleName::SystemAdministrator->value,
                     RoleName::OperationsManager->value,
                     RoleName::SafetyOfficer->value,
-                    RoleName::FieldForeman->value,
                 ])
                 ->with('roles')
                 ->select('id', 'name', 'email')
@@ -84,13 +82,11 @@ if (app()->environment(['local', 'testing'])) {
                 'admin@example.com',
                 'manager@example.com',
                 'so.morales@core2.ph',
-                'foreman.delacruz@core2.ph',
             ], true)
             && $user->hasAnyRole([
                 RoleName::SystemAdministrator->value,
                 RoleName::OperationsManager->value,
                 RoleName::SafetyOfficer->value,
-                RoleName::FieldForeman->value,
             ]),
             404,
         );
