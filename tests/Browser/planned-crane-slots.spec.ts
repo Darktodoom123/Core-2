@@ -30,9 +30,12 @@ const STADIA_STYLE_FIXTURE = JSON.stringify({
 
 test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', () => {
     test.beforeEach(async ({ page }) => {
-        await page.route('https://tiles.stadiamaps.com/data/**', async (route) => {
-            await route.abort();
-        });
+        await page.route(
+            'https://tiles.stadiamaps.com/data/**',
+            async (route) => {
+                await route.abort();
+            },
+        );
         await page.route('https://tiles.stadiamaps.com/styles/**', (route) =>
             route.fulfill({
                 contentType: 'application/json',
@@ -50,15 +53,21 @@ test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', (
         await signIn(page, fixtures.users.manager, fixtures.password);
 
         // 2. Navigate to dispatch job detail
-        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}#dispatch-context`);
+        await page.goto(
+            `/operations/dispatch-jobs/${fixtures.job_id}#dispatch-context`,
+        );
 
-        const step1Button = page.getByRole('button', { name: /(Review context|Step 1|Context)/i }).first();
+        const step1Button = page
+            .getByRole('button', { name: /(Review context|Step 1|Context)/i })
+            .first();
 
         if (await step1Button.isVisible()) {
             await step1Button.click();
         }
 
-        await expect(page.locator('#dispatch-context')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#dispatch-context')).toBeVisible({
+            timeout: 10_000,
+        });
 
         // 3. Expand Site Location Picker
         const toggleButton = page.getByRole('button', {
@@ -104,7 +113,9 @@ test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', (
         // 8. Verify Anti-Collision Warning renders for overlapping radiuses
         const antiCollisionWarning = page.getByTestId('anti-collision-warning');
         await expect(antiCollisionWarning).toBeVisible();
-        await expect(antiCollisionWarning).toContainText('Anti-Collision Zone Detected');
+        await expect(antiCollisionWarning).toContainText(
+            'Anti-Collision Zone Detected',
+        );
 
         // 9. Apply Pin and Save Site Layout
         const applyButton = page.getByTestId('apply-pin-button');
@@ -117,7 +128,9 @@ test.describe('Contract-Driven Crane Slots & Multi-Slot Site Layout Workflow', (
         await expect(pinnedBadge).toContainText('Pinned & Anchored');
 
         // 11. Capture high-resolution screenshots
-        await expect(page.locator('.maplibregl-canvas')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('.maplibregl-canvas')).toBeVisible({
+            timeout: 10_000,
+        });
         await page.waitForTimeout(1000);
         const screenshotDir = process.env.CI
             ? 'storage/framework/testing'

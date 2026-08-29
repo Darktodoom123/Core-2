@@ -31,9 +31,12 @@ const STADIA_STYLE_FIXTURE = JSON.stringify({
 test.describe('Multi-Tower Crane Pinning & Jib Slewing Radius Workflow', () => {
     test.beforeEach(async ({ page }) => {
         // Stub Stadia tile and style routes for reliable offline browser testing
-        await page.route('https://tiles.stadiamaps.com/data/**', async (route) => {
-            await route.abort();
-        });
+        await page.route(
+            'https://tiles.stadiamaps.com/data/**',
+            async (route) => {
+                await route.abort();
+            },
+        );
         await page.route('https://tiles.stadiamaps.com/styles/**', (route) =>
             route.fulfill({
                 contentType: 'application/json',
@@ -51,15 +54,21 @@ test.describe('Multi-Tower Crane Pinning & Jib Slewing Radius Workflow', () => {
         await signIn(page, fixtures.users.manager, fixtures.password);
 
         // 2. Navigate to dispatch job detail
-        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}#dispatch-context`);
+        await page.goto(
+            `/operations/dispatch-jobs/${fixtures.job_id}#dispatch-context`,
+        );
 
-        const step1Button = page.getByRole('button', { name: /(Review context|Step 1|Context)/i }).first();
+        const step1Button = page
+            .getByRole('button', { name: /(Review context|Step 1|Context)/i })
+            .first();
 
         if (await step1Button.isVisible()) {
             await step1Button.click();
         }
 
-        await expect(page.locator('#dispatch-context')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('#dispatch-context')).toBeVisible({
+            timeout: 10_000,
+        });
 
         // 3. Click Pin Coordinates button to expand the SiteLocationPicker
         const toggleButton = page.getByRole('button', {
@@ -101,7 +110,9 @@ test.describe('Multi-Tower Crane Pinning & Jib Slewing Radius Workflow', () => {
         await expect(pinnedBadge).toContainText('Pinned & Anchored');
 
         // 10. Capture high-resolution screenshots for review
-        await expect(page.locator('.maplibregl-canvas')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('.maplibregl-canvas')).toBeVisible({
+            timeout: 10_000,
+        });
         await page.waitForTimeout(1000);
         const screenshotDir = process.env.CI
             ? 'storage/framework/testing'

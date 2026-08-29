@@ -22,6 +22,7 @@ export type BrowserFixtures = {
     attachment_id: number;
     export_ids: string[];
     recommendations: Record<string, number>;
+    sos_incident_id?: string;
 };
 
 export function browserFixtures(): BrowserFixtures {
@@ -30,11 +31,7 @@ export function browserFixtures(): BrowserFixtures {
     return JSON.parse(readFileSync(path, 'utf8')) as BrowserFixtures;
 }
 
-export async function signIn(
-    page: Page,
-    username?: string,
-    password?: string,
-) {
+export async function signIn(page: Page, username?: string, password?: string) {
     const fixtures = browserFixtures();
     const resolvedUser =
         username ||

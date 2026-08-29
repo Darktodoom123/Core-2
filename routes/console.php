@@ -2,8 +2,11 @@
 
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
+use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
+use App\Platform\Safety\Jobs\SweepSosEscalationsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -26,3 +29,6 @@ Artisan::command('gpt:queue-status', function (): void {
         'last_metric_at' => GptRecommendationMetric::query()->max('occurred_at'),
     ], JSON_THROW_ON_ERROR));
 })->purpose('Report safe aggregate GPT queue status without exposing recommendation context');
+
+Schedule::job(new SweepSosEscalationsJob)->everyMinute();
+Schedule::job(new PruneSosIncidentCoordinatesJob)->daily();

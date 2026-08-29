@@ -95,11 +95,15 @@ export default function Workspace(props: WorkspacePageProps) {
         string | null
     >(null);
     const [currentTime, setCurrentTime] = useState(() => Date.now());
-    const availableSection = props.navigation.some(
-        (item) => item.id === section,
-    )
-        ? section
-        : (props.navigation[0]?.id ?? null);
+    const availableSection =
+        section === 'sos' &&
+        (props.capabilities.view_sos ||
+            props.capabilities.respond_sos ||
+            props.activeSosIncidents.length > 0)
+            ? 'sos'
+            : props.navigation.some((item) => item.id === section)
+              ? section
+              : (props.navigation[0]?.id ?? null);
 
     const beginRefresh = useCallback(
         (scope: RefreshScope, mode: RefreshMode) => {

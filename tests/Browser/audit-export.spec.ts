@@ -26,7 +26,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         ).toBeVisible();
 
         // Open export modal
-        await page.getByRole('button', { name: 'Export Audit Dataset' }).click();
+        await page
+            .getByRole('button', { name: 'Export Audit Dataset' })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Export Audit Dataset' }),
         ).toBeVisible();
@@ -35,7 +37,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await page.locator('input[name="format"][value="csv"]').check();
 
         // Request export
-        await page.getByRole('button', { name: 'Request Server Background Export' }).click();
+        await page
+            .getByRole('button', { name: 'Request Server Background Export' })
+            .click();
 
         // Verify success flash and zero network errors
         await expect(page.getByText(/Export task requested/i)).toBeVisible();
@@ -62,7 +66,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         ).toBeVisible();
 
         // Open export modal
-        await page.getByRole('button', { name: 'Export Audit Dataset' }).click();
+        await page
+            .getByRole('button', { name: 'Export Audit Dataset' })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Export Audit Dataset' }),
         ).toBeVisible();
@@ -71,7 +77,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await page.locator('input[name="format"][value="pdf"]').check();
 
         // Request export
-        await page.getByRole('button', { name: 'Request Server Background Export' }).click();
+        await page
+            .getByRole('button', { name: 'Request Server Background Export' })
+            .click();
 
         // Verify success flash and zero network errors
         await expect(page.getByText(/Export task requested/i)).toBeVisible();
@@ -103,7 +111,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await preset7d.click();
 
         // Open export modal
-        await page.getByRole('button', { name: 'Export Audit Dataset' }).click();
+        await page
+            .getByRole('button', { name: 'Export Audit Dataset' })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Export Audit Dataset' }),
         ).toBeVisible();
@@ -112,7 +122,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await page.locator('input[name="format"][value="csv"]').check();
 
         // Request export
-        await page.getByRole('button', { name: 'Request Server Background Export' }).click();
+        await page
+            .getByRole('button', { name: 'Request Server Background Export' })
+            .click();
 
         // Verify success flash and zero network errors
         await expect(page.getByText(/Export task requested/i)).toBeVisible();
@@ -144,7 +156,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await presetToday.click();
 
         // Open export modal
-        await page.getByRole('button', { name: 'Export Audit Dataset' }).click();
+        await page
+            .getByRole('button', { name: 'Export Audit Dataset' })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Export Audit Dataset' }),
         ).toBeVisible();
@@ -153,7 +167,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         await page.locator('input[name="format"][value="pdf"]').check();
 
         // Request export
-        await page.getByRole('button', { name: 'Request Server Background Export' }).click();
+        await page
+            .getByRole('button', { name: 'Request Server Background Export' })
+            .click();
 
         // Verify success flash and zero network errors
         await expect(page.getByText(/Export task requested/i)).toBeVisible();
@@ -170,7 +186,9 @@ test.describe('Audit Trail & Report Export Pipeline E2E', () => {
         ).toBeVisible();
 
         // Open export modal
-        await page.getByRole('button', { name: 'Export Audit Dataset' }).click();
+        await page
+            .getByRole('button', { name: 'Export Audit Dataset' })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Export Audit Dataset' }),
         ).toBeVisible();

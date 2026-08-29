@@ -106,9 +106,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const dispatchSelect = page.locator('#report-dispatch-select');
 
         if (
-            (await dispatchSelect.evaluate(
+            await dispatchSelect.evaluate(
                 (el) => el.tagName.toLowerCase() === 'select',
-            ))
+            )
         ) {
             await dispatchSelect.selectOption(String(fixtures.assigned_job_id));
         } else {
@@ -142,9 +142,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         );
 
         if (
-            (await unauthorizedDispatchSelect.evaluate(
+            await unauthorizedDispatchSelect.evaluate(
                 (el) => el.tagName.toLowerCase() === 'select',
-            ))
+            )
         ) {
             await unauthorizedDispatchSelect.evaluate((el, id) => {
                 const opt = document.createElement('option');
@@ -184,9 +184,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         );
 
         if (
-            (await validationDispatchSelect.evaluate(
+            await validationDispatchSelect.evaluate(
                 (el) => el.tagName.toLowerCase() === 'select',
-            ))
+            )
         ) {
             await validationDispatchSelect.selectOption(
                 String(fixtures.assigned_job_id),
@@ -258,16 +258,12 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         );
         await page.locator('#submit-job-report-btn').click();
         await expect(page.locator('form[aria-busy="true"]')).toBeVisible();
-        await expect(
-            page.locator('#submit-job-report-btn'),
-        ).toBeDisabled();
+        await expect(page.locator('#submit-job-report-btn')).toBeDisabled();
         releaseRequest();
         expect((await submitResponse).status()).toBeGreaterThanOrEqual(300);
         await page.unroute('**/operations/job-reports');
         await page.getByRole('button', { name: 'Close form' }).click();
-        await expect(
-            page.locator('#report-submit-toggle'),
-        ).toBeFocused();
+        await expect(page.locator('#report-submit-toggle')).toBeFocused();
     });
 
     test('tracking asset filter supports multiple selections and keyboard close', async ({
@@ -347,7 +343,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
 
         await expect(
-            page.getByRole('heading', { name: /Dispatch overview|Dispatch schedule|Assigned Work Schedule/i }),
+            page.getByRole('heading', {
+                name: /Dispatch overview|Dispatch schedule|Assigned Work Schedule/i,
+            }),
         ).toBeVisible();
 
         const documentWidth = await page.evaluate(
@@ -393,7 +391,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByText('GPT generation failed. Please retry.'),
         ).toBeVisible();
-        await expect(page.getByText('stale', { exact: true }).first()).toBeVisible();
+        await expect(
+            page.getByText('stale', { exact: true }).first(),
+        ).toBeVisible();
 
         const acceptResponse = page.waitForResponse(
             (response) =>
@@ -504,7 +504,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
-        await page.goto('/?section=dispatch', { waitUntil: 'domcontentloaded' });
+        await page.goto('/?section=dispatch', {
+            waitUntil: 'domcontentloaded',
+        });
         await page.getByRole('button', { name: 'Schedule board' }).click();
 
         const board = page.getByRole('region', {

@@ -61,7 +61,8 @@ final class OperationsWorkspaceController extends Controller
         $canViewAllAssignments = $user->can(PermissionName::AssignmentsViewAll->value);
         $refreshedAt = now();
         $navigation = OperationsWorkspaceViewModel::navigation($user);
-        $initialSection = $this->initialSection($request, $navigation);
+        $activeSos = $this->fetchActiveSosIncidents($user);
+        $initialSection = $this->initialSection($request, $navigation, $user, $activeSos);
         $sectionCache = null;
         $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments): array {
             request()->attributes->set('workspace_inertia_mode', 'deferred');
@@ -75,8 +76,6 @@ final class OperationsWorkspaceController extends Controller
                 $canViewAllAssignments,
             );
         };
-
-        $activeSos = $this->fetchActiveSosIncidents($user);
 
         $props = [
             'navigation' => $navigation,
@@ -202,13 +201,20 @@ final class OperationsWorkspaceController extends Controller
         };
     }
 
-    /** @param array<int, array{id: string, label: string}> $navigation */
-    private function initialSection(Request $request, array $navigation): ?string
+    /**
+     * @param  array<int, array{id: string, label: string}>  $navigation
+     * @param  array<int, mixed>  $activeSos
+     */
+    private function initialSection(Request $request, array $navigation, User $user, array $activeSos): ?string
     {
         $requested = $request->query('view') ?? $request->query('section');
 
         if ($requested === 'exports') {
             $requested = 'reports';
+        }
+
+        if ($requested === 'sos' && ($user->can('sos.view') || $user->can('sos.respond') || count($activeSos) > 0)) {
+            return 'sos';
         }
 
         if (is_string($requested) && collect($navigation)->contains('id', $requested)) {

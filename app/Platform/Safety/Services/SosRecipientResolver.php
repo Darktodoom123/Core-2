@@ -27,7 +27,7 @@ final class SosRecipientResolver
                 $selectedManager = $manager;
             }
         } elseif ($manager !== null) {
-            $recipients->push($this->recipient($manager, 'assignment_dispatcher'));
+            $recipients->push($this->recipient($manager, 'assignment_manager'));
         }
 
         if ($selectedManager === null) {

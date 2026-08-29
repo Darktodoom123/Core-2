@@ -14,8 +14,8 @@ import {
     MapPin,
     Menu,
     RefreshCw,
+    ShieldAlert,
     ShieldCheck,
-    Siren,
     Truck,
     Users,
     X,
@@ -49,7 +49,7 @@ const sectionIcons: Record<WorkspaceSection, LucideIcon> = {
     'gpt-recommendations': Cpu,
     users: Users,
     audit: History,
-    sos: Siren,
+    sos: ShieldCheck,
 };
 
 interface NavGroupDefinition {
@@ -72,7 +72,7 @@ const NAV_GROUPS: NavGroupDefinition[] = [
     {
         id: 'safety_system',
         label: 'Safety & System',
-        sections: ['sos', 'gpt-recommendations', 'users', 'audit'],
+        sections: ['gpt-recommendations', 'users', 'audit'],
     },
 ];
 
@@ -422,12 +422,15 @@ export function LiveWorkspaceShell({
                                     )}
                                     <ul className="space-y-1">
                                         {group.items.map((item) => {
-                                            const Icon = sectionIcons[item.id];
-                                            const active = item.id === section;
                                             const badge = getBadgeInfo(item.id);
                                             const showBadge =
                                                 badge !== null &&
                                                 badge.count > 0;
+                                            const Icon =
+                                                item.id === 'sos' && showBadge
+                                                    ? ShieldAlert
+                                                    : sectionIcons[item.id];
+                                            const active = item.id === section;
 
                                             return (
                                                 <li key={item.id}>

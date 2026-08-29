@@ -339,7 +339,7 @@ it('records the exact safe audit matrix with actor, subject, UUID, IP, and bound
         sort($expectedAfter);
         sort($actualAfter);
         expect($audit->actor_id)->toBe($actorId)
-            ->and($audit->subject_id)->toBe($subjectId)
+            ->and((string) $audit->subject_id)->toBe((string) $subjectId)
             ->and(Str::isUuid((string) $audit->request_id))->toBeTrue()
             ->and($audit->ip_address)->toBe('203.0.113.55')
             ->and($audit->occurred_at->between($startedAt, now()->addMinute()))->toBeTrue()

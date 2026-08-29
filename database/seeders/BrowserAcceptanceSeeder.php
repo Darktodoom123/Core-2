@@ -20,12 +20,17 @@ use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Safety\Enums\SosIncidentCategory;
+use App\Platform\Safety\Enums\SosIncidentStatus;
+use App\Platform\Safety\Models\SosIncident;
+use App\Platform\Safety\Models\SosIncidentRecipient;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use LogicException;
 
 final class BrowserAcceptanceSeeder extends Seeder
@@ -237,6 +242,33 @@ final class BrowserAcceptanceSeeder extends Seeder
             'occurred_at' => now()->subMinutes(15),
         ]);
 
+        $sosIncident = SosIncident::query()->create([
+            'id' => (string) Str::uuid(),
+            'command_id' => 'cmd-browser-sos-001',
+            'reporter_id' => $operator->id,
+            'dispatch_job_id' => $assignedJob->id,
+            'operational_asset_id' => $crane->id,
+            'category' => SosIncidentCategory::CriticalAssetMalfunction,
+            'status' => SosIncidentStatus::Active,
+            'worker_note' => 'Hydraulic boom sensor warning during crane setup.',
+            'device_activated_at' => now()->subMinute(),
+            'received_at' => now()->subMinute(),
+            'escalation_due_at' => now()->addMinutes(2),
+            'latitude' => 1.3521,
+            'longitude' => 103.8198,
+            'accuracy_metres' => 5.0,
+            'location_captured_at' => now()->subMinute(),
+            'version' => 1,
+        ]);
+
+        SosIncidentRecipient::query()->create([
+            'sos_incident_id' => $sosIncident->id,
+            'user_id' => $manager->id,
+            'role_at_alert' => 'operations_manager',
+            'resolution_reason' => 'assignment_manager',
+            'notified_at' => now()->subMinute(),
+        ]);
+
         File::ensureDirectoryExists(storage_path('framework/testing'));
         File::put(storage_path('framework/testing/browser-fixtures.json'), json_encode([
             'users' => [
@@ -257,6 +289,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'report_id' => $report->id,
             'attachment_id' => $attachment->id,
             'export_ids' => [$export->id, $pdfExport->id],
+            'sos_incident_id' => $sosIncident->id,
             'recommendations' => collect($recommendations)->mapWithKeys(static fn (GptRecommendation $rec, string $key): array => [$key => $rec->id])->all(),
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
     }

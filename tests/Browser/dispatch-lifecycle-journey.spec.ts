@@ -267,7 +267,9 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             await page
                 .getByRole('button', { name: 'Confirm reopen to draft' })
                 .click();
-            await expect(page.getByText('Draft', { exact: true })).toBeVisible();
+            await expect(
+                page.getByText('Draft', { exact: true }),
+            ).toBeVisible();
         }
 
         // 6. Verify accessibility

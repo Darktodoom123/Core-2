@@ -574,21 +574,12 @@ final class OperationsWorkspaceViewModel
                 'label' => 'Audit trail',
                 'permissions' => [PermissionName::AuditView],
             ],
-            [
-                'id' => 'sos',
-                'label' => 'Emergency SOS',
-                'permissions' => [],
-                'additional_permissions' => ['sos.view'],
-            ],
         ];
 
         return collect($items)
             ->filter(static function (array $item) use ($user): bool {
-                $permissions = collect($item['permissions'])
-                    ->map(static fn (PermissionName $permission): string => $permission->value)
-                    ->merge($item['additional_permissions'] ?? []);
-
-                return $permissions->contains(static fn (string $permission): bool => $user->can($permission));
+                return collect($item['permissions'])
+                    ->contains(static fn (PermissionName $permission): bool => $user->can($permission->value));
             })
             ->map(static fn (array $item): array => [
                 'id' => $item['id'],
