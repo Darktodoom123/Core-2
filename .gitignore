@@ -93,3 +93,10 @@ storage/framework/testing/*
 /test-results/
 .devswarm-temp/
 /zap-report*.json
+/scratch/
+/.lighthouseci/
+/.clinic/
+*.tmp
+*.temp
+*.bak
+core2_api_*.log
