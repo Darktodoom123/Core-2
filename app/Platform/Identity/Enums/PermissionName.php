@@ -73,4 +73,12 @@ enum PermissionName: string
     case SosView = 'sos.view';
     case SosRespond = 'sos.respond';
     case SosConfigure = 'sos.configure';
+    case SafetyTbmSubmit = 'safety.tbm_submit';
+    case SafetyTbmCoSign = 'safety.tbm_cosign';
+    case SafetyLiftPlanCreate = 'safety.lift_plan_create';
+    case SafetyLiftPlanApprove = 'safety.lift_plan_approve';
+    case SafetyHazardReport = 'safety.hazard_report';
+    case SafetyHazardRectify = 'safety.hazard_rectify';
+    case SafetyWorkStoppageIssue = 'safety.work_stoppage_issue';
+    case SafetyWorkStoppageLift = 'safety.work_stoppage_lift';
 }

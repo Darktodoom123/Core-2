@@ -163,6 +163,8 @@ final class LocalDevelopmentSeeder extends Seeder
                 ],
             );
         }
+
+        $this->call(PhilippineSafetyOperationsSeeder::class);
     }
 
     /**

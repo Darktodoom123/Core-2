@@ -39,7 +39,7 @@ final class TriggerSosIncidentRequest extends FormRequest
             return false;
         }
 
-        return $user->operationalRole() === RoleName::CraneOperator
+        return in_array($user->operationalRole(), [RoleName::CraneOperator, RoleName::FieldForeman], true)
             && $user->can(PermissionName::SosTrigger->value);
     }
 

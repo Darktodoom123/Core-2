@@ -39,8 +39,10 @@ final class DispatchResourceEligibility
     ): array {
         $reasons = [];
         $expectedRole = $this->personnelRole($assignmentType);
+        $roleMatches = $expectedRole !== null
+            && ($user->hasRole($expectedRole->value) || ($expectedRole === RoleName::CraneOperator && $user->hasRole(RoleName::FieldForeman->value)));
 
-        if ($expectedRole === null || ! $user->hasRole($expectedRole->value)) {
+        if (! $roleMatches) {
             $reasons[] = 'Personnel role does not qualify for this assignment type.';
         }
 
@@ -181,6 +183,7 @@ final class DispatchResourceEligibility
     public function personnelAssignmentType(User $user): ?string
     {
         return match (true) {
+            $user->hasRole(RoleName::FieldForeman->value) => RoleName::FieldForeman->value,
             $user->hasRole(RoleName::CraneOperator->value) => RoleName::CraneOperator->value,
             default => null,
         };
@@ -189,6 +192,7 @@ final class DispatchResourceEligibility
     public function personnelAssignmentLabel(string $assignmentType): string
     {
         return match ($assignmentType) {
+            'field_foreman', 'foreman', 'lead' => 'Field Foreman',
             'crane_operator', 'operator' => 'Crane operator',
             default => 'Personnel',
         };
@@ -208,6 +212,7 @@ final class DispatchResourceEligibility
     private function personnelRole(string $assignmentType): ?RoleName
     {
         return match ($assignmentType) {
+            'field_foreman', 'foreman', 'lead' => RoleName::FieldForeman,
             'crane_operator', 'operator', 'driver' => RoleName::CraneOperator,
             default => null,
         };
@@ -218,7 +223,7 @@ final class DispatchResourceEligibility
     {
         $kind = match ($assignmentType) {
             'driver' => 'driver_license',
-            'crane_operator' => 'operator_certification',
+            'crane_operator', 'field_foreman', 'foreman', 'lead' => 'operator_certification',
             default => null,
         };
 

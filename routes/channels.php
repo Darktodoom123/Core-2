@@ -16,3 +16,10 @@ Broadcast::channel('operations.sos', function (User $user): bool {
         && $user->hasVerifiedEmail()
         && $user->can('sos.view');
 });
+
+Broadcast::channel('operations.safety', function (User $user): bool {
+    return $user->is_active
+        && $user->suspended_at === null
+        && $user->hasVerifiedEmail()
+        && $user->operationalRole() !== null;
+});

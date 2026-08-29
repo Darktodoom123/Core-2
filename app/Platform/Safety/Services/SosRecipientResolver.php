@@ -48,6 +48,14 @@ final class SosRecipientResolver
             ->get()
             ->each(fn (User $user) => $recipients->push($this->recipient($user, 'operations_manager')));
 
+        User::query()
+            ->role(RoleName::SafetyOfficer->value)
+            ->where('is_active', true)
+            ->whereNull('suspended_at')
+            ->whereNotNull('email_verified_at')
+            ->get()
+            ->each(fn (User $user) => $recipients->push($this->recipient($user, 'safety_officer')));
+
         return $recipients->unique(fn (array $item): int => $item['user']->id)->values();
     }
 
