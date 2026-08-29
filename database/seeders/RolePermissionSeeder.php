@@ -82,7 +82,6 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::FuelReport, PermissionName::TrackingViewAll,
                 PermissionName::ReportsViewAll, PermissionName::ReportsViewDispatch, PermissionName::ReportsViewMaintenance, PermissionName::ReportsExport,
                 PermissionName::SosView, PermissionName::SosRespond,
-                PermissionName::AuditView,
                 PermissionName::SafetyTbmCoSign,
                 PermissionName::SafetyLiftPlanApprove,
                 PermissionName::SafetyHazardReport, PermissionName::SafetyHazardRectify,

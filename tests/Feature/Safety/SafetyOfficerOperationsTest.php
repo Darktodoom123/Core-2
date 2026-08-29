@@ -38,7 +38,7 @@ it('provisions Safety Officer with the exact required permissions', function ():
         ->and($safetyOfficer->can(PermissionName::EquipmentInspect->value))->toBeTrue()
         ->and($safetyOfficer->can(PermissionName::DispatchViewAll->value))->toBeTrue()
         ->and($safetyOfficer->can(PermissionName::ReportsViewAll->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::AuditView->value))->toBeTrue()
+        ->and($safetyOfficer->can(PermissionName::AuditView->value))->toBeFalse()
         ->and($safetyOfficer->can(PermissionName::DispatchCreate->value))->toBeFalse()
         ->and($safetyOfficer->can(PermissionName::SalesCreateQuote->value))->toBeFalse()
         ->and($safetyOfficer->can(PermissionName::UsersManage->value))->toBeFalse();
