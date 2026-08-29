@@ -37,7 +37,14 @@
         "mobile:sprint2:native:api30": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_30_phone",
         "mobile:sprint2:native:api36": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File packages/field-mobile/scripts/session1-native-external.ps1 -EvidenceScope sprint2 -DetoxTestPath e2e/session2-outbox.e2e.test.js -AndroidAvd core2_api_36",
         "security:image-size": "node scripts/test-image-size-hardening.cjs",
-        "audit:gauntlet": "node scripts/gauntlet-audit.cjs"
+        "audit:gauntlet": "node scripts/gauntlet-audit.cjs",
+        "audit:lighthouse": "node scripts/run-lighthouse.cjs",
+        "audit:lighthouse:all": "node scripts/run-lighthouse.cjs --all",
+        "audit:lighthouse:deep": "node scripts/run-lighthouse.cjs --deep",
+        "audit:lighthouse:mobile": "node scripts/run-lighthouse.cjs --preset=mobile",
+        "audit:lighthouse:desktop": "node scripts/run-lighthouse.cjs --preset=desktop",
+        "audit:lighthouse:build": "npm run build && node scripts/run-lighthouse.cjs --all",
+        "audit:lighthouse:ci": "lhci autorun"
     },
     "devDependencies": {
         "@axe-core/playwright": "^4.12.1",
