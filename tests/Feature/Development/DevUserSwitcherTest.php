@@ -13,13 +13,16 @@ beforeEach(function (): void {
     $this->seed(LocalDevelopmentSeeder::class);
 });
 
-it('lists only active system admin and operations manager accounts', function (): void {
+it('lists all active seeded development role accounts', function (): void {
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(2);
+    expect($response->json())->toHaveCount(5);
     expect(collect($response->json())->pluck('role_label')->sort()->values()->all())
         ->toEqual([
+            'Field Foreman',
             'Operations Manager',
+            'Operator',
+            'Safety Officer',
             'System Administrator',
         ]);
 });
@@ -27,23 +30,22 @@ it('lists only active system admin and operations manager accounts', function ()
 it('quick logs in allowed roles and rejects disallowed or suspended accounts', function (): void {
     $admin = User::query()->where('email', 'admin@example.com')->firstOrFail();
     $manager = User::query()->where('email', 'manager@example.com')->firstOrFail();
+    $safetyOfficer = User::query()->where('email', 'so.morales@core2.ph')->firstOrFail();
+    $foreman = User::query()->where('email', 'foreman.delacruz@core2.ph')->firstOrFail();
     $operator = User::query()->where('email', 'operator@example.com')->firstOrFail();
     $suspendedUser = User::factory()->suspended()->create();
 
-    // Allowed accounts can quick-login
-    $this->post('/dev/login/'.$admin->id)->assertRedirect(route('home'));
-    $this->assertAuthenticatedAs($admin);
+    // All seeded role accounts can quick-login
+    foreach ([$admin, $manager, $safetyOfficer, $foreman, $operator] as $user) {
+        $this->post('/dev/login/'.$user->id)->assertRedirect(route('home'));
+        $this->assertAuthenticatedAs($user);
+    }
 
-    $this->post('/dev/login/'.$manager->id)->assertRedirect(route('home'));
-    $this->assertAuthenticatedAs($manager);
-
-    // Non-allowed roles and suspended accounts are not in dev list
+    // Suspended accounts are not in dev list
     $this->getJson('/dev/users')
-        ->assertJsonMissing(['id' => $operator->id])
         ->assertJsonMissing(['id' => $suspendedUser->id]);
 
-    // Quick login is rejected for disallowed role or suspended account
-    $this->post('/dev/login/'.$operator->id)->assertNotFound();
+    // Quick login is rejected for suspended account
     $this->post('/dev/login/'.$suspendedUser->id)->assertNotFound();
 });
 
@@ -52,11 +54,14 @@ it('excludes browser test fixtures from dev quick sign-in', function (): void {
 
     $response = $this->getJson('/dev/users')->assertOk();
 
-    expect($response->json())->toHaveCount(2);
+    expect($response->json())->toHaveCount(5);
     expect(collect($response->json())->pluck('email')->sort()->values()->all())
         ->toEqual([
             'admin@example.com',
+            'foreman.delacruz@core2.ph',
             'manager@example.com',
+            'operator@example.com',
+            'so.morales@core2.ph',
         ]);
 
     $browserManager = User::query()->where('email', 'browser.manager@example.com')->firstOrFail();

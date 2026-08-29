@@ -186,6 +186,18 @@ final class LocalDevelopmentSeeder extends Seeder
                 'role' => RoleName::OperationsManager,
             ],
             [
+                'name' => 'Engr. Jonathan Morales (SO-3)',
+                'username' => Username::fromEmail('so.morales@core2.ph'),
+                'email' => 'so.morales@core2.ph',
+                'role' => RoleName::SafetyOfficer,
+            ],
+            [
+                'name' => 'Carlo Dela Cruz',
+                'username' => Username::fromEmail('foreman.delacruz@core2.ph'),
+                'email' => 'foreman.delacruz@core2.ph',
+                'role' => RoleName::FieldForeman,
+            ],
+            [
                 'name' => 'Dev Crane Operator',
                 'username' => Username::fromEmail('operator@example.com'),
                 'email' => 'operator@example.com',
