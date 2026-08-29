@@ -11,6 +11,9 @@ enum ReportExportType: string
     case MaintenanceLogs = 'maintenance_logs';
     case LocationAudit = 'location_audit';
     case SystemAudit = 'system_audit';
+    case DoleWair = 'dole_wair';
+    case CshpSafeManHours = 'cshp_safe_man_hours';
+    case DailyAccomplishment = 'daily_accomplishment';
 
     /** @return list<string> */
     public static function requestableValues(): array
@@ -23,6 +26,9 @@ enum ReportExportType: string
             self::MaintenanceLogs->value,
             self::LocationAudit->value,
             self::SystemAudit->value,
+            self::DoleWair->value,
+            self::CshpSafeManHours->value,
+            self::DailyAccomplishment->value,
         ];
     }
 
@@ -36,6 +42,9 @@ enum ReportExportType: string
             self::MaintenanceLogs => 'Fleet Maintenance Export',
             self::LocationAudit => 'Location Audit Export',
             self::SystemAudit => 'System Audit Export',
+            self::DoleWair => 'DOLE WAIR (Work Accident & Incident Report)',
+            self::CshpSafeManHours => 'DOLE D.O. 13 CSHP Safe Man-Hours Report',
+            self::DailyAccomplishment => 'Daily Accomplishment Report (DAR)',
         };
     }
 
@@ -49,6 +58,9 @@ enum ReportExportType: string
             self::MaintenanceLogs => 'maintenance-logs-export',
             self::LocationAudit => 'location-audit-export',
             self::SystemAudit => 'system-audit-export',
+            self::DoleWair => 'dole-wair-report-export',
+            self::CshpSafeManHours => 'cshp-safe-man-hours-export',
+            self::DailyAccomplishment => 'daily-accomplishment-report-export',
         };
     }
 }
