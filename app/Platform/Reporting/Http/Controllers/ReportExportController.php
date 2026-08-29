@@ -32,7 +32,7 @@ class ReportExportController extends Controller
 
         $createAction->execute($user, $type, $format, $filters);
 
-        return back()->with('flash', [
+        return back(fallback: route('operations', ['section' => 'reports']))->with('flash', [
             'type' => 'success',
             'message' => 'Export task requested. Your file is generating in the background.',
         ]);

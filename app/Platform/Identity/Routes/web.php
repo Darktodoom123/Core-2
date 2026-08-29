@@ -29,6 +29,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:6,1')->name('verification.send');
     Route::get('/', OperationsWorkspaceController::class)->middleware('verified')->name('home');
+    Route::get('/operations', OperationsWorkspaceController::class)->middleware('verified')->name('operations');
 });
 
 Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('operations')->group(function (): void {

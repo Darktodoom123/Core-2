@@ -5,6 +5,7 @@ import {
     Bot,
     CheckCircle,
     Clock,
+    Layers,
     Power,
     RefreshCw,
     ShieldAlert,
@@ -16,21 +17,24 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { Button, PageHeading, Panel } from '@/components/ui';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
     GptRecommendationViewModel,
     WorkspaceCapabilities,
+    WorkspaceSection,
 } from '@/types/workspace';
 
 export function GptRecommendationsSurface({
     recommendations = [],
     capabilities,
+    onSectionChange,
 }: {
     recommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
+    onSectionChange?: (section: WorkspaceSection) => void;
 }) {
     const [selectedForAccept, setSelectedForAccept] =
         useState<GptRecommendationViewModel | null>(null);
@@ -136,6 +140,40 @@ export function GptRecommendationsSurface({
             ),
         [recommendations],
     );
+
+    const [historyFilter, setHistoryFilter] = useState<
+        'all' | 'accepted' | 'rejected' | 'expired'
+    >('all');
+
+    const acceptedHistoryCount = useMemo(
+        () => history.filter((r) => r.status === 'accepted').length,
+        [history],
+    );
+    const rejectedHistoryCount = useMemo(
+        () => history.filter((r) => r.status === 'rejected').length,
+        [history],
+    );
+    const expiredHistoryCount = useMemo(
+        () =>
+            history.filter((r) => r.status === 'stale' || r.is_expired).length,
+        [history],
+    );
+
+    const filteredHistory = useMemo(() => {
+        if (historyFilter === 'accepted') {
+            return history.filter((r) => r.status === 'accepted');
+        }
+
+        if (historyFilter === 'rejected') {
+            return history.filter((r) => r.status === 'rejected');
+        }
+
+        if (historyFilter === 'expired') {
+            return history.filter((r) => r.status === 'stale' || r.is_expired);
+        }
+
+        return history;
+    }, [history, historyFilter]);
 
     const processingKey = processing
         .map((recommendation) => recommendation.id)
@@ -296,12 +334,73 @@ export function GptRecommendationsSurface({
                     </div>
 
                     {pending.length === 0 ? (
-                        <Panel>
-                            <EmptyState
-                                icon={Sparkles}
-                                title="No pending AI recommendations"
-                                message="When operators request AI assistance during resource planning, pending proposed plans will appear here for human evaluation."
-                            />
+                        <Panel className="overflow-hidden">
+                            <div className="p-6 text-center md:p-8">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-strong">
+                                    <Sparkles className="h-6 w-6" />
+                                </div>
+                                <h4 className="mt-3 text-base font-bold text-ink">
+                                    No pending AI advisory proposals
+                                </h4>
+                                <p className="mx-auto mt-1 max-w-lg text-xs text-ink-soft">
+                                    Operations Managers generate AI advisory
+                                    proposals directly from the Dispatch
+                                    Workspace to synthesize crane load
+                                    requirements, operator certifications, and
+                                    conflict-free schedules.
+                                </p>
+
+                                <div className="mt-6 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
+                                    <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                                            <span>🏗️ Crane Load Matching</span>
+                                        </div>
+                                        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                                            Calculates required rated capacity,
+                                            verifies zero maintenance work order
+                                            blocks, and checks pre-shift
+                                            inspections.
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                                            <span>👷 Operator Licensing</span>
+                                        </div>
+                                        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                                            Validates operator qualification,
+                                            active NCCCO certificates, and
+                                            non-expired safety credentials.
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                                            <span>⚡ Conflict Prevention</span>
+                                        </div>
+                                        <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
+                                            Guarantees zero overlapping
+                                            schedules across Service, Rental,
+                                            and Hauling modes before deployment.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {onSectionChange && (
+                                    <div className="mt-6">
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={() =>
+                                                onSectionChange('dispatch')
+                                            }
+                                        >
+                                            <Layers className="mr-1.5 h-4 w-4" />
+                                            Open Dispatch Workspace
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </Panel>
                     ) : (
                         <div className="grid gap-6 lg:grid-cols-2">
@@ -379,22 +478,113 @@ export function GptRecommendationsSurface({
 
                 {/* Historical AI Decision Table */}
                 <div className="space-y-4 pt-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold text-ink">
-                            Recommendation Decision History
-                        </h3>
-                        <span className="text-xs text-ink-soft">
-                            {history.length} logged decisions
-                        </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 className="text-base font-semibold text-ink">
+                                Recommendation Decision History
+                            </h3>
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Forensic audit archive of accepted, rejected,
+                                and expired proposals.
+                            </p>
+                        </div>
+                        {history.length > 0 && (
+                            <div
+                                className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs"
+                                role="group"
+                                aria-label="Filter decision history"
+                            >
+                                <button
+                                    type="button"
+                                    aria-pressed={historyFilter === 'all'}
+                                    onClick={() => setHistoryFilter('all')}
+                                    className={cn(
+                                        'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                        historyFilter === 'all'
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
+                                >
+                                    All ({history.length})
+                                </button>
+                                {acceptedHistoryCount > 0 && (
+                                    <button
+                                        type="button"
+                                        aria-pressed={
+                                            historyFilter === 'accepted'
+                                        }
+                                        onClick={() =>
+                                            setHistoryFilter('accepted')
+                                        }
+                                        className={cn(
+                                            'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                            historyFilter === 'accepted'
+                                                ? 'bg-surface font-semibold text-success-strong shadow-xs'
+                                                : 'text-success-strong hover:text-ink',
+                                        )}
+                                    >
+                                        Accepted ({acceptedHistoryCount})
+                                    </button>
+                                )}
+                                {rejectedHistoryCount > 0 && (
+                                    <button
+                                        type="button"
+                                        aria-pressed={
+                                            historyFilter === 'rejected'
+                                        }
+                                        onClick={() =>
+                                            setHistoryFilter('rejected')
+                                        }
+                                        className={cn(
+                                            'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                            historyFilter === 'rejected'
+                                                ? 'bg-surface font-semibold text-danger shadow-xs'
+                                                : 'text-danger hover:text-danger-strong',
+                                        )}
+                                    >
+                                        Rejected ({rejectedHistoryCount})
+                                    </button>
+                                )}
+                                {expiredHistoryCount > 0 && (
+                                    <button
+                                        type="button"
+                                        aria-pressed={
+                                            historyFilter === 'expired'
+                                        }
+                                        onClick={() =>
+                                            setHistoryFilter('expired')
+                                        }
+                                        className={cn(
+                                            'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                            historyFilter === 'expired'
+                                                ? 'bg-surface font-semibold text-warning-strong shadow-xs'
+                                                : 'text-warning-strong hover:text-ink',
+                                        )}
+                                    >
+                                        Expired ({expiredHistoryCount})
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {history.length === 0 ? (
-                        <Panel>
-                            <EmptyState
-                                icon={Clock}
-                                title="No historical AI decisions"
-                                message="Accepted, rejected, expired, and stale AI recommendations will be archived here for audit trail and compliance."
-                            />
+                        <Panel className="p-6">
+                            <div className="mx-auto max-w-xl text-center">
+                                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-subtle text-ink-soft">
+                                    <Clock className="h-5 w-5" />
+                                </div>
+                                <h4 className="mt-2.5 text-sm font-semibold text-ink">
+                                    No historical decisions logged yet
+                                </h4>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    When proposals are accepted, rejected, or
+                                    expire after their 15-minute validity
+                                    window, complete forensic audit records
+                                    (including reasoning, token volume, model
+                                    latency, and cost) will appear here.
+                                </p>
+                            </div>
                         </Panel>
                     ) : (
                         <Panel className="overflow-hidden">
@@ -435,7 +625,7 @@ export function GptRecommendationsSurface({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-line">
-                                        {history.map((rec) => (
+                                        {filteredHistory.map((rec) => (
                                             <tr
                                                 key={rec.id}
                                                 className="text-xs hover:bg-surface-subtle/50"

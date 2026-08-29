@@ -22,6 +22,17 @@ class AuditEvent extends Model
         return ['before' => 'array', 'after' => 'array', 'occurred_at' => 'datetime'];
     }
 
+    protected static function booted(): void
+    {
+        static::updating(static function (): never {
+            throw new \LogicException('Audit records are immutable and cannot be modified.');
+        });
+
+        static::deleting(static function (): never {
+            throw new \LogicException('Audit records are immutable and cannot be deleted.');
+        });
+    }
+
     /** @return BelongsTo<User, $this> */
     public function actor(): BelongsTo
     {

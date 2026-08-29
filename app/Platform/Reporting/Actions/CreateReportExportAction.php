@@ -77,10 +77,16 @@ class CreateReportExportAction
 
                 return $export;
             });
-        } catch (QueryException) {
-            return ReportExport::query()
+        } catch (QueryException $e) {
+            $existing = ReportExport::query()
                 ->where('request_fingerprint', $fingerprint)
-                ->firstOrFail();
+                ->first();
+
+            if ($existing !== null) {
+                return $existing;
+            }
+
+            throw $e;
         }
     }
 }

@@ -16,6 +16,7 @@ import {
     Layers,
     Lock,
     MapPin,
+    Power,
     Radio,
     RefreshCw,
     Server,
@@ -161,7 +162,7 @@ function DashboardHeader({
             ? 'System Admin'
             : role === 'operations_manager'
               ? 'Operations Manager'
-              : 'Field Operations');
+              : 'Operator');
 
     const isSystemAdmin = role === 'system_administrator';
     const isOperationsManager = role === 'operations_manager';
@@ -1107,6 +1108,49 @@ function SystemAdminDashboardView({
         );
     }, [allUserCredentials]);
 
+    // Compliance radar filter state
+    const [radarFilter, setRadarFilter] = useState<
+        'all' | 'expired' | 'expiring' | 'suspended'
+    >('all');
+
+    const totalComplianceIssues =
+        expiredCredentials.length +
+        expiringSoonCredentials.length +
+        suspendedUsers.length;
+
+    // GPT AI Circuit Breaker Killswitch
+    const [circuitBreakerActive, setCircuitBreakerActive] = useState(false);
+    const [togglingCircuitBreaker, setTogglingCircuitBreaker] = useState(false);
+
+    const toggleCircuitBreaker = async () => {
+        setTogglingCircuitBreaker(true);
+
+        try {
+            const token = (
+                document.querySelector(
+                    'meta[name="csrf-token"]',
+                ) as HTMLMetaElement
+            )?.content;
+            const res = await fetch('/operations/gpt-circuit-breaker/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+                },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setCircuitBreakerActive(Boolean(data.circuit_breaker_active));
+            }
+        } catch {
+            // non-blocking
+        } finally {
+            setTogglingCircuitBreaker(false);
+        }
+    };
+
     // GPT AI Advisory Telemetry
     const gptStats = useMemo(() => {
         const approved = gptRecommendations.filter(
@@ -1533,35 +1577,104 @@ function SystemAdminDashboardView({
                 <div className="space-y-6">
                     {/* Security & Personnel Qualification Radar */}
                     <section aria-labelledby="admin-security-heading">
-                        <div className="mb-3 flex items-center justify-between">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <h2
                                     id="admin-security-heading"
                                     className="text-base font-semibold tracking-tight text-ink"
                                 >
-                                    Security & Qualification Compliance Radar
+                                    Security &amp; Qualification Compliance
+                                    Radar
                                 </h2>
                                 <p className="mt-0.5 text-xs text-ink-soft">
-                                    Licensing, safety credentials, and account
-                                    status governance.
+                                    Operator licensing, safety certifications,
+                                    and account status governance.
                                 </p>
                             </div>
-                            {canOpenUsers && (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => onSectionChange('users')}
-                                    className="text-xs"
+                            {totalComplianceIssues > 0 && (
+                                <div
+                                    className="flex flex-wrap gap-1 rounded-lg bg-surface-subtle p-1 text-xs"
+                                    role="group"
+                                    aria-label="Filter credentials"
                                 >
-                                    Manage Personnel →
-                                </Button>
+                                    <button
+                                        type="button"
+                                        aria-pressed={radarFilter === 'all'}
+                                        onClick={() => setRadarFilter('all')}
+                                        className={cn(
+                                            'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                            radarFilter === 'all'
+                                                ? 'bg-surface font-semibold text-ink shadow-xs'
+                                                : 'text-ink-soft hover:text-ink',
+                                        )}
+                                    >
+                                        All ({totalComplianceIssues})
+                                    </button>
+                                    {expiredCredentials.length > 0 && (
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                radarFilter === 'expired'
+                                            }
+                                            onClick={() =>
+                                                setRadarFilter('expired')
+                                            }
+                                            className={cn(
+                                                'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                radarFilter === 'expired'
+                                                    ? 'bg-surface font-semibold text-danger shadow-xs'
+                                                    : 'text-danger hover:text-danger-strong',
+                                            )}
+                                        >
+                                            Expired ({expiredCredentials.length}
+                                            )
+                                        </button>
+                                    )}
+                                    {expiringSoonCredentials.length > 0 && (
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                radarFilter === 'expiring'
+                                            }
+                                            onClick={() =>
+                                                setRadarFilter('expiring')
+                                            }
+                                            className={cn(
+                                                'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                radarFilter === 'expiring'
+                                                    ? 'bg-surface font-semibold text-warning-strong shadow-xs'
+                                                    : 'text-warning-strong hover:text-ink',
+                                            )}
+                                        >
+                                            Expiring (
+                                            {expiringSoonCredentials.length})
+                                        </button>
+                                    )}
+                                    {suspendedUsers.length > 0 && (
+                                        <button
+                                            type="button"
+                                            aria-pressed={
+                                                radarFilter === 'suspended'
+                                            }
+                                            onClick={() =>
+                                                setRadarFilter('suspended')
+                                            }
+                                            className={cn(
+                                                'min-h-7 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                                                radarFilter === 'suspended'
+                                                    ? 'bg-surface font-semibold text-ink shadow-xs'
+                                                    : 'text-ink-soft hover:text-ink',
+                                            )}
+                                        >
+                                            Suspended ({suspendedUsers.length})
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
 
                         <Panel className="overflow-hidden">
-                            {expiredCredentials.length === 0 &&
-                            expiringSoonCredentials.length === 0 &&
-                            suspendedUsers.length === 0 ? (
+                            {totalComplianceIssues === 0 ? (
                                 <div className="flex items-center gap-3 p-4 text-xs text-ink-soft">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success-strong">
                                         <CheckCircle2
@@ -1571,100 +1684,147 @@ function SystemAdminDashboardView({
                                     </div>
                                     <div>
                                         <p className="font-semibold text-ink">
-                                            100% Qualification & Account
+                                            100% Qualification &amp; Account
                                             Compliance
                                         </p>
                                         <p>
-                                            All registered operators and drivers
-                                            possess verified, non-expired
-                                            credentials.
+                                            All registered operators possess
+                                            verified, non-expired credentials.
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-line">
-                                    {expiredCredentials.map(
-                                        ({ user, credential }) => (
-                                            <div
-                                                key={`exp-${user.id}-${credential.id}`}
-                                                className="flex items-center justify-between gap-3 bg-danger-soft/20 p-3.5 text-xs"
-                                            >
-                                                <div className="flex min-w-0 items-center gap-2.5">
-                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger">
-                                                        <AlertCircle
-                                                            className="h-4 w-4"
-                                                            aria-hidden="true"
-                                                        />
+                                    {(radarFilter === 'all' ||
+                                        radarFilter === 'expired') &&
+                                        expiredCredentials.map(
+                                            ({ user, credential }) => (
+                                                <div
+                                                    key={`exp-${user.id}-${credential.id}`}
+                                                    className="flex items-center justify-between gap-3 bg-danger-soft/20 p-3.5 text-xs"
+                                                >
+                                                    <div className="flex min-w-0 items-center gap-2.5">
+                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger">
+                                                            <AlertCircle
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-bold text-danger">
+                                                                EXPIRED:{' '}
+                                                                {credential.kind.toUpperCase()}{' '}
+                                                                (
+                                                                {
+                                                                    credential.credential_type
+                                                                }
+                                                                )
+                                                            </p>
+                                                            <p className="truncate text-ink-soft">
+                                                                Assigned to{' '}
+                                                                {user.name} (
+                                                                {user.role_label ??
+                                                                    user.role}
+                                                                ) · Expired on{' '}
+                                                                {
+                                                                    credential.expires_at
+                                                                }
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <p className="truncate font-bold text-danger">
-                                                            EXPIRED:{' '}
-                                                            {credential.kind.toUpperCase()}{' '}
-                                                            (
-                                                            {
-                                                                credential.credential_type
+                                                    {canOpenUsers && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onSectionChange(
+                                                                    'users',
+                                                                )
                                                             }
-                                                            )
-                                                        </p>
-                                                        <p className="truncate text-ink-soft">
-                                                            Assigned to{' '}
-                                                            {user.name} (
-                                                            {user.role_label ??
-                                                                user.role}
-                                                            ) · Expired on{' '}
-                                                            {
-                                                                credential.expires_at
-                                                            }
-                                                        </p>
-                                                    </div>
+                                                            className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                                                        >
+                                                            Renew / Verify →
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {canOpenUsers && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onSectionChange(
-                                                                'users',
-                                                            )
-                                                        }
-                                                        className="shrink-0 text-xs font-semibold text-brand hover:underline"
-                                                    >
-                                                        Renew / Verify →
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ),
-                                    )}
+                                            ),
+                                        )}
 
-                                    {expiringSoonCredentials.map(
-                                        ({ user, credential }) => (
+                                    {(radarFilter === 'all' ||
+                                        radarFilter === 'expiring') &&
+                                        expiringSoonCredentials.map(
+                                            ({ user, credential }) => (
+                                                <div
+                                                    key={`soon-${user.id}-${credential.id}`}
+                                                    className="flex items-center justify-between gap-3 bg-warning-soft/20 p-3.5 text-xs"
+                                                >
+                                                    <div className="flex min-w-0 items-center gap-2.5">
+                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong">
+                                                            <Clock
+                                                                className="h-4 w-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-bold text-ink">
+                                                                EXPIRING SOON:{' '}
+                                                                {credential.kind.toUpperCase()}{' '}
+                                                                (
+                                                                {
+                                                                    credential.credential_type
+                                                                }
+                                                                )
+                                                            </p>
+                                                            <p className="truncate text-ink-soft">
+                                                                Assigned to{' '}
+                                                                {user.name} ·
+                                                                Expires on{' '}
+                                                                {
+                                                                    credential.expires_at
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {canOpenUsers && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onSectionChange(
+                                                                    'users',
+                                                                )
+                                                            }
+                                                            className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                                                        >
+                                                            Inspect →
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ),
+                                        )}
+
+                                    {(radarFilter === 'all' ||
+                                        radarFilter === 'suspended') &&
+                                        suspendedUsers.map((user) => (
                                             <div
-                                                key={`soon-${user.id}-${credential.id}`}
-                                                className="flex items-center justify-between gap-3 bg-warning-soft/20 p-3.5 text-xs"
+                                                key={`susp-${user.id}`}
+                                                className="flex items-center justify-between gap-3 bg-surface-subtle p-3.5 text-xs"
                                             >
                                                 <div className="flex min-w-0 items-center gap-2.5">
-                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong">
-                                                        <Clock
+                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
+                                                        <Lock
                                                             className="h-4 w-4"
                                                             aria-hidden="true"
                                                         />
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="truncate font-bold text-ink">
-                                                            EXPIRING SOON:{' '}
-                                                            {credential.kind.toUpperCase()}{' '}
-                                                            (
-                                                            {
-                                                                credential.credential_type
-                                                            }
-                                                            )
+                                                            INACTIVE ACCOUNT:{' '}
+                                                            {user.name}
                                                         </p>
                                                         <p className="truncate text-ink-soft">
-                                                            Assigned to{' '}
-                                                            {user.name} ·
-                                                            Expires on{' '}
-                                                            {
-                                                                credential.expires_at
-                                                            }
+                                                            {user.email} ·
+                                                            Suspended on{' '}
+                                                            {user.suspended_at ??
+                                                                'deactivated'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1678,51 +1838,11 @@ function SystemAdminDashboardView({
                                                         }
                                                         className="shrink-0 text-xs font-semibold text-brand hover:underline"
                                                     >
-                                                        Inspect →
+                                                        Manage Access →
                                                     </button>
                                                 )}
                                             </div>
-                                        ),
-                                    )}
-
-                                    {suspendedUsers.map((user) => (
-                                        <div
-                                            key={`susp-${user.id}`}
-                                            className="flex items-center justify-between gap-3 bg-surface-subtle p-3.5 text-xs"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-2.5">
-                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
-                                                    <Lock
-                                                        className="h-4 w-4"
-                                                        aria-hidden="true"
-                                                    />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-bold text-ink">
-                                                        INACTIVE ACCOUNT:{' '}
-                                                        {user.name}
-                                                    </p>
-                                                    <p className="truncate text-ink-soft">
-                                                        {user.email} · Suspended
-                                                        on{' '}
-                                                        {user.suspended_at ??
-                                                            'deactivated'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {canOpenUsers && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        onSectionChange('users')
-                                                    }
-                                                    className="shrink-0 text-xs font-semibold text-brand hover:underline"
-                                                >
-                                                    Manage Access →
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
+                                        ))}
                                 </div>
                             )}
                         </Panel>
@@ -1736,7 +1856,7 @@ function SystemAdminDashboardView({
                                     id="admin-gpt-heading"
                                     className="text-base font-semibold tracking-tight text-ink"
                                 >
-                                    GPT AI Advisory & Spend Governance
+                                    GPT AI Advisory &amp; Spend Governance
                                 </h2>
                                 <p className="mt-0.5 text-xs text-ink-soft">
                                     Token budget tracking, circuit breaker
@@ -1758,6 +1878,59 @@ function SystemAdminDashboardView({
                         </div>
 
                         <Panel className="space-y-4 p-4">
+                            {/* Circuit Breaker Killswitch Banner */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-subtle p-3">
+                                <div className="flex items-center gap-2.5">
+                                    <span
+                                        className={cn(
+                                            'flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold',
+                                            circuitBreakerActive
+                                                ? 'bg-danger text-surface'
+                                                : 'bg-success-soft text-success-strong',
+                                        )}
+                                    >
+                                        <Power className="h-3.5 w-3.5" />
+                                    </span>
+                                    <div>
+                                        <p className="text-xs font-semibold text-ink">
+                                            AI Circuit Breaker:{' '}
+                                            <span
+                                                className={
+                                                    circuitBreakerActive
+                                                        ? 'font-bold text-danger'
+                                                        : 'font-bold text-success-strong'
+                                                }
+                                            >
+                                                {circuitBreakerActive
+                                                    ? 'KILLED / PAUSED'
+                                                    : 'ACTIVE / OPERATIONAL'}
+                                            </span>
+                                        </p>
+                                        <p className="text-[11px] text-ink-soft">
+                                            {circuitBreakerActive
+                                                ? 'Advisory generation halted to prevent token budget overruns.'
+                                                : 'Real-time telemetry advisory active.'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant={
+                                        circuitBreakerActive
+                                            ? 'primary'
+                                            : 'secondary'
+                                    }
+                                    size="sm"
+                                    onClick={toggleCircuitBreaker}
+                                    disabled={togglingCircuitBreaker}
+                                    className="gap-1 text-xs"
+                                >
+                                    <Power className="h-3 w-3" />
+                                    {circuitBreakerActive
+                                        ? 'Resume AI Generation'
+                                        : 'Emergency Killswitch'}
+                                </Button>
+                            </div>
+
                             <div>
                                 <div className="flex items-center justify-between text-xs">
                                     <span className="font-semibold text-ink">
@@ -1824,7 +1997,8 @@ function SystemAdminDashboardView({
                                     Operational Role Distribution
                                 </h2>
                                 <p className="mt-0.5 text-xs text-ink-soft">
-                                    Active accounts partitioned by RBAC role.
+                                    Active accounts partitioned by canonical
+                                    RBAC role.
                                 </p>
                             </div>
                             {canOpenUsers && (
@@ -1847,6 +2021,11 @@ function SystemAdminDashboardView({
                                 )}
                                 detail="Dispatch, scheduling & operational governance role"
                                 icon={ShieldCheck}
+                                onClick={
+                                    canOpenUsers
+                                        ? () => onSectionChange('users')
+                                        : undefined
+                                }
                             />
                             <ReadinessRow
                                 label="System Administrators"
@@ -1854,18 +2033,27 @@ function SystemAdminDashboardView({
                                     rolesDistribution['system_administrator'] ??
                                         0,
                                 )}
-                                detail="System health & access control role"
+                                detail="System health & platform security role"
                                 icon={Cpu}
+                                onClick={
+                                    canOpenUsers
+                                        ? () => onSectionChange('users')
+                                        : undefined
+                                }
                             />
                             <ReadinessRow
-                                label="Drivers & Field Workers"
+                                label="Operators"
                                 value={String(
-                                    (rolesDistribution['driver'] ?? 0) +
-                                        (rolesDistribution['crane_operator'] ??
-                                            0),
+                                    (rolesDistribution['crane_operator'] ?? 0) +
+                                        (rolesDistribution['operator'] ?? 0),
                                 )}
-                                detail="Field execution & assignment role"
+                                detail="Field crane & heavy equipment execution role"
                                 icon={Truck}
+                                onClick={
+                                    canOpenUsers
+                                        ? () => onSectionChange('users')
+                                        : undefined
+                                }
                             />
                         </Panel>
                     </section>
@@ -1910,36 +2098,62 @@ function SystemAdminDashboardView({
                                 />
                             ) : (
                                 <ul className="divide-y divide-line">
-                                    {auditEvents.slice(0, 5).map((event) => (
-                                        <li
-                                            key={event.id}
-                                            className="flex items-start justify-between gap-3 p-3.5 text-xs"
-                                        >
-                                            <div className="min-w-0 space-y-0.5">
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <span className="font-bold text-ink">
-                                                        {event.action}
-                                                    </span>
-                                                    {event.actor && (
-                                                        <span className="py-0.2 rounded bg-surface-subtle px-1.5 text-[11px] text-ink-soft">
-                                                            by{' '}
-                                                            {event.actor.name}
+                                    {auditEvents.slice(0, 5).map((event) => {
+                                        const act = event.action.toLowerCase();
+                                        const isHighRisk =
+                                            act.includes('abort') ||
+                                            act.includes('lockdown') ||
+                                            act.includes('emergency') ||
+                                            act.includes('delete');
+                                        const isMediumRisk =
+                                            act.includes('suspend') ||
+                                            act.includes('role') ||
+                                            act.includes('permission') ||
+                                            act.includes('credential');
+
+                                        return (
+                                            <li
+                                                key={event.id}
+                                                className="flex items-start justify-between gap-3 p-3.5 text-xs"
+                                            >
+                                                <div className="min-w-0 space-y-0.5">
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <span
+                                                            className={cn(
+                                                                'font-bold',
+                                                                isHighRisk
+                                                                    ? 'text-danger'
+                                                                    : isMediumRisk
+                                                                      ? 'text-warning-strong'
+                                                                      : 'text-ink',
+                                                            )}
+                                                        >
+                                                            {event.action}
                                                         </span>
+                                                        {event.actor && (
+                                                            <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-[11px] text-ink-soft">
+                                                                by{' '}
+                                                                {
+                                                                    event.actor
+                                                                        .name
+                                                                }
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {event.reason && (
+                                                        <p className="truncate text-ink-soft">
+                                                            {event.reason}
+                                                        </p>
                                                     )}
                                                 </div>
-                                                {event.reason && (
-                                                    <p className="truncate text-ink-soft">
-                                                        {event.reason}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <span className="shrink-0 text-[11px] font-medium text-muted">
-                                                {formatSchedule(
-                                                    event.occurred_at,
-                                                )}
-                                            </span>
-                                        </li>
-                                    ))}
+                                                <span className="shrink-0 text-[11px] font-medium text-muted">
+                                                    {formatSchedule(
+                                                        event.occurred_at,
+                                                    )}
+                                                </span>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             )}
                         </Panel>
@@ -1951,7 +2165,7 @@ function SystemAdminDashboardView({
 }
 
 /* =========================================================================
-   4. FIELD WORKER DASHBOARD VIEW
+   4. OPERATOR DASHBOARD VIEW
    ========================================================================= */
 
 function FieldWorkerDashboardView({
@@ -1977,7 +2191,7 @@ function FieldWorkerDashboardView({
 
     return (
         <div className="space-y-6">
-            {/* Field Worker KPIs */}
+            {/* Operator KPIs */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <KpiCard
                     label="Today's Work"

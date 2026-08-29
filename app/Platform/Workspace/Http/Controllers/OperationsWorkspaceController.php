@@ -207,6 +207,10 @@ final class OperationsWorkspaceController extends Controller
     {
         $requested = $request->query('view') ?? $request->query('section');
 
+        if ($requested === 'exports') {
+            $requested = 'reports';
+        }
+
         if (is_string($requested) && collect($navigation)->contains('id', $requested)) {
             return $requested;
         }

@@ -819,3 +819,184 @@ it('keeps representative CSV and PDF export memory within bounded thresholds', f
     'CSV representative volume' => ['csv', 5000, 24 * 1024 * 1024],
     'PDF representative volume' => ['pdf', 100, 32 * 1024 * 1024],
 ]);
+
+it('creates a system audit export via POST /operations/reports/exports and redirects without 404', function (): void {
+    Queue::fake();
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    $response = $this->actingAs($admin)
+        ->from('/operations?section=audit')
+        ->post('/operations/reports/exports', [
+            'export_type' => 'system_audit',
+            'format' => 'csv',
+        ]);
+
+    $response->assertRedirect('/operations?section=audit');
+    $this->assertDatabaseHas('report_exports', [
+        'user_id' => $admin->id,
+        'export_type' => ReportExportType::SystemAudit->value,
+        'format' => 'csv',
+        'status' => ReportExportStatus::Queued->value,
+    ]);
+});
+
+it('redirects GET /operations/reports/exports to the reports workspace section', function (): void {
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    $response = $this->actingAs($admin)
+        ->get('/operations/reports/exports');
+
+    $response->assertRedirect('/operations?section=reports');
+});
+
+it('normalizes section=exports and view=exports to reports initial_section on workspace', function (string $queryParam): void {
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    $response = $this->actingAs($admin)
+        ->get('/operations?'.$queryParam.'=exports');
+
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('workspace')
+            ->where('initial_section', 'reports')
+        );
+})->with(['section', 'view']);
+
+it('rejects invalid export dataset types such as assets with validation error', function (): void {
+    Queue::fake();
+    $manager = createExportUser(RoleName::OperationsManager);
+
+    $this->actingAs($manager)
+        ->post('/operations/reports/exports', [
+            'export_type' => 'assets',
+            'format' => 'csv',
+        ])
+        ->assertSessionHasErrors('export_type');
+
+    Queue::assertNothingPushed();
+    expect(ReportExport::query()->count())->toBe(0);
+});
+
+it('accepts all combinations of parameters for system audit exports via POST /operations/reports/exports', function (string $format, ?string $dateFrom, ?string $dateTo): void {
+    Queue::fake();
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    $payload = [
+        'export_type' => 'system_audit',
+        'format' => $format,
+    ];
+
+    if ($dateFrom !== null) {
+        $payload['date_from'] = $dateFrom;
+    }
+
+    if ($dateTo !== null) {
+        $payload['date_to'] = $dateTo;
+    }
+
+    $response = $this->actingAs($admin)
+        ->from('/operations?section=audit')
+        ->post('/operations/reports/exports', $payload);
+
+    $response->assertRedirect('/operations?section=audit');
+
+    $export = ReportExport::query()->latest('id')->first();
+    expect($export)->not()->toBeNull()
+        ->and($export->user_id)->toBe($admin->id)
+        ->and($export->export_type)->toBe(ReportExportType::SystemAudit)
+        ->and($export->format)->toBe($format)
+        ->and($export->status)->toBe(ReportExportStatus::Queued);
+
+    if ($dateFrom !== null) {
+        expect($export->filters['date_from'])->toBe($dateFrom);
+    }
+    if ($dateTo !== null) {
+        expect($export->filters['date_to'])->toBe($dateTo);
+    }
+
+    Queue::assertPushed(GenerateReportExportJob::class);
+})->with([
+    'CSV without date range' => ['csv', null, null],
+    'PDF without date range' => ['pdf', null, null],
+    'CSV with date_from only' => ['csv', '2026-08-01', null],
+    'PDF with date_from only' => ['pdf', '2026-08-01', null],
+    'CSV with date_to only' => ['csv', null, '2026-08-29'],
+    'PDF with date_to only' => ['pdf', null, '2026-08-29'],
+    'CSV with full date range' => ['csv', '2026-08-01', '2026-08-29'],
+    'PDF with full date range' => ['pdf', '2026-08-01', '2026-08-29'],
+]);
+
+it('successfully generates storage files for system audit exports across all parameter variants', function (string $format, ?string $dateFrom, ?string $dateTo): void {
+    $admin = createExportUser(RoleName::SystemAdministrator);
+
+    // Create audit events with distinct dates
+    AuditEvent::query()->create([
+        'actor_id' => $admin->id,
+        'action' => 'user.login',
+        'subject_type' => $admin->getMorphClass(),
+        'subject_id' => $admin->id,
+        'reason' => 'Early audit event',
+        'occurred_at' => '2026-08-05 10:00:00',
+    ]);
+    AuditEvent::query()->create([
+        'actor_id' => $admin->id,
+        'action' => 'dispatch.created',
+        'subject_type' => $admin->getMorphClass(),
+        'subject_id' => $admin->id,
+        'reason' => 'Mid audit event',
+        'occurred_at' => '2026-08-15 12:00:00',
+    ]);
+    AuditEvent::query()->create([
+        'actor_id' => $admin->id,
+        'action' => 'security.override',
+        'subject_type' => $admin->getMorphClass(),
+        'subject_id' => $admin->id,
+        'reason' => 'Late audit event',
+        'occurred_at' => '2026-08-25 14:00:00',
+    ]);
+
+    $filters = array_filter([
+        'date_from' => $dateFrom,
+        'date_to' => $dateTo,
+    ]);
+
+    $export = ReportExport::query()->create([
+        'user_id' => $admin->id,
+        'export_type' => ReportExportType::SystemAudit,
+        'format' => $format,
+        'status' => ReportExportStatus::Queued,
+        'filters' => $filters,
+        'expires_at' => now()->addDay(),
+        'download_expires_at' => now()->addDay(),
+        'purge_at' => now()->addDays(7),
+    ]);
+
+    GenerateReportExportJob::dispatchSync($export->id);
+
+    $export->refresh();
+    expect($export->status)->toBe(ReportExportStatus::Completed)
+        ->and($export->file_path)->not()->toBeNull()
+        ->and(Storage::disk('private')->exists($export->file_path))->toBeTrue()
+        ->and($export->file_size_bytes)->toBeGreaterThan(0)
+        ->and($export->row_count)->toBeGreaterThanOrEqual(1)
+        ->and($export->checksum_sha256)->toHaveLength(64);
+
+    $content = Storage::disk('private')->get($export->file_path);
+    if ($format === 'pdf') {
+        expect($content)->toStartWith('%PDF-')
+            ->and($export->mime_type)->toBe('application/pdf');
+    } else {
+        expect($content)->toContain('Event ID')
+            ->and($content)->toContain('Occurred At')
+            ->and($export->mime_type)->toBe('text/csv; charset=UTF-8');
+    }
+})->with([
+    'CSV without date range' => ['csv', null, null],
+    'PDF without date range' => ['pdf', null, null],
+    'CSV with date_from only' => ['csv', '2026-08-10', null],
+    'PDF with date_from only' => ['pdf', '2026-08-10', null],
+    'CSV with date_to only' => ['csv', null, '2026-08-20'],
+    'PDF with date_to only' => ['pdf', null, '2026-08-20'],
+    'CSV with full date range' => ['csv', '2026-08-10', '2026-08-20'],
+    'PDF with full date range' => ['pdf', '2026-08-10', '2026-08-20'],
+]);

@@ -13,7 +13,7 @@ enum RoleName: string
         return match ($this) {
             self::SystemAdministrator => 'System Administrator',
             self::OperationsManager => 'Operations Manager',
-            self::CraneOperator => 'Crane Operator',
+            self::CraneOperator => 'Operator',
         };
     }
 

@@ -384,7 +384,6 @@ function RequestExportForm({ onDone }: { onDone: () => void }) {
                             <option value="dispatches">
                                 Dispatch Lifecycle
                             </option>
-                            <option value="assets">Fleet & Assets</option>
                             <option value="fuel_logs">Fuel Receipts</option>
                             <option value="weekly_fuel_consumption">
                                 Weekly Fuel Consumption Summary

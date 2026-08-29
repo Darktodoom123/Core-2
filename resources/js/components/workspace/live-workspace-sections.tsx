@@ -10,13 +10,16 @@ import {
     Compass,
     Copy,
     Download,
+    DownloadCloud,
     Droplets,
+    FileSpreadsheet,
     FileText,
     Fuel,
     Gauge,
     Key,
     MapPin,
     Navigation,
+    Printer,
     Radio,
     Search,
     SearchX,
@@ -34,6 +37,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { ApprovalsSurface } from '@/components/approvals';
 import {
     Button,
+    DateTimePicker,
     EmptyState,
     PageHeading,
     Panel,
@@ -183,6 +187,7 @@ export function LiveWorkspaceSection({
                 <GptRecommendationsSurface
                     recommendations={gptRecommendations}
                     capabilities={capabilities}
+                    onSectionChange={onSectionChange}
                 />
             );
         case 'users':
@@ -2919,7 +2924,7 @@ function FuelSurface({
 function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
     const [roleFilter, setRoleFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<
-        'all' | 'active' | 'suspended'
+        'all' | 'active' | 'suspended' | 'compliance_risk'
     >('all');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -2943,7 +2948,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
     const [inviteUsername, setInviteUsername] = useState('');
     const [inviteEmail, setInviteEmail] = useState('');
     const [invitePhone, setInvitePhone] = useState('');
-    const [inviteRole, setInviteRole] = useState('driver');
+    const [inviteRole, setInviteRole] = useState('crane_operator');
     const [generateTempPassword, setGenerateTempPassword] = useState(true);
     const [inviteSubmitting, setInviteSubmitting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
@@ -2973,7 +2978,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
         const active = users.filter((u) => u.is_active).length;
         const suspended = users.filter((u) => !u.is_active).length;
         const fieldPersonnel = users.filter((u) =>
-            ['driver', 'crane_operator'].includes(u.role ?? ''),
+            ['crane_operator', 'operator'].includes(u.role ?? ''),
         ).length;
         const expiringCredentials = users.reduce((count, u) => {
             return (
@@ -2995,8 +3000,12 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
     const uniqueRoles = useMemo(() => {
         const roles = new Map<string, string>();
         users.forEach((u) => {
-            if (u.role && u.role_label) {
-                roles.set(u.role, u.role_label);
+            if (u.role) {
+                const label =
+                    u.role === 'crane_operator' || u.role === 'operator'
+                        ? 'Operator'
+                        : (u.role_label ?? u.role);
+                roles.set(u.role, label);
             }
         });
 
@@ -3011,6 +3020,17 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 
             if (statusFilter === 'suspended' && user.is_active) {
                 return false;
+            }
+
+            if (statusFilter === 'compliance_risk') {
+                const creds = user.credentials ?? [];
+                const hasRisk = creds.some(
+                    (c) => c.is_expired || c.expires_soon,
+                );
+
+                if (!hasRisk) {
+                    return false;
+                }
             }
 
             if (roleFilter !== 'all' && user.role !== roleFilter) {
@@ -3344,7 +3364,22 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                         </p>
                     </div>
 
-                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setStatusFilter(
+                                statusFilter === 'compliance_risk'
+                                    ? 'all'
+                                    : 'compliance_risk',
+                            )
+                        }
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            statusFilter === 'compliance_risk'
+                                ? 'border-warning-strong bg-warning-soft/70 ring-2 ring-warning'
+                                : 'border-warning/30 bg-warning-soft/30 hover:border-warning/60 hover:bg-warning-soft/50',
+                        )}
+                    >
                         <span className="text-xs font-medium text-warning-strong">
                             Compliance Alerts
                         </span>
@@ -3352,9 +3387,11 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             {stats.expiringCredentials}
                         </p>
                         <p className="mt-0.5 text-xs text-ink-soft">
-                            Expired or expiring credentials
+                            {statusFilter === 'compliance_risk'
+                                ? 'Filtered: click to clear'
+                                : 'Expired or expiring credentials'}
                         </p>
-                    </div>
+                    </button>
                 </div>
 
                 {/* Filter and Search Bar */}
@@ -3405,14 +3442,14 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                         </div>
 
                         {/* Status Toggle */}
-                        <div className="inline-flex rounded-lg border border-line p-0.5">
+                        <div className="inline-flex flex-wrap rounded-lg border border-line p-0.5">
                             <button
                                 type="button"
                                 onClick={() => setStatusFilter('all')}
                                 className={cn(
                                     'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     statusFilter === 'all'
-                                        ? 'bg-brand-soft text-brand-strong'
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
                                         : 'text-ink-soft hover:text-ink',
                                 )}
                             >
@@ -3424,7 +3461,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                 className={cn(
                                     'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     statusFilter === 'active'
-                                        ? 'bg-brand-soft text-brand-strong'
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
                                         : 'text-ink-soft hover:text-ink',
                                 )}
                             >
@@ -3436,12 +3473,29 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                 className={cn(
                                     'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
                                     statusFilter === 'suspended'
-                                        ? 'bg-brand-soft text-brand-strong'
+                                        ? 'bg-brand-soft font-semibold text-brand-strong'
                                         : 'text-ink-soft hover:text-ink',
                                 )}
                             >
                                 Suspended ({stats.suspended})
                             </button>
+                            {stats.expiringCredentials > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setStatusFilter('compliance_risk')
+                                    }
+                                    className={cn(
+                                        'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                                        statusFilter === 'compliance_risk'
+                                            ? 'bg-warning-soft font-semibold text-warning-strong'
+                                            : 'text-warning-strong hover:text-ink',
+                                    )}
+                                >
+                                    ⚠️ Compliance Risk (
+                                    {stats.expiringCredentials})
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -3518,9 +3572,55 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                                     className="hover:bg-surface-subtle/50"
                                                 >
                                                     <td className="px-4 py-3.5">
-                                                        <span className="block font-semibold text-ink">
-                                                            {user.name}
-                                                        </span>
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <span className="font-semibold text-ink">
+                                                                {user.name}
+                                                            </span>
+                                                            {user.profile
+                                                                ?.availability_status && (
+                                                                <span
+                                                                    className={cn(
+                                                                        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize',
+                                                                        user
+                                                                            .profile
+                                                                            .availability_status ===
+                                                                            'available'
+                                                                            ? 'bg-success-soft text-success-strong'
+                                                                            : user
+                                                                                    .profile
+                                                                                    .availability_status ===
+                                                                                'assigned'
+                                                                              ? 'bg-brand-soft text-brand-strong'
+                                                                              : user
+                                                                                      .profile
+                                                                                      .availability_status ===
+                                                                                  'on_leave'
+                                                                                ? 'bg-warning-soft text-warning-strong'
+                                                                                : 'bg-surface-subtle text-ink-soft',
+                                                                    )}
+                                                                >
+                                                                    {user
+                                                                        .profile
+                                                                        .availability_status ===
+                                                                        'available' &&
+                                                                        '🟢 '}
+                                                                    {user
+                                                                        .profile
+                                                                        .availability_status ===
+                                                                        'assigned' &&
+                                                                        '🚜 '}
+                                                                    {user
+                                                                        .profile
+                                                                        .availability_status ===
+                                                                        'on_leave' &&
+                                                                        '🏖️ '}
+                                                                    {user.profile.availability_status.replace(
+                                                                        '_',
+                                                                        ' ',
+                                                                    )}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <span className="block text-xs text-ink-soft">
                                                             {user.email}{' '}
                                                             {user.phone &&
@@ -3535,8 +3635,13 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 
                                                     <td className="px-4 py-3.5">
                                                         <span className="inline-flex items-center rounded-md bg-surface-subtle px-2.5 py-1 text-xs font-semibold text-ink">
-                                                            {user.role_label ??
-                                                                'Unassigned'}
+                                                            {user.role ===
+                                                                'crane_operator' ||
+                                                            user.role ===
+                                                                'operator'
+                                                                ? 'Operator'
+                                                                : (user.role_label ??
+                                                                  'Unassigned')}
                                                         </span>
                                                     </td>
 
@@ -3624,7 +3729,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                                                     );
                                                                     setEditRole(
                                                                         user.role ??
-                                                                            'driver',
+                                                                            'crane_operator',
                                                                     );
                                                                     setEditActive(
                                                                         user.is_active,
@@ -3765,17 +3870,16 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     }
                                     className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
                                 >
-                                    <option value="driver">
-                                        Driver (Prime Mover / Hauler)
-                                    </option>
                                     <option value="crane_operator">
-                                        Crane Operator (Mobile / All-Terrain)
+                                        Operator (Field crane & heavy equipment)
                                     </option>
                                     <option value="operations_manager">
-                                        Operations Manager
+                                        Operations Manager (Dispatch &
+                                        scheduling)
                                     </option>
                                     <option value="system_administrator">
-                                        System Administrator
+                                        System Administrator (Security &
+                                        platform)
                                     </option>
                                 </select>
                             </div>
@@ -3945,44 +4049,80 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     }
                                     className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
                                 >
-                                    <option value="driver">Driver</option>
                                     <option value="crane_operator">
-                                        Crane Operator
+                                        Operator (Field crane & heavy equipment)
                                     </option>
                                     <option value="operations_manager">
-                                        Operations Manager
+                                        Operations Manager (Dispatch &
+                                        scheduling)
                                     </option>
                                     <option value="system_administrator">
-                                        System Administrator
+                                        System Administrator (Security &
+                                        platform)
                                     </option>
                                 </select>
                             </div>
 
-                            <div className="rounded-lg border border-line bg-surface-subtle p-3">
-                                <label className="flex cursor-pointer items-center justify-between">
-                                    <div>
-                                        <span className="text-xs font-semibold text-ink">
-                                            Account Status
-                                        </span>
-                                        <p className="text-[11px] text-ink-soft">
-                                            Suspension immediately revokes
-                                            active mobile tokens & web sessions.
-                                        </p>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        checked={editActive}
-                                        onChange={(e) =>
-                                            setEditActive(e.target.checked)
-                                        }
-                                        className="h-5 w-5 rounded border-line text-brand focus:ring-brand"
-                                    />
+                            <div>
+                                <label className="block text-xs font-semibold text-ink">
+                                    Operational Account Status
                                 </label>
+                                <div className="mt-1.5 grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditActive(true)}
+                                        className={cn(
+                                            'flex flex-col rounded-xl border p-3 text-left transition-all',
+                                            editActive
+                                                ? 'border-success-strong bg-success-soft/40 ring-1 ring-success-strong'
+                                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle',
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+                                            <span className="h-2 w-2 rounded-full bg-success-strong" />
+                                            Active Account
+                                        </div>
+                                        <span className="mt-1 text-[11px] text-ink-soft">
+                                            Authorized to authenticate & receive
+                                            dispatches
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditActive(false)}
+                                        className={cn(
+                                            'flex flex-col rounded-xl border p-3 text-left transition-all',
+                                            !editActive
+                                                ? 'border-danger-strong bg-danger-soft/40 ring-1 ring-danger-strong'
+                                                : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle',
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-danger-strong">
+                                            <span className="h-2 w-2 rounded-full bg-danger-strong" />
+                                            Suspended
+                                        </div>
+                                        <span className="mt-1 text-[11px] text-ink-soft">
+                                            Immediate session purge & token
+                                            revocation
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex justify-end gap-2 border-t border-line pt-2">
+                            <div className="flex items-start gap-2 rounded-lg border border-line bg-surface-subtle p-2.5 text-xs text-ink-soft">
+                                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong" />
+                                <span>
+                                    Updating role or status instantly revokes
+                                    all active mobile app tokens and web
+                                    sessions.
+                                </span>
+                            </div>
+
+                            <div className="flex justify-end gap-2 border-t border-line pt-3">
                                 <Button
-                                    variant="quiet"
+                                    variant="secondary"
+                                    type="button"
                                     onClick={() =>
                                         setSelectedUserForAccess(null)
                                     }
@@ -3995,7 +4135,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                     disabled={accessSubmitting}
                                 >
                                     {accessSubmitting
-                                        ? 'Saving…'
+                                        ? 'Updating…'
                                         : 'Update Access'}
                                 </Button>
                             </div>
@@ -4058,7 +4198,12 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                 </h3>
                                 <p className="text-xs text-ink-soft">
                                     {selectedUserForCreds.name} (
-                                    {selectedUserForCreds.role_label})
+                                    {selectedUserForCreds.role_label ??
+                                        'Operator'}
+                                    ) ·
+                                    <span className="ml-1 font-medium text-brand-strong">
+                                        Core HR System of Record
+                                    </span>
                                 </p>
                             </div>
                             <button
@@ -4070,6 +4215,21 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             </button>
                         </div>
 
+                        {/* Core HR Compliance Notice */}
+                        <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-xs text-ink">
+                            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong" />
+                            <div>
+                                <span className="font-semibold text-brand-strong">
+                                    Core HR Compliance Authority:
+                                </span>{' '}
+                                Personnel identity, employment records, and
+                                primary certifications are mastered in Core
+                                Human Resources. Valid credentials clear this
+                                operator for automated crane dispatch and AI
+                                resource matching.
+                            </div>
+                        </div>
+
                         {/* Existing Credentials List */}
                         <div className="mt-4 space-y-2.5">
                             <h4 className="text-xs font-semibold text-ink-soft uppercase">
@@ -4077,9 +4237,21 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             </h4>
                             {(selectedUserForCreds.credentials ?? []).length ===
                             0 ? (
-                                <div className="rounded-lg border border-dashed border-line p-4 text-center text-xs text-ink-soft">
-                                    No verified credentials on record for this
-                                    operator.
+                                <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-4 text-center text-xs text-ink">
+                                    <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-warning-soft text-warning-strong">
+                                        <AlertTriangle className="h-4 w-4" />
+                                    </div>
+                                    <p className="mt-2 font-semibold text-warning-strong">
+                                        No Verified Credentials On File (Core
+                                        HR)
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                        This operator is currently ineligible
+                                        for heavy crane dispatch. Certifications
+                                        ingested from Core HR or operational
+                                        overrides added below will clear this
+                                        safety restriction.
+                                    </p>
                                 </div>
                             ) : (
                                 (selectedUserForCreds.credentials ?? []).map(
@@ -4142,9 +4314,66 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 
                         {/* Add Credential Form */}
                         <div className="mt-6 rounded-xl border border-line bg-surface p-4">
-                            <h4 className="text-xs font-semibold text-ink uppercase">
-                                Add New Verified Credential
-                            </h4>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h4 className="text-xs font-semibold text-ink uppercase">
+                                    Add Operational Credential / Override
+                                </h4>
+                            </div>
+
+                            {/* Industry Quick-Presets */}
+                            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-2 text-xs">
+                                <span className="text-[11px] font-semibold text-ink-soft">
+                                    Quick Presets:
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCredKind('operator_certification');
+                                        setCredType(
+                                            'NCCCO Mobile Crane Operator (TLL / TSS)',
+                                        );
+                                    }}
+                                    className="rounded border border-line bg-surface px-2 py-0.5 text-[11px] font-medium text-ink hover:border-brand hover:text-brand-strong"
+                                >
+                                    🏗️ NCCCO Crane
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCredKind('qualification');
+                                        setCredType(
+                                            'Rigging & Signal Person Level 1',
+                                        );
+                                    }}
+                                    className="rounded border border-line bg-surface px-2 py-0.5 text-[11px] font-medium text-ink hover:border-brand hover:text-brand-strong"
+                                >
+                                    🪝 Rigging & Signal
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCredKind('driver_license');
+                                        setCredType(
+                                            "Commercial Driver's License (Class A)",
+                                        );
+                                    }}
+                                    className="rounded border border-line bg-surface px-2 py-0.5 text-[11px] font-medium text-ink hover:border-brand hover:text-brand-strong"
+                                >
+                                    🚛 Class A CDL
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCredKind('qualification');
+                                        setCredType(
+                                            'DOT Medical Fitness Clearance',
+                                        );
+                                    }}
+                                    className="rounded border border-line bg-surface px-2 py-0.5 text-[11px] font-medium text-ink hover:border-brand hover:text-brand-strong"
+                                >
+                                    🩺 Medical Fitness
+                                </button>
+                            </div>
 
                             {credError && (
                                 <div className="mt-2 rounded-lg bg-danger-soft p-2.5 text-xs text-danger-strong">
@@ -4153,6 +4382,7 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                             )}
 
                             <form
+                                id="add-operator-credential-form"
                                 onSubmit={handleAddCredential}
                                 className="mt-3 space-y-3"
                             >
@@ -4230,9 +4460,14 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-semibold text-ink">
-                                            Expiry Date
-                                        </label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="block text-[11px] font-semibold text-ink">
+                                                Expiry Date
+                                            </label>
+                                            <span className="text-[10px] text-ink-soft">
+                                                (optional if lifetime)
+                                            </span>
+                                        </div>
                                         <input
                                             type="date"
                                             value={credExpiresAt}
@@ -4243,29 +4478,39 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
                                         />
                                     </div>
                                 </div>
-
-                                <div className="flex justify-end pt-2">
-                                    <Button
-                                        size="sm"
-                                        variant="primary"
-                                        type="submit"
-                                        disabled={credSubmitting}
-                                    >
-                                        {credSubmitting
-                                            ? 'Saving…'
-                                            : 'Add Credential'}
-                                    </Button>
-                                </div>
                             </form>
                         </div>
 
-                        <div className="mt-4 flex justify-end">
-                            <Button
-                                variant="secondary"
-                                onClick={() => setSelectedUserForCreds(null)}
-                            >
-                                Close
-                            </Button>
+                        {/* Modal Footer with Unified Actions */}
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                            <div className="flex items-center gap-1.5 text-xs text-ink-soft">
+                                <ShieldCheck className="h-4 w-4 text-brand-strong" />
+                                <span>
+                                    Field overrides are logged to compliance
+                                    audit trail
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="secondary"
+                                    type="button"
+                                    onClick={() =>
+                                        setSelectedUserForCreds(null)
+                                    }
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    type="submit"
+                                    form="add-operator-credential-form"
+                                    disabled={credSubmitting}
+                                >
+                                    {credSubmitting
+                                        ? 'Saving…'
+                                        : '+ Add Credential Record'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4276,9 +4521,98 @@ function UsersSurface({ users }: { users: WorkspaceUserViewModel[] }) {
 
 function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
     const [actionFilter, setActionFilter] = useState<string>('all');
+    const [actorFilter, setActorFilter] = useState<string>('all');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedEvent, setSelectedEvent] =
         useState<AuditEventViewModel | null>(null);
+    const [copiedBefore, setCopiedBefore] = useState(false);
+    const [copiedAfter, setCopiedAfter] = useState(false);
+    const [copiedReqId, setCopiedReqId] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportFormat, setExportFormat] = useState<'csv' | 'pdf'>('csv');
+    const exportForm = useForm({
+        export_type: 'system_audit',
+        format: 'csv',
+        date_from: '',
+        date_to: '',
+    });
+
+    const getActionSeverityBadge = (action: string) => {
+        const act = action.toLowerCase();
+
+        if (
+            act.includes('emergency') ||
+            act.includes('suspend') ||
+            act.includes('abort') ||
+            act.includes('lock') ||
+            act.includes('reject') ||
+            act.includes('fail')
+        ) {
+            return 'bg-danger-soft text-danger-strong border border-danger/30';
+        }
+
+        if (
+            act.includes('override') ||
+            act.includes('approval') ||
+            act.includes('reopen') ||
+            act.includes('handover') ||
+            act.includes('warning')
+        ) {
+            return 'bg-warning-soft text-warning-strong border border-warning/30';
+        }
+
+        if (
+            act.includes('gpt') ||
+            act.includes('ai') ||
+            act.includes('circuit')
+        ) {
+            return 'bg-brand-soft text-brand-strong border border-brand/30';
+        }
+
+        if (
+            act.includes('user') ||
+            act.includes('role') ||
+            act.includes('cred') ||
+            act.includes('access') ||
+            act.includes('auth') ||
+            act.includes('login')
+        ) {
+            return 'bg-surface-subtle text-ink border border-line';
+        }
+
+        return 'bg-success-soft text-success-strong border border-success/30';
+    };
+
+    const handleSetDatePreset = (preset: 'all' | 'today' | '7d' | '30d') => {
+        if (preset === 'all') {
+            setStartDate('');
+            setEndDate('');
+
+            return;
+        }
+
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const toStr = (d: Date) =>
+            `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        const endStr = toStr(now);
+        setEndDate(endStr);
+
+        if (preset === 'today') {
+            setStartDate(endStr);
+        } else if (preset === '7d') {
+            const past = new Date(now);
+            past.setDate(past.getDate() - 7);
+            setStartDate(toStr(past));
+        } else if (preset === '30d') {
+            const past = new Date(now);
+            past.setDate(past.getDate() - 30);
+            setStartDate(toStr(past));
+        }
+    };
 
     // System Health State (Node 5)
     const [health, setHealth] = useState<{
@@ -4325,6 +4659,17 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
         return { total, overrides, transitions, gpt, userAccess };
     }, [events]);
 
+    const uniqueActors = useMemo(() => {
+        const map = new Map<number, string>();
+        events.forEach((e) => {
+            if (e.actor) {
+                map.set(e.actor.id, e.actor.name);
+            }
+        });
+
+        return Array.from(map.entries());
+    }, [events]);
+
     const filteredEvents = useMemo(() => {
         return events.filter((event) => {
             if (
@@ -4355,6 +4700,36 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                 return false;
             }
 
+            if (actorFilter !== 'all') {
+                if (actorFilter === 'system') {
+                    if (event.actor !== null) {
+                        return false;
+                    }
+                } else if (event.actor?.id !== Number(actorFilter)) {
+                    return false;
+                }
+            }
+
+            if (startDate !== '') {
+                if (
+                    !event.occurred_at ||
+                    new Date(event.occurred_at) <
+                        new Date(`${startDate}T00:00:00`)
+                ) {
+                    return false;
+                }
+            }
+
+            if (endDate !== '') {
+                if (
+                    !event.occurred_at ||
+                    new Date(event.occurred_at) >
+                        new Date(`${endDate}T23:59:59`)
+                ) {
+                    return false;
+                }
+            }
+
             if (searchQuery.trim() !== '') {
                 const q = searchQuery.toLowerCase().trim();
                 const action = event.action.toLowerCase();
@@ -4372,10 +4747,204 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
 
             return true;
         });
-    }, [events, actionFilter, searchQuery]);
+    }, [events, actionFilter, actorFilter, startDate, endDate, searchQuery]);
 
-    const handleExportAudit = () => {
-        window.location.href = '/operations/reports/exports';
+    const handleDirectCsvDownload = () => {
+        if (filteredEvents.length === 0) {
+            return;
+        }
+
+        const headers = [
+            'Event ID',
+            'Timestamp',
+            'Actor Name',
+            'Action Type',
+            'Subject Type',
+            'Subject ID',
+            'Operational Reason',
+            'IP Address',
+            'Request Correlation UUID',
+            'Prior State (Before)',
+            'New State (After)',
+        ];
+
+        const escapeCsvField = (val: string | number | null | undefined) => {
+            if (val === null || val === undefined) {
+                return '""';
+            }
+
+            const str = String(val);
+            const sanitized = /^[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+
+            return `"${sanitized.replace(/"/g, '""')}"`;
+        };
+
+        const rows = filteredEvents.map((e) => [
+            escapeCsvField(e.id),
+            escapeCsvField(e.occurred_at),
+            escapeCsvField(e.actor?.name ?? 'System Observer'),
+            escapeCsvField(e.action),
+            escapeCsvField(e.subject_type),
+            escapeCsvField(e.subject_id),
+            escapeCsvField(e.reason ?? 'No operational reason recorded'),
+            escapeCsvField(e.ip_address ?? '127.0.0.1'),
+            escapeCsvField(e.request_id ?? 'N/A'),
+            escapeCsvField(e.before ? JSON.stringify(e.before) : ''),
+            escapeCsvField(e.after ? JSON.stringify(e.after) : ''),
+        ]);
+
+        const csvContent =
+            '\uFEFF' +
+            [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+
+        const blob = new Blob([csvContent], {
+            type: 'text/csv;charset=utf-8;',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const dateStamp = new Date().toISOString().split('T')[0];
+        link.setAttribute('download', `core2-audit-trail-${dateStamp}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDirectPrintPdf = () => {
+        if (filteredEvents.length === 0) {
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+
+        if (!printWindow) {
+            window.print();
+
+            return;
+        }
+
+        const dateStamp = new Date().toISOString().split('T')[0];
+
+        const escapeHtml = (str: string | number | null | undefined) => {
+            if (str === null || str === undefined) {
+                return '';
+            }
+
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        };
+
+        const rowsHtml = filteredEvents
+            .map(
+                (e) => `
+                <tr>
+                    <td style="font-family: monospace; font-size: 10px;">#${escapeHtml(e.id)}</td>
+                    <td style="white-space: nowrap;">${escapeHtml(e.occurred_at ? new Date(e.occurred_at).toLocaleString() : '—')}</td>
+                    <td><strong>${escapeHtml(e.actor?.name ?? 'System')}</strong></td>
+                    <td><code style="background: #f1f5f9; padding: 2px 4px; border-radius: 3px; font-size: 9px;">${escapeHtml(e.action)}</code></td>
+                    <td>${escapeHtml((e.subject_type ? e.subject_type.split('\\').pop() : 'Record') ?? 'Record')} #${escapeHtml(e.subject_id ?? 'N/A')}</td>
+                    <td style="font-size: 9.5px;">${escapeHtml(e.reason ?? 'Compliance / Operational Log')}</td>
+                </tr>
+            `,
+            )
+            .join('');
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Core-2 Compliance & Audit Trail Report (${dateStamp})</title>
+    <style>
+        @page { size: A4 landscape; margin: 12mm; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 10px; color: #0f172a; margin: 0; padding: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
+        .title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 3px 0; }
+        .subtitle { font-size: 10px; color: #475569; margin: 0; }
+        .badge { background: #0f172a; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metadata { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 9.5px; }
+        .meta-item strong { color: #334155; display: block; font-size: 8.5px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th { background: #f1f5f9; text-align: left; padding: 6px 8px; border: 1px solid #cbd5e1; font-weight: 700; font-size: 9.5px; text-transform: uppercase; color: #334155; }
+        td { padding: 5px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+        tr:nth-child(even) { background: #f8fafc; }
+        .footer { margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; justify-content: space-between; font-size: 8.5px; color: #94a3b8; }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="title">Core Transaction 2 · Compliance & Audit Trail Report</h1>
+            <p class="subtitle">Immutable forensic log of state transitions, approvals, user actions, and cryptographic telemetry.</p>
+        </div>
+        <div style="text-align: right;">
+            <span class="badge">Forensic Audit Export</span>
+        </div>
+    </div>
+
+    <div class="metadata">
+        <div class="meta-item"><strong>Generated On</strong> ${new Date().toUTCString()}</div>
+        <div class="meta-item"><strong>Record Count</strong> ${filteredEvents.length} active events</div>
+        <div class="meta-item"><strong>Date Scope</strong> ${dateStamp} (${startDate || 'Earliest'} → ${endDate || 'Latest'})</div>
+        <div class="meta-item"><strong>Filters Active</strong> Action: ${escapeHtml(actionFilter)} | Actor: ${escapeHtml(actorFilter)}</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 45px;">ID</th>
+                <th style="width: 120px;">Timestamp (UTC)</th>
+                <th style="width: 110px;">Actor</th>
+                <th style="width: 140px;">Action</th>
+                <th style="width: 110px;">Subject</th>
+                <th>Context / Operational Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <span>Confidential & Proprietary · Core-2 Heavy Lifting & Crane ERP</span>
+        <span>SHA-256 Validated · Page 1 of 1</span>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() { window.print(); }, 150);
+        };
+    </script>
+</body>
+</html>`;
+
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+    };
+
+    const handleQueueServerExport = (e: FormEvent) => {
+        e.preventDefault();
+        exportForm.transform(() => ({
+            export_type: 'system_audit',
+            format: exportFormat,
+            date_from: startDate || '',
+            date_to: endDate || '',
+        }));
+        exportForm.post('/operations/reports/exports', {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                setShowExportModal(false);
+            },
+        });
     };
 
     return (
@@ -4384,7 +4953,10 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                 title="Audit trail & compliance log"
                 description="Immutable forensic log of approvals, overrides, state transitions, GPT advisory decisions, user access, and cryptographic telemetry."
                 actions={
-                    <Button variant="secondary" onClick={handleExportAudit}>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setShowExportModal(true)}
+                    >
                         <Download className="h-4 w-4" />
                         Export Audit Dataset
                     </Button>
@@ -4485,46 +5057,115 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                 )}
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                    <button
+                        type="button"
+                        onClick={() => setActionFilter('all')}
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            actionFilter === 'all'
+                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                : 'border-line bg-surface hover:bg-surface-subtle',
+                        )}
+                    >
                         <span className="text-xs font-medium text-ink-soft">
                             Total Events
                         </span>
                         <p className="mt-1 text-2xl font-bold text-ink">
                             {stats.total}
                         </p>
-                    </div>
-                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActionFilter(
+                                actionFilter === 'overrides'
+                                    ? 'all'
+                                    : 'overrides',
+                            )
+                        }
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            actionFilter === 'overrides'
+                                ? 'border-warning-strong bg-warning-soft/70 ring-2 ring-warning'
+                                : 'border-warning/30 bg-warning-soft/30 hover:bg-warning-soft/50',
+                        )}
+                    >
                         <span className="text-xs font-medium text-warning-strong">
                             Approvals & Overrides
                         </span>
                         <p className="mt-1 text-2xl font-bold text-warning-strong">
                             {stats.overrides}
                         </p>
-                    </div>
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActionFilter(
+                                actionFilter === 'transitions'
+                                    ? 'all'
+                                    : 'transitions',
+                            )
+                        }
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            actionFilter === 'transitions'
+                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                : 'border-line bg-surface hover:bg-surface-subtle',
+                        )}
+                    >
                         <span className="text-xs font-medium text-ink-soft">
                             State Transitions
                         </span>
                         <p className="mt-1 text-2xl font-bold text-ink">
                             {stats.transitions}
                         </p>
-                    </div>
-                    <div className="rounded-xl border border-brand/30 bg-brand-soft/30 p-3.5 shadow-sm">
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActionFilter(
+                                actionFilter === 'gpt' ? 'all' : 'gpt',
+                            )
+                        }
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            actionFilter === 'gpt'
+                                ? 'border-brand-strong bg-brand-soft/70 ring-2 ring-brand'
+                                : 'border-brand/30 bg-brand-soft/30 hover:bg-brand-soft/50',
+                        )}
+                    >
                         <span className="text-xs font-medium text-brand-strong">
                             GPT AI Decisions
                         </span>
                         <p className="mt-1 text-2xl font-bold text-brand-strong">
                             {stats.gpt}
                         </p>
-                    </div>
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setActionFilter(
+                                actionFilter === 'access' ? 'all' : 'access',
+                            )
+                        }
+                        className={cn(
+                            'rounded-xl border p-3.5 text-left shadow-sm transition-all',
+                            actionFilter === 'access'
+                                ? 'border-brand bg-brand-soft/30 ring-2 ring-brand'
+                                : 'border-line bg-surface hover:bg-surface-subtle',
+                        )}
+                    >
                         <span className="text-xs font-medium text-ink-soft">
                             Access & Security
                         </span>
                         <p className="mt-1 text-2xl font-bold text-ink">
                             {stats.userAccess}
                         </p>
-                    </div>
+                    </button>
                 </div>
 
                 {/* Filter and Search */}
@@ -4584,6 +5225,113 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                             placeholder="Search action, actor, reason, correlation ID…"
                             className="h-9 w-full rounded-lg border border-line bg-surface px-3 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
+                    </div>
+                </div>
+
+                {/* Temporal Range & Actor Filter Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface p-3 text-xs shadow-xs">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-ink-soft">
+                                Temporal Range:
+                            </span>
+                            <div className="w-36">
+                                <DateTimePicker
+                                    id="audit-start-date"
+                                    value={startDate}
+                                    onChange={(val) => {
+                                        setStartDate(
+                                            val ? val.split('T')[0] : '',
+                                        );
+                                    }}
+                                    includeTime={false}
+                                    showPresets={false}
+                                    placeholder="Start date…"
+                                    className="text-xs"
+                                />
+                            </div>
+                            <span className="text-xs text-ink-soft">to</span>
+                            <div className="w-36">
+                                <DateTimePicker
+                                    id="audit-end-date"
+                                    value={endDate}
+                                    onChange={(val) => {
+                                        setEndDate(
+                                            val ? val.split('T')[0] : '',
+                                        );
+                                    }}
+                                    includeTime={false}
+                                    showPresets={false}
+                                    placeholder="End date…"
+                                    className="text-xs"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => handleSetDatePreset('today')}
+                                className={cn(
+                                    'rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors',
+                                    startDate !== '' && startDate === endDate
+                                        ? 'border-brand bg-brand-soft font-semibold text-brand-strong'
+                                        : 'border-line bg-surface-subtle text-ink-soft hover:text-ink',
+                                )}
+                            >
+                                Today
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSetDatePreset('7d')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft hover:text-ink"
+                            >
+                                Past 7 Days
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSetDatePreset('30d')}
+                                className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft hover:text-ink"
+                            >
+                                Past 30 Days
+                            </button>
+                            {(startDate ||
+                                endDate ||
+                                actorFilter !== 'all') && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleSetDatePreset('all');
+                                        setActorFilter('all');
+                                    }}
+                                    className="rounded-md border border-danger/30 bg-danger-soft px-2 py-0.5 text-[11px] font-semibold text-danger-strong hover:bg-danger-soft/80"
+                                >
+                                    Reset Filters
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-ink-soft">
+                            Actor:
+                        </span>
+                        <select
+                            value={actorFilter}
+                            onChange={(e) => setActorFilter(e.target.value)}
+                            className="h-8 rounded-lg border border-line bg-surface px-2 text-xs text-ink focus:border-brand focus:outline-none"
+                            aria-label="Filter by actor"
+                        >
+                            <option value="all">
+                                All Actors ({stats.total})
+                            </option>
+                            <option value="system">System Observer</option>
+                            {uniqueActors.map(([id, name]) => (
+                                <option key={id} value={id}>
+                                    {name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -4650,7 +5398,14 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                                         'System Observer'}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex items-center rounded-md px-2 py-0.5 font-mono text-xs font-semibold',
+                                                            getActionSeverityBadge(
+                                                                event.action,
+                                                            ),
+                                                        )}
+                                                    >
                                                         {event.action}
                                                     </span>
                                                 </td>
@@ -4690,7 +5445,14 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                         <div className="flex items-center justify-between border-b border-line pb-3">
                             <div className="space-y-0.5">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-mono text-sm font-bold text-ink">
+                                    <span
+                                        className={cn(
+                                            'rounded-md px-2 py-0.5 font-mono text-sm font-bold',
+                                            getActionSeverityBadge(
+                                                selectedEvent.action,
+                                            ),
+                                        )}
+                                    >
                                         {selectedEvent.action}
                                     </span>
                                     <span className="rounded bg-surface-subtle px-2 py-0.5 text-xs text-ink-soft">
@@ -4736,9 +5498,32 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 </p>
                             </div>
                             <div className="col-span-2">
-                                <span className="text-[10px] font-semibold text-ink-soft uppercase">
-                                    Request Correlation UUID
-                                </span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-semibold text-ink-soft uppercase">
+                                        Request Correlation UUID
+                                    </span>
+                                    {selectedEvent.request_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(
+                                                    selectedEvent.request_id ??
+                                                        '',
+                                                );
+                                                setCopiedReqId(true);
+                                                setTimeout(
+                                                    () => setCopiedReqId(false),
+                                                    2000,
+                                                );
+                                            }}
+                                            className="text-[10px] font-medium text-brand-strong hover:underline"
+                                        >
+                                            {copiedReqId
+                                                ? 'Copied!'
+                                                : 'Copy UUID'}
+                                        </button>
+                                    )}
+                                </div>
                                 <p className="truncate font-mono text-[11px] text-ink">
                                     {selectedEvent.request_id ?? 'N/A'}
                                 </p>
@@ -4767,8 +5552,35 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     {/* Before Panel */}
                                     <div className="overflow-hidden rounded-xl border border-line bg-surface">
-                                        <div className="border-b border-line bg-danger-soft/40 px-3 py-2 text-xs font-semibold text-danger-strong">
-                                            Prior State (Before)
+                                        <div className="flex items-center justify-between border-b border-line bg-danger-soft/40 px-3 py-2 text-xs font-semibold text-danger-strong">
+                                            <span>Prior State (Before)</span>
+                                            {selectedEvent.before && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(
+                                                            JSON.stringify(
+                                                                selectedEvent.before,
+                                                                null,
+                                                                2,
+                                                            ),
+                                                        );
+                                                        setCopiedBefore(true);
+                                                        setTimeout(
+                                                            () =>
+                                                                setCopiedBefore(
+                                                                    false,
+                                                                ),
+                                                            2000,
+                                                        );
+                                                    }}
+                                                    className="text-[10px] font-medium text-danger-strong hover:underline"
+                                                >
+                                                    {copiedBefore
+                                                        ? 'Copied!'
+                                                        : 'Copy JSON'}
+                                                </button>
+                                            )}
                                         </div>
                                         <pre className="max-h-60 overflow-x-auto p-3 font-mono text-[11px] text-ink">
                                             {selectedEvent.before
@@ -4783,8 +5595,35 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
 
                                     {/* After Panel */}
                                     <div className="overflow-hidden rounded-xl border border-line bg-surface">
-                                        <div className="border-b border-line bg-success-soft/40 px-3 py-2 text-xs font-semibold text-success-strong">
-                                            New State (After)
+                                        <div className="flex items-center justify-between border-b border-line bg-success-soft/40 px-3 py-2 text-xs font-semibold text-success-strong">
+                                            <span>New State (After)</span>
+                                            {selectedEvent.after && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(
+                                                            JSON.stringify(
+                                                                selectedEvent.after,
+                                                                null,
+                                                                2,
+                                                            ),
+                                                        );
+                                                        setCopiedAfter(true);
+                                                        setTimeout(
+                                                            () =>
+                                                                setCopiedAfter(
+                                                                    false,
+                                                                ),
+                                                            2000,
+                                                        );
+                                                    }}
+                                                    className="text-[10px] font-medium text-success-strong hover:underline"
+                                                >
+                                                    {copiedAfter
+                                                        ? 'Copied!'
+                                                        : 'Copy JSON'}
+                                                </button>
+                                            )}
                                         </div>
                                         <pre className="max-h-60 overflow-x-auto p-3 font-mono text-[11px] text-ink">
                                             {selectedEvent.after
@@ -4806,6 +5645,267 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 onClick={() => setSelectedEvent(null)}
                             >
                                 Close Inspector
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Export Audit Trail Dataset */}
+            {showExportModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line pb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-lg bg-brand-soft p-2 text-brand-strong">
+                                    <DownloadCloud className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-bold text-ink">
+                                        Export Audit Dataset
+                                    </h4>
+                                    <p className="text-xs text-ink-soft">
+                                        Download immediate CSV or queue an
+                                        asynchronous export.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowExportModal(false)}
+                                className="rounded-lg p-1 text-ink-soft hover:bg-surface-subtle"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Active Scope Summary */}
+                        <div className="mt-4 space-y-2 rounded-xl border border-line bg-surface-subtle p-3 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-ink-soft">
+                                    Active Category:
+                                </span>
+                                <span className="font-semibold text-ink uppercase">
+                                    {actionFilter}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-ink-soft">
+                                    Actor Scope:
+                                </span>
+                                <span className="font-semibold text-ink">
+                                    {actorFilter === 'all'
+                                        ? 'All Actors'
+                                        : actorFilter === 'system'
+                                          ? 'System Observer'
+                                          : (uniqueActors.find(
+                                                ([id]) =>
+                                                    id === Number(actorFilter),
+                                            )?.[1] ?? actorFilter)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-ink-soft">
+                                    Temporal Range:
+                                </span>
+                                <span className="font-mono text-ink">
+                                    {startDate || 'Beginning'} &rarr;{' '}
+                                    {endDate || 'Latest'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between border-t border-line pt-1 font-bold">
+                                <span className="text-ink">
+                                    Records In Scope:
+                                </span>
+                                <span className="text-brand-strong">
+                                    {filteredEvents.length} events
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Dual Export Methods */}
+                        <div className="mt-5 space-y-4">
+                            {/* Method 1: Instant Direct CSV Download */}
+                            <div className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand/40">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                                        <FileSpreadsheet className="h-4 w-4 text-success-strong" />
+                                        <span>
+                                            Instant Filtered CSV Download
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-ink-soft">
+                                        Immediately downloads the{' '}
+                                        {filteredEvents.length} currently
+                                        filtered records directly to your device
+                                        with full before/after JSON state
+                                        payloads.
+                                    </p>
+                                </div>
+                                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            handleDirectCsvDownload();
+                                            setShowExportModal(false);
+                                        }}
+                                        disabled={filteredEvents.length === 0}
+                                        className="w-full justify-center text-xs"
+                                    >
+                                        <Download className="h-3.5 w-3.5" />
+                                        Instant CSV ({filteredEvents.length})
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => {
+                                            handleDirectPrintPdf();
+                                            setShowExportModal(false);
+                                        }}
+                                        disabled={filteredEvents.length === 0}
+                                        className="w-full justify-center text-xs"
+                                    >
+                                        <Printer className="h-3.5 w-3.5" />
+                                        Print / PDF ({filteredEvents.length})
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Method 2: Queue Server Export */}
+                            <form
+                                onSubmit={handleQueueServerExport}
+                                className="rounded-xl border border-line bg-surface p-4 transition-all hover:border-brand/40"
+                            >
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                                        <DownloadCloud className="h-4 w-4 text-brand-strong" />
+                                        <span>
+                                            Queue Background Server Export
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-ink-soft">
+                                        Dispatches a background worker job to
+                                        generate and archive an official audit
+                                        export dataset.
+                                    </p>
+                                </div>
+
+                                <div className="mt-2 rounded-lg border border-line bg-surface-subtle px-2.5 py-1.5 text-[11px] text-ink-soft">
+                                    {startDate || endDate ? (
+                                        <span>
+                                            ⚡ Scope:{' '}
+                                            <strong className="text-ink">
+                                                Queries full database archive
+                                            </strong>{' '}
+                                            from{' '}
+                                            <code className="text-brand-strong">
+                                                {startDate || 'Beginning'}
+                                            </code>{' '}
+                                            to{' '}
+                                            <code className="text-brand-strong">
+                                                {endDate || 'Latest'}
+                                            </code>
+                                            .
+                                        </span>
+                                    ) : (
+                                        <span>
+                                            ⚡ Scope:{' '}
+                                            <strong className="text-ink">
+                                                Full historical database archive
+                                            </strong>{' '}
+                                            (all recorded audit events).
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                    <label
+                                        className={cn(
+                                            'flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-xs transition-all',
+                                            exportFormat === 'csv'
+                                                ? 'border-brand bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand'
+                                                : 'border-line bg-surface text-ink hover:bg-surface-subtle',
+                                        )}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="format"
+                                            value="csv"
+                                            checked={exportFormat === 'csv'}
+                                            onChange={() =>
+                                                setExportFormat('csv')
+                                            }
+                                            className="text-brand focus:ring-brand"
+                                        />
+                                        <span>CSV Dataset</span>
+                                    </label>
+                                    <label
+                                        className={cn(
+                                            'flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-xs transition-all',
+                                            exportFormat === 'pdf'
+                                                ? 'border-brand bg-brand-soft/40 font-semibold text-brand-strong ring-1 ring-brand'
+                                                : 'border-line bg-surface text-ink hover:bg-surface-subtle',
+                                        )}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="format"
+                                            value="pdf"
+                                            checked={exportFormat === 'pdf'}
+                                            onChange={() =>
+                                                setExportFormat('pdf')
+                                            }
+                                            className="text-brand focus:ring-brand"
+                                        />
+                                        <span>Printable PDF</span>
+                                    </label>
+                                </div>
+
+                                {Object.keys(exportForm.errors).length > 0 && (
+                                    <div className="mt-2 rounded-md bg-danger-soft p-2 text-xs text-danger-strong">
+                                        {Object.values(exportForm.errors).join(
+                                            ' ',
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="mt-3">
+                                    <Button
+                                        type="submit"
+                                        variant="primary"
+                                        disabled={exportForm.processing}
+                                        className="w-full justify-center text-xs"
+                                    >
+                                        {exportForm.processing ? (
+                                            'Dispatching Server Job…'
+                                        ) : (
+                                            <>
+                                                <DownloadCloud className="h-3.5 w-3.5" />
+                                                Request Server Background Export
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between border-t border-line pt-3 text-[11px] text-ink-soft">
+                            <span>
+                                💡 Server exports are archived under the{' '}
+                                <a
+                                    href="/operations?section=reports"
+                                    className="font-medium text-brand-strong underline hover:text-brand"
+                                >
+                                    Exports Archive
+                                </a>{' '}
+                                (available 24h).
+                            </span>
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                Close
                             </Button>
                         </div>
                     </div>

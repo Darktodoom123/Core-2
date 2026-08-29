@@ -9,6 +9,7 @@ use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\RoleName;
@@ -201,6 +202,39 @@ final class BrowserAcceptanceSeeder extends Seeder
             'status' => DispatchStatus::Draft,
             'requirements' => [],
             'created_by' => $manager->id,
+        ]);
+
+        AuditEvent::query()->create([
+            'actor_id' => $admin->id,
+            'action' => 'user.login',
+            'subject_type' => $admin->getMorphClass(),
+            'subject_id' => $admin->id,
+            'reason' => 'Administrative sign-in for compliance review.',
+            'ip_address' => '127.0.0.1',
+            'request_id' => 'req-browser-auth-001',
+            'occurred_at' => now()->subHours(2),
+        ]);
+
+        AuditEvent::query()->create([
+            'actor_id' => $manager->id,
+            'action' => 'dispatch.created',
+            'subject_type' => $job->getMorphClass(),
+            'subject_id' => $job->id,
+            'reason' => 'Deterministic browser acceptance dispatch creation.',
+            'ip_address' => '127.0.0.1',
+            'request_id' => 'req-browser-dispatch-002',
+            'occurred_at' => now()->subHour(),
+        ]);
+
+        AuditEvent::query()->create([
+            'actor_id' => $admin->id,
+            'action' => 'security.override',
+            'subject_type' => $approvalJob->getMorphClass(),
+            'subject_id' => $approvalJob->id,
+            'reason' => 'Administrative safety override compliance verification.',
+            'ip_address' => '127.0.0.1',
+            'request_id' => 'req-browser-audit-003',
+            'occurred_at' => now()->subMinutes(15),
         ]);
 
         File::ensureDirectoryExists(storage_path('framework/testing'));

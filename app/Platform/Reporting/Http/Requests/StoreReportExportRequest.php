@@ -21,7 +21,11 @@ class StoreReportExportRequest extends FormRequest
             'export_type' => ['required', 'string', Rule::in(ReportExportType::requestableValues())],
             'format' => ['required', 'string', Rule::in(['csv', 'pdf'])],
             'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'date_to' => [
+                'nullable',
+                'date',
+                Rule::when($this->filled('date_from'), ['after_or_equal:date_from']),
+            ],
         ];
     }
 }

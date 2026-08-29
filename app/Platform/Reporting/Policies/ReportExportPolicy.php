@@ -3,6 +3,7 @@
 namespace App\Platform\Reporting\Policies;
 
 use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Models\ReportExport;
@@ -38,7 +39,7 @@ class ReportExportPolicy
     {
         return $this->canAccessExports($user)
             && $export->isDownloadable()
-            && $user->id === $export->user_id
+            && ($user->id === $export->user_id || $user->hasRole(RoleName::SystemAdministrator->value))
             && $this->canCreateExports($user);
     }
 

@@ -413,13 +413,15 @@ export default function Workspace(props: WorkspacePageProps) {
 
     useEffect(() => {
         const handlePopState = () => {
-            const requested = new URL(window.location.href).searchParams.get(
-                'view',
-            ) as WorkspaceSection | null;
+            const url = new URL(window.location.href);
+            const requested = (url.searchParams.get('view') ||
+                url.searchParams.get('section')) as
+                WorkspaceSection | string | null;
+            const normalized = requested === 'exports' ? 'reports' : requested;
             const nextSection = props.navigation.some(
-                (item) => item.id === requested,
+                (item) => item.id === normalized,
             )
-                ? requested
+                ? (normalized as WorkspaceSection)
                 : (props.navigation[0]?.id ?? null);
 
             setSection(nextSection);
