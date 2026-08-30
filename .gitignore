@@ -100,3 +100,4 @@ storage/framework/testing/*
 *.temp
 *.bak
 core2_api_*.log
+/.ci
