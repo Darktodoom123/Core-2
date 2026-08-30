@@ -16,7 +16,11 @@ import {
 import type { GeoJSONSource, Marker as MapLibreMarker } from 'maplibre-gl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@/components/ui';
-import { getAssetKind } from '@/lib/asset-kind';
+import {
+    getAssetKind,
+    getAssetKindLabel,
+    resolveLocationName,
+} from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import type {
     LocationUpdateViewModel,
@@ -37,9 +41,14 @@ import {
     createSosMarker,
     getSosMarkerPosition,
 } from './maplibre/markers';
+import type { PopupCardField } from './maplibre/markers';
 
 export type { AssetKind } from '@/lib/asset-kind';
-export { getAssetKind } from '@/lib/asset-kind';
+export {
+    getAssetKind,
+    getAssetKindLabel,
+    resolveLocationName,
+} from '@/lib/asset-kind';
 
 const DEFAULT_CENTER: LngLat = [121.04, 14.64];
 const DEFAULT_ZOOM = 11;
@@ -684,23 +693,80 @@ function TrackingMapContent({
                     onSelect(location.id),
                 );
 
+                const hasAsset = Boolean(location.asset?.code);
+                const title = hasAsset
+                    ? location.asset?.name &&
+                      location.asset.name.toLowerCase() !==
+                          location.asset.code.toLowerCase()
+                        ? `${location.asset.code} · ${location.asset.name}`
+                        : (location.asset?.code ?? location.user.name)
+                    : location.user.name;
+
+                const subtitle = hasAsset
+                    ? getAssetKindLabel(kind)
+                    : 'Field Personnel';
+                const freshness = getFreshnessMeta(location.freshness_status);
+
+                const fields: PopupCardField[] = [
+                    {
+                        label: 'Personnel',
+                        value: location.user.name,
+                    },
+                    {
+                        label: 'Dispatch',
+                        value: location.job
+                            ? `${location.job.reference} — ${location.job.title}`
+                            : 'Standby / Unassigned',
+                    },
+                    {
+                        label: 'Movement',
+                        value:
+                            location.speed !== null && location.speed > 0
+                                ? `${location.speed.toFixed(1)} km/h`
+                                : 'Stationary',
+                    },
+                    {
+                        label: 'Captured',
+                        value: location.captured_at
+                            ? new Date(
+                                  location.captured_at,
+                              ).toLocaleTimeString()
+                            : 'N/A',
+                    },
+                ];
+
+                if (location.remarks) {
+                    fields.push({
+                        label: 'Note',
+                        value: location.remarks,
+                    });
+                }
+
+                const locationName = resolveLocationName(location);
+
                 const popup = new maplibregl.Popup({
                     closeButton: true,
                     closeOnClick: true,
                     offset: 24,
                 }).setDOMContent(
                     createPopupCard({
-                        title: location.user.name,
-                        subtitle: location.asset?.code ?? kind,
-                        status: location.freshness_status,
+                        title,
+                        subtitle,
+                        status: freshness.label,
+                        statusTone: freshness.tone,
+                        badge: sosIncident
+                            ? `🚨 SOS: ${sosIncident.status.label} (${sosIncident.category.label})`
+                            : undefined,
+                        badgeTone: 'danger',
+                        fields,
+                        locationName,
                         coordinateText: `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`,
-                        details: location.captured_at
-                            ? [
-                                  `Captured: ${new Date(location.captured_at).toLocaleTimeString()}`,
-                              ]
-                            : [],
                         onCopyCoordinates: (button) =>
                             onCopyCoordinates(location, button),
+                        actionButton: {
+                            label: 'Select Resource',
+                            onClick: () => onSelect(location.id),
+                        },
                     }),
                 );
 
@@ -738,6 +804,15 @@ function TrackingMapContent({
                 }
             });
 
+            const sosLocationName = incident.location
+                ? resolveLocationName({
+                      latitude: incident.location.latitude,
+                      longitude: incident.location.longitude,
+                      job: incident.dispatch,
+                      asset: incident.asset,
+                  })
+                : (incident.dispatch?.site ?? 'Incident Site');
+
             const popup = new maplibregl.Popup({
                 closeButton: true,
                 closeOnClick: true,
@@ -745,15 +820,42 @@ function TrackingMapContent({
             }).setDOMContent(
                 createPopupCard({
                     title: incident.worker.name,
-                    subtitle: 'Emergency SOS',
+                    subtitle: 'Emergency SOS Alert',
                     status: incident.status.label,
-                    coordinateText: `${markerPosition[1].toFixed(5)}, ${markerPosition[0].toFixed(5)}`,
-                    details: [
-                        `Category: ${incident.category.label}`,
-                        incident.dispatch
-                            ? `Dispatch: ${incident.dispatch.reference}`
-                            : 'No dispatch context attached',
+                    statusTone: 'danger',
+                    badge: '🚨 Urgent Attention Required',
+                    badgeTone: 'danger',
+                    fields: [
+                        {
+                            label: 'Category',
+                            value: incident.category.label,
+                        },
+                        {
+                            label: 'Dispatch',
+                            value: incident.dispatch
+                                ? `${incident.dispatch.reference} — ${incident.dispatch.title}`
+                                : 'No dispatch context attached',
+                        },
+                        {
+                            label: 'Triggered',
+                            value:
+                                incident.received_at ||
+                                incident.device_activated_at
+                                    ? new Date(
+                                          incident.received_at ||
+                                              incident.device_activated_at!,
+                                      ).toLocaleTimeString()
+                                    : 'N/A',
+                        },
                     ],
+                    locationName: sosLocationName,
+                    coordinateText: `${markerPosition[1].toFixed(5)}, ${markerPosition[0].toFixed(5)}`,
+                    actionButton: liveLocation
+                        ? {
+                              label: 'Focus Worker',
+                              onClick: () => onSelect(liveLocation.id),
+                          }
+                        : undefined,
                 }),
             );
 
@@ -1086,4 +1188,23 @@ function freshnessColor(
     status: LocationUpdateViewModel['freshness_status'],
 ): string {
     return MAP_FRESHNESS_COLORS[status];
+}
+
+function getFreshnessMeta(
+    status: LocationUpdateViewModel['freshness_status'],
+): {
+    label: string;
+    tone: 'success' | 'warning' | 'danger' | 'info';
+} {
+    switch (status) {
+        case 'fresh':
+            return { label: 'Live (≤2m)', tone: 'success' };
+        case 'delayed':
+            return { label: 'Delayed (2–10m)', tone: 'info' };
+        case 'stale':
+            return { label: 'Stale (10–30m)', tone: 'warning' };
+        case 'offline':
+        default:
+            return { label: 'Offline', tone: 'danger' };
+    }
 }

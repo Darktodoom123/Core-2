@@ -161,59 +161,191 @@ function detectReducedMotionPreference(): boolean {
     );
 }
 
+export interface PopupCardField {
+    label: string;
+    value: string;
+    icon?: string;
+}
+
+export interface PopupCardOptions {
+    title: string;
+    subtitle?: string;
+    status?: string;
+    statusTone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+    badge?: string;
+    badgeTone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+    fields?: PopupCardField[];
+    details?: string[];
+    locationName?: string;
+    coordinateText?: string;
+    onCopyCoordinates?: (button: HTMLButtonElement) => void;
+    actionButton?: {
+        label: string;
+        onClick: () => void;
+    };
+}
+
 export function createPopupCard({
     title,
     subtitle,
     status,
+    statusTone = 'neutral',
+    badge,
+    badgeTone,
+    fields = [],
+    details = [],
+    locationName,
     coordinateText,
-    details,
     onCopyCoordinates,
-}: {
-    title: string;
-    subtitle: string;
-    status: string;
-    coordinateText?: string;
-    details: string[];
-    onCopyCoordinates?: (button: HTMLButtonElement) => void;
-}): HTMLDivElement {
+    actionButton,
+}: PopupCardOptions): HTMLDivElement {
     const root = document.createElement('div');
     root.className = 'maplibre-popup-card';
 
-    const heading = document.createElement('div');
-    heading.className = 'maplibre-popup-card__heading';
+    // Header container with Title, Subtitle, and Top-Right Status Badge
+    const header = document.createElement('div');
+    header.className = 'maplibre-popup-card__header';
+
+    const headerMain = document.createElement('div');
+    headerMain.className = 'maplibre-popup-card__heading';
+
     const titleElement = document.createElement('strong');
+    titleElement.className = 'maplibre-popup-card__title';
     titleElement.textContent = title;
-    const subtitleElement = document.createElement('span');
-    subtitleElement.textContent = subtitle;
-    heading.append(titleElement, subtitleElement);
-    root.appendChild(heading);
+    headerMain.appendChild(titleElement);
 
-    const statusElement = document.createElement('span');
-    statusElement.className = 'maplibre-popup-card__status';
-    statusElement.textContent = status;
-    root.appendChild(statusElement);
+    if (subtitle) {
+        const subtitleElement = document.createElement('span');
+        subtitleElement.className = 'maplibre-popup-card__subtitle';
+        subtitleElement.textContent = subtitle;
+        headerMain.appendChild(subtitleElement);
+    }
 
-    details.forEach((detail) => {
-        const detailElement = document.createElement('p');
-        detailElement.textContent = detail;
-        root.appendChild(detailElement);
-    });
+    header.appendChild(headerMain);
 
-    if (coordinateText && onCopyCoordinates) {
-        const coordinateRow = document.createElement('div');
-        coordinateRow.className = 'maplibre-popup-card__coordinates';
-        const coordinateElement = document.createElement('span');
-        coordinateElement.textContent = coordinateText;
-        const copyButton = document.createElement('button');
-        copyButton.type = 'button';
-        copyButton.className = 'maplibre-popup-card__copy';
-        copyButton.textContent = 'Copy';
-        copyButton.setAttribute('aria-label', 'Copy coordinates');
-        copyButton.addEventListener('click', () =>
-            onCopyCoordinates(copyButton),
-        );
-        coordinateRow.append(coordinateElement, copyButton);
-        root.appendChild(coordinateRow);
+    if (status) {
+        const statusElement = document.createElement('span');
+        statusElement.className = `maplibre-popup-card__status maplibre-popup-card__status--${statusTone}`;
+
+        const dot = document.createElement('span');
+        dot.className = 'maplibre-popup-card__status-dot';
+        statusElement.appendChild(dot);
+
+        const statusText = document.createElement('span');
+        statusText.textContent = status;
+        statusElement.appendChild(statusText);
+
+        header.appendChild(statusElement);
+    }
+
+    root.appendChild(header);
+
+    // Optional alert / emergency banner (e.g. SOS active)
+    if (badge) {
+        const badgeElement = document.createElement('div');
+        badgeElement.className = `maplibre-popup-card__alert-badge maplibre-popup-card__alert-badge--${badgeTone ?? 'warning'}`;
+        badgeElement.textContent = badge;
+        root.appendChild(badgeElement);
+    }
+
+    // Body: Key-Value Structured Fields
+    if (fields.length > 0) {
+        const fieldsList = document.createElement('div');
+        fieldsList.className = 'maplibre-popup-card__fields';
+
+        fields.forEach((field) => {
+            if (!field.value) {
+                return;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'maplibre-popup-card__field';
+
+            const labelCol = document.createElement('span');
+            labelCol.className = 'maplibre-popup-card__field-label';
+            labelCol.textContent = field.label;
+
+            const valCol = document.createElement('span');
+            valCol.className = 'maplibre-popup-card__field-value';
+            valCol.textContent = field.value;
+
+            row.append(labelCol, valCol);
+            fieldsList.appendChild(row);
+        });
+
+        root.appendChild(fieldsList);
+    }
+
+    // Body: Paragraph details (for backward compatibility)
+    if (details.length > 0) {
+        const detailsContainer = document.createElement('div');
+        detailsContainer.className = 'maplibre-popup-card__details';
+        details.forEach((detail) => {
+            const detailElement = document.createElement('p');
+            detailElement.className = 'maplibre-popup-card__detail';
+            detailElement.textContent = detail;
+            detailsContainer.appendChild(detailElement);
+        });
+        root.appendChild(detailsContainer);
+    }
+
+    // Location Name & Coordinates Footer
+    if (locationName || (coordinateText && onCopyCoordinates)) {
+        const locationSection = document.createElement('div');
+        locationSection.className = 'maplibre-popup-card__location-section';
+
+        if (locationName) {
+            const nameRow = document.createElement('div');
+            nameRow.className = 'maplibre-popup-card__location-name';
+
+            const pinIcon = document.createElement('span');
+            pinIcon.className = 'maplibre-popup-card__location-icon';
+            pinIcon.textContent = '📍';
+
+            const nameText = document.createElement('span');
+            nameText.className = 'maplibre-popup-card__location-text';
+            nameText.textContent = locationName;
+
+            nameRow.append(pinIcon, nameText);
+            locationSection.appendChild(nameRow);
+        }
+
+        if (coordinateText && onCopyCoordinates) {
+            const coordinateRow = document.createElement('div');
+            coordinateRow.className = 'maplibre-popup-card__coordinates';
+
+            const coordinateElement = document.createElement('span');
+            coordinateElement.className = 'maplibre-popup-card__coord-text';
+            coordinateElement.textContent = coordinateText;
+
+            const copyButton = document.createElement('button');
+            copyButton.type = 'button';
+            copyButton.className = 'maplibre-popup-card__copy';
+            copyButton.textContent = 'Copy';
+            copyButton.setAttribute('aria-label', 'Copy coordinates');
+            copyButton.addEventListener('click', () =>
+                onCopyCoordinates(copyButton),
+            );
+            coordinateRow.append(coordinateElement, copyButton);
+            locationSection.appendChild(coordinateRow);
+        }
+
+        root.appendChild(locationSection);
+    }
+
+    // Optional Quick Action button (e.g. Focus Asset / View Details)
+    if (actionButton) {
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'maplibre-popup-card__actions';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'maplibre-popup-card__action-btn';
+        btn.textContent = actionButton.label;
+        btn.addEventListener('click', actionButton.onClick);
+
+        actionsContainer.appendChild(btn);
+        root.appendChild(actionsContainer);
     }
 
     return root;

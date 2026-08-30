@@ -37,11 +37,11 @@ final class OperationsWorkspaceController extends Controller
 
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
-        'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
-        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'approvals', 'users', 'gptRecommendations'],
-        'assets' => ['assets', 'locations'],
-        'tracking' => ['assets', 'locations'],
-        'fuel' => ['fuelRequests', 'assets'],
+        'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'users', 'gptRecommendations'],
+        'assets' => ['assets', 'assets_total', 'locations'],
+        'tracking' => ['assets', 'assets_total', 'locations'],
+        'fuel' => ['fuelRequests', 'assets', 'assets_total'],
         'approvals' => ['approvals'],
         'reports' => ['jobReports', 'reportExports', 'jobs'],
         'notifications' => ['notifications'],
@@ -118,12 +118,16 @@ final class OperationsWorkspaceController extends Controller
         bool $canViewSalesHandoffs,
         bool $canViewAllAssignments,
     ): array {
+        [$overviewAssets, $overviewAssetsTotal] = $this->fetchAssetsWithTotal($user, 50);
+        [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
+
         return match ($section) {
             'overview' => [
                 'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments, 6)),
                 'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
                 'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
-                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user, 50)),
+                'assets' => OperationsWorkspaceViewModel::assets($overviewAssets),
+                'assets_total' => $overviewAssetsTotal,
                 'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
                 'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
                 'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
@@ -137,18 +141,21 @@ final class OperationsWorkspaceController extends Controller
                 'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
                 'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
                 'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
-                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                'assets_total' => $defaultAssetsTotal,
                 'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
                 'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
                 'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             ],
             'assets', 'tracking' => [
-                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                'assets_total' => $defaultAssetsTotal,
                 'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             ],
             'fuel' => [
                 'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
-                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                'assets_total' => $defaultAssetsTotal,
             ],
             'approvals' => ['approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user)],
             'reports' => [
@@ -191,6 +198,7 @@ final class OperationsWorkspaceController extends Controller
             'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
             'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+            'assets_total' => $this->fetchAssetsTotal($user),
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
             'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
@@ -319,15 +327,17 @@ final class OperationsWorkspaceController extends Controller
             ->values();
     }
 
-    /** @return Collection<int, OperationalAsset> */
-    private function fetchAssets(User $user, int $limit = 100): Collection
+    /** @return array{0: Collection<int, OperationalAsset>, 1: int} */
+    private function fetchAssetsWithTotal(User $user, int $limit = 100): array
     {
         if (! Gate::forUser($user)->allows('viewAny', OperationalAsset::class)) {
-            return collect();
+            return [collect(), 0];
         }
 
-        return OperationalAsset::query()
-            ->visibleTo($user)
+        $query = OperationalAsset::query()->visibleTo($user);
+        $total = (clone $query)->toBase()->count();
+
+        $assets = $query
             ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])
             ->with([
                 'inspections' => fn ($query) => $query->latest('completed_at')->limit(10),
@@ -336,6 +346,23 @@ final class OperationsWorkspaceController extends Controller
             ->orderBy('code')
             ->limit($limit)
             ->get();
+
+        return [$assets, $total];
+    }
+
+    /** @return Collection<int, OperationalAsset> */
+    private function fetchAssets(User $user, int $limit = 100): Collection
+    {
+        return $this->fetchAssetsWithTotal($user, $limit)[0];
+    }
+
+    private function fetchAssetsTotal(User $user): int
+    {
+        if (! Gate::forUser($user)->allows('viewAny', OperationalAsset::class)) {
+            return 0;
+        }
+
+        return OperationalAsset::query()->visibleTo($user)->toBase()->count();
     }
 
     /** @return Collection<int, FuelRequest> */

@@ -38,6 +38,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'clients',
         'serviceRequests',
         'assets',
+        'assets_total',
         'fuelRequests',
         'locations',
         'approvals',
@@ -52,13 +53,14 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'rentalHandoffs',
         'salesHandoffs',
         'assets',
+        'assets_total',
         'approvals',
         'users',
         'gptRecommendations',
     ],
-    assets: ['assets', 'locations'],
-    tracking: ['assets', 'locations'],
-    fuel: ['fuelRequests', 'assets'],
+    assets: ['assets', 'assets_total', 'locations'],
+    tracking: ['assets', 'assets_total', 'locations'],
+    fuel: ['fuelRequests', 'assets', 'assets_total'],
     approvals: ['approvals'],
     reports: ['jobReports', 'reportExports', 'jobs'],
     notifications: ['notifications'],
@@ -769,6 +771,7 @@ export default function Workspace(props: WorkspacePageProps) {
                     <LiveWorkspaceSection
                         section={availableSection}
                         assets={props.assets ?? []}
+                        assetsTotal={props.assets_total}
                         fuelRequests={props.fuelRequests ?? []}
                         locations={props.locations ?? []}
                         approvals={props.approvals ?? []}

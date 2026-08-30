@@ -257,10 +257,15 @@ export interface SalesDispatchHandoffViewModel extends CommercialDispatchHandoff
     destination_coordinates?: GeoCoordinates | null;
 }
 
+export type InspectionTypeValue =
+    'pre_operation' | 'post_operation' | 'maintenance' | 'safety';
+
+export type InspectionResultValue = 'passed' | 'failed' | 'conditional';
+
 export interface InspectionViewModel {
     id: number;
-    type: 'pre_operation' | 'post_operation' | 'maintenance' | 'safety';
-    result: 'passed' | 'failed' | 'conditional';
+    type: InspectionTypeValue;
+    result: InspectionResultValue;
     checklist: Record<string, boolean>;
     findings: string | null;
     completed_at: string | null;
@@ -482,11 +487,13 @@ export interface LocationUpdateViewModel {
             | 'tower_crane'
             | 'equipment'
             | string;
+        location?: string | null;
     } | null;
     job: {
         id: number;
         reference: string;
         title: string;
+        site?: string | null;
     } | null;
     latitude: number | null;
     longitude: number | null;
@@ -623,6 +630,7 @@ export interface WorkspaceCapabilities {
     decide_approval: boolean;
     update_assigned_dispatch_status: boolean;
     update_asset_status: boolean;
+    safety_lockdown_asset: boolean;
     inspect_asset: boolean;
     maintain_asset: boolean;
     request_gpt_assistance: boolean;
@@ -810,6 +818,7 @@ export interface WorkspacePageProps {
     rentalHandoffs?: RentalDispatchHandoffViewModel[];
     salesHandoffs?: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
+    assets_total?: number;
     fuelRequests?: FuelRequestViewModel[];
     locations?: LocationUpdateViewModel[];
     approvals?: ApprovalViewModel[];

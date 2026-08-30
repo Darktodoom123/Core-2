@@ -4,7 +4,7 @@
 
 ### Did you build this the most secure way?
 
-The security boundary is server-authoritative: Sanctum authentication, active-token middleware, the named SOS rate limiter, active field-role validation, scoped dispatch/asset resolution, policy/FormRequest authorization, UUID idempotency, row locks, recipient snapshots, audit events, encrypted emergency phone numbers, deterministic phone hashes, coordinate retention pruning, and no automatic public-authority contact. Dispatcher and Operations Manager recipients are resolved from active verified Core 2 users only; Field Technicians are never escalation recipients. Mobile call/SMS actions accept only server-configured `tel:`/`sms:` URIs and require deliberate user action. The live map's SOS halo is non-interactive, while the marker retains a keyboard-accessible button, SOS icon/label, and status text. SOS is disabled by default (`SOS_ENABLED=false`) and the escalation binding is a null provider until real contacts, providers, monitoring, and acceptance gates are complete.
+The security boundary is server-authoritative: Sanctum authentication, active-token middleware, the named SOS rate limiter, active field-role validation, scoped dispatch/asset resolution, policy/FormRequest authorization, UUID idempotency, row locks, recipient snapshots, audit events, encrypted emergency phone numbers, deterministic phone hashes, coordinate retention pruning, and no automatic public-authority contact. Operations Manager and Safety Officer recipients are resolved from active verified Core 2 users only; Field Technicians are never escalation recipients. Mobile call/SMS actions accept only server-configured `tel:`/`sms:` URIs and require deliberate user action. The live map's SOS halo is non-interactive, while the marker retains a keyboard-accessible button, SOS icon/label, and status text. SOS is disabled by default (`SOS_ENABLED=false`) and the escalation binding is a null provider until real contacts, providers, monitoring, and acceptance gates are complete.
 
 Residual security gates are provider configuration review, production emergency-contact roster review, Reverb/realtime delivery monitoring, staging delivery drills, and physical-device/lock-screen acceptance. Those gates intentionally keep production activation disabled.
 
@@ -232,7 +232,7 @@ Comprehensive multi-layer test suites have been implemented and verified:
 
 ### Did you build this the most secure way?
 
-1. **Strict Mobile Role Allowlist**: The mobile terminal's authentication and session bootstrap layer (`isAuthorizedFieldRole`) strictly restricts authenticated field access to `crane_operator` and `operator`. Unauthorized roles (including `dispatcher`, `operations_manager`, `system_administrator`, and decommissioned mobile roles) are immediately rejected and their device tokens revoked server-side.
+1. **Strict Mobile Role Allowlist**: The mobile terminal's authentication and session bootstrap layer (`isAuthorizedFieldRole`) strictly restricts authenticated field access to `crane_operator` and `operator`. Unauthorized roles (including `operations_manager`, `system_administrator`, and decommissioned mobile roles) are immediately rejected and their device tokens revoked server-side.
 2. **Server-Authoritative Field Authorization**: Sanctum bearer token authentication combined with granular Spatie permissions (`RolePermissionSeeder`) enforces that only users holding `crane_operator` can respond to assigned dispatches (`dispatch.respond_own`), execute equipment inspections (`equipment.update_status`, `equipment.view_assigned`), manage assigned transport carriers (`fleet.view_assigned`), trigger safety emergencies (`sos.trigger`), and log fuel telemetry (`fuel.record`).
 3. **Session Revocation Staging**: If a non-operator or suspended account attempts login or bootstrap, the mobile client executes an atomic token revocation and locks the device state until acknowledged, preventing lingering or leaked credentials on field tablets.
 
@@ -250,7 +250,7 @@ Comprehensive multi-layer test suites have been implemented and verified:
 ### What tests do we need to write before we ship this?
 
 1. **Automated Unit & Component Tests**:
-   - `auth.test.ts`: Verified `isAuthorizedFieldRole` allows `operator` and `crane_operator` and rejects `driver`, `dispatcher`, `operations_manager`, `system_administrator`, `client`, `viewer`, `null`, and `undefined`.
+   - `auth.test.ts`: Verified `isAuthorizedFieldRole` allows `operator` and `crane_operator` and rejects `driver`, `operations_manager`, `system_administrator`, `client`, `viewer`, `null`, and `undefined`.
    - `app.component.test.tsx`: Verified all 13 test suites (66 component tests and 43 unit tests) pass with 100% success using operator fixtures.
    - `locationService.test.ts`: Verified GPS telemetry tracking and outbox queuing for active crane operators.
 2. **Backend Feature & RBAC Tests**:
@@ -261,24 +261,24 @@ Comprehensive multi-layer test suites have been implemented and verified:
    - Mobile TypeScript Check (`npm run types:check --prefix packages/field-mobile`): 0 errors.
    - Mobile Test Suite (`npm run test --prefix packages/field-mobile`): 13/13 suites passed (109 total tests).
 
-## Deprecation & Consolidation of Dispatcher Role into Operations Manager — 2026-08-28
+## Consolidation of Operational Roles into Operations Manager — 2026-08-28
 
 ### Did you build this the most secure way?
 
-1. **Transactional Role Reassignment & Database Migration**: The database migration (`2026_08_28_120000_remove_dispatcher_role.php`) safely migrates any existing user accounts holding `dispatcher` to `operations_manager` in `model_has_roles` before purging `dispatcher` role rows from `roles` and `role_has_permissions`. No user accounts are left stranded or locked out of the system.
-2. **Strict Spatie RBAC Parity**: All operational permissions previously assigned to `Dispatcher` (including `dispatch.*`, `assignments.*`, `fuel.forward`, `fleet.view_all`, `rental.create`, `gpt.use_dispatch`) were fully consolidated into `RoleName::OperationsManager` in `RolePermissionSeeder.php`.
+1. **Transactional Role Reassignment & Database Migration**: The database migration safely migrates any existing user accounts holding legacy roles to `operations_manager` in `model_has_roles` before purging deprecated role rows from `roles` and `role_has_permissions`. No user accounts are left stranded or locked out of the system.
+2. **Strict Spatie RBAC Parity**: All operational permissions previously assigned to operational coordinators (including `dispatch.*`, `assignments.*`, `fuel.forward`, `fleet.view_all`, `rental.create`, `gpt.use_dispatch`) were fully consolidated into `RoleName::OperationsManager` in `RolePermissionSeeder.php`.
 3. **Safety & Policy Integrity**: `SosRecipientResolver.php` and `SosIncidentPolicy.php` were updated to resolve and authorize the `OperationsManager` as the primary operational responder, ensuring emergency notifications and acknowledgement chains remain unbroken.
 4. **Segregation of Duties Enforcement**: The backend policies and command services (`ApprovalRequestPolicy`, `DispatchV2CommandService`, `SubmitJobReport`, `ResubmitJobReport`) maintain the four-eyes / maker-checker safeguards, preventing unapproved state transitions while allowing managers full operational scheduling autonomy.
 
 ### Did you build this the most efficient way?
 
-1. **Elimination of Redundant Role Layers**: Removes artificial bifurcations between Dispatcher and Operations Manager throughout database seeders, view models, and frontend dashboards.
+1. **Elimination of Redundant Role Layers**: Removes artificial bifurcations across operational roles throughout database seeders, view models, and frontend dashboards.
 2. **Simplified Dashboard Routing**: In `operations-overview-dashboard.tsx`, office operational overview routes cleanly to `OperationsManagerDashboardView`, which unifies scheduling telemetry, exception alerts, approvals, and resource KPIs in one optimized view model.
 3. **Domain Alignment with Alibaton**: Directly reflects Alibaton Heavy Equipment's real-world organizational hierarchy established in the capstone survey (`capstone-requirements-questionnaire.md`), reducing codebase cognitive overhead.
 
 ### What regressions could this introduce?
 
-1. **Legacy Seeder or Fixture References**: Any legacy seeder referencing `RoleName::Dispatcher` or `dispatcher@example.com` would fail to seed or authenticate. This was mitigated by refactoring `RolePermissionSeeder`, `LocalDevelopmentSeeder`, `BrowserAcceptanceSeeder`, and `Session1NativeAcceptanceSeeder` to use `manager@example.com` / `RoleName::OperationsManager`.
+1. **Legacy Seeder or Fixture References**: Any legacy seeder referencing deprecated operational roles or test accounts would fail to seed or authenticate. This was mitigated by refactoring `RolePermissionSeeder`, `LocalDevelopmentSeeder`, `BrowserAcceptanceSeeder`, and `Session1NativeAcceptanceSeeder` to use `manager@example.com` / `RoleName::OperationsManager`.
 2. **Test Assertion Failures**: Tests expecting 5 or 6 operational roles in the canonical catalog were updated to assert the exact 4 active roles (`SystemAdministrator`, `OperationsManager`, `Driver`, `CraneOperator`).
 
 ### What tests do we need to write before we ship this?
@@ -377,7 +377,7 @@ Comprehensive multi-layer test suites have been implemented and verified:
 ### Did you build this the most secure way?
 
 1. **Server-Side Coordinate Validation & Policy Authorization**: Added `PATCH /operations/dispatch-jobs/{dispatchJob}/site-coordinates` protected by `Gate::authorize('update', $dispatchJob)` and strict numeric range validation ($-90 \le \text{lat} \le 90$, $-180 \le \text{lon} \le 180$).
-2. **Authoritative Dispatcher Pinning**: Coordinates are set and maintained by authorized Operations Managers and System Administrators, preventing unauthorized client-side tampering or accidental GPS spoofing.
+2. **Authoritative Operations Manager Pinning**: Coordinates are set and maintained by authorized Operations Managers and System Administrators, preventing unauthorized client-side tampering or accidental GPS spoofing.
 3. **Sanctum Authenticated Telemetry**: Weather endpoints automatically resolve the pinned coordinates from the database record associated with the authenticated dispatch job.
 
 ### Did you build this the most efficient way?
@@ -418,7 +418,7 @@ Comprehensive multi-layer test suites have been implemented and verified:
 
 ### Did you build this the most efficient way?
 
-1. **Real-World Construction Domain Alignment**: Eliminates the chicken-and-egg dilemma where dispatchers previously had 0 resources assigned during Step 1 review. Engineering lifting plans can now predefine crane foundation grids (`TC-1`, `TC-2`, `TC-3`) directly from engineering contracts prior to resource scheduling in Step 2.
+1. **Real-World Construction Domain Alignment**: Eliminates the chicken-and-egg dilemma where operations managers previously had 0 resources assigned during Step 1 review. Engineering lifting plans can now predefine crane foundation grids (`TC-1`, `TC-2`, `TC-3`) directly from engineering contracts prior to resource scheduling in Step 2.
 2. **High-Performance MapLibre Dynamic GeoJSON Multi-Polygons**: Jib slewing zones are rendered via dynamic 64-vertex geodesic polygons in MapLibre GL (`setData`), bypassing heavy canvas re-renders and maintaining 60 FPS interactive map performance during panning and zooming.
 3. **Instant Real-Time Haversine Collision Detection**: Computes pairwise foundation distances and slewing jib intersections dynamically in React (`collisionOverlap`), immediately alerting operations managers when crane radii overlap without requiring expensive backend roundtrips.
 
@@ -492,7 +492,47 @@ Comprehensive multi-layer test suites have been implemented and verified:
    - PHPStan static analysis: **0 errors**.
    - Laravel Pint code style: **100% compliant**.
    - ESLint: **0 errors, 0 warnings**.
+## Fleet Management UI — Audit Remediation (5 Fixes) — 2026-08-30
+
+### Did you build this the most secure way?
+
+1. **Server-Authoritative Capability Authorization**:
+   - Gated the emergency `safety_lockdown_asset` capability on the backend (`OperationsWorkspaceViewModel::capabilities()`) strictly to users holding `RoleName::SystemAdministrator`, `RoleName::SafetyOfficer`, or `PermissionName::SystemConfigure`.
+   - Dispatchers (`OperationsManager`), drivers (`CraneOperator`), and standard technicians receive `safety_lockdown_asset: false`, preventing unauthorized UI exposure or client-side bypass attempts.
+   - The backend endpoint (`/operations/admin/assets/{id}/safety-lockdown`) retains canonical controller-level authorization checks.
+2. **CSRF & Form Security**:
+   - Replaced raw browser `fetch()` and manual DOM querying of `meta[name="csrf-token"]` in the safety lockdown modal with Inertia's `useForm`, ensuring automatic, synchronized CSRF header injection and secure error handling.
+   - Preserved server-side validation rules (mandatory reason with minimum length) and atomic database transition of asset status to `unavailable`.
+
+### Did you build this the most efficient way?
+
+1. **Zero N+1 & Single Server Count Aggregation**:
+   - Added server-side total asset count calculation (`assets_total`) in `OperationsWorkspaceController` by cloning the query and executing `toBase()->count()`, avoiding fetching or serializing extra model instances.
+   - Total Fleet KPI and list truncation notices consume `assets_total`, providing instant accuracy without client-side pagination overhead.
+2. **Server-Authoritative Dispatchability Contract**:
+   - Converted the "Ready to Deploy" KPI calculation in `AssetsSurface` to rely strictly on the server-authoritative view model property `a.is_dispatchable === true`, which already encapsulates status checks, unreleased blocking work orders, and completed passing inspections in one evaluated field.
+
+### What regressions could this introduce?
+
+1. **Truncation Visibility on Large Fleets**:
+   - Mitigated by rendering an accessible `InlineNotice` (`role="status"`) above the registry when `assets_total > assets.length`, informing dispatchers of the active view limit and directing them to the search filter.
+2. **Modal Accessibility & Focus Trapping**:
+   - Upgraded modal dialog with standard accessibility attributes (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`), `Escape` key listeners, and `useRef` focus restoration to ensure screen reader compatibility and keyboard navigation without trapping users.
+3. **Falsy Values in Asset Telemetry and Metrics**:
+   - Replaced loose truthiness check with explicit `asset.meter_value !== null && asset.meter_value !== undefined && asset.meter_value !== ''`, ensuring valid `0` meter readings are correctly formatted as `"0 (units)"` instead of `"N/A"`.
+
+### What tests do we need to write before we ship this?
+
+1. **Pest Feature Suite**:
+   - `AdminEmergencyOverrideTest.php`: Extended with tests verifying that `safety_lockdown_asset` is strictly `true` for System Administrators, Safety Officers, and users with `system.configure` permission, and `false` for Operations Managers and Crane Operators; verified `assets_total` matching the database count in deferred Inertia workspace payload.
+   - `AssetLifecycleAndMaintenanceTest.php`: Extended with tests verifying that `OperationsWorkspaceViewModel::assets()` computes `is_dispatchable: true` only when an asset has `available` status, zero blocking work orders, and a completed passing inspection.
+2. **Quality Gate Verification Results**:
+   - Pest backend tests: **`AdminEmergencyOverrideTest` (5/5 passed), `AssetLifecycleAndMaintenanceTest` (7/7 passed)**.
+   - PHPStan static analysis: **0 errors**.
+   - Laravel Pint code style: **100% compliant**.
    - TypeScript (`tsc --noEmit`): **0 errors**.
-   - Vite production build: **100% successful in 25.31s**.
+   - ESLint: **0 errors, 0 warnings**.
+   - Vite production build: **100% successful in 32.36s**.
+
 
 

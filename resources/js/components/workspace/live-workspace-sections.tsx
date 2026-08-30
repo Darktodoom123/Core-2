@@ -32,7 +32,7 @@ import {
     Wrench,
     X,
 } from 'lucide-react';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { ApprovalsSurface } from '@/components/approvals';
 import { FieldForemanSurface } from '@/components/surfaces/field-foreman-surface';
@@ -41,6 +41,7 @@ import {
     Button,
     DateTimePicker,
     EmptyState,
+    InlineNotice,
     PageHeading,
     Panel,
     Skeleton,
@@ -56,11 +57,14 @@ import { cn } from '@/lib/utils';
 import type {
     ApprovalViewModel,
     ArchivedJobViewModel,
+    AssetStatusValue,
     AssetViewModel,
     AuditEventViewModel,
     DispatchJobViewModel,
     FuelRequestViewModel,
     GptRecommendationViewModel,
+    InspectionResultValue,
+    InspectionTypeValue,
     JobReportViewModel,
     LocationUpdateViewModel,
     NotificationViewModel,
@@ -97,6 +101,7 @@ function AssetMapLoadingFallback({ compact = false }: { compact?: boolean }) {
 export function LiveWorkspaceSection({
     section,
     assets,
+    assetsTotal,
     fuelRequests,
     locations,
     approvals,
@@ -114,6 +119,7 @@ export function LiveWorkspaceSection({
 }: {
     section: Exclude<WorkspaceSection, 'dispatch'>;
     assets: AssetViewModel[];
+    assetsTotal?: number;
     fuelRequests: FuelRequestViewModel[];
     locations: LocationUpdateViewModel[];
     approvals: ApprovalViewModel[];
@@ -134,6 +140,7 @@ export function LiveWorkspaceSection({
             return (
                 <AssetsSurface
                     assets={assets}
+                    assetsTotal={assetsTotal}
                     locations={locations}
                     activeSosIncidents={activeSosIncidents}
                     capabilities={capabilities}
@@ -152,6 +159,7 @@ export function LiveWorkspaceSection({
             return (
                 <AssetsSurface
                     assets={assets}
+                    assetsTotal={assetsTotal}
                     locations={locations}
                     activeSosIncidents={activeSosIncidents}
                     capabilities={capabilities}
@@ -224,6 +232,7 @@ function SafetyWorkspaceSection() {
 
 function AssetsSurface({
     assets,
+    assetsTotal,
     locations = [],
     activeSosIncidents = [],
     capabilities,
@@ -231,6 +240,7 @@ function AssetsSurface({
     initialViewMode = 'list',
 }: {
     assets: AssetViewModel[];
+    assetsTotal?: number;
     locations?: LocationUpdateViewModel[];
     activeSosIncidents?: SosIncidentViewModel[];
     capabilities: WorkspaceCapabilities;
@@ -270,10 +280,7 @@ function AssetsSurface({
                 trucks += 1;
             }
 
-            if (
-                (v === 'available' || v === 'ready_for_service') &&
-                a.blocking_work_orders_count === 0
-            ) {
+            if (a.is_dispatchable === true) {
                 ready += 1;
             } else if (
                 v === 'working' ||
@@ -377,6 +384,8 @@ function AssetsSurface({
         [locations],
     );
 
+    const totalFleetCount = assetsTotal ?? kpis.total;
+
     return (
         <div>
             <PageHeading
@@ -394,7 +403,7 @@ function AssetsSurface({
                             <Truck className="h-4 w-4 text-ink-soft" />
                         </div>
                         <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.total}{' '}
+                            {totalFleetCount}{' '}
                             <span className="text-xs font-normal text-ink-soft">
                                 units
                             </span>
@@ -485,6 +494,14 @@ function AssetsSurface({
                         </button>
                     </div>
                 </div>
+
+                {assetsTotal !== undefined && assetsTotal > assets.length && (
+                    <InlineNotice tone="info" title="Fleet list truncated">
+                        Showing the first {assets.length} of {assetsTotal} fleet
+                        assets. Newer assets may not be listed — use the search
+                        field to find a specific asset.
+                    </InlineNotice>
+                )}
 
                 {assets.length === 0 ? (
                     <Panel>
@@ -814,58 +831,55 @@ function AssetDetailPane({
     >('overview');
 
     const [showLockdownModal, setShowLockdownModal] = useState(false);
-    const [lockdownReason, setLockdownReason] = useState('');
-    const [lockingDown, setLockingDown] = useState(false);
-    const [lockdownError, setLockdownError] = useState<string | null>(null);
+    const lockdownTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const lockdownTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const lockdownForm = useForm({
+        reason: '',
+    });
 
     const hasLiveGps =
         assetLocation &&
         assetLocation.latitude !== null &&
         assetLocation.longitude !== null;
 
-    const handleSafetyLockdown = async (e: FormEvent) => {
-        e.preventDefault();
-        setLockingDown(true);
-        setLockdownError(null);
+    useEffect(() => {
+        if (showLockdownModal) {
+            lockdownTextareaRef.current?.focus();
 
-        const csrfToken =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') ?? '';
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') {
+                    setShowLockdownModal(false);
+                    lockdownForm.clearErrors();
+                    lockdownTriggerRef.current?.focus();
+                }
+            };
 
-        try {
-            const response = await fetch(
-                `/operations/admin/assets/${asset.id}/safety-lockdown`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: JSON.stringify({ reason: lockdownReason }),
-                },
-            );
+            window.addEventListener('keydown', handleKeyDown);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                setLockdownError(
-                    data.message || 'Failed to place asset on safety lockdown.',
-                );
-                setLockingDown(false);
-
-                return;
-            }
-
-            setShowLockdownModal(false);
-            setLockdownReason('');
-            setLockingDown(false);
-            router.reload();
-        } catch {
-            setLockdownError('Network error while applying safety lockdown.');
-            setLockingDown(false);
+            return () => window.removeEventListener('keydown', handleKeyDown);
         }
+    }, [showLockdownModal, lockdownForm]);
+
+    const handleSafetyLockdown = (e: FormEvent) => {
+        e.preventDefault();
+        lockdownForm.post(
+            `/operations/admin/assets/${asset.id}/safety-lockdown`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowLockdownModal(false);
+                    lockdownForm.reset();
+                    lockdownTriggerRef.current?.focus();
+                },
+            },
+        );
+    };
+
+    const handleCloseLockdownModal = () => {
+        setShowLockdownModal(false);
+        lockdownForm.clearErrors();
+        lockdownTriggerRef.current?.focus();
     };
 
     return (
@@ -906,30 +920,43 @@ function AssetDetailPane({
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {asset.status.value !== 'unavailable' && (
-                        <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => setShowLockdownModal(true)}
-                            title="Place asset under emergency safety recall lockdown"
-                        >
-                            <ShieldAlert className="h-3.5 w-3.5" />
-                            Safety Lockdown
-                        </Button>
-                    )}
+                    {capabilities.safety_lockdown_asset &&
+                        asset.status.value !== 'unavailable' && (
+                            <Button
+                                ref={lockdownTriggerRef}
+                                size="sm"
+                                variant="danger"
+                                onClick={() => setShowLockdownModal(true)}
+                                title="Place asset under emergency safety recall lockdown"
+                            >
+                                <ShieldAlert className="h-3.5 w-3.5" />
+                                Safety Lockdown
+                            </Button>
+                        )}
                 </div>
             </div>
 
             {/* Safety Lockdown Modal */}
             {showLockdownModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="lockdown-dialog-title"
+                >
                     <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
                         <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-strong">
-                                <ShieldAlert className="h-6 w-6" />
+                                <ShieldAlert
+                                    className="h-6 w-6"
+                                    aria-hidden="true"
+                                />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-ink">
+                                <h3
+                                    id="lockdown-dialog-title"
+                                    className="text-lg font-bold text-ink"
+                                >
                                     Fleet Safety Recall Lockdown
                                 </h3>
                                 <p className="text-xs text-ink-soft">
@@ -938,9 +965,24 @@ function AssetDetailPane({
                             </div>
                         </div>
 
-                        {lockdownError && (
-                            <div className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong">
-                                {lockdownError}
+                        {(
+                            lockdownForm.errors as Record<
+                                string,
+                                string | undefined
+                            >
+                        ).message && (
+                            <div
+                                role="alert"
+                                className="mt-3 rounded-lg bg-danger-soft p-3 text-xs font-medium text-danger-strong"
+                            >
+                                {
+                                    (
+                                        lockdownForm.errors as Record<
+                                            string,
+                                            string | undefined
+                                        >
+                                    ).message
+                                }
                             </div>
                         )}
 
@@ -954,38 +996,70 @@ function AssetDetailPane({
                         <form
                             onSubmit={handleSafetyLockdown}
                             className="mt-4 space-y-4"
+                            noValidate
                         >
                             <div>
-                                <label className="block text-xs font-semibold text-ink">
+                                <label
+                                    htmlFor="lockdown-reason"
+                                    className="block text-xs font-semibold text-ink"
+                                >
                                     Mandatory Safety Recall Reason *
                                 </label>
                                 <textarea
+                                    id="lockdown-reason"
+                                    ref={lockdownTextareaRef}
                                     required
                                     rows={3}
                                     minLength={6}
-                                    value={lockdownReason}
+                                    maxLength={500}
+                                    value={lockdownForm.data.reason}
                                     onChange={(e) =>
-                                        setLockdownReason(e.target.value)
+                                        lockdownForm.setData(
+                                            'reason',
+                                            e.target.value,
+                                        )
+                                    }
+                                    aria-invalid={Boolean(
+                                        lockdownForm.errors.reason,
+                                    )}
+                                    aria-describedby={
+                                        lockdownForm.errors.reason
+                                            ? 'lockdown-reason-error'
+                                            : undefined
                                     }
                                     placeholder="Specify safety defect, hydraulic fault, structural crack, or regulatory recall notice…"
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-danger focus:outline-none"
+                                    className={cn(
+                                        'mt-1 w-full rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:outline-none',
+                                        lockdownForm.errors.reason
+                                            ? 'border-danger focus:border-danger'
+                                            : 'border-line focus:border-line-strong',
+                                    )}
                                 />
+                                {lockdownForm.errors.reason && (
+                                    <p
+                                        id="lockdown-reason-error"
+                                        role="alert"
+                                        className="mt-1 text-xs font-medium text-danger"
+                                    >
+                                        {lockdownForm.errors.reason}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex justify-end gap-2 border-t border-line pt-2">
                                 <Button
                                     variant="quiet"
-                                    onClick={() => setShowLockdownModal(false)}
-                                    disabled={lockingDown}
+                                    onClick={handleCloseLockdownModal}
+                                    disabled={lockdownForm.processing}
                                 >
                                     Cancel
                                 </Button>
                                 <Button
                                     variant="danger"
                                     type="submit"
-                                    disabled={lockingDown}
+                                    disabled={lockdownForm.processing}
                                 >
-                                    {lockingDown
+                                    {lockdownForm.processing
                                         ? 'Applying…'
                                         : 'Enforce Safety Lockdown'}
                                 </Button>
@@ -995,9 +1069,18 @@ function AssetDetailPane({
                 </div>
             )}
 
-            <div className="flex flex-wrap border-b border-line">
+            <div
+                className="flex flex-wrap border-b border-line"
+                role="tablist"
+                aria-label="Asset Details"
+            >
                 <button
                     type="button"
+                    role="tab"
+                    id={`asset-tab-overview-${asset.id}`}
+                    aria-controls={`asset-tabpanel-overview-${asset.id}`}
+                    aria-selected={activeTab === 'overview'}
+                    tabIndex={activeTab === 'overview' ? 0 : -1}
                     onClick={() => setActiveTab('overview')}
                     className={cn(
                         'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
@@ -1011,6 +1094,11 @@ function AssetDetailPane({
                 </button>
                 <button
                     type="button"
+                    role="tab"
+                    id={`asset-tab-telemetry-${asset.id}`}
+                    aria-controls={`asset-tabpanel-telemetry-${asset.id}`}
+                    aria-selected={activeTab === 'telemetry'}
+                    tabIndex={activeTab === 'telemetry' ? 0 : -1}
                     onClick={() => setActiveTab('telemetry')}
                     className={cn(
                         'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
@@ -1027,6 +1115,11 @@ function AssetDetailPane({
                 </button>
                 <button
                     type="button"
+                    role="tab"
+                    id={`asset-tab-status-${asset.id}`}
+                    aria-controls={`asset-tabpanel-status-${asset.id}`}
+                    aria-selected={activeTab === 'status'}
+                    tabIndex={activeTab === 'status' ? 0 : -1}
                     onClick={() => setActiveTab('status')}
                     className={cn(
                         'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
@@ -1040,6 +1133,11 @@ function AssetDetailPane({
                 </button>
                 <button
                     type="button"
+                    role="tab"
+                    id={`asset-tab-inspections-${asset.id}`}
+                    aria-controls={`asset-tabpanel-inspections-${asset.id}`}
+                    aria-selected={activeTab === 'inspections'}
+                    tabIndex={activeTab === 'inspections' ? 0 : -1}
                     onClick={() => setActiveTab('inspections')}
                     className={cn(
                         'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
@@ -1063,6 +1161,11 @@ function AssetDetailPane({
                 </button>
                 <button
                     type="button"
+                    role="tab"
+                    id={`asset-tab-maintenance-${asset.id}`}
+                    aria-controls={`asset-tabpanel-maintenance-${asset.id}`}
+                    aria-selected={activeTab === 'maintenance'}
+                    tabIndex={activeTab === 'maintenance' ? 0 : -1}
                     onClick={() => setActiveTab('maintenance')}
                     className={cn(
                         'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
@@ -1089,7 +1192,12 @@ function AssetDetailPane({
             </div>
 
             {activeTab === 'overview' && (
-                <div className="space-y-4">
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-overview-${asset.id}`}
+                    aria-labelledby={`asset-tab-overview-${asset.id}`}
+                    className="space-y-4"
+                >
                     <dl className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                         <div className="rounded-lg bg-surface-subtle p-3">
                             <dt className="text-xs font-medium text-ink-soft">
@@ -1123,7 +1231,9 @@ function AssetDetailPane({
                                 Meter Reading
                             </dt>
                             <dd className="mt-1 text-sm font-semibold">
-                                {asset.meter_value
+                                {asset.meter_value !== null &&
+                                asset.meter_value !== undefined &&
+                                asset.meter_value !== ''
                                     ? `${asset.meter_value} (${asset.meter_type ?? 'units'})`
                                     : 'N/A'}
                             </dd>
@@ -1175,33 +1285,57 @@ function AssetDetailPane({
             )}
 
             {activeTab === 'telemetry' && (
-                <AssetTelemetrySection
-                    asset={asset}
-                    location={assetLocation}
-                    activeSosIncidents={activeSosIncidents}
-                    onViewFullTracking={onViewFullTracking}
-                />
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-telemetry-${asset.id}`}
+                    aria-labelledby={`asset-tab-telemetry-${asset.id}`}
+                >
+                    <AssetTelemetrySection
+                        asset={asset}
+                        location={assetLocation}
+                        activeSosIncidents={activeSosIncidents}
+                        onViewFullTracking={onViewFullTracking}
+                    />
+                </div>
             )}
 
             {activeTab === 'status' && (
-                <AssetStatusUpdateForm
-                    asset={asset}
-                    canUpdate={capabilities.update_asset_status}
-                />
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-status-${asset.id}`}
+                    aria-labelledby={`asset-tab-status-${asset.id}`}
+                >
+                    <AssetStatusUpdateForm
+                        asset={asset}
+                        canUpdate={capabilities.update_asset_status}
+                    />
+                </div>
             )}
 
             {activeTab === 'inspections' && (
-                <AssetInspectionsSection
-                    asset={asset}
-                    canInspect={capabilities.inspect_asset}
-                />
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-inspections-${asset.id}`}
+                    aria-labelledby={`asset-tab-inspections-${asset.id}`}
+                >
+                    <AssetInspectionsSection
+                        asset={asset}
+                        canInspect={capabilities.inspect_asset}
+                    />
+                </div>
             )}
 
             {activeTab === 'maintenance' && (
-                <AssetMaintenanceSection
-                    asset={asset}
-                    canMaintain={capabilities.maintain_asset}
-                />
+                <div
+                    role="tabpanel"
+                    id={`asset-tabpanel-maintenance-${asset.id}`}
+                    aria-labelledby={`asset-tab-maintenance-${asset.id}`}
+                >
+                    <AssetMaintenanceSection
+                        asset={asset}
+                        canMaintain={capabilities.maintain_asset}
+                    />
+                </div>
             )}
         </Panel>
     );
@@ -1305,9 +1439,9 @@ function AssetTelemetrySection({
                                 location.freshness_status === 'delayed' &&
                                     'bg-warning-strong',
                                 location.freshness_status === 'stale' &&
-                                    'bg-amber-500',
+                                    'bg-warning-strong',
                                 location.freshness_status === 'offline' &&
-                                    'bg-slate-400',
+                                    'bg-ink-soft/40',
                             )}
                         />
                         <span className="capitalize">
@@ -1411,7 +1545,10 @@ function AssetStatusUpdateForm({
     asset: AssetViewModel;
     canUpdate: boolean;
 }) {
-    const form = useForm({
+    const form = useForm<{
+        status: AssetStatusValue;
+        reason: string;
+    }>({
         status: asset.status.value,
         reason: '',
     });
@@ -1449,8 +1586,12 @@ function AssetStatusUpdateForm({
                     <select
                         value={form.data.status}
                         onChange={(e) =>
-                            form.setData('status', e.target.value as any)
+                            form.setData(
+                                'status',
+                                e.target.value as AssetStatusValue,
+                            )
                         }
+                        aria-invalid={Boolean(form.errors.status)}
                         className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
                     >
                         <option value="available">Available</option>
@@ -1477,7 +1618,7 @@ function AssetStatusUpdateForm({
             </div>
 
             {form.errors.status && (
-                <p className="text-xs font-medium text-danger">
+                <p role="alert" className="text-xs font-medium text-danger">
                     {form.errors.status}
                 </p>
             )}
@@ -1503,7 +1644,12 @@ function AssetInspectionsSection({
     canInspect: boolean;
 }) {
     const [showForm, setShowForm] = useState(false);
-    const form = useForm({
+    const form = useForm<{
+        type: InspectionTypeValue;
+        result: InspectionResultValue;
+        checklist: Record<string, boolean>;
+        findings: string;
+    }>({
         type: 'safety',
         result: 'passed',
         checklist: {
@@ -1512,7 +1658,7 @@ function AssetInspectionsSection({
             tires_or_tracks: true,
             hydraulics: true,
             lights_and_signals: true,
-        } as Record<string, boolean>,
+        },
         findings: '',
     });
 
@@ -1557,7 +1703,10 @@ function AssetInspectionsSection({
                             <select
                                 value={form.data.type}
                                 onChange={(e) =>
-                                    form.setData('type', e.target.value as any)
+                                    form.setData(
+                                        'type',
+                                        e.target.value as InspectionTypeValue,
+                                    )
                                 }
                                 className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"
                             >
@@ -1578,7 +1727,7 @@ function AssetInspectionsSection({
                                 onChange={(e) =>
                                     form.setData(
                                         'result',
-                                        e.target.value as any,
+                                        e.target.value as InspectionResultValue,
                                     )
                                 }
                                 className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3"

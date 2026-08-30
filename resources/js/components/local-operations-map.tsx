@@ -348,6 +348,15 @@ function OperationsMapContent({
             markerElement.addEventListener('click', () =>
                 onSelect(point.resourceId),
             );
+            const statusTone =
+                point.freshness === 'Live'
+                    ? 'success'
+                    : point.freshness === 'Delayed'
+                      ? 'info'
+                      : point.freshness === 'Stale'
+                        ? 'warning'
+                        : 'danger';
+
             const popup = new maplibregl.Popup({
                 closeButton: true,
                 closeOnClick: true,
@@ -357,7 +366,15 @@ function OperationsMapContent({
                     title: point.label,
                     subtitle: point.destination,
                     status: point.freshness,
-                    details: [`Updated ${point.updatedAt}`, point.eta],
+                    statusTone,
+                    fields: [
+                        { label: 'Updated', value: point.updatedAt },
+                        { label: 'ETA', value: point.eta },
+                    ],
+                    actionButton: {
+                        label: 'Select Resource',
+                        onClick: () => onSelect(point.resourceId),
+                    },
                 }),
             );
             markersRef.current.push(

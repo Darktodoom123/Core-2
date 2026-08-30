@@ -9,7 +9,7 @@ Field Emergency SOS is implemented behind `SOS_ENABLED=false`. Do not enable it 
 - Authenticated active field workers may hold the global Android SOS control for two seconds. A normal tap does not activate it.
 - The server attaches the worker's active dispatch and assigned asset when valid; otherwise the incident remains valid without context.
 - Categories are vehicular accident, site accident, critical asset malfunction, other immediate danger, and unclassified.
-- Initial alerts are delivered only to the assigned Dispatcher and active Operations Managers. Field Technicians are not recipients.
+- Initial alerts are delivered only to active Operations Managers. Field Technicians are not recipients.
 - An unacknowledged incident escalates at the server deadline (default 180 seconds) to the configured company emergency contacts. Public authorities are never contacted automatically.
 - Mobile offline attempts are retained in the emergency-priority outbox for the bounded retry window (default 15 minutes), with deliberate call/SMS actions available to the worker.
 

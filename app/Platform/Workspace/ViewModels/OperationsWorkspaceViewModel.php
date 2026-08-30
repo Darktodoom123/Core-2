@@ -466,11 +466,13 @@ final class OperationsWorkspaceViewModel
                 'code' => $location->asset->code,
                 'name' => $location->asset->name,
                 'kind' => $location->asset->kind,
+                'location' => $location->asset->location,
             ],
             'job' => $location->job === null ? null : [
                 'id' => (int) $location->job->getKey(),
                 'reference' => $location->job->reference,
                 'title' => $location->job->title,
+                'site' => $location->job->site,
             ],
             'latitude' => $location->latitude !== null ? (float) $location->latitude : null,
             'longitude' => $location->longitude !== null ? (float) $location->longitude : null,
@@ -610,6 +612,9 @@ final class OperationsWorkspaceViewModel
                 || $user->can(PermissionName::DispatchApprovePriority->value),
             'update_assigned_dispatch_status' => $user->can(PermissionName::DispatchUpdateOwnStatus->value),
             'update_asset_status' => $user->can(PermissionName::FleetUpdateStatus->value) || $user->can(PermissionName::EquipmentUpdateStatus->value),
+            'safety_lockdown_asset' => $user->hasRole(RoleName::SystemAdministrator->value)
+                || $user->hasRole(RoleName::SafetyOfficer->value)
+                || $user->can(PermissionName::SystemConfigure->value),
             'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),
             'request_gpt_assistance' => $user->can(PermissionName::GptUseDispatch->value) || $user->can(PermissionName::GptUseOperations->value) || $user->can(PermissionName::GptUseMaintenance->value),

@@ -440,42 +440,184 @@ textarea:focus-visible,
 }
 
 .maplibre-popup-card {
-    min-width: 13rem;
+    min-width: 15rem;
+    max-width: 20rem;
     padding: 0.75rem;
     color: var(--color-ink);
     font-family: var(--font-sans);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.maplibre-popup-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+    padding-bottom: 0.5rem;
+    padding-right: 1.5rem;
 }
 
 .maplibre-popup-card__heading {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
-    border-bottom: 1px solid var(--color-line);
-    padding-bottom: 0.5rem;
+    min-width: 0;
 }
 
-.maplibre-popup-card__heading strong {
+.maplibre-popup-card__title {
     font-size: 0.875rem;
+    font-weight: 600;
     line-height: 1.25;
+    color: var(--color-ink);
+    word-break: break-word;
 }
 
-.maplibre-popup-card__heading span,
-.maplibre-popup-card > p {
+.maplibre-popup-card__subtitle {
     color: var(--color-ink-soft);
     font-size: 0.6875rem;
+    font-weight: 500;
 }
 
 .maplibre-popup-card__status {
     display: inline-flex;
-    width: fit-content;
-    margin-top: 0.625rem;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
     border-radius: 9999px;
-    background: var(--color-surface-subtle);
     padding: 0.125rem 0.5rem;
-    color: var(--color-ink-soft);
     font-size: 0.6875rem;
     font-weight: 600;
+    line-height: 1.2;
+    background: var(--color-surface-subtle);
+    color: var(--color-ink-soft);
     text-transform: capitalize;
+}
+
+.maplibre-popup-card__status-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: currentColor;
+}
+
+.maplibre-popup-card__status--success {
+    background: var(--color-success-soft);
+    color: var(--color-success-strong);
+}
+
+.maplibre-popup-card__status--warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+}
+
+.maplibre-popup-card__status--danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+}
+
+.maplibre-popup-card__status--info {
+    background: var(--color-info-soft);
+    color: var(--color-info-strong);
+}
+
+.maplibre-popup-card__status--neutral {
+    background: var(--color-surface-subtle);
+    color: var(--color-ink-soft);
+}
+
+.maplibre-popup-card__alert-badge {
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.maplibre-popup-card__alert-badge--danger {
+    background: var(--color-danger-soft);
+    color: var(--color-danger-strong);
+    border: 1px solid var(--color-danger);
+}
+
+.maplibre-popup-card__alert-badge--warning {
+    background: var(--color-warning-soft);
+    color: var(--color-warning-strong);
+    border: 1px solid var(--color-warning);
+}
+
+.maplibre-popup-card__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+}
+
+.maplibre-popup-card__field {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+}
+
+.maplibre-popup-card__field-label {
+    color: var(--color-ink-soft);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.maplibre-popup-card__field-value {
+    color: var(--color-ink);
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+.maplibre-popup-card__details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.maplibre-popup-card__detail {
+    color: var(--color-ink-soft);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.maplibre-popup-card__location-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-top: 1px dashed var(--color-line);
+    padding-top: 0.375rem;
+}
+
+.maplibre-popup-card__location-name {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.maplibre-popup-card__location-icon {
+    font-size: 0.8125rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.maplibre-popup-card__location-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .maplibre-popup-card__coordinates {
@@ -483,27 +625,67 @@ textarea:focus-visible,
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-top: 0.5rem;
     color: var(--color-ink-soft);
     font-family:
         ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.6875rem;
 }
 
+.maplibre-popup-card__coord-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .maplibre-popup-card__copy {
     min-width: 44px;
-    min-height: 44px;
+    min-height: 28px;
     border-radius: 0.375rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.125rem 0.5rem;
     color: var(--color-brand-strong);
     font-family: var(--font-sans);
     font-size: 0.6875rem;
     font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid transparent;
+    transition:
+        background-color 150ms ease-out,
+        border-color 150ms ease-out;
 }
 
 .maplibre-popup-card__copy:hover,
 .maplibre-popup-card__copy:focus-visible {
     background: var(--color-brand-soft);
+    border-color: var(--color-brand);
+}
+
+.maplibre-popup-card__actions {
+    display: flex;
+    gap: 0.375rem;
+    padding-top: 0.125rem;
+}
+
+.maplibre-popup-card__action-btn {
+    width: 100%;
+    border-radius: 0.375rem;
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-brand-contrast);
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-line);
+    cursor: pointer;
+    text-align: center;
+    transition:
+        background-color 150ms ease-out,
+        border-color 150ms ease-out;
+}
+
+.maplibre-popup-card__action-btn:hover,
+.maplibre-popup-card__action-btn:focus-visible {
+    background: var(--color-brand-soft);
+    border-color: var(--color-brand);
 }
 
 .maplibre-map .maplibregl-popup-content {

@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
@@ -266,4 +267,79 @@ it('prevents unsafe assets from being assessed as eligible for dispatch assignme
     $assessment1 = $eligibility->asset($asset1, 'truck', $job);
     expect($assessment1['eligible'])->toBeFalse();
     expect($assessment1['reasons'])->toContain('Readiness is Under maintenance.');
+});
+
+it('computes is_dispatchable strictly requiring passing inspection, available status, and zero blocking work orders', function (): void {
+    $technician = User::factory()->create();
+    $technician->syncRoles([RoleName::OperationsManager->value]);
+
+    // 1. Available, 0 blocking orders, NO inspection => false
+    $assetNoInspection = OperationalAsset::query()->create([
+        'code' => 'CRN-NO-INSP',
+        'name' => 'Crane Without Inspection',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+
+    // 2. Available, 0 blocking orders, passing inspection => true
+    $assetCertified = OperationalAsset::query()->create([
+        'code' => 'CRN-CERTIFIED',
+        'name' => 'Certified Ready Crane',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+    $assetCertified->inspections()->create([
+        'technician_id' => $technician->id,
+        'type' => 'safety',
+        'result' => 'passed',
+        'checklist' => ['boom' => true],
+        'completed_at' => now(),
+    ]);
+
+    // 3. Available, 1 blocking order, passing inspection => false
+    $assetBlocked = OperationalAsset::query()->create([
+        'code' => 'CRN-BLOCKED',
+        'name' => 'Blocked Crane',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+    $assetBlocked->inspections()->create([
+        'technician_id' => $technician->id,
+        'type' => 'safety',
+        'result' => 'passed',
+        'checklist' => ['boom' => true],
+        'completed_at' => now(),
+    ]);
+    $assetBlocked->maintenanceWorkOrders()->create([
+        'defect' => 'Cracked outrigger weld',
+        'status' => 'open',
+        'dispatch_blocking' => true,
+    ]);
+
+    // 4. Unavailable status, passing inspection => false
+    $assetUnavailable = OperationalAsset::query()->create([
+        'code' => 'CRN-UNAVAILABLE',
+        'name' => 'Unavailable Crane',
+        'kind' => 'crane',
+        'status' => AssetStatus::Unavailable,
+    ]);
+    $assetUnavailable->inspections()->create([
+        'technician_id' => $technician->id,
+        'type' => 'safety',
+        'result' => 'passed',
+        'checklist' => ['boom' => true],
+        'completed_at' => now(),
+    ]);
+
+    $assets = OperationalAsset::query()
+        ->withCount(['maintenanceWorkOrders as blocking_work_orders_count' => fn ($query) => $query->where('dispatch_blocking', true)->whereNull('released_at')])
+        ->with(['inspections', 'maintenanceWorkOrders'])
+        ->get();
+
+    $viewModels = collect(OperationsWorkspaceViewModel::assets($assets))->keyBy('code');
+
+    expect($viewModels['CRN-NO-INSP']['is_dispatchable'])->toBeFalse();
+    expect($viewModels['CRN-CERTIFIED']['is_dispatchable'])->toBeTrue();
+    expect($viewModels['CRN-BLOCKED']['is_dispatchable'])->toBeFalse();
+    expect($viewModels['CRN-UNAVAILABLE']['is_dispatchable'])->toBeFalse();
 });

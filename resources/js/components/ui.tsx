@@ -7,6 +7,7 @@ import type {
     HTMLAttributes,
     PropsWithChildren,
     ReactNode,
+    Ref,
 } from 'react';
 import { cn } from '@/lib/utils';
 import type {
@@ -19,13 +20,16 @@ export function Button({
     variant = 'secondary',
     size = 'md',
     type = 'button',
+    ref,
     ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
     size?: 'sm' | 'md' | 'icon';
+    ref?: Ref<HTMLButtonElement>;
 }) {
     return (
         <button
+            ref={ref}
             type={type}
             className={cn(
                 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50',
@@ -229,21 +233,27 @@ export function InlineNotice({
     title,
     children,
     action,
+    role = 'status',
+    className,
 }: PropsWithChildren<{
     tone: 'info' | 'warning' | 'success';
     title: string;
     action?: ReactNode;
+    role?: string;
+    className?: string;
 }>) {
     const Icon =
         tone === 'warning' ? AlertTriangle : tone === 'success' ? Check : Info;
 
     return (
         <div
+            role={role}
             className={cn(
                 'flex items-start gap-3 rounded-lg p-3 text-sm',
                 tone === 'info' && 'bg-brand-soft text-brand-strong',
                 tone === 'warning' && 'bg-warning-soft text-warning-strong',
                 tone === 'success' && 'bg-success-soft text-success-strong',
+                className,
             )}
         >
             <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

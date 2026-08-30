@@ -5,12 +5,15 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
@@ -120,4 +123,80 @@ it('denies emergency overrides to unauthorized roles', function (): void {
             'reason' => 'Unauthorized attempt',
         ])
         ->assertForbidden();
+});
+
+it('exposes safety_lockdown_asset in workspace capabilities strictly to system admin, safety officer, or system configure permission', function (): void {
+    $admin = User::factory()->create();
+    $admin->syncRoles([RoleName::SystemAdministrator->value]);
+
+    $safetyOfficer = User::factory()->create();
+    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+
+    $dispatcher = User::factory()->create();
+    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+
+    $driver = User::factory()->create();
+    $driver->syncRoles([RoleName::CraneOperator->value]);
+
+    $customUser = User::factory()->create();
+    $customUser->givePermissionTo(PermissionName::SystemConfigure->value);
+
+    expect(OperationsWorkspaceViewModel::capabilities($admin)['safety_lockdown_asset'])->toBeTrue();
+    expect(OperationsWorkspaceViewModel::capabilities($safetyOfficer)['safety_lockdown_asset'])->toBeTrue();
+    expect(OperationsWorkspaceViewModel::capabilities($customUser)['safety_lockdown_asset'])->toBeTrue();
+    expect(OperationsWorkspaceViewModel::capabilities($dispatcher)['safety_lockdown_asset'])->toBeFalse();
+    expect(OperationsWorkspaceViewModel::capabilities($driver)['safety_lockdown_asset'])->toBeFalse();
+
+    $this->actingAs($admin)
+        ->get('/operations?section=assets')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('workspace')
+            ->where('capabilities.safety_lockdown_asset', true)
+        );
+
+    $this->actingAs($dispatcher)
+        ->get('/operations?section=assets')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('workspace')
+            ->where('capabilities.safety_lockdown_asset', false)
+        );
+});
+
+it('includes untruncated assets_total in workspace payload matching database count', function (): void {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+
+    OperationalAsset::query()->create([
+        'code' => 'CRN-AUDIT-01',
+        'name' => 'Audit Test Crane 1',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+    OperationalAsset::query()->create([
+        'code' => 'CRN-AUDIT-02',
+        'name' => 'Audit Test Crane 2',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+    ]);
+    OperationalAsset::query()->create([
+        'code' => 'TRK-AUDIT-01',
+        'name' => 'Audit Test Truck 1',
+        'kind' => 'truck',
+        'status' => AssetStatus::Available,
+    ]);
+
+    expect(OperationalAsset::query()->count())->toBe(3);
+
+    $this->actingAs($manager)
+        ->get('/operations?section=assets')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('workspace')
+            ->loadDeferredProps('workspace-assets', fn (Assert $section) => $section
+                ->where('assets_total', 3)
+                ->has('assets', 3)
+            )
+        );
 });
