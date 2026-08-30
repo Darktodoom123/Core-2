@@ -160,6 +160,28 @@ final class SafetyGovernanceApiController extends Controller
         return response()->json(['data' => $hazards]);
     }
 
+    public function indexToolboxMeetings(Request $request): JsonResponse
+    {
+        $meetings = ToolboxMeeting::query()
+            ->with(['conductor', 'safetyOfficer'])
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $meetings]);
+    }
+
+    public function indexWorkStoppages(Request $request): JsonResponse
+    {
+        $notices = WorkStoppageNotice::query()
+            ->with(['safetyOfficer', 'acknowledgedByUser', 'liftedByUser'])
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        return response()->json(['data' => $notices]);
+    }
+
     public function indexCriticalLiftPlans(Request $request): JsonResponse
     {
         $plans = CriticalLiftPlan::query()

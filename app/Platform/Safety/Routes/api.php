@@ -18,6 +18,8 @@ Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api
         Route::get('/metrics', [SafetyGovernanceApiController::class, 'metrics'])->name('metrics');
         Route::get('/hazards', [SafetyGovernanceApiController::class, 'indexHazards'])->name('hazards.index');
         Route::get('/lift-plans', [SafetyGovernanceApiController::class, 'indexCriticalLiftPlans'])->name('lift-plans.index');
+        Route::get('/toolbox-meetings', [SafetyGovernanceApiController::class, 'indexToolboxMeetings'])->name('tbm.index');
+        Route::get('/work-stoppages', [SafetyGovernanceApiController::class, 'indexWorkStoppages'])->name('work-stoppages.index');
         Route::post('/toolbox-meetings', [SafetyGovernanceApiController::class, 'storeToolboxMeeting'])->name('tbm.store');
         Route::post('/toolbox-meetings/{meeting}/cosign', [SafetyGovernanceApiController::class, 'coSignToolboxMeeting'])->name('tbm.cosign');
         Route::post('/lift-plans', [SafetyGovernanceApiController::class, 'storeCriticalLiftPlan'])->name('lift-plans.store');

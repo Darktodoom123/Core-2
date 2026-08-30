@@ -21,6 +21,8 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
         Route::get('/metrics', [SafetyGovernanceApiController::class, 'metrics'])->name('metrics');
         Route::get('/hazards', [SafetyGovernanceApiController::class, 'indexHazards'])->name('hazards.index');
         Route::get('/lift-plans', [SafetyGovernanceApiController::class, 'indexCriticalLiftPlans'])->name('lift-plans.index');
+        Route::get('/toolbox-meetings', [SafetyGovernanceApiController::class, 'indexToolboxMeetings'])->name('tbm.index');
+        Route::get('/work-stoppages', [SafetyGovernanceApiController::class, 'indexWorkStoppages'])->name('work-stoppages.index');
         Route::post('/toolbox-meetings', [SafetyGovernanceApiController::class, 'storeToolboxMeeting'])->name('tbm.store');
         Route::post('/toolbox-meetings/{meeting}/cosign', [SafetyGovernanceApiController::class, 'coSignToolboxMeeting'])->name('tbm.cosign');
         Route::post('/lift-plans', [SafetyGovernanceApiController::class, 'storeCriticalLiftPlan'])->name('lift-plans.store');
