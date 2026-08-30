@@ -126,9 +126,7 @@ export interface LocationResolutionInput {
  * prioritizing assigned job sites and asset locations, with a
  * fallback to geographic area and landmark lookups.
  */
-export function resolveLocationName(
-    location: LocationResolutionInput,
-): string {
+export function resolveLocationName(location: LocationResolutionInput): string {
     // 1. Explicit site name from active dispatch job
     if (location.job?.site?.trim()) {
         return location.job.site.trim();

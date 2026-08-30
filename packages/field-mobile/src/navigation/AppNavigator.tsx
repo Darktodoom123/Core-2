@@ -18,7 +18,10 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';

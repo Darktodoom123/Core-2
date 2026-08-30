@@ -176,19 +176,11 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="call-outline" size={size} color={color} />;
         case 'clipboard':
             return (
-                <Ionicons
-                    name="clipboard-outline"
-                    size={size}
-                    color={color}
-                />
+                <Ionicons name="clipboard-outline" size={size} color={color} />
             );
         case 'work':
             return (
-                <Ionicons
-                    name="briefcase-outline"
-                    size={size}
-                    color={color}
-                />
+                <Ionicons name="briefcase-outline" size={size} color={color} />
             );
         case 'message':
             return (
