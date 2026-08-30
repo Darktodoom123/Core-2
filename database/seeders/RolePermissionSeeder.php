@@ -66,10 +66,7 @@ final class RolePermissionSeeder extends Seeder
                 PermissionName::SalesCreateQuote,
                 PermissionName::SalesApproveOrder, PermissionName::SalesFulfill, PermissionName::SalesTransferOwnership,
                 PermissionName::SosView, PermissionName::SosRespond,
-                PermissionName::SafetyTbmSubmit, PermissionName::SafetyTbmCoSign,
-                PermissionName::SafetyLiftPlanCreate, PermissionName::SafetyLiftPlanApprove,
-                PermissionName::SafetyHazardReport, PermissionName::SafetyHazardRectify,
-                PermissionName::SafetyWorkStoppageIssue, PermissionName::SafetyWorkStoppageLift,
+                PermissionName::SafetyHazardReport,
             ]),
             RoleName::SafetyOfficer->value => self::values([
                 PermissionName::DispatchViewAll,

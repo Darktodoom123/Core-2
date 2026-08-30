@@ -19,7 +19,6 @@ import {
     ShieldCheck,
     Truck,
     Users,
-    Volume2,
     X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -70,7 +69,7 @@ const NAV_GROUPS: NavGroupDefinition[] = [
     {
         id: 'governance',
         label: 'Field Governance',
-        sections: ['safety', 'reports', 'archive'],
+        sections: ['reports', 'archive'],
     },
     {
         id: 'safety_system',
@@ -117,50 +116,11 @@ export function LiveWorkspaceShell({
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [audioTested, setAudioTested] = useState(false);
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
     const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
     const navigationRef = useRef<HTMLElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
-
-    const handleHeaderAudioTest = useCallback(() => {
-        try {
-            const AudioContextClass =
-                window.AudioContext ||
-                (
-                    window as unknown as {
-                        webkitAudioContext: typeof AudioContext;
-                    }
-                ).webkitAudioContext;
-
-            if (AudioContextClass) {
-                const audioCtx = new AudioContextClass();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(
-                    440,
-                    audioCtx.currentTime + 0.35,
-                );
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(
-                    0.01,
-                    audioCtx.currentTime + 0.35,
-                );
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.35);
-            }
-        } catch {
-            // Audio context fallback
-        }
-
-        setAudioTested(true);
-        window.setTimeout(() => setAudioTested(false), 2500);
-    }, []);
 
     useEffect(() => {
         if (!userMenuOpen) {
@@ -875,30 +835,6 @@ export function LiveWorkspaceShell({
                                                 </span>
                                             </div>
                                         </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                handleHeaderAudioTest();
-                                            }}
-                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle"
-                                            role="menuitem"
-                                        >
-                                            <Volume2
-                                                className="h-4 w-4 text-ink-soft"
-                                                aria-hidden="true"
-                                            />
-                                            <span>
-                                                {audioTested
-                                                    ? 'Chime tested!'
-                                                    : 'Test station audio'}
-                                            </span>
-                                        </button>
-
-                                        <div
-                                            className="my-1 h-px bg-line"
-                                            aria-hidden="true"
-                                        />
 
                                         <button
                                             type="button"

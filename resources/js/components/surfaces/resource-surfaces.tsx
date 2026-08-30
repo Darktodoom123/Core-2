@@ -547,11 +547,26 @@ export function FuelManagement({
                                             </td>
                                             <td className="px-4 py-3">
                                                 <p className="text-sm font-medium text-ink">
-                                                    {request.assetCode}
+                                                    {request.equipmentName ||
+                                                        request.assetCode}
                                                 </p>
                                                 <p className="mt-0.5 text-xs text-ink-soft">
-                                                    {request.jobReference}
+                                                    {request.equipmentType
+                                                        ? `${request.equipmentType} · `
+                                                        : ''}
+                                                    {request.registrationNumber
+                                                        ? `Reg: ${request.registrationNumber} · `
+                                                        : ''}
+                                                    <span className="font-mono">
+                                                        {request.assetCode}
+                                                    </span>
                                                 </p>
+                                                {request.jobReference && (
+                                                    <p className="mt-0.5 text-[11px] text-ink-soft">
+                                                        Job:{' '}
+                                                        {request.jobReference}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-ink-soft">
                                                 {request.requestedBy}

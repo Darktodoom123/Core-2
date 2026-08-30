@@ -41,7 +41,7 @@ final class OperationsWorkspaceController extends Controller
         'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'approvals', 'users', 'gptRecommendations'],
         'assets' => ['assets', 'locations'],
         'tracking' => ['assets', 'locations'],
-        'fuel' => ['fuelRequests'],
+        'fuel' => ['fuelRequests', 'assets'],
         'approvals' => ['approvals'],
         'reports' => ['jobReports', 'reportExports', 'jobs'],
         'notifications' => ['notifications'],
@@ -146,7 +146,10 @@ final class OperationsWorkspaceController extends Controller
                 'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
                 'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             ],
-            'fuel' => ['fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user))],
+            'fuel' => [
+                'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+                'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
+            ],
             'approvals' => ['approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user)],
             'reports' => [
                 'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
@@ -347,7 +350,7 @@ final class OperationsWorkspaceController extends Controller
             ->with([
                 'requester:id,name',
                 'job:id,reference,title',
-                'asset:id,code,name,meter_type,meter_value,baseline_burn_rate,burn_rate_unit',
+                'asset:id,code,name,kind,subtype,registration_number,manufacturer,model,meter_type,meter_value,baseline_burn_rate,burn_rate_unit',
                 'logs.recorder:id,name',
             ])
             ->latest()

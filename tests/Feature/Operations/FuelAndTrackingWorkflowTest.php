@@ -6,6 +6,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Platform\Attachments\Models\Attachment;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
@@ -418,4 +419,40 @@ it('accepts own location sharing but reserves the all-operations feed for office
     expect(AuditEvent::query()->where('action', 'tracking.location_shared')->where('actor_id', $driver->id)->exists())->toBeTrue();
     $this->actingAs($driver)->getJson('/operations/locations')->assertForbidden();
     $this->actingAs($dispatcher)->getJson('/operations/locations')->assertOk();
+});
+
+it('includes equipment kind, subtype, and registration number in the fuel workspace view model', function () {
+    $operator = fieldUser(RoleName::CraneOperator);
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-5501',
+        'name' => 'Liebherr 50T Mobile Crane',
+        'kind' => 'mobile_crane',
+        'subtype' => 'All-Terrain Mobile Crane',
+        'registration_number' => 'CRN-5501-PH',
+        'manufacturer' => 'Liebherr',
+        'model' => 'LTM 1050',
+        'status' => AssetStatus::ReadyForService,
+    ]);
+
+    $fuel = FuelRequest::query()->create([
+        'reference' => 'FUEL-TEST-001',
+        'requester_id' => $operator->id,
+        'operational_asset_id' => $asset->id,
+        'quantity_litres' => 50,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Site crane lifting',
+        'status' => FuelRequestStatus::Forwarded,
+    ]);
+
+    $viewModel = FuelWorkspaceViewModel::single($fuel);
+
+    expect($viewModel['asset'])->not()->toBeNull()
+        ->and($viewModel['asset']['id'])->toBe($asset->id)
+        ->and($viewModel['asset']['code'])->toBe('CRN-5501')
+        ->and($viewModel['asset']['name'])->toBe('Liebherr 50T Mobile Crane')
+        ->and($viewModel['asset']['kind'])->toBe('mobile_crane')
+        ->and($viewModel['asset']['subtype'])->toBe('All-Terrain Mobile Crane')
+        ->and($viewModel['asset']['registration_number'])->toBe('CRN-5501-PH')
+        ->and($viewModel['asset']['manufacturer'])->toBe('Liebherr')
+        ->and($viewModel['asset']['model'])->toBe('LTM 1050');
 });

@@ -145,6 +145,7 @@ export function LiveWorkspaceSection({
                 <FuelSurface
                     requests={fuelRequests}
                     capabilities={capabilities}
+                    assets={assets}
                 />
             );
         case 'tracking':
@@ -1968,9 +1969,11 @@ function AssetMaintenanceSection({
 function FuelSurface({
     requests,
     capabilities,
+    assets = [],
 }: {
     requests: FuelRequestViewModel[];
     capabilities: WorkspaceCapabilities;
+    assets?: AssetViewModel[];
 }) {
     const [pendingAction, setPendingAction] = useState<string | null>(null);
     const [activeLogId, setActiveLogId] = useState<number | null>(null);
@@ -1983,13 +1986,28 @@ function FuelSurface({
     >({});
 
     const form = useForm({
+        operational_asset_id: '',
+        dispatch_job_id: '',
         quantity_litres: '',
         fuel_type: 'diesel',
         purpose: '',
     });
     const formComplete =
         form.data.quantity_litres.trim() !== '' &&
-        form.data.purpose.trim() !== '';
+        (form.data.operational_asset_id !== '' ||
+            form.data.purpose.trim() !== '');
+
+    const selectedAsset = useMemo(() => {
+        if (!form.data.operational_asset_id) {
+            return null;
+        }
+
+        return (
+            assets.find(
+                (a) => String(a.id) === String(form.data.operational_asset_id),
+            ) ?? null
+        );
+    }, [assets, form.data.operational_asset_id]);
 
     const logForm = useForm({
         quantity_litres: '',
@@ -2003,6 +2021,15 @@ function FuelSurface({
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        form.transform((data) => ({
+            ...data,
+            purpose:
+                data.purpose.trim() !== ''
+                    ? data.purpose
+                    : selectedAsset
+                      ? `Refuel for ${selectedAsset.name || selectedAsset.code} (${humanize(selectedAsset.kind)})`
+                      : 'Equipment refueling',
+        }));
         form.post('/operations/fuel-requests', {
             preserveScroll: true,
             onSuccess: () => form.reset(),
@@ -2098,7 +2125,7 @@ function FuelSurface({
 
             const matchesQuery =
                 q === '' ||
-                `${req.reference} ${req.requester.name} ${req.purpose} ${req.fuel_type} ${req.asset?.code ?? ''} ${req.asset?.name ?? ''} ${req.job?.reference ?? ''}`
+                `${req.reference} ${req.requester.name} ${req.purpose} ${req.fuel_type} ${req.asset?.code ?? ''} ${req.asset?.name ?? ''} ${req.asset?.kind ?? ''} ${req.asset?.subtype ?? ''} ${req.asset?.registration_number ?? ''} ${req.job?.reference ?? ''}`
                     .toLowerCase()
                     .includes(q);
 
@@ -2192,47 +2219,150 @@ function FuelSurface({
                         </h2>
                         <p className="mt-0.5 text-xs text-ink-soft">
                             Submit equipment refueling requests scoped to your
-                            active assignments.
+                            active assignments and fleet.
                         </p>
                         <form
                             onSubmit={submit}
-                            className="mt-4 grid gap-3 md:grid-cols-[12rem_12rem_minmax(16rem,1fr)_auto]"
+                            className="mt-4 space-y-3"
                             noValidate
                         >
-                            <FuelInput
-                                label="Litres"
-                                type="number"
-                                value={form.data.quantity_litres}
-                                error={form.errors.quantity_litres}
-                                onChange={(value) =>
-                                    form.setData('quantity_litres', value)
-                                }
-                            />
-                            <label className="text-xs font-medium text-ink">
-                                Fuel Type
-                                <select
-                                    value={form.data.fuel_type}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'fuel_type',
-                                            event.target.value,
-                                        )
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <label className="text-xs font-medium text-ink">
+                                    Equipment / Asset
+                                    <select
+                                        value={form.data.operational_asset_id}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'operational_asset_id',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
+                                    >
+                                        <option value="">
+                                            -- Select Equipment / Vehicle --
+                                        </option>
+                                        {assets.map((asset) => (
+                                            <option
+                                                key={asset.id}
+                                                value={asset.id}
+                                            >
+                                                {asset.code} - {asset.name} (
+                                                {humanize(asset.kind)}
+                                                {asset.registration_number
+                                                    ? ` · Reg: ${asset.registration_number}`
+                                                    : ''}
+                                                )
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {form.errors.operational_asset_id && (
+                                        <p className="mt-1 text-xs text-danger">
+                                            {form.errors.operational_asset_id}
+                                        </p>
+                                    )}
+                                </label>
+
+                                <label className="text-xs font-medium text-ink">
+                                    Fuel Type
+                                    <select
+                                        value={form.data.fuel_type}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'fuel_type',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
+                                    >
+                                        <option value="diesel">Diesel</option>
+                                        <option value="gasoline">
+                                            Gasoline
+                                        </option>
+                                    </select>
+                                </label>
+
+                                <FuelInput
+                                    label="Volume (Litres)"
+                                    type="number"
+                                    value={form.data.quantity_litres}
+                                    error={form.errors.quantity_litres}
+                                    onChange={(value) =>
+                                        form.setData('quantity_litres', value)
                                     }
-                                    className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
-                                >
-                                    <option value="diesel">Diesel</option>
-                                    <option value="gasoline">Gasoline</option>
-                                </select>
-                            </label>
-                            <FuelInput
-                                label="Purpose & Equipment Code"
-                                value={form.data.purpose}
-                                error={form.errors.purpose}
-                                onChange={(value) =>
-                                    form.setData('purpose', value)
-                                }
-                            />
-                            <div className="flex flex-col justify-end">
+                                />
+
+                                <FuelInput
+                                    label="Purpose / Notes"
+                                    placeholder="e.g. Site foundation lift, Shift refill"
+                                    value={form.data.purpose}
+                                    error={form.errors.purpose}
+                                    onChange={(value) =>
+                                        form.setData('purpose', value)
+                                    }
+                                />
+                            </div>
+
+                            {selectedAsset && (
+                                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                                        <Truck className="h-4 w-4 text-brand" />
+                                        <span>{selectedAsset.name}</span>
+                                    </div>
+                                    <span className="text-ink-soft">·</span>
+                                    <div>
+                                        <span className="text-ink-soft">
+                                            Type:{' '}
+                                        </span>
+                                        <span className="font-medium text-ink">
+                                            {humanize(selectedAsset.kind)}
+                                            {selectedAsset.subtype
+                                                ? ` (${selectedAsset.subtype})`
+                                                : ''}
+                                        </span>
+                                    </div>
+                                    <span className="text-ink-soft">·</span>
+                                    <div>
+                                        <span className="text-ink-soft">
+                                            Registration No:{' '}
+                                        </span>
+                                        <span className="font-semibold text-ink">
+                                            {selectedAsset.registration_number ||
+                                                'N/A'}
+                                        </span>
+                                    </div>
+                                    <span className="text-ink-soft">·</span>
+                                    <div>
+                                        <span className="text-ink-soft">
+                                            Code:{' '}
+                                        </span>
+                                        <span className="font-mono text-ink">
+                                            {selectedAsset.code}
+                                        </span>
+                                    </div>
+                                    {selectedAsset.meter_value && (
+                                        <>
+                                            <span className="text-ink-soft">
+                                                ·
+                                            </span>
+                                            <div>
+                                                <span className="text-ink-soft">
+                                                    Meter:{' '}
+                                                </span>
+                                                <span className="font-medium text-ink">
+                                                    {selectedAsset.meter_value}{' '}
+                                                    {selectedAsset.meter_type ===
+                                                    'hour_meter'
+                                                        ? 'hrs'
+                                                        : 'km'}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex justify-end">
                                 <Button
                                     type="submit"
                                     variant="primary"
@@ -2450,7 +2580,7 @@ function FuelSurface({
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                        <p className="font-semibold">
+                                                        <p className="font-semibold text-ink">
                                                             {request.reference}
                                                         </p>
                                                         <CanonicalStatusBadge
@@ -2464,24 +2594,90 @@ function FuelSurface({
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="mt-1 text-sm text-ink-soft">
+                                                    <p className="mt-1 text-sm font-medium text-ink">
                                                         {
                                                             request.quantity_litres
                                                         }{' '}
                                                         L ·{' '}
-                                                        {humanize(
-                                                            request.fuel_type,
-                                                        )}{' '}
-                                                        · {request.purpose}
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-ink-soft">
-                                                        Requested by{' '}
-                                                        {request.requester.name}
-                                                        {request.asset
-                                                            ? ` · Asset: ${request.asset.code} (${request.asset.name ?? 'Equipment'})`
+                                                        <span className="capitalize">
+                                                            {humanize(
+                                                                request.fuel_type,
+                                                            )}
+                                                        </span>
+                                                        {request.purpose
+                                                            ? ` · ${request.purpose}`
                                                             : ''}
+                                                    </p>
+                                                    {request.asset && (
+                                                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                                                            <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface-subtle px-2.5 py-1 font-semibold text-ink shadow-2xs">
+                                                                <Truck className="h-3.5 w-3.5 text-brand" />
+                                                                <span>
+                                                                    {request
+                                                                        .asset
+                                                                        .name ||
+                                                                        request
+                                                                            .asset
+                                                                            .code}
+                                                                </span>
+                                                                <span className="font-normal text-ink-soft">
+                                                                    (
+                                                                    {humanize(
+                                                                        request
+                                                                            .asset
+                                                                            .kind ||
+                                                                            'equipment',
+                                                                    )}
+                                                                    {request
+                                                                        .asset
+                                                                        .subtype
+                                                                        ? ` - ${request.asset.subtype}`
+                                                                        : ''}
+                                                                    )
+                                                                </span>
+                                                            </span>
+                                                            {request.asset
+                                                                .registration_number && (
+                                                                <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-1 text-ink-soft shadow-2xs">
+                                                                    <span className="font-medium text-ink-soft">
+                                                                        Reg /
+                                                                        Plate
+                                                                        No:
+                                                                    </span>
+                                                                    <span className="font-semibold text-ink">
+                                                                        {
+                                                                            request
+                                                                                .asset
+                                                                                .registration_number
+                                                                        }
+                                                                    </span>
+                                                                </span>
+                                                            )}
+                                                            <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-1 font-mono text-[11px] text-ink-soft">
+                                                                <span>
+                                                                    Code:
+                                                                </span>
+                                                                <span className="font-semibold text-ink">
+                                                                    {
+                                                                        request
+                                                                            .asset
+                                                                            .code
+                                                                    }
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <p className="mt-1.5 text-xs text-ink-soft">
+                                                        Requested by{' '}
+                                                        <strong className="font-medium text-ink">
+                                                            {
+                                                                request
+                                                                    .requester
+                                                                    .name
+                                                            }
+                                                        </strong>
                                                         {request.job
-                                                            ? ` · Job: ${request.job.reference}`
+                                                            ? ` · Job: ${request.job.reference} (${request.job.title})`
                                                             : ''}
                                                         {request.asset
                                                             ?.baseline_burn_rate
@@ -2643,12 +2839,34 @@ function FuelSurface({
                                                         </h3>
                                                         {request.asset && (
                                                             <span className="text-xs text-ink-soft">
-                                                                Asset:{' '}
-                                                                {
+                                                                <strong className="text-ink">
+                                                                    {request
+                                                                        .asset
+                                                                        .name ||
+                                                                        request
+                                                                            .asset
+                                                                            .code}
+                                                                </strong>{' '}
+                                                                (
+                                                                {humanize(
                                                                     request
                                                                         .asset
-                                                                        .code
-                                                                }
+                                                                        .kind ||
+                                                                        'equipment',
+                                                                )}
+                                                                {request.asset
+                                                                    .registration_number
+                                                                    ? ` · Reg: ${request.asset.registration_number}`
+                                                                    : ''}
+                                                                {' · '}
+                                                                <span className="font-mono">
+                                                                    {
+                                                                        request
+                                                                            .asset
+                                                                            .code
+                                                                    }
+                                                                </span>
+                                                                )
                                                                 {request.asset
                                                                     .meter_value
                                                                     ? ` · Current meter: ${request.asset.meter_value} ${
@@ -6029,23 +6247,26 @@ function FuelInput({
     onChange,
     error,
     type = 'text',
+    placeholder,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
     error?: string;
     type?: string;
+    placeholder?: string;
 }) {
     return (
         <label className="text-sm font-medium">
             {label}
             <input
                 type={type}
+                placeholder={placeholder}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
                 aria-invalid={error ? 'true' : undefined}
                 className={cn(
-                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3',
+                    'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-xs placeholder:text-ink-soft/60',
                     error ? 'border-danger' : 'border-line-strong',
                 )}
             />

@@ -342,6 +342,11 @@ export interface FuelRequestViewModel {
         id: number;
         code: string;
         name?: string;
+        kind?: string | null;
+        subtype?: string | null;
+        registration_number?: string | null;
+        manufacturer?: string | null;
+        model?: string | null;
         meter_type?: string | null;
         meter_value?: string | null;
         baseline_burn_rate?: string | null;

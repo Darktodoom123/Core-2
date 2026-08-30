@@ -171,6 +171,9 @@ export interface FuelRequest {
     id: string;
     reference: string;
     assetCode: string;
+    equipmentName?: string;
+    equipmentType?: string;
+    registrationNumber?: string;
     jobReference: string;
     requestedBy: string;
     liters: number;

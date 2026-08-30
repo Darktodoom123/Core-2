@@ -565,14 +565,6 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
-                'id' => 'safety',
-                'label' => 'Safety & DOLE Compliance',
-                'permissions' => [
-                    PermissionName::SafetyLiftPlanApprove,
-                    PermissionName::SafetyWorkStoppageIssue,
-                ],
-            ],
-            [
                 'id' => 'users',
                 'label' => 'Users & roles',
                 'permissions' => [PermissionName::UsersManage],

@@ -58,7 +58,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
     ],
     assets: ['assets', 'locations'],
     tracking: ['assets', 'locations'],
-    fuel: ['fuelRequests'],
+    fuel: ['fuelRequests', 'assets'],
     approvals: ['approvals'],
     reports: ['jobReports', 'reportExports', 'jobs'],
     notifications: ['notifications'],
