@@ -79,7 +79,7 @@
         "@vitejs/plugin-react": "^5.2.0",
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
-        "globals": "^15.14.0",
+        "globals": "^17.11.0",
         "image-size": "file:third_party/image-size",
         "laravel-echo": "^2.4.0",
         "laravel-vite-plugin": "^3.1",
