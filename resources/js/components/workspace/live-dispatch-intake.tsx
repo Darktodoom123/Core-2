@@ -258,19 +258,6 @@ export function LiveDispatchIntake({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {canCreateManual && (
-                            <Button
-                                id="create-direct-dispatch-trigger"
-                                variant="primary"
-                                onClick={() => {
-                                    setSelectedItemKey(null);
-                                    setMode('manual');
-                                }}
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create direct dispatch
-                            </Button>
-                        )}
                         {capabilities.create_client && (
                             <Button
                                 size="md"
@@ -320,28 +307,27 @@ export function LiveDispatchIntake({
                                 Incoming customer orders
                             </p>
                             <h3 className="mt-1 text-base font-semibold text-ink">
-                                Staging queue
+                                Incoming work queue
                             </h3>
                             <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-                                Select an incoming customer order to verify site
-                                details, assign equipment, and stage for
-                                dispatch.
+                                Select an incoming handoff to verify site
+                                details, assign equipment, and dispatch.
                             </p>
                         </div>
                         <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
                             {incomingItems.length > 0
-                                ? `${incomingItems.length} ready to stage`
-                                : 'No orders waiting'}
+                                ? `${incomingItems.length} needs review`
+                                : 'No handoffs waiting'}
                         </span>
                     </div>
 
-                    {incomingItems.length > 0 ? (
-                        <div
-                            className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface"
-                            role="list"
-                            aria-label="Incoming work queue"
-                        >
-                            {incomingItems.map((item) => (
+                    <div
+                        className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface"
+                        role="list"
+                        aria-label="Incoming work queue"
+                    >
+                        {incomingItems.length > 0 ? (
+                            incomingItems.map((item) => (
                                 <IncomingWorkRow
                                     key={item.key}
                                     item={item}
@@ -351,31 +337,48 @@ export function LiveDispatchIntake({
                                         setMode(item.mode);
                                     }}
                                 />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="mt-4 rounded-lg border border-line bg-surface p-6 text-center">
-                            <Package className="mx-auto h-8 w-8 text-ink-soft" />
-                            <h4 className="mt-2 text-sm font-semibold text-ink">
-                                No incoming customer orders waiting
-                            </h4>
-                            <p className="mt-1 text-xs text-ink-soft">
-                                Use Direct Dispatch to create a new job from
-                                scratch.
-                            </p>
-                            <div className="mt-4">
-                                <Button
-                                    variant="primary"
-                                    onClick={() => {
-                                        setSelectedItemKey(null);
-                                        setMode('manual');
-                                    }}
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Open Direct Dispatch Form
-                                </Button>
+                            ))
+                        ) : (
+                            <div className="p-6 text-center">
+                                <Package className="mx-auto h-8 w-8 text-ink-soft" />
+                                <h4 className="mt-2 text-sm font-semibold text-ink">
+                                    No incoming customer orders waiting
+                                </h4>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    Use Direct operational fallback for work
+                                    that has not arrived from upstream.
+                                </p>
                             </div>
-                        </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                            Direct operational fallback
+                        </p>
+                        <p className="mt-1 text-sm text-ink-soft">
+                            For work without a Core 1 request or commercial
+                            handoff.
+                        </p>
+                    </div>
+                    {canCreateManual && (
+                        <Button
+                            id="create-direct-dispatch-trigger"
+                            variant={
+                                incomingItems.length > 0
+                                    ? 'secondary'
+                                    : 'primary'
+                            }
+                            onClick={() => {
+                                setSelectedItemKey(null);
+                                setMode('manual');
+                            }}
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create direct dispatch
+                        </Button>
                     )}
                 </div>
 
@@ -383,7 +386,7 @@ export function LiveDispatchIntake({
                     <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                Dispatch reconciliation
+                                Dispatch review
                             </p>
                             <p className="mt-1 text-sm text-ink-soft">
                                 Review unmatched records before they can create
@@ -404,7 +407,7 @@ export function LiveDispatchIntake({
                                     : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                             )}
                         >
-                            <span>Review unmatched orders</span>
+                            <span>Review unmatched handoffs</span>
                             <span className="rounded-full bg-info px-2 py-0.5 text-[10px] font-bold text-white">
                                 {unlinkedCount} to review
                             </span>

@@ -995,11 +995,7 @@ export function LiveDispatchWorkspace({
                             capabilities={capabilities}
                             initialRequestId={initialServiceRequestId}
                             initialMode={
-                                initialServiceRequestId
-                                    ? 'service'
-                                    : incomingWorkCount > 0
-                                      ? null
-                                      : 'manual'
+                                initialServiceRequestId ? 'service' : null
                             }
                             onDirtyChange={setDirectIntakeDirty}
                             onClose={() => {
