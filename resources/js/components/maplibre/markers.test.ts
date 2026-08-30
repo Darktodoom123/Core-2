@@ -250,3 +250,35 @@ test('createPopupCard renders title, subtitle, semantic status, structured field
     assert.equal(copied, false);
     assert.equal(selected, false);
 });
+
+test('createPopupCard renders clean location name without copy button or action button when omitted', () => {
+    installFakeDocument();
+
+    const popup = createPopupCard({
+        title: 'CRN-101 · Zoomlion TC7035',
+        subtitle: 'Stationary / Tower Crane',
+        status: 'Live (≤2m)',
+        statusTone: 'success',
+        fields: [
+            { label: 'Personnel', value: 'Dev Crane Operator' },
+            { label: 'Dispatch', value: 'DSP-2026-089 — BGC High-Rise Lift' },
+        ],
+        locationName: 'Santa Mesa, Manila',
+    }) as unknown as FakeElement;
+
+    const locationTextEl = findByClass(
+        popup,
+        'maplibre-popup-card__location-text',
+    );
+    assert.equal(locationTextEl?.textContent, 'Santa Mesa, Manila');
+
+    const copyBtn = findByClass(popup, 'maplibre-popup-card__copy');
+    assert.equal(copyBtn, null, 'Copy button should not render when omitted');
+
+    const actionBtn = findByClass(popup, 'maplibre-popup-card__action-btn');
+    assert.equal(
+        actionBtn,
+        null,
+        'Action button should not render when omitted',
+    );
+});

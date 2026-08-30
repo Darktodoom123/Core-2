@@ -16,6 +16,7 @@ import {
 import type { GeoJSONSource, Marker as MapLibreMarker } from 'maplibre-gl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, StatusBadge } from '@/components/ui';
+import { deriveWeatherFromCoords } from '@/components/weather/weather-safety-telemetry';
 import {
     getAssetKind,
     getAssetKindLabel,
@@ -724,22 +725,44 @@ function TrackingMapContent({
                             ? `${location.job.reference} — ${location.job.title}`
                             : 'Standby / Unassigned',
                     },
-                    {
+                ];
+
+                if (kind === 'tower_crane') {
+                    const weather = deriveWeatherFromCoords(
+                        location.latitude,
+                        location.longitude,
+                    );
+                    const windSafetyLabel =
+                        weather.safetyStatus === 'danger'
+                            ? '🚨 Hold'
+                            : weather.safetyStatus === 'caution'
+                              ? '⚠️ Elevated'
+                              : 'Safe';
+
+                    fields.push({
+                        label: 'Wind Speed',
+                        value: `${weather.windSpeedKmh} km/h ${weather.windDirection} (${windSafetyLabel} · Gust ${weather.windGustKmh} km/h)`,
+                    });
+                    fields.push({
+                        label: 'Weather',
+                        value: `${weather.temperatureC}°C · ${weather.conditionLabel}`,
+                    });
+                } else {
+                    fields.push({
                         label: 'Movement',
                         value:
                             location.speed !== null && location.speed > 0
                                 ? `${location.speed.toFixed(1)} km/h`
                                 : 'Stationary',
-                    },
-                    {
-                        label: 'Captured',
-                        value: location.captured_at
-                            ? new Date(
-                                  location.captured_at,
-                              ).toLocaleTimeString()
-                            : 'N/A',
-                    },
-                ];
+                    });
+                }
+
+                fields.push({
+                    label: 'Captured',
+                    value: location.captured_at
+                        ? new Date(location.captured_at).toLocaleTimeString()
+                        : 'N/A',
+                });
 
                 if (location.remarks) {
                     fields.push({
@@ -767,13 +790,6 @@ function TrackingMapContent({
                         badgeTone: 'danger',
                         fields,
                         locationName,
-                        coordinateText: `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`,
-                        onCopyCoordinates: (button) =>
-                            onCopyCoordinates(location, button),
-                        actionButton: {
-                            label: 'Select Resource',
-                            onClick: () => onSelect(location.id),
-                        },
                     }),
                 );
 
@@ -863,13 +879,6 @@ function TrackingMapContent({
                         },
                     ],
                     locationName: sosLocationName,
-                    coordinateText: `${markerPosition[1].toFixed(5)}, ${markerPosition[0].toFixed(5)}`,
-                    actionButton: liveLocation
-                        ? {
-                              label: 'Focus Worker',
-                              onClick: () => onSelect(liveLocation.id),
-                          }
-                        : undefined,
                 }),
             );
 

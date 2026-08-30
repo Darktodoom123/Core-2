@@ -372,10 +372,6 @@ function OperationsMapContent({
                         { label: 'Updated', value: point.updatedAt },
                         { label: 'ETA', value: point.eta },
                     ],
-                    actionButton: {
-                        label: 'Select Resource',
-                        onClick: () => onSelect(point.resourceId),
-                    },
                 }),
             );
             markersRef.current.push(
