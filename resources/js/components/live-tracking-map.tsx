@@ -689,9 +689,15 @@ function TrackingMapContent({
                           }
                         : undefined,
                 });
-                markerElement.addEventListener('click', () =>
-                    onSelect(location.id),
-                );
+                markerElement.addEventListener('click', () => {
+                    onSelect(location.id);
+
+                    map.easeTo({
+                        center: toLngLat(location),
+                        offset: [0, -60],
+                        duration: 250,
+                    });
+                });
 
                 const hasAsset = Boolean(location.asset?.code);
                 const title = hasAsset
@@ -748,6 +754,7 @@ function TrackingMapContent({
                     closeButton: true,
                     closeOnClick: true,
                     offset: 24,
+                    maxWidth: '320px',
                 }).setDOMContent(
                     createPopupCard({
                         title,
@@ -802,6 +809,12 @@ function TrackingMapContent({
                 if (liveLocation) {
                     onSelect(liveLocation.id);
                 }
+
+                map.easeTo({
+                    center: markerPosition,
+                    offset: [0, -60],
+                    duration: 250,
+                });
             });
 
             const sosLocationName = incident.location
@@ -817,6 +830,7 @@ function TrackingMapContent({
                 closeButton: true,
                 closeOnClick: true,
                 offset: 24,
+                maxWidth: '320px',
             }).setDOMContent(
                 createPopupCard({
                     title: incident.worker.name,

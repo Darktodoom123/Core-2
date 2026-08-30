@@ -361,6 +361,7 @@ function OperationsMapContent({
                 closeButton: true,
                 closeOnClick: true,
                 offset: 24,
+                maxWidth: '320px',
             }).setDOMContent(
                 createPopupCard({
                     title: point.label,
