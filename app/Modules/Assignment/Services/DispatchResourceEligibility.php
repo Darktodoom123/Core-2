@@ -185,6 +185,7 @@ final class DispatchResourceEligibility
         return match (true) {
             $user->hasRole(RoleName::FieldForeman->value) => RoleName::FieldForeman->value,
             $user->hasRole(RoleName::CraneOperator->value) => RoleName::CraneOperator->value,
+            $user->hasRole(RoleName::Rigger->value) => RoleName::Rigger->value,
             default => null,
         };
     }
@@ -194,6 +195,7 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'field_foreman', 'foreman', 'lead' => 'Field Foreman',
             'crane_operator', 'operator' => 'Crane operator',
+            'rigger', 'signalperson' => 'Rigger / Signalperson',
             default => 'Personnel',
         };
     }
@@ -214,6 +216,7 @@ final class DispatchResourceEligibility
         return match ($assignmentType) {
             'field_foreman', 'foreman', 'lead' => RoleName::FieldForeman,
             'crane_operator', 'operator', 'driver' => RoleName::CraneOperator,
+            'rigger', 'signalperson' => RoleName::Rigger,
             default => null,
         };
     }
@@ -224,6 +227,7 @@ final class DispatchResourceEligibility
         $kind = match ($assignmentType) {
             'driver' => 'driver_license',
             'crane_operator', 'field_foreman', 'foreman', 'lead' => 'operator_certification',
+            'rigger', 'signalperson' => 'rigger_certification',
             default => null,
         };
 
@@ -244,7 +248,11 @@ final class DispatchResourceEligibility
         $valid = $credentials->first(static fn (PersonnelCredential $credential): bool => $credential->status === 'active'
             && ($credential->issued_at === null || $credential->issued_at->toDateString() <= $scheduledDate)
             && ($credential->expires_at === null || $credential->expires_at->toDateString() >= $scheduledDate));
-        $label = $kind === 'driver_license' ? 'Driver license' : 'Operator certification';
+        $label = match ($kind) {
+            'driver_license' => 'Driver license',
+            'rigger_certification' => 'Rigger certification',
+            default => 'Operator certification',
+        };
 
         if ($valid instanceof PersonnelCredential) {
             return [

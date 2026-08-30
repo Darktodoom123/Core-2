@@ -34,7 +34,9 @@ export type IconName =
     | 'list'
     | 'flag'
     | 'compass'
-    | 'pin';
+    | 'pin'
+    | 'clipboard'
+    | 'work';
 
 export interface IconProps {
     name: IconName;
@@ -172,6 +174,22 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="power-outline" size={size} color={color} />;
         case 'phone':
             return <Ionicons name="call-outline" size={size} color={color} />;
+        case 'clipboard':
+            return (
+                <Ionicons
+                    name="clipboard-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'work':
+            return (
+                <Ionicons
+                    name="briefcase-outline"
+                    size={size}
+                    color={color}
+                />
+            );
         case 'message':
             return (
                 <Ionicons name="chatbubble-outline" size={size} color={color} />

@@ -56,7 +56,8 @@ export interface ToolboxMeetingRecord {
     notes?: string;
 }
 
-export type LiftRiskLevel = 'routine' | 'critical' | 'complex_tandem';
+export type LiftRiskLevel =
+    'routine' | 'standard_engineered' | 'critical' | 'complex_tandem';
 export type LiftPermitStatus =
     'draft' | 'pending_so_review' | 'approved' | 'rejected' | 'revoked';
 
@@ -71,15 +72,20 @@ export interface CriticalLiftPlan {
     riggerTesdaNcNumber: string;
     riskLevel: LiftRiskLevel;
     grossLoadWeightTons: number;
+    netLoadWeightTons?: number | null;
+    riggingWeightTons?: number;
+    hookBlockWeightTons?: number;
     craneRatedCapacityTons: number;
     loadPercentageOfCapacity: number;
     boomLengthMeters: number;
     workingRadiusMeters: number;
+    loadMomentTonMeters?: number | null;
     groundBearingCondition:
         | 'Engineered Timber Pads'
         | 'Steel Plates on Compacted Soil'
         | 'Concrete Pad'
-        | 'Unverified Ground';
+        | 'Unverified Ground'
+        | string;
     overheadObstacles: boolean;
     weatherWindSpeedKph: number;
     maxAllowedWindSpeedKph: number;

@@ -18,7 +18,7 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
@@ -209,6 +209,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
+    const insets = useSafeAreaInsets();
 
     const commandOutbox = useMemo(
         () =>
@@ -970,7 +971,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         )}
                     </View>
                 </View>
-                <View style={styles.sosAffordance}>
+                <View
+                    style={[
+                        styles.sosAffordance,
+                        { bottom: Math.max(96, 72 + insets.bottom + 16) },
+                    ]}
+                >
                     <EmergencySosButton
                         disabled={isSosActivating}
                         onHoldComplete={handleGlobalSosHold}
@@ -1001,9 +1007,10 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     sosAffordance: {
-        bottom: 88,
+        bottom: 96,
         position: 'absolute',
         right: 16,
+        zIndex: 50,
     },
     mainContent: {
         flex: 1,

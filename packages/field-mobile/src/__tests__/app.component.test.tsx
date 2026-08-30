@@ -1238,9 +1238,6 @@ describe('native application component tree', () => {
 
         expect(await screen.findByText(driverJob.reference)).toBeVisible();
         expect(screen.getByText('Your assignments')).toBeVisible();
-        expect(
-            screen.getByText(/See today.?s jobs and what to do next\./),
-        ).toBeVisible();
         expect(screen.getByText(/1 active assignment/)).toBeVisible();
         expect(screen.getByText('Synced')).toBeVisible();
         expect(screen.getByTestId('bottom-nav-bar')).toBeVisible();

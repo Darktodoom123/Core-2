@@ -9,6 +9,7 @@ enum RoleName: string
     case SafetyOfficer = 'safety_officer';
     case FieldForeman = 'field_foreman';
     case CraneOperator = 'crane_operator';
+    case Rigger = 'rigger';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum RoleName: string
             self::SafetyOfficer => 'Safety Officer',
             self::FieldForeman => 'Field Foreman',
             self::CraneOperator => 'Operator',
+            self::Rigger => 'Rigger / Signalperson',
         };
     }
 
@@ -29,6 +31,7 @@ enum RoleName: string
             self::SafetyOfficer => 'safety_officer',
             self::FieldForeman => 'foreman',
             self::CraneOperator => 'operator',
+            self::Rigger => 'rigger',
         };
     }
 }

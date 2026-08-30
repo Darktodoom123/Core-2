@@ -20,10 +20,14 @@ use Illuminate\Support\Carbon;
  * @property string $rigger_tesda_nc_number
  * @property string $risk_level
  * @property float $gross_load_weight_tons
+ * @property float|null $net_load_weight_tons
+ * @property float $rigging_weight_tons
+ * @property float $hook_block_weight_tons
  * @property float $crane_rated_capacity_tons
  * @property float $load_percentage_of_capacity
  * @property float $boom_length_meters
  * @property float $working_radius_meters
+ * @property float|null $load_moment_ton_meters
  * @property string $ground_bearing_condition
  * @property float $weather_wind_speed_kph
  * @property string $status
@@ -49,10 +53,14 @@ final class CriticalLiftPlan extends Model
         'rigger_tesda_nc_number',
         'risk_level',
         'gross_load_weight_tons',
+        'net_load_weight_tons',
+        'rigging_weight_tons',
+        'hook_block_weight_tons',
         'crane_rated_capacity_tons',
         'load_percentage_of_capacity',
         'boom_length_meters',
         'working_radius_meters',
+        'load_moment_ton_meters',
         'ground_bearing_condition',
         'weather_wind_speed_kph',
         'status',
@@ -68,10 +76,14 @@ final class CriticalLiftPlan extends Model
     {
         return [
             'gross_load_weight_tons' => 'float',
+            'net_load_weight_tons' => 'float',
+            'rigging_weight_tons' => 'float',
+            'hook_block_weight_tons' => 'float',
             'crane_rated_capacity_tons' => 'float',
             'load_percentage_of_capacity' => 'float',
             'boom_length_meters' => 'float',
             'working_radius_meters' => 'float',
+            'load_moment_ton_meters' => 'float',
             'weather_wind_speed_kph' => 'float',
             'foreman_signed_at' => 'datetime',
             'safety_officer_signed_at' => 'datetime',

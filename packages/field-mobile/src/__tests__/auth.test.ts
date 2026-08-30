@@ -273,6 +273,7 @@ describe('Field Mobile Authentication Shell', () => {
     it('validates authorized field mobile roles', () => {
         assert.equal(isAuthorizedFieldRole('operator'), true);
         assert.equal(isAuthorizedFieldRole('crane_operator'), true);
+        assert.equal(isAuthorizedFieldRole('rigger'), false);
         assert.equal(isAuthorizedFieldRole('driver'), false);
         assert.equal(isAuthorizedFieldRole('field_technician'), false);
         assert.equal(isAuthorizedFieldRole('dispatcher'), false);

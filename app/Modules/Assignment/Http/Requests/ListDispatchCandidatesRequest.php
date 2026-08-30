@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 final class ListDispatchCandidatesRequest extends FormRequest
 {
     /** @var list<string> */
-    private const PERSONNEL_TYPES = ['driver', 'crane_operator'];
+    private const PERSONNEL_TYPES = ['driver', 'crane_operator', 'rigger'];
 
     /** @var list<string> */
     private const ASSET_TYPES = ['truck', 'crane', 'mobile_crane', 'equipment'];

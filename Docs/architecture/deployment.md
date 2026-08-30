@@ -129,7 +129,7 @@ CACHE_CONFIG=true
 
 ## 4. Mobile Field App Configuration (`packages/field-mobile`)
 
-Field technicians, drivers, and crane operators running the React Native / Expo application connect to the HostForge-hosted Core-2 backend via HTTPS:
+Field technicians, drivers, and operators running the React Native / Expo application connect to the HostForge-hosted Core-2 backend via HTTPS:
 
 ```dotenv
 # packages/field-mobile/.env.production

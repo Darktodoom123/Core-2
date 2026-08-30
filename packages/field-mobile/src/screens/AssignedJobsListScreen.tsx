@@ -249,9 +249,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     Your assignments
                                 </Text>
                                 <Text style={styles.subtitle}>
-                                    See today’s jobs and what to do next.
-                                </Text>
-                                <Text style={styles.workSummary}>
                                     {workSummary}
                                 </Text>
                             </View>
@@ -311,7 +308,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             >
                                 <View style={styles.emptyMark}>
                                     <Icon
-                                        name="shield-check"
+                                        name="clipboard"
                                         size={28}
                                         color={colors.primaryDark}
                                     />

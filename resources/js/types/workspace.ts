@@ -840,7 +840,7 @@ export interface AssignmentScheduleConflictViewModel {
 export interface PersonnelCandidateViewModel {
     id: number;
     name: string;
-    assignment_type: 'driver' | 'crane_operator';
+    assignment_type: 'driver' | 'crane_operator' | 'rigger';
     assignment_label: string;
     eligible: boolean;
     reasons: string[];
@@ -849,7 +849,11 @@ export interface PersonnelCandidateViewModel {
     >;
     account_status: StatusViewModel<'active' | 'inactive' | 'suspended'>;
     credential: {
-        kind: 'driver_license' | 'operator_certification' | null;
+        kind:
+            | 'driver_license'
+            | 'operator_certification'
+            | 'rigger_certification'
+            | null;
         label: string;
         status:
             | 'valid'

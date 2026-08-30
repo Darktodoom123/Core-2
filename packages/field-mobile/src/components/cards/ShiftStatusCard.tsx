@@ -15,49 +15,89 @@ export const ShiftStatusCard: React.FC<ShiftStatusCardProps> = ({
     shiftInfo = { status: 'on_shift', startedAt: '08:00 AM', hoursElapsed: 4 },
     locationSharingActive = true,
     onToggleLocationSharing,
+    onToggleShift,
 }) => {
+    const isOnShift = shiftInfo.status === 'on_shift';
+
     return (
         <View style={styles.statusStrip} testID="shift-status-strip">
-            <View style={styles.shiftCard} testID="shift-status-card">
-                <View style={styles.shiftDot} />
-                <View style={styles.shiftCopy}>
-                    <Text style={styles.shiftLabel}>ACTIVE SHIFT</Text>
-                    <Text style={styles.shiftValue}>
-                        {shiftInfo.status === 'on_shift'
-                            ? `On Shift · ${shiftInfo.hoursElapsed ?? 4}h active`
+            <Pressable
+                accessibilityLabel={`Shift status: ${isOnShift ? `On Shift, ${shiftInfo.hoursElapsed ?? 4} hours active` : 'Standby or Break'}`}
+                accessibilityRole={onToggleShift ? 'button' : undefined}
+                disabled={!onToggleShift}
+                onPress={onToggleShift}
+                style={({ pressed }) => [
+                    styles.card,
+                    !isOnShift && styles.cardStandby,
+                    pressed && Boolean(onToggleShift) && styles.pressed,
+                ]}
+                testID="shift-status-card"
+            >
+                <View
+                    style={[
+                        styles.badge,
+                        isOnShift ? styles.badgeActive : styles.badgeStandby,
+                    ]}
+                >
+                    <Icon
+                        name="clock"
+                        size={15}
+                        color={isOnShift ? colors.greenDark : colors.muted}
+                    />
+                </View>
+                <View style={styles.cardCopy}>
+                    <Text style={styles.cardLabel}>ACTIVE SHIFT</Text>
+                    <Text numberOfLines={1} style={styles.cardValue}>
+                        {isOnShift
+                            ? `On Shift · ${shiftInfo.hoursElapsed ?? 4}h`
                             : 'Standby / Break'}
                     </Text>
                 </View>
-            </View>
+            </Pressable>
 
             <Pressable
                 accessibilityLabel={`Location sharing: ${locationSharingActive ? 'Active transmitting' : 'Paused'}`}
                 accessibilityRole="button"
                 onPress={onToggleLocationSharing}
                 style={({ pressed }) => [
-                    styles.locationPill,
-                    locationSharingActive ? styles.locActive : styles.locPaused,
+                    styles.card,
+                    !locationSharingActive && styles.cardStandby,
                     pressed && styles.pressed,
                 ]}
                 testID="location-sharing-indicator"
             >
-                <Icon
-                    name="location"
-                    size={14}
-                    color={
-                        locationSharingActive ? colors.greenDark : colors.muted
-                    }
-                />
-                <Text
+                <View
                     style={[
-                        styles.locText,
+                        styles.badge,
                         locationSharingActive
-                            ? styles.locTextActive
-                            : styles.locTextPaused,
+                            ? styles.badgeActive
+                            : styles.badgeStandby,
                     ]}
                 >
-                    {locationSharingActive ? 'GPS Sharing: ON' : 'GPS: Paused'}
-                </Text>
+                    <Icon
+                        name="location"
+                        size={15}
+                        color={
+                            locationSharingActive
+                                ? colors.greenDark
+                                : colors.muted
+                        }
+                    />
+                </View>
+                <View style={styles.cardCopy}>
+                    <Text style={styles.cardLabel}>GPS SHARING</Text>
+                    <Text
+                        numberOfLines={1}
+                        style={[
+                            styles.cardValue,
+                            locationSharingActive
+                                ? styles.cardValueActive
+                                : styles.cardValueStandby,
+                        ]}
+                    >
+                        {locationSharingActive ? 'Live Sharing' : 'Paused'}
+                    </Text>
+                </View>
             </Pressable>
         </View>
     );
@@ -70,7 +110,7 @@ const styles = StyleSheet.create({
         gap: 10,
         marginBottom: 16,
     },
-    shiftCard: {
+    card: {
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
@@ -79,61 +119,52 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         gap: 10,
-        minHeight: 50,
-        paddingHorizontal: 14,
+        minHeight: 56,
+        paddingHorizontal: 12,
         paddingVertical: 10,
         ...shadows.sm,
     },
-    shiftDot: {
-        backgroundColor: colors.green,
-        borderRadius: 4,
-        height: 8,
-        width: 8,
+    cardStandby: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
     },
-    shiftCopy: {
+    badge: {
+        alignItems: 'center',
+        borderRadius: 8,
+        borderWidth: 1,
+        height: 30,
+        justifyContent: 'center',
+        width: 30,
+    },
+    badgeActive: {
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+    },
+    badgeStandby: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+    },
+    cardCopy: {
         flex: 1,
+        justifyContent: 'center',
     },
-    shiftLabel: {
+    cardLabel: {
         color: colors.muted,
         fontSize: 10,
         fontWeight: '700',
         letterSpacing: 0.8,
         textTransform: 'uppercase',
     },
-    shiftValue: {
+    cardValue: {
         color: colors.text,
         fontSize: 13,
         fontWeight: '700',
         marginTop: 1,
     },
-    locationPill: {
-        alignItems: 'center',
-        borderRadius: 14,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 6,
-        justifyContent: 'center',
-        minHeight: 50,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        ...shadows.sm,
+    cardValueActive: {
+        color: colors.text,
     },
-    locActive: {
-        backgroundColor: colors.greenLight,
-        borderColor: colors.greenBorder,
-    },
-    locPaused: {
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-    },
-    locText: {
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    locTextActive: {
-        color: colors.greenDark,
-    },
-    locTextPaused: {
+    cardValueStandby: {
         color: colors.muted,
     },
     pressed: {

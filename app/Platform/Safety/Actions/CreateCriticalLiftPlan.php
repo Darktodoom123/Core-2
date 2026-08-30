@@ -20,7 +20,10 @@ final class CreateCriticalLiftPlan
      *     lead_rigger_id?: int|null,
      *     rigger_tesda_nc_number: string,
      *     risk_level?: string,
-     *     gross_load_weight_tons: float,
+     *     gross_load_weight_tons?: float,
+     *     net_load_weight_tons?: float|null,
+     *     rigging_weight_tons?: float,
+     *     hook_block_weight_tons?: float,
      *     crane_rated_capacity_tons: float,
      *     boom_length_meters: float,
      *     working_radius_meters: float,
@@ -36,14 +39,28 @@ final class CreateCriticalLiftPlan
             ]);
         }
 
-        $loadPercentage = ($data['gross_load_weight_tons'] / $data['crane_rated_capacity_tons']) * 100;
+        $riggingWeight = (float) ($data['rigging_weight_tons'] ?? 0);
+        $hookBlockWeight = (float) ($data['hook_block_weight_tons'] ?? 0);
+        $netLoadWeight = isset($data['net_load_weight_tons']) ? (float) $data['net_load_weight_tons'] : null;
+
+        $grossLoadWeight = (float) ($data['gross_load_weight_tons'] ?? ($netLoadWeight !== null ? $netLoadWeight + $riggingWeight + $hookBlockWeight : 0));
+        $workingRadius = (float) $data['working_radius_meters'];
+        $loadMoment = round($grossLoadWeight * $workingRadius, 2);
+
+        $loadPercentage = ($grossLoadWeight / $data['crane_rated_capacity_tons']) * 100;
         if ($loadPercentage > 95) {
             throw ValidationException::withMessages([
                 'gross_load_weight_tons' => 'DOLE Safety Limit Exceeded: Gross load exceeds 95% of crane rated capacity.',
             ]);
         }
 
-        return DB::transaction(function () use ($foreman, $data, $loadPercentage): CriticalLiftPlan {
+        $riskLevel = $data['risk_level'] ?? match (true) {
+            $loadPercentage >= 85 => 'critical',
+            $loadPercentage >= 75 => 'standard_engineered',
+            default => 'routine',
+        };
+
+        return DB::transaction(function () use ($foreman, $data, $grossLoadWeight, $netLoadWeight, $riggingWeight, $hookBlockWeight, $loadMoment, $loadPercentage, $riskLevel): CriticalLiftPlan {
             $reference = sprintf('LIFT-%s-%s', date('Ymd'), strtoupper(Str::random(4)));
 
             return CriticalLiftPlan::query()->create([
@@ -54,12 +71,16 @@ final class CreateCriticalLiftPlan
                 'crane_operator_id' => $data['crane_operator_id'] ?? null,
                 'lead_rigger_id' => $data['lead_rigger_id'] ?? null,
                 'rigger_tesda_nc_number' => $data['rigger_tesda_nc_number'],
-                'risk_level' => $data['risk_level'] ?? ($loadPercentage >= 80 ? 'critical' : 'routine'),
-                'gross_load_weight_tons' => $data['gross_load_weight_tons'],
+                'risk_level' => $riskLevel,
+                'gross_load_weight_tons' => $grossLoadWeight,
+                'net_load_weight_tons' => $netLoadWeight,
+                'rigging_weight_tons' => $riggingWeight,
+                'hook_block_weight_tons' => $hookBlockWeight,
                 'crane_rated_capacity_tons' => $data['crane_rated_capacity_tons'],
                 'load_percentage_of_capacity' => round($loadPercentage, 2),
                 'boom_length_meters' => $data['boom_length_meters'],
                 'working_radius_meters' => $data['working_radius_meters'],
+                'load_moment_ton_meters' => $loadMoment,
                 'ground_bearing_condition' => $data['ground_bearing_condition'],
                 'weather_wind_speed_kph' => $data['weather_wind_speed_kph'] ?? 0,
                 'status' => 'pending_so_review',
