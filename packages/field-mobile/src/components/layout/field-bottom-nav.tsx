@@ -5,7 +5,7 @@ import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 
-export type FieldNavItem = 'today' | 'route' | 'profile';
+export type FieldNavItem = 'today' | 'route' | 'documents' | 'profile';
 
 export interface FieldBottomNavProps {
     activeItem: FieldNavItem;
@@ -20,6 +20,7 @@ const items: ReadonlyArray<{
 }> = [
     { id: 'today', label: 'Today', iconName: 'home' },
     { id: 'route', label: 'Route', iconName: 'route', planned: true },
+    { id: 'documents', label: 'Docs', iconName: 'document' },
     { id: 'profile', label: 'Profile', iconName: 'profile' },
 ];
 

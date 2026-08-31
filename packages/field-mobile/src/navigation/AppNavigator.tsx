@@ -32,6 +32,9 @@ import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
+import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
+import { DvirScreen } from '../screens/DvirScreen';
+import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { ApiClientError } from '../services/apiClient';
 import {
@@ -47,6 +50,7 @@ import type {
 import type {
     DispatchJob,
     DispatchStatus,
+    DutyStatus,
     OutboxCommand,
     ActivateSosIncidentPayload,
     SosConfiguration,
@@ -204,8 +208,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         actions: [],
     });
     const [isSosActivating, setIsSosActivating] = useState(false);
+    const [activeAppView, setActiveAppView] = useState<
+        'main' | 'dvir' | 'documents' | 'inspection'
+    >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
+        dutyStatus: 'operating',
         startedAt: '08:00 AM',
         hoursElapsed: 4,
     });
@@ -585,12 +593,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     return true;
                 }
 
+                if (activeAppView !== 'main') {
+                    setActiveAppView('main');
+
+                    return true;
+                }
+
                 return false;
             },
         );
 
         return () => subscription.remove();
-    }, [selectedJobId]);
+    }, [activeAppView, selectedJobId]);
 
     const handleSelectJob = useCallback(
         (jobId: number) => setSelectedJobId(jobId),
@@ -602,6 +616,23 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         setShiftInfo((prev) => ({
             ...prev,
             status: nextStatus,
+        }));
+    }, []);
+
+    const handleChangeDutyStatus = useCallback((dutyStatus: DutyStatus) => {
+        const nextShiftStatus: ShiftStatus =
+            dutyStatus === 'off_duty'
+                ? 'off_shift'
+                : dutyStatus === 'on_break'
+                  ? 'on_break'
+                  : dutyStatus === 'standby'
+                    ? 'standby'
+                    : 'on_shift';
+
+        setShiftInfo((prev) => ({
+            ...prev,
+            status: nextShiftStatus,
+            dutyStatus,
         }));
     }, []);
 
@@ -934,29 +965,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 </Text>
                             </View>
                         ) : null}
-                        {selectedJobId === null || !activeJob || !user ? (
-                            <AssignedJobsListScreen
-                                error={jobsError}
-                                isLoading={isLoadingJobs}
-                                isOnline={isOnline}
-                                jobs={jobs}
-                                locationSharingActive={locationSharingActive}
-                                onDiscardCommand={handleDiscardCommand}
-                                onLogout={() => void logout()}
-                                onRefresh={() => void fetchJobs()}
-                                onRetryCommand={handleRetryCommand}
-                                onSelectJob={handleSelectJob}
-                                onSyncNow={() => void syncQueue()}
-                                onToggleLocationSharing={
-                                    handleToggleLocationSharing
-                                }
-                                onToggleShift={handleToggleShift}
-                                outboxCommands={outboxCommands}
-                                shiftInfo={shiftInfo}
-                                userName={user?.name}
-                                userRole={user?.role.replaceAll('_', ' ')}
-                            />
-                        ) : (
+                        {selectedJobId !== null && activeJob && user ? (
                             <JobDetailScreen
                                 getCurrentLocation={getCurrentLocation}
                                 job={activeJob}
@@ -970,6 +979,76 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onTransitionStatus={handleTransitionStatus}
                                 outboxCommands={outboxCommands}
                                 user={user}
+                            />
+                        ) : activeAppView === 'dvir' ? (
+                            <DvirScreen
+                                activeJobReference={
+                                    jobs[0]?.reference || 'DISP-2026-0891'
+                                }
+                                assetCode={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_code || 'ALB-CRN-050'
+                                }
+                                assetName={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    '50T Tadano All-Terrain Crane'
+                                }
+                                inspectorName={user?.name || 'Alex Rivera'}
+                                onBack={() => setActiveAppView('main')}
+                            />
+                        ) : activeAppView === 'documents' ? (
+                            <DocumentsWalletScreen
+                                assetCode={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_code || 'ALB-CRN-050'
+                                }
+                                onBack={() => setActiveAppView('main')}
+                                operatorName={user?.name || 'Alex Rivera'}
+                            />
+                        ) : activeAppView === 'inspection' ? (
+                            <EquipmentInspectionScreen
+                                assetCode={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_code || 'ALB-CRN-050'
+                                }
+                                assetName={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    '50T Tadano All-Terrain Crane'
+                                }
+                                onBack={() => setActiveAppView('main')}
+                                technicianName={user?.name || 'Alex Rivera'}
+                            />
+                        ) : (
+                            <AssignedJobsListScreen
+                                error={jobsError}
+                                isLoading={isLoadingJobs}
+                                isOnline={isOnline}
+                                jobs={jobs}
+                                locationSharingActive={locationSharingActive}
+                                onChangeDutyStatus={handleChangeDutyStatus}
+                                onDiscardCommand={handleDiscardCommand}
+                                onLogout={() => void logout()}
+                                onOpenDocuments={() =>
+                                    setActiveAppView('documents')
+                                }
+                                onOpenDvir={() => setActiveAppView('dvir')}
+                                onOpenVehicle={() =>
+                                    setActiveAppView('inspection')
+                                }
+                                onRefresh={() => void fetchJobs()}
+                                onRetryCommand={handleRetryCommand}
+                                onSelectJob={handleSelectJob}
+                                onSyncNow={() => void syncQueue()}
+                                onToggleLocationSharing={
+                                    handleToggleLocationSharing
+                                }
+                                onToggleShift={handleToggleShift}
+                                outboxCommands={outboxCommands}
+                                shiftInfo={shiftInfo}
+                                userName={user?.name}
+                                userRole={user?.role.replaceAll('_', ' ')}
                             />
                         )}
                     </View>

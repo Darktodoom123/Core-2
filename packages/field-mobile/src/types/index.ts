@@ -351,11 +351,88 @@ export interface DispatchJobV2 {
 
 export type ShiftStatus = 'on_shift' | 'off_shift' | 'on_break' | 'standby';
 
+export type DutyStatus =
+    'driving' | 'operating' | 'standby' | 'on_break' | 'off_duty';
+
+export type StandbyReason =
+    | 'client_delay'
+    | 'weather_hold'
+    | 'site_access_blocked'
+    | 'waiting_on_concrete'
+    | 'rigging_adjustment'
+    | 'mechanical_inspection'
+    | 'other';
+
+export interface DutyStatusInfo {
+    status: DutyStatus;
+    statusLabel: string;
+    startedAt: string;
+    elapsedFormatted: string;
+    standbyReason?: StandbyReason | null;
+    remarks?: string | null;
+}
+
 export interface ShiftInfo {
     status: ShiftStatus;
+    dutyStatus?: DutyStatus;
     startedAt?: string | null;
     hoursElapsed?: number;
     breakCount?: number;
+    drivingMinutes?: number;
+    operatingMinutes?: number;
+    standbyMinutes?: number;
+    breakMinutes?: number;
+    maxShiftHours?: number;
+}
+
+// ==========================================
+// Compliance Documents & Cab Wallet Types
+// ==========================================
+
+export type DocumentCategory =
+    | 'road_permits'
+    | 'load_test_certs'
+    | 'operator_licenses'
+    | 'delivery_receipts';
+
+export interface ComplianceDocument {
+    id: string;
+    category: DocumentCategory;
+    title: string;
+    documentNumber: string;
+    issuingAuthority: string;
+    issuedDate: string;
+    expiryDate?: string | null;
+    isExpired?: boolean;
+    assetCode?: string | null;
+    operatorName?: string | null;
+    fileUri?: string | null;
+    fileSizeLabel?: string;
+    status: 'valid' | 'expiring_soon' | 'expired';
+    notes?: string | null;
+}
+
+// ==========================================
+// DVIR (Pre-Trip / Post-Trip) Types
+// ==========================================
+
+export type DvirInspectionType = 'pre_trip' | 'post_trip' | 'routine';
+
+export interface DvirInspectionRecord {
+    id: string;
+    type: DvirInspectionType;
+    assetCode: string;
+    assetName: string;
+    inspectorName: string;
+    startingOdometerKm?: number | null;
+    endingOdometerKm?: number | null;
+    engineHours?: number | null;
+    hasDefects: boolean;
+    criticalDefectsCount: number;
+    checks: TechnicianInspectionCheck[];
+    signatureCaptured: boolean;
+    remarks?: string | null;
+    completedAt: string;
 }
 
 export type LocationSharingTone = 'active' | 'queued' | 'paused' | 'offline';

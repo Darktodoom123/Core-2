@@ -36,7 +36,15 @@ export type IconName =
     | 'compass'
     | 'pin'
     | 'clipboard'
-    | 'work';
+    | 'work'
+    | 'settings'
+    | 'log-out'
+    | 'document'
+    | 'folder'
+    | 'car'
+    | 'flash'
+    | 'search'
+    | 'chevron-up';
 
 export interface IconProps {
     name: IconName;
@@ -186,6 +194,32 @@ export const Icon: React.FC<IconProps> = ({
             return (
                 <Ionicons name="chatbubble-outline" size={size} color={color} />
             );
+        case 'settings':
+            return (
+                <Ionicons name="settings-outline" size={size} color={color} />
+            );
+        case 'log-out':
+            return (
+                <Ionicons name="log-out-outline" size={size} color={color} />
+            );
+        case 'document':
+            return (
+                <Ionicons
+                    name="document-text-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'folder':
+            return <Ionicons name="folder-outline" size={size} color={color} />;
+        case 'car':
+            return <Ionicons name="car-outline" size={size} color={color} />;
+        case 'flash':
+            return <Ionicons name="flash" size={size} color={color} />;
+        case 'search':
+            return <Ionicons name="search-outline" size={size} color={color} />;
+        case 'chevron-up':
+            return <Ionicons name="chevron-up" size={size} color={color} />;
         default:
             return (
                 <Ionicons
