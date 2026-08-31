@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Icon } from '../components/common/Icon';
 import {
     FuelReceiptTab,
     HandoverTab,
@@ -8,6 +9,7 @@ import {
     SafeReleaseTab,
 } from '../components/inspection';
 import { colors } from '../components/nativeStyles';
+import { useTheme } from '../theme';
 import type {
     FuelReceiptLog,
     MaintenanceWorkOrder,
@@ -21,6 +23,7 @@ export interface EquipmentInspectionScreenProps {
     assetName?: string;
     technicianName?: string;
     onBack?: () => void;
+    onOpenDvir?: () => void;
     onSaveInspection?: (checks: TechnicianInspectionCheck[]) => void;
     onLogWorkOrder?: (workOrder: MaintenanceWorkOrder) => void;
     onSafeRelease?: (verification: SafeReleaseVerification) => void;
@@ -38,27 +41,11 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         icon: '',
     },
     {
-        id: 'hyd-02',
-        category: 'hydraulics',
-        label: 'Hydraulic pressure & control valves',
-        status: 'good',
-        statusLabel: 'Pass · Normal pressure (210 bar)',
-        icon: '',
-    },
-    {
         id: 'elec-01',
         category: 'electrical',
         label: 'Load Moment Indicator (LMI) & sensors',
         status: 'good',
         statusLabel: 'Pass · Calibrated',
-        icon: '',
-    },
-    {
-        id: 'elec-02',
-        category: 'electrical',
-        label: 'Anti-two-block (A2B) limit switch',
-        status: 'good',
-        statusLabel: 'Pass · Audible alarm active',
         icon: '',
     },
     {
@@ -77,14 +64,6 @@ const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
         statusLabel: 'Pass · Safety latch intact',
         icon: '',
     },
-    {
-        id: 'tire-01',
-        category: 'tires_tracks',
-        label: 'Tire pressures & wheel lug torque',
-        status: 'good',
-        statusLabel: 'Pass · 120 PSI across all axles',
-        icon: '',
-    },
 ];
 
 export const EquipmentInspectionScreen: React.FC<
@@ -94,15 +73,22 @@ export const EquipmentInspectionScreen: React.FC<
     assetName = '50-Ton Mobile All-Terrain Crane',
     technicianName = 'Alex Rivera (Certified Crane Technician)',
     onBack,
+    onOpenDvir,
     onSaveInspection,
     onLogWorkOrder,
     onSafeRelease,
     onLogFuelReceipt,
     onCompleteHandover,
 }) => {
+    const { isDarkHud } = useTheme();
     const [activeTab, setActiveTab] = useState<
-        'checklist' | 'work_order' | 'safe_release' | 'fuel' | 'handover'
-    >('checklist');
+        | 'setup'
+        | 'work_order'
+        | 'safe_release'
+        | 'fuel'
+        | 'handover'
+        | 'checklist'
+    >('setup');
 
     const [checks, setChecks] =
         useState<TechnicianInspectionCheck[]>(INITIAL_CHECKS);
@@ -181,276 +167,786 @@ export const EquipmentInspectionScreen: React.FC<
         onLogFuelReceipt?.(log);
     };
 
-    const goodCount = checks.filter((c) => c.status === 'good').length;
-
     return (
-        <ScrollView
-            accessibilityLabel="Technician inspection and maintenance workflows"
-            contentContainerStyle={styles.container}
+        <View
+            style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
             testID="equipment-inspection-screen"
         >
-            <View style={styles.header}>
+            {/* Top Navigation Header Bar matching DVIR */}
+            <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
                 {onBack ? (
                     <Pressable
-                        accessibilityLabel="Back to previous screen"
+                        accessibilityLabel="Close and return"
                         accessibilityRole="button"
                         onPress={onBack}
-                        style={styles.backBtn}
+                        style={styles.closeHeaderBtn}
                     >
-                        <Text style={styles.backIcon}>‹</Text>
-                        <Text style={styles.backText}>Back</Text>
+                        <Icon
+                            color={isDarkHud ? '#94A3B8' : colors.text}
+                            name="back"
+                            size={22}
+                        />
                     </Pressable>
                 ) : null}
-                <View style={styles.headerCopy}>
-                    <Text style={styles.pageCategory}>
-                        FIELD TECHNICIAN WORKFLOW
+                <View style={styles.headerCenter}>
+                    <Text
+                        style={[
+                            styles.pageCategory,
+                            isDarkHud && styles.darkPageCategory,
+                        ]}
+                    >
+                        VEHICLE SETUP &amp; FLEET HUB
                     </Text>
-                    <Text accessibilityRole="header" style={styles.assetTitle}>
+                    <Text
+                        accessibilityRole="header"
+                        style={[
+                            styles.screenTitle,
+                            isDarkHud && styles.darkScreenTitle,
+                        ]}
+                    >
                         {assetCode} · {assetName}
                     </Text>
-                    <Text style={styles.techSubtitle}>
-                        Technician: {technicianName}
+                    <Text
+                        style={[
+                            styles.headerSubtitle,
+                            isDarkHud && styles.darkHeaderSubtitle,
+                        ]}
+                    >
+                        Assigned Operator: {technicianName}
                     </Text>
                 </View>
             </View>
 
-            <View style={styles.tabBar} accessibilityRole="tablist">
-                <Pressable
-                    accessibilityLabel="Asset inspection checklist"
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: activeTab === 'checklist' }}
-                    onPress={() => setActiveTab('checklist')}
-                    style={[
-                        styles.tabItem,
-                        activeTab === 'checklist' && styles.tabItemSelected,
-                    ]}
-                    testID="tab-checklist"
+            {/* Navigation Tabs Bar matching DVIR Segment Filter */}
+            <View
+                accessibilityRole="tablist"
+                style={[
+                    styles.tabBarContainer,
+                    isDarkHud && styles.darkTabBarContainer,
+                ]}
+            >
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.tabBarScroll}
                 >
-                    <Text
+                    <Pressable
+                        accessibilityLabel="Vehicle setup and telematics"
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: activeTab === 'setup' }}
+                        onPress={() => setActiveTab('setup')}
                         style={[
-                            styles.tabText,
-                            activeTab === 'checklist' && styles.tabTextSelected,
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
+                            activeTab === 'setup' && styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'setup' &&
+                                styles.darkTabPillActive,
                         ]}
+                        testID="tab-setup-telematics"
                     >
-                        Inspection ({goodCount}/{checks.length})
-                    </Text>
-                </Pressable>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'setup' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'setup' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Setup &amp; Specs
+                        </Text>
+                    </Pressable>
 
-                <Pressable
-                    accessibilityLabel="Maintenance work orders"
-                    accessibilityRole="tab"
-                    accessibilityState={{
-                        selected: activeTab === 'work_order',
-                    }}
-                    onPress={() => setActiveTab('work_order')}
-                    style={[
-                        styles.tabItem,
-                        activeTab === 'work_order' && styles.tabItemSelected,
-                    ]}
-                    testID="tab-work-orders"
-                >
-                    <Text
+                    <Pressable
+                        accessibilityLabel="Maintenance work orders"
+                        accessibilityRole="tab"
+                        accessibilityState={{
+                            selected: activeTab === 'work_order',
+                        }}
+                        onPress={() => setActiveTab('work_order')}
                         style={[
-                            styles.tabText,
-                            activeTab === 'work_order' &&
-                                styles.tabTextSelected,
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
+                            activeTab === 'work_order' && styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'work_order' &&
+                                styles.darkTabPillActive,
                         ]}
+                        testID="tab-work-orders"
                     >
-                        Work Orders ({workOrders.length})
-                    </Text>
-                </Pressable>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'work_order' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'work_order' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Work Orders ({workOrders.length})
+                        </Text>
+                    </Pressable>
 
-                <Pressable
-                    accessibilityLabel="Safe release certification"
-                    accessibilityRole="tab"
-                    accessibilityState={{
-                        selected: activeTab === 'safe_release',
-                    }}
-                    onPress={() => setActiveTab('safe_release')}
-                    style={[
-                        styles.tabItem,
-                        activeTab === 'safe_release' && styles.tabItemSelected,
-                    ]}
-                    testID="tab-safe-release"
-                >
-                    <Text
+                    <Pressable
+                        accessibilityLabel="Safe release certification"
+                        accessibilityRole="tab"
+                        accessibilityState={{
+                            selected: activeTab === 'safe_release',
+                        }}
+                        onPress={() => setActiveTab('safe_release')}
                         style={[
-                            styles.tabText,
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
                             activeTab === 'safe_release' &&
-                                styles.tabTextSelected,
+                                styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'safe_release' &&
+                                styles.darkTabPillActive,
                         ]}
+                        testID="tab-safe-release"
                     >
-                        Safe Release
-                    </Text>
-                </Pressable>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'safe_release' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'safe_release' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Safe Release
+                        </Text>
+                    </Pressable>
 
-                <Pressable
-                    accessibilityLabel="Fuel receipts"
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: activeTab === 'fuel' }}
-                    onPress={() => setActiveTab('fuel')}
-                    style={[
-                        styles.tabItem,
-                        activeTab === 'fuel' && styles.tabItemSelected,
-                    ]}
-                    testID="tab-fuel"
-                >
-                    <Text
+                    <Pressable
+                        accessibilityLabel="Fuel receipts"
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: activeTab === 'fuel' }}
+                        onPress={() => setActiveTab('fuel')}
                         style={[
-                            styles.tabText,
-                            activeTab === 'fuel' && styles.tabTextSelected,
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
+                            activeTab === 'fuel' && styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'fuel' &&
+                                styles.darkTabPillActive,
                         ]}
+                        testID="tab-fuel"
                     >
-                        Fuel ({fuelLogs.length})
-                    </Text>
-                </Pressable>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'fuel' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'fuel' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Fuel ({fuelLogs.length})
+                        </Text>
+                    </Pressable>
 
-                <Pressable
-                    accessibilityLabel="Technician handover"
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: activeTab === 'handover' }}
-                    onPress={() => setActiveTab('handover')}
-                    style={[
-                        styles.tabItem,
-                        activeTab === 'handover' && styles.tabItemSelected,
-                    ]}
-                    testID="tab-handover"
-                >
-                    <Text
+                    <Pressable
+                        accessibilityLabel="Technician handover"
+                        accessibilityRole="tab"
+                        accessibilityState={{
+                            selected: activeTab === 'handover',
+                        }}
+                        onPress={() => setActiveTab('handover')}
                         style={[
-                            styles.tabText,
-                            activeTab === 'handover' && styles.tabTextSelected,
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
+                            activeTab === 'handover' && styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'handover' &&
+                                styles.darkTabPillActive,
                         ]}
+                        testID="tab-handover"
                     >
-                        Handover
-                    </Text>
-                </Pressable>
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'handover' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'handover' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Handover
+                        </Text>
+                    </Pressable>
+                </ScrollView>
             </View>
 
-            {activeTab === 'checklist' ? (
-                <InspectionChecklistTab
-                    checks={checks}
-                    isSaved={isSaved}
-                    onSaveInspection={handleSaveInspection}
-                    onToggleCheck={handleToggleCheck}
-                />
-            ) : null}
+            {/* Scrollable Content Container matching DVIR Form */}
+            <ScrollView
+                accessibilityLabel="Vehicle setup, fleet telematics and maintenance workflows"
+                contentContainerStyle={[
+                    styles.contentContainer,
+                    isDarkHud && styles.darkContentContainer,
+                ]}
+                style={styles.scrollView}
+            >
+                {/* TAB 1: Setup, Telematics & DVIR Status Card */}
+                {activeTab === 'setup' ? (
+                    <View style={styles.setupTabContent}>
+                        {/* Primary DVIR Status Guarantee Banner */}
+                        <View
+                            style={[
+                                styles.dvirStatusCard,
+                                isDarkHud && styles.darkDvirStatusCard,
+                            ]}
+                            testID="dvir-unified-status-card"
+                        >
+                            <View style={styles.dvirCardHeader}>
+                                <View style={styles.dvirBadge}>
+                                    <Icon
+                                        color="#10B981"
+                                        name="shield-check"
+                                        size={20}
+                                    />
+                                    <Text style={styles.dvirBadgeText}>
+                                        UNIFIED DVIR ENGINE
+                                    </Text>
+                                </View>
+                                <Text style={styles.dvirSubBadge}>
+                                    Single Source of Truth
+                                </Text>
+                            </View>
 
-            {activeTab === 'work_order' ? (
-                <MaintenanceWorkOrderTab
-                    assetCode={assetCode}
-                    assetName={assetName}
-                    onLogWorkOrder={handleLogWorkOrder}
-                    technicianName={technicianName}
-                    workOrders={workOrders}
-                />
-            ) : null}
+                            <Text style={styles.dvirTitle}>
+                                Pre-Trip &amp; Post-Trip Inspection Active
+                            </Text>
+                            <Text style={styles.dvirDescription}>
+                                All vehicle and crane defects, 4-angle
+                                walkaround photos, safety statuses, and
+                                regulatory DOT/OSHA sign-offs are consolidated
+                                in the primary DVIR module.
+                            </Text>
 
-            {activeTab === 'safe_release' ? (
-                <SafeReleaseTab
-                    assetCode={assetCode}
-                    assetName={assetName}
-                    onSafeRelease={onSafeRelease ?? (() => {})}
-                    technicianName={technicianName}
-                />
-            ) : null}
+                            {onOpenDvir ? (
+                                <Pressable
+                                    accessibilityLabel="Open full DVIR inspection engine"
+                                    accessibilityRole="button"
+                                    onPress={onOpenDvir}
+                                    style={styles.openDvirBtn}
+                                    testID="open-dvir-engine-btn"
+                                >
+                                    <Icon
+                                        color="#FFFFFF"
+                                        name="clipboard"
+                                        size={18}
+                                    />
+                                    <Text style={styles.openDvirBtnText}>
+                                        Open DVIR Inspection Engine
+                                    </Text>
+                                    <Icon
+                                        color="#93C5FD"
+                                        name="chevron-right"
+                                        size={16}
+                                    />
+                                </Pressable>
+                            ) : null}
+                        </View>
 
-            {activeTab === 'fuel' ? (
-                <FuelReceiptTab
-                    assetCode={assetCode}
-                    fuelLogs={fuelLogs}
-                    onLogFuelReceipt={handleLogFuel}
-                />
-            ) : null}
+                        {/* Telemetrics & Specs Grid */}
+                        <View
+                            style={[
+                                styles.specsCard,
+                                isDarkHud && styles.darkSpecsCard,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    isDarkHud && styles.darkText,
+                                ]}
+                            >
+                                Live Telemetry &amp; Operating Specs
+                            </Text>
 
-            {activeTab === 'handover' ? (
-                <HandoverTab
-                    assetCode={assetCode}
-                    onCompleteHandover={onCompleteHandover ?? (() => {})}
-                    technicianName={technicianName}
-                />
-            ) : null}
-        </ScrollView>
+                            <View style={styles.telemetryGrid}>
+                                <View
+                                    style={[
+                                        styles.telemetryCell,
+                                        isDarkHud && styles.darkTelemetryCell,
+                                    ]}
+                                >
+                                    <Text style={styles.telemetryLabel}>
+                                        Odometer
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.telemetryValue,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        42,150 km
+                                    </Text>
+                                </View>
+
+                                <View
+                                    style={[
+                                        styles.telemetryCell,
+                                        isDarkHud && styles.darkTelemetryCell,
+                                    ]}
+                                >
+                                    <Text style={styles.telemetryLabel}>
+                                        Engine Hours
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.telemetryValue,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        1,842.5 hrs
+                                    </Text>
+                                </View>
+
+                                <View
+                                    style={[
+                                        styles.telemetryCell,
+                                        isDarkHud && styles.darkTelemetryCell,
+                                    ]}
+                                >
+                                    <Text style={styles.telemetryLabel}>
+                                        Fuel Level
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.telemetryValue,
+                                            styles.telemetryGreen,
+                                        ]}
+                                    >
+                                        88% · Diesel
+                                    </Text>
+                                </View>
+
+                                <View
+                                    style={[
+                                        styles.telemetryCell,
+                                        isDarkHud && styles.darkTelemetryCell,
+                                    ]}
+                                >
+                                    <Text style={styles.telemetryLabel}>
+                                        Battery Voltage
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.telemetryValue,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        24.6 V (Normal)
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Crane Rigging & Outrigger Readiness */}
+                        <View
+                            style={[
+                                styles.specsCard,
+                                isDarkHud && styles.darkSpecsCard,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    isDarkHud && styles.darkText,
+                                ]}
+                            >
+                                Crane &amp; Outrigger Configuration
+                            </Text>
+
+                            <View style={styles.configRows}>
+                                <View style={styles.configRow}>
+                                    <Text style={styles.configKey}>
+                                        Outrigger Spread
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.configVal,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        100% Full Extension (Mid-Lock Engaged)
+                                    </Text>
+                                </View>
+
+                                <View style={styles.configRow}>
+                                    <Text style={styles.configKey}>
+                                        Inclinometer Level
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.configVal,
+                                            styles.telemetryGreen,
+                                        ]}
+                                    >
+                                        0.0° Level (Within Safe &lt; 0.5°)
+                                    </Text>
+                                </View>
+
+                                <View style={styles.configRow}>
+                                    <Text style={styles.configKey}>
+                                        Boom &amp; Fly Jib
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.configVal,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        40.0m Telescopic + 9.2m Lattice Jib
+                                    </Text>
+                                </View>
+
+                                <View style={styles.configRow}>
+                                    <Text style={styles.configKey}>
+                                        Counterweight
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.configVal,
+                                            isDarkHud && styles.darkText,
+                                        ]}
+                                    >
+                                        12.5 Tonnes Full Slabs Mounted
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                ) : null}
+
+                {/* TAB 2: Work Orders */}
+                {activeTab === 'work_order' ? (
+                    <MaintenanceWorkOrderTab
+                        assetCode={assetCode}
+                        assetName={assetName}
+                        onLogWorkOrder={handleLogWorkOrder}
+                        technicianName={technicianName}
+                        workOrders={workOrders}
+                    />
+                ) : null}
+
+                {/* TAB 3: Safe Release */}
+                {activeTab === 'safe_release' ? (
+                    <SafeReleaseTab
+                        assetCode={assetCode}
+                        assetName={assetName}
+                        onSafeRelease={onSafeRelease ?? (() => {})}
+                        technicianName={technicianName}
+                    />
+                ) : null}
+
+                {/* TAB 4: Fuel Receipts */}
+                {activeTab === 'fuel' ? (
+                    <FuelReceiptTab
+                        assetCode={assetCode}
+                        fuelLogs={fuelLogs}
+                        onLogFuelReceipt={handleLogFuel}
+                    />
+                ) : null}
+
+                {/* TAB 5: Handover */}
+                {activeTab === 'handover' ? (
+                    <HandoverTab
+                        assetCode={assetCode}
+                        onCompleteHandover={onCompleteHandover ?? (() => {})}
+                        technicianName={technicianName}
+                    />
+                ) : null}
+
+                {/* Backwards compatibility fallback if checklist tab selected */}
+                {activeTab === 'checklist' ? (
+                    <InspectionChecklistTab
+                        checks={checks}
+                        isSaved={isSaved}
+                        onSaveInspection={handleSaveInspection}
+                        onToggleCheck={handleToggleCheck}
+                    />
+                ) : null}
+            </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    screenRoot: {
+        backgroundColor: '#090E1A',
+        flex: 1,
+    },
+    darkScreenRoot: {
+        backgroundColor: '#090E1A',
+    },
+    headerBar: {
+        alignItems: 'center',
+        backgroundColor: '#0F172A',
+        borderBottomColor: '#1E293B',
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    darkHeaderBar: {
+        backgroundColor: '#0F172A',
+        borderBottomColor: '#1E293B',
+    },
+    closeHeaderBtn: {
+        alignItems: 'center',
+        height: 38,
+        justifyContent: 'center',
+        width: 38,
+    },
+    headerCenter: {
+        flex: 1,
+    },
+    pageCategory: {
+        color: '#F59E0B',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 0.8,
+    },
+    darkPageCategory: {
+        color: '#F59E0B',
+    },
+    screenTitle: {
+        color: '#FFFFFF',
+        fontSize: 17,
+        fontWeight: '800',
+    },
+    darkScreenTitle: {
+        color: '#FFFFFF',
+    },
+    headerSubtitle: {
+        color: '#94A3B8',
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 1,
+    },
+    darkHeaderSubtitle: {
+        color: '#94A3B8',
+    },
+    tabBarContainer: {
+        backgroundColor: '#0F172A',
+        borderBottomColor: '#1E293B',
+        borderBottomWidth: 1,
+        paddingVertical: 8,
+    },
+    darkTabBarContainer: {
+        backgroundColor: '#0F172A',
+        borderBottomColor: '#1E293B',
+    },
+    tabBarScroll: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 16,
+    },
+    tabPill: {
+        alignItems: 'center',
+        backgroundColor: '#101A2E',
+        borderColor: '#1E3254',
+        borderRadius: 20,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 36,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+    },
+    darkTabPill: {
+        backgroundColor: '#101A2E',
+        borderColor: '#1E3254',
+    },
+    tabPillActive: {
+        backgroundColor: '#172554',
+        borderColor: '#2563EB',
+        borderWidth: 1.5,
+    },
+    darkTabPillActive: {
+        backgroundColor: '#172554',
+        borderColor: '#2563EB',
+        borderWidth: 1.5,
+    },
+    tabPillText: {
+        color: '#94A3B8',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    darkTabPillText: {
+        color: '#94A3B8',
+    },
+    tabPillTextActive: {
+        color: '#60A5FA',
+        fontWeight: '800',
+    },
+    darkTabPillTextActive: {
+        color: '#60A5FA',
+        fontWeight: '800',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    contentContainer: {
         alignSelf: 'center',
+        backgroundColor: '#090E1A',
         maxWidth: 720,
         padding: 16,
         paddingBottom: 32,
         width: '100%',
     },
-    header: {
-        marginBottom: 16,
+    darkContentContainer: {
+        backgroundColor: '#090E1A',
     },
-    backBtn: {
+    setupTabContent: {
+        gap: 16,
+    },
+    dvirStatusCard: {
+        backgroundColor: '#06281E',
+        borderColor: '#065F46',
+        borderRadius: 12,
+        borderWidth: 1,
+        padding: 16,
+    },
+    darkDvirStatusCard: {
+        backgroundColor: '#06281E',
+        borderColor: '#065F46',
+    },
+    dvirCardHeader: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 4,
-        marginBottom: 8,
-        minHeight: 48,
-        minWidth: 72,
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
-    backIcon: {
-        color: colors.text,
-        fontSize: 26,
-        fontWeight: '300',
+    dvirBadge: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
     },
-    backText: {
-        color: colors.text,
-        fontSize: 14,
+    dvirBadgeText: {
+        color: '#059669',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    dvirSubBadge: {
+        color: '#6EE7B7',
+        fontSize: 11,
         fontWeight: '700',
     },
-    headerCopy: {
-        gap: 2,
+    dvirTitle: {
+        color: '#34D399',
+        fontSize: 16,
+        fontWeight: '800',
+        marginBottom: 6,
     },
-    pageCategory: {
-        color: colors.amberDark,
-        fontSize: 11,
-        fontWeight: '900',
-        letterSpacing: 0.8,
+    dvirDescription: {
+        color: '#A7F3D0',
+        fontSize: 13,
+        lineHeight: 18,
+        marginBottom: 14,
     },
-    assetTitle: {
-        color: colors.text,
-        fontSize: 22,
+    openDvirBtn: {
+        alignItems: 'center',
+        backgroundColor: '#059669',
+        borderRadius: 8,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    openDvirBtnText: {
+        color: '#FFFFFF',
+        fontSize: 14,
         fontWeight: '800',
     },
-    techSubtitle: {
-        color: colors.secondary,
+    specsCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#1E293B',
+        borderRadius: 12,
+        borderWidth: 1,
+        padding: 16,
+    },
+    darkSpecsCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#1E293B',
+    },
+    sectionTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '800',
+        marginBottom: 12,
+    },
+    darkText: {
+        color: '#FFFFFF',
+    },
+    telemetryGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    telemetryCell: {
+        backgroundColor: '#162238',
+        borderColor: '#1E3A8A',
+        borderRadius: 8,
+        borderWidth: 1,
+        flex: 1,
+        minWidth: '45%',
+        padding: 12,
+    },
+    darkTelemetryCell: {
+        backgroundColor: '#162238',
+        borderColor: '#1E3A8A',
+        borderWidth: 1,
+    },
+    telemetryLabel: {
+        color: '#64748B',
+        fontSize: 11,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    telemetryValue: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    telemetryGreen: {
+        color: '#10B981',
+    },
+    configRows: {
+        gap: 10,
+    },
+    configRow: {
+        borderBottomColor: '#1E293B',
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingBottom: 8,
+    },
+    configKey: {
+        color: '#94A3B8',
         fontSize: 13,
         fontWeight: '600',
     },
-    tabBar: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 10,
-        borderWidth: 1,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 4,
-        marginBottom: 16,
-        padding: 4,
-    },
-    tabItem: {
-        alignItems: 'center',
-        borderRadius: 8,
-        justifyContent: 'center',
-        minHeight: 48,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    tabItemSelected: {
-        backgroundColor: colors.amberSoft,
-    },
-    tabText: {
-        color: colors.secondary,
-        fontSize: 12,
+    configVal: {
+        color: '#FFFFFF',
+        fontSize: 13,
         fontWeight: '700',
-    },
-    tabTextSelected: {
-        color: colors.amberDark,
-        fontWeight: '900',
+        textAlign: 'right',
     },
 });

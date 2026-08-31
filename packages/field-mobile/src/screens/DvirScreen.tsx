@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Pressable,
     ScrollView,
@@ -24,6 +24,7 @@ import type {
     DvirInspectionRecord,
     TechnicianInspectionCheck,
 } from '../types/index';
+import type { FieldApiClient } from '../services/apiClient';
 
 export interface DvirScreenProps {
     assetCode?: string;
@@ -31,6 +32,7 @@ export interface DvirScreenProps {
     inspectorName?: string;
     activeJobReference?: string;
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
+    apiClient?: FieldApiClient;
     onBack?: () => void;
     onSaveInspectionRecord?: (record: DvirInspectionRecord) => void;
 }
@@ -78,36 +80,100 @@ const DEFAULT_CHECKS: TechnicianInspectionCheck[] = [
     },
 ];
 
+/**
+ * Maps a snake_case `DvirInspectionResource` payload from
+ * `GET /api/v1/dvir/inspections` onto the mobile record shape.
+ */
+const mapApiRecordToHistory = (record: any): DvirInspectionRecord => ({
+    id: String(record.id ?? ''),
+    type: record.type === 'post_trip' ? 'post_trip' : 'pre_trip',
+    assetCode: record.asset_code ?? '',
+    assetName: record.asset_name ?? '',
+    inspectorName: record.inspector_name ?? '',
+    startingOdometerKm: record.starting_odometer_km ?? null,
+    endingOdometerKm: record.ending_odometer_km ?? null,
+    engineHours: record.engine_hours ?? null,
+    hasDefects: Boolean(record.has_defects),
+    criticalDefectsCount: record.critical_defects_count ?? 0,
+    checks: Array.isArray(record.checks)
+        ? record.checks.map(
+              (check: any): TechnicianInspectionCheck => ({
+                  id: String(check.id ?? ''),
+                  category: check.category,
+                  label: check.label,
+                  status: check.status,
+                  statusLabel: check.status_label ?? '',
+                  notes: check.notes ?? null,
+                  icon: '',
+              }),
+          )
+        : [],
+    signatureCaptured: Boolean(record.signature_captured),
+    remarks: record.remarks ?? null,
+    completedAt: record.completed_at ?? new Date().toISOString(),
+});
+
 const INITIAL_HISTORY: DvirInspectionRecord[] = [
     {
-        id: 'DVIR-2026-0830-01',
+        id: 'DVIR-2026-0831-01',
         type: 'pre_trip',
         assetCode: 'ALB-CRN-050',
         assetName: '50T Tadano All-Terrain Crane',
         inspectorName: 'Alex Rivera (Certified Operator)',
-        startingOdometerKm: 42120,
+        startingOdometerKm: 42150,
+        engineHours: 1842.5,
+        hasDefects: false,
+        criticalDefectsCount: 0,
+        checks: DEFAULT_CHECKS,
+        signatureCaptured: true,
+        remarks:
+            'Today pre-shift inspection passed with zero defects. Outriggers & LMI verified.',
+        completedAt: new Date().toISOString(),
+    },
+    {
+        id: 'DVIR-2026-0830-02',
+        type: 'post_trip',
+        assetCode: 'ALB-CRN-050',
+        assetName: '50T Tadano All-Terrain Crane',
+        inspectorName: 'Alex Rivera (Certified Operator)',
+        endingOdometerKm: 42120,
         engineHours: 1836,
         hasDefects: false,
         criticalDefectsCount: 0,
         checks: DEFAULT_CHECKS,
         signatureCaptured: true,
-        remarks: 'Morning pre-shift inspection passed with zero defects.',
+        remarks: 'Post-job walkaround clean. Asset parked and secured.',
         completedAt: new Date(Date.now() - 86400000).toISOString(),
     },
     {
-        id: 'DVIR-2026-0829-02',
-        type: 'post_trip',
+        id: 'DVIR-2026-0828-01',
+        type: 'pre_trip',
         assetCode: 'ALB-CRN-050',
         assetName: '50T Tadano All-Terrain Crane',
         inspectorName: 'Alex Rivera (Certified Operator)',
-        endingOdometerKm: 42100,
-        engineHours: 1830,
+        startingOdometerKm: 42080,
+        engineHours: 1824,
         hasDefects: false,
         criticalDefectsCount: 0,
         checks: DEFAULT_CHECKS,
         signatureCaptured: true,
-        remarks: 'Post-job walkaround clean. Asset parked and secured.',
-        completedAt: new Date(Date.now() - 172800000).toISOString(),
+        remarks: 'Pre-trip complete. Fluid levels verified.',
+        completedAt: new Date(Date.now() - 259200000).toISOString(),
+    },
+    {
+        id: 'DVIR-2026-0818-01',
+        type: 'post_trip',
+        assetCode: 'ALB-CRN-050',
+        assetName: '50T Tadano All-Terrain Crane',
+        inspectorName: 'Alex Rivera (Certified Operator)',
+        endingOdometerKm: 41850,
+        engineHours: 1795,
+        hasDefects: true,
+        criticalDefectsCount: 0,
+        checks: DEFAULT_CHECKS,
+        signatureCaptured: true,
+        remarks: 'Hydraulic hose sweat noted and reported to fleet shop.',
+        completedAt: new Date(Date.now() - 1123200000).toISOString(),
     },
 ];
 
@@ -117,6 +183,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     inspectorName = 'Alex Rivera (Certified Crane Operator)',
     activeJobReference = 'DISP-2026-0891',
     initialMode = 'pre_trip',
+    apiClient,
     onBack,
     onSaveInspectionRecord,
 }) => {
@@ -135,6 +202,80 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [isSaved, setIsSaved] = useState(false);
     const [history, setHistory] =
         useState<DvirInspectionRecord[]>(INITIAL_HISTORY);
+    const [showOlderArchive, setShowOlderArchive] = useState(false);
+    const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [syncError, setSyncError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!apiClient) {
+            return;
+        }
+
+        let cancelled = false;
+        setIsHistoryLoading(true);
+
+        apiClient
+            .fetchDvirInspections(30)
+            .then((res) => {
+                if (cancelled) {
+                    return;
+                }
+                if (Array.isArray(res?.inspections)) {
+                    setHistory(res.inspections.map(mapApiRecordToHistory));
+                    setSyncError(null);
+                }
+            })
+            .catch(() => {
+                if (cancelled) {
+                    return;
+                }
+                setSyncError(
+                    'DVIR history could not be loaded. Showing cached records.',
+                );
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsHistoryLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [apiClient]);
+
+    // Group history records into Today, Past 7 Days (Compliance), and Older (30-Day Archive)
+    const { todayRecords, past7DaysRecords, olderRecords } = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+        ).getTime();
+        const sevenDaysAgo = startOfToday - 7 * 86400000;
+
+        const today: DvirInspectionRecord[] = [];
+        const past7Days: DvirInspectionRecord[] = [];
+        const older: DvirInspectionRecord[] = [];
+
+        history.forEach((record) => {
+            const time = new Date(record.completedAt).getTime();
+
+            if (time >= startOfToday) {
+                today.push(record);
+            } else if (time >= sevenDaysAgo) {
+                past7Days.push(record);
+            } else {
+                older.push(record);
+            }
+        });
+
+        return {
+            todayRecords: today,
+            past7DaysRecords: past7Days,
+            olderRecords: older,
+        };
+    }, [history]);
 
     // Post-Trip Specific State
     const [chocksDeployed, setChocksDeployed] = useState(true);
@@ -278,6 +419,52 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setHistory((prev) => [record, ...prev]);
         setIsSaved(true);
         onSaveInspectionRecord?.(record);
+
+        if (apiClient) {
+            const checksPayload = record.checks.map((c) => ({
+                id: c.id || undefined,
+                category: c.category,
+                label: c.label,
+                status: c.status,
+                status_label: c.statusLabel || undefined,
+                notes: c.notes ?? undefined,
+            }));
+
+            apiClient
+                .createDvirInspection({
+                    inspection_type:
+                        record.type === 'post_trip' ? 'post_trip' : 'pre_trip',
+                    asset_code: assetCode,
+                    asset_name: assetName,
+                    inspector_name: inspectorName,
+                    starting_odometer_km:
+                        record.type === 'pre_trip'
+                            ? record.startingOdometerKm ?? null
+                            : null,
+                    ending_odometer_km:
+                        record.type === 'post_trip'
+                            ? record.endingOdometerKm ?? null
+                            : null,
+                    engine_hours: record.engineHours ?? null,
+                    has_defects: record.hasDefects,
+                    signature_captured: true,
+                    remarks: record.remarks,
+                    checks: checksPayload,
+                })
+                .then((responseRecord) => {
+                    const mapped = mapApiRecordToHistory(responseRecord);
+                    setHistory((prev) => [
+                        mapped,
+                        ...prev.filter((item) => item !== record),
+                    ]);
+                    setSyncError(null);
+                })
+                .catch(() => {
+                    setSyncError(
+                        'DVIR saved on device only — will not appear in server history.',
+                    );
+                });
+        }
     };
 
     const handleNextOrSubmit = () => {
@@ -373,98 +560,407 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 style={styles.scrollView}
             >
                 {mode === 'history' ? (
-                    /* Past DVIR Records History View */
+                    /* Past DVIR Records Grouped History View */
                     <View style={styles.historyContainer}>
-                        <Text
-                            style={[
-                                styles.sectionHeading,
-                                isDarkHud && styles.darkSectionHeading,
-                            ]}
-                        >
-                            PAST DVIR INSPECTION RECORDS
-                        </Text>
-                        <View style={styles.historyList}>
-                            {history.map((item) => (
-                                <View
-                                    key={item.id}
+                        {isHistoryLoading && (
+                            <Text
+                                style={[
+                                    styles.historyMeta,
+                                    isDarkHud && styles.darkHistoryAsset,
+                                ]}
+                                testID="dvir-history-loading"
+                            >
+                                Loading DVIR history from server...
+                            </Text>
+                        )}
+                        {syncError && (
+                            <Text
+                                style={[
+                                    styles.historyMeta,
+                                    { color: '#F59E0B' },
+                                ]}
+                                testID="dvir-sync-warning"
+                            >
+                                {syncError}
+                            </Text>
+                        )}
+                        {/* Section 1: Today's Shift Inspections */}
+                        <View style={styles.timelineSection}>
+                            <View style={styles.timelineSectionHeader}>
+                                <Text
                                     style={[
-                                        styles.historyCard,
-                                        isDarkHud && styles.darkHistoryCard,
-                                        item.criticalDefectsCount > 0 ||
-                                        item.hasDefects
-                                            ? styles.historyCardDefect
-                                            : styles.historyCardClean,
+                                        styles.sectionHeading,
+                                        isDarkHud && styles.darkSectionHeading,
                                     ]}
-                                    testID={`history-card-${item.id}`}
                                 >
-                                    <View style={styles.historyCardHeader}>
-                                        <View style={styles.historyRefGroup}>
-                                            <Text
-                                                style={styles.historyTypeBadge}
-                                            >
-                                                {item.type === 'pre_trip'
-                                                    ? 'PRE-TRIP GAUNTLET'
-                                                    : 'POST-TRIP CHECK'}
-                                            </Text>
-                                            <Text
-                                                style={[
-                                                    styles.historyId,
-                                                    isDarkHud &&
-                                                        styles.darkHistoryId,
-                                                ]}
-                                            >
-                                                {item.id}
-                                            </Text>
-                                        </View>
+                                    TODAY'S SHIFT INSPECTIONS
+                                </Text>
+                                <Text style={styles.timelineSectionBadge}>
+                                    {todayRecords.length} Today
+                                </Text>
+                            </View>
+                            {todayRecords.length > 0 ? (
+                                <View style={styles.historyList}>
+                                    {todayRecords.map((item) => (
                                         <View
+                                            key={item.id}
                                             style={[
-                                                styles.statusPill,
+                                                styles.historyCard,
+                                                isDarkHud &&
+                                                    styles.darkHistoryCard,
+                                                item.criticalDefectsCount > 0 ||
                                                 item.hasDefects
-                                                    ? styles.statusPillDefect
-                                                    : styles.statusPillClean,
+                                                    ? styles.historyCardDefect
+                                                    : styles.historyCardClean,
                                             ]}
+                                            testID={`history-card-${item.id}`}
                                         >
+                                            <View
+                                                style={styles.historyCardHeader}
+                                            >
+                                                <View
+                                                    style={
+                                                        styles.historyRefGroup
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.historyTypeBadge
+                                                        }
+                                                    >
+                                                        {item.type ===
+                                                        'pre_trip'
+                                                            ? 'PRE-TRIP GAUNTLET'
+                                                            : 'POST-TRIP CHECK'}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.historyId,
+                                                            isDarkHud &&
+                                                                styles.darkHistoryId,
+                                                        ]}
+                                                    >
+                                                        {item.id}
+                                                    </Text>
+                                                </View>
+                                                <View
+                                                    style={[
+                                                        styles.statusPill,
+                                                        item.hasDefects
+                                                            ? styles.statusPillDefect
+                                                            : styles.statusPillClean,
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.statusPillText,
+                                                            item.hasDefects
+                                                                ? styles.statusTextDefect
+                                                                : styles.statusTextClean,
+                                                        ]}
+                                                    >
+                                                        {item.hasDefects
+                                                            ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
+                                                            : '✓ Clean Pass'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
                                             <Text
                                                 style={[
-                                                    styles.statusPillText,
-                                                    item.hasDefects
-                                                        ? styles.statusTextDefect
-                                                        : styles.statusTextClean,
+                                                    styles.historyAsset,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryAsset,
                                                 ]}
                                             >
-                                                {item.hasDefects
-                                                    ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
-                                                    : '✓ Clean Pass'}
+                                                {item.assetCode} ·{' '}
+                                                {item.assetName}
                                             </Text>
+                                            <Text style={styles.historyMeta}>
+                                                Inspector: {item.inspectorName}
+                                            </Text>
+                                            <Text style={styles.historyMeta}>
+                                                Logged:{' '}
+                                                {new Date(
+                                                    item.completedAt,
+                                                ).toLocaleString()}
+                                            </Text>
+                                            {item.remarks ? (
+                                                <Text
+                                                    style={
+                                                        styles.historyRemarks
+                                                    }
+                                                >
+                                                    "{item.remarks}"
+                                                </Text>
+                                            ) : null}
                                         </View>
-                                    </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <View style={styles.emptyTimelineCard}>
+                                    <Text style={styles.emptyTimelineText}>
+                                        No inspections logged today yet. Use
+                                        Pre-Trip or Post-Trip above.
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
 
-                                    <Text
+                        {/* Section 2: Past 7 Days (Compliance Window) */}
+                        <View style={styles.timelineSection}>
+                            <View style={styles.timelineSectionHeader}>
+                                <Text
+                                    style={[
+                                        styles.sectionHeading,
+                                        isDarkHud && styles.darkSectionHeading,
+                                    ]}
+                                >
+                                    PAST 7 DAYS (SAFETY COMPLIANCE)
+                                </Text>
+                                <Text style={styles.timelineSectionBadge}>
+                                    {past7DaysRecords.length} Records
+                                </Text>
+                            </View>
+                            {past7DaysRecords.length > 0 ? (
+                                <View style={styles.historyList}>
+                                    {past7DaysRecords.map((item) => (
+                                        <View
+                                            key={item.id}
+                                            style={[
+                                                styles.historyCard,
+                                                isDarkHud &&
+                                                    styles.darkHistoryCard,
+                                                item.criticalDefectsCount > 0 ||
+                                                item.hasDefects
+                                                    ? styles.historyCardDefect
+                                                    : styles.historyCardClean,
+                                            ]}
+                                            testID={`history-card-${item.id}`}
+                                        >
+                                            <View
+                                                style={styles.historyCardHeader}
+                                            >
+                                                <View
+                                                    style={
+                                                        styles.historyRefGroup
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.historyTypeBadge
+                                                        }
+                                                    >
+                                                        {item.type ===
+                                                        'pre_trip'
+                                                            ? 'PRE-TRIP GAUNTLET'
+                                                            : 'POST-TRIP CHECK'}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.historyId,
+                                                            isDarkHud &&
+                                                                styles.darkHistoryId,
+                                                        ]}
+                                                    >
+                                                        {item.id}
+                                                    </Text>
+                                                </View>
+                                                <View
+                                                    style={[
+                                                        styles.statusPill,
+                                                        item.hasDefects
+                                                            ? styles.statusPillDefect
+                                                            : styles.statusPillClean,
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.statusPillText,
+                                                            item.hasDefects
+                                                                ? styles.statusTextDefect
+                                                                : styles.statusTextClean,
+                                                        ]}
+                                                    >
+                                                        {item.hasDefects
+                                                            ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
+                                                            : '✓ Clean Pass'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            <Text
+                                                style={[
+                                                    styles.historyAsset,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryAsset,
+                                                ]}
+                                            >
+                                                {item.assetCode} ·{' '}
+                                                {item.assetName}
+                                            </Text>
+                                            <Text style={styles.historyMeta}>
+                                                Inspector: {item.inspectorName}
+                                            </Text>
+                                            <Text style={styles.historyMeta}>
+                                                Logged:{' '}
+                                                {new Date(
+                                                    item.completedAt,
+                                                ).toLocaleString()}
+                                            </Text>
+                                            {item.remarks ? (
+                                                <Text
+                                                    style={
+                                                        styles.historyRemarks
+                                                    }
+                                                >
+                                                    "{item.remarks}"
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <View style={styles.emptyTimelineCard}>
+                                    <Text style={styles.emptyTimelineText}>
+                                        No prior inspections recorded within the
+                                        past 7 days.
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Section 3: 30-Day Historical Archive */}
+                        {olderRecords.length > 0 ? (
+                            <View style={styles.timelineSection}>
+                                <Pressable
+                                    accessibilityLabel="Toggle 30-day historical archive"
+                                    accessibilityRole="button"
+                                    onPress={() =>
+                                        setShowOlderArchive((prev) => !prev)
+                                    }
+                                    style={styles.archiveToggleBtn}
+                                    testID="toggle-older-archive"
+                                >
+                                    <Text style={styles.archiveToggleText}>
+                                        {showOlderArchive
+                                            ? `▼ Hide 30-Day Archive (${olderRecords.length} Records)`
+                                            : `▶ Load 30-Day Archive (${olderRecords.length} Older Records)`}
+                                    </Text>
+                                </Pressable>
+                                {showOlderArchive ? (
+                                    <View
                                         style={[
-                                            styles.historyAsset,
-                                            isDarkHud &&
-                                                styles.darkHistoryAsset,
+                                            styles.historyList,
+                                            { marginTop: 10 },
                                         ]}
                                     >
-                                        {item.assetCode} · {item.assetName}
-                                    </Text>
-                                    <Text style={styles.historyMeta}>
-                                        Inspector: {item.inspectorName}
-                                    </Text>
-                                    <Text style={styles.historyMeta}>
-                                        Logged:{' '}
-                                        {new Date(
-                                            item.completedAt,
-                                        ).toLocaleString()}
-                                    </Text>
-                                    {item.remarks ? (
-                                        <Text style={styles.historyRemarks}>
-                                            "{item.remarks}"
-                                        </Text>
-                                    ) : null}
-                                </View>
-                            ))}
-                        </View>
+                                        {olderRecords.map((item) => (
+                                            <View
+                                                key={item.id}
+                                                style={[
+                                                    styles.historyCard,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryCard,
+                                                    item.criticalDefectsCount >
+                                                        0 || item.hasDefects
+                                                        ? styles.historyCardDefect
+                                                        : styles.historyCardClean,
+                                                ]}
+                                                testID={`history-card-${item.id}`}
+                                            >
+                                                <View
+                                                    style={
+                                                        styles.historyCardHeader
+                                                    }
+                                                >
+                                                    <View
+                                                        style={
+                                                            styles.historyRefGroup
+                                                        }
+                                                    >
+                                                        <Text
+                                                            style={
+                                                                styles.historyTypeBadge
+                                                            }
+                                                        >
+                                                            {item.type ===
+                                                            'pre_trip'
+                                                                ? 'PRE-TRIP GAUNTLET'
+                                                                : 'POST-TRIP CHECK'}
+                                                        </Text>
+                                                        <Text
+                                                            style={[
+                                                                styles.historyId,
+                                                                isDarkHud &&
+                                                                    styles.darkHistoryId,
+                                                            ]}
+                                                        >
+                                                            {item.id}
+                                                        </Text>
+                                                    </View>
+                                                    <View
+                                                        style={[
+                                                            styles.statusPill,
+                                                            item.hasDefects
+                                                                ? styles.statusPillDefect
+                                                                : styles.statusPillClean,
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.statusPillText,
+                                                                item.hasDefects
+                                                                    ? styles.statusTextDefect
+                                                                    : styles.statusTextClean,
+                                                            ]}
+                                                        >
+                                                            {item.hasDefects
+                                                                ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
+                                                                : '✓ Clean Pass'}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+
+                                                <Text
+                                                    style={[
+                                                        styles.historyAsset,
+                                                        isDarkHud &&
+                                                            styles.darkHistoryAsset,
+                                                    ]}
+                                                >
+                                                    {item.assetCode} ·{' '}
+                                                    {item.assetName}
+                                                </Text>
+                                                <Text
+                                                    style={styles.historyMeta}
+                                                >
+                                                    Inspector:{' '}
+                                                    {item.inspectorName}
+                                                </Text>
+                                                <Text
+                                                    style={styles.historyMeta}
+                                                >
+                                                    Logged:{' '}
+                                                    {new Date(
+                                                        item.completedAt,
+                                                    ).toLocaleString()}
+                                                </Text>
+                                                {item.remarks ? (
+                                                    <Text
+                                                        style={
+                                                            styles.historyRemarks
+                                                        }
+                                                    >
+                                                        "{item.remarks}"
+                                                    </Text>
+                                                ) : null}
+                                            </View>
+                                        ))}
+                                    </View>
+                                ) : null}
+                            </View>
+                        ) : null}
                     </View>
                 ) : (
                     /* Create DVIR (Exact Match to Uploaded Screenshots 1, 2 & 3) */
@@ -1241,14 +1737,63 @@ const styles = StyleSheet.create({
         lineHeight: 17,
     },
     historyContainer: {
-        gap: 10,
+        gap: 16,
+    },
+    timelineSection: {
+        gap: 8,
+    },
+    timelineSectionHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 2,
+    },
+    timelineSectionBadge: {
+        backgroundColor: '#101A2E',
+        borderColor: '#1E3254',
+        borderRadius: 8,
+        borderWidth: 1,
+        color: '#38BDF8',
+        fontSize: 11,
+        fontWeight: '700',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+    },
+    emptyTimelineCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#1E293B',
+        borderRadius: 10,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        padding: 14,
+    },
+    emptyTimelineText: {
+        color: '#64748B',
+        fontSize: 12,
+        fontStyle: 'italic',
+        textAlign: 'center',
+    },
+    archiveToggleBtn: {
+        alignItems: 'center',
+        backgroundColor: '#0F1A2E',
+        borderColor: '#1E3254',
+        borderRadius: 10,
+        borderWidth: 1,
+        justifyContent: 'center',
+        paddingVertical: 12,
+    },
+    archiveToggleText: {
+        color: '#60A5FA',
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
     sectionHeading: {
         color: '#94A3B8',
         fontSize: 11,
         fontWeight: '800',
         letterSpacing: 0.5,
-        marginBottom: 10,
+        marginBottom: 0,
     },
     darkSectionHeading: {
         color: '#94A3B8',

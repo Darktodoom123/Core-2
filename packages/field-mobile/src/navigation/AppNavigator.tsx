@@ -35,6 +35,7 @@ import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
+import { HosScreen } from '../screens/HosScreen';
 import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { ApiClientError } from '../services/apiClient';
 import {
@@ -59,6 +60,7 @@ import type {
     SosIncidentCategory,
     ShiftInfo,
     ShiftStatus,
+    StandbyReason,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -209,7 +211,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     });
     const [isSosActivating, setIsSosActivating] = useState(false);
     const [activeAppView, setActiveAppView] = useState<
-        'main' | 'dvir' | 'documents' | 'inspection'
+        'main' | 'dvir' | 'documents' | 'inspection' | 'hos'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
@@ -619,22 +621,47 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         }));
     }, []);
 
-    const handleChangeDutyStatus = useCallback((dutyStatus: DutyStatus) => {
-        const nextShiftStatus: ShiftStatus =
-            dutyStatus === 'off_duty'
-                ? 'off_shift'
-                : dutyStatus === 'on_break'
-                  ? 'on_break'
-                  : dutyStatus === 'standby'
-                    ? 'standby'
-                    : 'on_shift';
+    const handleChangeDutyStatus = useCallback(
+        async (
+            dutyStatus: DutyStatus,
+            standbyReason?: StandbyReason,
+            remarks?: string,
+        ) => {
+            const nextShiftStatus: ShiftStatus =
+                dutyStatus === 'off_duty'
+                    ? 'off_shift'
+                    : dutyStatus === 'on_break'
+                      ? 'on_break'
+                      : dutyStatus === 'standby'
+                        ? 'standby'
+                        : 'on_shift';
 
-        setShiftInfo((prev) => ({
-            ...prev,
-            status: nextShiftStatus,
-            dutyStatus,
-        }));
-    }, []);
+            setShiftInfo((prev) => ({
+                ...prev,
+                status: nextShiftStatus,
+                dutyStatus,
+            }));
+
+            try {
+                if (dutyStatus === 'off_duty') {
+                    await apiClient.certifyHosShift({
+                        certification_statement:
+                            'I certify that these duty status entries and hours of service are true, complete, and accurate for this shift.',
+                        remarks,
+                    });
+                } else {
+                    await apiClient.updateHosDutyStatus({
+                        duty_status: dutyStatus,
+                        standby_reason: standbyReason,
+                        remarks,
+                    });
+                }
+            } catch {
+                // Offline fallback - state is preserved locally
+            }
+        },
+        [apiClient],
+    );
 
     const handleToggleLocationSharing = useCallback(() => {
         setLocationSharingActive((prev) => !prev);
@@ -934,11 +961,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         <ErrorBoundary>
             <SafeAreaView
                 edges={['top', 'left', 'right']}
-                style={styles.fullScreen}
+                style={[
+                    styles.fullScreen,
+                    (activeAppView === 'dvir' ||
+                        activeAppView === 'inspection' ||
+                        activeAppView === 'hos') &&
+                        styles.darkFullScreen,
+                ]}
             >
                 <StatusBar
-                    barStyle="dark-content"
-                    backgroundColor={colors.surface}
+                    barStyle={
+                        activeAppView === 'dvir' ||
+                        activeAppView === 'inspection' ||
+                        activeAppView === 'hos'
+                            ? 'light-content'
+                            : 'dark-content'
+                    }
+                    backgroundColor={
+                        activeAppView === 'dvir' ||
+                        activeAppView === 'inspection' ||
+                        activeAppView === 'hos'
+                            ? '#0F172A'
+                            : colors.surface
+                    }
                 />
                 <View
                     style={styles.appShell}
@@ -980,11 +1025,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 outboxCommands={outboxCommands}
                                 user={user}
                             />
+                        ) : activeAppView === 'hos' ? (
+                            <HosScreen
+                                operatorName={user?.name || 'Alex Rivera'}
+                                shiftInfo={shiftInfo}
+                                onBack={() => setActiveAppView('main')}
+                                onUpdateDutyStatus={handleChangeDutyStatus}
+                                userRole={
+                                    user?.role
+                                        ? user.role.replaceAll('_', ' ')
+                                        : 'Certified Crane Operator'
+                                }
+                            />
                         ) : activeAppView === 'dvir' ? (
                             <DvirScreen
                                 activeJobReference={
                                     jobs[0]?.reference || 'DISP-2026-0891'
                                 }
+                                apiClient={apiClient}
                                 assetCode={
                                     jobs[0]?.asset_assignments?.[0]
                                         ?.asset_code || 'ALB-CRN-050'
@@ -1018,6 +1076,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     '50T Tadano All-Terrain Crane'
                                 }
                                 onBack={() => setActiveAppView('main')}
+                                onOpenDvir={() => setActiveAppView('dvir')}
                                 technicianName={user?.name || 'Alex Rivera'}
                             />
                         ) : (
@@ -1034,6 +1093,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setActiveAppView('documents')
                                 }
                                 onOpenDvir={() => setActiveAppView('dvir')}
+                                onOpenHos={() => setActiveAppView('hos')}
                                 onOpenVehicle={() =>
                                     setActiveAppView('inspection')
                                 }
@@ -1083,6 +1143,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 const styles = StyleSheet.create({
     fullScreen: {
         backgroundColor: colors.background,
+        flex: 1,
+    },
+    darkFullScreen: {
+        backgroundColor: '#090E1A',
         flex: 1,
     },
     appShell: {

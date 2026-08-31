@@ -3,8 +3,10 @@
 use App\Modules\Assignment\AssignmentServiceProvider;
 use App\Modules\CraneEquipment\CraneEquipmentServiceProvider;
 use App\Modules\Dispatch\DispatchServiceProvider;
+use App\Modules\Dvir\DvirServiceProvider;
 use App\Modules\Fleet\FleetServiceProvider;
 use App\Modules\Fuel\FuelServiceProvider;
+use App\Modules\HoursOfService\HoursOfServiceServiceProvider;
 use App\Modules\Rental\RentalServiceProvider;
 use App\Modules\Sales\SalesServiceProvider;
 use App\Platform\PlatformServiceProvider;
@@ -22,6 +24,8 @@ return [
     FleetServiceProvider::class,
     CraneEquipmentServiceProvider::class,
     FuelServiceProvider::class,
+    HoursOfServiceServiceProvider::class,
+    DvirServiceProvider::class,
     AssetsServiceProvider::class,
     PlatformServiceProvider::class,
     TrackingServiceProvider::class,

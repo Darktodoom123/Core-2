@@ -1,0 +1,124 @@
+import { fireEvent, render } from '@testing-library/react-native';
+import React from 'react';
+import { HosScreen } from '../screens/HosScreen';
+
+describe('HosScreen Component & Workflows', () => {
+    it('renders the 4 live ELD duty clocks and shift progress gauge', async () => {
+        const onBack = jest.fn();
+        const onUpdateDutyStatus = jest.fn();
+
+        const view = await render(
+            <HosScreen
+                operatorName="Alex Rivera"
+                shiftInfo={{
+                    status: 'on_shift',
+                    dutyStatus: 'operating',
+                    startedAt: '08:00 AM',
+                    hoursElapsed: 4.5,
+                }}
+                onBack={onBack}
+                onUpdateDutyStatus={onUpdateDutyStatus}
+                userRole="Certified Crane Operator"
+            />,
+        );
+
+        // Header & Titles
+        expect(
+            view.getByText('HOURS OF SERVICE (HoS) · ELD COCKPIT'),
+        ).toBeTruthy();
+        expect(view.getByText('Duty Status & Shift Management')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Operator: Alex Rivera · Shift Started: 08:00 AM (4.5h Elapsed)',
+            ),
+        ).toBeTruthy();
+
+        // 4 Live ELD Clocks Card
+        expect(view.getByTestId('hos-eld-clocks-card')).toBeTruthy();
+        expect(view.getByText('LIVE ELD DUTY CLOCKS')).toBeTruthy();
+        expect(view.getByText('Drive / Operating')).toBeTruthy();
+        expect(view.getByText('Shift Window')).toBeTruthy();
+        expect(view.getByText('70-Hr 8-Day Cycle')).toBeTruthy();
+        expect(view.getByText('Break Countdown')).toBeTruthy();
+
+        // 24-Hour Duty Timeline Graph & Logs
+        expect(view.getByTestId('hos-timeline-graph')).toBeTruthy();
+        expect(view.getByTestId('hos-activity-logs')).toBeTruthy();
+    });
+
+    it('allows toggling between all 5 duty statuses and shows demurrage options for standby', async () => {
+        const view = await render(<HosScreen />);
+
+        // 5 Duty Status Options exist
+        expect(view.getByTestId('duty-option-operating')).toBeTruthy();
+        expect(view.getByTestId('duty-option-driving')).toBeTruthy();
+        expect(view.getByTestId('duty-option-standby')).toBeTruthy();
+        expect(view.getByTestId('duty-option-on_break')).toBeTruthy();
+        expect(view.getByTestId('duty-option-off_duty')).toBeTruthy();
+
+        // Switch to Standby
+        await fireEvent.press(view.getByTestId('duty-option-standby'));
+
+        // Demurrage reasons appear
+        expect(view.getByTestId('standby-reason-section')).toBeTruthy();
+        expect(
+            view.getByText('Client Site Delay (Billable Demurrage)'),
+        ).toBeTruthy();
+        expect(
+            view.getByTestId('standby-reason-waiting_on_concrete'),
+        ).toBeTruthy();
+
+        // Select Concrete Mixer standby reason
+        await fireEvent.press(
+            view.getByTestId('standby-reason-waiting_on_concrete'),
+        );
+
+        // Switch to Driving
+        await fireEvent.press(view.getByTestId('duty-option-driving'));
+        expect(view.queryByTestId('standby-reason-section')).toBeNull();
+    });
+
+    it('submits certified duty status updates and invokes onUpdateDutyStatus', async () => {
+        const onUpdateDutyStatus = jest.fn();
+
+        const view = await render(
+            <HosScreen onUpdateDutyStatus={onUpdateDutyStatus} />,
+        );
+
+        // Enter transition remarks
+        const remarksInput = view.getByTestId('hos-remarks-input');
+        await fireEvent.changeText(
+            remarksInput,
+            'Lift complete at Taguig site; transitioning to highway transit.',
+        );
+
+        // Select Driving
+        await fireEvent.press(view.getByTestId('duty-option-driving'));
+
+        // Confirm
+        const confirmBtn = view.getByTestId('confirm-hos-btn');
+        await fireEvent.press(confirmBtn);
+
+        expect(onUpdateDutyStatus).toHaveBeenCalledWith(
+            'driving',
+            undefined,
+            'Lift complete at Taguig site; transitioning to highway transit.',
+        );
+
+        // Stamp appears
+        expect(view.getByTestId('hos-confirmed-stamp')).toBeTruthy();
+        expect(
+            view.getByText('✓ DUTY STATUS UPDATED & CERTIFIED'),
+        ).toBeTruthy();
+    });
+
+    it('calls onBack when back button is pressed', async () => {
+        const onBack = jest.fn();
+        const view = await render(<HosScreen onBack={onBack} />);
+
+        const backBtn = view.getByTestId('hos-back-btn');
+        await fireEvent.press(backBtn);
+
+        expect(onBack).toHaveBeenCalled();
+    });
+});

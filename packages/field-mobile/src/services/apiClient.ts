@@ -638,4 +638,164 @@ export class FieldApiClient {
             };
         }>(response);
     }
+
+    public async fetchCurrentHosShift(): Promise<{
+        shift: any | null;
+        clocks: {
+            shift_active: boolean;
+            shift_status: string;
+            current_duty_status: string;
+            started_at: string | null;
+            hours_elapsed: number;
+            drive_remaining_minutes: number;
+            shift_window_remaining_minutes: number;
+            break_countdown_minutes: number;
+            cycle_remaining_minutes: number;
+            cycle_accumulated_minutes: number;
+            cycle_limit_minutes: number;
+            timeline_segments: any[];
+            recent_logs: any[];
+            active_demurrage: boolean;
+            is_certified: boolean;
+        };
+    }> {
+        const url = `${this.baseUrl}/api/v1/hos/current-shift`;
+
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{
+            shift: any | null;
+            clocks: any;
+        }>(response);
+    }
+
+    public async startHosShift(payload: {
+        operational_asset_id?: number;
+        dispatch_job_id?: number;
+        duty_status?: string;
+        latitude?: number;
+        longitude?: number;
+        location_name?: string;
+        remarks?: string;
+    }): Promise<any> {
+        const url = `${this.baseUrl}/api/v1/hos/shifts/start`;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async updateHosDutyStatus(payload: {
+        duty_status: string;
+        standby_reason?: string;
+        latitude?: number;
+        longitude?: number;
+        location_name?: string;
+        remarks?: string;
+    }): Promise<{ shift: any; clocks: any }> {
+        const url = `${this.baseUrl}/api/v1/hos/duty-status`;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ shift: any; clocks: any }>(response);
+    }
+
+    public async certifyHosShift(payload: {
+        certification_statement: string;
+        remarks?: string;
+    }): Promise<{ shift: any; clocks: any }> {
+        const url = `${this.baseUrl}/api/v1/hos/shifts/certify`;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ shift: any; clocks: any }>(response);
+    }
+
+    public async fetchHosCycleHistory(
+        days = 8,
+    ): Promise<{ days: number; shifts: any[]; logs: any[] }> {
+        const url = `${this.baseUrl}/api/v1/hos/cycle-history?days=${days}`;
+
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{
+            days: number;
+            shifts: any[];
+            logs: any[];
+        }>(response);
+    }
+
+    public async fetchDvirInspections(
+        days = 30,
+        operationalAssetId?: number,
+    ): Promise<{ days: number; inspections: any[] }> {
+        const params = new URLSearchParams({ days: String(days) });
+
+        if (operationalAssetId) {
+            params.set('operational_asset_id', String(operationalAssetId));
+        }
+
+        const url = `${this.baseUrl}/api/v1/dvir/inspections?${params.toString()}`;
+
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<{ days: number; inspections: any[] }>(
+            response,
+        );
+    }
+
+    public async createDvirInspection(payload: {
+        inspection_type: 'pre_trip' | 'post_trip';
+        operational_asset_id?: number;
+        dispatch_job_id?: number;
+        asset_code?: string;
+        asset_name?: string;
+        inspector_name?: string;
+        starting_odometer_km?: number | null;
+        ending_odometer_km?: number | null;
+        engine_hours?: number | null;
+        has_defects: boolean;
+        signature_captured: boolean;
+        remarks?: string | null;
+        completed_at?: string;
+        checks: Array<{
+            id?: string;
+            category: string;
+            label: string;
+            status: string;
+            status_label?: string | null;
+            notes?: string | null;
+        }>;
+    }): Promise<any> {
+        const url = `${this.baseUrl}/api/v1/dvir/inspections`;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<any>(response);
+    }
 }

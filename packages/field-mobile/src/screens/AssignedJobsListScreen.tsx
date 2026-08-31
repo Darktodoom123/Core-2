@@ -53,6 +53,7 @@ export interface AssignedJobsListScreenProps {
         remarks?: string,
     ) => void;
     onOpenDvir?: () => void;
+    onOpenHos?: () => void;
     onOpenDocuments?: () => void;
     onOpenVehicle?: () => void;
     onToggleLocationSharing?: () => void;
@@ -91,6 +92,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onToggleShift,
     onChangeDutyStatus,
     onOpenDvir,
+    onOpenHos,
     onOpenDocuments,
     onOpenVehicle,
     onToggleLocationSharing,
@@ -289,7 +291,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const handleTilePress = (tileId: TileItem['id']) => {
         switch (tileId) {
             case 'hos':
-                setDutyModalOpen(true);
+                if (onOpenHos) {
+                    onOpenHos();
+                } else {
+                    setDutyModalOpen(true);
+                }
+
                 break;
             case 'dvir':
                 onOpenDvir?.();

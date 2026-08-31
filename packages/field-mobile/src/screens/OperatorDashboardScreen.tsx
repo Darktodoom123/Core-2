@@ -38,6 +38,7 @@ export interface OperatorDashboardScreenProps {
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
     onOpenDvir: () => void;
+    onOpenHos?: () => void;
     onOpenDocuments: () => void;
     onOpenRoutes: () => void;
     onOpenVehicle: () => void;
@@ -82,6 +83,7 @@ export const OperatorDashboardScreen: React.FC<
     onRefresh,
     onSelectJob,
     onOpenDvir,
+    onOpenHos,
     onOpenDocuments,
     onOpenRoutes,
     onOpenVehicle,
@@ -228,7 +230,12 @@ export const OperatorDashboardScreen: React.FC<
     const handleTilePress = (tileId: DashboardTileConfig['id']) => {
         switch (tileId) {
             case 'hos':
-                setDutyModalOpen(true);
+                if (onOpenHos) {
+                    onOpenHos();
+                } else {
+                    setDutyModalOpen(true);
+                }
+
                 break;
             case 'dvir':
                 onOpenDvir();

@@ -1,8 +1,11 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { DvirScreen } from '../screens/DvirScreen';
+import { FieldApiClient } from '../services/apiClient';
 
 describe('DvirScreen Component & Workflows', () => {
+    jest.setTimeout(15000);
+
     it('renders the Create DVIR screen with inspection type, photos, defects, and safety status', async () => {
         const onBack = jest.fn();
         const onSave = jest.fn();
@@ -170,9 +173,9 @@ describe('DvirScreen Component & Workflows', () => {
         // Toggle history tab
         await fireEvent.press(view.getByTestId('tab-history'));
 
-        expect(view.getByText('PAST DVIR INSPECTION RECORDS')).toBeTruthy();
-        expect(view.getByTestId('history-card-DVIR-2026-0830-01')).toBeTruthy();
-        expect(view.getByTestId('history-card-DVIR-2026-0829-02')).toBeTruthy();
+        expect(view.getByText("TODAY'S SHIFT INSPECTIONS")).toBeTruthy();
+        expect(view.getByTestId('history-card-DVIR-2026-0831-01')).toBeTruthy();
+        expect(view.getByTestId('history-card-DVIR-2026-0830-02')).toBeTruthy();
     });
 
     it('filters and selects Mobile Crane specific defects with automatic critical safety lockout', async () => {
@@ -273,5 +276,230 @@ describe('DvirScreen Component & Workflows', () => {
             view.getByText('Trolley Drive Winch Motor, Brake & Gearbox'),
         ).toBeTruthy();
         expect(view.getByTestId('dvir-lockout-banner')).toBeTruthy();
+    });
+
+    it('renders grouped history sections for Today, Past 7 Days compliance, and 30-Day Archive', async () => {
+        const view = await render(
+            <DvirScreen
+                assetCode="ALB-CRN-050"
+                assetName="50T Tadano All-Terrain Crane"
+            />,
+        );
+
+        // Switch to history tab
+        await fireEvent.press(view.getByTestId('tab-history'));
+
+        // Verify section headers
+        expect(view.getByText("TODAY'S SHIFT INSPECTIONS")).toBeTruthy();
+        expect(view.getByText('PAST 7 DAYS (SAFETY COMPLIANCE)')).toBeTruthy();
+
+        // Verify today and past 7 days cards are rendered
+        expect(view.getByTestId('history-card-DVIR-2026-0831-01')).toBeTruthy();
+        expect(view.getByTestId('history-card-DVIR-2026-0830-02')).toBeTruthy();
+        expect(view.getByTestId('history-card-DVIR-2026-0828-01')).toBeTruthy();
+
+        // Archive button exists
+        const archiveButton = view.getByTestId('toggle-older-archive');
+        expect(archiveButton).toBeTruthy();
+
+        // Expand 30-day archive
+        await fireEvent.press(archiveButton);
+        expect(view.getByTestId('history-card-DVIR-2026-0818-01')).toBeTruthy();
+    });
+
+    it('loads DVIR history from apiClient on mount', async () => {
+        const mockFetch = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: async () =>
+                JSON.stringify({
+                    data: {
+                        days: 30,
+                        inspections: [
+                            {
+                                id: 'DVIR-000042',
+                                type: 'pre_trip',
+                                type_label: 'Pre-Trip Inspection',
+                                asset_code: 'CRN-777',
+                                asset_name: '70T Grove Mobile Crane',
+                                inspector_name: 'Alex Rivera',
+                                starting_odometer_km: 12000,
+                                ending_odometer_km: null,
+                                engine_hours: 500,
+                                has_defects: false,
+                                critical_defects_count: 0,
+                                signature_captured: true,
+                                remarks: 'All green on server fetch.',
+                                completed_at: new Date().toISOString(),
+                                checks: [],
+                            },
+                        ],
+                    },
+                }),
+        });
+
+        const apiClient = new FieldApiClient({
+            baseUrl: 'https://api.example.com',
+            getToken: () => 'test-token',
+            fetchFn: mockFetch as any,
+        });
+
+        const view = await render(
+            <DvirScreen apiClient={apiClient} assetCode="CRN-777" />,
+        );
+
+        // Wait for server records to load (history button label updates from History (4) to History (1))
+        await waitFor(() => {
+            expect(view.getByText('History (1)')).toBeTruthy();
+        });
+
+        // Switch to history tab
+        await fireEvent.press(view.getByTestId('tab-history'));
+
+        // Verify the server record details are displayed in the history tab
+        expect(view.getByText('DVIR-000042')).toBeTruthy();
+        expect(view.getByTestId('history-card-DVIR-000042')).toBeTruthy();
+        expect(view.getByText(/70T Grove Mobile Crane/)).toBeTruthy();
+
+        expect(mockFetch).toHaveBeenCalledWith(
+            'https://api.example.com/api/v1/dvir/inspections?days=30',
+            expect.objectContaining({ method: 'GET' }),
+        );
+    });
+
+    it('submits completed DVIR to apiClient with correct payload structure', async () => {
+        let capturedUrl = '';
+        let capturedBody: any = null;
+
+        const mockFetch = jest.fn().mockImplementation(async (url, init) => {
+            if (init?.method === 'POST') {
+                capturedUrl = String(url);
+                capturedBody = JSON.parse(init.body);
+                return {
+                    ok: true,
+                    status: 201,
+                    text: async () =>
+                        JSON.stringify({
+                            data: {
+                                id: 'DVIR-000099',
+                                type: capturedBody.inspection_type,
+                                asset_code: capturedBody.asset_code,
+                                asset_name: capturedBody.asset_name,
+                                inspector_name: capturedBody.inspector_name,
+                                starting_odometer_km:
+                                    capturedBody.starting_odometer_km,
+                                engine_hours: capturedBody.engine_hours,
+                                has_defects: capturedBody.has_defects,
+                                critical_defects_count: 0,
+                                signature_captured: true,
+                                remarks: capturedBody.remarks,
+                                completed_at: new Date().toISOString(),
+                                checks: capturedBody.checks,
+                            },
+                        }),
+                };
+            }
+            return {
+                ok: true,
+                status: 200,
+                text: async () =>
+                    JSON.stringify({
+                        data: {
+                            days: 30,
+                            inspections: [],
+                        },
+                    }),
+            };
+        });
+
+        const apiClient = new FieldApiClient({
+            baseUrl: 'https://api.example.com',
+            getToken: () => 'test-token',
+            fetchFn: mockFetch as any,
+        });
+
+        const onSave = jest.fn();
+
+        const view = await render(
+            <DvirScreen
+                apiClient={apiClient}
+                assetCode="ALB-CRN-050"
+                assetName="50T Tadano All-Terrain Crane"
+                inspectorName="Alex Rivera (Certified Crane Operator)"
+                onSaveInspectionRecord={onSave}
+            />,
+        );
+
+        // Update odometer & hours
+        await fireEvent.changeText(view.getByTestId('input-odometer'), '42200');
+        await fireEvent.changeText(
+            view.getByTestId('input-engine-hours'),
+            '1855.0',
+        );
+
+        // Press complete DVIR
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+
+        expect(onSave).toHaveBeenCalled();
+
+        await waitFor(() => {
+            expect(capturedUrl).toBe(
+                'https://api.example.com/api/v1/dvir/inspections',
+            );
+            expect(capturedBody).not.toBeNull();
+        });
+
+        expect(capturedBody.inspection_type).toBe('pre_trip');
+        expect(capturedBody.asset_code).toBe('ALB-CRN-050');
+        expect(capturedBody.asset_name).toBe('50T Tadano All-Terrain Crane');
+        expect(capturedBody.inspector_name).toBe(
+            'Alex Rivera (Certified Crane Operator)',
+        );
+        expect(capturedBody.starting_odometer_km).toBe(42200);
+        expect(capturedBody.ending_odometer_km).toBeNull();
+        expect(capturedBody.engine_hours).toBe(1855.0);
+        expect(capturedBody.has_defects).toBe(false);
+        expect(capturedBody.signature_captured).toBe(true);
+        expect(Array.isArray(capturedBody.checks)).toBe(true);
+        expect(capturedBody.checks.length).toBeGreaterThan(0);
+        expect(capturedBody.checks[0]).toHaveProperty('category');
+        expect(capturedBody.checks[0]).toHaveProperty('label');
+        expect(capturedBody.checks[0]).toHaveProperty('status');
+
+        // Server-derived / forbidden-on-create fields should NOT be sent
+        expect(capturedBody.critical_defects_count).toBeUndefined();
+        expect(capturedBody.completed_at).toBeUndefined();
+    });
+
+    it('falls back to local history and shows warning when server history fetch fails', async () => {
+        const mockFetch = jest
+            .fn()
+            .mockRejectedValue(new Error('Network error'));
+
+        const apiClient = new FieldApiClient({
+            baseUrl: 'https://api.example.com',
+            getToken: () => 'test-token',
+            fetchFn: mockFetch as any,
+        });
+
+        const view = await render(
+            <DvirScreen apiClient={apiClient} assetCode="ALB-CRN-050" />,
+        );
+
+        // Switch to history tab
+        await fireEvent.press(view.getByTestId('tab-history'));
+
+        // Wait for sync warning to appear
+        await waitFor(() => {
+            expect(view.getByTestId('dvir-sync-warning')).toBeTruthy();
+            expect(
+                view.getByText(
+                    'DVIR history could not be loaded. Showing cached records.',
+                ),
+            ).toBeTruthy();
+        });
+
+        // Cached/initial records are still visible
+        expect(view.getByTestId('history-card-DVIR-2026-0831-01')).toBeTruthy();
     });
 });
