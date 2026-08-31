@@ -6,7 +6,7 @@
 # PostgreSQL, and Redis upgrades remain an explicit compatibility decision.
 FROM composer:2.10.2@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 AS composer-bin
 
-FROM php:8.4.24-cli-alpine3.24@sha256:26e3f1de7f6aa3e8ea15584d803c5e088c57df89ff02a3ecf2dc855a4282d8d7 AS php-cli-base
+FROM php:8.5.9-cli-alpine3.24@sha256:0554eb53778b5316f6b9a3447c9dfa3cf2141c0c02ff816c42cdc9aa240a34aa AS php-cli-base
 
 RUN set -eux; \
     apk add --no-cache \
@@ -146,7 +146,7 @@ RUN set -eu; \
     npm run build; \
     rm -f database/database.sqlite
 
-FROM php:8.4.24-fpm-alpine3.24@sha256:5992f8b7433fe7fa96dfbf67746c86d6c41bc91e686eac38fe531c72a02e40e4 AS runtime
+FROM php:8.5.9-fpm-alpine3.24@sha256:9dc81f4086ea5402227a6bcc489b04b4baba12394624d9621faa92ed812fb8ee AS runtime
 
 RUN set -eux; \
     apk add --no-cache \
