@@ -267,6 +267,42 @@ function attentionActionLabel(type: DerivedConflict['type']): string {
     return 'Assign resources';
 }
 
+function getAssetStatusTone(
+    statusValue: string,
+    blockingWorkOrdersCount: number = 0,
+): 'success' | 'warning' | 'error' | 'brand' | 'info' | 'neutral' {
+    if (
+        blockingWorkOrdersCount > 0 ||
+        statusValue === 'unavailable' ||
+        statusValue === 'out_of_service'
+    ) {
+        return 'error';
+    }
+
+    if (statusValue === 'available' || statusValue === 'ready_for_service') {
+        return 'success';
+    }
+
+    if (statusValue === 'assigned' || statusValue === 'in_transit') {
+        return 'brand';
+    }
+
+    if (statusValue === 'working' || statusValue === 'on_site') {
+        return 'info';
+    }
+
+    if (
+        statusValue === 'under_maintenance' ||
+        statusValue === 'under_inspection' ||
+        statusValue === 'awaiting_parts' ||
+        statusValue === 'maintenance'
+    ) {
+        return 'warning';
+    }
+
+    return 'neutral';
+}
+
 export function LiveDispatchWorkspace({
     jobs,
     clients,
@@ -2131,7 +2167,8 @@ function ScheduleBoardTable({
             name: string;
             category: 'cranes' | 'trucks' | 'equipment' | 'personnel';
             statusLabel: string;
-            statusTone?: 'success' | 'warning' | 'error';
+            statusTone?:
+                'success' | 'warning' | 'error' | 'brand' | 'info' | 'neutral';
             jobAssignments: Array<{
                 job: DispatchJobViewModel;
                 startCol: number;
@@ -2204,12 +2241,10 @@ function ScheduleBoardTable({
                 name: asset.name,
                 category: cat,
                 statusLabel: asset.status.label,
-                statusTone:
-                    asset.blocking_work_orders_count > 0
-                        ? 'error'
-                        : asset.is_dispatchable
-                          ? 'success'
-                          : 'warning',
+                statusTone: getAssetStatusTone(
+                    asset.status.value,
+                    asset.blocking_work_orders_count,
+                ),
                 jobAssignments: assignedJobsForAsset,
                 hasConflict,
             });
@@ -2376,13 +2411,19 @@ function ScheduleBoardTable({
                                         </div>
                                         <span
                                             className={cn(
-                                                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide transition-colors',
                                                 row.statusTone === 'success' &&
-                                                    'bg-success-soft text-success-strong',
+                                                    'border border-success/25 bg-success-soft text-success-strong',
+                                                row.statusTone === 'brand' &&
+                                                    'border border-brand/25 bg-brand-soft text-brand-strong',
+                                                row.statusTone === 'info' &&
+                                                    'border border-info/25 bg-info-soft text-info-strong',
                                                 row.statusTone === 'warning' &&
-                                                    'bg-warning-soft text-warning-strong',
+                                                    'border border-warning/30 bg-warning-soft text-warning-strong',
                                                 row.statusTone === 'error' &&
-                                                    'bg-danger-soft text-danger',
+                                                    'border border-danger/25 bg-danger-soft text-danger',
+                                                row.statusTone === 'neutral' &&
+                                                    'border border-line-strong bg-surface-subtle text-ink-soft',
                                             )}
                                         >
                                             {row.statusLabel}

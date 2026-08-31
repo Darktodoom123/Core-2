@@ -276,13 +276,49 @@ function jobTone(job: DispatchJobViewModel, hasConflict: boolean) {
     return 'border-line bg-surface text-ink hover:border-brand-strong hover:bg-surface-subtle';
 }
 
+function getAssetStatusTone(
+    statusValue: string,
+    blockingWorkOrdersCount: number = 0,
+): 'success' | 'warning' | 'error' | 'brand' | 'info' | 'neutral' {
+    if (
+        blockingWorkOrdersCount > 0 ||
+        statusValue === 'unavailable' ||
+        statusValue === 'out_of_service'
+    ) {
+        return 'error';
+    }
+
+    if (statusValue === 'available' || statusValue === 'ready_for_service') {
+        return 'success';
+    }
+
+    if (statusValue === 'assigned' || statusValue === 'in_transit') {
+        return 'brand';
+    }
+
+    if (statusValue === 'working' || statusValue === 'on_site') {
+        return 'info';
+    }
+
+    if (
+        statusValue === 'under_maintenance' ||
+        statusValue === 'under_inspection' ||
+        statusValue === 'awaiting_parts' ||
+        statusValue === 'maintenance'
+    ) {
+        return 'warning';
+    }
+
+    return 'neutral';
+}
+
 interface WeekResourceRow {
     id: string;
     name: string;
     code: string;
     category: ScheduleBoardResourceCategory | 'unassigned';
     statusLabel: string;
-    statusTone: 'success' | 'warning' | 'error' | 'info';
+    statusTone: 'success' | 'warning' | 'error' | 'brand' | 'info' | 'neutral';
     jobs: DispatchJobViewModel[];
     hasConflict: boolean;
 }
@@ -357,12 +393,10 @@ export function ScheduleBoardWeekView({
                 code: asset.code,
                 category: resourceCategory,
                 statusLabel: asset.status.label,
-                statusTone:
-                    asset.blocking_work_orders_count > 0
-                        ? 'error'
-                        : asset.is_dispatchable
-                          ? 'success'
-                          : 'warning',
+                statusTone: getAssetStatusTone(
+                    asset.status.value,
+                    asset.blocking_work_orders_count,
+                ),
                 jobs: assignedJobs,
                 hasConflict: assignedJobs.some((job) =>
                     jobHasConflict(job, derivedConflicts),
@@ -633,18 +667,24 @@ export function ScheduleBoardWeekView({
                                             </div>
                                             <span
                                                 className={cn(
-                                                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide transition-colors',
                                                     row.statusTone ===
                                                         'success' &&
-                                                        'bg-success-soft text-success-strong',
+                                                        'border border-success/25 bg-success-soft text-success-strong',
+                                                    row.statusTone ===
+                                                        'brand' &&
+                                                        'border border-brand/25 bg-brand-soft text-brand-strong',
+                                                    row.statusTone === 'info' &&
+                                                        'border border-info/25 bg-info-soft text-info-strong',
                                                     row.statusTone ===
                                                         'warning' &&
-                                                        'bg-warning-soft text-warning-strong',
+                                                        'border border-warning/30 bg-warning-soft text-warning-strong',
                                                     row.statusTone ===
                                                         'error' &&
-                                                        'bg-danger-soft text-danger',
-                                                    row.statusTone === 'info' &&
-                                                        'bg-cobalt-50 text-cobalt-700',
+                                                        'border border-danger/25 bg-danger-soft text-danger',
+                                                    row.statusTone ===
+                                                        'neutral' &&
+                                                        'border border-line-strong bg-surface-subtle text-ink-soft',
                                                 )}
                                             >
                                                 {row.statusLabel}
