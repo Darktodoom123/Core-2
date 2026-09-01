@@ -807,6 +807,7 @@ describe('native application component tree', () => {
 
         const { rerender } = await renderScreen(
             <AssignedJobsListScreen
+                onSosHoldComplete={jest.fn()}
                 error="Network unavailable."
                 isLoading
                 jobs={[]}
@@ -827,6 +828,7 @@ describe('native application component tree', () => {
 
         await rerender(
             <AssignedJobsListScreen
+                onSosHoldComplete={jest.fn()}
                 error={null}
                 isLoading={false}
                 jobs={[]}
@@ -1245,7 +1247,15 @@ describe('native application component tree', () => {
             screen.getByTestId('bottom-nav-today').props.accessibilityState
                 .selected,
         ).toBe(true);
-        expect(screen.getByLabelText('Route, planned')).toBeVisible();
+        const navigation = within(screen.getByTestId('bottom-nav-bar'));
+        expect(navigation.getAllByRole('tab')).toHaveLength(2);
+        expect(navigation.getAllByRole('button')).toHaveLength(1);
+        expect(
+            navigation.getByLabelText('Activate Emergency SOS'),
+        ).toBeVisible();
+        expect(screen.getAllByTestId('open-emergency-sos')).toHaveLength(1);
+        expect(screen.queryByTestId('bottom-nav-route')).toBeNull();
+        expect(screen.queryByTestId('bottom-nav-documents')).toBeNull();
         expect(screen.queryByText(/synced 2 min ago/i)).toBeNull();
         expect(screen.queryByText('Inspection')).toBeNull();
     });
@@ -1267,7 +1277,7 @@ describe('native application component tree', () => {
         expect(screen.queryByTestId('sync-details-toggle')).toBeNull();
     });
 
-    it('keeps Profile and planned Route navigation truthful', async () => {
+    it('keeps Profile navigation working with the docked SOS control', async () => {
         const { fetchFn } = createApi({ assignedJobs: [driverJob] });
 
         await renderScreen(
@@ -1281,15 +1291,6 @@ describe('native application component tree', () => {
         await screen.findByText(driverJob.reference);
 
         expect(screen.queryByTestId('bottom-nav-sync')).toBeNull();
-
-        await fireEvent.press(screen.getByTestId('bottom-nav-route'));
-        expect(screen.getByTestId('planned-route-panel')).toBeVisible();
-        expect(
-            screen.getByText(
-                'Route planning is not available for this assignment yet.',
-            ),
-        ).toBeVisible();
-        expect(screen.queryByTestId('route-map')).toBeNull();
 
         await fireEvent.press(screen.getByTestId('bottom-nav-profile'));
         const profileSheet = screen.getByTestId('profile-sheet');
@@ -1308,6 +1309,7 @@ describe('native application component tree', () => {
     it('keeps offline status compact when no actions are waiting to sync', async () => {
         await renderScreen(
             <AssignedJobsListScreen
+                onSosHoldComplete={jest.fn()}
                 isLoading={false}
                 isOnline={false}
                 jobs={[]}

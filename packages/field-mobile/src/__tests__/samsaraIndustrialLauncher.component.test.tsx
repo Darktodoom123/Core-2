@@ -131,6 +131,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
 
             const view = await render(
                 <OperatorDashboardScreen
+                    onSosHoldComplete={jest.fn()}
                     isLoading={false}
                     isOnline={true}
                     jobs={[mockJob]}

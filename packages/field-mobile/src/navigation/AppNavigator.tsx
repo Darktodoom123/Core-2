@@ -18,16 +18,13 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import {
-    SafeAreaView,
-    useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
-import { EmergencySosButton, EmergencySosSheet } from '../components/sos';
+import { EmergencySosSheet } from '../components/sos';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { nativeLocationAdapter } from '../native/locationAdapter';
@@ -222,7 +219,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
-    const insets = useSafeAreaInsets();
 
     const commandOutbox = useMemo(
         () =>
@@ -1081,6 +1077,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : (
                             <AssignedJobsListScreen
+                                onSosHoldComplete={handleGlobalSosHold}
+                                sosDisabled={isSosActivating}
                                 error={jobsError}
                                 isLoading={isLoadingJobs}
                                 isOnline={isOnline}
@@ -1113,17 +1111,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         )}
                     </View>
                 </View>
-                <View
-                    style={[
-                        styles.sosAffordance,
-                        { bottom: Math.max(96, 72 + insets.bottom + 16) },
-                    ]}
-                >
-                    <EmergencySosButton
-                        disabled={isSosActivating}
-                        onHoldComplete={handleGlobalSosHold}
-                    />
-                </View>
                 <EmergencySosSheet
                     actions={emergencyActions}
                     activeIncident={activeSosIncident}
@@ -1151,12 +1138,6 @@ const styles = StyleSheet.create({
     },
     appShell: {
         flex: 1,
-    },
-    sosAffordance: {
-        bottom: 96,
-        position: 'absolute',
-        right: 16,
-        zIndex: 50,
     },
     mainContent: {
         flex: 1,

@@ -35,6 +35,8 @@ export interface OperatorDashboardScreenProps {
     shiftInfo?: ShiftInfo;
     locationSharingActive?: boolean;
     error?: string | null;
+    onSosHoldComplete: () => void;
+    sosDisabled?: boolean;
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
     onOpenDvir: () => void;
@@ -80,6 +82,8 @@ export const OperatorDashboardScreen: React.FC<
         hoursElapsed: 4.5,
     },
     error,
+    onSosHoldComplete,
+    sosDisabled = false,
     onRefresh,
     onSelectJob,
     onOpenDvir,
@@ -533,6 +537,8 @@ export const OperatorDashboardScreen: React.FC<
             {/* Bottom Navigation */}
             <FieldBottomNav
                 activeItem={activeNavItem}
+                onSosHoldComplete={onSosHoldComplete}
+                sosDisabled={sosDisabled}
                 onSelect={(item) => {
                     if (item === 'route') {
                         onOpenRoutes();

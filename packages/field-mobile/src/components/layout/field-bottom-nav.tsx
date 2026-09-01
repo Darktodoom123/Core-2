@@ -4,29 +4,31 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
+import { EmergencySosButton } from '../sos/emergency-sos-button';
 
 export type FieldNavItem = 'today' | 'route' | 'documents' | 'profile';
 
 export interface FieldBottomNavProps {
     activeItem: FieldNavItem;
     onSelect: (item: FieldNavItem) => void;
+    onSosHoldComplete: () => void;
+    sosDisabled?: boolean;
 }
 
 const items: ReadonlyArray<{
     id: FieldNavItem;
     label: string;
     iconName: IconName;
-    planned?: boolean;
 }> = [
     { id: 'today', label: 'Today', iconName: 'home' },
-    { id: 'route', label: 'Route', iconName: 'route', planned: true },
-    { id: 'documents', label: 'Docs', iconName: 'document' },
     { id: 'profile', label: 'Profile', iconName: 'profile' },
 ];
 
 export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
     activeItem,
     onSelect,
+    onSosHoldComplete,
+    sosDisabled = false,
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
@@ -40,62 +42,56 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
             ]}
             testID="bottom-nav-bar"
         >
-            {items.map(({ id, label, iconName, planned }) => {
+            {items.map(({ id, label, iconName }) => {
                 const selected = activeItem === id;
 
                 return (
-                    <Pressable
-                        accessibilityHint={
-                            planned
-                                ? 'Planned capability. Route data is not available yet.'
-                                : undefined
-                        }
-                        accessibilityLabel={`${label}${planned ? ', planned' : ''}`}
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected }}
-                        key={id}
-                        onPress={() => onSelect(id)}
-                        style={({ pressed }) => [
-                            styles.item,
-                            pressed && styles.pressed,
-                        ]}
-                        testID={`bottom-nav-${id}`}
-                    >
-                        <View
-                            style={[
-                                styles.indicator,
-                                selected && styles.indicatorSelected,
-                            ]}
-                        >
-                            <Icon
-                                name={iconName}
-                                size={22}
-                                color={
-                                    selected
-                                        ? colors.primaryDark
-                                        : planned
-                                          ? colors.muted
-                                          : colors.secondary
-                                }
-                            />
-                        </View>
-                        <Text
-                            style={[
-                                styles.label,
-                                selected && styles.labelSelected,
-                                planned && styles.labelPlanned,
-                            ]}
-                        >
-                            {label}
-                        </Text>
-                        {planned ? (
-                            <View style={styles.plannedPill}>
-                                <Text style={styles.plannedCaption}>
-                                    Planned
-                                </Text>
+                    <React.Fragment key={id}>
+                        {id === 'profile' ? (
+                            <View style={styles.sosItem}>
+                                <EmergencySosButton
+                                    disabled={sosDisabled}
+                                    onHoldComplete={onSosHoldComplete}
+                                />
                             </View>
                         ) : null}
-                    </Pressable>
+                        <Pressable
+                            accessibilityLabel={label}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected }}
+                            onPress={() => onSelect(id)}
+                            style={({ pressed }) => [
+                                styles.item,
+                                pressed && styles.pressed,
+                            ]}
+                            testID={`bottom-nav-${id}`}
+                        >
+                            <View
+                                style={[
+                                    styles.indicator,
+                                    selected && styles.indicatorSelected,
+                                ]}
+                            >
+                                <Icon
+                                    name={iconName}
+                                    size={22}
+                                    color={
+                                        selected
+                                            ? colors.primaryDark
+                                            : colors.secondary
+                                    }
+                                />
+                            </View>
+                            <Text
+                                style={[
+                                    styles.label,
+                                    selected && styles.labelSelected,
+                                ]}
+                            >
+                                {label}
+                            </Text>
+                        </Pressable>
+                    </React.Fragment>
                 );
             })}
         </View>
@@ -122,6 +118,12 @@ const styles = StyleSheet.create({
         minHeight: 52,
         paddingVertical: 4,
     },
+    sosItem: {
+        alignItems: 'center',
+        flex: 1,
+        justifyContent: 'center',
+        paddingVertical: 4,
+    },
     indicator: {
         alignItems: 'center',
         borderRadius: 20,
@@ -144,23 +146,6 @@ const styles = StyleSheet.create({
     labelSelected: {
         color: colors.primaryDark,
         fontWeight: '700',
-    },
-    labelPlanned: {
-        color: colors.muted,
-    },
-    plannedPill: {
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: 4,
-        marginTop: 2,
-        paddingHorizontal: 5,
-        paddingVertical: 1,
-    },
-    plannedCaption: {
-        color: colors.muted,
-        fontSize: 9,
-        fontWeight: '700',
-        letterSpacing: 0.2,
-        textTransform: 'uppercase',
     },
     pressed: {
         opacity: 0.7,

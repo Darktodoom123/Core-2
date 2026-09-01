@@ -44,6 +44,8 @@ export interface AssignedJobsListScreenProps {
     shiftInfo?: ShiftInfo;
     locationSharingActive?: boolean;
     error?: string | null;
+    onSosHoldComplete: () => void;
+    sosDisabled?: boolean;
     onRefresh: () => void;
     onSelectJob: (jobId: number) => void;
     onToggleShift?: (nextStatus: ShiftStatus) => void;
@@ -87,6 +89,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     },
     locationSharingActive = true,
     error,
+    onSosHoldComplete,
+    sosDisabled = false,
     onRefresh,
     onSelectJob,
     onToggleShift,
@@ -655,6 +659,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             <FieldBottomNav
                 activeItem={activeNavItem}
+                onSosHoldComplete={onSosHoldComplete}
+                sosDisabled={sosDisabled}
                 onSelect={handleNavSelect}
             />
 
