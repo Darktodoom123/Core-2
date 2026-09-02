@@ -401,6 +401,17 @@ function OperationsManagerDashboardView({
             ? actions
             : actions.filter((a) => a.category === actionFilter);
 
+    const trackingPreview = canOpenTracking ? (
+        <LiveTrackingPreview
+            locations={locations}
+            activeSosIncidents={activeSosIncidents}
+            refresh={refresh}
+            realtimeConnected={realtimeConnected}
+            onOpenTracking={() => onSectionChange('assets')}
+            safetyContext={<WeatherSafetyTelemetry variant="tracking" />}
+        />
+    ) : null;
+
     return (
         <div className="space-y-6">
             {/* Manager Executive KPI Cards */}
@@ -495,6 +506,8 @@ function OperationsManagerDashboardView({
                     }
                 />
             </div>
+
+            {actions.length === 0 && trackingPreview}
 
             {/* Manager Exception & Action Queue */}
             <section aria-labelledby="manager-queue-heading">
@@ -615,18 +628,7 @@ function OperationsManagerDashboardView({
                 </Panel>
             </section>
 
-            {/* Regional Weather & Wind Safety Telemetry Cockpit */}
-            <WeatherSafetyTelemetry variant="cockpit" />
-
-            {canOpenTracking && (
-                <LiveTrackingPreview
-                    locations={locations}
-                    activeSosIncidents={activeSosIncidents}
-                    refresh={refresh}
-                    realtimeConnected={realtimeConnected}
-                    onOpenTracking={() => onSectionChange('assets')}
-                />
-            )}
+            {actions.length > 0 && trackingPreview}
 
             {/* Grid Layout: Tri-Modal Schedule & Side Governance */}
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.9fr)]">

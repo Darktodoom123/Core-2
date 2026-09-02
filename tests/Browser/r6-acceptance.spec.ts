@@ -334,6 +334,41 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
     });
 
+    test('manager action queue stays above tracking when attention is required', async ({
+        page,
+    }) => {
+        const fixtures = browserFixtures();
+
+        await signIn(page, fixtures.users.manager, fixtures.password);
+
+        await expect(
+            page.getByRole('region', {
+                name: 'Manager action & exception queue',
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('region', { name: 'Live field tracking' }),
+        ).toBeVisible();
+        await expect(
+            page
+                .getByRole('region', { name: 'Live field tracking' })
+                .getByRole('group', { name: 'Weather and lift safety' }),
+        ).toBeVisible();
+
+        const queueBox = await page
+            .getByRole('region', { name: 'Manager action & exception queue' })
+            .boundingBox();
+        const trackingBox = await page
+            .getByRole('region', { name: 'Live field tracking' })
+            .boundingBox();
+
+        if (!queueBox || !trackingBox) {
+            throw new Error('Could not measure the manager overview sections.');
+        }
+
+        expect(queueBox.y).toBeLessThan(trackingBox.y);
+    });
+
     test('dispatcher overview prioritizes schedule and telemetry exceptions', async ({
         page,
     }) => {

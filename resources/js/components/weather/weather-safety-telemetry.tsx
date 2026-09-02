@@ -218,7 +218,7 @@ export function WeatherSafetyTelemetry({
     latitude?: number | null;
     longitude?: number | null;
     locationLabel?: string;
-    variant?: 'cockpit' | 'site';
+    variant?: 'cockpit' | 'site' | 'tracking';
     className?: string;
 }) {
     // Default to Base Yard coordinates (Metro Manila: 14.5995, 120.9842) if none provided
@@ -332,6 +332,7 @@ export function WeatherSafetyTelemetry({
     );
 
     const isSite = variant === 'site';
+    const isTracking = variant === 'tracking';
 
     const WeatherIcon =
         weather.condition === 'storm'
@@ -366,6 +367,172 @@ export function WeatherSafetyTelemetry({
                 GO: SAFE LIFT WINDOW
             </span>
         );
+
+    if (isTracking) {
+        const SafetyIcon =
+            weather.safetyStatus === 'danger'
+                ? ShieldAlert
+                : weather.safetyStatus === 'caution'
+                  ? AlertTriangle
+                  : CheckCircle2;
+        const safetyLabel =
+            weather.safetyStatus === 'danger'
+                ? 'Warning'
+                : weather.safetyStatus === 'caution'
+                  ? 'Caution'
+                  : 'Safe';
+
+        return (
+            <div
+                className={cn('bg-surface', className)}
+                role="group"
+                aria-label="Weather and lift safety"
+            >
+                <div
+                    className={cn(
+                        'flex items-start gap-2.5 border-b px-4 py-2.5 text-xs md:px-5',
+                        statusBg,
+                    )}
+                    role={
+                        weather.safetyStatus === 'danger' ? 'alert' : 'status'
+                    }
+                    aria-live={
+                        weather.safetyStatus === 'danger'
+                            ? 'assertive'
+                            : 'polite'
+                    }
+                >
+                    <SafetyIcon
+                        className="mt-0.5 h-4 w-4 shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span className="font-bold tracking-wide uppercase">
+                        {safetyLabel}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                        <strong className="font-semibold">
+                            {weather.safetyHeadline}:
+                        </strong>{' '}
+                        {weather.safetyAdvice}
+                    </span>
+                </div>
+
+                <div className="grid gap-px bg-line lg:grid-cols-3">
+                    <section className="min-w-0 bg-surface">
+                        <div className="flex min-h-8 flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-subtle px-4 py-1.5 md:px-5">
+                            <h3 className="text-[10px] font-semibold tracking-wide text-ink-soft uppercase">
+                                Weather &amp; site conditions
+                            </h3>
+                            {weather.isLiveFeed ? (
+                                <span className="inline-flex items-center gap-1 rounded border border-success/30 bg-success-soft px-1.5 py-0.5 text-[9px] font-bold text-success-strong">
+                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong motion-reduce:animate-none" />
+                                    Live data
+                                </span>
+                            ) : (
+                                <span className="rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[9px] font-medium text-ink-soft">
+                                    Estimated
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 p-4 md:px-5">
+                            <WeatherIcon
+                                className="h-8 w-8 shrink-0 text-brand-strong"
+                                aria-hidden="true"
+                            />
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-ink uppercase">
+                                    {weather.conditionLabel}
+                                </p>
+                                <p className="text-xs text-ink-soft">
+                                    <strong className="font-semibold text-ink tabular-nums">
+                                        {weather.temperatureC}°C
+                                    </strong>{' '}
+                                    · {weather.humidityPercent}% humidity
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-ink-soft">
+                                    {weather.lastUpdatedTime
+                                        ? `Updated ${weather.lastUpdatedTime}`
+                                        : 'Regional estimate'}
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="min-w-0 bg-surface">
+                        <h3 className="flex min-h-8 items-center border-b border-line bg-surface-subtle px-4 py-1.5 text-[10px] font-semibold tracking-wide text-ink-soft uppercase md:px-5">
+                            Wind metrics
+                        </h3>
+                        <div className="flex items-center gap-3 p-4 md:px-5">
+                            <Wind
+                                className="h-8 w-8 shrink-0 text-ink-soft"
+                                aria-hidden="true"
+                            />
+                            <dl className="min-w-0 space-y-1 text-xs">
+                                <div className="flex items-baseline gap-2">
+                                    <dt className="font-semibold text-ink-soft uppercase">
+                                        Wind
+                                    </dt>
+                                    <dd className="font-semibold text-ink tabular-nums">
+                                        {weather.windSpeedKmh} km/h{' '}
+                                        <span className="font-normal text-ink-soft">
+                                            {weather.windDirection}
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div className="flex flex-wrap items-baseline gap-2">
+                                    <dt className="font-semibold text-ink-soft uppercase">
+                                        Peak gust
+                                    </dt>
+                                    <dd
+                                        className={cn(
+                                            'rounded-md px-1.5 py-0.5 font-bold tabular-nums',
+                                            weather.windGustKmh > 40
+                                                ? 'bg-danger-soft text-danger-strong'
+                                                : weather.windGustKmh > 28
+                                                  ? 'bg-warning-soft text-warning-strong'
+                                                  : 'bg-surface-subtle text-ink',
+                                        )}
+                                    >
+                                        {weather.windGustKmh} km/h
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </section>
+
+                    <section className="min-w-0 bg-surface">
+                        <h3 className="flex min-h-8 items-center border-b border-line bg-surface-subtle px-4 py-1.5 text-[10px] font-semibold tracking-wide text-ink-soft uppercase md:px-5">
+                            Surface &amp; ground
+                        </h3>
+                        <div className="flex items-center gap-3 p-4 md:px-5">
+                            <Droplets
+                                className="h-8 w-8 shrink-0 text-ink-soft"
+                                aria-hidden="true"
+                            />
+                            <div className="min-w-0">
+                                <p className="text-xs font-semibold text-ink-soft uppercase">
+                                    Ground:{' '}
+                                    <strong className="font-bold text-ink capitalize">
+                                        {weather.groundSaturationRisk}
+                                    </strong>
+                                </p>
+                                <p className="mt-1 text-xs text-ink-soft">
+                                    {weather.groundSaturationRisk ===
+                                    'saturated'
+                                        ? 'Ground matting required before lift.'
+                                        : weather.groundSaturationRisk ===
+                                            'damp'
+                                          ? 'Verify pad bearing before lift.'
+                                          : 'Bearing conditions currently stable.'}
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        );
+    }
 
     if (isSite) {
         return (
