@@ -80,7 +80,7 @@ function hasSectionProps(
 }
 
 export default function Workspace(props: WorkspacePageProps) {
-    const { auth, flash, errors } = usePage().props;
+    const { auth, flash } = usePage().props;
     const [section, setSection] = useState<WorkspaceSection | null>(
         props.initial_section,
     );
@@ -589,8 +589,6 @@ export default function Workspace(props: WorkspacePageProps) {
         toggleLocationSharing(true);
     }, [toggleLocationSharing]);
 
-    const validationErrorCount = Object.keys(errors).length;
-
     const unreadNotificationCount =
         props.badges?.unread_notifications ??
         (props.notifications ?? []).filter(
@@ -647,10 +645,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         onOpenQueue={() => changeSection('sos')}
                     />
                 )}
-                {(flash ||
-                    locationError ||
-                    validationErrorCount > 0 ||
-                    showStaleNotice) && (
+                {(flash || locationError || showStaleNotice) && (
                     <div className="space-y-2 border-b border-line bg-surface px-4 py-3 md:px-6">
                         {flash && <FlashNotice flash={flash} />}
                         {locationError && (
@@ -658,12 +653,6 @@ export default function Workspace(props: WorkspacePageProps) {
                                 tone="error"
                                 message={locationError}
                                 onDismiss={() => setLocationError(null)}
-                            />
-                        )}
-                        {validationErrorCount > 0 && (
-                            <StateNotice
-                                tone="error"
-                                message={`${validationErrorCount} field${validationErrorCount === 1 ? '' : 's'} need attention. Your entries were preserved.`}
                             />
                         )}
                         {showStaleNotice && (

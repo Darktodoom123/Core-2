@@ -41,6 +41,9 @@ return [
         'fake' => (bool) env('OPENAI_FAKE', false),
         'max_input_tokens' => (int) env('OPENAI_MAX_INPUT_TOKENS', 32000),
         'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),
+        'proactive_enabled' => (bool) env('OPENAI_PROACTIVE_ENABLED', true),
+        'proactive_batch_size' => 10,
+        'proactive_cooldown_minutes' => 5,
     ],
 
     'tomorrow_io' => [

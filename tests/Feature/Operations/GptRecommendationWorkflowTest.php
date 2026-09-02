@@ -78,18 +78,58 @@ it('allows authorized dispatcher to request GPT recommendation and queues backgr
     Queue::assertPushed(GenerateGptRecommendationJob::class);
 });
 
-it('prevents unauthorized field driver from requesting GPT recommendation', function (): void {
+it('prevents unauthorized field driver from requesting GPT recommendation', function (string $subjectType): void {
     $driver = createGptUser(RoleName::CraneOperator);
     $dispatcher = createGptUser(RoleName::OperationsManager);
     $job = createGptJob($dispatcher, DispatchStatus::Draft);
 
     $this->actingAs($driver)
         ->post('/operations/gpt-recommendations', [
-            'subject_type' => (new DispatchJob)->getMorphClass(),
+            'subject_type' => $subjectType,
             'subject_id' => $job->id,
             'purpose' => 'dispatch_assignment',
         ])
         ->assertStatus(403);
+})->with([
+    'model class' => [DispatchJob::class],
+    'public alias' => ['dispatch_job'],
+]);
+
+it('accepts the public dispatch subject sent by the request now button', function (): void {
+    Queue::fake();
+    $dispatcher = createGptUser(RoleName::OperationsManager);
+    $job = createGptJob($dispatcher);
+
+    $this->actingAs($dispatcher)
+        ->from('/?view=dispatch')
+        ->post('/operations/gpt-recommendations', [
+            'subject_type' => 'dispatch_job',
+            'subject_id' => $job->id,
+            'purpose' => 'dispatch_assignment',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/?view=dispatch');
+
+    expect(GptRecommendation::query()->sole()->subject_type)->toBe($job->getMorphClass());
+    Queue::assertPushed(GenerateGptRecommendationJob::class, 1);
+});
+
+it('rejects unsupported subjects without queuing a request', function (): void {
+    Queue::fake();
+    $dispatcher = createGptUser(RoleName::OperationsManager);
+    $job = createGptJob($dispatcher);
+
+    $this->actingAs($dispatcher)
+        ->from('/?view=dispatch')
+        ->post('/operations/gpt-recommendations', [
+            'subject_type' => User::class,
+            'subject_id' => $job->id,
+            'purpose' => 'dispatch_assignment',
+        ])
+        ->assertSessionHasErrors(['subject_type' => 'Invalid subject model type.']);
+
+    expect(GptRecommendation::query()->count())->toBe(0);
+    Queue::assertNothingPushed();
 });
 
 it('allows authorized dispatcher to accept valid GPT recommendation and record audit log', function (): void {

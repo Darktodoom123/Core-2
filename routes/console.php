@@ -1,5 +1,6 @@
 <?php
 
+use App\Platform\Gpt\Jobs\SweepProactiveGptRecommendationsJob;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
@@ -31,4 +32,5 @@ Artisan::command('gpt:queue-status', function (): void {
 })->purpose('Report safe aggregate GPT queue status without exposing recommendation context');
 
 Schedule::job(new SweepSosEscalationsJob)->everyMinute();
+Schedule::job(new SweepProactiveGptRecommendationsJob)->everyMinute();
 Schedule::job(new PruneSosIncidentCoordinatesJob)->daily();

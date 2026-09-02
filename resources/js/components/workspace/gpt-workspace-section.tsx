@@ -18,7 +18,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, PageHeading, Panel } from '@/components/ui';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
@@ -1188,6 +1188,7 @@ export function AcceptGptModal({
     onClose: () => void;
 }) {
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         document.getElementById('accept-gpt-cancel-btn')?.focus();
@@ -1195,15 +1196,17 @@ export function AcceptGptModal({
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
+        setError(null);
         setProcessing(true);
 
         router.post(
             `/operations/gpt-recommendations/${rec.id}/accept`,
             {},
             {
+                onSuccess: () => onClose(),
+                onError: (errors) => setError(Object.values(errors).join(' ')),
                 onFinish: () => {
                     setProcessing(false);
-                    onClose();
                 },
             },
         );
@@ -1223,34 +1226,53 @@ export function AcceptGptModal({
                         id={`accept-gpt-title-${rec.id}`}
                         className="text-lg font-semibold text-ink"
                     >
-                        Accept AI Resource Recommendation
+                        Review crew & equipment
                     </h3>
                 </div>
 
                 <p className="text-sm leading-relaxed text-ink-soft">
-                    You are confirming and executing this AI recommendation
-                    under your active authenticated human account. This will
-                    trigger the resource assignment transaction for Dispatch #
-                    {rec.subject_id}.
+                    Confirm this resource plan for Dispatch #{rec.subject_id}.
+                    Availability and job requirements will be checked again
+                    before any assignments are applied.
                 </p>
 
                 <div className="space-y-1.5 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
-                    <p className="font-semibold text-ink">
-                        Safety & Authorization Verification:
-                    </p>
-                    <p className="text-ink-soft">
-                        • Context hash will be re-validated against current
-                        dispatch state.
-                    </p>
-                    <p className="text-ink-soft">
-                        • Decision will be recorded in audit log as{' '}
-                        <code className="rounded bg-surface px-1 py-0.5 font-mono text-[11px]">
-                            gpt.recommendation_accepted
-                        </code>
-                        .
-                    </p>
+                    <p className="font-semibold text-ink">Resources to apply</p>
+                    <ul className="space-y-2 pt-1 text-ink-soft">
+                        {(rec.proposed_personnel ?? []).map((person) => (
+                            <li
+                                key={`${person.user_id}-${person.assignment_type}`}
+                            >
+                                {person.name ||
+                                    `Crew member #${person.user_id}`}{' '}
+                                · {humanize(person.assignment_type)}
+                            </li>
+                        ))}
+                        {(rec.proposed_assets ?? []).map((asset) => (
+                            <li
+                                key={`${asset.operational_asset_id}-${asset.assignment_type}`}
+                            >
+                                {asset.name ||
+                                    asset.asset_code ||
+                                    `Equipment #${asset.operational_asset_id}`}{' '}
+                                · {humanize(asset.assignment_type)}
+                            </li>
+                        ))}
+                    </ul>
+                    {!rec.proposed_personnel?.length &&
+                        !rec.proposed_assets?.length && (
+                            <p className="text-ink-soft">
+                                No resource changes proposed. Confirming records
+                                your acceptance of this advisory.
+                            </p>
+                        )}
                 </div>
 
+                {error && (
+                    <p role="alert" className="text-sm text-danger">
+                        {error}
+                    </p>
+                )}
                 <form
                     onSubmit={handleSubmit}
                     className="flex justify-end gap-3 pt-2"

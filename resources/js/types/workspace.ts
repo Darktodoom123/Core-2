@@ -634,6 +634,7 @@ export interface WorkspaceCapabilities {
     inspect_asset: boolean;
     maintain_asset: boolean;
     request_gpt_assistance: boolean;
+    proactive_gpt_assistance?: boolean;
     decide_gpt_recommendation: boolean;
     retry_gpt_recommendation: boolean;
     create_job_report: boolean;

@@ -32,7 +32,7 @@ final class GptRecommendationController extends Controller
 
         $subjectType = $validated['subject_type'];
         $dispatchMorphClass = (new DispatchJob)->getMorphClass();
-        if (! in_array($subjectType, [DispatchJob::class, $dispatchMorphClass], true)) {
+        if (! in_array($subjectType, ['dispatch_job', DispatchJob::class, $dispatchMorphClass], true)) {
             throw ValidationException::withMessages([
                 'subject_type' => 'Invalid subject model type.',
             ]);

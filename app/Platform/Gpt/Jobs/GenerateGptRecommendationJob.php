@@ -2,17 +2,24 @@
 
 namespace App\Platform\Gpt\Jobs;
 
+use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BoundedContextBuilder;
+use App\Platform\Gpt\Services\DispatchAdvisoryNeed;
 use App\Platform\Gpt\Services\GptRecommendationTransition;
 use App\Platform\Gpt\Services\OpenAiClientWrapper;
 use App\Platform\Gpt\Services\RecordGptOperationalMetric;
+use App\Platform\Identity\Enums\PermissionName;
+use App\Platform\Identity\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -30,7 +37,8 @@ final class GenerateGptRecommendationJob implements ShouldQueue
     /** @param array<string, mixed> $boundedContext */
     public function __construct(
         public int $recommendationId,
-        public array $boundedContext
+        public array $boundedContext,
+        public bool $automatic = false,
     ) {}
 
     public function handle(
@@ -54,6 +62,14 @@ final class GenerateGptRecommendationJob implements ShouldQueue
 
         $recommendation = GptRecommendation::query()->find($this->recommendationId);
         if (! $recommendation instanceof GptRecommendation) {
+            return;
+        }
+
+        if ($this->automatic && ! $this->automaticRequestIsCurrent($recommendation)) {
+            $transitions->compareAndSet($recommendation->id, GptRecommendationStatus::Processing, GptRecommendationStatus::Failed, [
+                'error_message' => 'Automatic suggestion deferred because dispatch context or access changed. Request a fresh suggestion when ready.',
+            ]);
+
             return;
         }
 
@@ -135,6 +151,21 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 'reason' => $result['is_timeout'] ? 'timeout' : 'provider_or_schema_failure',
             ]);
         }
+    }
+
+    private function automaticRequestIsCurrent(GptRecommendation $recommendation): bool
+    {
+        $actor = $recommendation->requestedBy;
+        $subject = $recommendation->subject;
+
+        return (bool) config('services.openai.proactive_enabled', true)
+            && ! Cache::get('gpt_circuit_breaker_disabled', false)
+            && $actor instanceof User && $actor->is_active && $actor->suspended_at === null
+            && $actor->can(PermissionName::GptUseDispatch->value)
+            && $subject instanceof DispatchJob
+            && Gate::forUser($actor)->allows('view', $subject)
+            && app(DispatchAdvisoryNeed::class)->exists($subject)
+            && $recommendation->context_hash === app(BoundedContextBuilder::class)->buildForDispatchJob($subject)['context_hash'];
     }
 
     /** @param array<string, mixed> $values */

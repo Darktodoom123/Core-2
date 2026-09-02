@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $purpose
  * @property string $context_hash
+ * @property string|null $automation_hash
  * @property array<string, mixed>|null $input_references
  * @property array<string, mixed>|null $recommendation
  * @property array<string, mixed>|null $conflicts
@@ -36,6 +37,7 @@ class GptRecommendation extends Model
         'retry_of_id',
         'purpose',
         'context_hash',
+        'automation_hash',
         'input_references',
         'recommendation',
         'conflicts',

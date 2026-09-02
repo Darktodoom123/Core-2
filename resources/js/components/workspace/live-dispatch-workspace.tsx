@@ -12,13 +12,10 @@ import {
     MapPin,
     Package,
     Plus,
-    RefreshCw,
     Search,
     SearchX,
     ShieldCheck,
-    Sparkles,
     Truck,
-    User,
     UserRound,
     Users,
     X,
@@ -36,6 +33,7 @@ import {
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
+import { DispatchAdvisoryCard } from '@/components/workspace/dispatch-advisory-card';
 import {
     AcceptGptModal,
     RecommendationDetails,
@@ -345,7 +343,6 @@ export function LiveDispatchWorkspace({
     const [statusFilter, setStatusFilter] = useState<
         'all' | 'draft' | 'scheduled' | 'active' | 'completed'
     >('all');
-    const [dismissConflictAlert, setDismissConflictAlert] = useState(false);
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
@@ -755,11 +752,6 @@ export function LiveDispatchWorkspace({
         : derivedConflicts.some((conflict) => conflict.severity === 'warning')
           ? 'bg-warning text-ink'
           : 'bg-info text-white';
-
-    const dangerConflicts = useMemo(
-        () => derivedConflicts.filter((c) => c.severity === 'danger'),
-        [derivedConflicts],
-    );
 
     const readyAssetsCount = useMemo(
         () =>
@@ -1439,70 +1431,6 @@ export function LiveDispatchWorkspace({
             {/* VIEW MODE: LIST (DEFAULT) */}
             {(viewMode === 'list' || fieldMode) && (
                 <>
-                    {/* DANGER CONFLICT ALERT BANNER */}
-                    {viewMode === 'list' &&
-                        !fieldMode &&
-                        dangerConflicts.length > 0 &&
-                        !dismissConflictAlert && (
-                            <div className="workspace-width-contained px-4 pt-4 md:px-6">
-                                <div
-                                    role="alert"
-                                    className="flex flex-col gap-3 rounded-xl border border-danger/30 bg-danger-soft/40 p-3.5 text-danger-strong sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger text-white">
-                                            <AlertTriangle className="h-4 w-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-xs font-bold tracking-wider text-danger-strong uppercase">
-                                                Critical Operational Conflict
-                                                {dangerConflicts.length > 1
-                                                    ? 's'
-                                                    : ''}{' '}
-                                                Detected (
-                                                {dangerConflicts.length})
-                                            </p>
-                                            <p className="mt-0.5 text-xs text-ink">
-                                                <span className="font-semibold">
-                                                    {dangerConflicts[0].title}:
-                                                </span>{' '}
-                                                {dangerConflicts[0].description}
-                                                {dangerConflicts.length > 1 && (
-                                                    <span className="ml-1 text-ink-soft">
-                                                        (+
-                                                        {dangerConflicts.length -
-                                                            1}{' '}
-                                                        more)
-                                                    </span>
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="danger"
-                                            onClick={() =>
-                                                setViewMode('conflicts')
-                                            }
-                                        >
-                                            Review Conflicts
-                                        </Button>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setDismissConflictAlert(true)
-                                            }
-                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
-                                            aria-label="Dismiss alert"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                     {/* ZERO-STATE: UNIFIED FLEET OPERATIONS HUB */}
                     {!fieldMode &&
                     jobs.length === 0 &&
@@ -4141,6 +4069,7 @@ function DispatchDetails({
                 {/* Right Column: AI Advisory & Guidance */}
                 <div className="space-y-5">
                     <DispatchGptAdvisory
+                        key={job.id}
                         job={job}
                         recommendations={recommendations}
                         capabilities={capabilities}
@@ -4231,361 +4160,91 @@ function DispatchGptAdvisory({
     recommendations: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
-    const { auth } = usePage<{ auth?: Auth }>().props;
+    const returnTo = usePage().url;
+    const { auth, errors } = usePage<{ auth?: Auth }>().props;
+    const errorBag = `dispatchAdvisory${job.id}`;
+    const persistedErrors = errors[errorBag];
+    const persistedRequestError = persistedErrors
+        ? Object.values(persistedErrors).join(' ')
+        : null;
     const isAdmin =
         auth?.role === 'system_administrator' ||
         auth?.role === 'admin' ||
         auth?.prototype_role === 'system_administrator';
-
     const [selectedForAccept, setSelectedForAccept] =
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
     const [requesting, setRequesting] = useState(false);
-    const [retryingId, setRetryingId] = useState<number | null>(null);
-    const activeRecommendations = recommendations.filter(
-        (recommendation) =>
-            ['draft', 'processing'].includes(recommendation.status) ||
-            (recommendation.status === 'pending_review' &&
-                !recommendation.is_expired),
+    const [requestError, setRequestError] = useState<string | null>(null);
+    const recommendation = recommendations.reduce<
+        GptRecommendationViewModel | undefined
+    >(
+        (latest, candidate) =>
+            !latest || candidate.id > latest.id ? candidate : latest,
+        undefined,
     );
-    const visibleRecommendations =
-        activeRecommendations.length > 0
-            ? activeRecommendations
-            : recommendations.slice(0, 1);
 
-    const requestRecommendation = () => {
+    const requestRecommendation = (retry = false) => {
+        setRequestError(null);
         setRequesting(true);
         router.post(
-            '/operations/gpt-recommendations',
-            {
-                subject_type: 'dispatch_job',
-                subject_id: job.id,
-                purpose: 'dispatch_assignment',
-            },
+            retry && recommendation
+                ? recommendation.retry_url
+                : '/operations/gpt-recommendations',
+            retry
+                ? {}
+                : {
+                      subject_type: 'dispatch_job',
+                      subject_id: job.id,
+                      purpose: 'dispatch_assignment',
+                  },
             {
                 preserveScroll: true,
+                errorBag,
+                only: ['gptRecommendations', 'errors', 'flash'],
+                onError: (errors) =>
+                    setRequestError(Object.values(errors).join(' ')),
                 onFinish: () => setRequesting(false),
             },
         );
     };
 
     return (
-        <section
-            className="rounded-lg border border-line bg-surface p-4"
-            aria-labelledby={`dispatch-gpt-advisory-${job.id}`}
-        >
-            <div className="flex flex-col gap-2 border-b border-line pb-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h3
-                        id={`dispatch-gpt-advisory-${job.id}`}
-                        className="flex items-center gap-2 text-sm font-semibold text-ink"
-                    >
-                        <Sparkles
-                            className="h-4 w-4 text-brand-strong"
-                            aria-hidden="true"
-                        />
-                        GPT dispatch advisory
-                    </h3>
-                    <p className="mt-0.5 text-xs text-ink-soft">
-                        Explainable resource guidance (requires human
-                        confirmation).
-                    </p>
-                </div>
-
-                {(isAdmin || capabilities.request_gpt_assistance) && (
-                    <Link
-                        href="/?view=gpt-recommendations"
-                        className="inline-flex min-h-8 items-center rounded-lg px-2 text-xs font-medium text-brand-strong hover:bg-brand-soft"
-                    >
-                        View full advisory
-                    </Link>
-                )}
-            </div>
-
-            {visibleRecommendations.length === 0 ? (
-                <div className="mt-3 rounded-lg bg-surface-subtle p-5 text-center">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
-                        <Sparkles className="h-5 w-5" aria-hidden="true" />
-                    </div>
-                    <h4 className="mt-2 text-sm font-semibold text-ink">
-                        No AI proposal generated
-                    </h4>
-                    <p className="mx-auto mt-1 max-w-sm text-xs text-ink-soft">
-                        Request automated assistance to analyze qualified
-                        operators, crane capacity match, and conflict-free
-                        schedules.
-                    </p>
-                    {capabilities.request_gpt_assistance && (
-                        <Button
-                            size="sm"
-                            variant="primary"
-                            className="mt-3"
-                            onClick={requestRecommendation}
-                            disabled={requesting}
-                        >
-                            <Sparkles
-                                className="mr-1.5 h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
-                            {requesting
-                                ? 'Evaluating fleet…'
-                                : 'Suggest crew & equipment'}
-                        </Button>
-                    )}
-                </div>
-            ) : (
-                <div className="mt-3 space-y-4">
-                    {visibleRecommendations.map((recommendation) => {
-                        const reviewable =
-                            recommendation.status === 'pending_review' &&
-                            !recommendation.is_expired;
-                        const personnel =
-                            recommendation.proposed_personnel ?? [];
-                        const assets = recommendation.proposed_assets ?? [];
-
-                        return (
-                            <div
-                                key={recommendation.id}
-                                className={cn(
-                                    'space-y-3',
-                                    recommendation.is_expired && 'opacity-90',
-                                )}
-                            >
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-sm font-semibold text-ink">
-                                            Recommendation #{recommendation.id}
-                                        </p>
-                                        <span
-                                            className={cn(
-                                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                                gptRecommendationStatusClass(
-                                                    recommendation,
-                                                ),
-                                            )}
-                                        >
-                                            {gptRecommendationStatusLabel(
-                                                recommendation,
-                                            )}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs text-ink-soft">
-                                        <Clock
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden="true"
-                                        />
-                                        {recommendation.is_expired
-                                            ? 'Expired'
-                                            : recommendation.expires_in_seconds
-                                              ? `${Math.ceil(recommendation.expires_in_seconds / 60)}m left`
-                                              : 'No expiry window'}
-                                    </div>
-                                </div>
-
-                                {/* Expired Advisory Explanation Banner */}
-                                {recommendation.is_expired && (
-                                    <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft/30 p-2.5 text-xs">
-                                        <Clock
-                                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-strong"
-                                            aria-hidden="true"
-                                        />
-                                        <p className="leading-relaxed text-ink-soft">
-                                            <span className="font-semibold text-warning-strong">
-                                                Proposal Expired:
-                                            </span>{' '}
-                                            Fleet availability and operator
-                                            schedules may have shifted since
-                                            this was synthesized. Re-evaluate
-                                            live availability to update
-                                            suggestions.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {recommendation.response_summary && (
-                                    <p className="text-xs leading-relaxed text-ink">
-                                        {recommendation.response_summary}
-                                    </p>
-                                )}
-
-                                {/* Proposed Resources Plan */}
-                                {personnel.length > 0 || assets.length > 0 ? (
-                                    <div className="space-y-2 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
-                                        <p className="font-semibold text-ink">
-                                            Proposed Resource Plan
-                                        </p>
-                                        {personnel.length > 0 && (
-                                            <div className="flex items-start gap-2">
-                                                <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong" />
-                                                <div className="min-w-0">
-                                                    <span className="font-medium text-ink">
-                                                        Personnel:{' '}
-                                                    </span>
-                                                    <span className="text-ink-soft">
-                                                        {personnel
-                                                            .map(
-                                                                (person) =>
-                                                                    `${person.name || `User #${person.user_id}`} (${person.assignment_type})`,
-                                                            )
-                                                            .join(', ')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {assets.length > 0 && (
-                                            <div className="flex items-start gap-2">
-                                                <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-strong" />
-                                                <div className="min-w-0">
-                                                    <span className="font-medium text-ink">
-                                                        Assets:{' '}
-                                                    </span>
-                                                    <span className="text-ink-soft">
-                                                        {assets
-                                                            .map(
-                                                                (asset) =>
-                                                                    `${asset.name || asset.asset_code || `Asset #${asset.operational_asset_id}`} (${asset.assignment_type})`,
-                                                            )
-                                                            .join(', ')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="rounded-lg border border-dashed border-line bg-surface-subtle/50 px-3 py-2 text-xs text-ink-soft">
-                                        <span className="font-medium text-ink">
-                                            Resource Plan:
-                                        </span>{' '}
-                                        No specific personnel or equipment were
-                                        attached in this proposal draft.
-                                    </div>
-                                )}
-
-                                {recommendation.conflicts.length > 0 && (
-                                    <div className="flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger-strong">
-                                        <AlertTriangle
-                                            className="mt-0.5 h-4 w-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <div>
-                                            <p className="font-semibold">
-                                                Constraint notes
-                                            </p>
-                                            <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                                                {recommendation.conflicts.map(
-                                                    (conflict, index) => (
-                                                        <li key={index}>
-                                                            {String(
-                                                                conflict.reason ??
-                                                                    conflict.message ??
-                                                                    'Constraint note',
-                                                            )}
-                                                        </li>
-                                                    ),
-                                                )}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <RecommendationDetails rec={recommendation} />
-
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
-                                    {isAdmin ? (
-                                        <p className="text-xs text-ink-soft">
-                                            Requested by{' '}
-                                            <span className="font-medium text-ink">
-                                                {
-                                                    recommendation.requested_by
-                                                        .name
-                                                }
-                                            </span>
-                                        </p>
-                                    ) : (
-                                        <span />
-                                    )}
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {reviewable &&
-                                            capabilities.decide_gpt_recommendation && (
-                                                <>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        onClick={() =>
-                                                            setSelectedForReject(
-                                                                recommendation,
-                                                            )
-                                                        }
-                                                    >
-                                                        Reject recommendation
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="primary"
-                                                        onClick={() =>
-                                                            setSelectedForAccept(
-                                                                recommendation,
-                                                            )
-                                                        }
-                                                    >
-                                                        Accept recommendation
-                                                    </Button>
-                                                </>
-                                            )}
-                                        {recommendation.is_retryable &&
-                                            capabilities.retry_gpt_recommendation && (
-                                                <Button
-                                                    size="sm"
-                                                    variant={
-                                                        recommendation.is_expired
-                                                            ? 'primary'
-                                                            : 'secondary'
-                                                    }
-                                                    disabled={
-                                                        retryingId ===
-                                                        recommendation.id
-                                                    }
-                                                    onClick={() => {
-                                                        setRetryingId(
-                                                            recommendation.id,
-                                                        );
-                                                        router.post(
-                                                            recommendation.retry_url,
-                                                            {},
-                                                            {
-                                                                preserveScroll: true,
-                                                                onFinish: () =>
-                                                                    setRetryingId(
-                                                                        null,
-                                                                    ),
-                                                            },
-                                                        );
-                                                    }}
-                                                >
-                                                    <RefreshCw
-                                                        className={cn(
-                                                            'mr-1.5 h-3.5 w-3.5',
-                                                            retryingId ===
-                                                                recommendation.id &&
-                                                                'animate-spin',
-                                                        )}
-                                                        aria-hidden="true"
-                                                    />
-                                                    {retryingId ===
-                                                    recommendation.id
-                                                        ? 'Re-evaluating…'
-                                                        : 'Retry recommendation'}
-                                                </Button>
-                                            )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
+        <>
+            <DispatchAdvisoryCard
+                jobId={job.id}
+                recommendation={recommendation}
+                automatic={Boolean(capabilities.proactive_gpt_assistance)}
+                busy={requesting}
+                canRequest={capabilities.request_gpt_assistance}
+                canReview={capabilities.decide_gpt_recommendation}
+                canRetry={capabilities.retry_gpt_recommendation}
+                canViewHistory={isAdmin || capabilities.request_gpt_assistance}
+                error={
+                    requesting ? null : (requestError ?? persistedRequestError)
+                }
+                assignmentUrl={
+                    !['draft', 'pending_approval', 'scheduled'].includes(
+                        job.status.value,
+                    )
+                        ? assignmentWorkspaceUrl(job.id, returnTo)
+                        : undefined
+                }
+                onRequest={() => requestRecommendation()}
+                onRetry={() => requestRecommendation(true)}
+                onReview={() =>
+                    recommendation && setSelectedForAccept(recommendation)
+                }
+                onReject={() =>
+                    recommendation && setSelectedForReject(recommendation)
+                }
+                details={
+                    recommendation ? (
+                        <RecommendationDetails rec={recommendation} />
+                    ) : undefined
+                }
+            />
             {selectedForAccept && (
                 <AcceptGptModal
                     rec={selectedForAccept}
@@ -4598,51 +4257,9 @@ function DispatchGptAdvisory({
                     onClose={() => setSelectedForReject(null)}
                 />
             )}
-        </section>
+        </>
     );
 }
-
-function gptRecommendationStatusLabel(
-    recommendation: GptRecommendationViewModel,
-): string {
-    if (recommendation.is_expired) {
-        return 'Expired';
-    }
-
-    return (
-        {
-            accepted: 'Accepted',
-            rejected: 'Rejected',
-            stale: 'Stale context',
-            failed: 'Generation failed',
-            processing: 'Processing',
-            draft: 'Queued',
-            pending_review: 'Pending human review',
-        }[recommendation.status] ?? recommendation.status
-    );
-}
-
-function gptRecommendationStatusClass(
-    recommendation: GptRecommendationViewModel,
-): string {
-    if (
-        recommendation.is_expired ||
-        ['stale', 'rejected', 'failed'].includes(recommendation.status)
-    ) {
-        return 'bg-warning-soft text-warning-strong';
-    }
-
-    if (recommendation.status === 'accepted') {
-        return 'bg-success-soft text-success-strong';
-    }
-
-    if (recommendation.status === 'pending_review') {
-        return 'bg-warning-soft text-warning-strong';
-    }
-
-    return 'bg-cobalt-50 text-cobalt-700';
-}
-
 function DispatchListSkeleton() {
     return (
         <div
