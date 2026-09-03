@@ -3,8 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
-import type { IconName } from '../common/Icon';
-import { colors, shadows } from '../nativeStyles';
+import { colors } from '../nativeStyles';
 import { EmergencySosButton } from '../sos/emergency-sos-button';
 
 export type FieldNavItem = 'today' | 'route' | 'documents' | 'profile';
@@ -16,15 +15,6 @@ export interface FieldBottomNavProps {
     sosDisabled?: boolean;
 }
 
-const items: ReadonlyArray<{
-    id: FieldNavItem;
-    label: string;
-    iconName: IconName;
-}> = [
-    { id: 'today', label: 'Today', iconName: 'home' },
-    { id: 'profile', label: 'Profile', iconName: 'profile' },
-];
-
 export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
     activeItem,
     onSelect,
@@ -34,6 +24,8 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
     const { isDarkHud } = useTheme();
+
+    const cutoutColor = isDarkHud ? '#090D16' : colors.background;
 
     return (
         <View
@@ -51,59 +43,112 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                 ]}
                 testID="bottom-nav-bar"
             >
-                {items.map(({ id, label, iconName }) => {
-                    const selected = activeItem === id;
+                {/* Today Tab */}
+                <Pressable
+                    accessibilityLabel="Today"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: activeItem === 'today' }}
+                    onPress={() => onSelect('today')}
+                    style={({ pressed }) => [
+                        styles.item,
+                        activeItem === 'today' && styles.itemSelected,
+                        isDarkHud &&
+                            activeItem === 'today' &&
+                            styles.darkItemSelected,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="bottom-nav-today"
+                >
+                    <View style={styles.indicator}>
+                        <Icon
+                            color={
+                                activeItem === 'today'
+                                    ? isDarkHud
+                                        ? '#60A5FA'
+                                        : colors.primaryDark
+                                    : isDarkHud
+                                      ? '#94A3B8'
+                                      : colors.secondary
+                            }
+                            name="home"
+                            size={20}
+                        />
+                    </View>
+                    <Text
+                        style={[
+                            styles.label,
+                            activeItem === 'today' && styles.labelSelected,
+                            isDarkHud &&
+                                (activeItem === 'today'
+                                    ? styles.darkLabelSelected
+                                    : styles.darkLabel),
+                        ]}
+                    >
+                        Today
+                    </Text>
+                </Pressable>
 
-                    return (
-                        <React.Fragment key={id}>
-                            {id === 'profile' ? (
-                                <View style={styles.sosItem}>
-                                    <EmergencySosButton
-                                        disabled={sosDisabled}
-                                        onHoldComplete={onSosHoldComplete}
-                                    />
-                                </View>
-                            ) : null}
-                            <Pressable
-                                accessibilityLabel={label}
-                                accessibilityRole="tab"
-                                accessibilityState={{ selected }}
-                                onPress={() => onSelect(id)}
-                                style={({ pressed }) => [
-                                    styles.item,
-                                    selected && styles.itemSelected,
-                                    isDarkHud && selected && styles.darkItemSelected,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID={`bottom-nav-${id}`}
-                            >
-                                <View style={styles.indicator}>
-                                    <Icon
-                                        name={iconName}
-                                        size={20}
-                                        color={
-                                            selected
-                                                ? (isDarkHud ? '#60A5FA' : colors.primaryDark)
-                                                : (isDarkHud ? '#94A3B8' : colors.secondary)
-                                        }
-                                    />
-                                </View>
-                                <Text
-                                    style={[
-                                        styles.label,
-                                        selected && styles.labelSelected,
-                                        isDarkHud &&
-                                            (selected
-                                                ? styles.darkLabelSelected
-                                                : styles.darkLabel),
-                                    ]}
-                                >
-                                    {label}
-                                </Text>
-                            </Pressable>
-                        </React.Fragment>
-                    );
-                })}
+                {/* Central Floating SOS Cradle Notch with fabCradleMargin */}
+                <View style={styles.sosItem}>
+                    <View
+                        style={[
+                            styles.cradleCutout,
+                            { backgroundColor: cutoutColor },
+                        ]}
+                    >
+                        <EmergencySosButton
+                            disabled={sosDisabled}
+                            onHoldComplete={onSosHoldComplete}
+                        />
+                    </View>
+                </View>
+
+                {/* Profile Tab */}
+                <Pressable
+                    accessibilityLabel="Profile"
+                    accessibilityRole="tab"
+                    accessibilityState={{
+                        selected: activeItem === 'profile',
+                    }}
+                    onPress={() => onSelect('profile')}
+                    style={({ pressed }) => [
+                        styles.item,
+                        activeItem === 'profile' && styles.itemSelected,
+                        isDarkHud &&
+                            activeItem === 'profile' &&
+                            styles.darkItemSelected,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="bottom-nav-profile"
+                >
+                    <View style={styles.indicator}>
+                        <Icon
+                            color={
+                                activeItem === 'profile'
+                                    ? isDarkHud
+                                        ? '#60A5FA'
+                                        : colors.primaryDark
+                                    : isDarkHud
+                                      ? '#94A3B8'
+                                      : colors.secondary
+                            }
+                            name="profile"
+                            size={20}
+                        />
+                    </View>
+                    <Text
+                        style={[
+                            styles.label,
+                            activeItem === 'profile' && styles.labelSelected,
+                            isDarkHud &&
+                                (activeItem === 'profile'
+                                    ? styles.darkLabelSelected
+                                    : styles.darkLabel),
+                        ]}
+                    >
+                        Profile
+                    </Text>
+                </Pressable>
             </View>
         </View>
     );
@@ -115,7 +160,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         paddingHorizontal: 16,
-        paddingTop: 18,
+        paddingTop: 24,
         pointerEvents: 'box-none',
         position: 'absolute',
         right: 0,
@@ -123,23 +168,28 @@ const styles = StyleSheet.create({
     },
     container: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
         borderColor: 'rgba(226, 232, 240, 0.95)',
         borderRadius: 36,
         borderWidth: 1,
+        elevation: 10,
         flexDirection: 'row',
         justifyContent: 'space-between',
         maxWidth: 440,
         overflow: 'visible',
         paddingHorizontal: 10,
         paddingVertical: 6,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
         width: '100%',
-        ...shadows.lg,
-        elevation: 10,
     },
     darkContainer: {
-        backgroundColor: '#1E293B',
+        backgroundColor: 'rgba(30, 41, 59, 0.96)',
         borderColor: '#334155',
+        shadowColor: '#000000',
+        shadowOpacity: 0.35,
     },
     item: {
         alignItems: 'center',
@@ -161,7 +211,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'visible',
-        paddingHorizontal: 6,
+        paddingHorizontal: 4,
+    },
+    cradleCutout: {
+        alignItems: 'center',
+        borderRadius: 35,
+        height: 70,
+        justifyContent: 'center',
+        marginTop: -28,
+        overflow: 'visible',
+        width: 70,
     },
     indicator: {
         alignItems: 'center',
