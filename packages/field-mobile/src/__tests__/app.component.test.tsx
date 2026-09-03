@@ -1372,4 +1372,37 @@ describe('native application component tree', () => {
         expect(screen.getByText('Accept job responsibility')).toBeVisible();
         expect(screen.queryByText('Accept job responsibility (v3)')).toBeNull();
     });
+
+    it('redirects to Heavy Crane Drive Mode when clicking Routes tile and returns to main on back', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        // Find the Routes / Heavy Transit tile on dashboard
+        const routesTile = await screen.findByTestId('tile-routes');
+        expect(routesTile).toBeTruthy();
+
+        // Tap Routes tile — redirects to Heavy Crane Drive Mode Screen like DVIR
+        await fireEvent.press(routesTile);
+
+        expect(
+            await screen.findByTestId('heavy-crane-drive-mode-screen'),
+        ).toBeVisible();
+        expect(screen.getByText('Heavy Crane Drive Mode')).toBeVisible();
+
+        // Tap Back button — returns to dashboard
+        const backBtn = screen.getByTestId('drive-mode-back-btn');
+        await fireEvent.press(backBtn);
+
+        expect(
+            screen.queryByTestId('heavy-crane-drive-mode-screen'),
+        ).toBeNull();
+        expect(screen.getByTestId('tile-routes')).toBeVisible();
+    });
 });

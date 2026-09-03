@@ -9,6 +9,7 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
+import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { ShiftStatusCard } from '../components/cards/ShiftStatusCard';
@@ -57,6 +58,7 @@ export interface AssignedJobsListScreenProps {
     onOpenDvir?: () => void;
     onOpenHos?: () => void;
     onOpenDocuments?: () => void;
+    onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
     onToggleLocationSharing?: () => void;
     onLogout?: () => void;
@@ -98,6 +100,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenDvir,
     onOpenHos,
     onOpenDocuments,
+    onOpenRoutes,
     onOpenVehicle,
     onToggleLocationSharing,
     onLogout,
@@ -306,7 +309,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onOpenDvir?.();
                 break;
             case 'routes':
-                setActiveNavItem('route');
+                if (onOpenRoutes) {
+                    onOpenRoutes();
+                } else {
+                    setActiveNavItem('route');
+                }
+
                 break;
             case 'documents':
                 onOpenDocuments?.();
@@ -452,51 +460,21 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 </Pressable>
 
                 {/* Assigned Vehicle & Rigging Hero Card */}
-                <View
-                    style={[
-                        styles.vehicleCard,
-                        isDarkHud && styles.darkVehicleCard,
-                    ]}
-                    testID="hero-vehicle-card"
-                >
-                    <View style={styles.vehicleRow}>
-                        <Text style={styles.vehicleCardLabel}>Vehicle</Text>
-                        <Text
-                            style={[
-                                styles.vehicleCardValue,
-                                isDarkHud && styles.darkVehicleCardValue,
-                            ]}
-                        >
-                            {assetCode}
-                        </Text>
-                    </View>
-                    <View style={styles.vehicleRow}>
-                        <Text style={styles.vehicleCardLabel}>Attachment</Text>
-                        <Text
-                            style={[
-                                styles.vehicleCardValue,
-                                isDarkHud && styles.darkVehicleCardValue,
-                            ]}
-                        >
-                            20T Counterweight · Jib Extension
-                        </Text>
-                    </View>
-                    <View style={styles.vehicleRow}>
-                        <Text style={styles.vehicleCardLabel}>
-                            Shipping IDs
-                        </Text>
-                        <Text
-                            style={[
-                                styles.vehicleCardValue,
-                                isDarkHud && styles.darkVehicleCardValue,
-                            ]}
-                        >
-                            {activeJob
-                                ? `Ref: ${activeJob.reference}`
-                                : 'No Active Dispatch'}
-                        </Text>
-                    </View>
-                </View>
+                <AssetVehicleCard
+                    activeJob={activeJob}
+                    assetCode={assetCode}
+                    assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
+                    assetName={
+                        primaryAsset?.asset_name || 'Liebherr LTM 1050-3.1'
+                    }
+                    attachments={['20T Counterweight', 'Jib Extension']}
+                    dispatchPrefix="Ref: "
+                    dvirStatus="cleared"
+                    engineHours="4,820 hrs"
+                    fuelPercent={82}
+                    onPress={onOpenVehicle}
+                    ratedCapacity="50T All-Terrain"
+                />
 
                 {/* 6-Tile Industrial Launcher Grid */}
                 <View
@@ -780,39 +758,6 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 11,
         fontWeight: '600',
-    },
-    vehicleCard: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 4,
-        marginBottom: 12,
-        padding: 12,
-        ...shadows.sm,
-    },
-    darkVehicleCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    vehicleRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 10,
-    },
-    vehicleCardLabel: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '700',
-        minWidth: 84,
-    },
-    vehicleCardValue: {
-        color: colors.text,
-        fontSize: 13,
-        fontWeight: '800',
-    },
-    darkVehicleCardValue: {
-        color: '#F8FAFC',
     },
     gridContainer: {
         flexDirection: 'row',

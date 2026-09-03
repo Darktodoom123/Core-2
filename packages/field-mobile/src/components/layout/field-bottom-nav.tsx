@@ -25,8 +25,6 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
     const bottomInset = insets?.bottom ?? 0;
     const { isDarkHud } = useTheme();
 
-    const cutoutColor = isDarkHud ? '#090D16' : colors.background;
-
     return (
         <View
             pointerEvents="box-none"
@@ -37,10 +35,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
         >
             <View
                 accessibilityLabel="Field mobile navigation"
-                style={[
-                    styles.container,
-                    isDarkHud && styles.darkContainer,
-                ]}
+                style={[styles.container, isDarkHud && styles.darkContainer]}
                 testID="bottom-nav-bar"
             >
                 {/* Today Tab */}
@@ -88,19 +83,12 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                     </Text>
                 </Pressable>
 
-                {/* Central Floating SOS Cradle Notch with fabCradleMargin */}
+                {/* Central Floating SOS Dock */}
                 <View style={styles.sosItem}>
-                    <View
-                        style={[
-                            styles.cradleCutout,
-                            { backgroundColor: cutoutColor },
-                        ]}
-                    >
-                        <EmergencySosButton
-                            disabled={sosDisabled}
-                            onHoldComplete={onSosHoldComplete}
-                        />
-                    </View>
+                    <EmergencySosButton
+                        disabled={sosDisabled}
+                        onHoldComplete={onSosHoldComplete}
+                    />
                 </View>
 
                 {/* Profile Tab */}
@@ -211,16 +199,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'visible',
-        paddingHorizontal: 4,
-    },
-    cradleCutout: {
-        alignItems: 'center',
-        borderRadius: 35,
-        height: 70,
-        justifyContent: 'center',
-        marginTop: -28,
-        overflow: 'visible',
-        width: 70,
+        paddingHorizontal: 8,
     },
     indicator: {
         alignItems: 'center',

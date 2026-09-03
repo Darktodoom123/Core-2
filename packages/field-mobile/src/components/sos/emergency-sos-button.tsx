@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Vibration } from 'react-native';
+import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
@@ -12,6 +13,7 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
     onHoldComplete,
     disabled = false,
 }) => {
+    const { isDarkHud } = useTheme();
     const [progress, setProgress] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const accessibilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -103,6 +105,7 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
             onPressOut={endHold}
             style={({ pressed }) => [
                 styles.button,
+                isDarkHud && styles.darkButton,
                 disabled && styles.disabled,
                 pressed && !disabled && styles.pressed,
             ]}
@@ -123,18 +126,22 @@ const styles = StyleSheet.create({
     button: {
         alignItems: 'center',
         backgroundColor: colors.redDark,
-        borderColor: colors.red,
-        borderRadius: 26,
-        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
+        borderRadius: 28,
+        borderWidth: 3.5,
         elevation: 8,
-        height: 52,
+        height: 56,
         justifyContent: 'center',
+        marginTop: -18,
         overflow: 'hidden',
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
-        width: 52,
+        width: 56,
+    },
+    darkButton: {
+        borderColor: '#1E293B',
     },
     progress: {
         backgroundColor: colors.red,

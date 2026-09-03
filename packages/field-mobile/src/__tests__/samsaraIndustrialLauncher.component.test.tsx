@@ -173,6 +173,10 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             await fireEvent.press(view.getByTestId('tile-dvir'));
             expect(onOpenDvir).toHaveBeenCalled();
 
+            // Tapping Routes tile
+            await fireEvent.press(view.getByTestId('tile-routes'));
+            expect(onOpenRoutes).toHaveBeenCalled();
+
             // Tapping Documents tile
             await fireEvent.press(view.getByTestId('tile-documents'));
             expect(onOpenDocs).toHaveBeenCalled();

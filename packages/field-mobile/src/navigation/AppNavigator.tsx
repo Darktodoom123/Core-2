@@ -32,6 +32,7 @@ import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
+import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
 import { JobDetailScreen } from '../screens/JobDetailScreen';
 import { ApiClientError } from '../services/apiClient';
@@ -208,7 +209,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     });
     const [isSosActivating, setIsSosActivating] = useState(false);
     const [activeAppView, setActiveAppView] = useState<
-        'main' | 'dvir' | 'documents' | 'inspection' | 'hos'
+        'main' | 'dvir' | 'documents' | 'inspection' | 'hos' | 'routes'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
@@ -961,7 +962,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     styles.fullScreen,
                     (activeAppView === 'dvir' ||
                         activeAppView === 'inspection' ||
-                        activeAppView === 'hos') &&
+                        activeAppView === 'hos' ||
+                        activeAppView === 'routes') &&
                         styles.darkFullScreen,
                 ]}
             >
@@ -969,14 +971,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     barStyle={
                         activeAppView === 'dvir' ||
                         activeAppView === 'inspection' ||
-                        activeAppView === 'hos'
+                        activeAppView === 'hos' ||
+                        activeAppView === 'routes'
                             ? 'light-content'
                             : 'dark-content'
                     }
                     backgroundColor={
                         activeAppView === 'dvir' ||
                         activeAppView === 'inspection' ||
-                        activeAppView === 'hos'
+                        activeAppView === 'hos' ||
+                        activeAppView === 'routes'
                             ? '#0F172A'
                             : colors.surface
                     }
@@ -1075,6 +1079,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onOpenDvir={() => setActiveAppView('dvir')}
                                 technicianName={user?.name || 'Alex Rivera'}
                             />
+                        ) : activeAppView === 'routes' ? (
+                            <HeavyCraneDriveModeScreen
+                                activeJob={activeJob || jobs[0] || null}
+                                assetCode={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_code || 'ALB-CRN-050'
+                                }
+                                assetName={
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    '50T Tadano All-Terrain Crane'
+                                }
+                                onArrived={(jobId, version) => {
+                                    handleTransitionStatus(
+                                        jobId,
+                                        'arrived',
+                                        version,
+                                    );
+                                    setActiveAppView('main');
+                                }}
+                                onBack={() => setActiveAppView('main')}
+                                operatorName={user?.name || 'Alex Rivera'}
+                            />
                         ) : (
                             <AssignedJobsListScreen
                                 onSosHoldComplete={handleGlobalSosHold}
@@ -1092,6 +1119,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }
                                 onOpenDvir={() => setActiveAppView('dvir')}
                                 onOpenHos={() => setActiveAppView('hos')}
+                                onOpenRoutes={() => setActiveAppView('routes')}
                                 onOpenVehicle={() =>
                                     setActiveAppView('inspection')
                                 }

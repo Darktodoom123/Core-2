@@ -8,6 +8,7 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
+import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
@@ -388,9 +389,15 @@ export const OperatorDashboardScreen: React.FC<
                 </Pressable>
 
                 {/* 3. Assigned Vehicle & Dispatch Context Hero Card */}
-                <Pressable
-                    accessibilityLabel={`Assigned Asset: ${assetCode}, ${assetName}. Active Dispatch: ${activeJob?.reference || 'None'}`}
-                    accessibilityRole="button"
+                <AssetVehicleCard
+                    activeJob={activeJob}
+                    assetCode={assetCode}
+                    assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
+                    assetName={assetName}
+                    attachments={['20T Counterweight', 'Jib Extension']}
+                    dvirStatus="cleared"
+                    engineHours="4,820 hrs"
+                    fuelPercent={82}
                     onPress={() => {
                         if (activeJob) {
                             onSelectJob(activeJob.id);
@@ -398,89 +405,8 @@ export const OperatorDashboardScreen: React.FC<
                             onOpenForms();
                         }
                     }}
-                    style={({ pressed }) => [
-                        styles.vehicleCard,
-                        isDarkHud && styles.darkVehicleCard,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="hero-vehicle-card"
-                >
-                    <View style={styles.vehicleCardHeader}>
-                        <View style={styles.vehicleRow}>
-                            <Text style={styles.vehicleCardLabel}>Vehicle</Text>
-                            <Text
-                                style={[
-                                    styles.vehicleCardValue,
-                                    isDarkHud && styles.darkVehicleCardValue,
-                                ]}
-                            >
-                                {assetCode}
-                            </Text>
-                        </View>
-
-                        <View style={styles.syncStateBadge}>
-                            <View
-                                style={[
-                                    styles.syncStateDot,
-                                    isOnline === false
-                                        ? styles.syncDotOffline
-                                        : syncAttentionCount > 0
-                                          ? styles.syncDotAttention
-                                          : styles.syncDotOnline,
-                                ]}
-                            />
-                            <Text style={styles.syncStateText}>
-                                {isOnline === false
-                                    ? 'Offline'
-                                    : syncAttentionCount > 0
-                                      ? 'Needs Review'
-                                      : 'Synced'}
-                            </Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.vehicleRow}>
-                        <Text style={styles.vehicleCardLabel}>Attachment</Text>
-                        <Text
-                            style={[
-                                styles.vehicleCardValue,
-                                isDarkHud && styles.darkVehicleCardValue,
-                            ]}
-                        >
-                            20T Counterweight · Jib Extension
-                        </Text>
-                    </View>
-
-                    <View style={styles.vehicleRow}>
-                        <Text style={styles.vehicleCardLabel}>
-                            Shipping IDs
-                        </Text>
-                        <Text
-                            style={[
-                                styles.vehicleCardValue,
-                                isDarkHud && styles.darkVehicleCardValue,
-                            ]}
-                        >
-                            {activeJob?.reference || 'No Active Dispatch'}
-                        </Text>
-                    </View>
-
-                    {activeJob ? (
-                        <View style={styles.siteAccessRow}>
-                            <Icon
-                                name="location"
-                                size={14}
-                                color={colors.amberDark}
-                            />
-                            <Text
-                                numberOfLines={1}
-                                style={styles.siteAccessText}
-                            >
-                                {activeJob.site} — {activeJob.client}
-                            </Text>
-                        </View>
-                    ) : null}
-                </Pressable>
+                    ratedCapacity="50T All-Terrain"
+                />
 
                 {error ? (
                     <View style={styles.errorBox}>

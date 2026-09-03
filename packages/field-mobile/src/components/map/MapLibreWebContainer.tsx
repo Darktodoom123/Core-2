@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../nativeStyles';
 import type { RouteWaypoint } from './FieldRouteMapView';
@@ -11,6 +12,17 @@ export interface MapLibreWebContainerProps {
     waypoints?: RouteWaypoint[];
     styleVariant?: 'light' | 'dark';
     testID?: string;
+    style?: StyleProp<ViewStyle>;
+    apiKey?: string;
+}
+
+export function resolveStadiaApiKey(configuredKey?: string): string {
+    return (
+        configuredKey?.trim() ||
+        process.env.EXPO_PUBLIC_STADIA_MAPS_API_KEY?.trim() ||
+        process.env.VITE_STADIA_MAPS_API_KEY?.trim() ||
+        ''
+    );
 }
 
 // Safely resolve react-native-webview if available in native binary without throwing InvariantViolation
@@ -39,6 +51,8 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
     waypoints = [],
     styleVariant = 'dark',
     testID = 'maplibre-web-container',
+    style,
+    apiKey,
 }) => {
     const [selectedPin, setSelectedPin] = useState<string | null>(null);
 
@@ -55,10 +69,34 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 
     // Build self-contained MapLibre HTML template for WebView / Web
     const mapHtml = useMemo(() => {
-        const styleUrl =
-            styleVariant === 'dark'
-                ? 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json'
-                : 'https://tiles.stadiamaps.com/styles/alidade_smooth.json';
+        const resolvedKey = resolveStadiaApiKey(apiKey);
+        const styleUrl = resolvedKey
+            ? styleVariant === 'dark'
+                ? `https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json?api_key=${resolvedKey}`
+                : `https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=${resolvedKey}`
+            : '';
+
+        const osmFallbackStyleJson = JSON.stringify({
+            version: 8,
+            sources: {
+                'osm-tiles': {
+                    type: 'raster',
+                    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                    tileSize: 256,
+                    attribution:
+                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                },
+            },
+            layers: [
+                {
+                    id: 'osm-tiles-layer',
+                    type: 'raster',
+                    source: 'osm-tiles',
+                    minzoom: 0,
+                    maxzoom: 19,
+                },
+            ],
+        });
 
         const waypointsJson = JSON.stringify(waypoints);
         const routeCoordsJson = JSON.stringify(routeCoordinates);
@@ -80,13 +118,22 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         #map { width: 100%; height: 100%; }
+        ${
+            !resolvedKey && styleVariant === 'dark'
+                ? '.maplibregl-canvas { filter: invert(92%) hue-rotate(180deg) brightness(85%) contrast(115%); }'
+                : ''
+        }
         .marker { cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .marker-origin { width: 22px; height: 22px; background: #10b981; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-        .marker-dest { width: 24px; height: 24px; background: #2563eb; border: 2px solid #ffffff; border-radius: 50%; font-size: 13px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-        .marker-wp { width: 18px; height: 18px; background: #3b82f6; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .marker-hazard { width: 20px; height: 20px; background: #ef4444; border: 2px solid #ffffff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(239,68,68,0.5); }
+        .marker-origin { width: 24px; height: 24px; background: #10b981; border: 2.5px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.6); font-size: 11px; color: #fff; }
+        .marker-dest { width: 28px; height: 28px; background: #2563eb; border: 2.5px solid #ffffff; border-radius: 50%; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+        .marker-wp { width: 18px; height: 18px; background: #38bdf8; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .marker-hazard { width: 24px; height: 24px; background: #dc2626; border: 2px solid #ffffff; border-radius: 50%; font-size: 13px; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,0.7); }
+        .marker-vehicle { width: 40px; height: 40px; position: relative; }
+        .vehicle-pulse { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(14, 165, 233, 0.4); animation: pulse 2s infinite ease-out; }
+        .vehicle-arrow { width: 24px; height: 24px; border-radius: 50%; background: #0284c7; border: 2.5px solid #ffffff; color: #ffffff; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.7); z-index: 2; transform: rotate(30deg); }
+        @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.8); opacity: 0; } }
         .maplibregl-popup-content { background: #1e293b; color: #ffffff; padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #1e293b; }
         .maplibregl-ctrl-attrib { display: none; }
@@ -103,9 +150,11 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 
             const map = new maplibregl.Map({
                 container: 'map',
-                style: '${styleUrl}',
+                style: ${resolvedKey ? `'${styleUrl}'` : osmFallbackStyleJson},
                 center: origin.coords,
                 zoom: 12,
+                pitch: 45,
+                bearing: -15,
                 attributionControl: false
             });
 
@@ -130,9 +179,9 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     source: 'route',
                     layout: { 'line-join': 'round', 'line-cap': 'round' },
                     paint: {
-                        'line-color': '#60a5fa',
-                        'line-width': 7,
-                        'line-opacity': 0.35
+                        'line-color': '#0ea5e9',
+                        'line-width': 8,
+                        'line-opacity': 0.4
                     }
                 });
 
@@ -142,10 +191,18 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     source: 'route',
                     layout: { 'line-join': 'round', 'line-cap': 'round' },
                     paint: {
-                        'line-color': '#2563eb',
-                        'line-width': 3.5
+                        'line-color': '#38bdf8',
+                        'line-width': 4
                     }
                 });
+
+                // Live Vehicle navigation arrow
+                const vehicleEl = document.createElement('div');
+                vehicleEl.className = 'marker marker-vehicle';
+                vehicleEl.innerHTML = '<div class="vehicle-pulse"></div><div class="vehicle-arrow">▲</div>';
+                new maplibregl.Marker({ element: vehicleEl })
+                    .setLngLat(origin.coords)
+                    .addTo(map);
 
                 const originEl = document.createElement('div');
                 originEl.className = 'marker marker-origin';
@@ -178,7 +235,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 
                 if (routeCoords.length > 0) {
                     const bounds = routeCoords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
-                    map.fitBounds(bounds, { padding: 36, maxZoom: 14 });
+                    map.fitBounds(bounds, { padding: 48, maxZoom: 14 });
                 }
             });
         } catch (e) {
@@ -196,12 +253,13 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
         destinationCoords,
         waypoints,
         routeCoordinates,
+        apiKey,
     ]);
 
     // On Native with WebView: render WebView safely if available in binary
     if (Platform.OS !== 'web' && SafeNativeWebView) {
         return (
-            <View style={styles.container} testID={testID}>
+            <View style={[styles.container, style]} testID={testID}>
                 <SafeNativeWebView
                     domStorageEnabled
                     javaScriptEnabled
@@ -218,7 +276,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
         const IframeComponent = 'iframe' as any;
 
         return (
-            <View style={styles.container} testID={testID}>
+            <View style={[styles.container, style]} testID={testID}>
                 <IframeComponent
                     aria-label="MapLibre Route View"
                     srcDoc={mapHtml}
@@ -231,7 +289,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 
     // Fallback Native Vector Interactive Canvas (for native mobile without WebView bridge)
     return (
-        <View style={styles.container} testID={testID}>
+        <View style={[styles.container, style]} testID={testID}>
             <View style={styles.fallbackHeader}>
                 <View style={styles.liveBadge}>
                     <View style={styles.liveDot} />
@@ -330,7 +388,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        height: 260,
+        minHeight: 260,
         backgroundColor: '#0f172a',
         borderRadius: 12,
         overflow: 'hidden',
