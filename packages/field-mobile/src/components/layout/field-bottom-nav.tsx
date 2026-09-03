@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         paddingHorizontal: 16,
+        paddingTop: 18,
         pointerEvents: 'box-none',
         position: 'absolute',
         right: 0,
@@ -129,6 +130,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         maxWidth: 440,
+        overflow: 'visible',
         paddingHorizontal: 10,
         paddingVertical: 6,
         width: '100%',
@@ -158,7 +160,8 @@ const styles = StyleSheet.create({
     sosItem: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 4,
+        overflow: 'visible',
+        paddingHorizontal: 6,
     },
     indicator: {
         alignItems: 'center',
