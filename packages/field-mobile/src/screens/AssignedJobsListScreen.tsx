@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 36,
+        paddingBottom: 110,
         width: '100%',
     },
     dutyStatusBar: {

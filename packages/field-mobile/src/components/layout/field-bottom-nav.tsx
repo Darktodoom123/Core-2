@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
 import type { IconName } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
@@ -32,109 +33,138 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
+    const { isDarkHud } = useTheme();
 
     return (
         <View
-            accessibilityLabel="Field mobile navigation"
+            pointerEvents="box-none"
             style={[
-                styles.container,
-                { paddingBottom: Math.max(10, bottomInset) },
+                styles.floatingWrapper,
+                { paddingBottom: Math.max(16, bottomInset + 4) },
             ]}
-            testID="bottom-nav-bar"
         >
-            {items.map(({ id, label, iconName }) => {
-                const selected = activeItem === id;
+            <View
+                accessibilityLabel="Field mobile navigation"
+                style={[
+                    styles.container,
+                    isDarkHud && styles.darkContainer,
+                ]}
+                testID="bottom-nav-bar"
+            >
+                {items.map(({ id, label, iconName }) => {
+                    const selected = activeItem === id;
 
-                return (
-                    <React.Fragment key={id}>
-                        {id === 'profile' ? (
-                            <View style={styles.sosItem}>
-                                <EmergencySosButton
-                                    disabled={sosDisabled}
-                                    onHoldComplete={onSosHoldComplete}
-                                />
-                            </View>
-                        ) : null}
-                        <Pressable
-                            accessibilityLabel={label}
-                            accessibilityRole="tab"
-                            accessibilityState={{ selected }}
-                            onPress={() => onSelect(id)}
-                            style={({ pressed }) => [
-                                styles.item,
-                                pressed && styles.pressed,
-                            ]}
-                            testID={`bottom-nav-${id}`}
-                        >
-                            <View
-                                style={[
-                                    styles.indicator,
-                                    selected && styles.indicatorSelected,
+                    return (
+                        <React.Fragment key={id}>
+                            {id === 'profile' ? (
+                                <View style={styles.sosItem}>
+                                    <EmergencySosButton
+                                        disabled={sosDisabled}
+                                        onHoldComplete={onSosHoldComplete}
+                                    />
+                                </View>
+                            ) : null}
+                            <Pressable
+                                accessibilityLabel={label}
+                                accessibilityRole="tab"
+                                accessibilityState={{ selected }}
+                                onPress={() => onSelect(id)}
+                                style={({ pressed }) => [
+                                    styles.item,
+                                    selected && styles.itemSelected,
+                                    isDarkHud && selected && styles.darkItemSelected,
+                                    pressed && styles.pressed,
                                 ]}
+                                testID={`bottom-nav-${id}`}
                             >
-                                <Icon
-                                    name={iconName}
-                                    size={22}
-                                    color={
-                                        selected
-                                            ? colors.primaryDark
-                                            : colors.secondary
-                                    }
-                                />
-                            </View>
-                            <Text
-                                style={[
-                                    styles.label,
-                                    selected && styles.labelSelected,
-                                ]}
-                            >
-                                {label}
-                            </Text>
-                        </Pressable>
-                    </React.Fragment>
-                );
-            })}
+                                <View style={styles.indicator}>
+                                    <Icon
+                                        name={iconName}
+                                        size={20}
+                                        color={
+                                            selected
+                                                ? (isDarkHud ? '#60A5FA' : colors.primaryDark)
+                                                : (isDarkHud ? '#94A3B8' : colors.secondary)
+                                        }
+                                    />
+                                </View>
+                                <Text
+                                    style={[
+                                        styles.label,
+                                        selected && styles.labelSelected,
+                                        isDarkHud &&
+                                            (selected
+                                                ? styles.darkLabelSelected
+                                                : styles.darkLabel),
+                                    ]}
+                                >
+                                    {label}
+                                </Text>
+                            </Pressable>
+                        </React.Fragment>
+                    );
+                })}
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    floatingWrapper: {
+        alignItems: 'center',
+        bottom: 0,
+        left: 0,
+        paddingHorizontal: 16,
+        pointerEvents: 'box-none',
+        position: 'absolute',
+        right: 0,
+        zIndex: 100,
+    },
     container: {
         alignItems: 'center',
         backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderTopWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.95)',
+        borderRadius: 36,
+        borderWidth: 1,
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingHorizontal: 16,
-        paddingTop: 8,
+        justifyContent: 'space-between',
+        maxWidth: 440,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
         width: '100%',
         ...shadows.lg,
+        elevation: 10,
+    },
+    darkContainer: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
     },
     item: {
         alignItems: 'center',
+        borderRadius: 22,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 52,
-        paddingVertical: 4,
+        marginHorizontal: 2,
+        minHeight: 48,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    itemSelected: {
+        backgroundColor: colors.primaryLight,
+    },
+    darkItemSelected: {
+        backgroundColor: 'rgba(56, 189, 248, 0.14)',
     },
     sosItem: {
         alignItems: 'center',
-        flex: 1,
         justifyContent: 'center',
-        paddingVertical: 4,
+        paddingHorizontal: 4,
     },
     indicator: {
         alignItems: 'center',
-        borderRadius: 20,
-        height: 32,
+        height: 22,
         justifyContent: 'center',
         marginBottom: 2,
-        minWidth: 52,
-        paddingHorizontal: 10,
-    },
-    indicatorSelected: {
-        backgroundColor: colors.primarySoft,
     },
     label: {
         color: colors.secondary,
@@ -147,8 +177,14 @@ const styles = StyleSheet.create({
         color: colors.primaryDark,
         fontWeight: '700',
     },
+    darkLabel: {
+        color: '#94A3B8',
+    },
+    darkLabelSelected: {
+        color: '#60A5FA',
+    },
     pressed: {
-        opacity: 0.7,
+        opacity: 0.75,
         transform: [{ scale: 0.96 }],
     },
 });

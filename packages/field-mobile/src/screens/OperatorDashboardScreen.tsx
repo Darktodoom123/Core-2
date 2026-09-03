@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 14,
-        paddingBottom: 36,
+        paddingBottom: 110,
         width: '100%',
     },
     topIdentityBar: {
