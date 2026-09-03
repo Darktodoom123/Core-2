@@ -36,7 +36,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
                 'email_verified_at' => Carbon::now(),
             ]
         );
-        $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+        $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
 
         PersonnelCredential::query()->firstOrCreate(
             ['credential_number' => 'DOLE-BWC-SO3-2023-4412'],
@@ -61,7 +61,7 @@ final class PhilippineSafetyOperationsSeeder extends Seeder
                 'email_verified_at' => Carbon::now(),
             ]
         );
-        $foreman->syncRoles([RoleName::FieldForeman->value]);
+        $foreman->syncRoles([RoleName::CraneOperator->value]);
 
         PersonnelCredential::query()->firstOrCreate(
             ['credential_number' => 'TESDA-RIG-2024-9912'],

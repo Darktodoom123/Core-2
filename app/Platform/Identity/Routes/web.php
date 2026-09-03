@@ -49,12 +49,10 @@ if (app()->environment(['local', 'testing'])) {
                 ->whereIn('email', [
                     'admin@example.com',
                     'manager@example.com',
-                    'so.morales@core2.ph',
                 ])
                 ->role([
                     RoleName::SystemAdministrator->value,
                     RoleName::OperationsManager->value,
-                    RoleName::SafetyOfficer->value,
                 ])
                 ->with('roles')
                 ->select('id', 'name', 'email')
@@ -81,12 +79,10 @@ if (app()->environment(['local', 'testing'])) {
             && in_array($user->email, [
                 'admin@example.com',
                 'manager@example.com',
-                'so.morales@core2.ph',
             ], true)
             && $user->hasAnyRole([
                 RoleName::SystemAdministrator->value,
                 RoleName::OperationsManager->value,
-                RoleName::SafetyOfficer->value,
             ]),
             404,
         );

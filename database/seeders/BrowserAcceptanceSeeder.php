@@ -50,8 +50,8 @@ final class BrowserAcceptanceSeeder extends Seeder
         $admin = $this->user('Browser Admin', 'browser.admin@example.com', RoleName::SystemAdministrator);
         $manager = $this->user('Browser Manager', 'browser.manager@example.com', RoleName::OperationsManager);
         $operator = $this->user('Browser Crane Operator', 'browser.operator@example.com', RoleName::CraneOperator);
-        $safetyOfficer = $this->user('Browser Safety Officer', 'browser.safety@example.com', RoleName::SafetyOfficer);
-        $foreman = $this->user('Browser Field Foreman', 'browser.foreman@example.com', RoleName::FieldForeman);
+        $safetyOfficer = $this->user('Browser Safety Officer', 'browser.safety@example.com', RoleName::OperationsManager);
+        $foreman = $this->user('Browser Field Foreman', 'browser.foreman@example.com', RoleName::CraneOperator);
 
         PersonnelCredential::query()->create([
             'user_id' => $safetyOfficer->id,

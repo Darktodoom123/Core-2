@@ -375,6 +375,7 @@ describe('DvirScreen Component & Workflows', () => {
             if (init?.method === 'POST') {
                 capturedUrl = String(url);
                 capturedBody = JSON.parse(init.body);
+
                 return {
                     ok: true,
                     status: 201,
@@ -399,6 +400,7 @@ describe('DvirScreen Component & Workflows', () => {
                         }),
                 };
             }
+
             return {
                 ok: true,
                 status: 200,

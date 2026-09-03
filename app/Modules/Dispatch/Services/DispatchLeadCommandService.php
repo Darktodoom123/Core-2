@@ -122,7 +122,7 @@ final class DispatchLeadCommandService
             return false;
         }
         $roleOkay = match ($assignmentType) {
-            'crane_operator', 'operator', 'lead', 'foreman', 'driver' => $user->hasRole(RoleName::CraneOperator->value) || $user->hasRole(RoleName::FieldForeman->value),
+            'crane_operator', 'operator', 'lead', 'foreman', 'driver' => $user->hasRole(RoleName::CraneOperator->value),
             default => false,
         };
         if (! $roleOkay) {

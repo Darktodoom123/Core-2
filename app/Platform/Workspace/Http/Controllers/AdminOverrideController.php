@@ -104,7 +104,7 @@ final class AdminOverrideController extends Controller
         $actor = $request->user();
         abort_unless(
             $actor->hasRole(RoleName::SystemAdministrator->value)
-            || $actor->hasRole(RoleName::SafetyOfficer->value)
+            || $actor->hasRole(RoleName::OperationsManager->value)
             || $actor->can(PermissionName::SystemConfigure->value),
             403
         );

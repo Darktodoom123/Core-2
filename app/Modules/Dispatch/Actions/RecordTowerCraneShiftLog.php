@@ -31,11 +31,11 @@ final class RecordTowerCraneShiftLog
     public function handle(User $operator, array $data): TowerCraneShiftLog
     {
         $hasQualifiedRole = $operator->hasRole(RoleName::CraneOperator->value)
-            || $operator->hasRole(RoleName::FieldForeman->value);
+            || $operator->hasRole(RoleName::OperationsManager->value);
 
         if (! $hasQualifiedRole) {
             throw ValidationException::withMessages([
-                'operator_id' => 'User must have an operator or foreman role to record a tower crane shift log.',
+                'operator_id' => 'User must have an operator or manager role to record a tower crane shift log.',
             ]);
         }
 

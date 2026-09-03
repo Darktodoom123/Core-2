@@ -11,7 +11,7 @@ final class SosIncidentPolicy
 {
     public function trigger(User $user): bool
     {
-        return in_array($user->operationalRole(), [RoleName::CraneOperator, RoleName::FieldForeman], true)
+        return $user->operationalRole() === RoleName::CraneOperator
             && $user->can(PermissionName::SosTrigger->value);
     }
 
@@ -28,7 +28,7 @@ final class SosIncidentPolicy
 
     public function respond(User $user, SosIncident $incident): bool
     {
-        return in_array($user->operationalRole(), [RoleName::OperationsManager, RoleName::SafetyOfficer], true)
+        return in_array($user->operationalRole(), [RoleName::OperationsManager, RoleName::SystemAdministrator], true)
             && $user->can(PermissionName::SosRespond->value)
             && $this->view($user, $incident);
     }

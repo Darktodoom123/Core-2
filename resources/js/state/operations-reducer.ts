@@ -36,8 +36,6 @@ export const defaultSectionForRole: Record<UserRole, AppSection> = {
     manager: 'board',
     driver: 'today',
     operator: 'today',
-    foreman: 'today',
-    safety_officer: 'today',
 };
 
 export function createInitialState(

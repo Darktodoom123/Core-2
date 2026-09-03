@@ -116,12 +116,12 @@ it('allows assigning a certified rigger to a dispatch job', function (): void {
 });
 
 it('calculates gross load weight, deductions, and load moment ton-meters in critical lift plans', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $action = app(CreateCriticalLiftPlan::class);
 
-    $plan = $action->handle($foreman, [
+    $plan = $action->handle($operator, [
         'project_site' => 'Makati CBD Tower 3',
         'rigger_tesda_nc_number' => 'TESDA-NC2-RIG-1029',
         'net_load_weight_tons' => 12.0,
@@ -147,12 +147,12 @@ it('calculates gross load weight, deductions, and load moment ton-meters in crit
 });
 
 it('rejects critical lift plans exceeding DOLE statutory 95% capacity limit', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $action = app(CreateCriticalLiftPlan::class);
 
-    expect(fn () => $action->handle($foreman, [
+    expect(fn () => $action->handle($operator, [
         'project_site' => 'Pasig River Bridge',
         'rigger_tesda_nc_number' => 'TESDA-NC2-RIG-9900',
         'net_load_weight_tons' => 19.5,

@@ -15,9 +15,9 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('allows Field Foreman to submit a daily DOLE Toolbox Meeting with attendee roster', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo']);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+it('allows Crane Operator to submit a daily DOLE Toolbox Meeting with attendee roster', function (): void {
+    $foreman = User::factory()->create(['name' => 'Operator Carlo']);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
     $token = $foreman->createToken('Mobile')->plainTextToken;
 
     $payload = [
@@ -42,12 +42,12 @@ it('allows Field Foreman to submit a daily DOLE Toolbox Meeting with attendee ro
         ->and($meeting->safety_officer_signed_at)->toBeNull();
 });
 
-it('allows Safety Officer to co-sign a submitted Toolbox Meeting', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo']);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+it('allows Operations Manager to co-sign a submitted Toolbox Meeting', function (): void {
+    $foreman = User::factory()->create(['name' => 'Operator Carlo']);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
 
-    $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales (SO-3)']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales (Ops Mgr)']);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     $meeting = ToolboxMeeting::query()->create([
@@ -56,7 +56,7 @@ it('allows Safety Officer to co-sign a submitted Toolbox Meeting', function (): 
         'topic_title' => 'DOLE D.O. 13: Critical Lifting Clearance',
         'topic_category' => 'Lifting & Rigging',
         'conductor_id' => $foreman->id,
-        'conductor_role' => 'Field Foreman',
+        'conductor_role' => 'Operator',
         'attendee_ids' => ['op-101', 'rig-202'],
         'attendee_count' => 2,
     ]);
@@ -69,13 +69,13 @@ it('allows Safety Officer to co-sign a submitted Toolbox Meeting', function (): 
         ->and($meeting->fresh()->safety_officer_signed_at)->not->toBeNull();
 });
 
-it('allows Field Foreman to create a Critical Lift Plan and Safety Officer to authorize it', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Dave']);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+it('allows Crane Operator to create a Critical Lift Plan and Operations Manager to authorize it', function (): void {
+    $foreman = User::factory()->create(['name' => 'Operator Dave']);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
     $foremanToken = $foreman->createToken('Mobile')->plainTextToken;
 
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer John']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager John']);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     $payload = [
@@ -109,9 +109,9 @@ it('allows Field Foreman to create a Critical Lift Plan and Safety Officer to au
         ->and($plan->fresh()->safety_officer_id)->toBe($safetyOfficer->id);
 });
 
-it('allows Safety Officer to issue and lift a statutory Work Stoppage Order', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer John', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+it('allows Operations Manager to issue and lift a statutory Work Stoppage Order', function (): void {
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager John', 'is_active' => true]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     // 1. Issue Work Stoppage
@@ -141,12 +141,12 @@ it('allows Safety Officer to issue and lift a statutory Work Stoppage Order', fu
 });
 
 it('logs site hazard tickets and tracks rectification', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Dave', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $foreman = User::factory()->create(['name' => 'Operator Dave', 'is_active' => true]);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
     $foremanToken = $foreman->createToken('Mobile')->plainTextToken;
 
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer John', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager John', 'is_active' => true]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     $hazardPayload = [
@@ -175,12 +175,12 @@ it('logs site hazard tickets and tracks rectification', function (): void {
         ->and($ticket->fresh()->rectified_by)->toBe($safetyOfficer->id);
 });
 
-it('allows Safety Officer to reject an unsafe Critical Lift Plan with a mandatory condition note', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Dave', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+it('allows Operations Manager to reject an unsafe Critical Lift Plan with a mandatory condition note', function (): void {
+    $foreman = User::factory()->create(['name' => 'Operator Dave', 'is_active' => true]);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
 
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer John', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager John', 'is_active' => true]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     $plan = CriticalLiftPlan::query()->create([
@@ -245,8 +245,8 @@ it('enforces RBAC preventing Crane Operators from approving lift plans or issuin
 });
 
 it('provides index endpoints for hazards and critical lift plans', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager']);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     SiteHazardTicket::query()->create([
@@ -288,8 +288,8 @@ it('provides index endpoints for hazards and critical lift plans', function (): 
 });
 
 it('computes dynamic safety metrics aggregating TBM attendees and stoppage state', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer = User::factory()->create(['name' => 'Operations Manager']);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
     $soToken = $safetyOfficer->createToken('SafetyDesk')->plainTextToken;
 
     ToolboxMeeting::query()->create([
@@ -298,7 +298,7 @@ it('computes dynamic safety metrics aggregating TBM attendees and stoppage state
         'topic_title' => 'Electrical clearance',
         'topic_category' => 'Site Environment',
         'conductor_id' => $safetyOfficer->id,
-        'conductor_role' => 'Safety Officer',
+        'conductor_role' => 'Operations Manager',
         'attendee_ids' => ['u1', 'u2', 'u3', 'u4', 'u5'],
         'attendee_count' => 5,
         'audit_hash' => 'dummy-hash',

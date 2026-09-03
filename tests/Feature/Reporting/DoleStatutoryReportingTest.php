@@ -20,14 +20,14 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
-it('exports DOLE WAIR accident and incident records for Safety Officers', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+it('exports DOLE WAIR accident and incident records for Operations Managers', function (): void {
+    $manager = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
     SiteHazardTicket::query()->create([
         'ticket_code' => 'HAZ-2026-901',
         'project_site' => 'Makati Skysuites Tower',
-        'reporter_id' => $safetyOfficer->id,
+        'reporter_id' => $manager->id,
         'category' => 'rigging_tackle',
         'severity' => 'imminent_danger',
         'description' => 'Damaged 30T wire rope sling strand parted during pre-lift inspection.',
@@ -40,10 +40,10 @@ it('exports DOLE WAIR accident and incident records for Safety Officers', functi
     $catalog = app(ReportExportCatalog::class);
     $dataset = $catalog->dataset(ReportExportType::DoleWair);
 
-    expect($dataset->authorize($safetyOfficer))->toBeTrue();
+    expect($dataset->authorize($manager))->toBeTrue();
     expect($dataset->headers())->toContain('Ticket Code', 'Severity Level', 'Work Stoppage Triggered');
 
-    $rows = iterator_to_array($dataset->rows($safetyOfficer, []));
+    $rows = iterator_to_array($dataset->rows($manager, []));
     expect($rows)->toHaveCount(1);
     expect($rows[0][0])->toBe('HAZ-2026-901');
     expect($rows[0][3])->toBe('IMMINENT DANGER');
@@ -51,22 +51,22 @@ it('exports DOLE WAIR accident and incident records for Safety Officers', functi
 });
 
 it('exports DOLE D.O. 13 CSHP Safe Man-Hours and Toolbox Meeting compliance audit', function (): void {
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
-    $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $manager = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
     ToolboxMeeting::query()->create([
         'project_site' => 'BGC High Street Tower',
         'topic_id' => 'TBM-TOPIC-HEIGHTS',
         'topic_title' => 'Working at Heights & Dual Lanyard 100% Tie-Off',
         'topic_category' => 'fall_protection',
-        'conductor_id' => $foreman->id,
-        'conductor_role' => 'Field Foreman',
+        'conductor_id' => $operator->id,
+        'conductor_role' => 'Operator',
         'attendee_ids' => ['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8', 'w9', 'w10', 'w11', 'w12'],
         'attendee_count' => 12,
-        'safety_officer_id' => $safetyOfficer->id,
+        'safety_officer_id' => $manager->id,
         'safety_officer_signed_at' => now(),
         'audit_hash' => 'PH-DOLE-CSHP-2026-TBM-8801-VALID',
     ]);
@@ -74,10 +74,10 @@ it('exports DOLE D.O. 13 CSHP Safe Man-Hours and Toolbox Meeting compliance audi
     $catalog = app(ReportExportCatalog::class);
     $dataset = $catalog->dataset(ReportExportType::CshpSafeManHours);
 
-    expect($dataset->authorize($foreman))->toBeTrue();
-    expect($dataset->authorize($safetyOfficer))->toBeTrue();
+    expect($dataset->authorize($operator))->toBeTrue();
+    expect($dataset->authorize($manager))->toBeTrue();
 
-    $rows = iterator_to_array($dataset->rows($safetyOfficer, []));
+    $rows = iterator_to_array($dataset->rows($manager, []));
     expect($rows)->toHaveCount(1);
     expect($rows[0][0])->toBe('PH-DOLE-CSHP-2026-TBM-8801-VALID');
     expect($rows[0][3])->toBe(12);
@@ -85,12 +85,12 @@ it('exports DOLE D.O. 13 CSHP Safe Man-Hours and Toolbox Meeting compliance audi
     expect($rows[0][7])->toBe('PH-DOLE-CSHP-2026-TBM-8801-VALID');
 });
 
-it('exports Daily Accomplishment Reports (DAR) for Field Foremen and Operations Managers', function (): void {
+it('exports Daily Accomplishment Reports (DAR) for Crane Operators and Operations Managers', function (): void {
     $manager = User::factory()->create(['name' => 'Ops Manager Dave', 'is_active' => true]);
     $manager->syncRoles([RoleName::OperationsManager->value]);
 
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $operator = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $job = DispatchJob::query()->create([
         'reference' => 'DSP-DAR-001',
@@ -105,7 +105,7 @@ it('exports Daily Accomplishment Reports (DAR) for Field Foremen and Operations 
 
     JobReport::query()->create([
         'dispatch_job_id' => $job->id,
-        'author_id' => $foreman->id,
+        'author_id' => $operator->id,
         'status' => JobReportStatus::Submitted,
         'started_at' => now()->subHours(8),
         'ended_at' => now(),
@@ -117,7 +117,7 @@ it('exports Daily Accomplishment Reports (DAR) for Field Foremen and Operations 
     $dataset = $catalog->dataset(ReportExportType::DailyAccomplishment);
 
     expect($dataset->authorize($manager))->toBeTrue();
-    expect($dataset->authorize($foreman))->toBeTrue();
+    expect($dataset->authorize($operator))->toBeTrue();
 
     $rows = iterator_to_array($dataset->rows($manager, []));
     expect($rows)->toHaveCount(1);

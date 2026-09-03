@@ -108,8 +108,8 @@ it('allows system administrator to enforce safety recall lockdown on an operatio
 });
 
 it('denies emergency overrides to unauthorized roles', function (): void {
-    $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+    $operator = User::factory()->create();
+    $operator->syncRoles([RoleName::CraneOperator->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'CRANE-02',
@@ -118,22 +118,19 @@ it('denies emergency overrides to unauthorized roles', function (): void {
         'status' => AssetStatus::Available,
     ]);
 
-    $this->actingAs($dispatcher)
+    $this->actingAs($operator)
         ->postJson("/operations/admin/assets/{$asset->id}/safety-lockdown", [
             'reason' => 'Unauthorized attempt',
         ])
         ->assertForbidden();
 });
 
-it('exposes safety_lockdown_asset in workspace capabilities strictly to system admin, safety officer, or system configure permission', function (): void {
+it('exposes safety_lockdown_asset in workspace capabilities strictly to system admin, operations manager, or system configure permission', function (): void {
     $admin = User::factory()->create();
     $admin->syncRoles([RoleName::SystemAdministrator->value]);
 
-    $safetyOfficer = User::factory()->create();
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
-
-    $dispatcher = User::factory()->create();
-    $dispatcher->syncRoles([RoleName::OperationsManager->value]);
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
     $driver = User::factory()->create();
     $driver->syncRoles([RoleName::CraneOperator->value]);
@@ -142,9 +139,8 @@ it('exposes safety_lockdown_asset in workspace capabilities strictly to system a
     $customUser->givePermissionTo(PermissionName::SystemConfigure->value);
 
     expect(OperationsWorkspaceViewModel::capabilities($admin)['safety_lockdown_asset'])->toBeTrue();
-    expect(OperationsWorkspaceViewModel::capabilities($safetyOfficer)['safety_lockdown_asset'])->toBeTrue();
+    expect(OperationsWorkspaceViewModel::capabilities($manager)['safety_lockdown_asset'])->toBeTrue();
     expect(OperationsWorkspaceViewModel::capabilities($customUser)['safety_lockdown_asset'])->toBeTrue();
-    expect(OperationsWorkspaceViewModel::capabilities($dispatcher)['safety_lockdown_asset'])->toBeFalse();
     expect(OperationsWorkspaceViewModel::capabilities($driver)['safety_lockdown_asset'])->toBeFalse();
 
     $this->actingAs($admin)
@@ -155,7 +151,7 @@ it('exposes safety_lockdown_asset in workspace capabilities strictly to system a
             ->where('capabilities.safety_lockdown_asset', true)
         );
 
-    $this->actingAs($dispatcher)
+    $this->actingAs($driver)
         ->get('/operations?section=assets')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page

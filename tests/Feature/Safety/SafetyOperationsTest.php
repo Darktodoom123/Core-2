@@ -25,33 +25,28 @@ beforeEach(function (): void {
     Queue::fake();
 });
 
-it('provisions Safety Officer with the exact required permissions', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'Jane Safety']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
-
-    expect($safetyOfficer->hasRole(RoleName::SafetyOfficer->value))->toBeTrue()
-        ->and($safetyOfficer->operationalRole())->toBe(RoleName::SafetyOfficer)
-        ->and($safetyOfficer->can(PermissionName::SosView->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::SosRespond->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::TrackingViewAll->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::FleetInspect->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::EquipmentInspect->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::DispatchViewAll->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::ReportsViewAll->value))->toBeTrue()
-        ->and($safetyOfficer->can(PermissionName::AuditView->value))->toBeFalse()
-        ->and($safetyOfficer->can(PermissionName::FuelViewAll->value))->toBeFalse()
-        ->and($safetyOfficer->can(PermissionName::FuelRequest->value))->toBeFalse()
-        ->and($safetyOfficer->can(PermissionName::DispatchCreate->value))->toBeFalse()
-        ->and($safetyOfficer->can(PermissionName::SalesCreateQuote->value))->toBeFalse()
-        ->and($safetyOfficer->can(PermissionName::UsersManage->value))->toBeFalse();
-});
-
-it('includes active Safety Officers as recipients when an SOS alert is triggered', function (): void {
-    $manager = User::factory()->create(['name' => 'Ops Manager', 'is_active' => true, 'email_verified_at' => now()]);
+it('provisions Operations Manager with the safety governance permissions', function (): void {
+    $manager = User::factory()->create(['name' => 'Jane Operations Manager']);
     $manager->syncRoles([RoleName::OperationsManager->value]);
 
-    $safetyOfficer = User::factory()->create(['name' => 'Chief Safety Officer', 'is_active' => true, 'email_verified_at' => now()]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    expect($manager->hasRole(RoleName::OperationsManager->value))->toBeTrue()
+        ->and($manager->operationalRole())->toBe(RoleName::OperationsManager)
+        ->and($manager->can(PermissionName::SosView->value))->toBeTrue()
+        ->and($manager->can(PermissionName::SosRespond->value))->toBeTrue()
+        ->and($manager->can(PermissionName::TrackingViewAll->value))->toBeTrue()
+        ->and($manager->can(PermissionName::FleetInspect->value))->toBeTrue()
+        ->and($manager->can(PermissionName::EquipmentInspect->value))->toBeTrue()
+        ->and($manager->can(PermissionName::DispatchViewAll->value))->toBeTrue()
+        ->and($manager->can(PermissionName::ReportsViewAll->value))->toBeTrue()
+        ->and($manager->can(PermissionName::SafetyTbmCoSign->value))->toBeTrue()
+        ->and($manager->can(PermissionName::SafetyLiftPlanApprove->value))->toBeTrue()
+        ->and($manager->can(PermissionName::SafetyWorkStoppageIssue->value))->toBeTrue()
+        ->and($manager->can(PermissionName::SafetyWorkStoppageLift->value))->toBeTrue();
+});
+
+it('includes active Operations Managers as recipients when an SOS alert is triggered', function (): void {
+    $manager = User::factory()->create(['name' => 'Ops Manager', 'is_active' => true, 'email_verified_at' => now()]);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
     $worker = User::factory()->create(['name' => 'Field Crane Operator', 'is_active' => true, 'email_verified_at' => now()]);
     $worker->syncRoles([RoleName::CraneOperator->value]);
@@ -80,14 +75,13 @@ it('includes active Safety Officers as recipients when an SOS alert is triggered
     $recipients = $resolver->resolve($worker, $job);
 
     $recipientUserIds = $recipients->pluck('user.id')->all();
-    expect($recipientUserIds)->toContain($manager->id)
-        ->and($recipientUserIds)->toContain($safetyOfficer->id);
+    expect($recipientUserIds)->toContain($manager->id);
 
-    $safetyRecipient = $recipients->first(fn (array $item) => $item['user']->id === $safetyOfficer->id);
-    expect($safetyRecipient['resolution_reason'])->toBe('safety_officer');
+    $managerRecipient = $recipients->first(fn (array $item) => $item['user']->id === $manager->id);
+    expect($managerRecipient['resolution_reason'])->toBe('assignment_manager');
 });
 
-it('allows Safety Officer to acknowledge and resolve SOS emergency incidents', function (): void {
+it('allows Operations Manager to acknowledge and resolve SOS emergency incidents', function (): void {
     $worker = User::factory()->create(['name' => 'Field Worker', 'is_active' => true, 'email_verified_at' => now()]);
     $worker->syncRoles([RoleName::CraneOperator->value]);
     $token = $worker->createToken('Device')->plainTextToken;
@@ -100,17 +94,17 @@ it('allows Safety Officer to acknowledge and resolve SOS emergency incidents', f
 
     $incident = SosIncident::query()->sole();
 
-    $safetyOfficer = User::factory()->create(['name' => 'Safety Officer']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $manager = User::factory()->create(['name' => 'Operations Manager']);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
-    $this->actingAs($safetyOfficer)->postJson("/operations/sos-incidents/{$incident->id}/acknowledge")
+    $this->actingAs($manager)->postJson("/operations/sos-incidents/{$incident->id}/acknowledge")
         ->assertOk()
         ->assertJsonPath('data.status', 'acknowledged');
 
     expect($incident->fresh()->status)->toBe(SosIncidentStatus::Acknowledged)
-        ->and($incident->fresh()->acknowledged_by)->toBe($safetyOfficer->id);
+        ->and($incident->fresh()->acknowledged_by)->toBe($manager->id);
 
-    $this->actingAs($safetyOfficer)->postJson("/operations/sos-incidents/{$incident->id}/resolve", [
+    $this->actingAs($manager)->postJson("/operations/sos-incidents/{$incident->id}/resolve", [
         'resolution_code' => 'asset_secured',
         'resolution_notes' => 'Load lowered to ground level safely, crane boom locked out, no injuries.',
     ])->assertOk()
@@ -120,9 +114,9 @@ it('allows Safety Officer to acknowledge and resolve SOS emergency incidents', f
         ->and($incident->fresh()->resolution_notes)->toBe('Load lowered to ground level safely, crane boom locked out, no injuries.');
 });
 
-it('allows Safety Officer to trigger an emergency safety lockdown on a compromised asset', function (): void {
-    $safetyOfficer = User::factory()->create(['name' => 'HSE Inspector']);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+it('allows Operations Manager to trigger an emergency safety lockdown on a compromised asset', function (): void {
+    $manager = User::factory()->create(['name' => 'Operations Manager']);
+    $manager->syncRoles([RoleName::OperationsManager->value]);
 
     $asset = OperationalAsset::query()->create([
         'code' => 'CRANE-LOTO-001',
@@ -131,7 +125,7 @@ it('allows Safety Officer to trigger an emergency safety lockdown on a compromis
         'status' => AssetStatus::Available,
     ]);
 
-    $this->actingAs($safetyOfficer)->postJson("/operations/admin/assets/{$asset->id}/safety-lockdown", [
+    $this->actingAs($manager)->postJson("/operations/admin/assets/{$asset->id}/safety-lockdown", [
         'reason' => 'Failed outrigger pressure test and hydraulic leak detected during pre-lift audit.',
     ])->assertOk()
         ->assertJsonPath('asset.status', AssetStatus::Unavailable->value);

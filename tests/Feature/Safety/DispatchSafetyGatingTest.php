@@ -30,8 +30,8 @@ function createReadyDispatchJob(string $site = 'Makati Sky Tower 2'): array
     $manager = User::factory()->create(['name' => 'Ops Manager', 'is_active' => true]);
     $manager->syncRoles([RoleName::OperationsManager->value]);
 
-    $foreman = User::factory()->create(['name' => 'Foreman Carlo', 'is_active' => true]);
-    $foreman->syncRoles([RoleName::FieldForeman->value]);
+    $foreman = User::factory()->create(['name' => 'Operator Carlo', 'is_active' => true]);
+    $foreman->syncRoles([RoleName::CraneOperator->value]);
 
     PersonnelCredential::query()->create([
         'user_id' => $foreman->id,
@@ -95,7 +95,7 @@ it('blocks dispatch activation when an active statutory Work Stoppage Order is i
     [$manager, $job] = createReadyDispatchJob('Makati Sky Tower 2');
 
     $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
 
     // 1. Active WSO on site
     WorkStoppageNotice::query()->create([
@@ -121,7 +121,7 @@ it('allows dispatch activation once the Safety Officer lifts the Work Stoppage O
     [$manager, $job] = createReadyDispatchJob('Makati Sky Tower 2');
 
     $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
 
     $wso = WorkStoppageNotice::query()->create([
         'notice_number' => 'WSO-2026-001',
@@ -176,7 +176,7 @@ it('blocks dispatch activation if a Critical Lift Plan is pending Safety Officer
 
     // 2. Safety Officer approves lift plan
     $safetyOfficer = User::factory()->create(['name' => 'Engr. Morales', 'is_active' => true]);
-    $safetyOfficer->syncRoles([RoleName::SafetyOfficer->value]);
+    $safetyOfficer->syncRoles([RoleName::OperationsManager->value]);
 
     $liftPlan->update([
         'status' => 'approved',

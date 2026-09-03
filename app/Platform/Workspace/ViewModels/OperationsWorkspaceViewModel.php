@@ -567,11 +567,6 @@ final class OperationsWorkspaceViewModel
                 ],
             ],
             [
-                'id' => 'users',
-                'label' => 'Users & roles',
-                'permissions' => [PermissionName::UsersManage],
-            ],
-            [
                 'id' => 'audit',
                 'label' => 'Audit trail',
                 'permissions' => [PermissionName::AuditView],
@@ -613,7 +608,7 @@ final class OperationsWorkspaceViewModel
             'update_assigned_dispatch_status' => $user->can(PermissionName::DispatchUpdateOwnStatus->value),
             'update_asset_status' => $user->can(PermissionName::FleetUpdateStatus->value) || $user->can(PermissionName::EquipmentUpdateStatus->value),
             'safety_lockdown_asset' => $user->hasRole(RoleName::SystemAdministrator->value)
-                || $user->hasRole(RoleName::SafetyOfficer->value)
+                || $user->hasRole(RoleName::OperationsManager->value)
                 || $user->can(PermissionName::SystemConfigure->value),
             'inspect_asset' => $user->can(PermissionName::FleetInspect->value) || $user->can(PermissionName::EquipmentInspect->value),
             'maintain_asset' => $user->can(PermissionName::FleetMaintain->value) || $user->can(PermissionName::EquipmentMaintain->value),

@@ -17,7 +17,6 @@ import {
     FuelManagement,
     ResourceDirectory,
 } from '@/components/surfaces/resource-surfaces';
-import { SafetyOfficerSurface } from '@/components/surfaces/safety-officer-surface';
 import { ToastStack } from '@/components/ui';
 import {
     createInitialState,
@@ -96,10 +95,6 @@ export default function Operations() {
     };
 
     const renderWebSurface = () => {
-        if (state.role === 'safety_officer') {
-            return <SafetyOfficerSurface />;
-        }
-
         if (state.role === 'administrator') {
             switch (state.section) {
                 case 'board':
@@ -392,7 +387,7 @@ export default function Operations() {
         }
     };
 
-    const fieldRole = ['driver', 'operator', 'foreman'].includes(state.role);
+    const fieldRole = ['driver', 'operator'].includes(state.role);
 
     return (
         <>

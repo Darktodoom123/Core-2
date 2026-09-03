@@ -19,12 +19,12 @@ import type {
     WalkaroundPhotosMap,
 } from '../components/inspection';
 import { colors } from '../components/nativeStyles';
+import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
 import type {
     DvirInspectionRecord,
     TechnicianInspectionCheck,
 } from '../types/index';
-import type { FieldApiClient } from '../services/apiClient';
 
 export interface DvirScreenProps {
     assetCode?: string;
@@ -96,17 +96,15 @@ const mapApiRecordToHistory = (record: any): DvirInspectionRecord => ({
     hasDefects: Boolean(record.has_defects),
     criticalDefectsCount: record.critical_defects_count ?? 0,
     checks: Array.isArray(record.checks)
-        ? record.checks.map(
-              (check: any): TechnicianInspectionCheck => ({
-                  id: String(check.id ?? ''),
-                  category: check.category,
-                  label: check.label,
-                  status: check.status,
-                  statusLabel: check.status_label ?? '',
-                  notes: check.notes ?? null,
-                  icon: '',
-              }),
-          )
+        ? record.checks.map((check: any): TechnicianInspectionCheck => ({
+              id: String(check.id ?? ''),
+              category: check.category,
+              label: check.label,
+              status: check.status,
+              statusLabel: check.status_label ?? '',
+              notes: check.notes ?? null,
+              icon: '',
+          }))
         : [],
     signatureCaptured: Boolean(record.signature_captured),
     remarks: record.remarks ?? null,
@@ -212,32 +210,39 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         }
 
         let cancelled = false;
-        setIsHistoryLoading(true);
 
-        apiClient
-            .fetchDvirInspections(30)
-            .then((res) => {
-                if (cancelled) {
-                    return;
-                }
-                if (Array.isArray(res?.inspections)) {
-                    setHistory(res.inspections.map(mapApiRecordToHistory));
-                    setSyncError(null);
-                }
-            })
-            .catch(() => {
-                if (cancelled) {
-                    return;
-                }
-                setSyncError(
-                    'DVIR history could not be loaded. Showing cached records.',
-                );
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setIsHistoryLoading(false);
-                }
-            });
+        const load = (): void => {
+            setIsHistoryLoading(true);
+
+            apiClient
+                .fetchDvirInspections(30)
+                .then((res) => {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    if (Array.isArray(res?.inspections)) {
+                        setHistory(res.inspections.map(mapApiRecordToHistory));
+                        setSyncError(null);
+                    }
+                })
+                .catch(() => {
+                    if (cancelled) {
+                        return;
+                    }
+
+                    setSyncError(
+                        'DVIR history could not be loaded. Showing cached records.',
+                    );
+                })
+                .finally(() => {
+                    if (!cancelled) {
+                        setIsHistoryLoading(false);
+                    }
+                });
+        };
+
+        queueMicrotask(load);
 
         return () => {
             cancelled = true;
@@ -439,11 +444,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     inspector_name: inspectorName,
                     starting_odometer_km:
                         record.type === 'pre_trip'
-                            ? record.startingOdometerKm ?? null
+                            ? (record.startingOdometerKm ?? null)
                             : null,
                     ending_odometer_km:
                         record.type === 'post_trip'
-                            ? record.endingOdometerKm ?? null
+                            ? (record.endingOdometerKm ?? null)
                             : null,
                     engine_hours: record.engineHours ?? null,
                     has_defects: record.hasDefects,
