@@ -372,7 +372,7 @@ function UnitViewButton({
                     : 'border-transparent text-ink-soft hover:border-line-strong hover:text-ink',
             )}
         >
-            {label}
+            <span className="text-xs whitespace-nowrap">{label}</span>
             <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-xs tabular-nums">
                 {count}
             </span>

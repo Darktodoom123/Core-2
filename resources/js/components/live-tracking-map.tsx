@@ -585,10 +585,11 @@ function TrackingMapContent({
                     pointFeature(toLngLat(location), {
                         color: freshnessColor(location.freshness_status),
                         id: location.id,
+                        selectedCount: location.id === selected?.id ? 1 : 0,
                     }),
                 ),
             ),
-        [locations],
+        [locations, selected?.id],
     );
 
     useEffect(() => {
@@ -614,6 +615,10 @@ function TrackingMapContent({
             cluster: true,
             clusterRadius: 44,
             clusterMaxZoom: 22,
+            maxzoom: 24,
+            clusterProperties: {
+                selectedCount: ['+', ['get', 'selectedCount']],
+            },
         });
         map.addLayer({
             id: 'tracking-marker-overview',
@@ -621,9 +626,34 @@ function TrackingMapContent({
             source: 'tracking-marker-overview',
             paint: {
                 'circle-color': ['coalesce', ['get', 'color'], '#475569'],
-                'circle-radius': ['case', ['has', 'point_count'], 20, 9],
-                'circle-stroke-color': '#ffffff',
-                'circle-stroke-width': 2,
+                'circle-radius': [
+                    'case',
+                    ['has', 'point_count'],
+                    [
+                        'case',
+                        ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
+                        22,
+                        20,
+                    ],
+                    [
+                        'case',
+                        ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
+                        12,
+                        9,
+                    ],
+                ],
+                'circle-stroke-color': [
+                    'case',
+                    ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
+                    '#c98f12',
+                    '#ffffff',
+                ],
+                'circle-stroke-width': [
+                    'case',
+                    ['>', ['coalesce', ['get', 'selectedCount'], 0], 0],
+                    3,
+                    2,
+                ],
                 'circle-opacity': 0.9,
             },
             layout: { visibility: 'none' },
@@ -803,6 +833,72 @@ function TrackingMapContent({
             });
         }
 
+        const getLargeFleetOverviewFeatureAt = (position: LngLat) => {
+            if (
+                useHtml ||
+                !overviewSourceRef.current ||
+                !map.getLayer('tracking-marker-overview')
+            ) {
+                return undefined;
+            }
+
+            return map
+                .queryRenderedFeatures(map.project(position), {
+                    layers: ['tracking-marker-overview'],
+                })
+                .find((candidate) => candidate.geometry.type === 'Point');
+        };
+
+        const getLargeFleetOverviewCountAt = (position: LngLat): number => {
+            const feature = getLargeFleetOverviewFeatureAt(position);
+
+            if (!feature) {
+                return 0;
+            }
+
+            const count = Number(feature.properties?.point_count);
+
+            return Number.isFinite(count) && count > 0 ? count : 1;
+        };
+
+        const getLargeFleetLocationsAt = async (
+            position: LngLat,
+        ): Promise<LocationUpdateViewModel[]> => {
+            const feature = getLargeFleetOverviewFeatureAt(position);
+            const overviewSource = overviewSourceRef.current;
+
+            if (!feature || !overviewSource) {
+                return [];
+            }
+
+            const clusterId = feature.properties?.cluster_id;
+            let locationIds: Set<number>;
+
+            if (typeof clusterId === 'number') {
+                const leaves = await overviewSource.getClusterLeaves(
+                    clusterId,
+                    locations.length,
+                    0,
+                );
+                locationIds = new Set(
+                    leaves
+                        .map((leaf) => Number(leaf.properties?.id))
+                        .filter(Number.isFinite),
+                );
+            } else {
+                const locationId = Number(feature.properties?.id);
+
+                if (!Number.isFinite(locationId)) {
+                    return [];
+                }
+
+                locationIds = new Set([locationId]);
+            }
+
+            return locations.filter((location) => locationIds.has(location.id));
+        };
+
+        let disposed = false;
         let signature = '';
         const renderMarkers = () => {
             const groups = groupOverlappingMarkers(
@@ -812,11 +908,39 @@ function TrackingMapContent({
                     ...map.project(entry.position),
                 })),
             );
+            const overviewCounts = groups.map((group) =>
+                useHtml ? 0 : getLargeFleetOverviewCountAt(group[0].position),
+            );
             const nextSignature = JSON.stringify(
                 groups.map((group) => group.map((entry) => entry.key)),
             );
 
             if (signature === nextSignature) {
+                if (!useHtml) {
+                    groups.forEach((group, groupIndex) => {
+                        const marker = markersRef.current[groupIndex];
+
+                        if (!marker) {
+                            return;
+                        }
+
+                        const overviewCount = overviewCounts[groupIndex];
+                        const markerCount = Math.max(
+                            group.length,
+                            overviewCount +
+                                group.filter(
+                                    (entry) => entry.locationId === undefined,
+                                ).length,
+                        );
+                        updateLargeFleetMarkerCount(
+                            marker.getElement(),
+                            markerCount,
+                            overviewCount > 0,
+                            Boolean(group[0].sos),
+                        );
+                    });
+                }
+
                 return;
             }
 
@@ -824,16 +948,33 @@ function TrackingMapContent({
             markersRef.current.forEach((marker) => marker.remove());
             markersRef.current = [];
 
-            for (const group of groups) {
+            groups.forEach((group, groupIndex) => {
                 // Use the exact anchor used for grouping; SOS entries were prioritized first.
                 const anchor = group[0];
+                const overviewCount = overviewCounts[groupIndex];
+                const markerCount = Math.max(
+                    group.length,
+                    overviewCount +
+                        group.filter((entry) => entry.locationId === undefined)
+                            .length,
+                );
                 const element =
                     group.length === 1
                         ? anchor.element()
                         : createMarkerGroup({
-                              count: group.length,
+                              count: useHtml ? group.length : markerCount,
                               sos: anchor.sos,
                           });
+
+                if (!useHtml) {
+                    updateLargeFleetMarkerCount(
+                        element,
+                        markerCount,
+                        overviewCount > 0,
+                        Boolean(anchor.sos),
+                    );
+                }
+
                 element.dataset.locationIds = group
                     .flatMap((entry) =>
                         entry.locationId === undefined
@@ -847,13 +988,23 @@ function TrackingMapContent({
                     offset: 24,
                     maxWidth: '320px',
                 });
-                const groupContent = () =>
-                    createTrackingGroupPopup(
+                let popupGeneration = 0;
+                const groupContent = (
+                    entriesForPopup: Array<{
+                        label: string;
+                        description: string;
+                        hasSos: boolean;
+                        onSelect: () => void;
+                    }>,
+                ) => createTrackingGroupPopup(entriesForPopup);
+                const baseGroupContent = () =>
+                    groupContent(
                         group.map((entry) => ({
                             label: entry.label,
                             description: entry.description,
                             hasSos: Boolean(entry.sos),
                             onSelect: () => {
+                                popupGeneration += 1;
                                 popup.setDOMContent(entry.content());
 
                                 if (entry.locationId !== undefined) {
@@ -862,14 +1013,121 @@ function TrackingMapContent({
                             },
                         })),
                     );
+                const showLargeFleetOverlap = async () => {
+                    const generation = ++popupGeneration;
+                    let members: LocationUpdateViewModel[];
+
+                    try {
+                        members = await getLargeFleetLocationsAt(
+                            anchor.position,
+                        );
+                    } catch {
+                        if (!disposed && generation === popupGeneration) {
+                            const message = document.createElement('p');
+                            message.className = 'maplibre-tracking-group';
+                            message.textContent =
+                                'This group changed. Select a unit from the synchronized list or try again.';
+                            popup.setDOMContent(message);
+                        }
+
+                        return;
+                    }
+
+                    if (
+                        disposed ||
+                        generation !== popupGeneration ||
+                        members.length === 0
+                    ) {
+                        return;
+                    }
+
+                    const memberIds = new Set(
+                        members.map((member) => member.id),
+                    );
+                    const locationEntries = members.map((location) => {
+                        const incident = findSosIncidentForLocation(
+                            location,
+                            activeSosIncidents,
+                        );
+
+                        return {
+                            label: trackingUnitLabel(location),
+                            description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
+                            hasSos: Boolean(incident),
+                            onSelect: () => {
+                                popupGeneration += 1;
+                                popup.setDOMContent(
+                                    createTrackingLocationPopup(
+                                        location,
+                                        incident,
+                                        (button) =>
+                                            void onCopyCoordinates(
+                                                location,
+                                                button,
+                                            ),
+                                    ),
+                                );
+                                onSelect(location.id);
+                            },
+                        };
+                    });
+                    const remainingSosEntries = group
+                        .filter(
+                            (entry) =>
+                                entry.locationId === undefined ||
+                                !memberIds.has(entry.locationId),
+                        )
+                        .map((entry) => ({
+                            label: entry.label,
+                            description: entry.description,
+                            hasSos: true,
+                            onSelect: () => {
+                                popupGeneration += 1;
+                                popup.setDOMContent(entry.content());
+
+                                if (entry.locationId !== undefined) {
+                                    onSelect(entry.locationId);
+                                }
+                            },
+                        }));
+                    const mergedEntries = [
+                        ...locationEntries,
+                        ...remainingSosEntries,
+                    ];
+
+                    if (mergedEntries.length === 1 && members.length === 1) {
+                        const location = members[0];
+                        popup.setDOMContent(
+                            createTrackingLocationPopup(
+                                location,
+                                findSosIncidentForLocation(
+                                    location,
+                                    activeSosIncidents,
+                                ),
+                                (button) =>
+                                    void onCopyCoordinates(location, button),
+                            ),
+                        );
+
+                        return;
+                    }
+
+                    popup.setDOMContent(groupContent(mergedEntries));
+                };
                 popup.setDOMContent(
-                    group.length === 1 ? anchor.content() : groupContent(),
+                    group.length === 1 ? anchor.content() : baseGroupContent(),
                 );
                 element.addEventListener('click', () => {
                     // Reopening a group always exposes every member, including identical coordinates.
                     popup.setDOMContent(
-                        group.length === 1 ? anchor.content() : groupContent(),
+                        group.length === 1
+                            ? anchor.content()
+                            : baseGroupContent(),
                     );
+
+                    if (!useHtml) {
+                        void showLargeFleetOverlap();
+                    }
 
                     if (group.length === 1 && anchor.locationId !== undefined) {
                         onSelect(anchor.locationId);
@@ -881,7 +1139,7 @@ function TrackingMapContent({
                         .setPopup(popup)
                         .addTo(map),
                 );
-            }
+            });
 
             updateMarkerSelection(
                 markersRef.current,
@@ -890,9 +1148,12 @@ function TrackingMapContent({
         };
         renderMarkers();
         map.on('moveend', renderMarkers);
+        map.on('idle', renderMarkers);
 
         return () => {
+            disposed = true;
             map.off('moveend', renderMarkers);
+            map.off('idle', renderMarkers);
             markersRef.current.forEach((marker) => marker.remove());
             markersRef.current = [];
         };
@@ -1534,5 +1795,71 @@ function updateMarkerSelection(
                 .includes(String(selectedId));
         element.dataset.selected = String(selected);
         element.setAttribute('aria-pressed', String(selected));
+    }
+}
+
+function updateLargeFleetMarkerCount(
+    element: HTMLElement,
+    markerCount: number,
+    hasOverviewCount: boolean,
+    hasSos: boolean,
+): void {
+    if (element.classList.contains('maplibre-marker-group')) {
+        const countElement = element.querySelector<HTMLElement>(
+            '.maplibre-marker-group__count',
+        );
+
+        if (countElement) {
+            countElement.textContent = String(markerCount);
+        }
+
+        element.setAttribute(
+            'aria-label',
+            `${markerCount} units in this area${hasSos ? '. Includes SOS incidents' : ''}. Select a unit`,
+        );
+
+        return;
+    }
+
+    if (!hasSos) {
+        return;
+    }
+
+    const indicator = element.querySelector<HTMLElement>(
+        '.maplibre-sos-marker__indicator',
+    );
+
+    if (!indicator) {
+        return;
+    }
+
+    let countElement = indicator.querySelector<HTMLElement>(
+        '.maplibre-sos-marker__overlap-count',
+    );
+
+    if (hasOverviewCount) {
+        if (!countElement) {
+            countElement = document.createElement('span');
+            countElement.className = 'maplibre-sos-marker__overlap-count';
+            indicator.appendChild(countElement);
+        }
+
+        countElement.textContent = ` · ${markerCount}`;
+        element.dataset.sosBaseAriaLabel ??=
+            element.getAttribute('aria-label') ?? 'SOS marker';
+        element.setAttribute(
+            'aria-label',
+            `${element.dataset.sosBaseAriaLabel}. ${markerCount} units in this area`,
+        );
+        element.dataset.overlapCount = String(markerCount);
+
+        return;
+    }
+
+    countElement?.remove();
+    delete element.dataset.overlapCount;
+
+    if (element.dataset.sosBaseAriaLabel) {
+        element.setAttribute('aria-label', element.dataset.sosBaseAriaLabel);
     }
 }
