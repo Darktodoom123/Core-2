@@ -21,6 +21,12 @@ import {
     ProgressBar,
     StatusBadge,
     PrototypeSandboxBanner,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui';
 import type {
     AppSection,
@@ -253,62 +259,49 @@ export function AdministrationSurface() {
 
                 {tab === 'users' ? (
                     <Panel className="overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[46rem] text-left">
-                                <thead className="bg-surface-subtle text-xs text-ink-soft">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">
-                                            User
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Role
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Last active
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Access
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-line">
-                                    {prototypeUsers.map((user) => (
-                                        <tr key={user.email}>
-                                            <td className="px-4 py-3">
-                                                <p className="text-sm font-semibold text-ink">
-                                                    {user.name}
-                                                </p>
-                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                    {user.email}
-                                                </p>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft">
-                                                {user.role}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <StatusBadge
-                                                    status={user.status}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft">
-                                                {user.lastSeen}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <Button
-                                                    size="sm"
-                                                    variant="quiet"
-                                                >
-                                                    Manage access
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table
+                            containerClassName="border-0 rounded-none"
+                            className="min-w-[46rem]"
+                            aria-label="Users and roles table"
+                        >
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Last active</TableHead>
+                                    <TableHead>Access</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {prototypeUsers.map((user) => (
+                                    <TableRow key={user.email}>
+                                        <TableCell>
+                                            <p className="text-sm font-semibold text-ink">
+                                                {user.name}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                {user.email}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {user.role}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={user.status} />
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {user.lastSeen}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button size="sm" variant="quiet">
+                                                Manage access
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </Panel>
                 ) : (
                     <div className="grid gap-4 xl:grid-cols-2">

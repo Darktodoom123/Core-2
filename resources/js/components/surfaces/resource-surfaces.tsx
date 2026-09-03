@@ -22,6 +22,12 @@ import {
     ProgressBar,
     StatusBadge,
     PrototypeSandboxBanner,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { FuelRequest, Resource, UserRole } from '@/types/operations';
@@ -187,80 +193,67 @@ export function ResourceDirectory({
                             }
                         />
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[48rem] border-collapse text-left">
-                                <thead className="bg-surface-subtle text-xs text-ink-soft">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">
-                                            Resource
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Type
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Current location
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Utilization
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-line">
-                                    {filtered.map((resource) => (
-                                        <tr
-                                            key={resource.id}
-                                            className={cn(
-                                                'cursor-pointer hover:bg-surface-subtle',
-                                                selected?.id === resource.id &&
-                                                    'bg-brand-soft',
-                                            )}
-                                            onClick={() =>
-                                                onSelectAsset(resource.id)
-                                            }
-                                        >
-                                            <td className="px-4 py-3">
-                                                <button
-                                                    type="button"
-                                                    className="text-left"
-                                                    onClick={() =>
-                                                        onSelectAsset(
-                                                            resource.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <span className="block text-sm font-semibold text-ink">
-                                                        {resource.code}
-                                                    </span>
-                                                    <span className="mt-0.5 block text-xs text-ink-soft">
-                                                        {resource.name}
-                                                    </span>
-                                                </button>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft capitalize">
-                                                {resource.kind}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <StatusBadge
-                                                    status={resource.status}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft">
-                                                {resource.location}
-                                            </td>
-                                            <td className="w-44 px-4 py-3">
-                                                <ProgressBar
-                                                    value={resource.utilization}
-                                                    label="Last 30 days"
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Table
+                            containerClassName="border-0 rounded-none"
+                            className="min-w-[48rem]"
+                            aria-label="Fleet resources table"
+                        >
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Resource</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Current location</TableHead>
+                                    <TableHead>Utilization</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((resource) => (
+                                    <TableRow
+                                        key={resource.id}
+                                        selected={selected?.id === resource.id}
+                                        className="cursor-pointer"
+                                        onClick={() =>
+                                            onSelectAsset(resource.id)
+                                        }
+                                    >
+                                        <TableCell>
+                                            <button
+                                                type="button"
+                                                className="text-left"
+                                                onClick={() =>
+                                                    onSelectAsset(resource.id)
+                                                }
+                                            >
+                                                <span className="block text-sm font-semibold text-ink">
+                                                    {resource.code}
+                                                </span>
+                                                <span className="mt-0.5 block text-xs text-ink-soft">
+                                                    {resource.name}
+                                                </span>
+                                            </button>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft capitalize">
+                                            {resource.kind}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={resource.status}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {resource.location}
+                                        </TableCell>
+                                        <TableCell className="w-44">
+                                            <ProgressBar
+                                                value={resource.utilization}
+                                                label="Last 30 days"
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     )}
                 </Panel>
 
@@ -507,129 +500,115 @@ export function FuelManagement({
                             }
                         />
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[54rem] text-left">
-                                <thead className="bg-surface-subtle text-xs text-ink-soft">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">
-                                            Request
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Asset / job
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Requested by
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Quantity
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Meter
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-3 font-medium">
-                                            Action
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-line">
-                                    {filtered.map((request) => (
-                                        <tr key={request.id}>
-                                            <td className="px-4 py-3">
-                                                <p className="text-sm font-semibold text-ink">
-                                                    {request.reference}
+                        <Table
+                            containerClassName="border-0 rounded-none"
+                            className="min-w-[54rem]"
+                            aria-label="Fuel authorization requests table"
+                        >
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Request</TableHead>
+                                    <TableHead>Asset / job</TableHead>
+                                    <TableHead>Requested by</TableHead>
+                                    <TableHead>Quantity</TableHead>
+                                    <TableHead>Meter</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((request) => (
+                                    <TableRow key={request.id}>
+                                        <TableCell>
+                                            <p className="text-sm font-semibold text-ink">
+                                                {request.reference}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                {request.requestedAt}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-sm font-medium text-ink">
+                                                {request.equipmentName ||
+                                                    request.assetCode}
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                {request.equipmentType
+                                                    ? `${request.equipmentType} · `
+                                                    : ''}
+                                                {request.registrationNumber
+                                                    ? `Reg: ${request.registrationNumber} · `
+                                                    : ''}
+                                                <span className="font-mono">
+                                                    {request.assetCode}
+                                                </span>
+                                            </p>
+                                            {request.jobReference && (
+                                                <p className="mt-0.5 text-[11px] text-ink-soft">
+                                                    Job: {request.jobReference}
                                                 </p>
-                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                    {request.requestedAt}
-                                                </p>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-sm font-medium text-ink">
-                                                    {request.equipmentName ||
-                                                        request.assetCode}
-                                                </p>
-                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                    {request.equipmentType
-                                                        ? `${request.equipmentType} · `
-                                                        : ''}
-                                                    {request.registrationNumber
-                                                        ? `Reg: ${request.registrationNumber} · `
-                                                        : ''}
-                                                    <span className="font-mono">
-                                                        {request.assetCode}
-                                                    </span>
-                                                </p>
-                                                {request.jobReference && (
-                                                    <p className="mt-0.5 text-[11px] text-ink-soft">
-                                                        Job:{' '}
-                                                        {request.jobReference}
-                                                    </p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft">
-                                                {request.requestedBy}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <p className="text-sm font-medium text-ink">
-                                                    {request.liters} L
-                                                </p>
-                                                <p className="mt-0.5 text-xs text-ink-soft">
-                                                    ₱
-                                                    {request.cost.toLocaleString()}
-                                                </p>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-ink-soft">
-                                                {request.meterReading}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <StatusBadge
-                                                    status={request.status}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {canApprove &&
-                                                request.status === 'Pending' ? (
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="primary"
-                                                            onClick={() =>
-                                                                onDecide(
-                                                                    request.id,
-                                                                    'Approved',
-                                                                )
-                                                            }
-                                                        >
-                                                            Approve
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                onDecide(
-                                                                    request.id,
-                                                                    'Rejected',
-                                                                )
-                                                            }
-                                                        >
-                                                            Reject
-                                                        </Button>
-                                                    </div>
-                                                ) : (
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {request.requestedBy}
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-sm font-medium text-ink">
+                                                {request.liters} L
+                                            </p>
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                ₱{request.cost.toLocaleString()}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-ink-soft">
+                                            {request.meterReading}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={request.status}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {canApprove &&
+                                            request.status === 'Pending' ? (
+                                                <div className="flex gap-2">
                                                     <Button
                                                         size="sm"
-                                                        variant="quiet"
+                                                        variant="primary"
+                                                        onClick={() =>
+                                                            onDecide(
+                                                                request.id,
+                                                                'Approved',
+                                                            )
+                                                        }
                                                     >
-                                                        View record
+                                                        Approve
                                                     </Button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            onDecide(
+                                                                request.id,
+                                                                'Rejected',
+                                                            )
+                                                        }
+                                                    >
+                                                        Reject
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    variant="quiet"
+                                                >
+                                                    View record
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     )}
                 </Panel>
             </div>

@@ -8,7 +8,19 @@ import {
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import {
+    Button,
+    EmptyState,
+    PageHeading,
+    Panel,
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui';
 import type { AssetKind } from '@/lib/asset-kind';
 import { getAssetKind } from '@/lib/asset-kind';
 import { removeOutboxItem } from '@/lib/outbox';
@@ -355,68 +367,51 @@ function SynchronizedLocationList({
 }) {
     return (
         <Panel className="overflow-hidden">
-            <table
-                className="w-full text-left text-sm"
+            <Table
+                containerClassName="border-0 rounded-none"
                 aria-label="Synchronized field location updates"
             >
-                <caption className="sr-only">
+                <TableCaption className="sr-only">
                     List of current location updates showing worker name,
                     coordinates, accuracy, capture time, receive time, sharing
                     state, and freshness.
-                </caption>
-                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
-                    <tr>
-                        <th scope="col" className="px-4 py-3">
-                            Worker / Asset
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Freshness Status
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Coordinates
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Accuracy
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Sharing
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Captured Time
-                        </th>
-                        <th scope="col" className="px-4 py-3">
-                            Received Time
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
+                </TableCaption>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead scope="col">Worker / Asset</TableHead>
+                        <TableHead scope="col">Freshness Status</TableHead>
+                        <TableHead scope="col">Coordinates</TableHead>
+                        <TableHead scope="col">Accuracy</TableHead>
+                        <TableHead scope="col">Sharing</TableHead>
+                        <TableHead scope="col">Captured Time</TableHead>
+                        <TableHead scope="col">Received Time</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
                     {locations.map((loc) => (
-                        <tr
-                            key={loc.id}
-                            className="transition-colors hover:bg-surface-subtle"
-                        >
-                            <td className="px-4 py-3 font-semibold text-ink">
+                        <TableRow key={loc.id}>
+                            <TableCell className="font-semibold text-ink">
                                 {loc.user.name}
                                 {loc.asset && (
                                     <div className="text-xs font-normal text-ink-soft">
                                         {loc.asset.code}
                                     </div>
                                 )}
-                            </td>
-                            <td className="px-4 py-3">
+                            </TableCell>
+                            <TableCell>
                                 <FreshnessBadge status={loc.freshness_status} />
-                            </td>
-                            <td className="px-4 py-3 font-mono text-xs">
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
                                 {loc.latitude !== null && loc.longitude !== null
                                     ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
                                     : 'Pruned / Off'}
-                            </td>
-                            <td className="px-4 py-3 text-xs">
+                            </TableCell>
+                            <TableCell className="text-xs">
                                 {loc.accuracy_metres
                                     ? `±${loc.accuracy_metres}m`
                                     : 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-xs font-medium">
+                            </TableCell>
+                            <TableCell className="text-xs font-medium">
                                 {loc.sharing_enabled ? (
                                     <span className="text-success-strong">
                                         On
@@ -426,25 +421,25 @@ function SynchronizedLocationList({
                                         Off
                                     </span>
                                 )}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-ink-soft">
+                            </TableCell>
+                            <TableCell className="text-xs text-ink-soft">
                                 {loc.captured_at
                                     ? new Date(
                                           loc.captured_at,
                                       ).toLocaleTimeString()
                                     : 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-ink-soft">
+                            </TableCell>
+                            <TableCell className="text-xs text-ink-soft">
                                 {loc.received_at
                                     ? new Date(
                                           loc.received_at,
                                       ).toLocaleTimeString()
                                     : 'N/A'}
-                            </td>
-                        </tr>
+                            </TableCell>
+                        </TableRow>
                     ))}
-                </tbody>
-            </table>
+                </TableBody>
+            </Table>
         </Panel>
     );
 }

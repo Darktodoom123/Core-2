@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import {
     Bell,
+    ChevronDown,
     ChevronRight,
     ClipboardList,
     Fuel,
@@ -9,11 +10,13 @@ import {
     LogOut,
     Map,
     Menu,
+    Moon,
     PanelLeftClose,
     PanelLeftOpen,
     Search,
     Settings,
     ShieldCheck,
+    Sun,
     Truck,
     Users,
     Wrench,
@@ -23,6 +26,7 @@ import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { Button, PrototypeSandboxBanner } from '@/components/ui';
+import { useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';
 import type {
     AppSection,
@@ -33,6 +37,12 @@ import { roleLabels } from '@/types/operations';
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
 
+interface NavSubItem {
+    section: AppSection;
+    label: string;
+    anyPermission?: string[];
+}
+
 interface NavItem {
     section: AppSection;
     label: string;
@@ -40,44 +50,86 @@ interface NavItem {
     module?: number;
     detail?: string;
     anyPermission?: string[];
+    children?: NavSubItem[];
 }
 
 const coreModuleNavigation: NavItem[] = [
     {
         section: 'board',
-        label: 'Dispatch Job and Scheduling',
+        label: 'Dispatch & Scheduling',
         icon: Gauge,
         module: 1,
         detail: 'Real-time activation',
         anyPermission: ['dispatch.view_all', 'dispatch.view_assigned'],
+        children: [
+            {
+                section: 'board',
+                label: 'Schedule Board',
+                anyPermission: ['dispatch.view_all', 'dispatch.view_assigned'],
+            },
+            {
+                section: 'dispatch',
+                label: 'Guided Intake',
+                anyPermission: ['dispatch.view_all', 'dispatch.view_assigned'],
+            },
+            {
+                section: 'live',
+                label: 'Live Tracking Map',
+                anyPermission: ['dispatch.view_all', 'dispatch.view_assigned'],
+            },
+        ],
     },
     {
         section: 'dispatch',
-        label: 'Assign Operator and Equipment',
+        label: 'Assign Operator & Crew',
         icon: Users,
         module: 2,
         anyPermission: ['assignments.view_all', 'assignments.view_own'],
     },
     {
         section: 'fleet',
-        label: 'Fleet Management',
+        label: 'Fleet & Equipment',
         icon: Truck,
         module: 3,
         anyPermission: ['fleet.view_all', 'fleet.view_assigned'],
-    },
-    {
-        section: 'equipment',
-        label: 'Crane and Equipment Management',
-        icon: Wrench,
-        module: 4,
-        anyPermission: ['equipment.view_all', 'equipment.view_assigned'],
+        children: [
+            {
+                section: 'fleet',
+                label: 'Fleet Vehicles',
+                anyPermission: ['fleet.view_all', 'fleet.view_assigned'],
+            },
+            {
+                section: 'equipment',
+                label: 'Cranes & Heavy Gear',
+                anyPermission: [
+                    'equipment.view_all',
+                    'equipment.view_assigned',
+                ],
+            },
+        ],
     },
     {
         section: 'fuel',
-        label: 'Fuel Management',
+        label: 'Fuel & Resources',
         icon: Fuel,
-        module: 5,
+        module: 4,
         anyPermission: ['fuel.view_all', 'fuel.view_own', 'fuel.request'],
+        children: [
+            {
+                section: 'fuel',
+                label: 'Fuel Logs & Dispensing',
+                anyPermission: [
+                    'fuel.view_all',
+                    'fuel.view_own',
+                    'fuel.request',
+                ],
+            },
+            {
+                section: 'reports',
+                label: 'Operational Reports',
+                anyPermission: ['reports.view_all', 'reports.view_assigned'],
+            },
+        ],
     },
 ];
 
@@ -112,13 +164,33 @@ export function getNavigationForRole(
     role: UserRole,
     permissions: string[] = [],
 ) {
-    return navigationByRole[role].filter(
-        (item) =>
-            !item.anyPermission ||
-            item.anyPermission.some((permission) =>
-                permissions.includes(permission),
-            ),
-    );
+    return navigationByRole[role]
+        .filter(
+            (item) =>
+                !item.anyPermission ||
+                item.anyPermission.some((permission) =>
+                    permissions.includes(permission),
+                ),
+        )
+        .map((item) => {
+            if (!item.children) {
+                return item;
+            }
+
+            const filteredChildren = item.children.filter(
+                (child) =>
+                    !child.anyPermission ||
+                    child.anyPermission.some((permission) =>
+                        permissions.includes(permission),
+                    ),
+            );
+
+            return {
+                ...item,
+                children:
+                    filteredChildren.length > 0 ? filteredChildren : undefined,
+            };
+        });
 }
 
 export function AppShell({
@@ -146,6 +218,30 @@ export function AppShell({
     const { auth } = usePage().props;
     const navigation = getNavigationForRole(role, auth.permissions);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { resolvedTheme, toggleTheme } = useTheme();
+
+    const [expandedSections, setExpandedSections] = useState<
+        Record<string, boolean>
+    >(() => {
+        const initial: Record<string, boolean> = {};
+        coreModuleNavigation.forEach((item) => {
+            if (
+                item.children?.some((child) => child.section === section) ||
+                item.section === section
+            ) {
+                initial[item.label] = true;
+            }
+        });
+
+        return initial;
+    });
+
+    const toggleAccordion = (label: string) => {
+        setExpandedSections((prev) => ({
+            ...prev,
+            [label]: !prev[label],
+        }));
+    };
 
     return (
         <div className="min-h-screen bg-canvas md:grid md:grid-cols-[auto_minmax(0,1fr)]">
@@ -167,24 +263,24 @@ export function AppShell({
 
             <aside
                 className={cn(
-                    'fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-white/10 bg-ink text-white transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0',
+                    'fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-line bg-surface text-ink transition-all duration-300 ease-in-out md:sticky md:top-0 md:translate-x-0',
                     mobileOpen ? 'translate-x-0' : '-translate-x-full',
                     collapsed ? 'md:w-[4.75rem]' : 'w-[15.5rem]',
                 )}
             >
                 <div
                     className={cn(
-                        'flex h-[4.5rem] items-center border-b border-white/10 px-4',
+                        'flex h-[4.5rem] items-center border-b border-line px-4',
                         collapsed ? 'justify-center' : 'gap-3',
                     )}
                 >
                     <ApplicationLogo variant="badge" />
                     {!collapsed && (
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">
+                            <p className="truncate text-sm font-semibold text-ink">
                                 Core Transaction 2
                             </p>
-                            <p className="mt-0.5 text-xs text-white/60">
+                            <p className="mt-0.5 text-xs text-ink-soft">
                                 Operations platform
                             </p>
                         </div>
@@ -196,13 +292,26 @@ export function AppShell({
                     aria-label={`${roleLabels[role]} navigation`}
                 >
                     {!collapsed && navigation.some((item) => item.module) && (
-                        <p className="px-3 pb-2 text-xs font-medium text-white/50">
+                        <p className="px-3 pb-2 text-[10px] font-bold tracking-wider text-ink-soft/70 uppercase">
                             Core modules
                         </p>
                     )}
                     <ul className="space-y-1">
                         {navigation.map((item) => {
                             const Icon = item.icon;
+                            const hasChildren = Boolean(
+                                item.children &&
+                                item.children.length > 0 &&
+                                !collapsed,
+                            );
+                            const isExpanded = Boolean(
+                                expandedSections[item.label],
+                            );
+                            const isChildActive = Boolean(
+                                item.children?.some(
+                                    (child) => child.section === section,
+                                ),
+                            );
                             const active = item.section === section;
 
                             const accessibleLabel = item.module
@@ -210,76 +319,173 @@ export function AppShell({
                                 : item.label;
 
                             return (
-                                <li key={item.section}>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            onSectionChange(item.section);
-                                            setMobileOpen(false);
-                                        }}
-                                        title={
-                                            collapsed
-                                                ? accessibleLabel
-                                                : undefined
-                                        }
-                                        aria-label={accessibleLabel}
-                                        className={cn(
-                                            'nav-btn relative flex min-h-11 w-full items-center rounded-lg py-2 text-sm transition-colors duration-200 ease-out focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
-                                            collapsed
-                                                ? 'justify-center'
-                                                : 'gap-3 pr-2 pl-4',
-                                            active
-                                                ? "bg-white/10 text-white before:absolute before:top-1/2 before:left-0 before:h-1 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-brand before:content-['']"
-                                                : 'text-white/60 hover:bg-white/5 hover:text-white',
-                                        )}
-                                        aria-current={
-                                            active ? 'page' : undefined
-                                        }
-                                    >
-                                        <Icon
-                                            className={cn(
-                                                'shrink-0 transition-transform duration-200 ease-out motion-reduce:transform-none motion-reduce:transition-none',
-                                                active && !collapsed
-                                                    ? 'translate-x-1'
-                                                    : '',
+                                <li key={item.label} className="space-y-1">
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (hasChildren && active) {
+                                                    toggleAccordion(item.label);
+                                                } else {
+                                                    if (hasChildren) {
+                                                        setExpandedSections(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                [item.label]: true,
+                                                            }),
+                                                        );
+                                                    }
+
+                                                    onSectionChange(
+                                                        item.section,
+                                                    );
+                                                    setMobileOpen(false);
+                                                }
+                                            }}
+                                            title={
                                                 collapsed
-                                                    ? 'h-[1.375rem] w-[1.375rem]'
-                                                    : 'h-5 w-5',
+                                                    ? accessibleLabel
+                                                    : undefined
+                                            }
+                                            aria-label={accessibleLabel}
+                                            className={cn(
+                                                'nav-btn relative flex min-h-11 flex-1 items-center rounded-lg py-2 text-sm transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                                collapsed
+                                                    ? 'justify-center'
+                                                    : 'gap-3 pr-2 pl-4',
+                                                active ||
+                                                    (collapsed && isChildActive)
+                                                    ? 'bg-brand font-semibold text-brand-contrast shadow-xs'
+                                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                             )}
-                                            aria-hidden="true"
-                                        />
-                                        {!collapsed && (
-                                            <span className="min-w-0 text-left">
-                                                {item.module && (
-                                                    <span className="block text-[0.6875rem] leading-4 font-medium text-white/50">
-                                                        Module {item.module}
-                                                    </span>
+                                            aria-current={
+                                                active ? 'page' : undefined
+                                            }
+                                        >
+                                            <Icon
+                                                className={cn(
+                                                    'shrink-0 transition-transform duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none',
+                                                    active && !collapsed
+                                                        ? 'translate-x-0.5'
+                                                        : '',
+                                                    collapsed
+                                                        ? 'h-[1.375rem] w-[1.375rem]'
+                                                        : 'h-5 w-5',
                                                 )}
-                                                <span
-                                                    className={cn(
-                                                        'block leading-5',
-                                                        active
-                                                            ? 'font-semibold'
-                                                            : 'font-normal',
+                                                aria-hidden="true"
+                                            />
+                                            {!collapsed && (
+                                                <span className="min-w-0 flex-1 text-left">
+                                                    {item.module && (
+                                                        <span
+                                                            className={cn(
+                                                                'block text-[0.6875rem] leading-4 font-medium',
+                                                                active
+                                                                    ? 'text-brand-contrast/75'
+                                                                    : 'text-ink-soft',
+                                                            )}
+                                                        >
+                                                            Module {item.module}
+                                                        </span>
                                                     )}
-                                                >
-                                                    {item.label}
-                                                </span>
-                                                {item.detail && (
-                                                    <span className="block text-[0.6875rem] leading-4 text-white/50">
-                                                        {item.detail}
+                                                    <span
+                                                        className={cn(
+                                                            'block leading-5',
+                                                            active
+                                                                ? 'font-bold'
+                                                                : 'font-normal',
+                                                        )}
+                                                    >
+                                                        {item.label}
                                                     </span>
-                                                )}
-                                            </span>
+                                                    {item.detail && (
+                                                        <span
+                                                            className={cn(
+                                                                'block text-[0.6875rem] leading-4',
+                                                                active
+                                                                    ? 'text-brand-contrast/75'
+                                                                    : 'text-ink-soft',
+                                                            )}
+                                                        >
+                                                            {item.detail}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        {hasChildren && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    toggleAccordion(item.label)
+                                                }
+                                                aria-label={
+                                                    isExpanded
+                                                        ? `Collapse ${item.label} sub-menu`
+                                                        : `Expand ${item.label} sub-menu`
+                                                }
+                                                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                            >
+                                                <ChevronDown
+                                                    className={cn(
+                                                        'h-4 w-4 transition-transform duration-200',
+                                                        isExpanded
+                                                            ? 'rotate-180'
+                                                            : 'rotate-0',
+                                                    )}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
                                         )}
-                                    </button>
+                                    </div>
+
+                                    {hasChildren && isExpanded && (
+                                        <ul className="ml-5 space-y-0.5 border-l border-line py-1 pl-4">
+                                            {item.children!.map((child) => {
+                                                const childActive =
+                                                    child.section === section;
+
+                                                return (
+                                                    <li key={child.label}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                onSectionChange(
+                                                                    child.section,
+                                                                );
+                                                                setMobileOpen(
+                                                                    false,
+                                                                );
+                                                            }}
+                                                            className={cn(
+                                                                'flex min-h-8 w-full items-center rounded-md px-2.5 py-1.5 text-xs transition-colors duration-150',
+                                                                childActive
+                                                                    ? 'bg-brand font-semibold text-brand-contrast shadow-xs'
+                                                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                                            )}
+                                                            aria-current={
+                                                                childActive
+                                                                    ? 'page'
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            <span className="truncate">
+                                                                {child.label}
+                                                            </span>
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
                                 </li>
                             );
                         })}
                     </ul>
                 </nav>
 
-                <div className="border-t border-white/10 px-4 py-3">
+                <div className="border-t border-line px-4 py-3">
                     {auth.permissions.some((permission) =>
                         [
                             'users.manage',
@@ -291,7 +497,7 @@ export function AppShell({
                             type="button"
                             onClick={() => onSectionChange('administration')}
                             className={cn(
-                                'flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                                'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
                                 collapsed ? 'justify-center' : 'gap-3 px-3',
                             )}
                             title={collapsed ? 'Settings' : undefined}
@@ -307,7 +513,7 @@ export function AppShell({
                         type="button"
                         onClick={onToggleSidebar}
                         className={cn(
-                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-white/60 transition-colors duration-200 ease-out hover:bg-white/5 hover:text-white focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
+                            'mt-1 flex min-h-11 w-full items-center rounded-lg text-sm text-ink-soft transition-colors duration-200 ease-out hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none',
                             collapsed ? 'justify-center' : 'gap-3 px-3',
                         )}
                         aria-label={
@@ -411,6 +617,28 @@ export function AppShell({
                                   ? `Offline · ${queuedActions} queued`
                                   : 'Syncing'}
                         </div>
+                        <Button
+                            size="icon"
+                            variant="quiet"
+                            onClick={toggleTheme}
+                            aria-label={
+                                resolvedTheme === 'dark'
+                                    ? 'Switch to light mode'
+                                    : 'Switch to dark mode'
+                            }
+                            title={
+                                resolvedTheme === 'dark'
+                                    ? 'Switch to light mode'
+                                    : 'Switch to dark mode'
+                            }
+                            className="text-ink-soft hover:text-ink"
+                        >
+                            {resolvedTheme === 'dark' ? (
+                                <Sun className="h-5 w-5" aria-hidden="true" />
+                            ) : (
+                                <Moon className="h-5 w-5" aria-hidden="true" />
+                            )}
+                        </Button>
                         <Button
                             size="icon"
                             variant="quiet"

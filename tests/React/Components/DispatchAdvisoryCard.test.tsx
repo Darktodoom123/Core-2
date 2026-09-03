@@ -79,7 +79,7 @@ describe('dispatch advisory', () => {
                 options?.onError?.({
                     gpt: 'Resource availability changed. Refresh the suggestion.',
                 });
-                options?.onFinish?.();
+                options?.onFinish?.({} as never);
             },
         );
         render(<AcceptGptModal rec={proposal} onClose={onClose} />);

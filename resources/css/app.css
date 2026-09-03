@@ -3,24 +3,64 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
-    --color-canvas: oklch(0.965 0.006 255);
-    --color-surface: oklch(1 0 0);
-    --color-surface-subtle: oklch(0.945 0.009 255);
-    --color-ink: oklch(0.18 0.03 255);
-    --color-ink-soft: oklch(0.4 0.03 255);
-    --color-muted: oklch(0.42 0.025 255);
+    --color-canvas: var(--color-canvas);
+    --color-surface: var(--color-surface);
+    --color-surface-subtle: var(--color-surface-subtle);
+    --color-ink: var(--color-ink);
+    --color-ink-soft: var(--color-ink-soft);
+    --color-muted: var(--color-muted);
+    --color-line: var(--color-line);
+    --color-line-strong: var(--color-line-strong);
+    --color-brand: var(--color-brand);
+    --color-brand-strong: var(--color-brand-strong);
+    --color-brand-soft: var(--color-brand-soft);
+    --color-brand-contrast: var(--color-brand-contrast);
+    --color-accent: var(--color-accent);
+    --color-accent-strong: var(--color-accent-strong);
+    --color-accent-soft: var(--color-accent-soft);
+    --color-success: var(--color-success);
+    --color-success-strong: var(--color-success-strong);
+    --color-success-soft: var(--color-success-soft);
+    --color-warning: var(--color-warning);
+    --color-warning-strong: var(--color-warning-strong);
+    --color-warning-soft: var(--color-warning-soft);
+    --color-danger: var(--color-danger);
+    --color-danger-strong: var(--color-danger-strong);
+    --color-danger-soft: var(--color-danger-soft);
+    --color-danger-contrast: var(--color-danger-contrast);
+    --color-info: var(--color-info);
+    --color-info-strong: var(--color-info-strong);
+    --color-info-soft: var(--color-info-soft);
+    --color-success-on-dark: oklch(0.82 0.12 151);
+    --color-warning-on-dark: oklch(0.84 0.13 76);
+    --color-info-on-dark: oklch(0.82 0.12 250);
+    --color-ink-on-dark-muted: oklch(0.8 0.01 255);
+}
+
+:root {
+    --color-canvas: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-subtle: oklch(0.95 0.009 255);
+    --color-ink: #0f172a;
+    --color-ink-soft: #475569;
+    --color-muted: #64748b;
     --color-line: oklch(0.88 0.01 255);
     --color-line-strong: oklch(0.78 0.01 255);
-    --color-brand: #e98a00;
-    --color-brand-strong: oklch(0.48 0.15 76);
-    --color-brand-soft: oklch(0.96 0.07 88);
-    --color-brand-contrast: oklch(0.18 0.03 255);
+    --color-brand: #e6a719;
+    --color-brand-strong: #c98f12;
+    --color-brand-soft: #fdf0d5;
+    --color-brand-contrast: #000000;
+    --color-accent: #2563eb;
+    --color-accent-strong: #1d4ed8;
+    --color-accent-soft: #eff6ff;
     --color-success: oklch(0.55 0.145 151);
     --color-success-strong: oklch(0.36 0.105 151);
     --color-success-soft: oklch(0.96 0.035 151);
@@ -34,18 +74,44 @@
     --color-info: oklch(0.55 0.14 250);
     --color-info-strong: oklch(0.38 0.105 250);
     --color-info-soft: oklch(0.95 0.035 250);
-    --color-success-on-dark: oklch(0.82 0.12 151);
-    --color-warning-on-dark: oklch(0.84 0.13 76);
-    --color-info-on-dark: oklch(0.82 0.12 250);
-    --color-ink-on-dark-muted: oklch(0.8 0.01 255);
-}
 
-:root {
     color: var(--color-ink);
     background: var(--color-canvas);
     font-synthesis: none;
     font-kerning: normal;
     text-rendering: optimizeLegibility;
+}
+
+.dark,
+[data-theme='dark'] {
+    --color-canvas: #0f0f11;
+    --color-surface: #1c1c1e;
+    --color-surface-subtle: #27272a;
+    --color-ink: #ffffff;
+    --color-ink-soft: #a1a1aa;
+    --color-muted: #71717a;
+    --color-line: #2e2e32;
+    --color-line-strong: #3f3f46;
+    --color-brand: #e6a719;
+    --color-brand-strong: #f5b62b;
+    --color-brand-soft: rgba(230, 167, 25, 0.15);
+    --color-brand-contrast: #000000;
+    --color-accent: #3b82f6;
+    --color-accent-strong: #60a5fa;
+    --color-accent-soft: rgba(59, 130, 246, 0.15);
+    --color-success: oklch(0.65 0.15 151);
+    --color-success-strong: oklch(0.75 0.14 151);
+    --color-success-soft: rgba(34, 197, 94, 0.15);
+    --color-warning: oklch(0.68 0.17 42);
+    --color-warning-strong: oklch(0.78 0.15 42);
+    --color-warning-soft: rgba(245, 158, 11, 0.15);
+    --color-danger: oklch(0.62 0.2 27);
+    --color-danger-strong: oklch(0.72 0.18 27);
+    --color-danger-soft: rgba(239, 68, 68, 0.15);
+    --color-danger-contrast: #ffffff;
+    --color-info: oklch(0.65 0.14 250);
+    --color-info-strong: oklch(0.75 0.12 250);
+    --color-info-soft: rgba(59, 130, 246, 0.15);
 }
 
 * {
@@ -91,9 +157,25 @@ textarea:focus-visible,
     outline-offset: 2px;
 }
 
-::selection {
-    background: var(--color-brand-soft);
-    color: var(--color-brand-strong);
+button,
+a,
+input,
+select,
+textarea {
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 .scrollbar-thin {

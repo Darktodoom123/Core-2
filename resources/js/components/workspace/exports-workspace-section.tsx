@@ -11,7 +11,17 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, Panel } from '@/components/ui';
+import {
+    Button,
+    EmptyState,
+    Panel,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { formatDateTime } from '@/lib/formatters';
@@ -161,164 +171,137 @@ export function ExportsSurface({
                             </span>
                         )}
                     </div>
-                    <div
-                        className="workspace-scroll-region"
-                        role="region"
-                        aria-label="Export tasks table scroll region"
-                        tabIndex={0}
+                    <Table
+                        containerClassName="border-0 rounded-none"
+                        aria-label="Export tasks table"
                     >
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-surface-subtle text-xs tracking-wider text-ink-soft uppercase">
-                                <tr>
-                                    <th className="px-4 py-3 font-medium">
-                                        Dataset Type
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Format
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Status
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Rows
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        File Size
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Expiry (24h Window)
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Requested At
-                                    </th>
-                                    <th className="px-4 py-3 text-right font-medium">
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-line">
-                                {exports.map((exp) => {
-                                    const isProcessing = [
-                                        'queued',
-                                        'processing',
-                                    ].includes(exp.status.value);
-                                    const isRetrying = retryingId === exp.id;
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Dataset Type</TableHead>
+                                <TableHead>Format</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Rows</TableHead>
+                                <TableHead>File Size</TableHead>
+                                <TableHead>Expiry (24h Window)</TableHead>
+                                <TableHead>Requested At</TableHead>
+                                <TableHead className="text-right">
+                                    Action
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {exports.map((exp) => {
+                                const isProcessing = [
+                                    'queued',
+                                    'processing',
+                                ].includes(exp.status.value);
+                                const isRetrying = retryingId === exp.id;
 
-                                    return (
-                                        <tr
-                                            key={exp.id}
-                                            className="hover:bg-surface-subtle/50"
-                                        >
-                                            <td className="px-4 py-3 font-medium text-ink">
-                                                <div className="flex items-center gap-2">
-                                                    {exp.format === 'PDF' ? (
-                                                        <FileText className="h-4 w-4 text-brand-strong" />
-                                                    ) : (
-                                                        <FileSpreadsheet className="h-4 w-4 text-success-strong" />
-                                                    )}
-                                                    <span>
-                                                        {exp.export_type.label}
-                                                    </span>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-4 py-3">
-                                                <span className="inline-flex items-center rounded-md bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
-                                                    {exp.format}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-1.5">
-                                                    {isProcessing && (
-                                                        <Loader2 className="h-3 w-3 animate-spin text-brand-strong" />
-                                                    )}
-                                                    <CanonicalStatusBadge
-                                                        status={exp.status}
-                                                    />
-                                                </div>
-                                                {exp.error_message && (
-                                                    <p className="mt-0.5 max-w-xs text-xs text-danger">
-                                                        {exp.error_message}
-                                                    </p>
+                                return (
+                                    <TableRow key={exp.id}>
+                                        <TableCell className="font-medium text-ink">
+                                            <div className="flex items-center gap-2">
+                                                {exp.format === 'PDF' ? (
+                                                    <FileText className="h-4 w-4 text-brand-strong" />
+                                                ) : (
+                                                    <FileSpreadsheet className="h-4 w-4 text-success-strong" />
                                                 )}
-                                            </td>
+                                                <span>
+                                                    {exp.export_type.label}
+                                                </span>
+                                            </div>
+                                        </TableCell>
 
-                                            <td className="px-4 py-3 text-ink-soft">
-                                                {exp.row_count !== null
-                                                    ? exp.row_count.toLocaleString()
-                                                    : '—'}
-                                            </td>
+                                        <TableCell>
+                                            <span className="inline-flex items-center rounded-md bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink">
+                                                {exp.format}
+                                            </span>
+                                        </TableCell>
 
-                                            <td className="px-4 py-3 text-ink-soft">
-                                                {exp.file_size_bytes !== null
-                                                    ? `${(exp.file_size_bytes / 1024).toFixed(1)} KB`
-                                                    : '—'}
-                                            </td>
-
-                                            <td className="px-4 py-3 text-xs">
-                                                <ExpiryCountdown
-                                                    expiresAt={exp.expires_at}
-                                                    isExpired={exp.is_expired}
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5">
+                                                {isProcessing && (
+                                                    <Loader2 className="h-3 w-3 animate-spin text-brand-strong" />
+                                                )}
+                                                <CanonicalStatusBadge
+                                                    status={exp.status}
                                                 />
-                                            </td>
+                                            </div>
+                                            {exp.error_message && (
+                                                <p className="mt-0.5 max-w-xs text-xs text-danger">
+                                                    {exp.error_message}
+                                                </p>
+                                            )}
+                                        </TableCell>
 
-                                            <td className="px-4 py-3 text-xs text-ink-soft">
-                                                {exp.created_at
-                                                    ? formatDateTime(
-                                                          exp.created_at,
-                                                      )
-                                                    : '—'}
-                                            </td>
+                                        <TableCell className="text-ink-soft">
+                                            {exp.row_count !== null
+                                                ? exp.row_count.toLocaleString()
+                                                : '—'}
+                                        </TableCell>
 
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {exp.is_downloadable && (
-                                                        <a
-                                                            href={
-                                                                exp.download_url
-                                                            }
-                                                            download
-                                                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-brand px-3 py-1 text-xs font-semibold text-white shadow-xs hover:bg-brand-strong"
-                                                        >
-                                                            <Download className="h-3.5 w-3.5" />
-                                                            Download
-                                                        </a>
-                                                    )}
+                                        <TableCell className="text-ink-soft">
+                                            {exp.file_size_bytes !== null
+                                                ? `${(exp.file_size_bytes / 1024).toFixed(1)} KB`
+                                                : '—'}
+                                        </TableCell>
 
-                                                    {(exp.status.value ===
-                                                        'failed' ||
-                                                        exp.is_expired) && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleRetry(exp)
-                                                            }
-                                                            disabled={
-                                                                isRetrying
-                                                            }
-                                                            className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface-subtle disabled:opacity-60"
-                                                        >
-                                                            <RefreshCw
-                                                                className={cn(
-                                                                    'h-3.5 w-3.5',
-                                                                    isRetrying &&
-                                                                        'animate-spin',
-                                                                )}
-                                                            />
-                                                            {isRetrying
-                                                                ? 'Retrying…'
-                                                                : 'Retry'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                        <TableCell className="text-xs">
+                                            <ExpiryCountdown
+                                                expiresAt={exp.expires_at}
+                                                isExpired={exp.is_expired}
+                                            />
+                                        </TableCell>
+
+                                        <TableCell className="text-xs text-ink-soft">
+                                            {exp.created_at
+                                                ? formatDateTime(exp.created_at)
+                                                : '—'}
+                                        </TableCell>
+
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                {exp.is_downloadable && (
+                                                    <a
+                                                        href={exp.download_url}
+                                                        download
+                                                        className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface-subtle"
+                                                    >
+                                                        <Download className="h-3.5 w-3.5" />
+                                                        Download
+                                                    </a>
+                                                )}
+
+                                                {(exp.status.value ===
+                                                    'failed' ||
+                                                    exp.is_expired) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleRetry(exp)
+                                                        }
+                                                        disabled={isRetrying}
+                                                        className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-ink hover:bg-surface-subtle disabled:opacity-60"
+                                                    >
+                                                        <RefreshCw
+                                                            className={cn(
+                                                                'h-3.5 w-3.5',
+                                                                isRetrying &&
+                                                                    'animate-spin',
+                                                            )}
+                                                        />
+                                                        {isRetrying
+                                                            ? 'Retrying…'
+                                                            : 'Retry'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 </Panel>
             )}
         </div>

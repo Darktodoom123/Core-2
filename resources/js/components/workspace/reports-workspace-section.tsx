@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { Button, EmptyState, PageHeading, Panel, Stat } from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
@@ -223,105 +223,53 @@ export function ReportsSurface({
             <div className="space-y-6 p-4 md:p-6">
                 {/* Commercial & Verification KPI Cards */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {/* 1. Pending Review */}
-                    <div
-                        onClick={() => setStatusFilter('submitted')}
-                        className={cn(
-                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
-                            statusFilter === 'submitted'
-                                ? 'border-warning bg-warning-soft/40 ring-2 ring-warning/30'
-                                : 'border-warning/30 bg-warning-soft/20 hover:bg-warning-soft/30',
-                        )}
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
-                                Pending Sign-Off
-                            </span>
-                            <Clock className="h-4 w-4 text-warning-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.submitted}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            {stats.submitted === 0
+                    <Stat
+                        title="Pending Sign-Off"
+                        value={stats.submitted}
+                        description={
+                            stats.submitted === 0
                                 ? 'All submissions up to date'
-                                : 'Awaiting manager verification'}
-                        </p>
-                    </div>
+                                : 'Awaiting manager verification'
+                        }
+                        icon={Clock}
+                        tone="warning"
+                        selected={statusFilter === 'submitted'}
+                        onClick={() => setStatusFilter('submitted')}
+                    />
 
-                    {/* 2. Total Logged Across Fleet */}
-                    <div
-                        onClick={() => setStatusFilter('all')}
-                        className={cn(
-                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
-                            statusFilter === 'all'
-                                ? 'border-brand bg-brand-soft/40 ring-2 ring-brand/30'
-                                : 'border-line bg-surface hover:bg-surface-subtle',
-                        )}
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                                Total Reports
-                            </span>
-                            <FileText className="h-4 w-4 text-brand-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.total}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            {stats.totalAttachments > 0
+                    <Stat
+                        title="Total Reports"
+                        value={stats.total}
+                        description={
+                            stats.totalAttachments > 0
                                 ? `${stats.totalAttachments} verified attachments`
-                                : 'Logged across active fleet'}
-                        </p>
-                    </div>
+                                : 'Logged across active fleet'
+                        }
+                        icon={FileText}
+                        tone="brand"
+                        selected={statusFilter === 'all'}
+                        onClick={() => setStatusFilter('all')}
+                    />
 
-                    {/* 3. Approved & Invoiced */}
-                    <div
+                    <Stat
+                        title="Approved & Closed"
+                        value={stats.approved}
+                        description="Verified & ready for billing"
+                        icon={FileCheck}
+                        tone="success"
+                        selected={statusFilter === 'approved'}
                         onClick={() => setStatusFilter('approved')}
-                        className={cn(
-                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
-                            statusFilter === 'approved'
-                                ? 'border-success bg-success-soft/40 ring-2 ring-success/30'
-                                : 'border-success/30 bg-success-soft/20 hover:bg-success-soft/30',
-                        )}
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
-                                Approved & Closed
-                            </span>
-                            <FileCheck className="h-4 w-4 text-success-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-success-strong">
-                            {stats.approved}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Verified & ready for billing
-                        </p>
-                    </div>
+                    />
 
-                    {/* 4. Needs Rework / Rejected */}
-                    <div
+                    <Stat
+                        title="Needs Rework"
+                        value={stats.rejected}
+                        description="Returned to operator for revision"
+                        icon={FileX}
+                        tone="danger"
+                        selected={statusFilter === 'rejected'}
                         onClick={() => setStatusFilter('rejected')}
-                        className={cn(
-                            'cursor-pointer rounded-xl border p-4 shadow-xs transition-all',
-                            statusFilter === 'rejected'
-                                ? 'border-danger bg-danger-soft/40 ring-2 ring-danger/30'
-                                : 'border-danger/30 bg-danger-soft/20 hover:bg-danger-soft/30',
-                        )}
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-danger-strong uppercase">
-                                Needs Rework
-                            </span>
-                            <FileX className="h-4 w-4 text-danger-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-danger-strong">
-                            {stats.rejected}
-                        </p>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Returned to operator for revision
-                        </p>
-                    </div>
+                    />
                 </div>
 
                 {/* Submit Job Report Drawer / Inline Form */}

@@ -14,9 +14,11 @@ import {
     LogOut,
     MapPin,
     Menu,
+    Moon,
     RefreshCw,
     ShieldAlert,
     ShieldCheck,
+    Sun,
     Truck,
     Users,
     X,
@@ -28,6 +30,7 @@ import type { PropsWithChildren } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
 import { Button } from '@/components/ui';
 import { NotificationCenterPopover } from '@/components/workspace/notification-center-popover';
+import { useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';
 import type {
     NotificationViewModel,
@@ -113,6 +116,7 @@ export function LiveWorkspaceShell({
     onShareLocation: () => void;
 }>) {
     const { auth } = usePage().props;
+    const { resolvedTheme, toggleTheme } = useTheme();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -392,7 +396,7 @@ export function LiveWorkspaceShell({
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.15, ease: 'easeOut' }}
                             type="button"
-                            className="fixed inset-0 z-40 bg-ink/35 min-[840px]:hidden"
+                            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs min-[840px]:hidden"
                             onClick={closeMobileNavigation}
                             aria-label="Close navigation"
                             tabIndex={-1}
@@ -408,24 +412,24 @@ export function LiveWorkspaceShell({
                     aria-label={mobileOpen ? 'Workspace navigation' : undefined}
                     tabIndex={mobileOpen ? -1 : undefined}
                     className={cn(
-                        'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-white/10 bg-ink text-white transition-transform duration-200 ease-out min-[840px]:sticky min-[840px]:top-0 min-[840px]:translate-x-0',
+                        'fixed inset-y-0 left-0 z-50 flex h-screen w-[15.5rem] flex-col border-r border-line bg-surface text-ink transition-[width,transform] duration-200 ease-out min-[840px]:sticky min-[840px]:top-0 min-[840px]:translate-x-0',
                         mobileOpen ? 'translate-x-0' : '-translate-x-full',
                         collapsed && 'min-[840px]:w-[4.75rem]',
                     )}
                 >
                     <div
                         className={cn(
-                            'flex h-[4.5rem] items-center border-b border-white/10 px-4',
+                            'flex h-[4.5rem] items-center border-b border-line px-4',
                             collapsed ? 'justify-center' : 'gap-3',
                         )}
                     >
                         <ApplicationLogo variant="badge" />
                         {!collapsed && (
                             <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-semibold">
+                                <p className="truncate text-sm font-semibold text-ink">
                                     Core Transaction 2
                                 </p>
-                                <p className="truncate text-xs text-white/65">
+                                <p className="truncate text-xs text-ink-soft">
                                     {auth.role_label}
                                 </p>
                             </div>
@@ -434,7 +438,7 @@ export function LiveWorkspaceShell({
                             type="button"
                             ref={mobileCloseButtonRef}
                             onClick={closeMobileNavigation}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white min-[840px]:hidden"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink min-[840px]:hidden"
                             aria-label="Close navigation"
                         >
                             <X className="h-5 w-5" aria-hidden="true" />
@@ -452,13 +456,13 @@ export function LiveWorkspaceShell({
                                     className={groupIndex > 0 ? 'pt-2' : ''}
                                 >
                                     {!collapsed && (
-                                        <p className="px-3 pb-1.5 text-[10px] font-bold tracking-wider text-white/40 uppercase">
+                                        <p className="px-3 pb-1.5 text-[10px] font-bold tracking-wider text-ink-soft/70 uppercase">
                                             {group.label}
                                         </p>
                                     )}
                                     {collapsed && groupIndex > 0 && (
                                         <div
-                                            className="mx-2 mb-2 h-px bg-white/10"
+                                            className="mx-2 mb-2 h-px bg-line"
                                             aria-hidden="true"
                                         />
                                     )}
@@ -490,8 +494,8 @@ export function LiveWorkspaceShell({
                                                                 ? 'justify-center'
                                                                 : 'gap-3 px-3',
                                                             active
-                                                                ? 'bg-white/10 text-white'
-                                                                : 'text-white/65 hover:bg-white/5 hover:text-white',
+                                                                ? 'bg-surface-subtle font-semibold text-ink'
+                                                                : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                                         )}
                                                         aria-current={
                                                             active
@@ -529,6 +533,9 @@ export function LiveWorkspaceShell({
                                                             <Icon
                                                                 className={cn(
                                                                     'h-5 w-5',
+                                                                    active
+                                                                        ? 'text-brand-strong'
+                                                                        : 'text-ink-soft',
                                                                     item.id ===
                                                                         'sos' &&
                                                                         showBadge &&
@@ -603,12 +610,12 @@ export function LiveWorkspaceShell({
                         </div>
                     </nav>
 
-                    <div className="border-t border-white/10 p-3">
+                    <div className="border-t border-line p-3">
                         <button
                             type="button"
                             onClick={() => setCollapsed((value) => !value)}
                             className={cn(
-                                'hidden min-h-11 w-full items-center rounded-lg text-sm text-white/65 hover:bg-white/5 hover:text-white min-[840px]:flex',
+                                'hidden min-h-11 w-full items-center rounded-lg text-sm text-ink-soft hover:bg-surface-subtle hover:text-ink min-[840px]:flex',
                                 collapsed ? 'justify-center' : 'gap-3 px-3',
                             )}
                             aria-label={
@@ -696,8 +703,8 @@ export function LiveWorkspaceShell({
                             </div>
                         </div>
                         <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
-                            {/* Live Stream / Safety Status Pill */}
-                            {activeSosCount > 0 ? (
+                            {/* Emergency SOS Pill: only renders when an active SOS exists */}
+                            {activeSosCount > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => onSectionChange('sos')}
@@ -707,24 +714,7 @@ export function LiveWorkspaceShell({
                                     <span className="h-2 w-2 rounded-full bg-danger" />
                                     <span>{activeSosCount} Active SOS</span>
                                 </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => onSectionChange('sos')}
-                                    className="hidden items-center gap-1.5 rounded-full border border-line bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink sm:flex"
-                                    title="Realtime Reverb Stream Connected · Click to view Safety Watch"
-                                >
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
-                                    <span className="text-[11px] font-semibold text-ink">
-                                        Live Stream
-                                    </span>
-                                </button>
                             )}
-
-                            <div
-                                className="hidden h-4 w-px bg-line sm:block"
-                                aria-hidden="true"
-                            />
 
                             {canShareLocation && (
                                 <Button
@@ -777,6 +767,34 @@ export function LiveWorkspaceShell({
                                     )}
                                     aria-hidden="true"
                                 />
+                            </Button>
+
+                            <Button
+                                size="icon"
+                                variant="quiet"
+                                onClick={toggleTheme}
+                                aria-label={
+                                    resolvedTheme === 'dark'
+                                        ? 'Switch to light mode'
+                                        : 'Switch to dark mode'
+                                }
+                                title={
+                                    resolvedTheme === 'dark'
+                                        ? 'Switch to light mode'
+                                        : 'Switch to dark mode'
+                                }
+                            >
+                                {resolvedTheme === 'dark' ? (
+                                    <Sun
+                                        className="h-5 w-5 text-brand-strong"
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <Moon
+                                        className="h-5 w-5 text-ink-soft hover:text-ink"
+                                        aria-hidden="true"
+                                    />
+                                )}
                             </Button>
 
                             <div
@@ -835,6 +853,31 @@ export function LiveWorkspaceShell({
                                                 </span>
                                             </div>
                                         </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={toggleTheme}
+                                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle"
+                                            role="menuitem"
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                {resolvedTheme === 'dark' ? (
+                                                    <Sun
+                                                        className="h-4 w-4 text-brand-strong"
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : (
+                                                    <Moon
+                                                        className="h-4 w-4 text-ink-soft"
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                <span>Theme</span>
+                                            </div>
+                                            <span className="text-[11px] font-semibold text-ink-soft capitalize">
+                                                {resolvedTheme}
+                                            </span>
+                                        </button>
 
                                         <button
                                             type="button"

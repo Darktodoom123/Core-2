@@ -45,6 +45,7 @@ import {
     PageHeading,
     Panel,
     Skeleton,
+    Stat,
 } from '@/components/ui';
 import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { ArchiveSurface } from '@/components/workspace/archive-workspace-section';
@@ -395,68 +396,43 @@ function AssetsSurface({
             <div className="space-y-6 p-4 md:p-6">
                 {/* Fleet Health & Readiness KPI Strip */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                                Total Fleet
+                    <Stat
+                        title="Total Fleet"
+                        value={
+                            <span>
+                                {totalFleetCount}{' '}
+                                <span className="text-xs font-normal text-ink-soft">
+                                    units
+                                </span>
                             </span>
-                            <Truck className="h-4 w-4 text-ink-soft" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {totalFleetCount}{' '}
-                            <span className="text-xs font-normal text-ink-soft">
-                                units
-                            </span>
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            {kpis.cranes} Cranes · {kpis.trucks} Transport
-                        </p>
-                    </div>
+                        }
+                        description={`${kpis.cranes} Cranes · ${kpis.trucks} Transport`}
+                        icon={Truck}
+                    />
 
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
-                                Ready to Deploy
-                            </span>
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.ready}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Certified &amp; available
-                        </p>
-                    </div>
+                    <Stat
+                        title="Ready to Deploy"
+                        value={kpis.ready}
+                        description="Certified & available"
+                        icon={CheckCircle2}
+                        tone="success"
+                    />
 
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                Active on Jobs
-                            </span>
-                            <Radio className="h-4 w-4 animate-pulse text-brand" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.working}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Working or in transit
-                        </p>
-                    </div>
+                    <Stat
+                        title="Active on Jobs"
+                        value={kpis.working}
+                        description="Working or in transit"
+                        icon={Radio}
+                        tone="brand"
+                    />
 
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
-                                Maintenance Holds
-                            </span>
-                            <Wrench className="h-4 w-4 text-warning" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.maintenance}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Work orders or holds
-                        </p>
-                    </div>
+                    <Stat
+                        title="Maintenance Holds"
+                        value={kpis.maintenance}
+                        description="Work orders or holds"
+                        icon={Wrench}
+                        tone="warning"
+                    />
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">

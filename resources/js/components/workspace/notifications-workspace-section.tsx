@@ -10,7 +10,7 @@ import {
     X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { Button, EmptyState, PageHeading, Panel, Stat } from '@/components/ui';
 import {
     categorizeNotification,
     exactTimestamp,
@@ -156,53 +156,38 @@ export function NotificationsSurface({
             <div className="space-y-6 p-4 md:p-6">
                 {/* Stats Header Bar */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink-soft">
-                                Total Alerts
-                            </span>
-                            <Bell className="h-4 w-4 text-brand-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.total}
-                        </p>
-                    </div>
+                    <Stat
+                        size="sm"
+                        title="Total Alerts"
+                        value={stats.total}
+                        icon={Bell}
+                        tone="brand"
+                    />
 
-                    <div className="rounded-xl border border-warning/30 bg-warning-soft/30 p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-warning-strong">
-                                Unread
-                            </span>
+                    <Stat
+                        size="sm"
+                        title="Unread"
+                        value={stats.unread}
+                        tone="warning"
+                        indicator={
                             <span className="h-2 w-2 rounded-full bg-warning-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-warning-strong">
-                            {stats.unread}
-                        </p>
-                    </div>
+                        }
+                    />
 
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink-soft">
-                                Dispatch Events
-                            </span>
-                            <Truck className="h-4 w-4 text-brand-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.dispatch}
-                        </p>
-                    </div>
+                    <Stat
+                        size="sm"
+                        title="Dispatch Events"
+                        value={stats.dispatch}
+                        icon={Truck}
+                    />
 
-                    <div className="rounded-xl border border-line bg-surface p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-ink-soft">
-                                Safety & Maintenance
-                            </span>
-                            <ShieldAlert className="h-4 w-4 text-warning-strong" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold text-ink">
-                            {stats.safety}
-                        </p>
-                    </div>
+                    <Stat
+                        size="sm"
+                        title="Safety & Maintenance"
+                        value={stats.safety}
+                        icon={ShieldAlert}
+                        tone="warning"
+                    />
                 </div>
 
                 <div className="mt-6 space-y-4">

@@ -2,7 +2,18 @@ import { router, useForm } from '@inertiajs/react';
 import { Archive, Filter, RotateCcw, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import {
+    Button,
+    EmptyState,
+    PageHeading,
+    Panel,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { formatDateTime } from '@/lib/formatters';
 import type {
@@ -98,86 +109,73 @@ export function ArchiveSurface({
                     </Panel>
                 ) : (
                     <Panel className="overflow-hidden">
-                        <div
-                            className="workspace-scroll-region"
-                            role="region"
-                            aria-label="Archived dispatches table scroll region"
-                            tabIndex={0}
+                        <Table
+                            containerClassName="border-0 rounded-none"
+                            aria-label="Archived dispatches table"
                         >
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-line bg-surface-subtle text-xs font-semibold text-ink-soft uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3">Reference</th>
-                                        <th className="px-4 py-3">Client</th>
-                                        <th className="px-4 py-3">Title</th>
-                                        <th className="px-4 py-3">
-                                            Status & Reason
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            Archived At
-                                        </th>
-                                        <th className="px-4 py-3 text-right">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-line">
-                                    {filteredJobs.map((job) => (
-                                        <tr
-                                            key={job.id}
-                                            className="hover:bg-surface-subtle/50"
-                                        >
-                                            <td className="px-4 py-3 font-mono font-semibold text-ink">
-                                                {job.reference}
-                                            </td>
-                                            <td className="px-4 py-3 text-ink">
-                                                {job.client}
-                                            </td>
-                                            <td className="px-4 py-3 font-medium text-ink">
-                                                {job.title}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="space-y-1">
-                                                    <CanonicalStatusBadge
-                                                        status={job.status}
-                                                    />
-                                                    {job.cancellation_reason && (
-                                                        <p className="max-w-xs text-xs text-ink-soft italic">
-                                                            “
-                                                            {
-                                                                job.cancellation_reason
-                                                            }
-                                                            ”
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs text-ink-soft">
-                                                {job.deleted_at
-                                                    ? formatDateTime(
-                                                          job.deleted_at,
-                                                      )
-                                                    : 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                {capabilities.restore_dispatch && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        onClick={() =>
-                                                            setSelectedJob(job)
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Reference</TableHead>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Status & Reason</TableHead>
+                                    <TableHead>Archived At</TableHead>
+                                    <TableHead className="text-right">
+                                        Actions
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredJobs.map((job) => (
+                                    <TableRow key={job.id}>
+                                        <TableCell className="font-mono font-semibold text-ink">
+                                            {job.reference}
+                                        </TableCell>
+                                        <TableCell className="text-ink">
+                                            {job.client}
+                                        </TableCell>
+                                        <TableCell className="font-medium text-ink">
+                                            {job.title}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <CanonicalStatusBadge
+                                                    status={job.status}
+                                                />
+                                                {job.cancellation_reason && (
+                                                    <p className="max-w-xs text-xs text-ink-soft italic">
+                                                        “
+                                                        {
+                                                            job.cancellation_reason
                                                         }
-                                                    >
-                                                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                                                        Restore
-                                                    </Button>
+                                                        ”
+                                                    </p>
                                                 )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-xs text-ink-soft">
+                                            {job.deleted_at
+                                                ? formatDateTime(job.deleted_at)
+                                                : 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {capabilities.restore_dispatch && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() =>
+                                                        setSelectedJob(job)
+                                                    }
+                                                >
+                                                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                                                    Restore
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </Panel>
                 )}
 

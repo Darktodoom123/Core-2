@@ -11,8 +11,10 @@ describe('CanonicalStatusBadge', () => {
             label: 'Scheduled',
         };
 
-        render(<CanonicalStatusBadge status={status} />);
+        const { container } = render(<CanonicalStatusBadge status={status} />);
         expect(screen.getByText('Scheduled')).toBeInTheDocument();
+        expect(container.firstChild).toHaveClass('text-brand-strong');
+        expect(container.firstChild).toHaveClass('bg-brand-soft');
     });
 
     it('renders different status tones', () => {
@@ -21,7 +23,9 @@ describe('CanonicalStatusBadge', () => {
             label: 'Cancelled',
         };
 
-        const { container } = render(<CanonicalStatusBadge status={dangerStatus} />);
+        const { container } = render(
+            <CanonicalStatusBadge status={dangerStatus} />,
+        );
         expect(container.firstChild).toHaveClass('text-danger-strong');
     });
 
@@ -31,7 +35,9 @@ describe('CanonicalStatusBadge', () => {
             label: 'Completed',
         };
 
-        const { container } = render(<CanonicalStatusBadge status={status} showDot={false} />);
+        const { container } = render(
+            <CanonicalStatusBadge status={status} showDot={false} />,
+        );
         expect(container.querySelector('.rounded-full.h-1\\.5')).toBeNull();
     });
 });
