@@ -727,7 +727,12 @@ function TrackingMapContent({
                     },
                 ];
 
-                if (kind === 'tower_crane') {
+                const isCrane =
+                    kind === 'tower_crane' ||
+                    kind === 'crane' ||
+                    kind === 'mobile_crane';
+
+                if (isCrane) {
                     const weather = deriveWeatherFromCoords(
                         location.latitude,
                         location.longitude,
@@ -747,6 +752,17 @@ function TrackingMapContent({
                         label: 'Weather',
                         value: `${weather.temperatureC}°C · ${weather.conditionLabel}`,
                     });
+
+                    if (
+                        kind === 'mobile_crane' &&
+                        location.speed !== null &&
+                        location.speed > 0
+                    ) {
+                        fields.push({
+                            label: 'Transit',
+                            value: `${location.speed.toFixed(1)} km/h`,
+                        });
+                    }
                 } else {
                     fields.push({
                         label: 'Movement',

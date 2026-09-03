@@ -11,7 +11,6 @@ import {
     Wrench,
 } from 'lucide-react';
 import { lazy, Suspense, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
 import { Button, EmptyState, Panel } from '@/components/ui';
 import type { AssetKind } from '@/lib/asset-kind';
@@ -58,16 +57,12 @@ export interface LiveTrackingPreviewProps {
     refresh?: ScopeRefreshState;
     realtimeConnected?: boolean;
     onOpenTracking?: () => void;
-    safetyContext?: ReactNode;
 }
 
 export function LiveTrackingPreview({
     locations,
     activeSosIncidents = [],
-    refresh,
-    realtimeConnected = false,
     onOpenTracking,
-    safetyContext,
 }: LiveTrackingPreviewProps) {
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
         null,
@@ -110,111 +105,62 @@ export function LiveTrackingPreview({
         [filteredLocations],
     );
 
-    const latestReceivedAt = filteredLocations.reduce<string | null>(
-        (latest, location) =>
-            timestamp(location.received_at) > timestamp(latest)
-                ? location.received_at
-                : latest,
-        null,
-    );
-    const connection = getConnectionState(refresh, realtimeConnected);
     const mappedCount = filteredLocations.filter(
         (location) => location.latitude !== null && location.longitude !== null,
     ).length;
 
-    const livePingsCount = filteredLocations.filter(
-        (location) => location.freshness_status === 'fresh',
-    ).length;
-
     return (
         <section aria-labelledby="live-tracking-preview-heading">
-            <div className="mb-4 overflow-hidden rounded-2xl border border-line bg-surface">
-                <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                        <h2
-                            id="live-tracking-preview-heading"
-                            className="text-xl font-semibold tracking-tight text-ink"
-                        >
-                            Live field tracking
-                        </h2>
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
-                            <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-                        </span>
-                    </div>
-
-                    <div className="grid w-full grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line lg:w-auto lg:grid-cols-[minmax(15rem,1.25fr)_minmax(10rem,0.8fr)_auto]">
-                        <div className="col-span-2 bg-surface-subtle px-3 py-2 lg:col-span-1">
-                            <p className="text-[10px] font-semibold tracking-wide text-ink-soft uppercase">
-                                System health
-                            </p>
-                            <div className="mt-1 flex flex-wrap items-center gap-2">
-                                <Radio
-                                    className="h-3.5 w-3.5 text-success-strong"
-                                    aria-hidden="true"
-                                />
-                                <span
-                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold ${connection.className}`}
-                                    role="status"
-                                    aria-live="polite"
+            <div className="mb-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand-strong ring-1 ring-brand/20">
+                            <Radio className="h-5 w-5" aria-hidden="true" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2
+                                    id="live-tracking-preview-heading"
+                                    className="text-lg font-bold tracking-tight text-ink sm:text-xl"
                                 >
-                                    <span
-                                        className={`h-1.5 w-1.5 rounded-full ${connection.dotClassName}`}
-                                        aria-hidden="true"
-                                    />
-                                    {connection.label}
-                                </span>
-                                <span className="text-[11px] text-ink-soft">
-                                    {latestReceivedAt
-                                        ? `${formatAge(latestReceivedAt)} ago`
-                                        : 'No signals recorded'}
+                                    Live field tracking
+                                </h2>
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft/60 px-2 py-0.5 text-[11px] font-semibold text-brand-strong">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-strong opacity-60 motion-reduce:hidden" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-strong" />
+                                    </span>
+                                    Live
                                 </span>
                             </div>
-                        </div>
-
-                        <div className="bg-surface-subtle px-3 py-2">
-                            <p className="text-[10px] font-semibold tracking-wide text-ink-soft uppercase">
-                                Asset summary
+                            <p className="text-xs text-ink-soft">
+                                Real-time fleet positioning and live unit
+                                telemetry
                             </p>
-                            <div className="mt-1 flex items-center gap-1.5 text-xs text-ink">
-                                <Truck
-                                    className="h-3.5 w-3.5 text-ink-soft"
-                                    aria-hidden="true"
-                                />
-                                <strong className="font-semibold tabular-nums">
-                                    {filteredLocations.length} total
-                                </strong>
-                                <span className="text-ink-soft">
-                                    · {livePingsCount} live
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center bg-surface-subtle p-2">
-                            {onOpenTracking ? (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="w-full whitespace-nowrap"
-                                    onClick={onOpenTracking}
-                                >
-                                    Open full tracking
-                                    <ArrowUpRight
-                                        className="h-4 w-4"
-                                        aria-hidden="true"
-                                    />
-                                </Button>
-                            ) : (
-                                <div className="px-2 text-xs text-ink-soft">
-                                    Tracking preview
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
 
-                {safetyContext && (
-                    <div className="border-t border-line">{safetyContext}</div>
-                )}
+                <div className="flex items-center">
+                    {onOpenTracking ? (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 rounded-xl font-medium shadow-2xs transition-all hover:bg-surface-subtle active:scale-[0.98]"
+                            onClick={onOpenTracking}
+                        >
+                            <span>Open full tracking</span>
+                            <ArrowUpRight
+                                className="ml-1 h-3.5 w-3.5"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    ) : (
+                        <div className="px-2 text-xs text-ink-soft">
+                            Tracking preview
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="mb-2 flex justify-end">
@@ -438,33 +384,6 @@ function StatusIcon({
     }
 
     return <WifiOff className={className} aria-hidden="true" />;
-}
-
-function getConnectionState(
-    refresh: ScopeRefreshState | undefined,
-    realtimeConnected: boolean,
-) {
-    if (refresh?.status === 'failed') {
-        return {
-            label: 'Sync issue',
-            className: 'border-danger/30 bg-danger-soft text-danger',
-            dotClassName: 'bg-danger',
-        };
-    }
-
-    if (realtimeConnected) {
-        return {
-            label: 'Connected',
-            className: 'border-success/30 bg-success-soft text-success-strong',
-            dotClassName: 'bg-success-strong',
-        };
-    }
-
-    return {
-        label: 'Polling fallback',
-        className: 'border-warning/30 bg-warning-soft text-warning-strong',
-        dotClassName: 'bg-warning-strong',
-    };
 }
 
 function timestamp(value: string | null) {

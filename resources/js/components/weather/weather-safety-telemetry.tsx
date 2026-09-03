@@ -1,4 +1,4 @@
-﻿import {
+import {
     AlertTriangle,
     CheckCircle2,
     Cloud,
@@ -7,6 +7,7 @@
     Compass,
     Droplets,
     Gauge,
+    MapPin,
     ShieldAlert,
     Sun,
     Wind,
@@ -15,6 +16,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import type { LocationUpdateViewModel } from '@/types/workspace';
 
 export type CraneLiftWeatherSafetyStatus = 'safe' | 'caution' | 'danger';
 
@@ -214,12 +216,18 @@ export function WeatherSafetyTelemetry({
     locationLabel,
     variant = 'cockpit',
     className,
+    availableLocations,
+    selectedLocationId,
+    onSelectLocationId,
 }: {
     latitude?: number | null;
     longitude?: number | null;
     locationLabel?: string;
     variant?: 'cockpit' | 'site' | 'tracking';
     className?: string;
+    availableLocations?: LocationUpdateViewModel[];
+    selectedLocationId?: number | null;
+    onSelectLocationId?: (id: number | null) => void;
 }) {
     // Default to Base Yard coordinates (Metro Manila: 14.5995, 120.9842) if none provided
     const targetLat = latitude ?? 14.5995;
@@ -369,18 +377,30 @@ export function WeatherSafetyTelemetry({
         );
 
     if (isTracking) {
-        const SafetyIcon =
+        const directiveBadge =
+            weather.safetyStatus === 'danger' ? (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-danger px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
+                    <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                    Critical Hold
+                </span>
+            ) : weather.safetyStatus === 'caution' ? (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-warning px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
+                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                    Caution Monitor
+                </span>
+            ) : (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Safe Window
+                </span>
+            );
+
+        const bannerBg =
             weather.safetyStatus === 'danger'
-                ? ShieldAlert
+                ? 'bg-danger-soft/70 border-b border-danger/25'
                 : weather.safetyStatus === 'caution'
-                  ? AlertTriangle
-                  : CheckCircle2;
-        const safetyLabel =
-            weather.safetyStatus === 'danger'
-                ? 'Warning'
-                : weather.safetyStatus === 'caution'
-                  ? 'Caution'
-                  : 'Safe';
+                  ? 'bg-warning-soft/70 border-b border-warning/25'
+                  : 'bg-success-soft/40 border-b border-success/20';
 
         return (
             <div
@@ -388,10 +408,11 @@ export function WeatherSafetyTelemetry({
                 role="group"
                 aria-label="Weather and lift safety"
             >
+                {/* Mission Control Directive Bar */}
                 <div
                     className={cn(
-                        'flex items-start gap-2.5 border-b px-4 py-2.5 text-xs md:px-5',
-                        statusBg,
+                        'flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-3.5 sm:px-5',
+                        bannerBg,
                     )}
                     role={
                         weather.safetyStatus === 'danger' ? 'alert' : 'status'
@@ -402,133 +423,250 @@ export function WeatherSafetyTelemetry({
                             : 'polite'
                     }
                 >
-                    <SafetyIcon
-                        className="mt-0.5 h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                    />
-                    <span className="font-bold tracking-wide uppercase">
-                        {safetyLabel}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span>
-                        <strong className="font-semibold">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {directiveBadge}
+
+                        {availableLocations && availableLocations.length > 0 ? (
+                            <div className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-2.5 py-1 text-xs text-ink shadow-2xs">
+                                <MapPin
+                                    className="h-3.5 w-3.5 shrink-0 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                                <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                    Target:
+                                </span>
+                                <select
+                                    aria-label="Target asset or site for weather monitoring"
+                                    value={selectedLocationId ?? ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        onSelectLocationId?.(
+                                            val ? Number(val) : null,
+                                        );
+                                    }}
+                                    className="cursor-pointer bg-transparent text-xs font-semibold text-ink hover:text-brand-strong focus:outline-none"
+                                >
+                                    <option value="">
+                                        Base Yard (HQ · Metro Manila)
+                                    </option>
+                                    {availableLocations.map((loc) => {
+                                        const name =
+                                            loc.asset?.name ??
+                                            loc.asset?.code ??
+                                            loc.user.name;
+                                        const site = loc.job?.site
+                                            ? ` (${loc.job.site})`
+                                            : '';
+
+                                        return (
+                                            <option key={loc.id} value={loc.id}>
+                                                {name}
+                                                {site}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-2.5 py-1 text-xs font-semibold text-ink shadow-2xs">
+                                <MapPin
+                                    className="h-3.5 w-3.5 shrink-0 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                                <span>
+                                    {locationLabel ||
+                                        'Base Yard (HQ · Metro Manila)'}
+                                </span>
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                        <strong className="font-bold text-ink">
                             {weather.safetyHeadline}:
-                        </strong>{' '}
-                        {weather.safetyAdvice}
-                    </span>
+                        </strong>
+                        <span className="text-ink-soft">
+                            {weather.safetyAdvice}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="grid gap-px bg-line lg:grid-cols-3">
-                    <section className="min-w-0 bg-surface">
-                        <div className="flex min-h-8 flex-wrap items-center justify-between gap-2 border-b border-line bg-surface-subtle px-4 py-1.5 md:px-5">
-                            <h3 className="text-[10px] font-semibold tracking-wide text-ink-soft uppercase">
-                                Weather &amp; site conditions
-                            </h3>
-                            {weather.isLiveFeed ? (
-                                <span className="inline-flex items-center gap-1 rounded border border-success/30 bg-success-soft px-1.5 py-0.5 text-[9px] font-bold text-success-strong">
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong motion-reduce:animate-none" />
-                                    Live data
+                {/* 3-Column Modern Telemetry Modules */}
+                <div className="p-3.5 sm:p-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        {/* Card 1: Atmospheric & Weather */}
+                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
+                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
+                                <span
+                                    className="max-w-[180px] truncate text-[11px] font-semibold tracking-wider text-ink-soft uppercase"
+                                    title={locationLabel || 'Base Yard'}
+                                >
+                                    Atmosphere ·{' '}
+                                    {locationLabel
+                                        ? locationLabel.split('(')[0].trim()
+                                        : 'Base Yard'}
                                 </span>
-                            ) : (
-                                <span className="rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[9px] font-medium text-ink-soft">
-                                    Estimated
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3 p-4 md:px-5">
-                            <WeatherIcon
-                                className="h-8 w-8 shrink-0 text-brand-strong"
-                                aria-hidden="true"
-                            />
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-ink uppercase">
-                                    {weather.conditionLabel}
-                                </p>
-                                <p className="text-xs text-ink-soft">
-                                    <strong className="font-semibold text-ink tabular-nums">
-                                        {weather.temperatureC}°C
-                                    </strong>{' '}
-                                    · {weather.humidityPercent}% humidity
-                                </p>
-                                <p className="mt-0.5 text-[10px] text-ink-soft">
-                                    {weather.lastUpdatedTime
-                                        ? `Updated ${weather.lastUpdatedTime}`
-                                        : 'Regional estimate'}
-                                </p>
+                                {weather.isLiveFeed ? (
+                                    <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-1.5 py-0.5 text-[10px] font-bold text-success-strong">
+                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong motion-reduce:animate-none" />
+                                        Live Satellite
+                                    </span>
+                                ) : (
+                                    <span className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                                        Estimated
+                                    </span>
+                                )}
                             </div>
-                        </div>
-                    </section>
 
-                    <section className="min-w-0 bg-surface">
-                        <h3 className="flex min-h-8 items-center border-b border-line bg-surface-subtle px-4 py-1.5 text-[10px] font-semibold tracking-wide text-ink-soft uppercase md:px-5">
-                            Wind metrics
-                        </h3>
-                        <div className="flex items-center gap-3 p-4 md:px-5">
-                            <Wind
-                                className="h-8 w-8 shrink-0 text-ink-soft"
-                                aria-hidden="true"
-                            />
-                            <dl className="min-w-0 space-y-1 text-xs">
-                                <div className="flex items-baseline gap-2">
-                                    <dt className="font-semibold text-ink-soft uppercase">
-                                        Wind
-                                    </dt>
-                                    <dd className="font-semibold text-ink tabular-nums">
-                                        {weather.windSpeedKmh} km/h{' '}
-                                        <span className="font-normal text-ink-soft">
-                                            {weather.windDirection}
+                            <div className="mt-2.5 flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-brand-strong shadow-2xs">
+                                    <WeatherIcon
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-lg font-bold tracking-tight text-ink tabular-nums">
+                                            {weather.temperatureC}°C
                                         </span>
-                                    </dd>
-                                </div>
-                                <div className="flex flex-wrap items-baseline gap-2">
-                                    <dt className="font-semibold text-ink-soft uppercase">
-                                        Peak gust
-                                    </dt>
-                                    <dd
-                                        className={cn(
-                                            'rounded-md px-1.5 py-0.5 font-bold tabular-nums',
-                                            weather.windGustKmh > 40
-                                                ? 'bg-danger-soft text-danger-strong'
-                                                : weather.windGustKmh > 28
-                                                  ? 'bg-warning-soft text-warning-strong'
-                                                  : 'bg-surface-subtle text-ink',
+                                        <span className="truncate text-xs font-semibold text-ink">
+                                            {weather.conditionLabel}
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-[11px] text-ink-soft">
+                                        {weather.humidityPercent}% humidity
+                                        {weather.lastUpdatedTime && (
+                                            <span>
+                                                {' '}
+                                                · {weather.lastUpdatedTime}
+                                            </span>
                                         )}
-                                    >
-                                        {weather.windGustKmh} km/h
-                                    </dd>
+                                    </p>
                                 </div>
-                            </dl>
-                        </div>
-                    </section>
-
-                    <section className="min-w-0 bg-surface">
-                        <h3 className="flex min-h-8 items-center border-b border-line bg-surface-subtle px-4 py-1.5 text-[10px] font-semibold tracking-wide text-ink-soft uppercase md:px-5">
-                            Surface &amp; ground
-                        </h3>
-                        <div className="flex items-center gap-3 p-4 md:px-5">
-                            <Droplets
-                                className="h-8 w-8 shrink-0 text-ink-soft"
-                                aria-hidden="true"
-                            />
-                            <div className="min-w-0">
-                                <p className="text-xs font-semibold text-ink-soft uppercase">
-                                    Ground:{' '}
-                                    <strong className="font-bold text-ink capitalize">
-                                        {weather.groundSaturationRisk}
-                                    </strong>
-                                </p>
-                                <p className="mt-1 text-xs text-ink-soft">
-                                    {weather.groundSaturationRisk ===
-                                    'saturated'
-                                        ? 'Ground matting required before lift.'
-                                        : weather.groundSaturationRisk ===
-                                            'damp'
-                                          ? 'Verify pad bearing before lift.'
-                                          : 'Bearing conditions currently stable.'}
-                                </p>
                             </div>
                         </div>
-                    </section>
+
+                        {/* Card 2: Wind Vectors & Hazards */}
+                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
+                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
+                                <span className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
+                                    Wind &amp; Gusts
+                                </span>
+                                <span className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[10px] font-bold text-ink uppercase">
+                                    {weather.windDirection} Vector
+                                </span>
+                            </div>
+
+                            <div className="mt-2.5 flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft shadow-2xs">
+                                    <Wind
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-baseline gap-2">
+                                        <span className="text-lg font-bold tracking-tight text-ink tabular-nums">
+                                            {weather.windSpeedKmh}{' '}
+                                            <span className="text-xs font-normal text-ink-soft">
+                                                km/h
+                                            </span>
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
+                                                weather.windGustKmh > 40
+                                                    ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                                    : weather.windGustKmh > 28
+                                                      ? 'border border-warning/30 bg-warning-soft text-warning-strong'
+                                                      : 'border border-line bg-surface text-ink',
+                                            )}
+                                        >
+                                            Gust {weather.windGustKmh} km/h
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-[11px] text-ink-soft">
+                                        {weather.windGustKmh > 40
+                                            ? 'Exceeds safe lifting threshold'
+                                            : weather.windGustKmh > 28
+                                              ? 'Monitor boom anemometers'
+                                              : 'Within safe operating limits'}
+                                        {locationLabel && (
+                                            <span className="text-ink-soft/70">
+                                                {' '}
+                                                ·{' '}
+                                                {locationLabel
+                                                    .split('(')[0]
+                                                    .trim()}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card 3: Soil & Ground Bearing */}
+                        <div className="flex flex-col justify-between rounded-xl border border-line bg-surface-subtle/40 p-3.5 transition-all hover:bg-surface-subtle/70">
+                            <div className="flex items-center justify-between gap-2 border-b border-line/60 pb-2">
+                                <span className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
+                                    Ground Bearing
+                                </span>
+                                <span
+                                    className={cn(
+                                        'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase',
+                                        weather.groundSaturationRisk ===
+                                            'saturated'
+                                            ? 'border border-danger/30 bg-danger-soft text-danger-strong'
+                                            : weather.groundSaturationRisk ===
+                                                'damp'
+                                              ? 'border border-warning/30 bg-warning-soft text-warning-strong'
+                                              : 'border border-success/30 bg-success-soft text-success-strong',
+                                    )}
+                                >
+                                    {weather.groundSaturationRisk}
+                                </span>
+                            </div>
+
+                            <div className="mt-2.5 flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft shadow-2xs">
+                                    <Droplets
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs leading-snug font-semibold text-ink">
+                                        {weather.groundSaturationRisk ===
+                                        'saturated'
+                                            ? 'Severe outrigger sinking risk'
+                                            : weather.groundSaturationRisk ===
+                                                'damp'
+                                              ? 'Verify pad bearing before lift'
+                                              : 'Bearing conditions stable'}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-ink-soft">
+                                        {weather.groundSaturationRisk ===
+                                        'saturated'
+                                            ? 'Ground matting strictly required'
+                                            : weather.groundSaturationRisk ===
+                                                'damp'
+                                              ? 'Check pad compaction & soil'
+                                              : 'Outrigger pads nominal'}
+                                        {locationLabel && (
+                                            <span className="text-ink-soft/70">
+                                                {' '}
+                                                ·{' '}
+                                                {locationLabel
+                                                    .split('(')[0]
+                                                    .trim()}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

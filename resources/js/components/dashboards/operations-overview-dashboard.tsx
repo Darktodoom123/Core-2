@@ -30,7 +30,6 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { LiveTrackingPreview } from '@/components/dashboards/live-tracking-preview';
 import { Button, EmptyState, Panel } from '@/components/ui';
-import { WeatherSafetyTelemetry } from '@/components/weather/weather-safety-telemetry';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { cn } from '@/lib/utils';
 import type {
@@ -408,7 +407,6 @@ function OperationsManagerDashboardView({
             refresh={refresh}
             realtimeConnected={realtimeConnected}
             onOpenTracking={() => onSectionChange('assets')}
-            safetyContext={<WeatherSafetyTelemetry variant="tracking" />}
         />
     ) : null;
 
