@@ -397,16 +397,96 @@ textarea {
 }
 
 .maplibre-asset-marker[data-freshness='stale'] .maplibre-asset-marker__surface {
-    border-color: var(--color-danger);
-    background: var(--color-danger-strong);
-    color: var(--color-danger-contrast);
+    border-style: dashed;
+    border-color: var(--color-line-strong);
+    background: var(--color-surface);
+    color: var(--color-ink-soft);
 }
 
 .maplibre-asset-marker[data-freshness='offline']
     .maplibre-asset-marker__surface {
     border-style: dashed;
-    background: var(--color-muted);
-    color: var(--color-surface);
+    background: var(--color-surface);
+    color: var(--color-ink-soft);
+}
+
+.maplibre-marker-group {
+    position: relative;
+    display: flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--color-line-strong);
+    border-radius: 9999px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.maplibre-marker-group__count {
+    position: relative;
+}
+
+.maplibre-marker-group[data-sos-active='true'] {
+    z-index: 120;
+    border-color: var(--color-danger);
+    color: var(--color-danger-strong);
+}
+
+.maplibre-marker-group[data-selected='true'],
+.maplibre-marker-group:focus-visible {
+    outline: 3px solid var(--color-brand-strong);
+    outline-offset: 3px;
+}
+
+.maplibre-tracking-group {
+    padding: 0.875rem;
+    color: var(--color-ink);
+    font-size: 0.875rem;
+}
+
+.maplibre-tracking-group__title {
+    display: block;
+    padding: 0 1.25rem 0.75rem 0;
+}
+
+.maplibre-tracking-group__list {
+    display: grid;
+    max-height: 14rem;
+    overflow-y: auto;
+}
+
+.maplibre-tracking-group__unit {
+    display: grid;
+    min-height: 44px;
+    gap: 0.25rem;
+    border-top: 1px solid var(--color-line);
+    padding: 0.75rem 0.375rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.maplibre-tracking-group__unit span {
+    color: var(--color-ink-soft);
+    font-size: 0.75rem;
+}
+
+.maplibre-tracking-group__unit[data-sos='true'] strong {
+    color: var(--color-danger-strong);
+}
+
+.maplibre-tracking-group__unit:hover {
+    background: var(--color-surface-subtle);
+}
+
+.maplibre-tracking-group__unit:focus-visible {
+    outline: 2px solid var(--color-brand-strong);
+    outline-offset: -2px;
 }
 
 .maplibre-asset-marker[data-selected='true'] {

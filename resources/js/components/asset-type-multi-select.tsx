@@ -6,7 +6,7 @@ import {
     Truck,
     UserRoundCog,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { SVGProps } from 'react';
 import { getAssetKind } from '@/lib/asset-kind';
 import type { AssetKind } from '@/lib/asset-kind';
@@ -20,6 +20,7 @@ const ASSET_TYPE_FILTERS: ReadonlyArray<{
     { id: 'truck', label: 'Trucks' },
     { id: 'crane', label: 'Cranes' },
     { id: 'mobile_crane', label: 'Mobile Cranes' },
+    { id: 'tower_crane', label: 'Tower Cranes' },
     { id: 'equipment', label: 'Heavy Eqp' },
     { id: 'personnel', label: 'Personnel' },
 ];
@@ -32,6 +33,7 @@ export interface AssetTypeMultiSelectProps {
     onChange: (selectedTypes: Set<AssetKind>) => void;
     statusFilter?: AssetStatusFilter;
     label?: string;
+    appearance?: 'brand' | 'neutral';
 }
 
 export function AssetTypeMultiSelect({
@@ -40,8 +42,10 @@ export function AssetTypeMultiSelect({
     onChange,
     statusFilter = 'all',
     label = 'Asset:',
+    appearance = 'brand',
 }: AssetTypeMultiSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const menuId = useId();
     const menuRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -102,23 +106,27 @@ export function AssetTypeMultiSelect({
 
     return (
         <div ref={menuRef} className="relative flex items-center gap-2">
-            <span className="mr-1 text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                {label}
-            </span>
+            {label && (
+                <span className="mr-1 text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                    {label}
+                </span>
+            )}
             <button
                 ref={triggerRef}
                 type="button"
                 onClick={() => setIsOpen((open) => !open)}
                 className={cn(
-                    'inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors',
-                    allTypesSelected
-                        ? 'bg-brand-strong font-semibold text-white shadow-xs'
-                        : 'bg-brand-soft font-semibold text-brand-strong ring-1 ring-brand-strong/20',
+                    'inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    appearance === 'neutral'
+                        ? 'rounded-lg border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-subtle'
+                        : allTypesSelected
+                          ? 'bg-brand-strong font-semibold text-white shadow-xs'
+                          : 'bg-brand-soft font-semibold text-brand-strong ring-1 ring-brand-strong/20',
                 )}
                 aria-label={`Asset type filter: ${selectedLabel}`}
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
-                aria-controls="asset-type-filter-menu"
+                aria-controls={menuId}
             >
                 <ListFilter className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>{selectedLabel}</span>
@@ -136,10 +144,13 @@ export function AssetTypeMultiSelect({
 
             {isOpen && (
                 <div
-                    id="asset-type-filter-menu"
+                    id={menuId}
                     role="menu"
                     aria-label="Asset type filters"
-                    className="absolute top-full right-0 z-[1000] mt-2 w-56 rounded-xl border border-line bg-surface p-1.5 shadow-lg ring-1 ring-black/5"
+                    className={cn(
+                        'absolute top-full z-[1000] mt-2 w-56 rounded-xl border border-line bg-surface p-1.5 shadow-lg ring-1 ring-black/5',
+                        appearance === 'neutral' ? 'left-0' : 'right-0',
+                    )}
                 >
                     <button
                         type="button"

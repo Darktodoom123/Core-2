@@ -1,55 +1,35 @@
 import {
     ArrowUpRight,
-    CheckCircle2,
     CircleAlert,
     Clock3,
-    Construction,
+    List,
+    Map,
     Radio,
-    Truck,
-    UserRoundCog,
+    Search,
     WifiOff,
-    Wrench,
 } from 'lucide-react';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { AssetTypeMultiSelect } from '@/components/asset-type-multi-select';
-import { Button, EmptyState, Panel } from '@/components/ui';
-import type { AssetKind } from '@/lib/asset-kind';
-import { getAssetKind } from '@/lib/asset-kind';
+import { Button, EmptyState, Input, Select } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import type {
     LocationUpdateViewModel,
     ScopeRefreshState,
     SosIncidentViewModel,
 } from '@/types/workspace';
+import {
+    FRESHNESS_META,
+    TrackingUnitDetails,
+    TrackingUnitRow,
+} from './tracking-preview-units';
+import { UNASSIGNED_JOBSITE, useTrackingPreview } from './use-tracking-preview';
 
 const LiveTrackingMap = lazy(() =>
     import('@/components/live-tracking-map').then(
         ({ LiveTrackingMap: Map }) => ({ default: Map }),
     ),
 );
-
-function MapLoadingFallback() {
-    return (
-        <div
-            className="flex h-[360px] min-h-[360px] items-center justify-center bg-surface-subtle p-6 text-center md:h-[420px]"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
-            aria-label="Loading live location map"
-        >
-            <p className="text-sm text-ink-soft">Loading live location map…</p>
-        </div>
-    );
-}
-
-const STATUS_ORDER: Record<
-    LocationUpdateViewModel['freshness_status'],
-    number
-> = {
-    offline: 0,
-    stale: 1,
-    delayed: 2,
-    fresh: 3,
-};
+const EMPTY_SOS_INCIDENTS: SosIncidentViewModel[] = [];
 
 export interface LiveTrackingPreviewProps {
     locations: LocationUpdateViewModel[];
@@ -61,354 +41,355 @@ export interface LiveTrackingPreviewProps {
 
 export function LiveTrackingPreview({
     locations,
-    activeSosIncidents = [],
+    activeSosIncidents = EMPTY_SOS_INCIDENTS,
+    refresh,
+    realtimeConnected,
     onOpenTracking,
 }: LiveTrackingPreviewProps) {
-    const [selectedLocationId, setSelectedLocationId] = useState<number | null>(
-        null,
-    );
-    const [assetFilters, setAssetFilters] = useState<Set<AssetKind>>(
-        () => new Set(),
-    );
-
-    const filteredLocations = useMemo(
-        () =>
-            locations.filter(
-                (location) =>
-                    assetFilters.size === 0 ||
-                    assetFilters.has(getAssetKind(location)),
-            ),
-        [assetFilters, locations],
-    );
-
-    const effectiveSelectedLocationId = filteredLocations.some(
-        (location) => location.id === selectedLocationId,
-    )
-        ? selectedLocationId
-        : null;
-
-    const sortedLocations = useMemo(
-        () =>
-            [...filteredLocations]
-                .sort((a, b) => {
-                    const statusDifference =
-                        STATUS_ORDER[a.freshness_status] -
-                        STATUS_ORDER[b.freshness_status];
-
-                    if (statusDifference !== 0) {
-                        return statusDifference;
-                    }
-
-                    return timestamp(b.received_at) - timestamp(a.received_at);
-                })
-                .slice(0, 5),
-        [filteredLocations],
-    );
-
-    const mappedCount = filteredLocations.filter(
-        (location) => location.latitude !== null && location.longitude !== null,
-    ).length;
+    const tracking = useTrackingPreview(locations, activeSosIncidents);
 
     return (
-        <section aria-labelledby="live-tracking-preview-heading">
-            <div className="mb-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div className="flex min-w-0 flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand-strong ring-1 ring-brand/20">
-                            <Radio className="h-5 w-5" aria-hidden="true" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h2
-                                    id="live-tracking-preview-heading"
-                                    className="text-lg font-bold tracking-tight text-ink sm:text-xl"
-                                >
-                                    Live field tracking
-                                </h2>
-                                <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft/60 px-2 py-0.5 text-[11px] font-semibold text-brand-strong">
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-strong opacity-60 motion-reduce:hidden" />
-                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-strong" />
-                                    </span>
-                                    Live
-                                </span>
-                            </div>
-                            <p className="text-xs text-ink-soft">
-                                Real-time fleet positioning and live unit
-                                telemetry
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center">
-                    {onOpenTracking ? (
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-8 rounded-xl font-medium shadow-2xs transition-all hover:bg-surface-subtle active:scale-[0.98]"
-                            onClick={onOpenTracking}
+        <section
+            aria-labelledby="live-tracking-preview-heading"
+            className="min-w-0 rounded-2xl border border-line bg-surface"
+        >
+            <header className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3 border-b border-line px-4 py-4 sm:px-5">
+                <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <h2
+                            id="live-tracking-preview-heading"
+                            className="text-lg font-semibold tracking-tight text-ink"
                         >
-                            <span>Open full tracking</span>
-                            <ArrowUpRight
-                                className="ml-1 h-3.5 w-3.5"
-                                aria-hidden="true"
-                            />
-                        </Button>
-                    ) : (
-                        <div className="px-2 text-xs text-ink-soft">
-                            Tracking preview
-                        </div>
+                            Field tracking
+                        </h2>
+                        {realtimeConnected !== undefined && (
+                            <span className="inline-flex items-center gap-1.5 text-xs text-ink-soft">
+                                {realtimeConnected ? (
+                                    <Radio
+                                        className="size-3.5 text-success-strong"
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <WifiOff
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                {realtimeConnected
+                                    ? 'Feed connected'
+                                    : 'Feed disconnected'}
+                            </span>
+                        )}
+                    </div>
+                    <div
+                        role="group"
+                        aria-label="Unit freshness"
+                        className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums"
+                    >
+                        <span className="font-medium text-ink">
+                            {tracking.visibleLocations.length} units
+                        </span>
+                        {(
+                            Object.keys(FRESHNESS_META) as Array<
+                                keyof typeof FRESHNESS_META
+                            >
+                        ).map((status) => (
+                            <span
+                                key={status}
+                                className={
+                                    tracking.counts[status] > 0
+                                        ? FRESHNESS_META[status].textClassName
+                                        : 'text-ink-soft'
+                                }
+                            >
+                                {tracking.counts[status]} {status}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+                {onOpenTracking && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11 shrink-0"
+                        onClick={onOpenTracking}
+                    >
+                        Open full tracking
+                        <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                    </Button>
+                )}
+            </header>
+
+            <div className="flex flex-wrap items-center gap-3 border-b border-line bg-surface-subtle/40 px-4 py-3 sm:px-5">
+                <div className="relative min-w-0 basis-full lg:max-w-72 lg:grow lg:basis-auto">
+                    <Search
+                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-soft"
+                        aria-hidden="true"
+                    />
+                    <Input
+                        type="search"
+                        aria-label="Find a unit"
+                        placeholder="Find a unit by ID or name"
+                        value={tracking.filters.query}
+                        onChange={(event) =>
+                            tracking.updateFilters({
+                                query: event.target.value,
+                            })
+                        }
+                        className="pl-9 placeholder:text-ink-soft"
+                    />
+                </div>
+                <AssetTypeMultiSelect
+                    locations={tracking.assetFilterLocations}
+                    selectedTypes={tracking.filters.assetTypes}
+                    onChange={(assetTypes) =>
+                        tracking.updateFilters({ assetTypes })
+                    }
+                    appearance="neutral"
+                    label=""
+                />
+                <Select
+                    aria-label="Assigned jobsite"
+                    value={tracking.filters.site}
+                    onChange={(event) =>
+                        tracking.updateFilters({ site: event.target.value })
+                    }
+                    className="min-w-0 flex-1 basis-44 lg:max-w-64"
+                >
+                    <option value="">All assigned jobsites</option>
+                    {tracking.sites.map((site) => (
+                        <option key={site} value={site}>
+                            {site}
+                        </option>
+                    ))}
+                    {tracking.hasUnassignedSite && (
+                        <option value={UNASSIGNED_JOBSITE}>
+                            No assigned jobsite
+                        </option>
                     )}
+                </Select>
+                {tracking.hasFilters && (
+                    <Button
+                        variant="quiet"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={tracking.clearFilters}
+                    >
+                        Clear filters
+                    </Button>
+                )}
+            </div>
+
+            <div className="border-b border-line">
+                <div
+                    role="group"
+                    aria-label="Unit views"
+                    className="flex w-full gap-1 px-3 pt-2 lg:w-80"
+                >
+                    <UnitViewButton
+                        active={!tracking.filters.attentionOnly}
+                        onClick={() =>
+                            tracking.updateFilters({ attentionOnly: false })
+                        }
+                        label="All units"
+                        count={tracking.allCount}
+                    />
+                    <UnitViewButton
+                        active={tracking.filters.attentionOnly}
+                        onClick={() =>
+                            tracking.updateFilters({ attentionOnly: true })
+                        }
+                        label="Needs attention"
+                        count={tracking.attentionCount}
+                    />
                 </div>
             </div>
 
-            <div className="mb-2 flex justify-end">
-                <AssetTypeMultiSelect
-                    locations={locations}
-                    selectedTypes={assetFilters}
-                    onChange={setAssetFilters}
-                />
+            {refresh?.status === 'failed' && (
+                <p
+                    role="status"
+                    className="flex items-start gap-2 border-b border-line bg-warning-soft px-4 py-3 text-xs text-warning-strong"
+                >
+                    <CircleAlert
+                        className="size-4 shrink-0"
+                        aria-hidden="true"
+                    />
+                    Location refresh failed. Showing the last available reports.
+                </p>
+            )}
+
+            <div
+                role="group"
+                aria-label="Tracking view"
+                className="flex gap-1 border-b border-line px-4 py-2 lg:hidden"
+            >
+                <Button
+                    variant={
+                        tracking.mobileView === 'map' ? 'secondary' : 'quiet'
+                    }
+                    size="sm"
+                    aria-pressed={tracking.mobileView === 'map'}
+                    className="min-h-11 flex-1"
+                    onClick={() => tracking.setMobileView('map')}
+                >
+                    <Map className="size-4" aria-hidden="true" />
+                    Map
+                </Button>
+                <Button
+                    variant={
+                        tracking.mobileView === 'list' ? 'secondary' : 'quiet'
+                    }
+                    size="sm"
+                    aria-pressed={tracking.mobileView === 'list'}
+                    className="min-h-11 flex-1"
+                    onClick={() => tracking.setMobileView('list')}
+                >
+                    <List className="size-4" aria-hidden="true" />
+                    List
+                </Button>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.8fr)]">
-                <Suspense fallback={<MapLoadingFallback />}>
-                    <LiveTrackingMap
-                        locations={filteredLocations}
-                        activeSosIncidents={activeSosIncidents}
-                        compact
-                        showLocationList={false}
-                        selectedLocationId={effectiveSelectedLocationId}
-                        onSelectedLocationChange={setSelectedLocationId}
-                    />
-                </Suspense>
-
-                <Panel className="flex min-h-[360px] flex-col overflow-hidden p-0 md:min-h-[420px]">
-                    <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                        <div>
-                            <h3 className="text-sm font-semibold text-ink">
-                                Unit status
-                            </h3>
-                            <p className="mt-0.5 text-xs text-ink-soft">
-                                {filteredLocations.length === 0
-                                    ? 'No visible field units'
-                                    : `${mappedCount} of ${filteredLocations.length} with coordinates`}
-                            </p>
-                        </div>
-                        <Radio
-                            className="h-4 w-4 text-brand-strong"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    {sortedLocations.length === 0 ? (
-                        <div className="flex flex-1 items-center justify-center p-6">
+            <div className="grid min-w-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
+                <div
+                    aria-label="Field units"
+                    className={cn(
+                        'h-[420px] min-w-0 flex-col lg:flex lg:h-[480px] lg:border-r lg:border-line',
+                        tracking.mobileView === 'list' ? 'flex' : 'hidden',
+                    )}
+                >
+                    <p className="flex min-h-11 shrink-0 items-center border-b border-line px-4 py-2.5 text-xs text-ink-soft">
+                        {tracking.mappedCount} of{' '}
+                        {tracking.visibleLocations.length} with coordinates
+                    </p>
+                    {tracking.visibleLocations.length === 0 ? (
+                        <div className="flex flex-1 items-center justify-center p-5">
                             <EmptyState
                                 compact
-                                icon={Radio}
-                                title="No location updates"
-                                message="Visible field units will appear here when location sharing is active."
+                                icon={Search}
+                                title={
+                                    locations.length
+                                        ? 'No matching units'
+                                        : 'No location updates'
+                                }
+                                message={
+                                    locations.length
+                                        ? 'Try a different name, asset type, or assigned jobsite.'
+                                        : 'Units will appear when location reports are available.'
+                                }
                             />
                         </div>
                     ) : (
-                        <ul className="divide-y divide-line overflow-y-auto">
-                            {sortedLocations.map((location) => (
-                                <UnitStatusRow
+                        <ul
+                            aria-label="Matching units"
+                            className="min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain"
+                        >
+                            {tracking.visibleLocations.map((location) => (
+                                <TrackingUnitRow
                                     key={location.id}
                                     location={location}
                                     selected={
-                                        location.id ===
-                                        effectiveSelectedLocationId
+                                        tracking.selected?.id === location.id
                                     }
-                                    onSelect={() => {
-                                        if (
-                                            location.latitude !== null &&
-                                            location.longitude !== null
-                                        ) {
-                                            setSelectedLocationId(location.id);
-                                        }
-                                    }}
+                                    hasSos={tracking.sosWorkerIds.has(
+                                        location.user.id,
+                                    )}
+                                    onSelect={() =>
+                                        tracking.selectLocation(location.id)
+                                    }
                                 />
                             ))}
                         </ul>
                     )}
+                </div>
 
-                    {filteredLocations.length > sortedLocations.length &&
-                        onOpenTracking && (
-                            <div className="mt-auto border-t border-line px-4 py-3">
-                                <button
-                                    type="button"
-                                    className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-strong hover:text-brand focus-visible:outline-none"
-                                    onClick={onOpenTracking}
-                                >
-                                    View all {filteredLocations.length} units
-                                    <ArrowUpRight
-                                        className="h-4 w-4"
-                                        aria-hidden="true"
-                                    />
-                                </button>
-                            </div>
-                        )}
-                </Panel>
+                <div
+                    className={cn(
+                        'h-[420px] min-w-0 flex-col overflow-hidden rounded-b-2xl lg:flex lg:h-[480px] lg:rounded-bl-none',
+                        tracking.mobileView === 'map' ? 'flex' : 'hidden',
+                        tracking.selected && 'rounded-b-none',
+                    )}
+                >
+                    <div className="flex min-h-11 shrink-0 items-center gap-2 border-b border-line bg-surface-subtle/50 px-4 py-2 text-xs text-ink-soft">
+                        <Clock3
+                            className="size-3.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span>
+                            {tracking.hasOldLocations
+                                ? 'Showing last reported locations'
+                                : tracking.mappedCount
+                                  ? 'Select a unit to inspect its latest report'
+                                  : 'No reported coordinates to show'}
+                        </span>
+                    </div>
+                    <Suspense fallback={<MapLoadingFallback />}>
+                        <LiveTrackingMap
+                            locations={tracking.visibleLocations}
+                            activeSosIncidents={tracking.activeIncidents}
+                            compact
+                            showLocationList={false}
+                            selectedLocationId={tracking.selected?.id ?? null}
+                            onSelectedLocationChange={tracking.selectLocation}
+                            className="h-full min-h-0 flex-1 rounded-none border-0 shadow-none md:h-full"
+                        />
+                    </Suspense>
+                </div>
             </div>
+            {tracking.selected && (
+                <TrackingUnitDetails
+                    location={tracking.selected}
+                    hasSos={tracking.sosWorkerIds.has(
+                        tracking.selected.user.id,
+                    )}
+                    onClose={() => tracking.selectLocation(null)}
+                />
+            )}
         </section>
     );
 }
 
-function UnitStatusRow({
-    location,
-    selected,
-    onSelect,
+function UnitViewButton({
+    active,
+    onClick,
+    label,
+    count,
 }: {
-    location: LocationUpdateViewModel;
-    selected: boolean;
-    onSelect: () => void;
+    active: boolean;
+    onClick: () => void;
+    label: string;
+    count: number;
 }) {
-    const status = statusMeta(location.freshness_status);
-    const trackableLabel = location.asset?.code ?? 'Field worker';
-    const hasCoordinates =
-        location.latitude !== null && location.longitude !== null;
-
     return (
-        <li>
-            <button
-                type="button"
-                className={`flex min-h-[76px] w-full items-center gap-3 px-4 py-3 text-left transition-colors focus-visible:outline-none ${
-                    selected ? 'bg-brand-soft/70' : 'hover:bg-surface-subtle'
-                } ${!hasCoordinates ? 'opacity-75' : ''}`}
-                onClick={onSelect}
-                disabled={!hasCoordinates}
-                aria-pressed={selected}
-            >
-                <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${status.iconClassName}`}
-                >
-                    <AssetIcon location={location} />
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-ink">
-                        {location.asset?.name ?? location.user.name}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-ink-soft">
-                        {trackableLabel}
-                        {location.job ? ` · ${location.job.reference}` : ''}
-                    </span>
-                </span>
-                <span className="shrink-0 text-right">
-                    <span
-                        className={`flex items-center justify-end gap-1 text-xs font-semibold ${status.textClassName}`}
-                    >
-                        <StatusIcon
-                            status={location.freshness_status}
-                            className="h-3.5 w-3.5"
-                            aria-hidden="true"
-                        />
-                        {status.label}
-                    </span>
-                    <span className="mt-1 block text-[11px] text-muted">
-                        Last received {formatAge(location.received_at)}
-                    </span>
-                </span>
-            </button>
-        </li>
+        <button
+            type="button"
+            aria-label={label}
+            aria-pressed={active}
+            onClick={onClick}
+            className={cn(
+                'inline-flex min-h-11 flex-1 items-center justify-center gap-2 border-b-2 px-1 pb-2 text-xs font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand',
+                active
+                    ? 'border-brand text-ink'
+                    : 'border-transparent text-ink-soft hover:border-line-strong hover:text-ink',
+            )}
+        >
+            {label}
+            <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-xs tabular-nums">
+                {count}
+            </span>
+        </button>
     );
 }
 
-function statusMeta(status: LocationUpdateViewModel['freshness_status']) {
-    if (status === 'fresh') {
-        return {
-            label: 'Fresh',
-            textClassName: 'text-success-strong',
-            iconClassName: 'bg-success-soft text-success-strong',
-        };
-    }
-
-    if (status === 'delayed') {
-        return {
-            label: 'Delayed',
-            textClassName: 'text-warning-strong',
-            iconClassName: 'bg-warning-soft text-warning-strong',
-        };
-    }
-
-    if (status === 'stale') {
-        return {
-            label: 'Stale',
-            textClassName: 'text-danger',
-            iconClassName: 'bg-danger-soft text-danger',
-        };
-    }
-
-    return {
-        label: 'Offline',
-        textClassName: 'text-danger',
-        iconClassName: 'bg-danger-soft text-danger',
-    };
-}
-
-function AssetIcon({ location }: { location: LocationUpdateViewModel }) {
-    const kind = getAssetKind(location);
-
-    if (kind === 'truck') {
-        return <Truck className="h-4 w-4" aria-hidden="true" />;
-    }
-
-    if (kind === 'crane' || kind === 'mobile_crane') {
-        return <Construction className="h-4 w-4" aria-hidden="true" />;
-    }
-
-    if (kind === 'equipment') {
-        return <Wrench className="h-4 w-4" aria-hidden="true" />;
-    }
-
-    return <UserRoundCog className="h-4 w-4" aria-hidden="true" />;
-}
-
-function StatusIcon({
-    status,
-    className,
-}: {
-    status: LocationUpdateViewModel['freshness_status'];
-    className: string;
-}) {
-    if (status === 'fresh') {
-        return <CheckCircle2 className={className} aria-hidden="true" />;
-    }
-
-    if (status === 'delayed') {
-        return <Clock3 className={className} aria-hidden="true" />;
-    }
-
-    if (status === 'stale') {
-        return <CircleAlert className={className} aria-hidden="true" />;
-    }
-
-    return <WifiOff className={className} aria-hidden="true" />;
-}
-
-function timestamp(value: string | null) {
-    return value ? new Date(value).getTime() : 0;
-}
-
-function formatAge(value: string | null) {
-    if (!value) {
-        return 'not available';
-    }
-
-    const seconds = Math.max(
-        0,
-        Math.floor((Date.now() - timestamp(value)) / 1000),
+function MapLoadingFallback() {
+    return (
+        <div
+            className="flex min-h-0 flex-1 items-center justify-center bg-surface-subtle p-6 text-center"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading live location map"
+        >
+            <p className="text-sm text-ink-soft">Loading live location map…</p>
+        </div>
     );
-
-    if (seconds < 60) {
-        return `${seconds}s ago`;
-    }
-
-    const minutes = Math.floor(seconds / 60);
-
-    if (minutes < 60) {
-        return `${minutes}m ago`;
-    }
-
-    return `${Math.floor(minutes / 60)}h ago`;
 }

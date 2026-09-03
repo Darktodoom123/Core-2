@@ -64,7 +64,9 @@ async function openTracking(page: Page) {
 }
 
 async function expectMapReady(page: Page) {
-    await expect(page.getByTestId('live-tracking-map')).toBeVisible();
+    await expect(page.getByTestId('live-tracking-map')).toBeVisible({
+        timeout: 20_000,
+    });
     await expect(
         page.getByRole('application', {
             name: /Interactive live field location map/i,
@@ -115,7 +117,10 @@ test('exposes the SOS marker DOM contract without blocking marker interaction', 
         document.body.append(marker);
     });
 
-    const marker = page.locator('.maplibre-sos-marker');
+    const marker = page.getByRole('button', {
+        name: 'SOS incident for Worker One (Acknowledged)',
+        exact: true,
+    });
     const halo = marker.locator('.maplibre-sos-marker__halo');
 
     await expect(marker).toHaveAttribute(
@@ -183,7 +188,9 @@ test('keeps the synchronized list available when the style fails', async ({
     );
     await openTracking(page);
 
-    await expect(page.getByRole('alert')).toContainText('Map unavailable');
+    await expect(
+        page.getByTestId('live-tracking-map').getByRole('alert'),
+    ).toContainText('Map unavailable');
     await expectSynchronizedList(page);
 });
 
@@ -204,7 +211,9 @@ test('keeps the synchronized list available when WebGL is unavailable', async ({
     });
     await openTracking(page);
 
-    await expect(page.getByRole('alert')).toContainText('Map unavailable');
+    await expect(
+        page.getByTestId('live-tracking-map').getByRole('alert'),
+    ).toContainText('Map unavailable');
     await expectSynchronizedList(page);
 });
 

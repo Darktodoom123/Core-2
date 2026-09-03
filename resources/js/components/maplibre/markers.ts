@@ -113,6 +113,34 @@ export function createSosMarker({
     return marker;
 }
 
+export function createMarkerGroup({
+    count,
+    sos,
+}: {
+    count: number;
+    sos?: SosMarkerOptions;
+}): HTMLButtonElement {
+    const marker = document.createElement('button');
+    marker.type = 'button';
+    marker.className = 'maplibre-marker-group';
+    marker.setAttribute(
+        'aria-label',
+        `${count} units in this area${sos ? '. Includes SOS incidents' : ''}. Select a unit`,
+    );
+    marker.setAttribute('aria-haspopup', 'dialog');
+
+    if (sos) {
+        appendSosMarkerTreatment(marker, sos);
+    }
+
+    const countElement = document.createElement('span');
+    countElement.className = 'maplibre-marker-group__count';
+    countElement.textContent = String(count);
+    marker.appendChild(countElement);
+
+    return marker;
+}
+
 const SOS_ICON =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
 

@@ -13,15 +13,21 @@ import {
     ZoomIn,
     ZoomOut,
 } from 'lucide-react';
-import type { GeoJSONSource, Marker as MapLibreMarker } from 'maplibre-gl';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, StatusBadge } from '@/components/ui';
-import { deriveWeatherFromCoords } from '@/components/weather/weather-safety-telemetry';
+import type {
+    GeoJSONSource,
+    MapLayerMouseEvent,
+    Marker as MapLibreMarker,
+} from 'maplibre-gl';
 import {
-    getAssetKind,
-    getAssetKindLabel,
-    resolveLocationName,
-} from '@/lib/asset-kind';
+    useCallback,
+    useEffect,
+    useId,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
+import { Button, StatusBadge } from '@/components/ui';
+import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import type {
     LocationUpdateViewModel,
@@ -36,13 +42,21 @@ import type { LngLat } from './maplibre/geojson';
 import { getMapProviderConfiguration } from './maplibre/map-config';
 import type { MapStyleVariant } from './maplibre/map-config';
 import { MapLibreMap, useMapLibre } from './maplibre/maplibre-map';
+import { groupOverlappingMarkers } from './maplibre/marker-overlap';
 import {
     createAssetMarker,
-    createPopupCard,
+    createMarkerGroup,
     createSosMarker,
     getSosMarkerPosition,
 } from './maplibre/markers';
-import type { PopupCardField } from './maplibre/markers';
+import type { SosMarkerOptions } from './maplibre/markers';
+import {
+    createTrackingGroupPopup,
+    createTrackingLocationPopup,
+    createTrackingSosPopup,
+    formatReportAge,
+    trackingUnitLabel,
+} from './maplibre/tracking-map-popups';
 
 export type { AssetKind } from '@/lib/asset-kind';
 export {
@@ -63,6 +77,7 @@ export function LiveTrackingMap({
     showLocationList = true,
     selectedLocationId,
     onSelectedLocationChange,
+    className,
 }: {
     locations: LocationUpdateViewModel[];
     activeSosIncidents?: SosIncidentViewModel[];
@@ -70,6 +85,7 @@ export function LiveTrackingMap({
     showLocationList?: boolean;
     selectedLocationId?: number | null;
     onSelectedLocationChange?: (id: number) => void;
+    className?: string;
 }) {
     const [internalSelectedId, setInternalSelectedId] = useState<number | null>(
         null,
@@ -102,6 +118,12 @@ export function LiveTrackingMap({
         );
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
+                if (
+                    fullscreenSurfaceRef.current?.querySelector(':popover-open')
+                ) {
+                    return;
+                }
+
                 event.preventDefault();
                 setIsFullscreen(false);
 
@@ -116,7 +138,11 @@ export function LiveTrackingMap({
                 fullscreenSurfaceRef.current.querySelectorAll<HTMLElement>(
                     'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])',
                 ),
-            ).filter((element) => !element.hasAttribute('disabled'));
+            ).filter(
+                (element) =>
+                    !element.hasAttribute('disabled') &&
+                    element.getClientRects().length > 0,
+            );
 
             if (focusableElements.length === 0) {
                 return;
@@ -176,12 +202,15 @@ export function LiveTrackingMap({
                 : averageSosPosition(activeSosIncidents),
         [activeSosIncidents, mappedLocations],
     );
-    const selectedId = selectedLocationId ?? internalSelectedId;
+    const selectedId =
+        selectedLocationId === undefined
+            ? internalSelectedId
+            : selectedLocationId;
     const selected =
         (selectedId === null
             ? undefined
             : locations.find((location) => location.id === selectedId)) ??
-        mappedLocations[0];
+        (selectedLocationId === undefined ? mappedLocations[0] : undefined);
 
     const selectLocation = useCallback(
         (id: number) => {
@@ -253,6 +282,7 @@ export function LiveTrackingMap({
                 'grid grid-cols-1 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm',
                 showLocationList && 'xl:grid-cols-[minmax(0,1fr)_22rem]',
                 mapHeight,
+                !isFullscreen && className,
             )}
         >
             <div className="relative h-full min-h-0 w-full overflow-hidden bg-surface-subtle">
@@ -276,6 +306,8 @@ export function LiveTrackingMap({
                         onCopyCoordinates={copyCoordinates}
                     />
                     <LiveMapControls
+                        compact={compact}
+                        activeSosIncidents={activeSosIncidents}
                         mappedLocations={mappedLocations}
                         mapCenter={mapCenter}
                         styleVariant={styleVariant}
@@ -287,26 +319,33 @@ export function LiveTrackingMap({
                     />
                 </MapLibreMap>
 
-                <MapLegend />
-                <div className="pointer-events-none absolute top-3 right-3 z-[2] flex items-center gap-2 rounded-lg border border-line/60 bg-surface/90 px-3 py-1.5 text-xs text-ink-soft shadow-sm backdrop-blur-md">
-                    <span className="h-2 w-2 rounded-full bg-success-strong" />
+                {!compact && <MapLegend />}
+                <div
+                    className={cn(
+                        'pointer-events-none absolute z-[2] max-w-[calc(100%-1.5rem)] rounded-md bg-surface px-2 py-1 text-[11px] text-ink-soft',
+                        compact ? 'bottom-10 left-3' : 'top-3 right-3',
+                    )}
+                >
                     <span>
                         {provider.isDevelopmentOnly
                             ? 'Stadia Maps · development/evaluation'
                             : `${provider.provider} basemap`}{' '}
-                        · {mappedLocations.length} mapped markers
+                        · {mappedLocations.length} mapped units
                     </span>
                 </div>
 
-                {mappedLocations.length === 0 && (
-                    <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
-                        <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
-                            {locations.length === 0
-                                ? 'No location updates match the selected filter.'
-                                : 'Coordinates are unavailable for the selected updates.'}
+                {mappedLocations.length === 0 &&
+                    activeSosIncidents.every(
+                        (incident) => getSosMarkerPosition(incident) === null,
+                    ) && (
+                        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-surface/40 p-6 backdrop-blur-xs">
+                            <div className="rounded-xl border border-line bg-surface/95 px-5 py-4 text-center text-sm text-ink-soft shadow-lg">
+                                {locations.length === 0
+                                    ? 'No location updates match the selected filter.'
+                                    : 'Coordinates are unavailable for the selected updates.'}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
             </div>
 
             {showLocationList && (
@@ -516,6 +555,7 @@ function TrackingMapContent({
     const overviewSourceRef = useRef<GeoJSONSource | null>(null);
     const hasCenteredRef = useRef(false);
     const previousSelectedIdRef = useRef<number | null>(null);
+    const markerSelectionRef = useRef<number | null>(null);
 
     const accuracyData = useMemo(
         () =>
@@ -571,22 +611,17 @@ function TrackingMapContent({
         map.addSource('tracking-marker-overview', {
             type: 'geojson',
             data: overviewData,
+            cluster: true,
+            clusterRadius: 44,
+            clusterMaxZoom: 22,
         });
         map.addLayer({
             id: 'tracking-marker-overview',
             type: 'circle',
             source: 'tracking-marker-overview',
             paint: {
-                'circle-color': ['get', 'color'],
-                'circle-radius': [
-                    'interpolate',
-                    ['linear'],
-                    ['zoom'],
-                    8,
-                    5,
-                    14,
-                    9,
-                ],
+                'circle-color': ['coalesce', ['get', 'color'], '#475569'],
+                'circle-radius': ['case', ['has', 'point_count'], 20, 9],
                 'circle-stroke-color': '#ffffff',
                 'circle-stroke-width': 2,
                 'circle-opacity': 0.9,
@@ -596,6 +631,19 @@ function TrackingMapContent({
         overviewSourceRef.current = map.getSource(
             'tracking-marker-overview',
         ) as GeoJSONSource;
+        map.addLayer({
+            id: 'tracking-marker-count',
+            type: 'symbol',
+            source: 'tracking-marker-overview',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': ['get', 'point_count_abbreviated'],
+                'text-size': 13,
+                'text-allow-overlap': true,
+                visibility: 'none',
+            },
+            paint: { 'text-color': '#ffffff' },
+        });
         map.addLayer({
             id: 'tracking-accuracy-outline',
             type: 'line',
@@ -624,6 +672,10 @@ function TrackingMapContent({
                 map.removeSource('tracking-accuracy');
             }
 
+            if (map.getLayer('tracking-marker-count')) {
+                map.removeLayer('tracking-marker-count');
+            }
+
             if (map.getLayer('tracking-marker-overview')) {
                 map.removeLayer('tracking-marker-overview');
             }
@@ -650,263 +702,197 @@ function TrackingMapContent({
                 'visibility',
                 locations.length > HTML_MARKER_THRESHOLD ? 'visible' : 'none',
             );
+            map.setLayoutProperty(
+                'tracking-marker-count',
+                'visibility',
+                locations.length > HTML_MARKER_THRESHOLD ? 'visible' : 'none',
+            );
         }
     }, [locations.length, map, overviewData]);
 
     useEffect(() => {
-        markersRef.current.forEach((marker) => marker.remove());
-        markersRef.current = [];
-
-        const matchedSosIncidentIds = new Set(
-            activeSosIncidents
-                .filter((incident) =>
-                    locations.some(
-                        (location) => location.user.id === incident.worker.id,
-                    ),
-                )
-                .map((incident) => incident.id),
+        type Entry = {
+            key: string;
+            locationId?: number;
+            position: LngLat;
+            label: string;
+            description: string;
+            sos?: SosMarkerOptions;
+            content: () => HTMLDivElement;
+            element: () => HTMLButtonElement;
+        };
+        const useHtml = locations.length <= HTML_MARKER_THRESHOLD;
+        const entries: Entry[] = [];
+        const representedSosIds = new Set<SosIncidentViewModel['id']>();
+        const incidentsByWorker = new Map(
+            activeSosIncidents.map((incident) => [
+                incident.worker.id,
+                incident,
+            ]),
         );
-        const shouldUseHtmlMarkers = locations.length <= HTML_MARKER_THRESHOLD;
+        const locationsByWorker = new Map(
+            locations.map((location) => [location.user.id, location]),
+        );
+        const sosOptions = (
+            incident: SosIncidentViewModel,
+        ): SosMarkerOptions => ({
+            status: incident.status.value,
+            label: `SOS incident for ${incident.worker.name} (${incident.status.label})`,
+            prefersReducedMotion,
+        });
 
-        if (shouldUseHtmlMarkers) {
-            locations.forEach((location) => {
-                const kind = getAssetKind(location);
-                const isSelected = location.id === selected?.id;
-                const sosIncident = findSosIncidentForLocation(
-                    location,
-                    activeSosIncidents,
-                );
+        if (useHtml) {
+            for (const location of locations) {
+                const incident = incidentsByWorker.get(location.user.id);
+                const sos = incident ? sosOptions(incident) : undefined;
 
-                const markerElement = createAssetMarker({
-                    kind,
-                    freshness: location.freshness_status,
-                    isSelected,
-                    label: `${location.user.name}, ${location.freshness_status} location`,
-                    sos: sosIncident
-                        ? {
-                              status: sosIncident.status.value,
-                              label: `SOS incident for ${sosIncident.worker.name} (${sosIncident.status.label})`,
-                              prefersReducedMotion,
-                          }
-                        : undefined,
-                });
-                markerElement.addEventListener('click', () => {
-                    onSelect(location.id);
-
-                    map.easeTo({
-                        center: toLngLat(location),
-                        offset: [0, -60],
-                        duration: 250,
-                    });
-                });
-
-                const hasAsset = Boolean(location.asset?.code);
-                const title = hasAsset
-                    ? location.asset?.name &&
-                      location.asset.name.toLowerCase() !==
-                          location.asset.code.toLowerCase()
-                        ? `${location.asset.code} · ${location.asset.name}`
-                        : (location.asset?.code ?? location.user.name)
-                    : location.user.name;
-
-                const subtitle = hasAsset
-                    ? getAssetKindLabel(kind)
-                    : 'Field Personnel';
-                const freshness = getFreshnessMeta(location.freshness_status);
-
-                const fields: PopupCardField[] = [
-                    {
-                        label: 'Personnel',
-                        value: location.user.name,
-                    },
-                    {
-                        label: 'Dispatch',
-                        value: location.job
-                            ? `${location.job.reference} — ${location.job.title}`
-                            : 'Standby / Unassigned',
-                    },
-                ];
-
-                const isCrane =
-                    kind === 'tower_crane' ||
-                    kind === 'crane' ||
-                    kind === 'mobile_crane';
-
-                if (isCrane) {
-                    const weather = deriveWeatherFromCoords(
-                        location.latitude,
-                        location.longitude,
-                    );
-                    const windSafetyLabel =
-                        weather.safetyStatus === 'danger'
-                            ? '🚨 Hold'
-                            : weather.safetyStatus === 'caution'
-                              ? '⚠️ Elevated'
-                              : 'Safe';
-
-                    fields.push({
-                        label: 'Wind Speed',
-                        value: `${weather.windSpeedKmh} km/h ${weather.windDirection} (${windSafetyLabel} · Gust ${weather.windGustKmh} km/h)`,
-                    });
-                    fields.push({
-                        label: 'Weather',
-                        value: `${weather.temperatureC}°C · ${weather.conditionLabel}`,
-                    });
-
-                    if (
-                        kind === 'mobile_crane' &&
-                        location.speed !== null &&
-                        location.speed > 0
-                    ) {
-                        fields.push({
-                            label: 'Transit',
-                            value: `${location.speed.toFixed(1)} km/h`,
-                        });
-                    }
-                } else {
-                    fields.push({
-                        label: 'Movement',
-                        value:
-                            location.speed !== null && location.speed > 0
-                                ? `${location.speed.toFixed(1)} km/h`
-                                : 'Stationary',
-                    });
+                if (incident) {
+                    representedSosIds.add(incident.id);
                 }
 
-                fields.push({
-                    label: 'Captured',
-                    value: location.captured_at
-                        ? new Date(location.captured_at).toLocaleTimeString()
-                        : 'N/A',
+                const label = trackingUnitLabel(location);
+                entries.push({
+                    key: `location:${location.id}`,
+                    locationId: location.id,
+                    position: toLngLat(location),
+                    label,
+                    description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
+                    sos,
+                    content: () =>
+                        createTrackingLocationPopup(
+                            location,
+                            incident,
+                            (button) =>
+                                void onCopyCoordinates(location, button),
+                        ),
+                    element: () =>
+                        createAssetMarker({
+                            kind: getAssetKind(location),
+                            freshness: location.freshness_status,
+                            isSelected: false,
+                            label: `${label}, ${location.freshness_status} location`,
+                            sos,
+                        }),
                 });
+            }
+        }
 
-                if (location.remarks) {
-                    fields.push({
-                        label: 'Note',
-                        value: location.remarks,
-                    });
-                }
+        for (const incident of activeSosIncidents) {
+            const location = locationsByWorker.get(incident.worker.id);
 
-                const locationName = resolveLocationName(location);
+            if (representedSosIds.has(incident.id)) {
+                continue;
+            }
 
+            const position = getSosMarkerPosition(incident, location);
+
+            if (!position) {
+                continue;
+            }
+
+            const sos = sosOptions(incident);
+            entries.push({
+                key: `sos:${incident.id}`,
+                locationId: location?.id,
+                position,
+                label: incident.worker.name,
+                description: `${incident.status.label} · ${incident.category.label}`,
+                sos,
+                content: () => createTrackingSosPopup(incident),
+                element: () => createSosMarker(sos),
+            });
+        }
+
+        let signature = '';
+        const renderMarkers = () => {
+            const groups = groupOverlappingMarkers(
+                entries.map((entry) => ({
+                    value: entry,
+                    priority: entry.sos ? 1 : 0,
+                    ...map.project(entry.position),
+                })),
+            );
+            const nextSignature = JSON.stringify(
+                groups.map((group) => group.map((entry) => entry.key)),
+            );
+
+            if (signature === nextSignature) {
+                return;
+            }
+
+            signature = nextSignature;
+            markersRef.current.forEach((marker) => marker.remove());
+            markersRef.current = [];
+
+            for (const group of groups) {
+                // Use the exact anchor used for grouping; SOS entries were prioritized first.
+                const anchor = group[0];
+                const element =
+                    group.length === 1
+                        ? anchor.element()
+                        : createMarkerGroup({
+                              count: group.length,
+                              sos: anchor.sos,
+                          });
+                element.dataset.locationIds = group
+                    .flatMap((entry) =>
+                        entry.locationId === undefined
+                            ? []
+                            : [entry.locationId],
+                    )
+                    .join(',');
                 const popup = new maplibregl.Popup({
                     closeButton: true,
                     closeOnClick: true,
                     offset: 24,
                     maxWidth: '320px',
-                }).setDOMContent(
-                    createPopupCard({
-                        title,
-                        subtitle,
-                        status: freshness.label,
-                        statusTone: freshness.tone,
-                        badge: sosIncident
-                            ? `🚨 SOS: ${sosIncident.status.label} (${sosIncident.category.label})`
-                            : undefined,
-                        badgeTone: 'danger',
-                        fields,
-                        locationName,
-                    }),
-                );
+                });
+                const groupContent = () =>
+                    createTrackingGroupPopup(
+                        group.map((entry) => ({
+                            label: entry.label,
+                            description: entry.description,
+                            hasSos: Boolean(entry.sos),
+                            onSelect: () => {
+                                popup.setDOMContent(entry.content());
 
+                                if (entry.locationId !== undefined) {
+                                    onSelect(entry.locationId);
+                                }
+                            },
+                        })),
+                    );
+                popup.setDOMContent(
+                    group.length === 1 ? anchor.content() : groupContent(),
+                );
+                element.addEventListener('click', () => {
+                    // Reopening a group always exposes every member, including identical coordinates.
+                    popup.setDOMContent(
+                        group.length === 1 ? anchor.content() : groupContent(),
+                    );
+
+                    if (group.length === 1 && anchor.locationId !== undefined) {
+                        onSelect(anchor.locationId);
+                    }
+                });
                 markersRef.current.push(
-                    new maplibregl.Marker({ element: markerElement })
-                        .setLngLat(toLngLat(location))
+                    new maplibregl.Marker({ element })
+                        .setLngLat(anchor.position)
                         .setPopup(popup)
                         .addTo(map),
                 );
-            });
-        }
-
-        activeSosIncidents.forEach((incident) => {
-            const liveLocation = locations.find(
-                (location) => location.user.id === incident.worker.id,
-            );
-            const markerPosition = getSosMarkerPosition(incident, liveLocation);
-
-            if (
-                (shouldUseHtmlMarkers &&
-                    matchedSosIncidentIds.has(incident.id)) ||
-                markerPosition === null
-            ) {
-                return;
             }
 
-            const markerElement = createSosMarker({
-                status: incident.status.value,
-                label: `SOS incident for ${incident.worker.name} (${incident.status.label})`,
-                prefersReducedMotion,
-            });
-            markerElement.addEventListener('click', () => {
-                if (liveLocation) {
-                    onSelect(liveLocation.id);
-                }
-
-                map.easeTo({
-                    center: markerPosition,
-                    offset: [0, -60],
-                    duration: 250,
-                });
-            });
-
-            const sosLocationName = incident.location
-                ? resolveLocationName({
-                      latitude: incident.location.latitude,
-                      longitude: incident.location.longitude,
-                      job: incident.dispatch,
-                      asset: incident.asset,
-                  })
-                : (incident.dispatch?.site ?? 'Incident Site');
-
-            const popup = new maplibregl.Popup({
-                closeButton: true,
-                closeOnClick: true,
-                offset: 24,
-                maxWidth: '320px',
-            }).setDOMContent(
-                createPopupCard({
-                    title: incident.worker.name,
-                    subtitle: 'Emergency SOS Alert',
-                    status: incident.status.label,
-                    statusTone: 'danger',
-                    badge: '🚨 Urgent Attention Required',
-                    badgeTone: 'danger',
-                    fields: [
-                        {
-                            label: 'Category',
-                            value: incident.category.label,
-                        },
-                        {
-                            label: 'Dispatch',
-                            value: incident.dispatch
-                                ? `${incident.dispatch.reference} — ${incident.dispatch.title}`
-                                : 'No dispatch context attached',
-                        },
-                        {
-                            label: 'Triggered',
-                            value:
-                                incident.received_at ||
-                                incident.device_activated_at
-                                    ? new Date(
-                                          incident.received_at ||
-                                              incident.device_activated_at!,
-                                      ).toLocaleTimeString()
-                                    : 'N/A',
-                        },
-                    ],
-                    locationName: sosLocationName,
-                }),
+            updateMarkerSelection(
+                markersRef.current,
+                markerSelectionRef.current,
             );
-
-            markersRef.current.push(
-                new maplibregl.Marker({ element: markerElement })
-                    .setLngLat(markerPosition)
-                    .setPopup(popup)
-                    .addTo(map),
-            );
-        });
+        };
+        renderMarkers();
+        map.on('moveend', renderMarkers);
 
         return () => {
+            map.off('moveend', renderMarkers);
             markersRef.current.forEach((marker) => marker.remove());
             markersRef.current = [];
         };
@@ -918,11 +904,135 @@ function TrackingMapContent({
         onCopyCoordinates,
         onSelect,
         prefersReducedMotion,
-        selected?.id,
     ]);
 
     useEffect(() => {
+        markerSelectionRef.current = selected?.id ?? null;
+        updateMarkerSelection(markersRef.current, markerSelectionRef.current);
+    }, [locations, selected?.id]);
+
+    useEffect(() => {
+        if (locations.length <= HTML_MARKER_THRESHOLD) {
+            return;
+        }
+
+        let disposed = false;
+        let activePopup: InstanceType<typeof maplibregl.Popup> | undefined;
+        const onOverviewClick = (event: MapLayerMouseEvent) => {
+            const feature = event.features?.[0];
+
+            if (!feature || feature.geometry.type !== 'Point') {
+                return;
+            }
+
+            const position = feature.geometry.coordinates;
+
+            if (position.length < 2) {
+                return;
+            }
+
+            const popup = new maplibregl.Popup({ maxWidth: '320px' }).setLngLat(
+                [position[0], position[1]],
+            );
+            activePopup?.remove();
+            activePopup = popup;
+            const renderLocations = (ids: Set<number>) => {
+                if (disposed || activePopup !== popup) {
+                    return;
+                }
+
+                const members = locations.filter((location) =>
+                    ids.has(location.id),
+                );
+                const selectMember = (location: LocationUpdateViewModel) => {
+                    onSelect(location.id);
+                    popup
+                        .setDOMContent(
+                            createTrackingLocationPopup(
+                                location,
+                                findSosIncidentForLocation(
+                                    location,
+                                    activeSosIncidents,
+                                ),
+                                (button) =>
+                                    void onCopyCoordinates(location, button),
+                            ),
+                        )
+                        .addTo(map);
+                };
+
+                if (members.length === 1) {
+                    selectMember(members[0]);
+
+                    return;
+                }
+
+                popup
+                    .setDOMContent(
+                        createTrackingGroupPopup(
+                            members.map((location) => ({
+                                label: trackingUnitLabel(location),
+                                description: `${location.freshness_status} · Received ${formatReportAge(location.received_at)}`,
+                                hasSos: Boolean(
+                                    findSosIncidentForLocation(
+                                        location,
+                                        activeSosIncidents,
+                                    ),
+                                ),
+                                onSelect: () => selectMember(location),
+                            })),
+                        ),
+                    )
+                    .addTo(map);
+            };
+            const clusterId: unknown = feature.properties?.cluster_id;
+
+            if (typeof clusterId !== 'number') {
+                renderLocations(new Set([Number(feature.properties?.id)]));
+
+                return;
+            }
+
+            void overviewSourceRef.current
+                ?.getClusterLeaves(clusterId, locations.length, 0)
+                .then((leaves) =>
+                    renderLocations(
+                        new Set(
+                            leaves.map((leaf) => Number(leaf.properties?.id)),
+                        ),
+                    ),
+                )
+                .catch(() => {
+                    if (disposed || activePopup !== popup) {
+                        return;
+                    }
+
+                    const message = document.createElement('p');
+                    message.className = 'maplibre-tracking-group';
+                    message.textContent =
+                        'This group changed. Select a unit from the synchronized list or try again.';
+                    popup.setDOMContent(message).addTo(map);
+                });
+        };
+        map.on('click', 'tracking-marker-overview', onOverviewClick);
+
+        return () => {
+            disposed = true;
+            activePopup?.remove();
+            map.off('click', 'tracking-marker-overview', onOverviewClick);
+        };
+    }, [
+        activeSosIncidents,
+        locations,
+        map,
+        maplibregl,
+        onCopyCoordinates,
+        onSelect,
+    ]);
+    useEffect(() => {
         if (!selected) {
+            previousSelectedIdRef.current = null;
+
             return;
         }
 
@@ -950,6 +1060,8 @@ function TrackingMapContent({
 }
 
 function LiveMapControls({
+    compact,
+    activeSosIncidents,
     mappedLocations,
     mapCenter,
     styleVariant,
@@ -957,6 +1069,8 @@ function LiveMapControls({
     isFullscreen,
     onToggleFullscreen,
 }: {
+    compact: boolean;
+    activeSosIncidents: SosIncidentViewModel[];
     mappedLocations: LocationUpdateViewModel[];
     mapCenter: LngLat;
     styleVariant: MapStyleVariant;
@@ -985,14 +1099,26 @@ function LiveMapControls({
     }, [showStyleMenu]);
 
     const fitAll = () => {
-        if (mappedLocations.length === 0) {
+        const positions = [
+            ...mappedLocations.map(toLngLat),
+            ...activeSosIncidents.flatMap((incident) => {
+                const position = getSosMarkerPosition(
+                    incident,
+                    mappedLocations.find(
+                        (location) => location.user.id === incident.worker.id,
+                    ),
+                );
+
+                return position ? [position] : [];
+            }),
+        ];
+
+        if (positions.length === 0) {
             return;
         }
 
         const bounds = new maplibregl.LngLatBounds();
-        mappedLocations.forEach((location) =>
-            bounds.extend(toLngLat(location)),
-        );
+        positions.forEach((position) => bounds.extend(position));
         map.fitBounds(bounds, {
             padding: 40,
             maxZoom: 15,
@@ -1003,13 +1129,33 @@ function LiveMapControls({
     const controlClass =
         'h-11 min-h-[44px] w-11 min-w-[44px] rounded-lg text-ink transition-transform active:scale-95';
 
+    if (compact) {
+        return (
+            <CompactMapControls
+                onZoomIn={() =>
+                    map.zoomIn({ duration: prefersReducedMotion ? 0 : 200 })
+                }
+                onZoomOut={() =>
+                    map.zoomOut({ duration: prefersReducedMotion ? 0 : 200 })
+                }
+                onFitAll={fitAll}
+                styleVariant={styleVariant}
+                onStyleVariantChange={onStyleVariantChange}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={onToggleFullscreen}
+            />
+        );
+    }
+
     return (
         <div className="absolute top-3 left-3 z-[3] flex flex-col gap-1.5">
             <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface/95 p-1 shadow-sm backdrop-blur-md">
                 <Button
                     size="icon"
                     variant="secondary"
-                    onClick={() => map.zoomIn()}
+                    onClick={() =>
+                        map.zoomIn({ duration: prefersReducedMotion ? 0 : 200 })
+                    }
                     aria-label="Zoom in"
                     title="Zoom in"
                     className={controlClass}
@@ -1019,7 +1165,11 @@ function LiveMapControls({
                 <Button
                     size="icon"
                     variant="secondary"
-                    onClick={() => map.zoomOut()}
+                    onClick={() =>
+                        map.zoomOut({
+                            duration: prefersReducedMotion ? 0 : 200,
+                        })
+                    }
                     aria-label="Zoom out"
                     title="Zoom out"
                     className={controlClass}
@@ -1115,6 +1265,148 @@ function LiveMapControls({
                         <Maximize className="h-4 w-4" aria-hidden="true" />
                     )}
                 </Button>
+            </div>
+        </div>
+    );
+}
+
+function CompactMapControls({
+    onZoomIn,
+    onZoomOut,
+    onFitAll,
+    styleVariant,
+    onStyleVariantChange,
+    isFullscreen,
+    onToggleFullscreen,
+}: {
+    onZoomIn: () => void;
+    onZoomOut: () => void;
+    onFitAll: () => void;
+    styleVariant: MapStyleVariant;
+    onStyleVariantChange: (variant: MapStyleVariant) => void;
+    isFullscreen: boolean;
+    onToggleFullscreen: () => void;
+}) {
+    const menuId = useId();
+    const menuRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+
+    return (
+        <div className="absolute top-3 right-3 left-3 z-[3] flex items-start justify-between gap-2">
+            <div className="flex flex-col gap-2">
+                <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface">
+                    <Button
+                        size="icon"
+                        variant="quiet"
+                        className="h-11 w-11 rounded-none"
+                        onClick={onZoomIn}
+                        aria-label="Zoom in"
+                        title="Zoom in"
+                    >
+                        <ZoomIn className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        variant="quiet"
+                        className="h-11 w-11 rounded-none border-t border-line"
+                        onClick={onZoomOut}
+                        aria-label="Zoom out"
+                        title="Zoom out"
+                    >
+                        <ZoomOut className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                    variant="secondary"
+                    className="min-h-11 bg-surface px-3 text-xs"
+                    onClick={onFitAll}
+                >
+                    <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                    Fit all units
+                </Button>
+                {isFullscreen && (
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-11 w-11 bg-surface"
+                        aria-label="Exit fullscreen"
+                        onClick={onToggleFullscreen}
+                    >
+                        <Minimize className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                )}
+                <Button
+                    ref={triggerRef}
+                    variant="secondary"
+                    className="min-h-11 bg-surface px-3 text-xs"
+                    popoverTarget={menuId}
+                    onClick={() => {
+                        const rect =
+                            triggerRef.current?.getBoundingClientRect();
+
+                        if (rect) {
+                            setMenuPosition({
+                                left: Math.max(
+                                    8,
+                                    Math.min(
+                                        rect.right - 192,
+                                        window.innerWidth - 200,
+                                    ),
+                                ),
+                                top: Math.min(
+                                    rect.bottom + 8,
+                                    window.innerHeight - 228,
+                                ),
+                            });
+                        }
+                    }}
+                >
+                    <Layers className="h-4 w-4" aria-hidden="true" />
+                    Map options
+                </Button>
+                <div
+                    ref={menuRef}
+                    id={menuId}
+                    popover="auto"
+                    aria-label="Map options"
+                    className="fixed m-0 w-48 rounded-lg border border-line bg-surface p-1 text-ink shadow-lg"
+                    style={{ inset: 'auto', ...menuPosition }}
+                >
+                    <p className="px-3 py-2 text-xs font-medium text-ink-soft">
+                        Basemap
+                    </p>
+                    {(['light', 'dark'] as const).map((variant) => (
+                        <button
+                            key={variant}
+                            type="button"
+                            aria-pressed={variant === styleVariant}
+                            className="flex min-h-11 w-full items-center justify-between rounded-md px-3 text-left text-sm capitalize hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
+                            onClick={() => {
+                                menuRef.current?.hidePopover();
+                                onStyleVariantChange(variant);
+                            }}
+                        >
+                            {variant}
+                            {styleVariant === variant && (
+                                <Check className="h-4 w-4" aria-hidden="true" />
+                            )}
+                        </button>
+                    ))}
+                    <button
+                        type="button"
+                        className="flex min-h-11 w-full items-center gap-2 rounded-md border-t border-line px-3 text-left text-sm hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-brand-strong"
+                        onClick={() => {
+                            menuRef.current?.hidePopover();
+                            onToggleFullscreen();
+                        }}
+                    >
+                        <Maximize className="h-4 w-4" aria-hidden="true" />
+                        {isFullscreen ? 'Exit fullscreen' : 'Expand fullscreen'}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -1229,21 +1521,18 @@ function freshnessColor(
     return MAP_FRESHNESS_COLORS[status];
 }
 
-function getFreshnessMeta(
-    status: LocationUpdateViewModel['freshness_status'],
-): {
-    label: string;
-    tone: 'success' | 'warning' | 'danger' | 'info';
-} {
-    switch (status) {
-        case 'fresh':
-            return { label: 'Live (≤2m)', tone: 'success' };
-        case 'delayed':
-            return { label: 'Delayed (2–10m)', tone: 'info' };
-        case 'stale':
-            return { label: 'Stale (10–30m)', tone: 'warning' };
-        case 'offline':
-        default:
-            return { label: 'Offline', tone: 'danger' };
+function updateMarkerSelection(
+    markers: MapLibreMarker[],
+    selectedId: number | null,
+): void {
+    for (const marker of markers) {
+        const element = marker.getElement();
+        const selected =
+            selectedId !== null &&
+            (element.dataset.locationIds ?? '')
+                .split(',')
+                .includes(String(selectedId));
+        element.dataset.selected = String(selected);
+        element.setAttribute('aria-pressed', String(selected));
     }
 }

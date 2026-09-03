@@ -308,14 +308,14 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(menu).toBeHidden();
     });
 
-    test('dashboard live tracking preview supports the same asset multi-select', async ({
+    test('dashboard field tracking preview supports the same asset multi-select', async ({
         page,
     }) => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.dispatcher, fixtures.password);
         await expect(
-            page.getByRole('heading', { name: 'Live field tracking' }),
+            page.getByRole('heading', { name: 'Field tracking' }),
         ).toBeVisible();
 
         const trigger = page.getByRole('button', {
@@ -347,19 +347,19 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             }),
         ).toBeVisible();
         await expect(
-            page.getByRole('region', { name: 'Live field tracking' }),
+            page.getByRole('region', { name: 'Field tracking' }),
         ).toBeVisible();
         await expect(
             page
-                .getByRole('region', { name: 'Live field tracking' })
-                .getByRole('group', { name: 'Weather and lift safety' }),
+                .getByRole('region', { name: 'Field tracking' })
+                .getByRole('group', { name: 'Unit freshness' }),
         ).toBeVisible();
 
         const queueBox = await page
             .getByRole('region', { name: 'Manager action & exception queue' })
             .boundingBox();
         const trackingBox = await page
-            .getByRole('region', { name: 'Live field tracking' })
+            .getByRole('region', { name: 'Field tracking' })
             .boundingBox();
 
         if (!queueBox || !trackingBox) {
