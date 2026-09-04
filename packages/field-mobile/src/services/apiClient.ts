@@ -345,12 +345,19 @@ export class FieldApiClient {
         incidentId: string,
         category: SosIncidentCategory,
         commandId: string,
+        note?: string | null,
     ): Promise<SosIncident> {
         const url = `${this.baseUrl}/api/v1/sos-incidents/${encodeURIComponent(incidentId)}/classification`;
         const response = await this.fetchFn(url, {
             method: 'PATCH',
             headers: this.getHeaders(commandId),
-            body: JSON.stringify({ category, command_id: commandId }),
+            body: JSON.stringify({
+                category,
+                command_id: commandId,
+                ...(note !== undefined && note !== null
+                    ? { note, worker_note: note }
+                    : {}),
+            }),
         });
 
         return this.handleResponse<SosIncident>(response);

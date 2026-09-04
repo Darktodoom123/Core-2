@@ -24,12 +24,20 @@ final class ClassifySosIncidentRequest extends FormRequest
             && $user->can(PermissionName::SosTrigger->value);
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('worker_note') && $this->filled('note')) {
+            $this->merge(['worker_note' => $this->input('note')]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
             'category' => ['required', 'string', 'in:vehicular_accident,site_accident,critical_asset_malfunction,other_immediate_danger'],
             'operational_asset_id' => ['nullable', 'integer'],
+            'worker_note' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

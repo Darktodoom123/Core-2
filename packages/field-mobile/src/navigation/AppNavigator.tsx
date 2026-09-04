@@ -476,7 +476,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     );
 
     const handleClassifySos = useCallback(
-        async (category: SosIncidentCategory) => {
+        async (category: SosIncidentCategory, note?: string) => {
             if (!activeSosIncident) {
                 return;
             }
@@ -487,6 +487,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         activeSosIncident.id,
                         category,
                         await createCommandId(),
+                        note,
                     ),
                 );
             } catch (error: unknown) {
@@ -827,20 +828,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
     const handleGlobalSosHold = useCallback(() => {
         setSosSheetOpen(true);
-
-        if (activeSosIncident) {
-            return;
-        }
-
-        void handleActivateSos({
-            category: 'unclassified',
-            device_activated_at: new Date().toISOString(),
-            dispatch_job_id: activeJob?.id ?? null,
-            operational_asset_id:
-                activeJob?.asset_assignments?.[0]?.operational_asset_id ?? null,
-            location: null,
-        });
-    }, [activeJob, activeSosIncident, handleActivateSos]);
+    }, []);
 
     if (isInitializing) {
         return (

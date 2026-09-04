@@ -77,9 +77,19 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
         accessibilityTimerRef.current = setTimeout(completeHold, 2_000);
     }, [completeHold, startHold]);
 
+    const handlePress = useCallback(() => {
+        if (completedRef.current || disabled) {
+            completedRef.current = false;
+
+            return;
+        }
+
+        onHoldComplete();
+    }, [disabled, onHoldComplete]);
+
     return (
         <Pressable
-            accessibilityHint="Keep this control pressed for two seconds to activate Emergency SOS. A normal tap does not activate it."
+            accessibilityHint="Press or hold for two seconds to open Emergency SOS."
             accessibilityActions={[
                 {
                     label: 'Hold for two seconds to activate Emergency SOS',
@@ -99,9 +109,12 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
                 text: `${Math.round(progress * 100)} percent held`,
             }}
             disabled={disabled}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onAccessibilityAction={handleAccessibilityAction}
+            onPress={handlePress}
             onPressIn={startHold}
             onPressOut={endHold}
+            pressRetentionOffset={{ top: 30, bottom: 30, left: 30, right: 30 }}
             style={({ pressed }) => [
                 styles.button,
                 isDarkHud && styles.darkButton,
@@ -110,11 +123,12 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
             ]}
             testID="open-emergency-sos"
         >
-            <View style={[styles.progress, { width: `${progress * 100}%` }]} />
-            <View style={styles.contentWrap}>
-                <Text selectable style={[styles.label, styles.boldSosLabel]}>
-                    SOS
-                </Text>
+            <View
+                pointerEvents="none"
+                style={[styles.progress, { width: `${progress * 100}%` }]}
+            />
+            <View pointerEvents="none" style={styles.contentWrap}>
+                <Text style={[styles.label, styles.boldSosLabel]}>SOS</Text>
             </View>
         </Pressable>
     );

@@ -55,6 +55,7 @@ final class SosIncidentController extends Controller
             $sosIncident,
             SosIncidentCategory::from((string) $request->validated('category')),
             $request->validated('operational_asset_id'),
+            $request->validated('worker_note'),
         )->load(['dispatchJob', 'operationalAsset', 'acknowledgedBy']);
 
         return response()->json(['data' => new SosIncidentResource($updated)]);

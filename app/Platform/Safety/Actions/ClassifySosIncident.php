@@ -17,9 +17,9 @@ final class ClassifySosIncident
         private readonly RecordAuditEvent $audit,
     ) {}
 
-    public function handle(User $actor, SosIncident $incident, SosIncidentCategory $category, ?int $assetId = null): SosIncident
+    public function handle(User $actor, SosIncident $incident, SosIncidentCategory $category, ?int $assetId = null, ?string $workerNote = null): SosIncident
     {
-        return DB::transaction(function () use ($actor, $incident, $category, $assetId): SosIncident {
+        return DB::transaction(function () use ($actor, $incident, $category, $assetId, $workerNote): SosIncident {
             $incident = SosIncident::query()->whereKey($incident->id)->lockForUpdate()->firstOrFail();
             if ($incident->status->isTerminal()) {
                 throw ValidationException::withMessages(['status' => 'A terminal SOS incident cannot be reclassified.']);
@@ -32,11 +32,17 @@ final class ClassifySosIncident
                 throw ValidationException::withMessages(['operational_asset_id' => 'A currently assigned asset is required for this category.']);
             }
 
-            $incident->forceFill([
+            $updates = [
                 'category' => $category,
                 'operational_asset_id' => $category === SosIncidentCategory::CriticalAssetMalfunction ? $assetId : null,
                 'version' => $incident->version + 1,
-            ])->save();
+            ];
+
+            if ($workerNote !== null) {
+                $updates['worker_note'] = $workerNote;
+            }
+
+            $incident->forceFill($updates)->save();
             $this->audit->handle($actor, $incident, 'safety.sos_classified', $before, $incident->auditSnapshot());
 
             return $incident->fresh();

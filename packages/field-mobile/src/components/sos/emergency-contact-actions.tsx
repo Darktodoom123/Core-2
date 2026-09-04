@@ -54,6 +54,10 @@ export const EmergencyContactActions: React.FC<{
         }
     };
 
+    if (visibleActions.length === 0) {
+        return null;
+    }
+
     return (
         <View
             style={[styles.container, isDarkHud && styles.darkContainer]}
@@ -82,6 +86,7 @@ export const EmergencyContactActions: React.FC<{
                             }
                             accessibilityLabel={action.label}
                             accessibilityRole="button"
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                             key={`${action.kind}:${action.uri}`}
                             onPress={() => void openAction(action)}
                             style={({ pressed }) => [
@@ -99,7 +104,10 @@ export const EmergencyContactActions: React.FC<{
                                 }
                                 size={17}
                             />
-                            <Text selectable style={styles.actionText}>
+                            <Text
+                                pointerEvents="none"
+                                style={styles.actionText}
+                            >
                                 {action.label}
                             </Text>
                         </Pressable>
