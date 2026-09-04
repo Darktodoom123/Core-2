@@ -102,7 +102,7 @@ export class FieldApiClient {
             const errBody = body as ApiErrorResponse;
             const requestId =
                 errBody.request_id ||
-                response.headers.get('X-Request-Id') ||
+                response.headers?.get?.('X-Request-Id') ||
                 undefined;
 
             let retryAfter: number | undefined;
@@ -110,14 +110,15 @@ export class FieldApiClient {
                 response.status === 429 || errBody.error === 'rate_limited';
 
             if (isRateLimited) {
-                const retryAfterHeader =
-                    response.headers?.get?.('Retry-After');
+                const retryAfterHeader = response.headers?.get?.('Retry-After');
+
                 if (
                     retryAfterHeader !== null &&
                     retryAfterHeader !== undefined &&
                     retryAfterHeader.trim() !== ''
                 ) {
                     const parsed = parseInt(retryAfterHeader.trim(), 10);
+
                     if (!Number.isNaN(parsed)) {
                         retryAfter = parsed;
                     }
@@ -132,6 +133,7 @@ export class FieldApiClient {
                         typeof errBody.retry_after === 'number'
                             ? errBody.retry_after
                             : parseInt(String(errBody.retry_after).trim(), 10);
+
                     if (!Number.isNaN(parsed)) {
                         retryAfter = parsed;
                     }

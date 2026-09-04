@@ -83,7 +83,7 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                     </Text>
                 </Pressable>
 
-                {/* Central Floating SOS Dock */}
+                {/* Central Floating SOS Control */}
                 <View style={styles.sosItem}>
                     <EmergencySosButton
                         disabled={sosDisabled}
@@ -190,16 +190,17 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     itemSelected: {
-        backgroundColor: '#FEF3C7',
+        backgroundColor: 'transparent',
     },
     darkItemSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        backgroundColor: 'transparent',
     },
     sosItem: {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'visible',
         paddingHorizontal: 8,
+        zIndex: 10,
     },
     indicator: {
         alignItems: 'center',

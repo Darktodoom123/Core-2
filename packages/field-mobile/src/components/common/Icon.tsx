@@ -16,6 +16,7 @@ export type IconName =
     | 'truck'
     | 'tools'
     | 'fuel'
+    | 'engine'
     | 'signature'
     | 'camera'
     | 'clock'
@@ -126,6 +127,14 @@ export const Icon: React.FC<IconProps> = ({
             return (
                 <MaterialCommunityIcons
                     name="gas-station-outline"
+                    size={size}
+                    color={color}
+                />
+            );
+        case 'engine':
+            return (
+                <MaterialCommunityIcons
+                    name="engine-outline"
                     size={size}
                     color={color}
                 />

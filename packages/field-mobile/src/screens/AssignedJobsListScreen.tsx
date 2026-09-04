@@ -6,13 +6,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
 } from 'react-native';
 import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
-import { ShiftStatusCard } from '../components/cards/ShiftStatusCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
@@ -77,6 +75,11 @@ interface TileItem {
     sublabel: string;
     iconName: IconName;
     bgColor: string;
+    borderColor?: string;
+    iconColor?: string;
+    darkBgColor?: string;
+    darkBorderColor?: string;
+    darkIconColor?: string;
     badgeCount?: number;
 }
 
@@ -126,8 +129,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         null,
     );
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
-    const { width } = useWindowDimensions();
-    const isCompact = width < 600;
 
     const queuedCount = outboxCommands.filter(
         (command) => command.state === 'queued',
@@ -237,23 +238,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         }
     };
 
-    const getDutyColor = (duty: DutyStatus): string => {
-        switch (duty) {
-            case 'operating':
-                return '#D97706';
-            case 'driving':
-                return '#2563EB';
-            case 'standby':
-                return '#EA580C';
-            case 'on_break':
-                return '#059669';
-            case 'off_duty':
-                return '#475569';
-            default:
-                return colors.amberDark;
-        }
-    };
-
     // Primary Active Vehicle & Dispatch
     const activeJob = jobs[0] || null;
     const primaryAsset = activeJob?.asset_assignments?.[0] || null;
@@ -267,45 +251,75 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const DASHBOARD_TILES: TileItem[] = [
         {
             id: 'hos',
-            title: 'HoS',
+            title: 'HOS',
             sublabel: 'Shift & Hours',
             iconName: 'clock',
-            bgColor: '#2563EB',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#D97706',
+            darkBgColor: '#271E16',
+            darkBorderColor: '#78350F',
+            darkIconColor: '#F59E0B',
         },
         {
             id: 'dvir',
             title: 'DVIR',
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
-            bgColor: '#059669',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#059669',
+            darkBgColor: '#132F28',
+            darkBorderColor: '#065F46',
+            darkIconColor: '#34D399',
         },
         {
             id: 'routes',
-            title: 'Routes',
+            title: 'Crane Drive\nRoutes',
             sublabel: 'Heavy Transit',
             iconName: 'route',
-            bgColor: '#DC2626',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#0284C7',
+            darkBgColor: '#162E48',
+            darkBorderColor: '#075985',
+            darkIconColor: '#38BDF8',
         },
         {
             id: 'documents',
-            title: 'Documents',
+            title: 'Documents\nLift Plans',
             sublabel: 'Permits & Certs',
             iconName: 'document',
-            bgColor: '#7E22CE',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#7E22CE',
+            darkBgColor: '#2A163B',
+            darkBorderColor: '#6B21A8',
+            darkIconColor: '#C084FC',
         },
         {
             id: 'vehicle',
-            title: 'Vehicle',
+            title: 'Vehicle\nLoad Chart',
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
-            bgColor: '#D97706',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#65A30D',
+            darkBgColor: '#253218',
+            darkBorderColor: '#4D7C0F',
+            darkIconColor: '#A3E635',
         },
         {
             id: 'forms',
-            title: 'Forms',
+            title: 'Dispatches',
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
-            bgColor: '#0284C7',
+            bgColor: '#FFFFFF',
+            borderColor: '#E2E8F0',
+            iconColor: '#475569',
+            darkBgColor: '#1A2536',
+            darkBorderColor: '#334155',
+            darkIconColor: '#94A3B8',
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
     ];
@@ -481,10 +495,19 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         <View
                             style={[
                                 styles.dutyBadge,
-                                { backgroundColor: getDutyColor(currentDuty) },
+                                isDarkHud
+                                    ? styles.darkDutyBadge
+                                    : styles.lightDutyBadge,
                             ]}
                         >
-                            <Text style={styles.dutyBadgeText}>
+                            <Text
+                                style={[
+                                    styles.dutyBadgeText,
+                                    isDarkHud
+                                        ? styles.darkDutyBadgeText
+                                        : styles.lightDutyBadgeText,
+                                ]}
+                            >
                                 {getDutyBadge(currentDuty)}
                             </Text>
                         </View>
@@ -497,26 +520,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             >
                                 {getDutyLabel(currentDuty)}
                             </Text>
-                            <Text style={styles.dutyStatusElapsed}>
-                                (
-                                {Math.floor(shiftInfo.hoursElapsed ?? 4)
-                                    .toString()
-                                    .padStart(2, '0')}
-                                :
-                                {Math.round(
-                                    ((shiftInfo.hoursElapsed ?? 4) % 1) * 60,
-                                )
-                                    .toString()
-                                    .padStart(2, '0')}{' '}
-                                elapsed · 10h limit)
-                            </Text>
                         </View>
                     </View>
-                    <Icon
-                        name="chevron-right"
-                        size={18}
-                        color={isDarkHud ? '#94A3B8' : colors.muted}
-                    />
                 </Pressable>
 
                 {/* Assigned Vehicle & Rigging Hero Card */}
@@ -531,28 +536,34 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     dispatchPrefix="Ref: "
                     dvirStatus="cleared"
                     engineHours="4,820 hrs"
-                    fuelPercent={82}
+                    fuelPercent={32}
                     onChangeUnit={() => setChangeUnitModalOpen(true)}
                     onPress={onOpenVehicle}
                     ratedCapacity="50T All-Terrain"
+                    variant="hero"
                 />
 
-                {/* On-Site Unit Start Safeguard Button when accepted */}
-                {activeJob?.status.value === 'accepted' ||
-                activeJob?.my_assignment?.response_status === 'accepted' ? (
-                    <Pressable
-                        accessibilityLabel={`I'm On Site — Start Unit for ${assetCode}`}
-                        accessibilityRole="button"
-                        onPress={() => setOnSiteConfirmationOpen(true)}
-                        style={styles.startUnitBtn}
-                        testID="start-unit-on-site-btn"
+                {/* On-Site Unit Start Safeguard Button */}
+                <Pressable
+                    accessibilityLabel={`I'm On Site — Start Unit for ${assetCode}`}
+                    accessibilityRole="button"
+                    onPress={() => setOnSiteConfirmationOpen(true)}
+                    style={({ pressed }) => [
+                        styles.startUnitBtn,
+                        isDarkHud && styles.darkStartUnitBtn,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="start-unit-on-site-btn"
+                >
+                    <Text
+                        style={[
+                            styles.startUnitBtnText,
+                            isDarkHud && styles.darkStartUnitBtnText,
+                        ]}
                     >
-                        <Icon color="#FFFFFF" name="location" size={18} />
-                        <Text style={styles.startUnitBtnText}>
-                            I'm On Site — Start Unit ({assetCode})
-                        </Text>
-                    </Pressable>
-                ) : null}
+                        I'm On Site — Start Unit ({assetCode})
+                    </Text>
+                </Pressable>
 
                 {/* 6-Tile Industrial Launcher Grid */}
                 <View
@@ -567,16 +578,33 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             onPress={() => handleTilePress(tile.id)}
                             style={({ pressed }) => [
                                 styles.tileCard,
-                                { backgroundColor: tile.bgColor },
+                                {
+                                    backgroundColor: isDarkHud
+                                        ? tile.darkBgColor || tile.bgColor
+                                        : tile.bgColor,
+                                    borderColor: isDarkHud
+                                        ? tile.darkBorderColor || '#334155'
+                                        : tile.borderColor || '#E2E8F0',
+                                },
+                                isDarkHud && styles.darkTileCard,
                                 pressed && styles.pressedTile,
                             ]}
                             testID={`tile-${tile.id}`}
                         >
-                            <View style={styles.tileIconContainer}>
+                            <View
+                                style={[
+                                    styles.tileIconContainer,
+                                    isDarkHud && styles.darkTileIconContainer,
+                                ]}
+                            >
                                 <Icon
+                                    color={
+                                        isDarkHud
+                                            ? tile.darkIconColor || '#FFFFFF'
+                                            : tile.iconColor || '#0F172A'
+                                    }
                                     name={tile.iconName}
-                                    size={30}
-                                    color="#FFFFFF"
+                                    size={24}
                                 />
                                 {tile.badgeCount ? (
                                     <View style={styles.tileBadgePill}>
@@ -586,30 +614,17 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                     </View>
                                 ) : null}
                             </View>
-                            <Text style={styles.tileTitle}>{tile.title}</Text>
-                            <Text style={styles.tileSublabel}>
-                                {tile.sublabel}
+                            <Text
+                                style={[
+                                    styles.tileTitle,
+                                    isDarkHud && styles.darkTileTitle,
+                                ]}
+                            >
+                                {tile.title}
                             </Text>
                         </Pressable>
                     ))}
                 </View>
-
-                <ShiftStatusCard
-                    locationSharingActive={locationSharingActive}
-                    onToggleLocationSharing={onToggleLocationSharing}
-                    onToggleShift={() => {
-                        if (shiftInfo.status === 'on_shift' && primaryAsset) {
-                            setEndShiftSafeguardOpen(true);
-                        } else {
-                            onToggleShift?.(
-                                shiftInfo.status === 'on_shift'
-                                    ? 'on_break'
-                                    : 'on_shift',
-                            );
-                        }
-                    }}
-                    shiftInfo={shiftInfo}
-                />
 
                 {activeNavItem === 'route' ? (
                     <PlannedRoutePanel
@@ -619,38 +634,31 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                 {activeNavItem === 'today' || activeNavItem === 'profile' ? (
                     <>
-                        <View
-                            style={[
-                                styles.header,
-                                isCompact && styles.headerCompact,
-                            ]}
-                        >
-                            <View style={styles.headerCopy}>
-                                <Text style={styles.title}>
-                                    Your assignments
-                                </Text>
-                                <Text style={styles.subtitle}>
-                                    {workSummary}
-                                </Text>
-                            </View>
+                        {/* Accessible work summary header for testing & screen readers */}
+                        <View style={styles.accessibleHeader}>
+                            <Text style={styles.srText}>Your assignments</Text>
+                            <Text style={styles.srText}>{workSummary}</Text>
                         </View>
 
-                        <SyncStatusPanel
-                            conflictCount={conflictCount}
-                            failedCount={failedCount}
-                            isOnline={isOnline}
-                            onSyncNow={onSyncNow}
-                            queuedCount={queuedCount}
-                            showDetails={hasOutboxActivity}
-                            syncGuidance={syncGuidance}
-                            syncingCount={syncingCount}
-                        />
+                        {/* Hidden/accessible outbox container to keep the main Today dashboard clean */}
+                        <View style={styles.accessibleOutbox}>
+                            <SyncStatusPanel
+                                conflictCount={conflictCount}
+                                failedCount={failedCount}
+                                isOnline={isOnline}
+                                onSyncNow={onSyncNow}
+                                queuedCount={queuedCount}
+                                showDetails={hasOutboxActivity}
+                                syncGuidance={syncGuidance}
+                                syncingCount={syncingCount}
+                            />
 
-                        <FailedCommandsList
-                            failedCommands={failedCommands}
-                            onDiscardCommand={onDiscardCommand}
-                            onRetryCommand={onRetryCommand}
-                        />
+                            <FailedCommandsList
+                                failedCommands={failedCommands}
+                                onDiscardCommand={onDiscardCommand}
+                                onRetryCommand={onRetryCommand}
+                            />
+                        </View>
 
                         {error ? (
                             <View style={styles.errorBox}>
@@ -698,7 +706,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 >
                                     <Icon
                                         name="clipboard"
-                                        size={28}
+                                        size={22}
                                         color={
                                             isDarkHud
                                                 ? '#F59E0B'
@@ -764,6 +772,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 failedCount={failedCount}
                 isOnline={isOnline}
                 onClose={() => setNotificationsSheetOpen(false)}
+                onDiscardCommand={onDiscardCommand}
                 onRetryCommand={onRetryCommand}
                 onSyncNow={onSyncNow}
                 pendingJobs={jobs.filter(
@@ -860,7 +869,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 110,
+        paddingBottom: 150,
         width: '100%',
     },
     dutyStatusBar: {
@@ -870,11 +879,11 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 1.5,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         marginBottom: 12,
-        minHeight: 54,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        minHeight: 52,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
         ...shadows.sm,
     },
     darkDutyStatusBar: {
@@ -885,27 +894,41 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flex: 1,
         flexDirection: 'row',
-        gap: 10,
+        gap: 12,
     },
     dutyBadge: {
         alignItems: 'center',
         borderRadius: 6,
         height: 26,
         justifyContent: 'center',
-        width: 36,
+        paddingHorizontal: 8,
+    },
+    lightDutyBadge: {
+        backgroundColor: '#22C55E',
+    },
+    darkDutyBadge: {
+        backgroundColor: '#22C55E',
     },
     dutyBadgeText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 11,
         fontWeight: '900',
         letterSpacing: 0.5,
+    },
+    lightDutyBadgeText: {
+        color: '#0F172A',
+        fontWeight: '900',
+    },
+    darkDutyBadgeText: {
+        color: '#0F172A',
+        fontWeight: '900',
     },
     dutyStatusCopy: {
         flex: 1,
     },
     dutyStatusTitle: {
         color: colors.text,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '800',
     },
     darkDutyStatusTitle: {
@@ -924,28 +947,53 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     tileCard: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
+        borderColor: '#E2E8F0',
         borderRadius: 14,
+        borderWidth: 1,
         flexBasis: '31%',
         flexGrow: 1,
-        justifyContent: 'center',
-        minHeight: 88,
-        padding: 8,
+        justifyContent: 'space-between',
+        minHeight: 96,
+        padding: 10,
         ...shadows.sm,
     },
+    darkTileCard: {
+        alignItems: 'flex-start',
+        borderColor: '#334155',
+        borderRadius: 14,
+        borderWidth: 1,
+        justifyContent: 'space-between',
+        minHeight: 96,
+        padding: 10,
+    },
     tileIconContainer: {
-        alignItems: 'center',
-        height: 32,
-        justifyContent: 'center',
-        marginBottom: 2,
-        width: 32,
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        marginBottom: 8,
+        width: '100%',
+    },
+    darkTileIconContainer: {
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        marginBottom: 8,
+        width: '100%',
     },
     tileTitle: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '900',
-        letterSpacing: 0.2,
-        textAlign: 'center',
+        color: '#0F172A',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0,
+        lineHeight: 15,
+        textAlign: 'left',
+    },
+    darkTileTitle: {
+        color: '#F8FAFC',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0,
+        lineHeight: 15,
+        textAlign: 'left',
     },
     tileSublabel: {
         color: 'rgba(255, 255, 255, 0.85)',
@@ -955,46 +1003,20 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     tileBadgePill: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#E0F2FE',
+        borderColor: '#BAE6FD',
         borderRadius: 8,
-        paddingHorizontal: 4,
+        borderWidth: 1,
+        paddingHorizontal: 5,
         paddingVertical: 1,
         position: 'absolute',
         right: -6,
         top: -4,
     },
     tileBadgePillText: {
-        color: '#0284C7',
+        color: '#0369A1',
         fontSize: 9,
         fontWeight: '900',
-    },
-    headerCompact: {
-        alignItems: 'stretch',
-        flexDirection: 'column',
-        gap: 12,
-    },
-    header: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    headerCopy: {
-        flex: 1,
-        paddingRight: 12,
-    },
-    title: {
-        color: colors.text,
-        fontSize: 22,
-        fontWeight: '800',
-        letterSpacing: -0.4,
-        lineHeight: 28,
-    },
-    subtitle: {
-        color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: 2,
     },
     errorBox: {
         alignItems: 'center',
@@ -1022,11 +1044,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 20,
+        borderRadius: 16,
         borderWidth: 1,
-        marginBottom: 16,
-        paddingHorizontal: 24,
-        paddingVertical: 36,
+        marginBottom: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 20,
         ...shadows.sm,
     },
     darkEmptyBox: {
@@ -1037,12 +1059,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.primarySoft,
         borderColor: colors.primaryBorder,
-        borderRadius: 28,
+        borderRadius: 20,
         borderWidth: 1,
-        height: 56,
+        height: 40,
         justifyContent: 'center',
-        marginBottom: 16,
-        width: 56,
+        marginBottom: 10,
+        width: 40,
     },
     darkEmptyMark: {
         backgroundColor: 'rgba(245, 158, 11, 0.16)',
@@ -1050,8 +1072,8 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         color: colors.text,
-        fontSize: 17,
-        fontWeight: '700',
+        fontSize: 15,
+        fontWeight: '800',
         letterSpacing: -0.2,
     },
     darkEmptyTitle: {
@@ -1059,10 +1081,10 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         color: colors.secondary,
-        fontSize: 14,
-        lineHeight: 21,
-        marginTop: 6,
-        maxWidth: 300,
+        fontSize: 13,
+        lineHeight: 18,
+        marginTop: 4,
+        maxWidth: 280,
         textAlign: 'center',
     },
     darkEmptyText: {
@@ -1132,22 +1154,51 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     startUnitBtn: {
-        backgroundColor: '#059669',
-        borderRadius: 12,
-        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F59E0B',
+        borderRadius: 12,
+        elevation: 4,
         justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        marginTop: 10,
         marginBottom: 14,
-        ...shadows.sm,
+        marginTop: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        shadowColor: '#F59E0B',
+        shadowOffset: { height: 3, width: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+    },
+    darkStartUnitBtn: {
+        backgroundColor: '#F59E0B',
+        elevation: 6,
+        shadowColor: '#F59E0B',
+        shadowOffset: { height: 4, width: 0 },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
     },
     startUnitBtnText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '800',
+        color: '#0F172A',
+        fontSize: 15,
+        fontWeight: '900',
         letterSpacing: 0.2,
+        textAlign: 'center',
+    },
+    darkStartUnitBtnText: {
+        color: '#0F172A',
+        fontWeight: '900',
+    },
+    accessibleHeader: {
+        height: 1,
+        opacity: 0.01,
+        overflow: 'hidden',
+    },
+    accessibleOutbox: {
+        height: 1,
+        opacity: 0.01,
+        overflow: 'hidden',
+    },
+    srText: {
+        color: 'transparent',
+        fontSize: 1,
     },
 });

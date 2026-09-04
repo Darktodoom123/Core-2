@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../theme';
 import type { SosEmergencyAction } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
@@ -23,6 +24,7 @@ function isAllowedEmergencyUri(action: SosEmergencyAction): boolean {
 export const EmergencyContactActions: React.FC<{
     actions: SosEmergencyAction[];
 }> = ({ actions }) => {
+    const { isDarkHud } = useTheme();
     const [error, setError] = useState<string | null>(null);
     const visibleActions = actions.filter(isAllowedEmergencyUri);
 
@@ -53,11 +55,20 @@ export const EmergencyContactActions: React.FC<{
     };
 
     return (
-        <View style={styles.container} testID="emergency-contact-actions">
-            <Text selectable style={styles.title}>
+        <View
+            style={[styles.container, isDarkHud && styles.darkContainer]}
+            testID="emergency-contact-actions"
+        >
+            <Text
+                selectable
+                style={[styles.title, isDarkHud && styles.darkTitle]}
+            >
                 Call or text now
             </Text>
-            <Text selectable style={styles.helper}>
+            <Text
+                selectable
+                style={[styles.helper, isDarkHud && styles.darkHelper]}
+            >
                 These actions are deliberate. Core 2 will not call public
                 emergency services automatically.
             </Text>
@@ -95,7 +106,13 @@ export const EmergencyContactActions: React.FC<{
                     ))}
                 </View>
             ) : (
-                <Text selectable style={styles.unavailable}>
+                <Text
+                    selectable
+                    style={[
+                        styles.unavailable,
+                        isDarkHud && styles.darkUnavailable,
+                    ]}
+                >
                     No configured emergency contact action is available.
                 </Text>
             )}
@@ -104,7 +121,7 @@ export const EmergencyContactActions: React.FC<{
                     accessibilityLiveRegion="assertive"
                     accessibilityRole="alert"
                     selectable
-                    style={styles.error}
+                    style={[styles.error, isDarkHud && styles.darkError]}
                 >
                     {error}
                 </Text>
@@ -169,5 +186,21 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         lineHeight: 18,
+    },
+    darkContainer: {
+        backgroundColor: 'rgba(220, 38, 38, 0.12)',
+        borderColor: '#7F1D1D',
+    },
+    darkTitle: {
+        color: '#F87171',
+    },
+    darkHelper: {
+        color: '#94A3B8',
+    },
+    darkUnavailable: {
+        color: '#FCA5A5',
+    },
+    darkError: {
+        color: '#FCA5A5',
     },
 });

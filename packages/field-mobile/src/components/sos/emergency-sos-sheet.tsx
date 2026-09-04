@@ -15,6 +15,7 @@ import {
     Vibration,
     View,
 } from 'react-native';
+import { useTheme } from '../../theme';
 import type {
     ActivateSosIncidentPayload,
     DispatchJob,
@@ -59,6 +60,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     onActivate,
     onClassify,
 }) => {
+    const { isDarkHud } = useTheme();
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
@@ -200,8 +202,11 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
             transparent={false}
             visible={visible}
         >
-            <View style={styles.root} testID="emergency-sos-sheet">
-                <View style={styles.header}>
+            <View
+                style={[styles.root, isDarkHud && styles.darkRoot]}
+                testID="emergency-sos-sheet"
+            >
+                <View style={[styles.header, isDarkHud && styles.darkHeader]}>
                     <View style={styles.headerCopy}>
                         <Text selectable style={styles.eyebrow}>
                             SAFETY ACTION
@@ -209,7 +214,10 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         <Text
                             accessibilityRole="header"
                             selectable
-                            style={styles.title}
+                            style={[
+                                styles.title,
+                                isDarkHud && styles.darkTitle,
+                            ]}
                         >
                             Emergency SOS
                         </Text>
@@ -218,9 +226,16 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                         accessibilityLabel="Close Emergency SOS"
                         accessibilityRole="button"
                         onPress={onClose}
-                        style={styles.closeButton}
+                        style={[
+                            styles.closeButton,
+                            isDarkHud && styles.darkCloseButton,
+                        ]}
                     >
-                        <Icon color={colors.text} name="close" size={22} />
+                        <Icon
+                            color={isDarkHud ? '#F8FAFC' : colors.text}
+                            name="close"
+                            size={22}
+                        />
                     </Pressable>
                 </View>
 
@@ -228,7 +243,10 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                     contentContainerStyle={styles.content}
                     contentInsetAdjustmentBehavior="automatic"
                 >
-                    <Text selectable style={styles.intro}>
+                    <Text
+                        selectable
+                        style={[styles.intro, isDarkHud && styles.darkIntro]}
+                    >
                         Use SOS for immediate danger, an accident, or a critical
                         asset malfunction. Core 2 shares available dispatch,
                         asset, and one-time location context.
@@ -241,10 +259,22 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
 
                     {!activeIncident && deliveryState === 'preparing' ? (
                         <View style={styles.contextSection}>
-                            <Text selectable style={styles.sectionTitle}>
+                            <Text
+                                selectable
+                                style={[
+                                    styles.sectionTitle,
+                                    isDarkHud && styles.darkSectionTitle,
+                                ]}
+                            >
                                 Attach context (optional)
                             </Text>
-                            <Text selectable style={styles.helper}>
+                            <Text
+                                selectable
+                                style={[
+                                    styles.helper,
+                                    isDarkHud && styles.darkHelper,
+                                ]}
+                            >
                                 SOS remains available without a dispatch or
                                 asset. Choose only an active assignment you
                                 recognize.
@@ -262,11 +292,20 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                     }}
                                     style={[
                                         styles.contextOption,
+                                        isDarkHud && styles.darkContextOption,
                                         selectedJobId === null &&
-                                            styles.contextOptionSelected,
+                                            (isDarkHud
+                                                ? styles.darkContextOptionSelected
+                                                : styles.contextOptionSelected),
                                     ]}
                                 >
-                                    <Text selectable style={styles.contextText}>
+                                    <Text
+                                        selectable
+                                        style={[
+                                            styles.contextText,
+                                            isDarkHud && styles.darkContextText,
+                                        ]}
+                                    >
                                         No dispatch context
                                     </Text>
                                 </Pressable>
@@ -289,13 +328,21 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                             }}
                                             style={[
                                                 styles.contextOption,
+                                                isDarkHud &&
+                                                    styles.darkContextOption,
                                                 selected &&
-                                                    styles.contextOptionSelected,
+                                                    (isDarkHud
+                                                        ? styles.darkContextOptionSelected
+                                                        : styles.contextOptionSelected),
                                             ]}
                                         >
                                             <Text
                                                 selectable
-                                                style={styles.contextText}
+                                                style={[
+                                                    styles.contextText,
+                                                    isDarkHud &&
+                                                        styles.darkContextText,
+                                                ]}
                                             >
                                                 {contextLabel(job)}
                                             </Text>
@@ -305,7 +352,13 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                             </View>
                             {selectedJob?.asset_assignments?.length ? (
                                 <View style={styles.assetOptions}>
-                                    <Text selectable style={styles.assetLabel}>
+                                    <Text
+                                        selectable
+                                        style={[
+                                            styles.assetLabel,
+                                            isDarkHud && styles.darkHelper,
+                                        ]}
+                                    >
                                         Asset (optional)
                                     </Text>
                                     {selectedJob.asset_assignments.map(
@@ -326,14 +379,22 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                                                 }
                                                 style={[
                                                     styles.assetOption,
+                                                    isDarkHud &&
+                                                        styles.darkContextOption,
                                                     selectedAssetId ===
                                                         asset.operational_asset_id &&
-                                                        styles.assetOptionSelected,
+                                                        (isDarkHud
+                                                            ? styles.darkContextOptionSelected
+                                                            : styles.assetOptionSelected),
                                                 ]}
                                             >
                                                 <Text
                                                     selectable
-                                                    style={styles.contextText}
+                                                    style={[
+                                                        styles.contextText,
+                                                        isDarkHud &&
+                                                            styles.darkContextText,
+                                                    ]}
                                                 >
                                                     {asset.asset_code} ·{' '}
                                                     {asset.asset_name}
@@ -347,11 +408,28 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                     ) : null}
 
                     {!activeIncident && deliveryState === 'preparing' ? (
-                        <View style={styles.holdSection}>
-                            <Text selectable style={styles.holdInstruction}>
+                        <View
+                            style={[
+                                styles.holdSection,
+                                isDarkHud && styles.darkHoldSection,
+                            ]}
+                        >
+                            <Text
+                                selectable
+                                style={[
+                                    styles.holdInstruction,
+                                    isDarkHud && styles.darkHoldInstruction,
+                                ]}
+                            >
                                 Press and hold for two seconds to activate.
                             </Text>
-                            <Text selectable style={styles.helper}>
+                            <Text
+                                selectable
+                                style={[
+                                    styles.helper,
+                                    isDarkHud && styles.darkHelper,
+                                ]}
+                            >
                                 A normal tap will not send an alert. Location
                                 permission, GPS timeout, or no connection will
                                 not block the attempt.
@@ -421,7 +499,13 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
                     ) : null}
 
                     {activeIncident?.dispatch ? (
-                        <Text selectable style={styles.serverContext}>
+                        <Text
+                            selectable
+                            style={[
+                                styles.serverContext,
+                                isDarkHud && styles.darkHelper,
+                            ]}
+                        >
                             Server context: {activeIncident.dispatch.reference}
                             {activeIncident.asset
                                 ? ` · ${activeIncident.asset.code}`
@@ -577,5 +661,46 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 13,
         lineHeight: 18,
+    },
+    darkRoot: {
+        backgroundColor: '#090D16',
+    },
+    darkHeader: {
+        backgroundColor: '#1E293B',
+        borderBottomColor: '#334155',
+    },
+    darkTitle: {
+        color: '#F8FAFC',
+    },
+    darkCloseButton: {
+        backgroundColor: '#334155',
+        borderRadius: 24,
+    },
+    darkIntro: {
+        color: '#94A3B8',
+    },
+    darkSectionTitle: {
+        color: '#F8FAFC',
+    },
+    darkHelper: {
+        color: '#94A3B8',
+    },
+    darkContextOption: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    darkContextOptionSelected: {
+        backgroundColor: 'rgba(220, 38, 38, 0.25)',
+        borderColor: '#EF4444',
+    },
+    darkContextText: {
+        color: '#F8FAFC',
+    },
+    darkHoldSection: {
+        backgroundColor: '#1E293B',
+        borderColor: '#7F1D1D',
+    },
+    darkHoldInstruction: {
+        color: '#F87171',
     },
 });

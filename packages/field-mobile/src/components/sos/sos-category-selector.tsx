@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../theme';
 import type { SosIncidentCategory } from '../../types/index';
 import { colors } from '../nativeStyles';
 
@@ -17,47 +18,68 @@ export const SosCategorySelector: React.FC<{
     value: SosIncidentCategory;
     onChange: (category: SosIncidentCategory) => void;
     disabled?: boolean;
-}> = ({ value, onChange, disabled = false }) => (
-    <View accessibilityRole="radiogroup" style={styles.container}>
-        <Text selectable style={styles.title}>
-            What happened?
-        </Text>
-        <Text selectable style={styles.helper}>
-            Classification is optional and does not delay the alert.
-        </Text>
-        <View style={styles.options}>
-            {CATEGORIES.map((category) => {
-                const selected = value === category.value;
+}> = ({ value, onChange, disabled = false }) => {
+    const { isDarkHud } = useTheme();
 
-                return (
-                    <Pressable
-                        accessibilityLabel={category.label}
-                        accessibilityRole="radio"
-                        accessibilityState={{ disabled, selected }}
-                        disabled={disabled}
-                        key={category.value}
-                        onPress={() => onChange(category.value)}
-                        style={({ pressed }) => [
-                            styles.option,
-                            selected && styles.optionSelected,
-                            pressed && styles.optionPressed,
-                        ]}
-                    >
-                        <View
-                            style={[
-                                styles.radio,
-                                selected && styles.radioSelected,
+    return (
+        <View accessibilityRole="radiogroup" style={styles.container}>
+            <Text
+                selectable
+                style={[styles.title, isDarkHud && styles.darkTitle]}
+            >
+                What happened?
+            </Text>
+            <Text
+                selectable
+                style={[styles.helper, isDarkHud && styles.darkHelper]}
+            >
+                Classification is optional and does not delay the alert.
+            </Text>
+            <View style={styles.options}>
+                {CATEGORIES.map((category) => {
+                    const selected = value === category.value;
+
+                    return (
+                        <Pressable
+                            accessibilityLabel={category.label}
+                            accessibilityRole="radio"
+                            accessibilityState={{ disabled, selected }}
+                            disabled={disabled}
+                            key={category.value}
+                            onPress={() => onChange(category.value)}
+                            style={({ pressed }) => [
+                                styles.option,
+                                isDarkHud && styles.darkOption,
+                                selected &&
+                                    (isDarkHud
+                                        ? styles.darkOptionSelected
+                                        : styles.optionSelected),
+                                pressed && styles.optionPressed,
                             ]}
-                        />
-                        <Text selectable style={styles.optionText}>
-                            {category.label}
-                        </Text>
-                    </Pressable>
-                );
-            })}
+                        >
+                            <View
+                                style={[
+                                    styles.radio,
+                                    isDarkHud && styles.darkRadio,
+                                    selected && styles.radioSelected,
+                                ]}
+                            />
+                            <Text
+                                selectable
+                                style={[
+                                    styles.optionText,
+                                    isDarkHud && styles.darkOptionText,
+                                ]}
+                            >
+                                {category.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
         </View>
-    </View>
-);
+    );
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -109,5 +131,25 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         fontWeight: '600',
+    },
+    darkTitle: {
+        color: '#F8FAFC',
+    },
+    darkHelper: {
+        color: '#94A3B8',
+    },
+    darkOption: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    darkOptionSelected: {
+        backgroundColor: 'rgba(220, 38, 38, 0.25)',
+        borderColor: '#EF4444',
+    },
+    darkRadio: {
+        borderColor: '#64748B',
+    },
+    darkOptionText: {
+        color: '#F8FAFC',
     },
 });

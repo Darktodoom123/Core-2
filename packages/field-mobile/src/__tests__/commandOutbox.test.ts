@@ -467,6 +467,7 @@ describe('CommandOutboxManager', () => {
         const apiClient = {
             transitionStatus: async () => {
                 calls += 1;
+
                 if (calls === 1) {
                     throw new ApiClientError('Rate limit exceeded', 429, {
                         errorCode: 'rate_limited',

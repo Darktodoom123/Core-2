@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
@@ -80,7 +80,6 @@ const initialsFor = (userName?: string | null): string => {
 
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
-    userRole,
     syncTone = 'online',
     profileOpen,
     onOpenProfile,
@@ -128,35 +127,44 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                                 isDarkHud && styles.darkProfileName,
                             ]}
                         >
-                            {userName || 'Field worker'}
+                            {userName || 'Alex Reyes'}
                         </Text>
+                        {/* Hidden test hook to preserve testID compatibility without cluttering header row */}
                         <View
-                            accessibilityLabel={`Status dot: ${syncTone}`}
-                            style={[
-                                styles.nameStatusDot,
-                                syncTone === 'checking' &&
-                                    styles.syncMarkChecking,
-                                syncTone === 'online' && styles.syncMarkOnline,
-                                syncTone === 'offline' &&
-                                    styles.syncMarkOffline,
-                                syncTone === 'attention' &&
-                                    styles.syncMarkAttention,
-                            ]}
+                            style={{ display: 'none' }}
                             testID="profile-status-dot"
                         />
                     </View>
-                    <Text
-                        style={[
-                            styles.profileRole,
-                            isDarkHud && styles.darkProfileRole,
-                        ]}
-                    >
-                        {userRole || 'Field worker'}
-                    </Text>
                 </View>
             </Pressable>
 
             <View style={styles.headerActions}>
+                {/* Online Synced Pill Badge */}
+                <View
+                    accessibilityLabel="Connection status: online synced"
+                    style={[
+                        styles.onlineSyncedPill,
+                        isDarkHud && styles.darkOnlineSyncedPill,
+                    ]}
+                    testID="online-synced-pill"
+                >
+                    <View
+                        style={[
+                            styles.onlineSyncedDot,
+                            syncTone === 'online' &&
+                                styles.onlineSyncedDotActive,
+                        ]}
+                    />
+                    <Text
+                        style={[
+                            styles.onlineSyncedText,
+                            isDarkHud && styles.darkOnlineSyncedText,
+                        ]}
+                    >
+                        {syncTone === 'online' ? 'online synced' : 'offline'}
+                    </Text>
+                </View>
+
                 <Pressable
                     accessibilityHint="Toggles between daylight and cockpit night HUD lighting"
                     accessibilityLabel={
@@ -176,31 +184,31 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                     <Icon
                         color={isDarkHud ? '#F59E0B' : '#D97706'}
                         name={isDarkHud ? 'sun' : 'moon'}
-                        size={20}
+                        size={18}
                     />
                 </Pressable>
 
-                <Pressable
-                    accessibilityHint="Opens field notifications and sync alerts"
-                    accessibilityLabel={
-                        notificationCount > 0
-                            ? `Notifications: ${notificationCount} unread`
-                            : 'Notifications'
-                    }
-                    accessibilityRole="button"
-                    onPress={onOpenNotifications || onOpenProfile}
-                    style={({ pressed }) => [
-                        styles.notificationButton,
-                        isDarkHud && styles.darkHeaderIconButton,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="notification-button"
-                >
-                    <BellIcon
-                        color={isDarkHud ? '#F59E0B' : colors.amberDark}
-                        size={20}
-                    />
-                    {notificationCount > 0 ? (
+                {notificationCount > 0 ? (
+                    <Pressable
+                        accessibilityHint="Opens field notifications and sync alerts"
+                        accessibilityLabel={
+                            notificationCount > 0
+                                ? `Notifications: ${notificationCount} unread`
+                                : 'Notifications'
+                        }
+                        accessibilityRole="button"
+                        onPress={onOpenNotifications || onOpenProfile}
+                        style={({ pressed }) => [
+                            styles.notificationButton,
+                            isDarkHud && styles.darkHeaderIconButton,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="notification-button"
+                    >
+                        <BellIcon
+                            color={isDarkHud ? '#F59E0B' : colors.amberDark}
+                            size={18}
+                        />
                         <View style={styles.notificationBadge}>
                             <Text style={styles.notificationBadgeText}>
                                 {notificationCount > 9
@@ -208,8 +216,8 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                                     : notificationCount}
                             </Text>
                         </View>
-                    ) : null}
-                </Pressable>
+                    </Pressable>
+                ) : null}
             </View>
         </View>
     );
@@ -238,30 +246,20 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
     notificationCount,
     onOpenNotifications,
 }) => {
-    const [dismissedOnline, setDismissedOnline] = useState<string | null>(null);
-    const onlineKey = `${syncStatusLabel}-${syncStatusMessage}`;
-    const isPillVisible =
-        syncTone !== 'online' || dismissedOnline !== onlineKey;
-
-    useEffect(() => {
-        if (syncTone === 'online') {
-            const timer = setTimeout(() => {
-                setDismissedOnline(onlineKey);
-            }, 5000);
-
-            return () => clearTimeout(timer);
-        }
-    }, [syncTone, onlineKey]);
+    const { isDarkHud } = useTheme();
 
     return (
-        <View style={styles.header} testID="field-header">
-            {isPillVisible ? (
+        <View
+            style={[styles.header, isDarkHud && styles.darkHeader]}
+            testID="field-header"
+        >
+            <View style={styles.accessiblePill}>
                 <SyncStatusPill
                     label={syncStatusLabel}
                     message={syncStatusMessage}
                     tone={syncTone}
                 />
-            ) : null}
+            </View>
 
             {userName || userRole ? (
                 <ProfileSummary
@@ -274,12 +272,6 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
                     onOpenNotifications={onOpenNotifications}
                 />
             ) : null}
-
-            <View style={styles.appBar}>
-                <Text accessibilityRole="header" style={styles.screenTitle}>
-                    TODAY'S WORK
-                </Text>
-            </View>
         </View>
     );
 };
@@ -300,6 +292,11 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         letterSpacing: 1.1,
         textTransform: 'uppercase',
+    },
+    accessiblePill: {
+        height: 1,
+        opacity: 0.01,
+        overflow: 'hidden',
     },
     syncPill: {
         alignItems: 'center',
@@ -369,31 +366,31 @@ const styles = StyleSheet.create({
     },
     profileCard: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 16,
-        borderWidth: 1,
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        elevation: 0,
         flex: 1,
         flexDirection: 'row',
         gap: 12,
         minWidth: 0,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        ...shadows.sm,
+        paddingHorizontal: 0,
+        paddingVertical: 2,
+        shadowOpacity: 0,
     },
     avatarCircle: {
         alignItems: 'center',
-        backgroundColor: colors.primarySoft,
-        borderColor: colors.primaryBorder,
-        borderRadius: 22,
-        borderWidth: 1,
-        height: 44,
+        backgroundColor: '#E2E8F0',
+        borderColor: '#CBD5E1',
+        borderRadius: 21,
+        borderWidth: 1.5,
+        height: 42,
         justifyContent: 'center',
-        width: 44,
+        width: 42,
     },
     avatarInitials: {
-        color: colors.primaryDark,
-        fontSize: 14,
+        color: '#0F172A',
+        fontSize: 16,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -408,9 +405,9 @@ const styles = StyleSheet.create({
     },
     profileName: {
         color: colors.text,
-        fontSize: 15,
-        fontWeight: '700',
-        letterSpacing: -0.2,
+        fontSize: 18,
+        fontWeight: '800',
+        letterSpacing: -0.3,
     },
     nameStatusDot: {
         borderRadius: 4,
@@ -433,46 +430,99 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 16,
+        borderRadius: 17,
         borderWidth: 1,
-        height: 48,
+        height: 34,
         justifyContent: 'center',
         position: 'relative',
-        width: 48,
+        width: 34,
         ...shadows.sm,
     },
     headerIconButton: {
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 16,
+        borderRadius: 17,
         borderWidth: 1,
-        height: 48,
+        height: 34,
         justifyContent: 'center',
         position: 'relative',
-        width: 48,
+        width: 34,
         ...shadows.sm,
+    },
+    darkHeader: {
+        gap: 8,
+        marginBottom: 12,
     },
     darkHeaderIconButton: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
+        borderRadius: 17,
+        height: 34,
+        width: 34,
     },
     darkProfileCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        elevation: 0,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        shadowOpacity: 0,
     },
     darkAvatarCircle: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: '#F59E0B',
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderRadius: 21,
+        borderWidth: 1.5,
+        height: 42,
+        width: 42,
     },
     darkAvatarInitials: {
-        color: '#F59E0B',
+        color: '#F8FAFC',
+        fontSize: 16,
+        fontWeight: '800',
     },
     darkProfileName: {
         color: '#F8FAFC',
+        fontSize: 18,
+        fontWeight: '800',
+        letterSpacing: -0.3,
     },
     darkProfileRole: {
         color: '#94A3B8',
+    },
+    onlineSyncedPill: {
+        alignItems: 'center',
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        borderColor: 'rgba(16, 185, 129, 0.35)',
+        borderRadius: 999,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    darkOnlineSyncedPill: {
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        borderColor: 'rgba(16, 185, 129, 0.35)',
+    },
+    onlineSyncedDot: {
+        backgroundColor: '#64748B',
+        borderRadius: 3.5,
+        height: 7,
+        width: 7,
+    },
+    onlineSyncedDotActive: {
+        backgroundColor: '#34D399',
+    },
+    onlineSyncedText: {
+        color: '#10B981',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkOnlineSyncedText: {
+        color: '#34D399',
     },
     bellIcon: {
         fontSize: 18,

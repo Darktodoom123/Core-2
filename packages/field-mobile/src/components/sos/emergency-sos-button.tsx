@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Vibration } from 'react-native';
 import { useTheme } from '../../theme';
-import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
 export interface EmergencySosButtonProps {
@@ -113,8 +112,7 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
         >
             <View style={[styles.progress, { width: `${progress * 100}%` }]} />
             <View style={styles.contentWrap}>
-                <Icon color={colors.white} name="alert" size={17} />
-                <Text selectable style={styles.label}>
+                <Text selectable style={[styles.label, styles.boldSosLabel]}>
                     SOS
                 </Text>
             </View>
@@ -125,7 +123,7 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
 const styles = StyleSheet.create({
     button: {
         alignItems: 'center',
-        backgroundColor: colors.redDark,
+        backgroundColor: '#DC2626',
         borderColor: '#FFFFFF',
         borderRadius: 28,
         borderWidth: 3.5,
@@ -134,20 +132,37 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: -18,
         overflow: 'hidden',
-        shadowColor: '#000000',
+        shadowColor: '#DC2626',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.35,
         shadowRadius: 8,
         width: 56,
     },
     darkButton: {
+        backgroundColor: '#DC2626',
         borderColor: '#1E293B',
+        shadowColor: '#DC2626',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.45,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    darkLabel: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 0.5,
+    },
+    boldSosLabel: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 0.5,
     },
     progress: {
-        backgroundColor: colors.red,
+        backgroundColor: 'rgba(255, 255, 255, 0.35)',
         bottom: 0,
         left: 0,
-        opacity: 0.9,
         position: 'absolute',
         top: 0,
     },

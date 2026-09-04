@@ -21,6 +21,7 @@ export interface AssetVehicleCardProps {
     fuelPercent?: number;
     onChangeUnit?: () => void;
     onPress?: () => void;
+    variant?: 'detailed' | 'hero';
 }
 
 export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
@@ -36,6 +37,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
     fuelPercent = 82,
     onChangeUnit,
     onPress,
+    variant = 'detailed',
 }) => {
     const { isDarkHud } = useTheme();
 
@@ -142,6 +144,133 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
     };
 
     const CardContainer = onPress ? Pressable : View;
+
+    if (variant === 'hero') {
+        return (
+            <CardContainer
+                accessibilityHint={
+                    onPress
+                        ? 'Tap to view equipment specifications or setup fleet status'
+                        : undefined
+                }
+                accessibilityLabel={`Assigned vehicle hero card ${assetCode}, ${assetName}`}
+                accessibilityRole={onPress ? 'button' : undefined}
+                onPress={onPress}
+                style={({ pressed }: { pressed?: boolean } = {}) => [
+                    styles.heroCardRoot,
+                    isDarkHud && styles.darkHeroCardRoot,
+                    pressed && styles.pressed,
+                ]}
+                testID="hero-vehicle-card"
+            >
+                <Text
+                    style={[
+                        styles.heroCardSubtitle,
+                        isDarkHud && styles.darkHeroCardSubtitle,
+                    ]}
+                >
+                    Assigned vehicle hero card
+                </Text>
+                <Text
+                    style={[
+                        styles.heroUnitCode,
+                        isDarkHud && styles.darkHeroUnitCode,
+                    ]}
+                    testID="vehicle-card-code"
+                >
+                    {assetCode}
+                </Text>
+                <Text
+                    style={[
+                        styles.heroModelText,
+                        isDarkHud && styles.darkHeroModelText,
+                    ]}
+                >
+                    {assetName}
+                </Text>
+
+                <View style={styles.heroFooterRow}>
+                    <View style={styles.heroTelematicsGroup}>
+                        <View style={styles.heroTeleItem}>
+                            <Icon
+                                name="fuel"
+                                size={18}
+                                color={isDarkHud ? '#94A3B8' : '#64748B'}
+                            />
+                            <View style={styles.heroTeleTextCol}>
+                                <Text
+                                    style={[
+                                        styles.heroTeleValue,
+                                        isDarkHud && styles.darkHeroTeleValue,
+                                    ]}
+                                >
+                                    {fuelPercent !== undefined
+                                        ? `${fuelPercent.toFixed(1)}%`
+                                        : '32.0%'}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.heroTeleLabel,
+                                        !isDarkHud && styles.lightHeroTeleLabel,
+                                    ]}
+                                >
+                                    Fuel level
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.heroTeleItem}>
+                            <Icon
+                                name="engine"
+                                size={18}
+                                color={isDarkHud ? '#94A3B8' : '#64748B'}
+                            />
+                            <View style={styles.heroTeleTextCol}>
+                                <Text
+                                    style={[
+                                        styles.heroTeleValue,
+                                        isDarkHud && styles.darkHeroTeleValue,
+                                    ]}
+                                >
+                                    Engine
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.heroTeleLabel,
+                                        !isDarkHud && styles.lightHeroTeleLabel,
+                                    ]}
+                                >
+                                    Hours
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {onChangeUnit ? (
+                        <Pressable
+                            accessibilityLabel="Change assigned unit"
+                            accessibilityRole="button"
+                            onPress={onChangeUnit}
+                            style={[
+                                styles.heroChangeUnitBtn,
+                                isDarkHud && styles.darkHeroChangeUnitBtn,
+                            ]}
+                            testID="vehicle-card-change-unit-btn"
+                        >
+                            <Text
+                                style={[
+                                    styles.heroChangeUnitText,
+                                    isDarkHud && styles.darkHeroChangeUnitText,
+                                ]}
+                            >
+                                Change Unit
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
+            </CardContainer>
+        );
+    }
 
     return (
         <CardContainer
@@ -724,5 +853,101 @@ const styles = StyleSheet.create({
     },
     darkChangeUnitText: {
         color: '#F59E0B',
+    },
+    heroCardRoot: {
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        marginBottom: 12,
+        padding: 16,
+        ...shadows.sm,
+    },
+    darkHeroCardRoot: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    heroCardSubtitle: {
+        color: colors.secondary,
+        fontSize: 12,
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    darkHeroCardSubtitle: {
+        color: '#94A3B8',
+    },
+    heroUnitCode: {
+        color: colors.text,
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: -0.5,
+        marginBottom: 2,
+    },
+    darkHeroUnitCode: {
+        color: '#F8FAFC',
+    },
+    heroModelText: {
+        color: colors.secondary,
+        fontSize: 14,
+        fontWeight: '500',
+        marginBottom: 14,
+    },
+    darkHeroModelText: {
+        color: '#CBD5E1',
+    },
+    heroFooterRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    heroTelematicsGroup: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 18,
+    },
+    heroTeleItem: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
+    heroTeleTextCol: {
+        flexDirection: 'column',
+    },
+    heroTeleValue: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        lineHeight: 16,
+    },
+    darkHeroTeleValue: {
+        color: '#F8FAFC',
+    },
+    heroTeleLabel: {
+        color: '#94A3B8',
+        fontSize: 11,
+        fontWeight: '500',
+        lineHeight: 14,
+    },
+    lightHeroTeleLabel: {
+        color: '#64748B',
+    },
+    heroChangeUnitBtn: {
+        backgroundColor: '#F59E0B',
+        borderRadius: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        ...shadows.sm,
+    },
+    darkHeroChangeUnitBtn: {
+        backgroundColor: '#F59E0B',
+    },
+    heroChangeUnitText: {
+        color: '#0F172A',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.1,
+    },
+    darkHeroChangeUnitText: {
+        color: '#0F172A',
     },
 });

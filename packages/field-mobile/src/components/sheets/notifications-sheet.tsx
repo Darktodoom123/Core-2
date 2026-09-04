@@ -33,6 +33,7 @@ export interface NotificationsSheetProps {
     failedCommands?: OutboxCommand[];
     pendingJobs?: DispatchJob[];
     onRetryCommand?: (id: string) => void;
+    onDiscardCommand?: (id: string) => void;
     onSyncNow?: () => void;
     isOnline?: boolean | null;
 }
@@ -47,6 +48,7 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
     failedCommands = [],
     pendingJobs = [],
     onRetryCommand,
+    onDiscardCommand,
     onSyncNow,
     isOnline,
 }) => {
@@ -220,6 +222,88 @@ export const NotificationsSheet: React.FC<NotificationsSheetProps> = ({
                                                 </Text>
                                             </Pressable>
                                         ) : null}
+                                    </View>
+                                ) : null}
+
+                                {failedCommands.length > 0 ? (
+                                    <View style={styles.failedSection}>
+                                        {failedCommands.map((cmd) => (
+                                            <View
+                                                key={cmd.id}
+                                                style={styles.failedCard}
+                                            >
+                                                <Text
+                                                    style={styles.failedTitle}
+                                                >
+                                                    Action needs review:{' '}
+                                                    {cmd.type.replaceAll(
+                                                        '_',
+                                                        ' ',
+                                                    )}
+                                                </Text>
+                                                <Text style={styles.failedDesc}>
+                                                    {cmd.error?.message ||
+                                                        'Automatic retry limit reached.'}
+                                                </Text>
+                                                <View
+                                                    style={styles.failedActions}
+                                                >
+                                                    {cmd.error?.retryable &&
+                                                    onRetryCommand ? (
+                                                        <Pressable
+                                                            accessibilityLabel="Retry failed command"
+                                                            accessibilityRole="button"
+                                                            onPress={() =>
+                                                                onRetryCommand(
+                                                                    cmd.id,
+                                                                )
+                                                            }
+                                                            style={({
+                                                                pressed,
+                                                            }) => [
+                                                                styles.retryBtn,
+                                                                pressed &&
+                                                                    styles.pressed,
+                                                            ]}
+                                                        >
+                                                            <Text
+                                                                style={
+                                                                    styles.retryBtnText
+                                                                }
+                                                            >
+                                                                Retry
+                                                            </Text>
+                                                        </Pressable>
+                                                    ) : null}
+                                                    {onDiscardCommand ? (
+                                                        <Pressable
+                                                            accessibilityLabel="Discard failed command"
+                                                            accessibilityRole="button"
+                                                            onPress={() =>
+                                                                onDiscardCommand(
+                                                                    cmd.id,
+                                                                )
+                                                            }
+                                                            style={({
+                                                                pressed,
+                                                            }) => [
+                                                                styles.discardBtn,
+                                                                pressed &&
+                                                                    styles.pressed,
+                                                            ]}
+                                                        >
+                                                            <Text
+                                                                style={
+                                                                    styles.discardBtnText
+                                                                }
+                                                            >
+                                                                Discard
+                                                            </Text>
+                                                        </Pressable>
+                                                    ) : null}
+                                                </View>
+                                            </View>
+                                        ))}
                                     </View>
                                 ) : null}
                             </View>
@@ -534,5 +618,64 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.78,
+    },
+    failedSection: {
+        borderTopColor: colors.border,
+        borderTopWidth: 1,
+        gap: 8,
+        marginTop: 4,
+        paddingTop: 8,
+    },
+    failedCard: {
+        backgroundColor: colors.redSoft,
+        borderColor: colors.redBorder,
+        borderRadius: 8,
+        borderWidth: 1,
+        gap: 4,
+        padding: 10,
+    },
+    failedTitle: {
+        color: colors.red,
+        fontSize: 13,
+        fontWeight: '800',
+        textTransform: 'capitalize',
+    },
+    failedDesc: {
+        color: colors.secondary,
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    failedActions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 6,
+    },
+    retryBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 6,
+        flex: 1,
+        justifyContent: 'center',
+        minHeight: 36,
+        paddingHorizontal: 10,
+    },
+    retryBtnText: {
+        color: colors.text,
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    discardBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.red,
+        borderRadius: 6,
+        flex: 1,
+        justifyContent: 'center',
+        minHeight: 36,
+        paddingHorizontal: 10,
+    },
+    discardBtnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '800',
     },
 });

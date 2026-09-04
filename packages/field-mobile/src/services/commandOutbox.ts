@@ -760,8 +760,8 @@ export class CommandOutboxManager {
             const isRateLimited = Boolean(
                 (error instanceof ApiClientError &&
                     (error.status === 429 || error.isRateLimited)) ||
-                    errObj?.status === 429 ||
-                    errObj?.isRateLimited === true,
+                errObj?.status === 429 ||
+                errObj?.isRateLimited === true,
             );
 
             const retryAfterSeconds =
@@ -795,6 +795,7 @@ export class CommandOutboxManager {
                     retryable: true,
                 };
             }
+
             result.deferred += 1;
         }
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../theme';
 import type { SosDeliveryState } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
@@ -36,6 +37,7 @@ export const SosDeliveryStatus: React.FC<{
     state: SosDeliveryState;
     detail?: string | null;
 }> = ({ state, detail }) => {
+    const { isDarkHud } = useTheme();
     const copy = STATUS_COPY[state];
 
     return (
@@ -43,7 +45,11 @@ export const SosDeliveryStatus: React.FC<{
             accessible
             accessibilityLiveRegion="assertive"
             accessibilityRole="summary"
-            style={[styles.container, { borderColor: copy.tone }]}
+            style={[
+                styles.container,
+                isDarkHud && styles.darkContainer,
+                { borderColor: copy.tone },
+            ]}
             testID="sos-delivery-status"
         >
             <View style={[styles.mark, { backgroundColor: copy.tone }]}>
@@ -54,7 +60,10 @@ export const SosDeliveryStatus: React.FC<{
                     {copy.label}
                 </Text>
                 {detail ? (
-                    <Text selectable style={styles.detail}>
+                    <Text
+                        selectable
+                        style={[styles.detail, isDarkHud && styles.darkDetail]}
+                    >
                         {detail}
                     </Text>
                 ) : null}
@@ -92,5 +101,11 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 13,
         lineHeight: 18,
+    },
+    darkContainer: {
+        backgroundColor: '#1E293B',
+    },
+    darkDetail: {
+        color: '#94A3B8',
     },
 });
