@@ -36,7 +36,7 @@ export function DispatchDetailHeader({
                         {!capabilities.update_own_status && (
                             <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft/70 px-2 py-0.5 text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                    Assignment workspace
+                                    Dispatch preparation
                                 </span>
                                 <span className="text-xs font-medium text-ink-soft">
                                     {job.client}

@@ -17,10 +17,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     name: Backend Tests & Static Analysis
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -68,11 +73,21 @@ jobs:
         run: npm run build
 
       - name: Tests
-        run: php artisan test --parallel
+        run: mkdir -p test-results && vendor/bin/pest --parallel --log-junit=test-results/junit-backend.xml
+
+      - name: Upload backend JUnit results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-backend
+          path: test-results/junit-backend.xml
+          retention-days: 7
+          if-no-files-found: warn
 
   browser-acceptance:
     name: Browser Acceptance & Accessibility
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:16-alpine
@@ -147,12 +162,14 @@ jobs:
         env:
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
+          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-a11y.xml
         run: npm run test:a11y
 
       - name: Browser acceptance suite
         env:
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
+          PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e.xml
         run: npm run test:e2e
 
       - name: Upload Playwright test results and report
@@ -168,6 +185,7 @@ jobs:
   database-security:
     name: PostgreSQL Security & Concurrency
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -254,8 +272,9 @@ jobs:
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
         run: |
+          mkdir -p test-results
           php artisan migrate --force --database=pgsql
-          vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency
+          vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
 
       - name: PostgreSQL Rental and Sales RLS/grant tests
         env:
@@ -267,11 +286,23 @@ jobs:
           DB_SSLMODE: disable
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
-        run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL
+        run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
+
+      - name: Upload PostgreSQL JUnit results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-postgresql
+          path: |
+            test-results/junit-concurrency.xml
+            test-results/junit-postgresql.xml
+          retention-days: 7
+          if-no-files-found: warn
 
   mobile:
     name: Mobile Package & Bundling
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

@@ -136,8 +136,8 @@ export function CoverageForm({
 
     return (
         <Dialog
-            title={`Fill coverage · ${shift.reference}`}
-            description={`${shortDate(shift.starts_at)} · ${new Date(shift.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(shift.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Corporate rosters stay in Workforce Management.`}
+            title={`Fill crew coverage · ${shift.reference}`}
+            description={`${shortDate(shift.starts_at)} · ${new Date(shift.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(shift.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Workforce Management owns corporate rosters; Core 2 records operational shift coverage.`}
             onClose={onClose}
         >
             <div className="grid grid-cols-3 gap-2">
@@ -195,7 +195,7 @@ export function CoverageForm({
             <section className="mt-5 border-t border-line pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold">
-                        {roleLabels[role]} availability
+                        {roleLabels[role]} for this shift
                     </h3>
                     <label className="relative">
                         <Search className="absolute top-3.5 left-3 size-4 text-ink-soft" />
@@ -203,7 +203,7 @@ export function CoverageForm({
                         <Input
                             value={search}
                             className="pl-9"
-                            placeholder="Search personnel"
+                            placeholder="Search eligible personnel"
                             onChange={(e) => {
                                 setSearch(e.target.value);
                                 setPage(1);
@@ -366,12 +366,12 @@ export function CoverageForm({
                     }
                 }}
             >
-                <Field label="Change reason">
+                <Field label="Crew change reason">
                     <Textarea
                         required
                         maxLength={2000}
                         value={reason}
-                        placeholder="Explain the assignment or replacement"
+                        placeholder="Explain the crew change or replacement"
                         onChange={(e) => {
                             setReason(e.target.value);
                             setReview(false);
@@ -380,7 +380,9 @@ export function CoverageForm({
                 </Field>
                 {review && (
                     <section className="mt-4 rounded-lg border border-line bg-surface-subtle p-4 text-sm">
-                        <h3 className="font-semibold">Review crew change</h3>
+                        <h3 className="font-semibold">
+                            Review crew coverage change
+                        </h3>
                         <p className="mt-2">
                             Add: {added.map((p) => p.name).join(', ') || 'None'}
                         </p>
@@ -412,7 +414,7 @@ export function CoverageForm({
                             ? shift.locked
                                 ? 'Request exception approval'
                                 : 'Confirm crew'
-                            : 'Review crew change'}
+                            : 'Review crew coverage change'}
                     </Button>
                 </div>
                 {plan.status !== 'approved' && (

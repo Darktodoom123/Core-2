@@ -93,7 +93,7 @@ function isFieldUser(user: WorkspaceUserViewModel): boolean {
     return user.role !== null && FIELD_USER_ROLES.has(user.role);
 }
 
-interface DerivedConflict {
+export interface DerivedConflict {
     id: string;
     type:
         | 'overlap'
@@ -2060,7 +2060,7 @@ export function LiveDispatchWorkspace({
     );
 }
 
-function ScheduleBoardTable({
+export function ScheduleBoardTable({
     jobs,
     assets,
     users,

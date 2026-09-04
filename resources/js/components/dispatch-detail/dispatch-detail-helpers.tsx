@@ -64,18 +64,20 @@ export function getSafeReturnTo(fallback?: string | null) {
     }
 
     const params = new URLSearchParams(window.location.search);
-    const returnTo = params.get('return_to') ?? fallback;
+    const candidates = [params.get('return_to'), fallback];
 
-    if (
-        !returnTo ||
-        !returnTo.startsWith('/') ||
-        returnTo.startsWith('//') ||
-        returnTo.includes('\\')
-    ) {
-        return '/';
+    for (const returnTo of candidates) {
+        if (
+            returnTo &&
+            returnTo.startsWith('/') &&
+            !returnTo.startsWith('//') &&
+            !returnTo.includes('\\')
+        ) {
+            return returnTo;
+        }
     }
 
-    return returnTo;
+    return '/';
 }
 
 export function EligibilityBadge({ eligible }: { eligible: boolean }) {

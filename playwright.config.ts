@@ -10,7 +10,18 @@ export default defineConfig({
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 2 : 0,
     reporter: process.env.CI
-        ? [['html', { open: 'never' }], ['github']]
+        ? [
+              ['html', { open: 'never' }],
+              ['github'],
+              [
+                  'junit',
+                  {
+                      outputFile:
+                          process.env.PLAYWRIGHT_JUNIT_OUTPUT ??
+                          'test-results/junit-e2e.xml',
+                  },
+              ],
+          ]
         : 'list',
     use: {
         baseURL,

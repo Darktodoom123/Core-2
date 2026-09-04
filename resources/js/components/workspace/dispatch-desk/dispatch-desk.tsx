@@ -1,0 +1,1370 @@
+import { Link, usePage } from '@inertiajs/react';
+import {
+    AlertTriangle,
+    CalendarDays,
+    ChevronLeft,
+    ChevronRight,
+    ClipboardList,
+    Clock3,
+    FileText,
+    Inbox,
+    MapPin,
+    Plus,
+    RefreshCw,
+    Search,
+    Truck,
+    Users,
+    X,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import {
+    Button,
+    DataPair,
+    EmptyState,
+    PageHeading,
+    Panel,
+    Skeleton,
+} from '@/components/ui';
+import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
+import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
+import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
+import { ScheduleBoardTable } from '@/components/workspace/live-dispatch-workspace';
+import type { DerivedConflict } from '@/components/workspace/live-dispatch-workspace';
+import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
+import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
+import {
+    dateFromLocalKey,
+    localDateKey,
+    shiftLocalDate,
+} from '@/lib/date-utils';
+import { formatDateTime } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
+import type { Auth } from '@/types/auth';
+import type { DispatchJobViewModel } from '@/types/workspace';
+import {
+    deriveDispatchDeskConflicts,
+    EXECUTION_STATUSES,
+    HISTORY_STATUSES,
+    incomingWorkItems,
+    jobGroup,
+    jobOverlapsDate,
+    jobOverlapsPeriod,
+    nextActionForJob,
+    PREPARATION_STATUSES,
+    resourceLabel,
+    sourceMatches,
+} from './dispatch-desk-helpers';
+import type {
+    DispatchDeskMode,
+    DispatchDeskPeriod,
+    DispatchDeskProps,
+    DispatchDeskView,
+    DispatchSourceFilter,
+} from './types';
+import { useDispatchDeskState } from './use-dispatch-desk-state';
+
+const SOURCE_FILTERS: Array<{ value: DispatchSourceFilter; label: string }> = [
+    { value: 'all', label: 'All sources' },
+    { value: 'service_request', label: 'Service request' },
+    { value: 'rental_reservation', label: 'Rental delivery' },
+    { value: 'sales_order', label: 'Sales delivery' },
+    { value: 'manual', label: 'Manual intake' },
+];
+
+const VIEW_ITEMS: Array<{
+    value: DispatchDeskView;
+    label: string;
+    icon: typeof Inbox;
+}> = [
+    { value: 'incoming', label: 'Incoming work', icon: Inbox },
+    { value: 'schedule', label: 'Schedule', icon: CalendarDays },
+    { value: 'in-progress', label: 'In progress', icon: Truck },
+    { value: 'history', label: 'History', icon: FileText },
+];
+
+function formatDateLabel(dateKey: string): string {
+    const date = dateFromLocalKey(dateKey);
+
+    return date
+        ? new Intl.DateTimeFormat(undefined, {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+          }).format(date)
+        : 'Selected date';
+}
+
+function displayStatusFilter(view: DispatchDeskView): string {
+    if (view === 'incoming') {
+        return 'all';
+    }
+
+    if (view === 'in-progress') {
+        return 'active';
+    }
+
+    if (view === 'history') {
+        return 'completed';
+    }
+
+    return 'all';
+}
+
+function detailHash(
+    job: DispatchJobViewModel,
+    conflicts: readonly DerivedConflict[] = [],
+): string {
+    if (
+        job.status.value === 'pending_approval' ||
+        conflicts.some(
+            (conflict) =>
+                conflict.jobId === job.id && conflict.type === 'approval',
+        )
+    ) {
+        return '#dispatch-activation';
+    }
+
+    if (job.status.value === 'scheduled') {
+        return '#dispatch-activation';
+    }
+
+    if (job.status.value === 'draft') {
+        return '#assignment-summary';
+    }
+
+    return '#dispatch-context';
+}
+
+function dispatchDetailUrl(
+    job: DispatchJobViewModel,
+    returnTo: string,
+    conflicts: readonly DerivedConflict[] = [],
+): string {
+    const params = new URLSearchParams({ return_to: returnTo });
+
+    return `/operations/dispatch-jobs/${job.id}?${params.toString()}${detailHash(job, conflicts)}`;
+}
+
+function formatSchedule(job: DispatchJobViewModel): string {
+    if (!job.scheduled_start) {
+        return 'Schedule not recorded';
+    }
+
+    if (!job.scheduled_end) {
+        return formatDateTime(job.scheduled_start);
+    }
+
+    return `${formatDateTime(job.scheduled_start)} – ${formatDateTime(job.scheduled_end)}`;
+}
+
+function matchesStatus(
+    job: DispatchJobViewModel,
+    view: DispatchDeskView,
+): boolean {
+    if (view === 'incoming') {
+        return false;
+    }
+
+    if (view === 'in-progress') {
+        return EXECUTION_STATUSES.includes(
+            job.status.value as (typeof EXECUTION_STATUSES)[number],
+        );
+    }
+
+    if (view === 'history') {
+        return HISTORY_STATUSES.includes(
+            job.status.value as (typeof HISTORY_STATUSES)[number],
+        );
+    }
+
+    return (
+        PREPARATION_STATUSES.includes(
+            job.status.value as (typeof PREPARATION_STATUSES)[number],
+        ) ||
+        EXECUTION_STATUSES.includes(
+            job.status.value as (typeof EXECUTION_STATUSES)[number],
+        )
+    );
+}
+
+function isUndatedPreparation(job: DispatchJobViewModel): boolean {
+    return (
+        PREPARATION_STATUSES.includes(
+            job.status.value as (typeof PREPARATION_STATUSES)[number],
+        ) &&
+        job.scheduled_start === null &&
+        job.scheduled_end === null
+    );
+}
+
+function priorityClasses(value: string): string {
+    if (value === 'emergency') {
+        return 'bg-danger-soft text-danger-strong';
+    }
+
+    if (value === 'priority') {
+        return 'bg-warning-soft text-warning-strong';
+    }
+
+    return 'bg-surface-subtle text-ink-soft';
+}
+
+export function DispatchDesk({
+    jobs,
+    clients,
+    serviceRequests,
+    rentalHandoffs,
+    salesHandoffs,
+    assets = [],
+    approvals = [],
+    users = [],
+    gptRecommendations = [],
+    capabilities,
+    canCreate,
+    refreshing,
+    initialServiceRequestId,
+    resourceCoverage,
+}: DispatchDeskProps) {
+    const { url: currentWorkspaceUrl, props } = usePage<{ auth?: Auth }>();
+    const returnTo =
+        typeof window !== 'undefined'
+            ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+            : currentWorkspaceUrl || '/?view=dispatch';
+    const {
+        state,
+        setView,
+        setMode,
+        setPeriod,
+        setDate,
+        setQuery,
+        setSource,
+        setAttentionOnly,
+        setSelectedJobId,
+        setShowIntake,
+        setIntakeMode,
+    } = useDispatchDeskState(initialServiceRequestId, currentWorkspaceUrl);
+    const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
+    const intakeRequestId = useMemo(() => {
+        if (initialServiceRequestId) {
+            return initialServiceRequestId;
+        }
+
+        const params = new URLSearchParams(
+            typeof window !== 'undefined'
+                ? window.location.search
+                : (currentWorkspaceUrl?.split('?')[1]?.split('#')[0] ?? ''),
+        );
+        const value = Number.parseInt(params.get('serviceRequestId') ?? '', 10);
+
+        return Number.isFinite(value) && value > 0 ? value : null;
+    }, [currentWorkspaceUrl, initialServiceRequestId]);
+
+    const conflicts = useMemo(
+        () =>
+            deriveDispatchDeskConflicts({
+                jobs,
+                assets,
+                approvals,
+                gptRecommendations,
+            }),
+        [approvals, assets, gptRecommendations, jobs],
+    );
+    const incoming = useMemo(
+        () =>
+            incomingWorkItems({
+                serviceRequests,
+                rentalHandoffs,
+                salesHandoffs,
+            }),
+        [rentalHandoffs, salesHandoffs, serviceRequests],
+    );
+    const incomingByCapability = useMemo(
+        () =>
+            incoming.filter((item) =>
+                item.mode === 'service'
+                    ? capabilities.convert_service_request
+                    : item.mode === 'rental'
+                      ? capabilities.create_rental_dispatch
+                      : capabilities.create_sales_dispatch,
+            ),
+        [capabilities, incoming],
+    );
+
+    const filteredJobs = useMemo(() => {
+        const normalizedQuery = state.query.trim().toLowerCase();
+        const activeStatusFilter = displayStatusFilter(state.view);
+
+        return jobs.filter((job) => {
+            if (!matchesStatus(job, state.view)) {
+                return false;
+            }
+
+            const isUndatedScheduleJob =
+                state.view === 'schedule' && isUndatedPreparation(job);
+            const schedulePeriod = state.mode === 'list' ? 'day' : state.period;
+
+            if (
+                state.view === 'schedule' &&
+                !jobOverlapsPeriod(job, state.date, schedulePeriod) &&
+                !isUndatedScheduleJob
+            ) {
+                return false;
+            }
+
+            if (!sourceMatches(job.source, state.source)) {
+                return false;
+            }
+
+            if (
+                activeStatusFilter !== 'all' &&
+                state.view === 'schedule' &&
+                activeStatusFilter === 'active' &&
+                !EXECUTION_STATUSES.includes(
+                    job.status.value as (typeof EXECUTION_STATUSES)[number],
+                )
+            ) {
+                return false;
+            }
+
+            if (
+                activeStatusFilter !== 'all' &&
+                state.view === 'schedule' &&
+                activeStatusFilter === 'draft' &&
+                !PREPARATION_STATUSES.includes(
+                    job.status.value as (typeof PREPARATION_STATUSES)[number],
+                )
+            ) {
+                return false;
+            }
+
+            if (
+                activeStatusFilter !== 'all' &&
+                state.view === 'schedule' &&
+                activeStatusFilter === 'completed' &&
+                job.status.value !== 'completed'
+            ) {
+                return false;
+            }
+
+            if (
+                state.attentionOnly &&
+                !conflicts.some((conflict) => conflict.jobId === job.id)
+            ) {
+                return false;
+            }
+
+            return (
+                normalizedQuery === '' ||
+                `${job.reference} ${job.title} ${job.client} ${job.site} ${job.source?.reference ?? ''}`
+                    .toLowerCase()
+                    .includes(normalizedQuery)
+            );
+        });
+    }, [conflicts, jobs, state]);
+
+    const selectedJob = useMemo(
+        () =>
+            filteredJobs.find((job) => job.id === state.selectedJobId) ??
+            filteredJobs[0] ??
+            null,
+        [filteredJobs, state.selectedJobId],
+    );
+    const selectedConflicts = useMemo(
+        () =>
+            selectedJob
+                ? conflicts.filter(
+                      (conflict) => conflict.jobId === selectedJob.id,
+                  )
+                : [],
+        [conflicts, selectedJob],
+    );
+    const jobCounts = useMemo(
+        () => ({
+            incoming: incomingByCapability.length,
+            schedule: jobs.filter(
+                (job) =>
+                    matchesStatus(job, 'schedule') &&
+                    (jobOverlapsDate(job, state.date) ||
+                        isUndatedPreparation(job)),
+            ).length,
+            'in-progress': jobs.filter((job) =>
+                matchesStatus(job, 'in-progress'),
+            ).length,
+            history: jobs.filter((job) => matchesStatus(job, 'history')).length,
+        }),
+        [incomingByCapability.length, jobs, state.date],
+    );
+
+    const changeDesk = (patch: () => void) => {
+        if (directIntakeDirty) {
+            const shouldDiscard = window.confirm(
+                'Discard this direct dispatch draft? Unsaved details will be lost.',
+            );
+
+            if (!shouldDiscard) {
+                return false;
+            }
+
+            window.dispatchEvent(new Event(DIRECT_DISPATCH_DISCARD_EVENT));
+            setDirectIntakeDirty(false);
+        }
+
+        patch();
+
+        return true;
+    };
+
+    const selectJob = (jobId: number) => {
+        setSelectedJobId(jobId);
+    };
+
+    const toggleIntake = () => {
+        if (state.view === 'incoming') {
+            if (
+                !changeDesk(() => {
+                    setShowIntake(false);
+                    setIntakeMode(null);
+                    setView('schedule');
+                })
+            ) {
+                return;
+            }
+
+            return;
+        }
+
+        changeDesk(() => {
+            setView('incoming');
+            setShowIntake(true);
+            setIntakeMode(null);
+        });
+    };
+
+    const showScheduleControls = state.view === 'schedule';
+    const isResourceCoverageMode =
+        state.view === 'schedule' && state.mode === 'resources';
+    const scheduleJobs = filteredJobs;
+    const isFieldRole =
+        props.auth?.role === 'driver' || props.auth?.role === 'crane_operator';
+
+    return (
+        <div className="workspace-width-contained">
+            <PageHeading
+                title="Dispatch desk"
+                description="Schedule incoming work, assign resources, and follow dispatches through completion."
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                        {(canCreate || incomingByCapability.length > 0) &&
+                            !isFieldRole && (
+                                <Button
+                                    id="new-dispatch-trigger"
+                                    variant={
+                                        state.view === 'incoming'
+                                            ? 'secondary'
+                                            : 'primary'
+                                    }
+                                    onClick={toggleIntake}
+                                    aria-expanded={state.view === 'incoming'}
+                                    aria-controls={
+                                        state.view === 'incoming'
+                                            ? 'incoming-work-panel'
+                                            : undefined
+                                    }
+                                >
+                                    {state.view === 'incoming' ? (
+                                        <X
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                    ) : (
+                                        <Plus
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    {state.view === 'incoming'
+                                        ? 'Back to schedule'
+                                        : 'New dispatch'}
+                                    {incomingByCapability.length > 0 &&
+                                        state.view !== 'incoming' && (
+                                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-bold">
+                                                {incomingByCapability.length}
+                                            </span>
+                                        )}
+                                </Button>
+                            )}
+                    </div>
+                }
+            />
+
+            <div className="border-b border-line bg-surface px-5 py-3 lg:px-7">
+                <nav
+                    className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap"
+                    aria-label="Dispatch work views"
+                >
+                    {VIEW_ITEMS.map(({ value, label, icon: Icon }) => (
+                        <button
+                            key={value}
+                            type="button"
+                            className={cn(
+                                'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                state.view === value
+                                    ? 'bg-brand-soft text-ink'
+                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
+                            aria-current={
+                                state.view === value ? 'page' : undefined
+                            }
+                            onClick={() =>
+                                changeDesk(() => {
+                                    setView(value);
+
+                                    if (value === 'incoming') {
+                                        setShowIntake(true);
+                                        setIntakeMode(null);
+                                    } else {
+                                        setShowIntake(false);
+                                        setIntakeMode(null);
+                                    }
+                                })
+                            }
+                        >
+                            <Icon className="h-4 w-4" aria-hidden="true" />
+                            <span>{label}</span>
+                            <span className="rounded-full bg-surface-subtle px-1.5 text-xs text-ink-soft tabular-nums">
+                                {jobCounts[value]}
+                            </span>
+                        </button>
+                    ))}
+                </nav>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-subtle px-5 py-3 lg:px-7">
+                <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
+                    <span>Up to 100 dispatches loaded for this view</span>
+                    {refreshing && (
+                        <span
+                            className="inline-flex items-center gap-1 text-info-strong"
+                            role="status"
+                        >
+                            <RefreshCw
+                                className="h-3.5 w-3.5 animate-spin"
+                                aria-hidden="true"
+                            />
+                            Refreshing
+                        </span>
+                    )}
+                </div>
+                {state.view !== 'incoming' && (
+                    <span
+                        className="text-xs text-ink-soft"
+                        role="status"
+                        aria-live="polite"
+                    >
+                        {filteredJobs.length} matching dispatch
+                        {filteredJobs.length === 1 ? '' : 's'}
+                    </span>
+                )}
+            </div>
+
+            {state.view === 'incoming' ? (
+                <section
+                    id="incoming-work-panel"
+                    className="bg-canvas p-4 lg:p-6"
+                    aria-labelledby="incoming-work-heading"
+                >
+                    <div className="mx-auto max-w-6xl">
+                        <div className="border-b border-line pb-4">
+                            <h2
+                                id="incoming-work-heading"
+                                className="text-lg font-semibold tracking-[-0.02em] text-ink"
+                            >
+                                Incoming work
+                            </h2>
+                            <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
+                                Review source-aware handoffs and decide whether
+                                to convert, reconcile, or create a manual
+                                operational draft.
+                            </p>
+                        </div>
+                        <LiveDispatchIntake
+                            clients={clients}
+                            serviceRequests={serviceRequests}
+                            rentalHandoffs={rentalHandoffs}
+                            salesHandoffs={salesHandoffs}
+                            jobs={jobs}
+                            capabilities={capabilities}
+                            initialRequestId={intakeRequestId}
+                            initialMode={state.intakeMode}
+                            showQueueWhenEmpty
+                            onDirtyChange={setDirectIntakeDirty}
+                            onClose={() => {
+                                setDirectIntakeDirty(false);
+                                setShowIntake(false);
+                                setIntakeMode(null);
+                                setView('schedule');
+                            }}
+                        />
+                    </div>
+                </section>
+            ) : (
+                <>
+                    {!isResourceCoverageMode && (
+                        <DeskFilters
+                            query={state.query}
+                            source={state.source}
+                            attentionOnly={state.attentionOnly}
+                            onQuery={(value) =>
+                                changeDesk(() => setQuery(value))
+                            }
+                            onSource={(value) =>
+                                changeDesk(() => setSource(value))
+                            }
+                            onAttention={(value) =>
+                                changeDesk(() => setAttentionOnly(value))
+                            }
+                            onReset={() =>
+                                changeDesk(() => {
+                                    setQuery('');
+                                    setSource('all');
+                                    setAttentionOnly(false);
+                                })
+                            }
+                        />
+                    )}
+
+                    {showScheduleControls && (
+                        <ScheduleControls
+                            date={state.date}
+                            mode={state.mode}
+                            period={state.period}
+                            onDate={(value) => changeDesk(() => setDate(value))}
+                            onMode={(value) => changeDesk(() => setMode(value))}
+                            onPeriod={(value) =>
+                                changeDesk(() => setPeriod(value))
+                            }
+                        />
+                    )}
+
+                    {showScheduleControls && state.mode !== 'list' && (
+                        <>
+                            <ScheduleSurface
+                                mode={state.mode}
+                                jobs={scheduleJobs}
+                                assets={assets}
+                                users={users.filter(
+                                    (user) =>
+                                        user.role === 'driver' ||
+                                        user.role === 'crane_operator',
+                                )}
+                                conflicts={conflicts}
+                                date={state.date}
+                                period={state.period}
+                                resourceCoverage={resourceCoverage}
+                                onDate={(value) =>
+                                    changeDesk(() => setDate(value))
+                                }
+                                onSelectJob={selectJob}
+                            />
+                            <DispatchReviewPanel
+                                job={selectedJob}
+                                conflicts={selectedConflicts}
+                                returnTo={returnTo}
+                            />
+                        </>
+                    )}
+
+                    {(state.mode === 'list' || !showScheduleControls) && (
+                        <div className="grid min-w-0 lg:grid-cols-[minmax(18rem,25rem)_minmax(0,1fr)]">
+                            <DeskJobList
+                                jobs={filteredJobs}
+                                conflicts={conflicts}
+                                selectedJobId={selectedJob?.id ?? null}
+                                refreshing={refreshing}
+                                onSelectJob={selectJob}
+                            />
+                            <DispatchReviewPanel
+                                job={selectedJob}
+                                conflicts={selectedConflicts}
+                                returnTo={returnTo}
+                            />
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+function DeskFilters({
+    query,
+    source,
+    attentionOnly,
+    onQuery,
+    onSource,
+    onAttention,
+    onReset,
+}: {
+    query: string;
+    source: DispatchSourceFilter;
+    attentionOnly: boolean;
+    onQuery: (value: string) => void;
+    onSource: (value: DispatchSourceFilter) => void;
+    onAttention: (value: boolean) => void;
+    onReset: () => void;
+}) {
+    const hasFilters = query !== '' || source !== 'all' || attentionOnly;
+
+    return (
+        <section
+            className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-5 py-3 lg:px-7"
+            aria-label="Dispatch filters"
+        >
+            <label className="relative min-w-[14rem] flex-1 sm:max-w-sm">
+                <span className="sr-only">Search loaded dispatches</span>
+                <Search
+                    className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
+                    aria-hidden="true"
+                />
+                <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => onQuery(event.target.value)}
+                    placeholder="Search job, site, client"
+                    className="h-11 w-full rounded-lg border border-line-strong bg-surface pl-9 text-sm text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                />
+            </label>
+            <label className="min-w-[11rem]">
+                <span className="sr-only">Filter by source</span>
+                <select
+                    value={source}
+                    onChange={(event) =>
+                        onSource(event.target.value as DispatchSourceFilter)
+                    }
+                    className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                >
+                    {SOURCE_FILTERS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                            {item.label}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            <Button
+                size="sm"
+                variant={attentionOnly ? 'primary' : 'secondary'}
+                aria-pressed={attentionOnly}
+                onClick={() => onAttention(!attentionOnly)}
+            >
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                Needs attention
+            </Button>
+            {hasFilters && (
+                <Button size="sm" variant="quiet" onClick={onReset}>
+                    Clear filters
+                </Button>
+            )}
+        </section>
+    );
+}
+
+function ScheduleControls({
+    date,
+    mode,
+    period,
+    onDate,
+    onMode,
+    onPeriod,
+}: {
+    date: string;
+    mode: DispatchDeskMode;
+    period: DispatchDeskPeriod;
+    onDate: (value: string) => void;
+    onMode: (value: DispatchDeskMode) => void;
+    onPeriod: (value: DispatchDeskPeriod) => void;
+}) {
+    const showDateAndPeriod = mode !== 'resources';
+
+    return (
+        <section
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-canvas px-5 py-3 lg:px-7"
+            aria-label="Schedule controls"
+        >
+            <div className="flex flex-wrap items-center gap-2">
+                <div
+                    className="flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-1"
+                    role="group"
+                    aria-label="Schedule display"
+                >
+                    {(
+                        [
+                            ['list', 'List'],
+                            ['calendar', 'Calendar'],
+                            ['resources', 'Resource coverage'],
+                        ] as Array<[DispatchDeskMode, string]>
+                    ).map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            aria-pressed={mode === value}
+                            onClick={() => onMode(value)}
+                            className={cn(
+                                'min-h-11 rounded-md px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                mode === value
+                                    ? 'bg-brand-soft text-ink'
+                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                {showDateAndPeriod && mode !== 'list' && (
+                    <div
+                        className="flex items-center gap-1 rounded-lg border border-line bg-surface p-1"
+                        role="group"
+                        aria-label="Schedule period"
+                    >
+                        {(['day', 'week', 'month'] as DispatchDeskPeriod[]).map(
+                            (value) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    aria-pressed={period === value}
+                                    onClick={() => onPeriod(value)}
+                                    className={cn(
+                                        'min-h-11 rounded-md px-3 text-xs font-semibold capitalize focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        period === value
+                                            ? 'bg-brand-soft text-ink'
+                                            : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                    )}
+                                >
+                                    {value}
+                                </button>
+                            ),
+                        )}
+                    </div>
+                )}
+            </div>
+            {showDateAndPeriod && (
+                <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink">
+                    <span className="sr-only">Selected schedule date</span>
+                    <CalendarDays
+                        className="h-4 w-4 text-ink-soft"
+                        aria-hidden="true"
+                    />
+                    <input
+                        type="date"
+                        value={date}
+                        onChange={(event) => onDate(event.target.value)}
+                        className="h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    />
+                </label>
+            )}
+        </section>
+    );
+}
+
+function ScheduleSurface({
+    mode,
+    jobs,
+    assets,
+    users,
+    conflicts,
+    date,
+    period,
+    resourceCoverage,
+    onDate,
+    onSelectJob,
+}: {
+    mode: DispatchDeskMode;
+    jobs: DispatchJobViewModel[];
+    assets: DispatchDeskProps['assets'];
+    users: DispatchDeskProps['users'];
+    conflicts: DerivedConflict[];
+    date: string;
+    period: DispatchDeskPeriod;
+    resourceCoverage?: ReactNode;
+    onDate: (value: string) => void;
+    onSelectJob: (id: number) => void;
+}) {
+    const safeAssets = assets ?? [];
+    const safeUsers = users ?? [];
+
+    if (mode === 'resources') {
+        return (
+            <>
+                {resourceCoverage ?? (
+                    <EmptyState
+                        icon={Users}
+                        title="Resource coverage unavailable"
+                        message="This workspace did not provide an operational coverage surface for the selected planning context."
+                    />
+                )}
+            </>
+        );
+    }
+
+    return (
+        <div className="space-y-3 border-b border-line bg-canvas p-4 lg:p-6">
+            {period === 'day' ? (
+                <div className="overflow-hidden rounded-xl border border-line bg-surface">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 md:px-5">
+                        <div>
+                            <h2 className="text-base font-semibold text-ink">
+                                {formatDateLabel(date)}
+                            </h2>
+                            <p className="mt-1 text-xs text-ink-soft">
+                                Calendar planning uses recorded schedule
+                                intervals.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                size="iconSm"
+                                variant="secondary"
+                                aria-label="Previous day"
+                                onClick={() => onDate(shiftLocalDate(date, -1))}
+                            >
+                                <ChevronLeft
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => onDate(localDateKey(new Date()))}
+                            >
+                                Today
+                            </Button>
+                            <Button
+                                size="iconSm"
+                                variant="secondary"
+                                aria-label="Next day"
+                                onClick={() => onDate(shiftLocalDate(date, 1))}
+                            >
+                                <ChevronRight
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                        </div>
+                    </div>
+                    <ScheduleBoardTable
+                        jobs={jobs}
+                        assets={safeAssets}
+                        users={safeUsers}
+                        derivedConflicts={conflicts}
+                        category="all"
+                        conflictsOnly={false}
+                        selectedDate={date}
+                        onSelectJob={onSelectJob}
+                    />
+                </div>
+            ) : period === 'week' ? (
+                <ScheduleBoardWeekView
+                    jobs={jobs}
+                    assets={safeAssets}
+                    users={safeUsers}
+                    selectedDate={date}
+                    onSelectDate={onDate}
+                    onSelectJob={onSelectJob}
+                    category="all"
+                    conflictsOnly={false}
+                    derivedConflicts={conflicts}
+                />
+            ) : (
+                <ScheduleBoardMonthView
+                    jobs={jobs}
+                    assets={safeAssets}
+                    selectedDate={date}
+                    onSelectDate={onDate}
+                    onSelectJob={onSelectJob}
+                    category="all"
+                    conflictsOnly={false}
+                    derivedConflicts={conflicts}
+                    users={safeUsers}
+                />
+            )}
+        </div>
+    );
+}
+function DeskJobList({
+    jobs,
+    conflicts,
+    selectedJobId,
+    refreshing,
+    onSelectJob,
+}: {
+    jobs: DispatchJobViewModel[];
+    conflicts: DerivedConflict[];
+    selectedJobId: number | null;
+    refreshing: boolean;
+    onSelectJob: (id: number) => void;
+}) {
+    return (
+        <aside
+            className="min-w-0 border-b border-line bg-surface lg:border-r lg:border-b-0"
+            aria-label="Dispatch list"
+        >
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                <h2 className="text-sm font-semibold text-ink">Dispatches</h2>
+                <span className="text-xs text-ink-soft">{jobs.length}</span>
+            </div>
+            {refreshing && jobs.length === 0 ? (
+                <DeskListSkeleton />
+            ) : jobs.length === 0 ? (
+                <EmptyState
+                    compact
+                    icon={ClipboardList}
+                    title="No dispatches match"
+                    message="Clear a filter or choose another schedule date to review the dispatches loaded for this view."
+                />
+            ) : (
+                <ul className="divide-y divide-line">
+                    {jobs.map((job) => {
+                        const hasAttention = conflicts.some(
+                            (conflict) => conflict.jobId === job.id,
+                        );
+                        const resources = resourceLabel(job);
+                        const nextAction = nextActionForJob(job, conflicts);
+
+                        return (
+                            <li key={job.id}>
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectJob(job.id)}
+                                    aria-current={
+                                        selectedJobId === job.id
+                                            ? 'true'
+                                            : undefined
+                                    }
+                                    className={cn(
+                                        'flex min-h-[104px] w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none focus-visible:ring-inset',
+                                        selectedJobId === job.id &&
+                                            'bg-brand-soft/60',
+                                    )}
+                                >
+                                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
+                                        {jobGroup(job) === 'execution' ? (
+                                            <Truck
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                        ) : jobGroup(job) === 'history' ? (
+                                            <FileText
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <ClipboardList
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="flex flex-wrap items-center gap-1.5">
+                                            <span className="text-xs font-bold text-ink">
+                                                {job.reference}
+                                            </span>
+                                            <CanonicalStatusBadge
+                                                status={job.status}
+                                            />
+                                            {job.priority.value !==
+                                                'routine' && (
+                                                <span
+                                                    className={cn(
+                                                        'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
+                                                        priorityClasses(
+                                                            job.priority.value,
+                                                        ),
+                                                    )}
+                                                >
+                                                    {job.priority.label}
+                                                </span>
+                                            )}
+                                            {hasAttention && (
+                                                <AlertTriangle
+                                                    className="h-3.5 w-3.5 text-danger"
+                                                    aria-label="Needs attention"
+                                                />
+                                            )}
+                                        </span>
+                                        <span className="mt-1 block truncate text-sm font-semibold text-ink">
+                                            {job.title}
+                                        </span>
+                                        <span className="mt-1 flex items-center gap-1 truncate text-xs text-ink-soft">
+                                            <MapPin
+                                                className="h-3 w-3 shrink-0"
+                                                aria-hidden="true"
+                                            />
+                                            {job.site || 'Site not recorded'}
+                                        </span>
+                                        <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-ink-soft">
+                                            <span className="flex min-w-0 items-center gap-1 truncate">
+                                                <Users
+                                                    className="h-3 w-3 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                {resources}
+                                            </span>
+                                            <span className="shrink-0">
+                                                {formatDateTime(
+                                                    job.scheduled_start,
+                                                )}
+                                            </span>
+                                        </span>
+                                        <span className="mt-1 block truncate text-[11px] font-semibold text-ink-soft">
+                                            Next: {nextAction.label}
+                                        </span>
+                                    </span>
+                                    <ChevronRight
+                                        className="mt-2 h-4 w-4 shrink-0 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </aside>
+    );
+}
+
+function DispatchReviewPanel({
+    job,
+    conflicts,
+    returnTo,
+}: {
+    job: DispatchJobViewModel | null;
+    conflicts: DerivedConflict[];
+    returnTo: string;
+}) {
+    if (!job) {
+        return (
+            <section
+                className="min-w-0 bg-canvas p-4 md:p-6"
+                aria-label="Dispatch review"
+            >
+                <Panel>
+                    <EmptyState
+                        icon={ClipboardList}
+                        title="Select a dispatch"
+                        message="Choose a dispatch to review its schedule, site, recorded resources, and next permitted action."
+                    />
+                </Panel>
+            </section>
+        );
+    }
+
+    const nextAction = nextActionForJob(job, conflicts);
+    const href = dispatchDetailUrl(job, returnTo, conflicts);
+    const contextHref = href.replace(/#.*$/, '#dispatch-context');
+
+    return (
+        <section
+            className="min-w-0 bg-canvas p-4 md:p-6"
+            aria-labelledby="dispatch-review-heading"
+        >
+            <Panel className="overflow-hidden">
+                <div className="border-b border-line px-4 py-4 md:px-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold tracking-wide text-ink-soft">
+                                    {job.reference}
+                                </span>
+                                <CanonicalStatusBadge status={job.status} />
+                                {job.priority.value !== 'routine' && (
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                            priorityClasses(job.priority.value),
+                                        )}
+                                    >
+                                        {job.priority.label}
+                                    </span>
+                                )}
+                            </div>
+                            <h2
+                                id="dispatch-review-heading"
+                                className="mt-2 text-xl font-semibold tracking-[-0.02em] text-ink"
+                            >
+                                {job.title}
+                            </h2>
+                            <p className="mt-1 text-sm text-ink-soft">
+                                {job.client}
+                            </p>
+                        </div>
+                        <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
+                            {nextAction.group === 'execution'
+                                ? 'Field execution'
+                                : nextAction.group === 'history'
+                                  ? 'History'
+                                  : 'Preparation'}
+                        </span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <Link
+                            href={href}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                        >
+                            {nextAction.label}
+                            <ChevronRight
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            />
+                        </Link>
+                        <span className="text-xs text-ink-soft">
+                            {nextAction.group === 'preparation'
+                                ? 'Review the remaining requirements before activation.'
+                                : nextAction.group === 'execution'
+                                  ? 'Review the latest field updates.'
+                                  : 'Review the outcome and dispatch history.'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="grid gap-x-8 px-4 py-4 md:grid-cols-2 md:px-5">
+                    <dl className="divide-y divide-line">
+                        <DataPair
+                            label="Site"
+                            value={
+                                <span className="inline-flex items-center gap-1.5">
+                                    <MapPin
+                                        className="h-3.5 w-3.5 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                    {job.site || 'Site not recorded'}
+                                </span>
+                            }
+                        />
+                        <DataPair
+                            label="Schedule"
+                            value={
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Clock3
+                                        className="h-3.5 w-3.5 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                    {formatSchedule(job)}
+                                </span>
+                            }
+                        />
+                        <DataPair
+                            label="Source"
+                            value={job.source?.label ?? 'Direct intake'}
+                        />
+                        <DataPair
+                            label="Recorded resources"
+                            value={resourceLabel(job)}
+                        />
+                    </dl>
+                    <div className="border-t border-line pt-3 md:border-t-0 md:pt-0">
+                        <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                            Requirements
+                        </h3>
+                        {job.requirements.length > 0 ? (
+                            <ul className="mt-2 space-y-2 text-sm text-ink">
+                                {job.requirements.map((requirement) => (
+                                    <li
+                                        key={requirement}
+                                        className="flex items-start gap-2"
+                                    >
+                                        <span
+                                            className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                                            aria-hidden="true"
+                                        />
+                                        {requirement}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="mt-2 text-sm text-ink-soft">
+                                No requirements recorded.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {conflicts.length > 0 && (
+                    <div
+                        className="border-t border-line bg-warning-soft/40 px-4 py-4 md:px-5"
+                        aria-label="Dispatch blockers and approvals"
+                    >
+                        <div className="flex items-start gap-2">
+                            <AlertTriangle
+                                className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
+                                aria-hidden="true"
+                            />
+                            <div>
+                                <h3 className="text-sm font-semibold text-warning-strong">
+                                    Review before the next action
+                                </h3>
+                                <ul className="mt-2 space-y-2 text-sm text-ink">
+                                    {conflicts.slice(0, 4).map((conflict) => (
+                                        <li key={conflict.id}>
+                                            <span className="font-semibold">
+                                                {conflict.title}.
+                                            </span>{' '}
+                                            {conflict.actionRequired}
+                                            {conflict.type === 'approval' &&
+                                                conflict.canDecide === false &&
+                                                conflict.decisionBlocker && (
+                                                    <span className="block text-xs text-ink-soft">
+                                                        {
+                                                            conflict.decisionBlocker
+                                                        }
+                                                    </span>
+                                                )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-xs text-ink-soft md:px-5">
+                    <span>
+                        Updated{' '}
+                        {job.updated_at
+                            ? formatDateTime(job.updated_at)
+                            : 'time not recorded'}
+                    </span>
+                    <Link
+                        href={contextHref}
+                        className="inline-flex min-h-11 items-center px-1 font-semibold text-ink underline decoration-brand underline-offset-2 hover:decoration-2"
+                    >
+                        View dispatch context
+                    </Link>
+                </div>
+            </Panel>
+        </section>
+    );
+}
+
+function DeskListSkeleton() {
+    return (
+        <div className="space-y-px" aria-label="Loading dispatches">
+            {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="border-b border-line px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <Skeleton className="h-3.5 w-20" />
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="mt-2 h-4 w-40" />
+                    <Skeleton className="mt-2 h-3 w-32" />
+                    <Skeleton className="mt-2 h-3 w-48" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export { dispatchDetailUrl, formatSchedule, matchesStatus };

@@ -687,9 +687,9 @@ export function WeatherSafetyTelemetry({
                         </div>
                         <div>
                             <div className="flex items-center gap-1.5">
-                                <h4 className="text-xs font-bold tracking-wider text-ink uppercase">
+                                <h3 className="text-xs font-bold tracking-wider text-ink uppercase">
                                     Site Environmental &amp; Wind Safety
-                                </h4>
+                                </h3>
                                 {weather.isLiveFeed ? (
                                     <span className="py-0.2 inline-flex items-center gap-1 rounded border border-success/30 bg-success-soft px-1.5 text-[9px] font-bold text-success-strong">
                                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success-strong" />

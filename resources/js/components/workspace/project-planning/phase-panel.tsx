@@ -125,9 +125,11 @@ export function PhasePanel({
             <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-line bg-surface p-5">
                 <div>
                     <p className="text-xs font-medium text-ink-soft">
-                        {plan.name} · {plan.source_reference}
+                        {plan.name} · Work reference: {plan.source_reference}
                     </p>
-                    <h2 className="mt-1 text-xl font-semibold">{phase.name}</h2>
+                    <h2 className="mt-1 text-xl font-semibold">
+                        {phase.name} · operating phase
+                    </h2>
                     <p className="mt-1 text-xs text-ink-soft">
                         {shortDate(phase.starts_at)} –{' '}
                         {shortDate(phase.ends_at)}
@@ -160,7 +162,7 @@ export function PhasePanel({
                                     })
                                 }
                             >
-                                Edit phase
+                                Edit operating phase
                             </Button>
                         )}
                     </div>
@@ -211,7 +213,7 @@ export function PhasePanel({
                 <section>
                     <div className="mb-2 flex items-center justify-between">
                         <h3 className="text-sm font-semibold">
-                            Asset allocations
+                            Asset reservations
                         </h3>
                         {canEdit && (
                             <Button
@@ -225,7 +227,7 @@ export function PhasePanel({
                                 }
                             >
                                 <Plus className="size-4" />
-                                Allocate
+                                Reserve asset
                             </Button>
                         )}
                     </div>
@@ -280,7 +282,7 @@ export function PhasePanel({
                 <section>
                     <div className="flex items-center justify-between">
                         <h3 className="text-sm font-semibold">
-                            Weekly shift coverage
+                            Shift coverage
                         </h3>
                         {canEdit && (
                             <Button
@@ -294,7 +296,7 @@ export function PhasePanel({
                                 }
                             >
                                 <Plus className="size-4" />
-                                Plan shifts
+                                Generate shifts
                             </Button>
                         )}
                     </div>
@@ -336,7 +338,7 @@ export function PhasePanel({
                     </div>
                     {!shifts.length && (
                         <p className="rounded-lg border border-line p-4 text-sm text-ink-soft">
-                            No shifts in this week. Plan shifts or select a
+                            No shifts in this week. Generate shifts or select a
                             different week.
                         </p>
                     )}
@@ -446,7 +448,7 @@ function ShiftCard({
                         }
                     >
                         <Users className="size-4" />
-                        Fill coverage
+                        Fill crew coverage
                     </Button>
                 )}
                 {!shift.archived && (

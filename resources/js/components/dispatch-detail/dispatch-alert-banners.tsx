@@ -50,13 +50,13 @@ export function DispatchAlertBanners({
                     />
                     <div>
                         <p className="font-semibold">
-                            Assignment could not be saved
+                            Dispatch update needs review
                         </p>
                         <p className="mt-1">{conflictMessage}</p>
                         <p className="mt-1 text-xs">
-                            Eligibility was rechecked against the current
-                            schedule. Review the resource state below and try
-                            again.
+                            The server rechecked the current schedule, resource
+                            state, safety, and approval. Review the recorded
+                            blockers below before trying again.
                         </p>
                     </div>
                 </div>

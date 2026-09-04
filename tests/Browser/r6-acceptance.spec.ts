@@ -716,13 +716,13 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeVisible();
         await page
             .getByRole('button', {
-                name: /Next: Assign resources|2.*Assign resources/i,
+                name: /Next: Select resources|2.*Assign resources/i,
             })
             .first()
             .click();
         await expect(
             page.getByRole('heading', {
-                name: /Assignment plan|Assigned resources/i,
+                name: /Resource selection|Draft resource selection|Assigned resources/i,
             }),
         ).toBeVisible();
         const continueBtn = page.getByRole('button', {

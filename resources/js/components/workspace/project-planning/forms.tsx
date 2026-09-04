@@ -27,16 +27,16 @@ export function ProjectForm({ onClose }: { onClose: () => void }) {
     });
     const command = usePlanningMutation();
     const labels = {
-        name: 'Plan name',
-        source_reference: 'Core 1 project reference',
-        client: 'Client',
-        site: 'Project site',
+        name: 'Coverage record name',
+        source_reference: 'Work reference (Core 1 or manual)',
+        client: 'Client context',
+        site: 'Operating site',
     };
 
     return (
         <Dialog
-            title="New project plan"
-            description="Core 1 remains the project owner. This plan reserves operational resources for that project."
+            title="Add resource coverage record"
+            description="Record the operational schedule and resource coverage for Core 1 work. This local record does not create or update a Core 1 project. Manual intake remains valid when no handoff reference is available."
             onClose={onClose}
         >
             <form
@@ -66,6 +66,11 @@ export function ProjectForm({ onClose }: { onClose: () => void }) {
                         ),
                     )}
                 </div>
+                <p className="mt-3 text-xs leading-5 text-ink-soft">
+                    Enter the originating Core 1 reference when you have one; a
+                    manual work reference is also supported for operational
+                    intake. These fields describe the local coverage record.
+                </p>
                 <Errors errors={command.errors} />
                 <div className="mt-5 flex justify-end gap-2">
                     <Button onClick={onClose}>Cancel</Button>
@@ -74,7 +79,7 @@ export function ProjectForm({ onClose }: { onClose: () => void }) {
                         variant="primary"
                         disabled={command.busy}
                     >
-                        {command.busy ? 'Creating…' : 'Create plan'}
+                        {command.busy ? 'Creating…' : 'Create coverage record'}
                     </Button>
                 </div>
             </form>
@@ -112,8 +117,8 @@ export function PhaseForm({
 
     return (
         <Dialog
-            title={phase ? 'Edit project phase' : 'Add project phase'}
-            description="Set the operating dates and required personnel for every shift in this phase."
+            title={phase ? 'Edit operating phase' : 'Add operating phase'}
+            description="Set the operating dates and crew required for each shift in this phase."
             onClose={onClose}
         >
             <form
@@ -321,10 +326,10 @@ export function AllocationForm({
         <Dialog
             title={
                 allocation
-                    ? `Edit ${allocation.code} allocation`
-                    : 'Allocate a phase asset'
+                    ? `Edit ${allocation.code} resource coverage`
+                    : 'Reserve an asset for this phase'
             }
-            description="Reserve an asset for the phase or mark a maintenance window. Review affected shifts before saving."
+            description="Record an asset reservation or maintenance window. Review affected shifts, conflicts, and approval consequences before saving."
             onClose={onClose}
         >
             <form
@@ -473,7 +478,7 @@ export function AllocationForm({
                         {loading
                             ? 'Checking…'
                             : preview
-                              ? 'Confirm allocation'
+                              ? 'Confirm resource coverage change'
                               : 'Review change'}
                     </Button>
                 </div>
@@ -503,8 +508,8 @@ export function ShiftForm({
 
     return (
         <Dialog
-            title="Plan a week of shifts"
-            description="Creates a daily dispatch at the same hours for up to seven days. Assign each shift's crew afterward."
+            title="Generate shift dispatches"
+            description="Create daily dispatches at the same hours for up to seven days, then fill each shift's crew coverage."
             onClose={onClose}
         >
             <form
@@ -562,7 +567,7 @@ export function ShiftForm({
                         variant="primary"
                         disabled={command.busy}
                     >
-                        Create {data.days} shift dispatches
+                        Generate {data.days} shift dispatches
                     </Button>
                 </div>
             </form>

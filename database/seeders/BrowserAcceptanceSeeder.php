@@ -371,6 +371,8 @@ final class BrowserAcceptanceSeeder extends Seeder
             'hazard_id' => $hazardTicket->id,
             'recommendations' => collect($recommendations)->mapWithKeys(static fn (GptRecommendation $rec, string $key): array => [$key => $rec->id])->all(),
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+        $this->call(ProjectPlanningDemoSeeder::class);
     }
 
     private function user(string $name, string $email, RoleName $role): User

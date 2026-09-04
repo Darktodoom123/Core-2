@@ -7,7 +7,10 @@ import {
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { shiftIssues } from '@/components/workspace/project-planning/shared';
-import { DispatchWorkspace } from '@/components/workspace/project-planning-workspace';
+import {
+    DispatchWorkspace,
+    ResourceCoverageWorkspace,
+} from '@/components/workspace/project-planning-workspace';
 import type { ProjectPlanningViewModel } from '@/types/workspace';
 
 const post = vi.hoisted(() => vi.fn());
@@ -130,6 +133,25 @@ beforeEach(() => {
 });
 
 describe('project planning workflow', () => {
+    it('presents planning as operational resource coverage with Core 1 context', () => {
+        render(<ResourceCoverageWorkspace planning={fixture()} assets={[]} />);
+
+        expect(
+            screen.getByRole('heading', { name: 'Resource coverage' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', {
+                name: /Bridge project.*Work reference: CORE1-100/,
+            }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                /Core 1 remains the project owner.*Core 2 operational coverage only/,
+            ),
+        ).toBeInTheDocument();
+        expect(screen.queryByText('Project plans')).not.toBeInTheDocument();
+    });
+
     it('hides the previous roles candidates immediately during a role switch', async () => {
         const data = fixture();
         data.projects[0].phases[0].coverage.rigger = 1;
@@ -140,8 +162,12 @@ describe('project planning workflow', () => {
                 dispatches={<div>Daily jobs</div>}
             />,
         );
-        fireEvent.click(screen.getByRole('button', { name: 'Fill coverage' }));
-        const dialog = screen.getByRole('dialog', { name: /Fill coverage/ });
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Fill crew coverage' }),
+        );
+        const dialog = screen.getByRole('dialog', {
+            name: /Fill crew coverage/,
+        });
         expect(
             await within(dialog).findByRole('button', { name: 'Assign' }),
         ).toBeEnabled();
@@ -170,9 +196,11 @@ describe('project planning workflow', () => {
                 dispatches={<div>Daily jobs</div>}
             />,
         );
-        fireEvent.click(screen.getByRole('button', { name: 'Add phase' }));
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Add operating phase' }),
+        );
         expect(
-            screen.getByRole('dialog', { name: 'Add project phase' }),
+            screen.getByRole('dialog', { name: 'Add operating phase' }),
         ).toBeInTheDocument();
         expect(screen.getByLabelText('Operators per shift')).toHaveValue(1);
     });
@@ -186,12 +214,16 @@ describe('project planning workflow', () => {
                 dispatches={<div>Daily jobs</div>}
             />,
         );
-        fireEvent.click(screen.getByRole('button', { name: 'Fill coverage' }));
-        const dialog = screen.getByRole('dialog', { name: /Fill coverage/ });
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Fill crew coverage' }),
+        );
+        const dialog = screen.getByRole('dialog', {
+            name: /Fill crew coverage/,
+        });
         fireEvent.click(
             await within(dialog).findByRole('button', { name: 'Assign' }),
         );
-        fireEvent.change(within(dialog).getByLabelText('Change reason'), {
+        fireEvent.change(within(dialog).getByLabelText('Crew change reason'), {
             target: { value: 'Replace absent operator' },
         });
         const refreshed = structuredClone(data);
@@ -209,7 +241,9 @@ describe('project planning workflow', () => {
             }),
         ).toBeInTheDocument();
         fireEvent.click(
-            within(dialog).getByRole('button', { name: 'Review crew change' }),
+            within(dialog).getByRole('button', {
+                name: 'Review crew coverage change',
+            }),
         );
         expect(
             within(dialog).getByText('All required roles are covered.'),
@@ -249,14 +283,16 @@ describe('project planning workflow', () => {
                 name: /CR-1 · Crane.*Reserved on site/,
             }),
         );
-        const dialog = screen.getByRole('dialog', { name: /allocation/i });
+        const dialog = screen.getByRole('dialog', {
+            name: /resource coverage/i,
+        });
         fireEvent.click(
             within(dialog).getByRole('button', { name: 'Review change' }),
         );
         await waitFor(() =>
             expect(
                 within(dialog).getByRole('button', {
-                    name: 'Confirm allocation',
+                    name: 'Confirm resource coverage change',
                 }),
             ).toBeEnabled(),
         );
@@ -265,7 +301,7 @@ describe('project planning workflow', () => {
         });
         expect(
             within(dialog).queryByRole('button', {
-                name: 'Confirm allocation',
+                name: 'Confirm resource coverage change',
             }),
         ).not.toBeInTheDocument();
         expect(post).not.toHaveBeenCalled();

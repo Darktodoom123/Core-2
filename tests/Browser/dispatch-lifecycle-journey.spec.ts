@@ -18,10 +18,10 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             }),
         ).toBeVisible();
         await expect(
-            page.getByRole('heading', { name: 'Choose eligible resources' }),
+            page.getByRole('heading', { name: 'Select eligible resources' }),
         ).toBeVisible();
         await expect(
-            page.getByRole('heading', { name: 'Assignment plan' }),
+            page.getByRole('heading', { name: 'Resource selection' }),
         ).toBeVisible();
 
         // 2. Verify candidate cards have eligibility indicators
@@ -49,7 +49,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         // 4. Verify real-time assignment summary updates
         await expect(page.getByText('1 new resource selected')).toBeVisible();
         await expect(
-            page.getByRole('heading', { name: 'Draft assignment' }),
+            page.getByRole('heading', { name: 'Draft resource selection' }),
         ).toBeVisible();
         await expect(page.getByText('Pending changes')).toBeVisible();
         await expect(page.getByText('Draft assignment pending')).toBeVisible();
@@ -91,23 +91,46 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         }
 
         await signIn(page, fixtures.users.manager, fixtures.password);
-        await page.goto('/?view=approvals');
+        await page.goto('/?view=overview');
 
         await expect(
-            page.getByRole('heading', { name: 'Pending approvals' }),
+            page.getByRole('heading', {
+                name: 'Manager action & exception queue',
+            }),
         ).toBeVisible();
+
+        const approvalAction = page.getByRole('button', {
+            name: /approval.*(need your decision|awaiting review)/i,
+        });
         await expect(
-            page.getByRole('button', { name: /Approvals.*pending/i }),
+            page.getByRole('button', { name: /Approvals \(\d+\)/i }),
         ).toBeVisible();
-        const openDispatch = page.locator(
-            `a[href="/operations/dispatch-jobs/${fixtures.approval_job_id}"]`,
+        await expect(approvalAction).toBeVisible();
+        await approvalAction.click();
+        await expect(page).toHaveURL(/view=dispatch/);
+
+        await page.goto(
+            `/?view=dispatch&dispatch_job=${fixtures.approval_job_id}`,
         );
-        await expect(openDispatch).toBeVisible();
+        await expect(
+            page.getByRole('heading', { name: 'Dispatch desk' }),
+        ).toBeVisible();
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        await page
+            .getByLabel('Selected schedule date')
+            .fill(
+                `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`,
+            );
+        const reviewApproval = page.getByRole('link', {
+            name: 'Review approval',
+        });
+        await expect(reviewApproval).toBeVisible();
+        await reviewApproval.click();
 
-        await openDispatch.click();
         await expect(page).toHaveURL(
             new RegExp(
-                `/operations/dispatch-jobs/${fixtures.approval_job_id}$`,
+                `/operations/dispatch-jobs/${fixtures.approval_job_id}(?:\\?.*)?(?:#.*)?$`,
             ),
         );
 

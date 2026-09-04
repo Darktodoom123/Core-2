@@ -17,9 +17,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -68,7 +73,7 @@ jobs:
         run: npm run types:check
 
       - name: Run frontend unit tests
-        run: npm run test:unit
+        run: mkdir -p test-results && npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=test-results/junit-vitest.xml
 
       - name: Check PHP types
         run: composer types:check
@@ -81,6 +86,15 @@ jobs:
 
       - name: Verify image-size parser hardening
         run: npm run security:image-size
+
+      - name: Upload Vitest JUnit results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-vitest
+          path: test-results/junit-vitest.xml
+          retention-days: 7
+          if-no-files-found: warn
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v7

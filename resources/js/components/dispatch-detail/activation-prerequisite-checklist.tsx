@@ -30,35 +30,28 @@ export function ActivationPrerequisiteChecklist({
             ready: isActivatableStatus,
         },
         {
-            title: 'Personnel assignment',
+            title: 'Personnel coverage',
             desc: hasPersonnel
-                ? `${job.personnel_assignments.length} field worker(s) assigned.`
+                ? `${job.personnel_assignments.length} field worker(s) recorded. Server eligibility checks still apply.`
                 : 'At least one active eligible field worker is required.',
-            ready:
-                hasPersonnel &&
-                !activation.blockers.some(
-                    (b) => b.includes('worker') || b.includes('eligible'),
-                ),
+            ready: hasPersonnel,
         },
         {
-            title: 'Asset assignment & safety',
+            title: 'Asset coverage',
             desc: hasAssets
-                ? `${job.asset_assignments.length} asset(s) assigned.`
+                ? `${job.asset_assignments.length} asset(s) recorded. Server safety checks still apply.`
                 : 'At least one active safe asset (crane/truck) is required.',
-            ready:
-                hasAssets &&
-                !activation.blockers.some(
-                    (b) => b.includes('Asset') || b.includes('safe'),
-                ),
+            ready: hasAssets,
         },
         {
-            title: 'Operations Manager approval',
-            desc:
-                activation.approval_status === 'approved'
-                    ? 'Operations Manager approval granted.'
-                    : activation.approval_status === 'rejected'
-                      ? 'Approval request was rejected.'
-                      : 'Awaiting Operations Manager approval decision.',
+            title: 'Approval',
+            desc: !activation.approval_required
+                ? 'No additional approval is required for this dispatch.'
+                : activation.approval_status === 'approved'
+                  ? 'Operations Manager approval granted.'
+                  : activation.approval_status === 'rejected'
+                    ? 'Approval request was rejected.'
+                    : 'Awaiting Operations Manager approval decision.',
             ready: approvalPassed,
         },
     ];

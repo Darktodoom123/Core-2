@@ -20,6 +20,57 @@ beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
 });
 
+it('keeps operational dispatches visible when historical jobs exceed the workspace limit', function () {
+    $this->freezeTime();
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $base = [
+        'client' => 'Workspace ordering client',
+        'title' => 'Workspace ordering fixture',
+        'site' => 'Manila',
+        'priority' => DispatchPriority::Routine,
+        'created_by' => $manager->id,
+    ];
+
+    foreach (range(1, 101) as $day) {
+        DispatchJob::query()->create($base + [
+            'reference' => 'HISTORY-'.$day,
+            'status' => $day === 1 ? DispatchStatus::Cancelled : DispatchStatus::Completed,
+            'scheduled_start' => now()->subDays($day + 10),
+            'scheduled_end' => now()->subDays($day + 10)->addHours(4),
+        ])->forceFill(['updated_at' => now()->subDays($day)])->saveQuietly();
+    }
+
+    foreach ([
+        'ACTIVE' => DispatchStatus::Dispatched,
+        'PENDING' => DispatchStatus::PendingApproval,
+        'UPCOMING' => DispatchStatus::Scheduled,
+        'UNSCHEDULED' => DispatchStatus::Draft,
+    ] as $reference => $status) {
+        DispatchJob::query()->create($base + [
+            'reference' => $reference,
+            'status' => $status,
+            'scheduled_start' => $reference === 'UNSCHEDULED' ? null : now()->addDay(),
+            'scheduled_end' => $reference === 'UNSCHEDULED' ? null : now()->addDay()->addHours(4),
+        ]);
+    }
+
+    $this->actingAs($manager)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->loadDeferredProps('workspace-dispatch', fn (Assert $section) => $section
+                ->has('jobs', 100)
+                ->where('jobs.0.reference', 'ACTIVE')
+                ->where('jobs', function ($jobs): bool {
+                    $references = collect($jobs)->pluck('reference');
+
+                    expect($references->take(4)->all())->toContain('ACTIVE', 'PENDING', 'UPCOMING', 'UNSCHEDULED');
+                    expect($references->all())->toContain('HISTORY-1', 'HISTORY-2')->not->toContain('HISTORY-101');
+
+                    return true;
+                })));
+});
+
 it('serves canonical live dispatch view models and capability navigation', function () {
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);

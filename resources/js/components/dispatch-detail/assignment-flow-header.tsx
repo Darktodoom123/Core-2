@@ -10,6 +10,7 @@ export function AssignmentFlowHeader({
     selectedPersonnelCount,
     selectedAssetCount,
     canActivate,
+    canAssignResources = true,
     hasPendingSelections,
     activeStep,
     onSelectStep,
@@ -19,6 +20,7 @@ export function AssignmentFlowHeader({
     selectedPersonnelCount: number;
     selectedAssetCount: number;
     canActivate: boolean;
+    canAssignResources?: boolean;
     hasPendingSelections: boolean;
     activeStep: 1 | 2 | 3;
     onSelectStep: (step: 1 | 2 | 3) => void;
@@ -26,11 +28,13 @@ export function AssignmentFlowHeader({
     const hasAssignments =
         job.personnel_assignments.length + job.asset_assignments.length > 0;
     const hasSavedAssignments = hasAssignments && !hasPendingSelections;
-    const assignmentStepLabel = hasPendingSelections
-        ? `${formatResourceCounts(selectedPersonnelCount, selectedAssetCount)} selected`
-        : hasSavedAssignments
-          ? `${formatResourceCounts(job.personnel_assignments.length, job.asset_assignments.length)} assigned`
-          : 'Select eligible personnel and assets';
+    const assignmentStepLabel = !canAssignResources
+        ? 'Managed from resource coverage'
+        : hasPendingSelections
+          ? `${formatResourceCounts(selectedPersonnelCount, selectedAssetCount)} selected`
+          : hasSavedAssignments
+            ? `${formatResourceCounts(job.personnel_assignments.length, job.asset_assignments.length)} assigned`
+            : 'Select eligible personnel and assets';
 
     return (
         <section aria-label="Dispatch setup progress" className="space-y-3">
@@ -104,7 +108,7 @@ export function AssignmentFlowHeader({
                                             : 'text-ink-soft',
                                     )}
                                 >
-                                    Context and requirements
+                                    Schedule and requirements
                                 </span>
                             </span>
                         </button>
@@ -158,7 +162,9 @@ export function AssignmentFlowHeader({
                                           : 'Step 2 · Pending'}
                                 </span>
                                 <span className="block font-semibold text-ink transition-colors group-hover:text-brand-strong">
-                                    Assign resources
+                                    {canAssignResources
+                                        ? 'Assign resources'
+                                        : 'Resource coverage'}
                                 </span>
                                 <span
                                     className={cn(

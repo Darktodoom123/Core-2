@@ -17,12 +17,16 @@ export function ActivationPanel({
     const { errors } = usePage().props;
     const [attempted, setAttempted] = useState(false);
     const error = attempted
-        ? (errors.version ??
-          errors.approval ??
-          errors.status ??
-          errors.personnel ??
-          errors.assets ??
-          null)
+        ? firstErrorMessage(
+              errors.version,
+              errors.approval,
+              errors.status,
+              errors.personnel,
+              errors.assets,
+              errors.resources,
+              errors.safety,
+              errors.project_plan,
+          )
         : null;
     const isStale = attempted && errors.version !== undefined;
 
@@ -161,4 +165,36 @@ export function ActivationPanel({
             </div>
         </details>
     );
+}
+
+function firstErrorMessage(...values: unknown[]): string | null {
+    for (const value of values) {
+        const message = errorMessage(value);
+
+        if (message) {
+            return message;
+        }
+    }
+
+    return null;
+}
+
+function errorMessage(value: unknown): string | null {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        const messages = value
+            .map((item) => errorMessage(item))
+            .filter((item): item is string => Boolean(item));
+
+        return messages.length ? messages.join(' ') : null;
+    }
+
+    if (value && typeof value === 'object') {
+        return firstErrorMessage(...Object.values(value));
+    }
+
+    return null;
 }

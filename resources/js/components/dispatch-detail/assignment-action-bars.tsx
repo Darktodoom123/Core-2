@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import React from 'react';
 import { Button, Panel } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -13,19 +13,48 @@ export function AssignmentNextAction({
     canActivate: boolean;
     assignmentSaved: boolean;
 }) {
+    const blockerCount = activation.blockers.length;
+    const readyToActivate = activation.ready && canActivate;
+    const actionLabel = readyToActivate
+        ? 'Activate dispatch'
+        : blockerCount > 0
+          ? 'Resolve activation blockers'
+          : 'Review readiness';
+
     return (
-        <Panel className="border-brand/40 bg-brand-soft/20 p-4 shadow-2xs">
-            <div className="min-w-0">
-                <p className="text-sm font-semibold text-ink">
-                    {assignmentSaved
-                        ? 'Assignments recorded'
-                        : 'Ready for next step'}
-                </p>
-                <p className="mt-0.5 text-xs leading-5 text-ink-soft">
-                    {activation.ready && canActivate
-                        ? 'All prerequisites met. You can now activate this dispatch.'
-                        : 'Review the latest readiness and approval state before activation.'}
-                </p>
+        <Panel
+            className="hidden border-brand/40 bg-brand-soft/20 p-4 shadow-2xs xl:block"
+            aria-label="Next dispatch action"
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-xs font-semibold tracking-wide text-brand-strong uppercase">
+                        Next action
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-ink">
+                        {actionLabel}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-ink-soft">
+                        {assignmentSaved
+                            ? readyToActivate
+                                ? 'Resources are saved. Complete the server readiness review before field activation.'
+                                : 'Resources are saved. Resolve the recorded readiness or approval items before activation.'
+                            : 'Review the latest readiness and approval state before activation.'}
+                    </p>
+                </div>
+                {canActivate ? (
+                    <a
+                        href="#dispatch-activation"
+                        className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft"
+                    >
+                        Open
+                        <ArrowRight className="size-3.5" aria-hidden="true" />
+                    </a>
+                ) : (
+                    <span className="shrink-0 text-xs font-medium text-ink-soft">
+                        Read only
+                    </span>
+                )}
             </div>
         </Panel>
     );
@@ -64,10 +93,10 @@ export function AssignmentStageSummaries({
                     </span>
                     <span className="min-w-0">
                         <span className="block font-semibold text-ink">
-                            Review dispatch details
+                            Review schedule and requirements
                         </span>
                         <span className="block truncate text-xs text-ink-soft">
-                            Schedule, site, and requirements
+                            Schedule, site, and recorded requirements
                         </span>
                     </span>
                 </span>
@@ -101,10 +130,10 @@ export function AssignmentStageSummaries({
                         </span>
                         <span className="min-w-0">
                             <span className="block font-semibold text-ink">
-                                Activate dispatch
+                                Review readiness and activate
                             </span>
                             <span className="block truncate text-xs text-ink-soft">
-                                Review readiness and activate when ready
+                                Check server readiness before activation
                             </span>
                         </span>
                     </span>
@@ -174,15 +203,21 @@ export function MobileAssignmentActionBar({
                             ? 'Ready for activation.'
                             : 'Continue with readiness review.'}
                     </p>
-                    <Button
-                        id={`mobile-activation-action-${jobId}`}
-                        type="button"
-                        variant="primary"
-                        className="shrink-0"
-                        onClick={onActivationAction}
-                    >
-                        {nextActionLabel}
-                    </Button>
+                    {canActivate ? (
+                        <Button
+                            id={`mobile-activation-action-${jobId}`}
+                            type="button"
+                            variant="primary"
+                            className="shrink-0"
+                            onClick={onActivationAction}
+                        >
+                            {nextActionLabel}
+                        </Button>
+                    ) : (
+                        <span className="shrink-0 text-right text-xs font-medium text-ink-soft">
+                            Activation permission required
+                        </span>
+                    )}
                 </div>
             </div>
         );

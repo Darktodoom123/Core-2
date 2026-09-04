@@ -351,7 +351,7 @@ test.describe('New dispatch direct-intake contract', () => {
         ).toHaveCount(0);
         const globalClose = page.locator('#new-dispatch-trigger');
         await expect(globalClose).toHaveCount(1);
-        await expect(globalClose).toHaveAccessibleName(/Close new dispatch/i);
+        await expect(globalClose).toHaveAccessibleName(/Back to schedule/i);
     });
 
     test('focuses entry, keeps the draft beside the client control, and restores trigger focus on exit', async ({

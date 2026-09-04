@@ -17,7 +17,6 @@ import {
     AssignmentFlowHeader,
     AssignmentNextAction,
     AssignmentSelectionSummary,
-    AssignmentStageSummaries,
     CurrentAssignments,
     DispatchAlertBanners,
     DispatchContext,
@@ -131,33 +130,44 @@ export default function DispatchDetail({
     }
 
     const contextualReturn = getSafeReturnTo(storedContext);
-    const returnTo =
+    const backToOrigin =
         contextualReturn === '/'
             ? (project_context?.return_url ?? '/')
             : contextualReturn;
+    const coverageReturnTo =
+        project_context &&
+        contextualReturn !== '/' &&
+        isResourceCoverageReturn(contextualReturn)
+            ? contextualReturn
+            : (project_context?.return_url ?? backToOrigin);
     useEffect(() => {
-        if (project_context && contextualReturn !== '/') {
+        if (!capabilities.update_own_status && contextualReturn !== '/') {
             try {
                 window.sessionStorage.setItem(contextKey, contextualReturn);
             } catch {
                 /* Keep navigation working when storage is disabled. */
             }
         }
-    }, [contextKey, contextualReturn, project_context]);
+    }, [capabilities.update_own_status, contextKey, contextualReturn]);
     const canViewFleetAssets = auth.permissions.some((permission) =>
         ['fleet.view_all', 'fleet.view_assigned'].includes(permission),
     );
     const canViewEquipmentAssets = auth.permissions.some((permission) =>
         ['equipment.view_all', 'equipment.view_assigned'].includes(permission),
     );
-    const conflictMessage =
-        errors.resources ??
-        errors.reassignment ??
-        errors.approval ??
-        errors.version ??
-        form.errors.personnel ??
-        form.errors.assets ??
-        null;
+    const conflictMessage = firstErrorMessage(
+        errors.resources,
+        errors.reassignment,
+        errors.approval,
+        errors.version,
+        errors.safety,
+        errors.project_plan,
+        form.errors.personnel,
+        form.errors.assets,
+    );
+    const projectCoverageOnly = Boolean(
+        project_context && !capabilities.assign_resources,
+    );
 
     useEffect(() => {
         const handleHashChange = () => {
@@ -217,7 +227,7 @@ export default function DispatchDetail({
                 <DispatchDetailHeader
                     job={job}
                     capabilities={capabilities}
-                    returnTo={returnTo}
+                    returnTo={backToOrigin}
                     onConfirmLeave={confirmLeave}
                 />
 
@@ -238,21 +248,24 @@ export default function DispatchDetail({
                     {project_context && (
                         <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
                             <div>
-                                <p className="text-sm font-semibold">
+                                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                    Core 1 work context
+                                </p>
+                                <p className="mt-1 text-sm font-semibold">
                                     {project_context.name} ·{' '}
                                     {project_context.phase}
                                 </p>
                                 <p className="mt-1 text-sm text-ink-soft">
-                                    Crew and asset changes are managed in
-                                    Project plans, with baseline approval and
-                                    the 24-hour confirmation lock.
+                                    This Core 2 record manages operational
+                                    resource coverage. Baseline approval and the
+                                    24-hour confirmation lock still apply.
                                 </p>
                             </div>
                             <Link
-                                href={returnTo}
+                                href={coverageReturnTo}
                                 className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
                             >
-                                Return to project coverage
+                                Return to resource coverage
                             </Link>
                         </Panel>
                     )}
@@ -275,6 +288,9 @@ export default function DispatchDetail({
                                 }
                                 selectedAssetCount={form.data.assets.length}
                                 canActivate={capabilities.activate}
+                                canAssignResources={
+                                    capabilities.assign_resources
+                                }
                                 hasPendingSelections={hasPendingSelections}
                                 activeStep={activeStep}
                                 onSelectStep={(step) => setActiveStep(step)}
@@ -288,11 +304,10 @@ export default function DispatchDetail({
                                             <div className="flex items-center justify-between border-b border-line pb-3">
                                                 <div>
                                                     <p className="text-xs font-semibold tracking-wider text-success-strong uppercase">
-                                                        Step 1 of 3 · Context &
-                                                        Requirements
+                                                        Schedule & Requirements
                                                     </p>
                                                     <h2 className="mt-1 text-xl font-semibold text-ink">
-                                                        Review dispatch
+                                                        Review schedule and
                                                         requirements
                                                     </h2>
                                                     <p className="mt-0.5 text-xs text-ink-soft">
@@ -308,23 +323,35 @@ export default function DispatchDetail({
 
                                             <div className="flex items-center justify-between rounded-xl border border-line bg-surface p-4 shadow-2xs">
                                                 <Link
-                                                    href={returnTo}
+                                                    href={backToOrigin}
                                                     onClick={confirmLeave}
                                                     className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
                                                 >
                                                     <ArrowLeft className="h-4 w-4" />
                                                     Back to dispatch workspace
                                                 </Link>
-                                                <Button
-                                                    type="button"
-                                                    variant="primary"
-                                                    onClick={() =>
-                                                        setActiveStep(2)
-                                                    }
-                                                >
-                                                    Next: Assign resources
-                                                    <ArrowRight className="h-4 w-4" />
-                                                </Button>
+                                                {projectCoverageOnly ? (
+                                                    <Link
+                                                        href={coverageReturnTo}
+                                                        onClick={confirmLeave}
+                                                        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
+                                                    >
+                                                        Return to resource
+                                                        coverage
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </Link>
+                                                ) : (
+                                                    <Button
+                                                        type="button"
+                                                        variant="primary"
+                                                        onClick={() =>
+                                                            setActiveStep(2)
+                                                        }
+                                                    >
+                                                        Next: Select resources
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -332,7 +359,30 @@ export default function DispatchDetail({
                                     {/* STEP 2: CHOOSE ELIGIBLE RESOURCES */}
                                     {activeStep === 2 && (
                                         <div className="animate-in fade-in space-y-5 duration-150">
-                                            {capabilities.view_assignment_candidates ? (
+                                            {projectCoverageOnly ? (
+                                                <Panel>
+                                                    <EmptyState
+                                                        icon={ShieldCheck}
+                                                        title="Resource coverage is managed from the coverage record"
+                                                        message="This linked shift inherits its baseline, reservations, and crew rules from the Core 2 resource coverage record. Return there to fill or review operational coverage."
+                                                        primaryAction={
+                                                            <Link
+                                                                href={
+                                                                    coverageReturnTo
+                                                                }
+                                                                onClick={
+                                                                    confirmLeave
+                                                                }
+                                                                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
+                                                            >
+                                                                Return to
+                                                                resource
+                                                                coverage
+                                                            </Link>
+                                                        }
+                                                    />
+                                                </Panel>
+                                            ) : capabilities.view_assignment_candidates ? (
                                                 candidatesReady ? (
                                                     <form
                                                         id="assignment-selection-form"
@@ -381,12 +431,10 @@ export default function DispatchDetail({
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                                                             <div>
                                                                 <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                                                    Step 2 of 3
-                                                                    · Resource
-                                                                    Assignment
+                                                                    Resources
                                                                 </p>
                                                                 <h2 className="mt-1 text-xl font-semibold text-ink">
-                                                                    Choose
+                                                                    Select
                                                                     eligible
                                                                     resources
                                                                 </h2>
@@ -559,8 +607,8 @@ export default function DispatchDetail({
                                                                     )
                                                                 }
                                                             >
-                                                                Next: Activation
-                                                                review
+                                                                Next: Review
+                                                                readiness
                                                                 <ArrowRight className="h-4 w-4" />
                                                             </Button>
                                                         </div>
@@ -595,11 +643,10 @@ export default function DispatchDetail({
                                             <div className="flex items-center justify-between border-b border-line pb-3">
                                                 <div>
                                                     <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                                        Step 3 of 3 · Activation
-                                                        & Readiness
+                                                        Readiness & Activation
                                                     </p>
                                                     <h2 className="mt-1 text-xl font-semibold text-ink">
-                                                        Review readiness &
+                                                        Review readiness and
                                                         activate dispatch
                                                     </h2>
                                                     <p className="mt-0.5 text-xs text-ink-soft">
@@ -619,7 +666,7 @@ export default function DispatchDetail({
 
                                             <div className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-2xs">
                                                 <h3 className="text-base font-semibold text-ink">
-                                                    Prerequisite readiness
+                                                    Server readiness checks
                                                 </h3>
                                                 <ActivationPrerequisiteChecklist
                                                     job={job}
@@ -668,7 +715,7 @@ export default function DispatchDetail({
                                                     }
                                                 >
                                                     <ArrowLeft className="h-4 w-4" />
-                                                    Previous: Assign resources
+                                                    Previous: Select resources
                                                 </Button>
                                                 {activation.ready &&
                                                 capabilities.activate ? (
@@ -692,7 +739,7 @@ export default function DispatchDetail({
                                                         {activation.blockers
                                                             .length > 0
                                                             ? `${activation.blockers.length} blocker(s) remaining`
-                                                            : 'Assignments needed before activation'}
+                                                            : 'Resources needed before activation'}
                                                     </span>
                                                 )}
                                             </div>
@@ -777,11 +824,6 @@ export default function DispatchDetail({
                                     )}
                                 </aside>
                             </div>
-                            <AssignmentStageSummaries
-                                activation={activation}
-                                canActivate={capabilities.activate}
-                                onSelectStep={(step) => setActiveStep(step)}
-                            />
                             <LifecycleControlsPanel
                                 key={`lifecycle-${job.version}`}
                                 job={job}
@@ -793,6 +835,19 @@ export default function DispatchDetail({
             </div>
         </>
     );
+}
+
+function isResourceCoverageReturn(returnTo: string): boolean {
+    try {
+        const url = new URL(returnTo, 'http://dispatch.local');
+
+        return (
+            url.searchParams.get('dispatch_mode') === 'resources' ||
+            url.searchParams.get('dispatch_tab') === 'project-plans'
+        );
+    } catch {
+        return false;
+    }
 }
 
 function isCandidatePage<T>(
@@ -830,6 +885,38 @@ function candidatePageError(value: unknown): string | null {
     return isCandidatePage(value) && typeof value.error === 'string'
         ? value.error
         : null;
+}
+
+function firstErrorMessage(...values: unknown[]): string | null {
+    for (const value of values) {
+        const message = errorMessage(value);
+
+        if (message) {
+            return message;
+        }
+    }
+
+    return null;
+}
+
+function errorMessage(value: unknown): string | null {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        const messages = value
+            .map((item) => errorMessage(item))
+            .filter((item): item is string => Boolean(item));
+
+        return messages.length ? messages.join(' ') : null;
+    }
+
+    if (value && typeof value === 'object') {
+        return firstErrorMessage(...Object.values(value));
+    }
+
+    return null;
 }
 
 function CandidateDeferredState({

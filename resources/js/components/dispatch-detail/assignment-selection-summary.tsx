@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, ListChecks, Truck, Users } from 'lucide-react';
+import { CheckCircle2, Circle, ListChecks } from 'lucide-react';
 import React from 'react';
 import { Button, Panel } from '@/components/ui';
 import { humanize } from '@/lib/formatters';
@@ -38,14 +38,14 @@ export function AssignmentSelectionSummary({
     const hasSavedAssignments = currentCount > 0;
     const summaryTitle = hasDraftSelections
         ? hasSavedAssignments
-            ? 'Update assignment'
-            : 'Draft assignment'
+            ? 'Update resources'
+            : 'Draft resource selection'
         : hasSavedAssignments
           ? 'Assigned resources'
-          : 'Assignment plan';
+          : 'Resource selection';
     const summaryDescription = hasDraftSelections
         ? hasSavedAssignments
-            ? 'Review the new resources before saving this assignment update.'
+            ? 'Review the new resources before saving this update.'
             : 'These selections are not saved yet. Review them before assigning.'
         : hasSavedAssignments
           ? 'Saved personnel and assets for this dispatch.'
@@ -56,9 +56,6 @@ export function AssignmentSelectionSummary({
         : hasSavedAssignments
           ? `resource${currentCount === 1 ? '' : 's'} assigned`
           : 'resources selected';
-
-    const totalPeople = currentPersonnelCount + personnel.length;
-    const totalAssets = currentAssetCount + assets.length;
 
     return (
         <Panel
@@ -105,65 +102,16 @@ export function AssignmentSelectionSummary({
                     </span>
                 </div>
 
-                {/* Live Requirements Tracker */}
+                {/* Client selection state is deliberately separate from the
+                    server-authoritative readiness check. */}
                 <div className="space-y-2 rounded-lg border border-line bg-surface-subtle/50 p-3">
                     <p className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
-                        Readiness targets
+                        Selection status
                     </p>
-                    <div className="space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-ink">
-                                <Users className="h-3.5 w-3.5 text-ink-soft" />
-                                Field Personnel
-                            </span>
-                            <span
-                                className={cn(
-                                    'inline-flex items-center gap-1 font-semibold',
-                                    totalPeople > 0
-                                        ? 'text-success-strong'
-                                        : 'text-warning-strong',
-                                )}
-                            >
-                                {totalPeople > 0 ? (
-                                    <>
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                        {totalPeople} ready
-                                    </>
-                                ) : (
-                                    <>
-                                        <Circle className="h-3.5 w-3.5 opacity-60" />
-                                        1 required
-                                    </>
-                                )}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-ink">
-                                <Truck className="h-3.5 w-3.5 text-ink-soft" />
-                                Operational Asset
-                            </span>
-                            <span
-                                className={cn(
-                                    'inline-flex items-center gap-1 font-semibold',
-                                    totalAssets > 0
-                                        ? 'text-success-strong'
-                                        : 'text-warning-strong',
-                                )}
-                            >
-                                {totalAssets > 0 ? (
-                                    <>
-                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                        {totalAssets} ready
-                                    </>
-                                ) : (
-                                    <>
-                                        <Circle className="h-3.5 w-3.5 opacity-60" />
-                                        1 required
-                                    </>
-                                )}
-                            </span>
-                        </div>
-                    </div>
+                    <p className="text-xs leading-5 text-ink-soft">
+                        The server rechecks eligibility, conflicts, safety, and
+                        approval before saving and activating.
+                    </p>
                 </div>
 
                 <div className="space-y-2.5 text-sm">

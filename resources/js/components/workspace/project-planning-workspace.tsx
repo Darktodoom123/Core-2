@@ -96,7 +96,7 @@ export function DispatchWorkspace({
                         >
                             {tab === 'dispatches'
                                 ? 'Dispatches'
-                                : 'Project plans'}
+                                : 'Resource coverage'}
                         </button>
                     ),
                 )}
@@ -108,6 +108,51 @@ export function DispatchWorkspace({
             )}
         </div>
     );
+}
+
+/**
+ * Operational resource coverage for work received from Core 1.
+ *
+ * The API still calls this payload a project plan for compatibility with the
+ * existing planning endpoints. The UI deliberately describes what Core 2
+ * owns: dates, reservations, shifts, crew coverage, and the approval trail.
+ */
+export function ResourceCoverageWorkspace({
+    planning,
+    assets,
+}: {
+    planning?: ProjectPlanningViewModel | null;
+    assets: AssetViewModel[];
+}) {
+    if (!planning) {
+        return (
+            <div className="min-h-[calc(100vh-9rem)] bg-surface-subtle/50 p-5 lg:p-7">
+                <Panel className="p-8 text-center">
+                    <CalendarRange className="mx-auto size-8 text-ink-soft" />
+                    <h1 className="mt-3 text-xl font-semibold text-ink">
+                        Resource coverage is unavailable
+                    </h1>
+                    <p className="mx-auto mt-2 max-w-xl text-sm text-ink-soft">
+                        Refresh the dispatch workspace to load operational
+                        reservations, shifts, and crew coverage.
+                    </p>
+                    <Button
+                        className="mt-5"
+                        variant="secondary"
+                        onClick={() =>
+                            router.reload({
+                                only: ['projectPlanning', 'assets'],
+                            })
+                        }
+                    >
+                        Refresh resource coverage
+                    </Button>
+                </Panel>
+            </div>
+        );
+    }
+
+    return <ProjectPlans planning={planning} assets={assets} />;
 }
 
 function ProjectPlans({
@@ -203,11 +248,16 @@ function ProjectPlans({
             <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-5 py-5 lg:px-7">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-ink">
-                        Project plans
+                        Resource coverage
                     </h1>
-                    <p className="mt-1 text-sm text-ink-soft">
-                        Reserve equipment for the project. Keep every shift
-                        covered.
+                    <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+                        Schedule operational coverage for Core 1 work. Reserve
+                        equipment, generate shifts, and fill the crew required
+                        for safe activation.
+                    </p>
+                    <p className="mt-2 text-xs text-ink-soft">
+                        Core 1 remains the project owner. This workspace records
+                        Core 2 operational coverage only.
                     </p>
                 </div>
                 {planning.can_edit && (
@@ -216,7 +266,7 @@ function ProjectPlans({
                         onClick={() => setEditor({ type: 'project' })}
                     >
                         <Plus className="size-4" />
-                        New project plan
+                        Add coverage record
                     </Button>
                 )}
             </header>
@@ -231,14 +281,14 @@ function ProjectPlans({
                     >
                         <label>
                             <span className="sr-only">
-                                Search plan or Core 1 reference
+                                Search coverage record or Core 1 reference
                             </span>
                             <Search className="absolute top-3.5 left-3 size-4 text-ink-soft" />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="pl-9"
-                                placeholder="Search plan or Core 1 reference"
+                                placeholder="Search coverage or Core 1 reference"
                             />
                         </label>
                     </form>
@@ -343,7 +393,7 @@ function ProjectPlans({
                         <div className="min-w-[760px]">
                             <div className="grid grid-cols-[20rem_1fr] border-b border-line bg-surface-subtle text-xs font-medium text-ink-soft">
                                 <div className="p-3">
-                                    Project / phase / asset
+                                    Coverage / phase / asset
                                 </div>
                                 <div className="relative border-l border-line">
                                     {ticks.slice(0, -1).map((tick) => (
@@ -364,13 +414,13 @@ function ProjectPlans({
                                     <CalendarRange className="mx-auto size-8 text-ink-soft" />
                                     <h2 className="mt-3 font-semibold text-ink">
                                         {search
-                                            ? 'No matching project plans'
-                                            : 'Start your first project plan'}
+                                            ? 'No matching coverage records'
+                                            : 'Start resource coverage'}
                                     </h2>
                                     <p className="mt-1 text-sm text-ink-soft">
                                         {search
-                                            ? 'Try another name or project reference.'
-                                            : 'Add the Core 1 reference, create a phase, and reserve its on-site equipment.'}
+                                            ? 'Try another coverage name or Core 1 reference.'
+                                            : 'Record the Core 1 reference when available, set an operating phase, and reserve its on-site equipment.'}
                                     </p>
                                 </div>
                             )}
@@ -415,6 +465,7 @@ function ProjectPlans({
                                                         {plan.name}
                                                     </span>
                                                     <span className="block truncate text-xs text-ink-soft">
+                                                        Work reference:{' '}
                                                         {plan.source_reference}{' '}
                                                         · {plan.site}
                                                     </span>
@@ -424,7 +475,8 @@ function ProjectPlans({
                                         </div>
                                         <div className="flex items-center justify-end gap-2 border-l border-line px-3">
                                             <span className="mr-auto text-xs text-ink-soft">
-                                                {plan.phases.length} phases
+                                                {plan.phases.length} operating
+                                                phases
                                             </span>
                                             {planning.can_edit && (
                                                 <Button
@@ -438,7 +490,7 @@ function ProjectPlans({
                                                     }
                                                 >
                                                     <Plus className="size-4" />
-                                                    Add phase
+                                                    Add operating phase
                                                 </Button>
                                             )}
                                         </div>
@@ -446,9 +498,9 @@ function ProjectPlans({
                                     {!closed.has(plan.id) &&
                                         !plan.phases.length && (
                                             <p className="border-t border-line px-10 py-4 text-sm text-ink-soft">
-                                                Add a phase to set dates,
-                                                equipment reservations, and crew
-                                                requirements.
+                                                Add an operating phase to set
+                                                dates, equipment reservations,
+                                                and crew requirements.
                                             </p>
                                         )}
                                     {!closed.has(plan.id) &&
@@ -640,8 +692,8 @@ function ProjectPlans({
                     </div>
                     <div className="flex items-center gap-2">
                         <span>
-                            {planning.total} plans · page {planning.page} of{' '}
-                            {planning.last_page}
+                            {planning.total} coverage records · page{' '}
+                            {planning.page} of {planning.last_page}
                         </span>
                         {planning.last_page > 1 && (
                             <>

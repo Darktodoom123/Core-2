@@ -325,10 +325,14 @@ final class OperationsWorkspaceController extends Controller
                 'serviceRequest:id,reference',
                 'canonicalHandoff',
             ])
-            ->orderBy('scheduled_start')
+            // Rank before limiting so historical rows cannot crowd out active work.
+            ->orderByRaw("CASE WHEN status IN ('dispatched', 'accepted', 'en_route', 'arrived', 'working') THEN 0 WHEN status IN ('draft', 'pending_approval', 'scheduled') THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE WHEN status NOT IN ('completed', 'cancelled') AND scheduled_start IS NULL THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status NOT IN ('completed', 'cancelled') THEN scheduled_start END ASC")
+            ->orderByRaw("CASE WHEN status IN ('completed', 'cancelled') THEN updated_at END DESC")
+            ->orderByDesc('id')
             ->limit($limit)
             ->get()
-            ->sortBy(fn (DispatchJob $job): int => in_array($job->status->value, ['working', 'arrived', 'en_route', 'accepted', 'dispatched'], true) ? 0 : 1)
             ->values();
     }
 

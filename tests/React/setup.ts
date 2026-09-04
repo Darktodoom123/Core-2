@@ -15,7 +15,7 @@ vi.mock('@inertiajs/react', () => ({
             flash: {},
             errors: {},
         },
-        url: '/',
+        url: `${window.location.pathname}${window.location.search}${window.location.hash}`,
         component: 'Home',
         version: null,
     }),
@@ -27,6 +27,9 @@ vi.mock('@inertiajs/react', () => ({
         patch: vi.fn(),
         delete: vi.fn(),
         reload: vi.fn(),
+        replace: vi.fn(({ url }: { url: string }) => {
+            window.history.replaceState(window.history.state, '', url);
+        }),
     },
     Link: ({ children, href, ...props }: { children: React.ReactNode; href?: string; [key: string]: unknown }) => {
         return React.createElement('a', { href, ...props }, children);

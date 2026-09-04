@@ -58,6 +58,7 @@ export function LiveDispatchIntake({
     capabilities,
     initialRequestId,
     initialMode = null,
+    showQueueWhenEmpty = false,
     onClose,
     onDirtyChange,
 }: {
@@ -69,6 +70,7 @@ export function LiveDispatchIntake({
     capabilities: WorkspaceCapabilities;
     initialRequestId?: number | null;
     initialMode?: IntakeMode;
+    showQueueWhenEmpty?: boolean;
     onClose?: () => void;
     onDirtyChange?: (isDirty: boolean) => void;
 }) {
@@ -144,7 +146,7 @@ export function LiveDispatchIntake({
             return initialMode;
         }
 
-        return incomingItems.length > 0 ? null : 'manual';
+        return incomingItems.length > 0 || showQueueWhenEmpty ? null : 'manual';
     });
     const [selectedItemKey, setSelectedItemKey] = useState<string | null>(
         initialRequestId ? `service-${initialRequestId}` : null,
@@ -158,7 +160,7 @@ export function LiveDispatchIntake({
         setShowClientIntake(false);
     };
 
-    if (mode === 'manual') {
+    if (mode === 'manual' && canCreateManual) {
         return (
             <section
                 className="direct-dispatch-view border-b border-line bg-surface px-4 py-5 md:px-6"
@@ -200,7 +202,10 @@ export function LiveDispatchIntake({
                             setShowClientIntake(false);
                             onDirtyChange?.(false);
 
-                            if (incomingItems.length > 0) {
+                            if (
+                                incomingItems.length > 0 ||
+                                showQueueWhenEmpty
+                            ) {
                                 setMode(null);
                             } else {
                                 onClose?.();
@@ -218,7 +223,8 @@ export function LiveDispatchIntake({
                                 document
                                     .getElementById(
                                         reason === 'back' &&
-                                            incomingItems.length > 0
+                                            (incomingItems.length > 0 ||
+                                                showQueueWhenEmpty)
                                             ? 'create-direct-dispatch-trigger'
                                             : 'new-dispatch-trigger',
                                     )
@@ -289,7 +295,7 @@ export function LiveDispatchIntake({
                     </div>
                 </div>
 
-                {showClientIntake && (
+                {showClientIntake && capabilities.create_client && (
                     <div className="mt-4">
                         <ClientIntakeForm
                             onClose={() => setShowClientIntake(false)}
@@ -314,7 +320,7 @@ export function LiveDispatchIntake({
                                 details, assign equipment, and dispatch.
                             </p>
                         </div>
-                        <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong">
+                        <span className="inline-flex w-fit items-center rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
                             {incomingItems.length > 0
                                 ? `${incomingItems.length} needs review`
                                 : 'No handoffs waiting'}
@@ -323,7 +329,7 @@ export function LiveDispatchIntake({
 
                     <div
                         className="mt-4 divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface"
-                        role="list"
+                        role={incomingItems.length > 0 ? 'list' : 'region'}
                         aria-label="Incoming work queue"
                     >
                         {incomingItems.length > 0 ? (
@@ -415,11 +421,11 @@ export function LiveDispatchIntake({
                     </div>
                 )}
 
-                {mode === 'client' && (
+                {mode === 'client' && capabilities.create_client && (
                     <ClientIntakeForm onClose={closeWorkflow} />
                 )}
 
-                {mode === 'service' && (
+                {mode === 'service' && canReviewService && (
                     <ServiceIntakeSection
                         clients={clients}
                         serviceRequests={serviceRequests}
@@ -429,7 +435,7 @@ export function LiveDispatchIntake({
                     />
                 )}
 
-                {mode === 'rental' && (
+                {mode === 'rental' && canReviewRental && (
                     <RentalIntakeSection
                         rentalHandoffs={rentalHandoffs}
                         capabilities={capabilities}
@@ -437,7 +443,7 @@ export function LiveDispatchIntake({
                     />
                 )}
 
-                {mode === 'sale' && (
+                {mode === 'sale' && canReviewSale && (
                     <SaleIntakeSection
                         salesHandoffs={salesHandoffs}
                         capabilities={capabilities}
@@ -445,7 +451,7 @@ export function LiveDispatchIntake({
                     />
                 )}
 
-                {mode === 'reconciliation' && (
+                {mode === 'reconciliation' && canReconcile && (
                     <ReconciliationQueueSection
                         serviceRequests={serviceRequests}
                         rentalHandoffs={rentalHandoffs}
