@@ -46,7 +46,9 @@ class AppServiceProvider extends ServiceProvider
             : Limit::perMinute(60)->by($request->ip() ?: 'unknown'));
 
         RateLimiter::for('login', static function (Request $request): array {
-            $identifier = (string) ($request->input('username') ?: $request->input('email') ?: '');
+            $rawUsername = $request->input('username');
+            $rawEmail = $request->input('email');
+            $identifier = is_string($rawUsername) ? $rawUsername : (is_string($rawEmail) ? $rawEmail : '');
             $identifierKey = Str::transliterate(Str::lower(trim($identifier)).'|'.($request->ip() ?: 'unknown'));
 
             return [
