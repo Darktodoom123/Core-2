@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
@@ -40,17 +41,39 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        RateLimiter::for('location', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('api', static fn (Request $request): Limit => $request->user()
+            ? Limit::perMinute(180)->by($request->user()->id)
+            : Limit::perMinute(60)->by($request->ip() ?: 'unknown'));
 
-        RateLimiter::for('uploads', static fn (Request $request): Limit => Limit::perMinute(20)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('login', static function (Request $request): array {
+            $identifier = (string) ($request->input('username') ?: $request->input('email') ?: '');
+            $identifierKey = Str::transliterate(Str::lower(trim($identifier)).'|'.($request->ip() ?: 'unknown'));
 
-        RateLimiter::for('exports', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
+            return [
+                Limit::perMinute(10)->by($request->ip() ?: 'unknown'),
+                Limit::perMinute(5)->by($identifierKey),
+            ];
+        });
 
-        RateLimiter::for('gpt', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('password-reset', static fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip() ?: 'unknown'));
+
+        RateLimiter::for('location', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('uploads', static fn (Request $request): Limit => Limit::perMinute(20)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('downloads', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('exports', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('gpt', static fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('safety', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
+
+        RateLimiter::for('weather', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
         RateLimiter::for('sos', static fn (Request $request): Limit => Limit::perMinute(12)->by(sprintf(
             '%s:%s',
-            $request->user()?->id ?: $request->ip(),
+            $request->user()?->id ?: $request->ip() ?: 'unknown',
             (string) ($request->user()?->currentAccessToken()->id ?? 'session'),
         )));
     }
