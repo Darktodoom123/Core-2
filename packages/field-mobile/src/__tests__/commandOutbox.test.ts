@@ -455,4 +455,106 @@ describe('CommandOutboxManager', () => {
         assert.equal(restarted.getCommand(emergency.id)?.id, emergency.id);
         assert.equal(restarted.getCommand(emergency.id)?.priority, 'emergency');
     });
+
+    test('handles 429 response and respects retryAfter when scheduling nextAttemptAt', async () => {
+        let currentTime = new Date('2026-08-01T00:00:00.000Z');
+        const outbox = await createOutbox(1, {
+            now: () => currentTime,
+            baseRetryDelayMs: 1_000,
+        });
+        const command = await outbox.enqueueTransitionStatus(10, 'accepted', 1);
+        let calls = 0;
+        const apiClient = {
+            transitionStatus: async () => {
+                calls += 1;
+                if (calls === 1) {
+                    throw new ApiClientError('Rate limit exceeded', 429, {
+                        errorCode: 'rate_limited',
+                        retryAfter: 30,
+                        isRateLimited: true,
+                    });
+                }
+
+                return { id: 10, version: 2 } as DispatchJob;
+            },
+        } as unknown as FieldApiClient;
+
+        const result1 = await outbox.processQueue(apiClient);
+        assert.equal(result1.deferred, 1);
+        assert.equal(calls, 1);
+        assert.equal(command.state, 'queued');
+        assert.equal(command.attempts, 1);
+        assert.equal(command.error?.code, 'RATE_LIMITED');
+        assert.equal(
+            command.error?.message,
+            'Rate limit reached. Retry scheduled in 30 seconds.',
+        );
+        assert.equal(command.error?.retryable, true);
+        assert.equal(command.nextAttemptAt, '2026-08-01T00:00:30.000Z');
+        assert.equal(outbox.getNextRetryAt(), '2026-08-01T00:00:30.000Z');
+
+        // Not yet due (15s elapsed, 15s remaining)
+        currentTime = new Date('2026-08-01T00:00:15.000Z');
+        const intermediate = await outbox.processQueue(apiClient);
+        assert.equal(intermediate.deferred, 1);
+        assert.equal(calls, 1);
+        assert.equal(command.state, 'queued');
+
+        // Now due (30s elapsed)
+        currentTime = new Date('2026-08-01T00:00:30.000Z');
+        const completed = await outbox.processQueue(apiClient);
+        assert.equal(completed.completed, 1);
+        assert.equal(calls, 2);
+        assert.equal(command.state, 'completed');
+        assert.equal(command.error, null);
+    });
+
+    test('uses exponential backoff when calculated delay exceeds retryAfter on 429 response', async () => {
+        const currentTime = new Date('2026-08-01T00:00:00.000Z');
+        const outbox = await createOutbox(1, {
+            now: () => currentTime,
+            baseRetryDelayMs: 10_000,
+        });
+        const command = await outbox.enqueueTransitionStatus(11, 'accepted', 1);
+        const apiClient = {
+            transitionStatus: async () => {
+                throw new ApiClientError('Rate limit exceeded', 429, {
+                    retryAfter: 3,
+                    isRateLimited: true,
+                });
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+        assert.equal(command.state, 'queued');
+        assert.equal(command.nextAttemptAt, '2026-08-01T00:00:10.000Z');
+        assert.equal(command.error?.code, 'RATE_LIMITED');
+        assert.equal(
+            command.error?.message,
+            'Rate limit reached. Retry scheduled in 10 seconds.',
+        );
+    });
+
+    test('handles 429 response without retryAfter defaulting to exponential backoff', async () => {
+        const currentTime = new Date('2026-08-01T00:00:00.000Z');
+        const outbox = await createOutbox(1, {
+            now: () => currentTime,
+            baseRetryDelayMs: 1_000,
+        });
+        const command = await outbox.enqueueTransitionStatus(12, 'accepted', 1);
+        const apiClient = {
+            transitionStatus: async () => {
+                throw new ApiClientError('Too Many Requests', 429);
+            },
+        } as unknown as FieldApiClient;
+
+        await outbox.processQueue(apiClient);
+        assert.equal(command.state, 'queued');
+        assert.equal(command.nextAttemptAt, '2026-08-01T00:00:01.000Z');
+        assert.equal(command.error?.code, 'RATE_LIMITED');
+        assert.equal(
+            command.error?.message,
+            'Rate limit reached. Retry scheduled in 1 seconds.',
+        );
+    });
 });

@@ -206,4 +206,120 @@ describe('FieldApiClient', () => {
             assert.equal(err.requestId, 'req-header-fallback');
         }
     });
+
+    test('parses 429 Rate Limited with Retry-After header', async () => {
+        const mockFetch = async () => {
+            return new Response(
+                JSON.stringify({
+                    message: 'Too many requests.',
+                    error: 'rate_limited',
+                }),
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': '60',
+                    },
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        try {
+            await client.fetchMe();
+            assert.fail('Expected ApiClientError');
+        } catch (err) {
+            assert.ok(err instanceof ApiClientError);
+            assert.equal(err.status, 429);
+            assert.equal(err.isRateLimited, true);
+            assert.equal(err.retryAfter, 60);
+            assert.equal(err.errorCode, 'rate_limited');
+        }
+    });
+
+    test('parses 429 Rate Limited with retry_after in response body', async () => {
+        const mockFetch = async () => {
+            return new Response(
+                JSON.stringify({
+                    message: 'Rate limit exceeded.',
+                    error: 'rate_limited',
+                    retry_after: 45,
+                }),
+                {
+                    status: 429,
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        try {
+            await client.fetchMe();
+            assert.fail('Expected ApiClientError');
+        } catch (err) {
+            assert.ok(err instanceof ApiClientError);
+            assert.equal(err.status, 429);
+            assert.equal(err.isRateLimited, true);
+            assert.equal(err.retryAfter, 45);
+        }
+    });
+
+    test('parses 429 Rate Limited when retryAfter is missing or invalid', async () => {
+        const mockFetch = async () => {
+            return new Response(
+                JSON.stringify({
+                    message: 'Rate limit exceeded.',
+                }),
+                {
+                    status: 429,
+                    headers: {
+                        'Retry-After': 'invalid-seconds',
+                    },
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        try {
+            await client.fetchMe();
+            assert.fail('Expected ApiClientError');
+        } catch (err) {
+            assert.ok(err instanceof ApiClientError);
+            assert.equal(err.status, 429);
+            assert.equal(err.isRateLimited, true);
+            assert.equal(err.retryAfter, undefined);
+        }
+    });
+
+    test('ApiClientError constructor sets isRateLimited for 429 status', () => {
+        const rateLimitErr = new ApiClientError('Rate limited', 429);
+        assert.equal(rateLimitErr.status, 429);
+        assert.equal(rateLimitErr.isRateLimited, true);
+        assert.equal(rateLimitErr.retryAfter, undefined);
+
+        const customRetryErr = new ApiClientError('Rate limited', 429, {
+            retryAfter: 30,
+        });
+        assert.equal(customRetryErr.status, 429);
+        assert.equal(customRetryErr.isRateLimited, true);
+        assert.equal(customRetryErr.retryAfter, 30);
+
+        const serverErr = new ApiClientError('Server error', 500);
+        assert.equal(serverErr.status, 500);
+        assert.equal(serverErr.isRateLimited, false);
+        assert.equal(serverErr.retryAfter, undefined);
+    });
 });
