@@ -39,14 +39,22 @@ test('formatStopwatch formats total seconds to hh:mm:ss', () => {
 });
 
 test('Dual-mode theme tokens satisfy contrast and color assignments', () => {
+    // Light Mode
     assert.equal(lightThemeColors.mode, 'light');
     assert.equal(lightThemeColors.canvas, '#F1F5F9');
     assert.equal(lightThemeColors.surface, '#FFFFFF');
     assert.equal(lightThemeColors.textPrimary, '#0F172A');
+    assert.equal(lightThemeColors.textSecondary, '#64748B');
+    assert.equal(lightThemeColors.border, '#E2E8F0');
+    assert.equal(lightThemeColors.brandAmber, '#D97706');
 
+    // Dark Mode
     assert.equal(darkHudThemeColors.mode, 'dark_hud');
     assert.equal(darkHudThemeColors.canvas, '#090D16');
-    assert.equal(darkHudThemeColors.surface, '#0F172A');
-    assert.equal(darkHudThemeColors.hudGlowAmber, '#FBBF24');
-    assert.equal(darkHudThemeColors.hudGlowEmerald, '#34D399');
+    assert.equal(darkHudThemeColors.surface, '#1E293B');
+    assert.equal(darkHudThemeColors.textPrimary, '#F8FAFC');
+    assert.equal(darkHudThemeColors.textSecondary, '#94A3B8');
+    assert.equal(darkHudThemeColors.border, '#334155');
+    assert.equal(darkHudThemeColors.hudGlowAmber, '#F59E0B');
+    assert.equal(darkHudThemeColors.brandAmber, '#F59E0B');
 });

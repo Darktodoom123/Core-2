@@ -80,7 +80,7 @@ export const createMachinedStyles = (theme: ThemeColors) =>
         },
         headerSubtitle: {
             fontSize: 13,
-            color: '#94A3B8',
+            color: theme.textSecondary,
             marginTop: 2,
         },
         machinedPanel: {
@@ -101,22 +101,17 @@ export const createMachinedStyles = (theme: ThemeColors) =>
         },
         actionPedalPrimary: {
             minHeight: 52,
-            backgroundColor:
-                theme.mode === 'dark_hud'
-                    ? theme.brandAmber
-                    : theme.surfaceDark,
+            backgroundColor: theme.brandAmber,
             borderRadius: 10,
             alignItems: 'center',
             justifyContent: 'center',
             paddingHorizontal: 18,
             borderWidth: 1,
             borderColor:
-                theme.mode === 'dark_hud'
-                    ? theme.hudGlowAmber
-                    : theme.borderStrong,
+                theme.mode === 'dark_hud' ? theme.hudGlowAmber : '#B45309',
         },
         actionPedalPrimaryText: {
-            color: theme.mode === 'dark_hud' ? '#0F172A' : '#FFFFFF',
+            color: '#FFFFFF',
             fontSize: 15,
             fontWeight: '800',
             letterSpacing: 0.3,

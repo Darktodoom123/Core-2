@@ -228,7 +228,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             testID="vehicle-card-change-unit-btn"
                         >
                             <Icon
-                                color={isDarkHud ? '#60A5FA' : colors.primary}
+                                color={isDarkHud ? '#F59E0B' : colors.primary}
                                 name="sync"
                                 size={11}
                             />
@@ -319,7 +319,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             <View style={styles.dispatchLocationRow}>
                                 <Icon
                                     color={
-                                        isDarkHud ? '#60A5FA' : colors.primary
+                                        isDarkHud ? '#F59E0B' : colors.primary
                                     }
                                     name="location"
                                     size={13}
@@ -404,7 +404,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             Equipment Setup
                         </Text>
                         <Icon
-                            color={isDarkHud ? '#60A5FA' : colors.primary}
+                            color={isDarkHud ? '#F59E0B' : colors.primary}
                             name="chevron-right"
                             size={14}
                         />
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
         paddingVertical: 1,
     },
     darkDispatchBadge: {
-        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
     },
     dispatchBadgeText: {
         color: colors.primaryDark,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     darkDispatchBadgeText: {
-        color: '#60A5FA',
+        color: '#F59E0B',
     },
     dispatchTitleText: {
         color: colors.text,
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkActionPromptText: {
-        color: '#60A5FA',
+        color: '#F59E0B',
     },
     badgeAndActionsWrap: {
         alignItems: 'flex-end',
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
     },
     darkChangeUnitBtn: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#1E293B',
         borderColor: '#334155',
     },
     changeUnitText: {
@@ -723,6 +723,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkChangeUnitText: {
-        color: '#60A5FA',
+        color: '#F59E0B',
     },
 });

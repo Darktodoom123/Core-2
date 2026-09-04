@@ -392,7 +392,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     };
 
     return (
-        <View style={styles.screenRoot}>
+        <View style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}>
             <ScrollView
                 contentInsetAdjustmentBehavior="automatic"
                 contentContainerStyle={styles.content}
@@ -684,20 +684,42 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
                         {jobs.length === 0 && !isLoading ? (
                             <View
-                                style={styles.emptyBox}
+                                style={[
+                                    styles.emptyBox,
+                                    isDarkHud && styles.darkEmptyBox,
+                                ]}
                                 testID="empty-assignments-msg"
                             >
-                                <View style={styles.emptyMark}>
+                                <View
+                                    style={[
+                                        styles.emptyMark,
+                                        isDarkHud && styles.darkEmptyMark,
+                                    ]}
+                                >
                                     <Icon
                                         name="clipboard"
                                         size={28}
-                                        color={colors.primaryDark}
+                                        color={
+                                            isDarkHud
+                                                ? '#F59E0B'
+                                                : colors.primaryDark
+                                        }
                                     />
                                 </View>
-                                <Text style={styles.emptyTitle}>
+                                <Text
+                                    style={[
+                                        styles.emptyTitle,
+                                        isDarkHud && styles.darkEmptyTitle,
+                                    ]}
+                                >
                                     No work assigned yet
                                 </Text>
-                                <Text style={styles.emptyText}>
+                                <Text
+                                    style={[
+                                        styles.emptyText,
+                                        isDarkHud && styles.darkEmptyText,
+                                    ]}
+                                >
                                     New assignments will appear here. Pull down
                                     to refresh and check again.
                                 </Text>
@@ -827,6 +849,9 @@ const styles = StyleSheet.create({
     screenRoot: {
         backgroundColor: colors.background,
         flex: 1,
+    },
+    darkScreenRoot: {
+        backgroundColor: '#090D16',
     },
     scrollView: {
         flex: 1,
@@ -1004,6 +1029,10 @@ const styles = StyleSheet.create({
         paddingVertical: 36,
         ...shadows.sm,
     },
+    darkEmptyBox: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
     emptyMark: {
         alignItems: 'center',
         backgroundColor: colors.primarySoft,
@@ -1015,11 +1044,18 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         width: 56,
     },
+    darkEmptyMark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: '#F59E0B',
+    },
     emptyTitle: {
         color: colors.text,
         fontSize: 17,
         fontWeight: '700',
         letterSpacing: -0.2,
+    },
+    darkEmptyTitle: {
+        color: '#F8FAFC',
     },
     emptyText: {
         color: colors.secondary,
@@ -1028,6 +1064,9 @@ const styles = StyleSheet.create({
         marginTop: 6,
         maxWidth: 300,
         textAlign: 'center',
+    },
+    darkEmptyText: {
+        color: '#94A3B8',
     },
     jobList: {
         gap: 12,

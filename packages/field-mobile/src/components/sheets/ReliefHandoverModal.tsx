@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     badgeText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#2563EB',
+        color: '#D97706',
     },
     title: {
         fontSize: 18,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     darkCardSection: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#090D16',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
         width: 22,
         height: 22,
         borderRadius: 11,
-        backgroundColor: '#2563EB',
+        backgroundColor: '#D97706',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     sectionHeading: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#1E293B',
+        color: '#0F172A',
     },
     reliefLabel: {
         fontSize: 12,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     },
     primaryButton: {
         flexDirection: 'row',
-        backgroundColor: '#2563EB',
+        backgroundColor: '#D97706',
         borderRadius: 10,
         paddingVertical: 12,
         alignItems: 'center',
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     pinInstructions: {
         fontSize: 13,
         lineHeight: 18,
-        color: '#475569',
+        color: '#64748B',
         marginBottom: 12,
     },
     pinBoxes: {
@@ -460,19 +460,19 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         backgroundColor: '#FFFFFF',
         borderWidth: 2,
-        borderColor: '#2563EB',
+        borderColor: '#D97706',
         justifyContent: 'center',
         alignItems: 'center',
         ...shadows.sm,
     },
     darkPinBox: {
         backgroundColor: '#1E293B',
-        borderColor: '#60A5FA',
+        borderColor: '#F59E0B',
     },
     pinDigit: {
         fontSize: 26,
         fontWeight: '800',
-        color: '#2563EB',
+        color: '#D97706',
     },
     pinInputWrap: {
         marginTop: 14,
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     pinTextInput: {
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
-        borderColor: '#CBD5E1',
+        borderColor: '#E2E8F0',
         borderRadius: 8,
         paddingHorizontal: 16,
         paddingVertical: 10,
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     },
     darkPinTextInput: {
         backgroundColor: '#1E293B',
-        borderColor: '#475569',
+        borderColor: '#334155',
         color: '#F8FAFC',
     },
     footerNotice: {

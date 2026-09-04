@@ -80,7 +80,7 @@ describe('LoginScreen', () => {
         );
 
         expect(cardStyle).toMatchObject({
-            backgroundColor: '#f4f6f8',
+            backgroundColor: '#F1F5F9',
             borderRadius: 0,
             borderWidth: 0,
             overflow: 'visible',
@@ -94,7 +94,7 @@ describe('LoginScreen', () => {
         const submit = view.getByTestId('login-submit-button');
 
         expect(submit).toBeDisabled();
-        expect(submit).toHaveStyle({ backgroundColor: '#e98a00' });
+        expect(submit).toHaveStyle({ backgroundColor: '#D97706' });
 
         await fireEvent.changeText(
             view.getByTestId('login-username-input'),

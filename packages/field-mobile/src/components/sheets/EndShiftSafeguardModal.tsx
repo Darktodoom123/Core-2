@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
     promptText: {
         fontSize: 15,
         lineHeight: 22,
-        color: '#334155',
+        color: '#64748B',
         textAlign: 'center',
         marginBottom: 12,
     },
     darkPromptText: {
-        color: '#CBD5E1',
+        color: '#94A3B8',
     },
     assetHighlight: {
         fontWeight: '700',
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     darkGuardrailNotice: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#090D16',
         color: '#94A3B8',
     },
     actionRow: {
@@ -199,17 +199,17 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#CBD5E1',
+        borderColor: '#E2E8F0',
         alignItems: 'center',
         justifyContent: 'center',
     },
     darkCancelButton: {
-        borderColor: '#475569',
+        borderColor: '#334155',
     },
     cancelButtonText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#475569',
+        color: '#64748B',
     },
     darkCancelButtonText: {
         color: '#94A3B8',

@@ -59,11 +59,11 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                             color={
                                 activeItem === 'today'
                                     ? isDarkHud
-                                        ? '#60A5FA'
-                                        : colors.primaryDark
+                                        ? '#F59E0B'
+                                        : '#D97706'
                                     : isDarkHud
                                       ? '#94A3B8'
-                                      : colors.secondary
+                                      : '#64748B'
                             }
                             name="home"
                             size={20}
@@ -114,11 +114,11 @@ export const FieldBottomNav: React.FC<FieldBottomNavProps> = ({
                             color={
                                 activeItem === 'profile'
                                     ? isDarkHud
-                                        ? '#60A5FA'
-                                        : colors.primaryDark
+                                        ? '#F59E0B'
+                                        : '#D97706'
                                     : isDarkHud
                                       ? '#94A3B8'
-                                      : colors.secondary
+                                      : '#64748B'
                             }
                             name="profile"
                             size={20}
@@ -190,10 +190,10 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
     },
     itemSelected: {
-        backgroundColor: colors.primaryLight,
+        backgroundColor: '#FEF3C7',
     },
     darkItemSelected: {
-        backgroundColor: 'rgba(56, 189, 248, 0.14)',
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
     },
     sosItem: {
         alignItems: 'center',
@@ -215,14 +215,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     labelSelected: {
-        color: colors.primaryDark,
+        color: '#D97706',
         fontWeight: '700',
     },
     darkLabel: {
         color: '#94A3B8',
     },
     darkLabelSelected: {
-        color: '#60A5FA',
+        color: '#F59E0B',
     },
     pressed: {
         opacity: 0.75,

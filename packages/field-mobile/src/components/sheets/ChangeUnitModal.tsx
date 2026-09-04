@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     prompt: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#334155',
+        color: '#64748B',
         marginBottom: 10,
     },
     darkText: {
@@ -293,16 +293,16 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     darkUnitOption: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#1E293B',
         borderColor: '#334155',
     },
     selectedOption: {
-        borderColor: '#2563EB',
-        backgroundColor: '#EFF6FF',
+        borderColor: '#D97706',
+        backgroundColor: '#FEF3C7',
     },
     darkSelectedOption: {
-        borderColor: '#60A5FA',
-        backgroundColor: '#1E3A8A',
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
     },
     optionHeader: {
         flexDirection: 'row',
@@ -312,10 +312,10 @@ const styles = StyleSheet.create({
     unitCode: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1E293B',
+        color: '#0F172A',
     },
     selectedCode: {
-        color: '#2563EB',
+        color: '#D97706',
     },
     unitCapacity: {
         fontSize: 12,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     },
     unitName: {
         fontSize: 13,
-        color: '#475569',
+        color: '#64748B',
     },
     inputLabel: {
         fontSize: 12,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     },
     reasonInput: {
         borderWidth: 1,
-        borderColor: '#CBD5E1',
+        borderColor: '#E2E8F0',
         borderRadius: 8,
         padding: 10,
         fontSize: 13,
@@ -341,8 +341,8 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     darkReasonInput: {
-        borderColor: '#475569',
-        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+        backgroundColor: '#090D16',
         color: '#F8FAFC',
     },
     actionRow: {
@@ -354,22 +354,22 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#CBD5E1',
+        borderColor: '#E2E8F0',
         alignItems: 'center',
     },
     darkCancelBtn: {
-        borderColor: '#475569',
+        borderColor: '#334155',
     },
     cancelText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#475569',
+        color: '#64748B',
     },
     confirmBtn: {
         flex: 1.4,
         paddingVertical: 12,
         borderRadius: 10,
-        backgroundColor: '#2563EB',
+        backgroundColor: '#D97706',
         alignItems: 'center',
     },
     disabledBtn: {
