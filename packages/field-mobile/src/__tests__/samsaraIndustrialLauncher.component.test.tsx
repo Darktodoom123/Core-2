@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
+import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
@@ -184,6 +185,107 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Tapping Forms tile
             await fireEvent.press(view.getByTestId('tile-forms'));
             expect(onOpenForms).toHaveBeenCalled();
+        });
+
+        it('updates persistent duty status when confirmed via selector modal', async () => {
+            const onChangeDutyStatus = jest.fn();
+
+            const view = await render(
+                <OperatorDashboardScreen
+                    isLoading={false}
+                    jobs={[mockJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onDiscardCommand={jest.fn()}
+                    onLogout={jest.fn()}
+                    onOpenDocuments={jest.fn()}
+                    onOpenDvir={jest.fn()}
+                    onOpenForms={jest.fn()}
+                    onOpenRoutes={jest.fn()}
+                    onOpenVehicle={jest.fn()}
+                    onRefresh={jest.fn()}
+                    onRetryCommand={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.5,
+                    }}
+                    userName="Alex Rivera"
+                    userRole="Master Crane Rigger"
+                />,
+            );
+
+            // Initially operating
+            expect(view.getByText('On Duty — Crane Operating')).toBeTruthy();
+            expect(view.getByText('OPR')).toBeTruthy();
+
+            // Open duty modal by tapping persistent duty bar
+            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
+            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
+
+            // Select Driving
+            await fireEvent.press(view.getByTestId('duty-option-driving'));
+
+            // Confirm
+            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
+            expect(onChangeDutyStatus).toHaveBeenCalledWith(
+                'driving',
+                undefined,
+                undefined,
+            );
+
+            // Verified immediate update on dashboard screen
+            expect(view.getByText('On Duty — Driving / Transit')).toBeTruthy();
+            expect(view.getByText('DRV')).toBeTruthy();
+        });
+    });
+
+    describe('AssignedJobsListScreen Persistent Duty Bar', () => {
+        it('updates persistent duty status when confirmed via selector modal', async () => {
+            const onChangeDutyStatus = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[mockJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.0,
+                    }}
+                />,
+            );
+
+            // Initially operating
+            expect(view.getByText('On Duty — Crane Operating')).toBeTruthy();
+            expect(view.getByText('OPR')).toBeTruthy();
+
+            // Open duty modal by tapping persistent duty bar
+            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
+            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
+
+            // Select Standby
+            await fireEvent.press(view.getByTestId('duty-option-standby'));
+            await fireEvent.press(view.getByTestId('reason-client_delay'));
+
+            // Confirm
+            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
+            expect(onChangeDutyStatus).toHaveBeenCalledWith(
+                'standby',
+                'client_delay',
+                undefined,
+            );
+
+            // Verified immediate update on screen
+            expect(view.getByText('On Duty — Standby / Delay')).toBeTruthy();
+            expect(view.getByText('SBY')).toBeTruthy();
         });
     });
 

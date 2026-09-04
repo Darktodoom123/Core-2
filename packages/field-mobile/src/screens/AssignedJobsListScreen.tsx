@@ -203,7 +203,33 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
               ? 'No active assignments'
               : `${jobs.length} ${jobs.length === 1 ? 'active assignment' : 'active assignments'}${pendingResponseCount > 0 ? ` · ${pendingResponseCount} response${pendingResponseCount === 1 ? '' : 's'} needed` : ''}`;
 
-    const currentDuty: DutyStatus = shiftInfo.dutyStatus ?? 'operating';
+    const [overriddenDutyStatus, setOverriddenDutyStatus] = useState<{
+        propStatus?: DutyStatus;
+        localStatus: DutyStatus;
+    } | null>(null);
+
+    const currentDuty: DutyStatus =
+        overriddenDutyStatus &&
+        overriddenDutyStatus.propStatus === shiftInfo.dutyStatus
+            ? overriddenDutyStatus.localStatus
+            : (shiftInfo.dutyStatus ?? 'operating');
+
+    const getDutyColor = (duty: DutyStatus): string => {
+        switch (duty) {
+            case 'operating':
+                return '#D97706';
+            case 'driving':
+                return '#2563EB';
+            case 'standby':
+                return '#EA580C';
+            case 'on_break':
+                return '#059669';
+            case 'off_duty':
+                return '#475569';
+            default:
+                return colors.amberDark;
+        }
+    };
 
     const getDutyLabel = (duty: DutyStatus): string => {
         switch (duty) {
@@ -497,17 +523,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         <View
                             style={[
                                 styles.dutyBadge,
-                                isDarkHud
-                                    ? styles.darkDutyBadge
-                                    : styles.lightDutyBadge,
+                                { backgroundColor: getDutyColor(currentDuty) },
                             ]}
                         >
                             <Text
                                 style={[
                                     styles.dutyBadgeText,
-                                    isDarkHud
-                                        ? styles.darkDutyBadgeText
-                                        : styles.lightDutyBadgeText,
+                                    { color: '#FFFFFF' },
                                 ]}
                             >
                                 {getDutyBadge(currentDuty)}
@@ -522,8 +544,29 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             >
                                 {getDutyLabel(currentDuty)}
                             </Text>
+                            <Text
+                                style={[
+                                    styles.dutyStatusElapsed,
+                                    isDarkHud && styles.darkDutyStatusElapsed,
+                                ]}
+                            >
+                                (
+                                {Math.floor(hoursElapsed)
+                                    .toString()
+                                    .padStart(2, '0')}
+                                :
+                                {Math.round((hoursElapsed % 1) * 60)
+                                    .toString()
+                                    .padStart(2, '0')}{' '}
+                                elapsed · 10h max)
+                            </Text>
                         </View>
                     </View>
+                    <Icon
+                        name="chevron-right"
+                        size={18}
+                        color={isDarkHud ? '#64748B' : colors.muted}
+                    />
                 </Pressable>
 
                 {/* Assigned Vehicle & Rigging Hero Card */}
@@ -763,6 +806,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 maxShiftHours={shiftInfo.maxShiftHours ?? 10}
                 onClose={() => setDutyModalOpen(false)}
                 onSelectDutyStatus={(status, reason, remarks) => {
+                    setOverriddenDutyStatus({
+                        propStatus: shiftInfo.dutyStatus,
+                        localStatus: status,
+                    });
                     onChangeDutyStatus?.(status, reason, remarks);
                 }}
                 visible={dutyModalOpen}
@@ -947,6 +994,9 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 11,
         fontWeight: '600',
+    },
+    darkDutyStatusElapsed: {
+        color: '#94A3B8',
     },
     gridContainer: {
         flexDirection: 'row',

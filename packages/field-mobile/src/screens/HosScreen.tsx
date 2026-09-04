@@ -181,9 +181,22 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     onReleaseUnit,
 }) => {
     const { isDarkHud } = useTheme();
-    const [selectedStatus, setSelectedStatus] = useState<DutyStatus>(
-        shiftInfo.dutyStatus ?? 'operating',
-    );
+    const [overriddenStatus, setOverriddenStatus] = useState<{
+        propStatus?: DutyStatus;
+        localStatus: DutyStatus;
+    } | null>(null);
+
+    const selectedStatus: DutyStatus =
+        overriddenStatus && overriddenStatus.propStatus === shiftInfo.dutyStatus
+            ? overriddenStatus.localStatus
+            : (shiftInfo.dutyStatus ?? 'operating');
+
+    const setSelectedStatus = (status: DutyStatus) => {
+        setOverriddenStatus({
+            propStatus: shiftInfo.dutyStatus,
+            localStatus: status,
+        });
+    };
     const [standbyReason, setStandbyReason] =
         useState<StandbyReason>('client_delay');
     const [remarks, setRemarks] = useState('');

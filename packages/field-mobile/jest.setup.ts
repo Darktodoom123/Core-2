@@ -37,3 +37,23 @@ jest.mock('react-native-webview', () => {
             React.createElement(View, { testID: 'mock-webview', ...props }),
     };
 });
+
+jest.mock('@expo/vector-icons', () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    return {
+        Ionicons: (props: any) =>
+            React.createElement(
+                Text,
+                { testID: `icon-ionicons-${props.name}`, ...props },
+                props.name,
+            ),
+        MaterialCommunityIcons: (props: any) =>
+            React.createElement(
+                Text,
+                { testID: `icon-mci-${props.name}`, ...props },
+                props.name,
+            ),
+    };
+});

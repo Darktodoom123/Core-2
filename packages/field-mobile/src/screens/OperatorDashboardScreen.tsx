@@ -108,7 +108,16 @@ export const OperatorDashboardScreen: React.FC<
         useState(false);
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
 
-    const currentDuty: DutyStatus = shiftInfo.dutyStatus ?? 'operating';
+    const [overriddenDutyStatus, setOverriddenDutyStatus] = useState<{
+        propStatus?: DutyStatus;
+        localStatus: DutyStatus;
+    } | null>(null);
+
+    const currentDuty: DutyStatus =
+        overriddenDutyStatus &&
+        overriddenDutyStatus.propStatus === shiftInfo.dutyStatus
+            ? overriddenDutyStatus.localStatus
+            : (shiftInfo.dutyStatus ?? 'operating');
 
     // Outbox & Sync Counts
     const queuedCount = outboxCommands.filter(
@@ -517,6 +526,10 @@ export const OperatorDashboardScreen: React.FC<
                 maxShiftHours={shiftInfo.maxShiftHours ?? 10}
                 onClose={() => setDutyModalOpen(false)}
                 onSelectDutyStatus={(status, reason, remarks) => {
+                    setOverriddenDutyStatus({
+                        propStatus: shiftInfo.dutyStatus,
+                        localStatus: status,
+                    });
                     onChangeDutyStatus?.(status, reason, remarks);
                 }}
                 visible={dutyModalOpen}

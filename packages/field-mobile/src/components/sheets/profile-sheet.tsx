@@ -56,6 +56,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
+    const topInset = insets?.top ?? 0;
     const { isDarkHud, setMode } = useTheme();
 
     const formattedRole = userRole
@@ -104,427 +105,497 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
     );
 
     return (
-        <Modal
-            animationType="slide"
-            onRequestClose={onClose}
-            statusBarTranslucent
-            transparent
-            visible={visible}
-        >
-            <View
-                accessibilityViewIsModal
-                style={styles.modalRoot}
-                testID="profile-sheet"
+        <>
+            <Modal
+                animationType="slide"
+                onRequestClose={onClose}
+                statusBarTranslucent
+                transparent
+                visible={visible}
             >
-                <Pressable
-                    accessibilityLabel="Close profile"
-                    accessibilityRole="button"
-                    onPress={onClose}
-                    style={styles.scrim}
-                    testID="profile-sheet-dismiss"
-                />
-                <Animated.View
-                    style={[
-                        styles.sheet,
-                        isDarkHud && styles.darkSheet,
-                        {
-                            paddingBottom: Math.max(24, bottomInset + 16),
-                            transform: [{ translateY: panY }],
-                        },
-                    ]}
+                <View
+                    accessibilityViewIsModal
+                    style={styles.modalRoot}
+                    testID="profile-sheet"
                 >
-                    <View {...panResponder.panHandlers} style={styles.dragZone}>
+                    <Pressable
+                        accessibilityLabel="Close profile"
+                        accessibilityRole="button"
+                        onPress={onClose}
+                        style={styles.scrim}
+                        testID="profile-sheet-dismiss"
+                    />
+                    <Animated.View
+                        style={[
+                            styles.sheet,
+                            isDarkHud && styles.darkSheet,
+                            {
+                                marginTop: Math.max(16, topInset + 12),
+                                paddingBottom: Math.max(24, bottomInset + 16),
+                                transform: [{ translateY: panY }],
+                            },
+                        ]}
+                    >
                         <View
-                            style={[
-                                styles.handle,
-                                isDarkHud && styles.darkHandle,
-                            ]}
-                        />
-                        <View style={styles.sheetHeader}>
-                            <Text
-                                accessibilityRole="header"
+                            {...panResponder.panHandlers}
+                            style={styles.dragZone}
+                        >
+                            <View
                                 style={[
-                                    styles.title,
-                                    isDarkHud && styles.darkTitle,
+                                    styles.handle,
+                                    isDarkHud && styles.darkHandle,
                                 ]}
-                            >
-                                Profile
-                            </Text>
-                            <Pressable
-                                accessibilityLabel="Close profile"
-                                accessibilityRole="button"
-                                onPress={onClose}
-                                style={({ pressed }) => [
-                                    styles.closeButton,
-                                    isDarkHud && styles.darkCloseButton,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="profile-sheet-close"
-                            >
+                            />
+                            <View style={styles.sheetHeader}>
                                 <Text
+                                    accessibilityRole="header"
                                     style={[
-                                        styles.closeButtonText,
-                                        isDarkHud && styles.darkCloseButtonText,
+                                        styles.title,
+                                        isDarkHud && styles.darkTitle,
                                     ]}
                                 >
-                                    Close
+                                    Profile
                                 </Text>
-                            </Pressable>
+                                <Pressable
+                                    accessibilityLabel="Close profile"
+                                    accessibilityRole="button"
+                                    onPress={onClose}
+                                    style={({ pressed }) => [
+                                        styles.closeButton,
+                                        isDarkHud && styles.darkCloseButton,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID="profile-sheet-close"
+                                >
+                                    <Text
+                                        style={[
+                                            styles.closeButtonText,
+                                            isDarkHud &&
+                                                styles.darkCloseButtonText,
+                                        ]}
+                                    >
+                                        Close
+                                    </Text>
+                                </Pressable>
+                            </View>
                         </View>
-                    </View>
 
-                    <View style={styles.identityRow}>
                         <View
                             style={[
-                                styles.avatarCircle,
-                                isDarkHud && styles.darkAvatarCircle,
+                                styles.identityCard,
+                                isDarkHud && styles.darkIdentityCard,
                             ]}
                         >
-                            <Text
-                                style={[
-                                    styles.avatarInitials,
-                                    isDarkHud && styles.darkAvatarInitials,
-                                ]}
-                            >
-                                {initialsFor(userName)}
-                            </Text>
-                        </View>
-                        <View style={styles.identityCopy}>
-                            <Text
-                                selectable
-                                style={[
-                                    styles.name,
-                                    isDarkHud && styles.darkName,
-                                ]}
-                            >
-                                {userName || 'Field worker'}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.role,
-                                    isDarkHud && styles.darkRole,
-                                ]}
-                            >
-                                {formattedRole}
-                            </Text>
-                            {assignedAssetLabel ? (
+                            <View style={styles.identityTopRow}>
                                 <View
                                     style={[
-                                        styles.assetBadge,
-                                        isDarkHud && styles.darkAssetBadge,
+                                        styles.avatarCircle,
+                                        isDarkHud && styles.darkAvatarCircle,
                                     ]}
                                 >
                                     <Text
                                         style={[
-                                            styles.assetBadgeText,
+                                            styles.avatarInitials,
                                             isDarkHud &&
-                                                styles.darkAssetBadgeText,
+                                                styles.darkAvatarInitials,
                                         ]}
                                     >
-                                        🚜 {assignedAssetLabel}
+                                        {initialsFor(userName)}
                                     </Text>
-                                </View>
-                            ) : null}
-                        </View>
-                    </View>
-
-                    <View
-                        style={[
-                            styles.divider,
-                            isDarkHud && styles.darkDivider,
-                        ]}
-                    />
-
-                    {/* Display & Lighting (Theme Selector) */}
-                    <View style={styles.systemSection}>
-                        <Text
-                            style={[
-                                styles.sectionLabel,
-                                isDarkHud && styles.darkSectionLabel,
-                            ]}
-                        >
-                            Display & Lighting
-                        </Text>
-                        <View
-                            style={[
-                                styles.themeSelectorCard,
-                                isDarkHud && styles.darkThemeSelectorCard,
-                            ]}
-                            testID="theme-selector-card"
-                        >
-                            <Pressable
-                                accessibilityHint="Switches to high-contrast outdoor daylight theme"
-                                accessibilityLabel="Daylight outdoor theme"
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: !isDarkHud }}
-                                onPress={() => setMode('light')}
-                                style={({ pressed }) => [
-                                    styles.themeOption,
-                                    !isDarkHud && styles.themeOptionActive,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="theme-option-light"
-                            >
-                                <Icon
-                                    color={
-                                        !isDarkHud
-                                            ? '#D97706'
-                                            : isDarkHud
-                                              ? '#94A3B8'
-                                              : colors.secondary
-                                    }
-                                    name="sun"
-                                    size={18}
-                                />
-                                <View style={styles.themeOptionCopy}>
-                                    <Text
-                                        style={[
-                                            styles.themeOptionTitle,
-                                            !isDarkHud &&
-                                                styles.themeOptionTitleActive,
-                                            isDarkHud &&
-                                                styles.darkThemeOptionTitle,
-                                        ]}
-                                    >
-                                        Daylight
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.themeOptionSublabel,
-                                            !isDarkHud &&
-                                                styles.themeOptionSublabelActive,
-                                            isDarkHud &&
-                                                styles.darkThemeOptionSublabel,
-                                        ]}
-                                    >
-                                        Outdoor High-Contrast
-                                    </Text>
-                                </View>
-                                {!isDarkHud ? (
-                                    <Text style={styles.themeCheckmark}>✓</Text>
-                                ) : null}
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityHint="Switches to low-glare cockpit night HUD theme"
-                                accessibilityLabel="Cockpit HUD night theme"
-                                accessibilityRole="button"
-                                accessibilityState={{ selected: isDarkHud }}
-                                onPress={() => setMode('dark_hud')}
-                                style={({ pressed }) => [
-                                    styles.themeOption,
-                                    isDarkHud && styles.themeOptionActiveDark,
-                                    pressed && styles.pressed,
-                                ]}
-                                testID="theme-option-dark"
-                            >
-                                <Icon
-                                    color={
-                                        isDarkHud ? '#F59E0B' : colors.secondary
-                                    }
-                                    name="moon"
-                                    size={18}
-                                />
-                                <View style={styles.themeOptionCopy}>
-                                    <Text
-                                        style={[
-                                            styles.themeOptionTitle,
-                                            isDarkHud &&
-                                                styles.themeOptionTitleActiveDark,
-                                        ]}
-                                    >
-                                        Cockpit HUD
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.themeOptionSublabel,
-                                            isDarkHud &&
-                                                styles.themeOptionSublabelActiveDark,
-                                        ]}
-                                    >
-                                        Night Ops & In-Cab
-                                    </Text>
-                                </View>
-                                {isDarkHud ? (
-                                    <Text style={styles.themeCheckmarkDark}>
-                                        ✓
-                                    </Text>
-                                ) : null}
-                            </Pressable>
-                        </View>
-                    </View>
-
-                    <View
-                        style={[
-                            styles.divider,
-                            isDarkHud && styles.darkDivider,
-                        ]}
-                    />
-
-                    <View style={styles.systemSection}>
-                        <Text
-                            style={[
-                                styles.sectionLabel,
-                                isDarkHud && styles.darkSectionLabel,
-                            ]}
-                        >
-                            System & Sync Health
-                        </Text>
-                        <View
-                            style={[
-                                styles.healthCard,
-                                isDarkHud && styles.darkHealthCard,
-                            ]}
-                        >
-                            <View style={styles.healthRow}>
-                                <Text
-                                    style={[
-                                        styles.healthLabel,
-                                        isDarkHud && styles.darkHealthLabel,
-                                    ]}
-                                >
-                                    Connection:
-                                </Text>
-                                <View style={styles.statusPill}>
                                     <View
                                         style={[
-                                            styles.statusDot,
+                                            styles.avatarStatusDot,
                                             isOnline === false
-                                                ? styles.statusDotOffline
-                                                : styles.statusDotOnline,
+                                                ? styles.avatarOfflineDot
+                                                : styles.avatarOnlineDot,
+                                            isDarkHud &&
+                                                styles.darkAvatarStatusDot,
                                         ]}
                                     />
+                                </View>
+                                <View style={styles.identityCopy}>
+                                    <Text
+                                        numberOfLines={1}
+                                        selectable
+                                        style={[
+                                            styles.name,
+                                            isDarkHud && styles.darkName,
+                                        ]}
+                                    >
+                                        {userName || 'Field worker'}
+                                    </Text>
+                                    <View style={styles.roleMetaRow}>
+                                        <Icon
+                                            color={
+                                                isDarkHud
+                                                    ? '#F59E0B'
+                                                    : '#D97706'
+                                            }
+                                            name="profile"
+                                            size={12}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.roleText,
+                                                isDarkHud &&
+                                                    styles.darkRoleText,
+                                            ]}
+                                        >
+                                            {formattedRole}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View
+                                style={[
+                                    styles.innerDivider,
+                                    isDarkHud && styles.darkInnerDivider,
+                                ]}
+                            />
+
+                            {/* Clear Inner Station / Rig Row (transparent, seamless) */}
+                            <View style={styles.stationRowClear}>
+                                <View style={styles.stationLeft}>
+                                    <View
+                                        style={[
+                                            styles.stationIconWrap,
+                                            isDarkHud &&
+                                                styles.darkStationIconWrap,
+                                        ]}
+                                    >
+                                        <Icon
+                                            color={
+                                                isDarkHud
+                                                    ? '#F59E0B'
+                                                    : '#D97706'
+                                            }
+                                            name="crane"
+                                            size={15}
+                                        />
+                                    </View>
+                                    <View style={styles.stationCopy}>
+                                        <Text
+                                            style={[
+                                                styles.stationLabel,
+                                                isDarkHud &&
+                                                    styles.darkStationLabel,
+                                            ]}
+                                        >
+                                            Assigned Rig
+                                        </Text>
+                                        <Text
+                                            numberOfLines={1}
+                                            style={[
+                                                styles.stationValue,
+                                                isDarkHud &&
+                                                    styles.darkStationValue,
+                                            ]}
+                                        >
+                                            {assignedAssetLabel ||
+                                                'In-Cab Standby (Unassigned)'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View
+                                    style={[
+                                        styles.stationBadge,
+                                        assignedAssetLabel
+                                            ? isDarkHud
+                                                ? styles.darkStationBadgeInCab
+                                                : styles.stationBadgeInCab
+                                            : isDarkHud
+                                              ? styles.darkStationBadgeStandby
+                                              : styles.stationBadgeStandby,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.stationBadgeText,
+                                            assignedAssetLabel
+                                                ? isDarkHud
+                                                    ? styles.darkStationBadgeTextInCab
+                                                    : styles.stationBadgeTextInCab
+                                                : isDarkHud
+                                                  ? styles.darkStationBadgeTextStandby
+                                                  : styles.stationBadgeTextStandby,
+                                        ]}
+                                    >
+                                        {assignedAssetLabel
+                                            ? 'In-Cab'
+                                            : 'Standby'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <View
+                            style={[
+                                styles.divider,
+                                isDarkHud && styles.darkDivider,
+                            ]}
+                        />
+
+                        {/* Display & Lighting (Theme Selector) */}
+                        <View style={styles.systemSection}>
+                            <Text
+                                style={[
+                                    styles.sectionLabel,
+                                    isDarkHud && styles.darkSectionLabel,
+                                ]}
+                            >
+                                Display & Lighting
+                            </Text>
+                            <View
+                                style={[
+                                    styles.themeSelectorCard,
+                                    isDarkHud && styles.darkThemeSelectorCard,
+                                ]}
+                                testID="theme-selector-card"
+                            >
+                                <Pressable
+                                    accessibilityHint="Switches to high-contrast outdoor daylight theme"
+                                    accessibilityLabel="Daylight outdoor theme"
+                                    accessibilityRole="button"
+                                    accessibilityState={{
+                                        selected: !isDarkHud,
+                                    }}
+                                    onPress={() => setMode('light')}
+                                    style={({ pressed }) => [
+                                        styles.themeOption,
+                                        !isDarkHud && styles.themeOptionActive,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID="theme-option-light"
+                                >
+                                    <Icon
+                                        color={
+                                            !isDarkHud
+                                                ? '#D97706'
+                                                : isDarkHud
+                                                  ? '#94A3B8'
+                                                  : colors.secondary
+                                        }
+                                        name="sun"
+                                        size={18}
+                                    />
+                                    <View style={styles.themeOptionCopy}>
+                                        <Text
+                                            style={[
+                                                styles.themeOptionTitle,
+                                                !isDarkHud &&
+                                                    styles.themeOptionTitleActive,
+                                                isDarkHud &&
+                                                    styles.darkThemeOptionTitle,
+                                            ]}
+                                        >
+                                            Daylight
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.themeOptionSublabel,
+                                                !isDarkHud &&
+                                                    styles.themeOptionSublabelActive,
+                                                isDarkHud &&
+                                                    styles.darkThemeOptionSublabel,
+                                            ]}
+                                        >
+                                            Outdoor High-Contrast
+                                        </Text>
+                                    </View>
+                                    {!isDarkHud ? (
+                                        <Text style={styles.themeCheckmark}>
+                                            ✓
+                                        </Text>
+                                    ) : null}
+                                </Pressable>
+
+                                <Pressable
+                                    accessibilityHint="Switches to low-glare cockpit night HUD theme"
+                                    accessibilityLabel="Cockpit HUD night theme"
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected: isDarkHud }}
+                                    onPress={() => setMode('dark_hud')}
+                                    style={({ pressed }) => [
+                                        styles.themeOption,
+                                        isDarkHud &&
+                                            styles.themeOptionActiveDark,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID="theme-option-dark"
+                                >
+                                    <Icon
+                                        color={
+                                            isDarkHud
+                                                ? '#F59E0B'
+                                                : colors.secondary
+                                        }
+                                        name="moon"
+                                        size={18}
+                                    />
+                                    <View style={styles.themeOptionCopy}>
+                                        <Text
+                                            style={[
+                                                styles.themeOptionTitle,
+                                                isDarkHud &&
+                                                    styles.themeOptionTitleActiveDark,
+                                            ]}
+                                        >
+                                            Cockpit HUD
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.themeOptionSublabel,
+                                                isDarkHud &&
+                                                    styles.themeOptionSublabelActiveDark,
+                                            ]}
+                                        >
+                                            Night Ops & In-Cab
+                                        </Text>
+                                    </View>
+                                    {isDarkHud ? (
+                                        <Text style={styles.themeCheckmarkDark}>
+                                            ✓
+                                        </Text>
+                                    ) : null}
+                                </Pressable>
+                            </View>
+                        </View>
+
+                        <View
+                            style={[
+                                styles.divider,
+                                isDarkHud && styles.darkDivider,
+                            ]}
+                        />
+
+                        <View style={styles.systemSection}>
+                            <Text
+                                style={[
+                                    styles.sectionLabel,
+                                    isDarkHud && styles.darkSectionLabel,
+                                ]}
+                            >
+                                System & Sync Health
+                            </Text>
+                            <View
+                                style={[
+                                    styles.healthCard,
+                                    isDarkHud && styles.darkHealthCard,
+                                ]}
+                            >
+                                <View style={styles.healthRow}>
+                                    <Text
+                                        style={[
+                                            styles.healthLabel,
+                                            isDarkHud && styles.darkHealthLabel,
+                                        ]}
+                                    >
+                                        Connection:
+                                    </Text>
+                                    <View style={styles.statusPill}>
+                                        <View
+                                            style={[
+                                                styles.statusDot,
+                                                isOnline === false
+                                                    ? styles.statusDotOffline
+                                                    : styles.statusDotOnline,
+                                            ]}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.healthValue,
+                                                isDarkHud &&
+                                                    styles.darkHealthValue,
+                                            ]}
+                                        >
+                                            {isOnline === false
+                                                ? 'Offline (Saved locally)'
+                                                : 'Online'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={styles.healthRow}>
+                                    <Text
+                                        style={[
+                                            styles.healthLabel,
+                                            isDarkHud && styles.darkHealthLabel,
+                                        ]}
+                                    >
+                                        Outbox Data:
+                                    </Text>
                                     <Text
                                         style={[
                                             styles.healthValue,
                                             isDarkHud && styles.darkHealthValue,
+                                            queuedCount > 0 &&
+                                                (isDarkHud
+                                                    ? styles.darkHealthValueWarning
+                                                    : styles.healthValueWarning),
                                         ]}
                                     >
-                                        {isOnline === false
-                                            ? 'Offline (Saved locally)'
-                                            : 'Online'}
+                                        {queuedCount > 0
+                                            ? `⏳ ${queuedCount} unsynced action${
+                                                  queuedCount > 1 ? 's' : ''
+                                              }`
+                                            : '✓ All actions synced'}
                                     </Text>
                                 </View>
-                            </View>
-                            <View style={styles.healthRow}>
-                                <Text
-                                    style={[
-                                        styles.healthLabel,
-                                        isDarkHud && styles.darkHealthLabel,
-                                    ]}
-                                >
-                                    Outbox Data:
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.healthValue,
-                                        isDarkHud && styles.darkHealthValue,
-                                        queuedCount > 0 &&
-                                            styles.healthValueWarning,
-                                    ]}
-                                >
-                                    {queuedCount > 0
-                                        ? `⏳ ${queuedCount} unsynced action${
-                                              queuedCount > 1 ? 's' : ''
-                                          }`
-                                        : '✓ All actions synced'}
-                                </Text>
-                            </View>
-                            <View style={styles.healthRow}>
-                                <Text
-                                    style={[
-                                        styles.healthLabel,
-                                        isDarkHud && styles.darkHealthLabel,
-                                    ]}
-                                >
-                                    Field App:
-                                </Text>
-                                <Text style={styles.healthValueMuted}>
-                                    v1.0.0 (Core-2 Field Mobile)
-                                </Text>
-                            </View>
-                            {queuedCount > 0 &&
-                            isOnline !== false &&
-                            onSyncNow ? (
-                                <Pressable
-                                    accessibilityLabel="Sync queued outbox items"
-                                    accessibilityRole="button"
-                                    onPress={onSyncNow}
-                                    style={({ pressed }) => [
-                                        styles.quickSyncButton,
-                                        pressed && styles.pressed,
-                                    ]}
-                                >
-                                    <Text style={styles.quickSyncButtonText}>
-                                        Sync outbox now ({queuedCount})
+                                <View style={styles.healthRow}>
+                                    <Text
+                                        style={[
+                                            styles.healthLabel,
+                                            isDarkHud && styles.darkHealthLabel,
+                                        ]}
+                                    >
+                                        Field App:
                                     </Text>
-                                </Pressable>
-                            ) : null}
-                        </View>
-                    </View>
-
-                    <View
-                        style={[
-                            styles.divider,
-                            isDarkHud && styles.darkDivider,
-                        ]}
-                    />
-
-                    {signOutConfirmationOpen ? (
-                        <View style={styles.confirmation}>
-                            <Text style={styles.sectionLabel}>Sign out</Text>
-                            <Text style={styles.confirmationTitle}>
-                                Sign out of the field app?
-                            </Text>
-                            {queuedCount > 0 ? (
-                                <View style={styles.warningCallout}>
-                                    <Text style={styles.warningCalloutText}>
-                                        You have {queuedCount} unsynced
-                                        action(s) stored on this device. Signing
-                                        out will pause syncing until you log
-                                        back in.
+                                    <Text
+                                        style={[
+                                            styles.healthValueMuted,
+                                            isDarkHud &&
+                                                styles.darkHealthValueMuted,
+                                        ]}
+                                    >
+                                        v1.0.0 (Core-2 Field Mobile)
                                     </Text>
                                 </View>
-                            ) : (
-                                <Text style={styles.confirmationMessage}>
-                                    You can sign in again when you need to
-                                    access field work.
-                                </Text>
-                            )}
-                            <View style={styles.confirmationActions}>
-                                <Pressable
-                                    accessibilityLabel="Cancel sign out"
-                                    accessibilityRole="button"
-                                    onPress={onCancelSignOut}
-                                    style={({ pressed }) => [
-                                        styles.actionButton,
-                                        pressed && styles.pressed,
-                                    ]}
-                                    testID="cancel-sign-out-button"
-                                >
-                                    <Text style={styles.actionButtonText}>
-                                        Cancel
-                                    </Text>
-                                </Pressable>
-                                <Pressable
-                                    accessibilityLabel="Confirm sign out"
-                                    accessibilityRole="button"
-                                    disabled={!onLogout}
-                                    onPress={onLogout}
-                                    style={({ pressed }) => [
-                                        styles.actionButton,
-                                        styles.signOutButton,
-                                        pressed && styles.pressed,
-                                    ]}
-                                    testID="confirm-sign-out-button"
-                                >
-                                    <Text style={styles.signOutButtonText}>
-                                        Sign out
-                                    </Text>
-                                </Pressable>
+                                {queuedCount > 0 &&
+                                isOnline !== false &&
+                                onSyncNow ? (
+                                    <Pressable
+                                        accessibilityLabel="Sync queued outbox items"
+                                        accessibilityRole="button"
+                                        onPress={onSyncNow}
+                                        style={({ pressed }) => [
+                                            styles.quickSyncButton,
+                                            isDarkHud &&
+                                                styles.darkQuickSyncButton,
+                                            pressed && styles.pressed,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.quickSyncButtonText,
+                                                isDarkHud &&
+                                                    styles.darkQuickSyncButtonText,
+                                            ]}
+                                        >
+                                            Sync outbox now ({queuedCount})
+                                        </Text>
+                                    </Pressable>
+                                ) : null}
                             </View>
                         </View>
-                    ) : (
+
+                        <View
+                            style={[
+                                styles.divider,
+                                isDarkHud && styles.darkDivider,
+                            ]}
+                        />
+
                         <Pressable
                             accessibilityLabel="Start sign out"
                             accessibilityRole="button"
@@ -565,10 +636,140 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 ›
                             </Text>
                         </Pressable>
-                    )}
-                </Animated.View>
-            </View>
-        </Modal>
+                    </Animated.View>
+                </View>
+            </Modal>
+
+            {/* Reconfirmation Pop-up Modal for Sign-Out */}
+            <Modal
+                animationType="fade"
+                onRequestClose={onCancelSignOut}
+                statusBarTranslucent
+                transparent
+                visible={signOutConfirmationOpen}
+            >
+                <View
+                    accessibilityViewIsModal
+                    style={styles.confirmModalOverlay}
+                    testID="sign-out-confirmation-modal"
+                >
+                    <Pressable
+                        accessibilityLabel="Dismiss sign out dialog"
+                        accessibilityRole="button"
+                        onPress={onCancelSignOut}
+                        style={styles.confirmModalScrim}
+                    />
+                    <View
+                        style={[
+                            styles.confirmDialog,
+                            isDarkHud && styles.darkConfirmDialog,
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.confirmIconBadge,
+                                isDarkHud && styles.darkConfirmIconBadge,
+                            ]}
+                        >
+                            <Icon
+                                color={isDarkHud ? '#EF4444' : '#DC2626'}
+                                name="log-out"
+                                size={24}
+                            />
+                        </View>
+
+                        <Text
+                            accessibilityRole="header"
+                            style={[
+                                styles.confirmationTitle,
+                                isDarkHud && styles.darkConfirmationTitle,
+                            ]}
+                        >
+                            Sign out of the field app?
+                        </Text>
+
+                        {queuedCount > 0 ? (
+                            <View
+                                style={[
+                                    styles.warningCallout,
+                                    isDarkHud && styles.darkWarningCallout,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.warningCalloutText,
+                                        isDarkHud &&
+                                            styles.darkWarningCalloutText,
+                                    ]}
+                                >
+                                    You have {queuedCount} unsynced action(s)
+                                    stored on this device. Signing out will
+                                    pause syncing until you log back in.
+                                </Text>
+                            </View>
+                        ) : (
+                            <Text
+                                style={[
+                                    styles.confirmationMessage,
+                                    isDarkHud && styles.darkConfirmationMessage,
+                                ]}
+                            >
+                                You can sign in again when you need to access
+                                field work.
+                            </Text>
+                        )}
+
+                        <View style={styles.confirmationActions}>
+                            <Pressable
+                                accessibilityLabel="Cancel sign out"
+                                accessibilityRole="button"
+                                onPress={onCancelSignOut}
+                                style={({ pressed }) => [
+                                    styles.actionButton,
+                                    isDarkHud && styles.darkActionButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="cancel-sign-out-button"
+                            >
+                                <Text
+                                    style={[
+                                        styles.actionButtonText,
+                                        isDarkHud &&
+                                            styles.darkActionButtonText,
+                                    ]}
+                                >
+                                    Cancel
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                accessibilityLabel="Confirm sign out"
+                                accessibilityRole="button"
+                                disabled={!onLogout}
+                                onPress={onLogout}
+                                style={({ pressed }) => [
+                                    styles.actionButton,
+                                    isDarkHud && styles.darkActionButton,
+                                    styles.signOutButton,
+                                    isDarkHud && styles.darkSignOutButton,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="confirm-sign-out-button"
+                            >
+                                <Text
+                                    style={[
+                                        styles.signOutButtonText,
+                                        isDarkHud &&
+                                            styles.darkSignOutButtonText,
+                                    ]}
+                                >
+                                    Sign out
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </>
     );
 };
 
@@ -628,53 +829,193 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
     },
-    identityRow: {
+    identityCard: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
+        borderWidth: 1,
+        gap: 12,
+        padding: 14,
+    },
+    darkIdentityCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    identityTopRow: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 12,
+        gap: 14,
     },
     avatarCircle: {
         alignItems: 'center',
-        backgroundColor: colors.amberSoft,
-        borderRadius: 28,
-        height: 56,
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+        borderRadius: 26,
+        borderWidth: 1.5,
+        height: 52,
         justifyContent: 'center',
-        width: 56,
+        position: 'relative',
+        width: 52,
+    },
+    darkAvatarCircle: {
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
     },
     avatarInitials: {
-        color: colors.amberDark,
+        color: '#1D4ED8',
         fontSize: 16,
-        fontWeight: '800',
+        fontWeight: '900',
+    },
+    darkAvatarInitials: {
+        color: '#F59E0B',
+    },
+    avatarStatusDot: {
+        borderColor: '#FFFFFF',
+        borderRadius: 6,
+        borderWidth: 2,
+        bottom: -1,
+        height: 12,
+        position: 'absolute',
+        right: -1,
+        width: 12,
+    },
+    darkAvatarStatusDot: {
+        borderColor: '#0F172A',
+    },
+    avatarOnlineDot: {
+        backgroundColor: '#10B981',
+    },
+    avatarOfflineDot: {
+        backgroundColor: '#EA580C',
     },
     identityCopy: {
         flex: 1,
-        gap: 3,
+        gap: 4,
         minWidth: 0,
     },
     name: {
         color: colors.text,
         fontSize: 17,
         fontWeight: '800',
+        letterSpacing: -0.2,
     },
-    role: {
-        color: colors.secondary,
-        fontSize: 14,
+    darkName: {
+        color: '#F8FAFC',
+    },
+    roleMetaRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
+    roleText: {
+        color: '#D97706',
+        fontSize: 12,
+        fontWeight: '700',
         textTransform: 'capitalize',
     },
-    assetBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
+    darkRoleText: {
+        color: '#F59E0B',
+    },
+    innerDivider: {
+        backgroundColor: colors.border,
+        height: 1,
+    },
+    darkInnerDivider: {
+        backgroundColor: '#334155',
+    },
+    stationRowClear: {
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        flexDirection: 'row',
+        gap: 10,
+        justifyContent: 'space-between',
+        paddingHorizontal: 2,
+        paddingVertical: 2,
+    },
+    stationLeft: {
+        alignItems: 'center',
+        flex: 1,
+        flexDirection: 'row',
+        gap: 10,
+        minWidth: 0,
+    },
+    stationIconWrap: {
+        alignItems: 'center',
+        backgroundColor: '#EFF6FF',
+        borderColor: '#DBEAFE',
+        borderRadius: 8,
+        borderWidth: 1,
+        height: 34,
+        justifyContent: 'center',
+        width: 34,
+    },
+    darkStationIconWrap: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    stationCopy: {
+        flex: 1,
+        gap: 1,
+        minWidth: 0,
+    },
+    stationLabel: {
+        color: '#64748B',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.6,
+        textTransform: 'uppercase',
+    },
+    darkStationLabel: {
+        color: '#94A3B8',
+    },
+    stationValue: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    darkStationValue: {
+        color: '#F8FAFC',
+    },
+    stationBadge: {
         borderRadius: 6,
         borderWidth: 1,
-        marginTop: 2,
         paddingHorizontal: 8,
         paddingVertical: 3,
     },
-    assetBadgeText: {
-        color: colors.text,
-        fontSize: 12,
-        fontWeight: '700',
+    stationBadgeInCab: {
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
+    },
+    darkStationBadgeInCab: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: 'rgba(16, 185, 129, 0.35)',
+    },
+    stationBadgeStandby: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+    },
+    darkStationBadgeStandby: {
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
+    stationBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
+    stationBadgeTextInCab: {
+        color: '#059669',
+    },
+    darkStationBadgeTextInCab: {
+        color: '#34D399',
+    },
+    stationBadgeTextStandby: {
+        color: '#D97706',
+    },
+    darkStationBadgeTextStandby: {
+        color: '#FBBF24',
     },
     divider: {
         backgroundColor: colors.border,
@@ -793,23 +1134,65 @@ const styles = StyleSheet.create({
         fontSize: 26,
         lineHeight: 28,
     },
-    confirmation: {
-        gap: 10,
+    confirmModalOverlay: {
+        alignItems: 'center',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        flex: 1,
+        justifyContent: 'center',
+        padding: 24,
+    },
+    confirmModalScrim: {
+        ...StyleSheet.absoluteFill,
+    },
+    confirmDialog: {
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 18,
+        borderWidth: 1,
+        gap: 12,
+        maxWidth: 360,
+        padding: 22,
+        width: '100%',
+        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.25)',
+    },
+    darkConfirmDialog: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6)',
+    },
+    confirmIconBadge: {
+        alignItems: 'center',
+        backgroundColor: '#FEE2E2',
+        borderColor: '#FECACA',
+        borderRadius: 24,
+        borderWidth: 1,
+        height: 48,
+        justifyContent: 'center',
+        marginBottom: 2,
+        width: 48,
+    },
+    darkConfirmIconBadge: {
+        backgroundColor: 'rgba(239, 68, 68, 0.18)',
+        borderColor: 'rgba(239, 68, 68, 0.45)',
     },
     confirmationTitle: {
         color: colors.text,
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '800',
+        textAlign: 'center',
     },
     confirmationMessage: {
         color: colors.secondary,
         fontSize: 14,
         lineHeight: 20,
+        textAlign: 'center',
     },
     confirmationActions: {
         flexDirection: 'row',
-        gap: 10,
-        marginTop: 4,
+        gap: 12,
+        marginTop: 6,
+        width: '100%',
     },
     actionButton: {
         alignItems: 'center',
@@ -855,26 +1238,6 @@ const styles = StyleSheet.create({
     darkCloseButtonText: {
         color: '#94A3B8',
     },
-    darkAvatarCircle: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
-        borderColor: '#F59E0B',
-    },
-    darkAvatarInitials: {
-        color: '#F59E0B',
-    },
-    darkName: {
-        color: '#F8FAFC',
-    },
-    darkRole: {
-        color: '#94A3B8',
-    },
-    darkAssetBadge: {
-        backgroundColor: '#090D16',
-        borderColor: '#334155',
-    },
-    darkAssetBadgeText: {
-        color: '#F8FAFC',
-    },
     darkDivider: {
         backgroundColor: '#334155',
     },
@@ -902,6 +1265,45 @@ const styles = StyleSheet.create({
     },
     darkChevron: {
         color: '#94A3B8',
+    },
+    darkConfirmationTitle: {
+        color: '#F8FAFC',
+    },
+    darkConfirmationMessage: {
+        color: '#94A3B8',
+    },
+    darkWarningCallout: {
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+        borderColor: 'rgba(245, 158, 11, 0.35)',
+    },
+    darkWarningCalloutText: {
+        color: '#FDE68A',
+    },
+    darkActionButton: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    darkActionButtonText: {
+        color: '#F8FAFC',
+    },
+    darkSignOutButton: {
+        backgroundColor: '#DC2626',
+        borderColor: '#EF4444',
+    },
+    darkSignOutButtonText: {
+        color: '#FFFFFF',
+    },
+    darkHealthValueMuted: {
+        color: '#94A3B8',
+    },
+    darkHealthValueWarning: {
+        color: '#FBBF24',
+    },
+    darkQuickSyncButton: {
+        backgroundColor: '#D97706',
+    },
+    darkQuickSyncButtonText: {
+        color: '#FFFFFF',
     },
     themeSelectorCard: {
         backgroundColor: colors.surfaceMuted,

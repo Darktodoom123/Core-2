@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    Vibration,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ interface DutyOption {
     badgeTextColor: string;
     borderColor: string;
     bgColor: string;
+    darkBgColor: string;
 }
 
 const DUTY_OPTIONS: DutyOption[] = [
@@ -51,6 +53,7 @@ const DUTY_OPTIONS: DutyOption[] = [
         badgeTextColor: '#FFFFFF',
         borderColor: '#F59E0B',
         bgColor: '#FFFBEB',
+        darkBgColor: 'rgba(245, 158, 11, 0.16)',
     },
     {
         status: 'driving',
@@ -62,6 +65,7 @@ const DUTY_OPTIONS: DutyOption[] = [
         badgeTextColor: '#FFFFFF',
         borderColor: '#3B82F6',
         bgColor: '#EFF6FF',
+        darkBgColor: 'rgba(59, 130, 246, 0.16)',
     },
     {
         status: 'standby',
@@ -73,6 +77,7 @@ const DUTY_OPTIONS: DutyOption[] = [
         badgeTextColor: '#FFFFFF',
         borderColor: '#F97316',
         bgColor: '#FFF7ED',
+        darkBgColor: 'rgba(249, 115, 22, 0.16)',
     },
     {
         status: 'on_break',
@@ -84,6 +89,7 @@ const DUTY_OPTIONS: DutyOption[] = [
         badgeTextColor: '#FFFFFF',
         borderColor: '#10B981',
         bgColor: '#ECFDF5',
+        darkBgColor: 'rgba(16, 185, 129, 0.16)',
     },
     {
         status: 'off_duty',
@@ -95,6 +101,7 @@ const DUTY_OPTIONS: DutyOption[] = [
         badgeTextColor: '#FFFFFF',
         borderColor: '#64748B',
         bgColor: '#F8FAFC',
+        darkBgColor: 'rgba(148, 163, 184, 0.16)',
     },
 ];
 
@@ -141,11 +148,18 @@ export const DutyStatusSelectorModal: React.FC<
 }) => {
     const { isDarkHud } = useTheme();
     const insets = useSafeAreaInsets();
-    const [selectedStatus, setSelectedStatus] =
-        useState<DutyStatus>(currentDutyStatus);
+    const [overriddenStatus, setOverriddenStatus] = useState<{
+        propStatus: DutyStatus;
+        localStatus: DutyStatus;
+    } | null>(null);
     const [standbyReason, setStandbyReason] =
         useState<StandbyReason>('client_delay');
     const [remarks, setRemarks] = useState('');
+
+    const selectedStatus: DutyStatus =
+        overriddenStatus && overriddenStatus.propStatus === currentDutyStatus
+            ? overriddenStatus.localStatus
+            : currentDutyStatus;
 
     const shiftProgressPercent = Math.min(
         100,
@@ -153,6 +167,29 @@ export const DutyStatusSelectorModal: React.FC<
     );
     const isShiftNearLimit = hoursElapsed >= maxShiftHours * 0.8;
     const isShiftExceeded = hoursElapsed >= maxShiftHours;
+
+    const handleSelectStatus = (status: DutyStatus) => {
+        try {
+            Vibration.vibrate(30);
+        } catch {
+            // Ignore on unsupported platforms
+        }
+
+        setOverriddenStatus({
+            propStatus: currentDutyStatus,
+            localStatus: status,
+        });
+    };
+
+    const handleSelectReason = (reason: StandbyReason) => {
+        try {
+            Vibration.vibrate(25);
+        } catch {
+            // Ignore on unsupported platforms
+        }
+
+        setStandbyReason(reason);
+    };
 
     const handleConfirm = () => {
         onSelectDutyStatus(
@@ -181,7 +218,12 @@ export const DutyStatusSelectorModal: React.FC<
                 >
                     {/* Sheet Header */}
                     <View style={styles.sheetHeader}>
-                        <View style={styles.handleBar} />
+                        <View
+                            style={[
+                                styles.handleBar,
+                                isDarkHud && styles.darkHandleBar,
+                            ]}
+                        />
                         <View style={styles.headerRow}>
                             <View style={styles.titleGroup}>
                                 <Text
@@ -205,9 +247,16 @@ export const DutyStatusSelectorModal: React.FC<
                             <Pressable
                                 accessibilityLabel="Close duty status modal"
                                 accessibilityRole="button"
+                                hitSlop={{
+                                    top: 12,
+                                    bottom: 12,
+                                    left: 12,
+                                    right: 12,
+                                }}
                                 onPress={onClose}
                                 style={({ pressed }) => [
                                     styles.closeButton,
+                                    isDarkHud && styles.darkCloseButton,
                                     pressed && styles.pressed,
                                 ]}
                                 testID="close-duty-modal-btn"
@@ -215,7 +264,7 @@ export const DutyStatusSelectorModal: React.FC<
                                 <Icon
                                     name="close"
                                     size={18}
-                                    color={isDarkHud ? '#CBD5E1' : colors.text}
+                                    color={isDarkHud ? '#F1F5F9' : colors.text}
                                 />
                             </Pressable>
                         </View>
@@ -225,12 +274,17 @@ export const DutyStatusSelectorModal: React.FC<
                     <View
                         style={[
                             styles.shiftGaugeCard,
-                            isDarkHud && styles.darkShiftGaugeCard,
                             isShiftExceeded
-                                ? styles.gaugeExceeded
+                                ? isDarkHud
+                                    ? styles.darkGaugeExceeded
+                                    : styles.gaugeExceeded
                                 : isShiftNearLimit
-                                  ? styles.gaugeWarning
-                                  : styles.gaugeNormal,
+                                  ? isDarkHud
+                                      ? styles.darkGaugeWarning
+                                      : styles.gaugeWarning
+                                  : isDarkHud
+                                    ? styles.darkGaugeNormal
+                                    : styles.gaugeNormal,
                         ]}
                     >
                         <View style={styles.gaugeHeader}>
@@ -240,10 +294,16 @@ export const DutyStatusSelectorModal: React.FC<
                                     size={15}
                                     color={
                                         isShiftExceeded
-                                            ? colors.redDark
+                                            ? isDarkHud
+                                                ? '#F87171'
+                                                : colors.redDark
                                             : isShiftNearLimit
-                                              ? colors.warningDark
-                                              : colors.greenDark
+                                              ? isDarkHud
+                                                  ? '#FBBF24'
+                                                  : colors.warningDark
+                                              : isDarkHud
+                                                ? '#34D399'
+                                                : colors.greenDark
                                     }
                                 />
                                 <Text
@@ -260,10 +320,16 @@ export const DutyStatusSelectorModal: React.FC<
                                 style={[
                                     styles.gaugeStatusLabel,
                                     isShiftExceeded
-                                        ? styles.gaugeStatusExceeded
+                                        ? isDarkHud
+                                            ? styles.darkGaugeStatusExceeded
+                                            : styles.gaugeStatusExceeded
                                         : isShiftNearLimit
-                                          ? styles.gaugeStatusWarning
-                                          : styles.gaugeStatusNormal,
+                                          ? isDarkHud
+                                              ? styles.darkGaugeStatusWarning
+                                              : styles.gaugeStatusWarning
+                                          : isDarkHud
+                                            ? styles.darkGaugeStatusNormal
+                                            : styles.gaugeStatusNormal,
                                 ]}
                             >
                                 {isShiftExceeded
@@ -273,7 +339,12 @@ export const DutyStatusSelectorModal: React.FC<
                                       : 'Normal Duty'}
                             </Text>
                         </View>
-                        <View style={styles.progressBarBackground}>
+                        <View
+                            style={[
+                                styles.progressBarBackground,
+                                isDarkHud && styles.darkProgressBarBackground,
+                            ]}
+                        >
                             <View
                                 style={[
                                     styles.progressBarFill,
@@ -314,26 +385,47 @@ export const DutyStatusSelectorModal: React.FC<
                                         accessibilityState={{
                                             checked: isSelected,
                                         }}
+                                        hitSlop={{
+                                            top: 6,
+                                            bottom: 6,
+                                            left: 6,
+                                            right: 6,
+                                        }}
                                         key={opt.status}
                                         onPress={() =>
-                                            setSelectedStatus(opt.status)
+                                            handleSelectStatus(opt.status)
                                         }
                                         style={({ pressed }) => [
                                             styles.dutyOptionCard,
-                                            isDarkHud &&
-                                                styles.darkDutyOptionCard,
-                                            isSelected && [
-                                                styles.dutyOptionSelected,
-                                                {
-                                                    borderColor:
-                                                        opt.borderColor,
-                                                },
-                                            ],
+                                            isDarkHud
+                                                ? styles.darkDutyOptionCard
+                                                : styles.lightDutyOptionCard,
+                                            isSelected &&
+                                                (isDarkHud
+                                                    ? [
+                                                          styles.darkDutyOptionSelected,
+                                                          {
+                                                              borderColor:
+                                                                  opt.borderColor,
+                                                              backgroundColor:
+                                                                  opt.darkBgColor,
+                                                          },
+                                                      ]
+                                                    : [
+                                                          styles.lightDutyOptionSelected,
+                                                          {
+                                                              borderColor:
+                                                                  opt.borderColor,
+                                                              backgroundColor:
+                                                                  opt.bgColor,
+                                                          },
+                                                      ]),
                                             pressed && styles.pressed,
                                         ]}
                                         testID={`duty-option-${opt.status}`}
                                     >
                                         <View
+                                            pointerEvents="none"
                                             style={[
                                                 styles.statusBadge,
                                                 {
@@ -354,7 +446,10 @@ export const DutyStatusSelectorModal: React.FC<
                                             </Text>
                                         </View>
 
-                                        <View style={styles.dutyCopy}>
+                                        <View
+                                            pointerEvents="none"
+                                            style={styles.dutyCopy}
+                                        >
                                             <Text
                                                 style={[
                                                     styles.dutyTitle,
@@ -376,15 +471,29 @@ export const DutyStatusSelectorModal: React.FC<
                                         </View>
 
                                         <View
+                                            pointerEvents="none"
                                             style={[
                                                 styles.radioCircle,
-                                                isSelected &&
+                                                isDarkHud &&
+                                                    styles.darkRadioCircle,
+                                                isSelected && [
                                                     styles.radioCircleSelected,
+                                                    {
+                                                        borderColor:
+                                                            opt.borderColor,
+                                                    },
+                                                ],
                                             ]}
                                         >
                                             {isSelected ? (
                                                 <View
-                                                    style={styles.radioDotInner}
+                                                    style={[
+                                                        styles.radioDotInner,
+                                                        {
+                                                            backgroundColor:
+                                                                opt.borderColor,
+                                                        },
+                                                    ]}
                                                 />
                                             ) : null}
                                         </View>
@@ -418,7 +527,12 @@ export const DutyStatusSelectorModal: React.FC<
                                         </Text>
                                     </View>
                                 </View>
-                                <Text style={styles.standbyHelper}>
+                                <Text
+                                    style={[
+                                        styles.standbyHelper,
+                                        isDarkHud && styles.darkStandbyHelper,
+                                    ]}
+                                >
                                     Select delay cause to automatically attach
                                     to client time logs:
                                 </Text>
@@ -431,14 +545,25 @@ export const DutyStatusSelectorModal: React.FC<
                                         return (
                                             <Pressable
                                                 accessibilityRole="checkbox"
+                                                hitSlop={{
+                                                    top: 4,
+                                                    bottom: 4,
+                                                    left: 4,
+                                                    right: 4,
+                                                }}
                                                 key={r.reason}
                                                 onPress={() =>
-                                                    setStandbyReason(r.reason)
+                                                    handleSelectReason(r.reason)
                                                 }
                                                 style={[
                                                     styles.reasonItem,
+                                                    isDarkHud
+                                                        ? styles.darkReasonItem
+                                                        : styles.lightReasonItem,
                                                     isReasonActive &&
-                                                        styles.reasonItemActive,
+                                                        (isDarkHud
+                                                            ? styles.darkReasonItemActive
+                                                            : styles.reasonItemActive),
                                                 ]}
                                                 testID={`reason-${r.reason}`}
                                             >
@@ -448,18 +573,26 @@ export const DutyStatusSelectorModal: React.FC<
                                                             ? 'check-circle'
                                                             : 'alert'
                                                     }
-                                                    size={14}
+                                                    size={15}
                                                     color={
                                                         isReasonActive
-                                                            ? colors.amberDark
-                                                            : colors.muted
+                                                            ? isDarkHud
+                                                                ? '#FBBF24'
+                                                                : colors.amberDark
+                                                            : isDarkHud
+                                                              ? '#64748B'
+                                                              : colors.muted
                                                     }
                                                 />
                                                 <Text
                                                     style={[
                                                         styles.reasonText,
+                                                        isDarkHud &&
+                                                            styles.darkReasonText,
                                                         isReasonActive &&
-                                                            styles.reasonTextActive,
+                                                            (isDarkHud
+                                                                ? styles.darkReasonTextActive
+                                                                : styles.reasonTextActive),
                                                     ]}
                                                 >
                                                     {r.label}
@@ -508,6 +641,7 @@ export const DutyStatusSelectorModal: React.FC<
                             style={({ pressed }) => [
                                 sharedStyles.button,
                                 styles.confirmButton,
+                                isDarkHud && styles.darkConfirmButton,
                                 pressed && styles.pressed,
                             ]}
                             testID="confirm-duty-status-btn"
@@ -515,9 +649,14 @@ export const DutyStatusSelectorModal: React.FC<
                             <Icon
                                 name="check-circle"
                                 size={18}
-                                color="#FFFFFF"
+                                color={isDarkHud ? '#0F172A' : '#FFFFFF'}
                             />
-                            <Text style={sharedStyles.buttonText}>
+                            <Text
+                                style={[
+                                    sharedStyles.buttonText,
+                                    isDarkHud && styles.darkConfirmButtonText,
+                                ]}
+                            >
                                 Confirm Duty Status
                             </Text>
                         </Pressable>
@@ -559,6 +698,9 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         width: 44,
     },
+    darkHandleBar: {
+        backgroundColor: '#334155',
+    },
     headerRow: {
         alignItems: 'center',
         flexDirection: 'row',
@@ -588,32 +730,46 @@ const styles = StyleSheet.create({
     closeButton: {
         alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
-        borderRadius: 18,
-        height: 36,
+        borderRadius: 20,
+        height: 40,
         justifyContent: 'center',
-        width: 36,
+        width: 40,
+    },
+    darkCloseButton: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        borderWidth: 1,
     },
     shiftGaugeCard: {
-        borderRadius: 12,
+        borderRadius: 14,
         borderWidth: 1,
         marginHorizontal: 16,
         marginBottom: 12,
         padding: 12,
     },
-    darkShiftGaugeCard: {
-        backgroundColor: '#1E293B',
-    },
     gaugeNormal: {
-        backgroundColor: colors.greenLight,
-        borderColor: colors.greenBorder,
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
     },
     gaugeWarning: {
-        backgroundColor: colors.warningLight,
-        borderColor: colors.warningBorder,
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
     },
     gaugeExceeded: {
-        backgroundColor: colors.redLight,
-        borderColor: colors.redBorder,
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FECACA',
+    },
+    darkGaugeNormal: {
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        borderColor: 'rgba(16, 185, 129, 0.35)',
+    },
+    darkGaugeWarning: {
+        backgroundColor: 'rgba(245, 158, 11, 0.14)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    darkGaugeExceeded: {
+        backgroundColor: 'rgba(239, 68, 68, 0.16)',
+        borderColor: 'rgba(239, 68, 68, 0.45)',
     },
     gaugeHeader: {
         alignItems: 'center',
@@ -648,12 +804,24 @@ const styles = StyleSheet.create({
     gaugeStatusExceeded: {
         color: colors.redDark,
     },
+    darkGaugeStatusNormal: {
+        color: '#34D399',
+    },
+    darkGaugeStatusWarning: {
+        color: '#FBBF24',
+    },
+    darkGaugeStatusExceeded: {
+        color: '#F87171',
+    },
     progressBarBackground: {
         backgroundColor: colors.border,
         borderRadius: 4,
         height: 6,
         overflow: 'hidden',
         width: '100%',
+    },
+    darkProgressBarBackground: {
+        backgroundColor: '#334155',
     },
     progressBarFill: {
         borderRadius: 4,
@@ -693,8 +861,6 @@ const styles = StyleSheet.create({
     },
     dutyOptionCard: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
         borderRadius: 14,
         borderWidth: 1.5,
         flexDirection: 'row',
@@ -702,12 +868,18 @@ const styles = StyleSheet.create({
         padding: 12,
         ...shadows.sm,
     },
+    lightDutyOptionCard: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+    },
     darkDutyOptionCard: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
     },
-    dutyOptionSelected: {
-        backgroundColor: colors.surface,
+    lightDutyOptionSelected: {
+        borderWidth: 2,
+    },
+    darkDutyOptionSelected: {
         borderWidth: 2,
     },
     statusBadge: {
@@ -740,7 +912,7 @@ const styles = StyleSheet.create({
         lineHeight: 15,
     },
     darkDutySubtitle: {
-        color: '#94A3B8',
+        color: '#CBD5E1',
     },
     radioCircle: {
         alignItems: 'center',
@@ -750,6 +922,9 @@ const styles = StyleSheet.create({
         height: 22,
         justifyContent: 'center',
         width: 22,
+    },
+    darkRadioCircle: {
+        borderColor: '#475569',
     },
     radioCircleSelected: {
         borderColor: colors.primary,
@@ -761,16 +936,16 @@ const styles = StyleSheet.create({
         width: 12,
     },
     standbySection: {
-        backgroundColor: colors.warningLight,
-        borderColor: colors.warningBorder,
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
         borderRadius: 12,
         borderWidth: 1,
         marginBottom: 14,
         padding: 12,
     },
     darkStandbySection: {
-        backgroundColor: '#38230B',
-        borderColor: '#B45309',
+        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
     },
     standbyHeader: {
         alignItems: 'center',
@@ -804,22 +979,35 @@ const styles = StyleSheet.create({
         fontSize: 11,
         marginBottom: 8,
     },
+    darkStandbyHelper: {
+        color: '#CBD5E1',
+    },
     reasonsList: {
         gap: 6,
     },
     reasonItem: {
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
         borderRadius: 8,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 8,
         paddingHorizontal: 10,
-        paddingVertical: 8,
+        paddingVertical: 9,
+    },
+    lightReasonItem: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+    },
+    darkReasonItem: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
     },
     reasonItemActive: {
         backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+    },
+    darkReasonItemActive: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
         borderColor: '#F59E0B',
     },
     reasonText: {
@@ -827,8 +1015,15 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
     },
+    darkReasonText: {
+        color: '#E2E8F0',
+    },
     reasonTextActive: {
         color: colors.amberDark,
+        fontWeight: '800',
+    },
+    darkReasonTextActive: {
+        color: '#FDE68A',
         fontWeight: '800',
     },
     remarksGroup: {
@@ -841,9 +1036,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         color: colors.text,
         fontSize: 13,
-        minHeight: 52,
+        minHeight: 56,
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 10,
         textAlignVertical: 'top',
     },
     darkRemarksInput: {
@@ -859,10 +1054,18 @@ const styles = StyleSheet.create({
         backgroundColor: colors.amberDark,
         flexDirection: 'row',
         gap: 8,
-        minHeight: 50,
+        minHeight: 52,
+        borderRadius: 12,
+    },
+    darkConfirmButton: {
+        backgroundColor: '#F59E0B',
+    },
+    darkConfirmButtonText: {
+        color: '#0F172A',
+        fontWeight: '900',
     },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.8,
         transform: [{ scale: 0.985 }],
     },
 });
