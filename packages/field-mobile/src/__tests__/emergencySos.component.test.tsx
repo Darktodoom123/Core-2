@@ -158,6 +158,21 @@ describe('Emergency SOS sheet', () => {
         expect(navView.queryByTestId('cradle-cutout')).toBeNull();
     });
 
+    it('opens emergency SOS immediately on a simple tap without any hold state or delay', async () => {
+        const onOpen = jest.fn();
+        const view = await render(
+            <EmergencySosButton onHoldComplete={onOpen} />,
+        );
+        const btn = view.getByTestId('open-emergency-sos');
+
+        // Simple instantaneous tap
+        await act(async () => {
+            fireEvent.press(btn);
+        });
+
+        expect(onOpen).toHaveBeenCalledTimes(1);
+    });
+
     it('allows selecting emergency category, toggling situational chips, and entering situation notes in preparing state', async () => {
         const onActivate = jest.fn().mockResolvedValue(undefined);
 

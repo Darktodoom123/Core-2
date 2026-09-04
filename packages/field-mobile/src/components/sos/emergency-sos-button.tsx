@@ -1,119 +1,50 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View, Vibration } from 'react-native';
 import { useTheme } from '../../theme';
 import { colors } from '../nativeStyles';
 
 export interface EmergencySosButtonProps {
-    onHoldComplete: () => void;
+    onPress?: () => void;
+    onHoldComplete?: () => void;
     disabled?: boolean;
 }
 
 export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
+    onPress,
     onHoldComplete,
     disabled = false,
 }) => {
     const { isDarkHud } = useTheme();
-    const [progress, setProgress] = useState(0);
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const accessibilityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-        null,
-    );
-    const completedRef = useRef(false);
-
-    const clearHold = useCallback(() => {
-        if (timerRef.current !== null) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-
-        if (accessibilityTimerRef.current !== null) {
-            clearTimeout(accessibilityTimerRef.current);
-            accessibilityTimerRef.current = null;
-        }
-    }, []);
-
-    const completeHold = useCallback(() => {
-        if (completedRef.current || disabled) {
-            return;
-        }
-
-        completedRef.current = true;
-        clearHold();
-        setProgress(1);
-        Vibration.vibrate(90);
-        onHoldComplete();
-    }, [clearHold, disabled, onHoldComplete]);
-
-    const startHold = useCallback(() => {
-        if (disabled || timerRef.current !== null) {
-            return;
-        }
-
-        completedRef.current = false;
-        setProgress(0);
-        const startedAt = Date.now();
-        timerRef.current = setInterval(() => {
-            const nextProgress = Math.min(1, (Date.now() - startedAt) / 2_000);
-            setProgress(nextProgress);
-
-            if (nextProgress >= 1) {
-                completeHold();
-            }
-        }, 50);
-    }, [completeHold, disabled]);
-
-    const endHold = useCallback(() => {
-        clearHold();
-
-        if (!completedRef.current) {
-            setProgress(0);
-        }
-    }, [clearHold]);
-
-    useEffect(() => clearHold, [clearHold]);
-
-    const handleAccessibilityAction = useCallback(() => {
-        startHold();
-        accessibilityTimerRef.current = setTimeout(completeHold, 2_000);
-    }, [completeHold, startHold]);
 
     const handlePress = useCallback(() => {
-        if (completedRef.current || disabled) {
-            completedRef.current = false;
-
+        if (disabled) {
             return;
         }
 
-        onHoldComplete();
-    }, [disabled, onHoldComplete]);
+        try {
+            Vibration.vibrate(50);
+        } catch {
+            // Ignore vibration errors in test or web environments
+        }
+
+        if (onPress) {
+            onPress();
+        } else if (onHoldComplete) {
+            onHoldComplete();
+        }
+    }, [disabled, onHoldComplete, onPress]);
 
     return (
         <Pressable
-            accessibilityHint="Press or hold for two seconds to open Emergency SOS."
-            accessibilityActions={[
-                {
-                    label: 'Hold for two seconds to activate Emergency SOS',
-                    name: 'activate',
-                },
-            ]}
+            accessibilityHint="Tap to open the Emergency SOS screen."
             accessibilityLabel="Activate Emergency SOS"
             accessibilityRole="button"
             accessibilityState={{
                 disabled,
-                busy: progress > 0 && progress < 1,
-            }}
-            accessibilityValue={{
-                max: 100,
-                min: 0,
-                now: Math.round(progress * 100),
-                text: `${Math.round(progress * 100)} percent held`,
             }}
             disabled={disabled}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onAccessibilityAction={handleAccessibilityAction}
             onPress={handlePress}
-            onPressIn={startHold}
-            onPressOut={endHold}
             pressRetentionOffset={{ top: 30, bottom: 30, left: 30, right: 30 }}
             style={({ pressed }) => [
                 styles.button,
@@ -123,10 +54,6 @@ export const EmergencySosButton: React.FC<EmergencySosButtonProps> = ({
             ]}
             testID="open-emergency-sos"
         >
-            <View
-                pointerEvents="none"
-                style={[styles.progress, { width: `${progress * 100}%` }]}
-            />
             <View pointerEvents="none" style={styles.contentWrap}>
                 <Text style={[styles.label, styles.boldSosLabel]}>SOS</Text>
             </View>
@@ -172,13 +99,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '900',
         letterSpacing: 0.5,
-    },
-    progress: {
-        backgroundColor: 'rgba(255, 255, 255, 0.35)',
-        bottom: 0,
-        left: 0,
-        position: 'absolute',
-        top: 0,
     },
     contentWrap: {
         alignItems: 'center',
