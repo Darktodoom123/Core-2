@@ -679,9 +679,10 @@ export class CommandOutboxManager {
                 error.status === 408 ||
                 error.status === 425 ||
                 error.status === 429 ||
+                error.isRateLimited ||
                 error.status >= 500
             ) {
-                await this.deferRetry(command, result);
+                await this.deferRetry(command, result, error);
 
                 return;
             }
@@ -698,12 +699,21 @@ export class CommandOutboxManager {
             return;
         }
 
-        await this.deferRetry(command, result);
+        await this.deferRetry(command, result, error);
+    }
+
+    public async processCommand(
+        command: OutboxCommand,
+        apiClient: FieldApiClient,
+        result: OutboxProcessResult = emptyResult(),
+    ): Promise<DispatchJob | unknown | null> {
+        return this.executeCommand(command, apiClient, result);
     }
 
     private async deferRetry(
         command: OutboxCommand,
         result: OutboxProcessResult,
+        error?: unknown,
     ): Promise<void> {
         if (
             command.type === 'activate_sos' &&
@@ -735,21 +745,56 @@ export class CommandOutboxManager {
             };
             result.failed += 1;
         } else {
-            const delay = Math.min(
+            const calculatedDelay = Math.min(
                 this.baseRetryDelayMs * 2 ** (command.attempts - 1),
                 command.type === 'activate_sos'
                     ? sosMaxRetryDelayMs
                     : maxRetryDelayMs,
             );
+
+            const errObj =
+                typeof error === 'object' && error !== null
+                    ? (error as Record<string, unknown>)
+                    : undefined;
+
+            const isRateLimited = Boolean(
+                (error instanceof ApiClientError &&
+                    (error.status === 429 || error.isRateLimited)) ||
+                    errObj?.status === 429 ||
+                    errObj?.isRateLimited === true,
+            );
+
+            const retryAfterSeconds =
+                error instanceof ApiClientError
+                    ? error.retryAfter
+                    : typeof errObj?.retryAfter === 'number'
+                      ? errObj.retryAfter
+                      : typeof errObj?.retry_after === 'number'
+                        ? errObj.retry_after
+                        : undefined;
+
+            const delay = isRateLimited
+                ? Math.max(calculatedDelay, (retryAfterSeconds ?? 0) * 1000)
+                : calculatedDelay;
+
             command.state = 'queued';
             command.nextAttemptAt = new Date(
                 this.now().getTime() + delay,
             ).toISOString();
-            command.error = {
-                code: 'NETWORK_RETRY_SCHEDULED',
-                message: 'Connection unavailable. This command will retry.',
-                retryable: true,
-            };
+
+            if (isRateLimited) {
+                command.error = {
+                    code: 'RATE_LIMITED',
+                    message: `Rate limit reached. Retry scheduled in ${Math.round(delay / 1000)} seconds.`,
+                    retryable: true,
+                };
+            } else {
+                command.error = {
+                    code: 'NETWORK_RETRY_SCHEDULED',
+                    message: 'Connection unavailable. This command will retry.',
+                    retryable: true,
+                };
+            }
             result.deferred += 1;
         }
 
