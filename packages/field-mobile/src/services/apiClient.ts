@@ -20,6 +20,8 @@ export class ApiClientError extends Error {
     public serverSnapshot?: DispatchJob | null;
     public validationErrors?: Record<string, string[]>;
     public requestId?: string;
+    public retryAfter?: number;
+    public isRateLimited: boolean;
 
     constructor(
         message: string,
@@ -30,6 +32,8 @@ export class ApiClientError extends Error {
             serverSnapshot?: DispatchJob | null;
             validationErrors?: Record<string, string[]>;
             requestId?: string;
+            retryAfter?: number;
+            isRateLimited?: boolean;
         },
     ) {
         super(message);
@@ -40,6 +44,10 @@ export class ApiClientError extends Error {
         this.serverSnapshot = options?.serverSnapshot;
         this.validationErrors = options?.validationErrors;
         this.requestId = options?.requestId;
+        this.retryAfter = options?.retryAfter;
+        this.isRateLimited =
+            options?.isRateLimited ??
+            (status === 429 || options?.errorCode === 'rate_limited');
     }
 }
 
@@ -97,6 +105,39 @@ export class FieldApiClient {
                 response.headers.get('X-Request-Id') ||
                 undefined;
 
+            let retryAfter: number | undefined;
+            const isRateLimited =
+                response.status === 429 || errBody.error === 'rate_limited';
+
+            if (isRateLimited) {
+                const retryAfterHeader =
+                    response.headers?.get?.('Retry-After');
+                if (
+                    retryAfterHeader !== null &&
+                    retryAfterHeader !== undefined &&
+                    retryAfterHeader.trim() !== ''
+                ) {
+                    const parsed = parseInt(retryAfterHeader.trim(), 10);
+                    if (!Number.isNaN(parsed)) {
+                        retryAfter = parsed;
+                    }
+                }
+
+                if (
+                    retryAfter === undefined &&
+                    errBody.retry_after !== undefined &&
+                    errBody.retry_after !== null
+                ) {
+                    const parsed =
+                        typeof errBody.retry_after === 'number'
+                            ? errBody.retry_after
+                            : parseInt(String(errBody.retry_after).trim(), 10);
+                    if (!Number.isNaN(parsed)) {
+                        retryAfter = parsed;
+                    }
+                }
+            }
+
             throw new ApiClientError(
                 errBody.message ||
                     `Request failed with status ${response.status}`,
@@ -107,6 +148,8 @@ export class FieldApiClient {
                     serverSnapshot: errBody.data,
                     validationErrors: errBody.errors,
                     requestId,
+                    retryAfter,
+                    isRateLimited,
                 },
             );
         }
