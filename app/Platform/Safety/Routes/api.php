@@ -14,7 +14,7 @@ Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api
         Route::get('/sos-configuration', [SosIncidentController::class, 'configuration'])->name('sos.configuration');
     });
 
-    Route::prefix('safety')->name('safety.')->group(function (): void {
+    Route::prefix('safety')->name('safety.')->middleware('throttle:safety')->group(function (): void {
         Route::get('/metrics', [SafetyGovernanceApiController::class, 'metrics'])->name('metrics');
         Route::get('/hazards', [SafetyGovernanceApiController::class, 'indexHazards'])->name('hazards.index');
         Route::get('/lift-plans', [SafetyGovernanceApiController::class, 'indexCriticalLiftPlans'])->name('lift-plans.index');
