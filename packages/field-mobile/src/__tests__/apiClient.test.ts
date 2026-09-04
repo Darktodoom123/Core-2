@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
 import { FieldApiClient, ApiClientError } from '../services/apiClient';
 import type { DispatchJob } from '../types/index';
@@ -136,5 +136,74 @@ describe('FieldApiClient', () => {
             captured.headers?.get('idempotency-key'),
             'sos-command-123',
         );
+    });
+
+    test('parses 422 validation failure with errors and request_id', async () => {
+        const mockFetch = async () => {
+            return new Response(
+                JSON.stringify({
+                    message: 'The given data was invalid.',
+                    error: 'validation_failed',
+                    request_id: 'req-uuid-422',
+                    errors: {
+                        status: ['Status transition is invalid.'],
+                    },
+                }),
+                {
+                    status: 422,
+                    headers: { 'X-Request-Id': 'req-uuid-422' },
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        try {
+            await client.transitionStatus(1, 'completed', 1, 'cmd-uuid-422');
+            assert.fail('Expected ApiClientError');
+        } catch (err) {
+            assert.ok(err instanceof ApiClientError);
+            assert.equal(err.status, 422);
+            assert.equal(err.errorCode, 'validation_failed');
+            assert.equal(err.requestId, 'req-uuid-422');
+            assert.deepEqual(err.validationErrors, {
+                status: ['Status transition is invalid.'],
+            });
+        }
+    });
+
+    test('parses 500 server error and extracts X-Request-Id header when body lacks request_id', async () => {
+        const mockFetch = async () => {
+            return new Response(
+                JSON.stringify({
+                    message: 'An unexpected server error occurred.',
+                    error: 'internal_server_error',
+                }),
+                {
+                    status: 500,
+                    headers: { 'X-Request-Id': 'req-header-fallback' },
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        try {
+            await client.fetchMe();
+            assert.fail('Expected ApiClientError');
+        } catch (err) {
+            assert.ok(err instanceof ApiClientError);
+            assert.equal(err.status, 500);
+            assert.equal(err.errorCode, 'internal_server_error');
+            assert.equal(err.requestId, 'req-header-fallback');
+        }
     });
 });

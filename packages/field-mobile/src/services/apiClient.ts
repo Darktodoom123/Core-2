@@ -19,6 +19,7 @@ export class ApiClientError extends Error {
     public currentVersion?: number;
     public serverSnapshot?: DispatchJob | null;
     public validationErrors?: Record<string, string[]>;
+    public requestId?: string;
 
     constructor(
         message: string,
@@ -28,6 +29,7 @@ export class ApiClientError extends Error {
             currentVersion?: number;
             serverSnapshot?: DispatchJob | null;
             validationErrors?: Record<string, string[]>;
+            requestId?: string;
         },
     ) {
         super(message);
@@ -37,6 +39,7 @@ export class ApiClientError extends Error {
         this.currentVersion = options?.currentVersion;
         this.serverSnapshot = options?.serverSnapshot;
         this.validationErrors = options?.validationErrors;
+        this.requestId = options?.requestId;
     }
 }
 
@@ -89,6 +92,10 @@ export class FieldApiClient {
 
         if (!response.ok) {
             const errBody = body as ApiErrorResponse;
+            const requestId =
+                errBody.request_id ||
+                response.headers.get('X-Request-Id') ||
+                undefined;
 
             throw new ApiClientError(
                 errBody.message ||
@@ -99,6 +106,7 @@ export class FieldApiClient {
                     currentVersion: errBody.current_version,
                     serverSnapshot: errBody.data,
                     validationErrors: errBody.errors,
+                    requestId,
                 },
             );
         }

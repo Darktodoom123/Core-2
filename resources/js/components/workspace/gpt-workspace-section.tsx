@@ -57,6 +57,9 @@ export function GptRecommendationsSurface({
         circuit_breaker_active: boolean;
     } | null>(null);
     const [togglingCircuitBreaker, setTogglingCircuitBreaker] = useState(false);
+    const [circuitBreakerError, setCircuitBreakerError] = useState<
+        string | null
+    >(null);
 
     useEffect(() => {
         fetch('/operations/gpt-governance/telemetry')
@@ -83,6 +86,7 @@ export function GptRecommendationsSurface({
         }
 
         setTogglingCircuitBreaker(true);
+        setCircuitBreakerError(null);
         const csrfToken =
             document
                 .querySelector('meta[name="csrf-token"]')
@@ -96,9 +100,9 @@ export function GptRecommendationsSurface({
                     'X-CSRF-TOKEN': csrfToken,
                 },
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
 
-            if (res.ok) {
+            if (res.ok && data) {
                 setTelemetry((prev) =>
                     prev
                         ? {
@@ -108,7 +112,17 @@ export function GptRecommendationsSurface({
                           }
                         : null,
                 );
+            } else {
+                setCircuitBreakerError(
+                    data?.message ??
+                        data?.error ??
+                        'Failed to toggle AI circuit breaker. Please try again.',
+                );
             }
+        } catch {
+            setCircuitBreakerError(
+                'Network error toggling AI circuit breaker. Please check your connection.',
+            );
         } finally {
             setTogglingCircuitBreaker(false);
         }
@@ -239,6 +253,23 @@ export function GptRecommendationsSurface({
             />
 
             <div className="space-y-6 p-4 md:p-6">
+                {/* Circuit Breaker Error Notification */}
+                {circuitBreakerError && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs font-medium text-danger-strong">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 shrink-0 text-danger" />
+                            <span>{circuitBreakerError}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setCircuitBreakerError(null)}
+                            className="cursor-pointer text-xs font-semibold text-ink-soft hover:text-ink"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
+
                 {/* Circuit Breaker Warning if active */}
                 {telemetry?.circuit_breaker_active && (
                     <div className="flex items-center gap-3 rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-xs font-medium text-danger-strong">

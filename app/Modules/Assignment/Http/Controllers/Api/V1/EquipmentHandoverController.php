@@ -37,7 +37,7 @@ final class EquipmentHandoverController extends Controller
         }
 
         $assetAssignment = $dispatchJob->assetAssignments()->open()->with('asset')->first();
-        $assetCode = $assetAssignment?->asset?->code ?? 'UNSPECIFIED';
+        $assetCode = $assetAssignment?->asset->code ?? 'UNSPECIFIED';
 
         $reliefOperator = null;
         if ($request->filled('relief_user_id')) {
@@ -136,7 +136,7 @@ final class EquipmentHandoverController extends Controller
             DispatchPersonnelAssignment::query()->create([
                 'dispatch_job_id' => $job->id,
                 'user_id' => $actor->id,
-                'assignment_type' => $outgoingAssignment?->assignment_type ?? 'driver',
+                'assignment_type' => $outgoingAssignment->assignment_type ?? 'driver',
                 'assigned_by' => $actor->id,
                 'response_status' => AssignmentResponse::Accepted,
                 'responded_at' => now(),

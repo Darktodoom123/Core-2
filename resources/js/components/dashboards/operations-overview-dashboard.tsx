@@ -1048,31 +1048,66 @@ function SystemAdminDashboardView({
         };
     } | null>(null);
     const [healthLoading, setHealthLoading] = useState(false);
+    const [healthError, setHealthError] = useState<string | null>(null);
 
     const fetchHealth = () => {
         setHealthLoading(true);
-        fetch('/operations/admin/health')
-            .then((res) => (res.ok ? res.json() : null))
+        setHealthError(null);
+        fetch('/operations/admin/health', {
+            headers: { Accept: 'application/json' },
+        })
+            .then(async (res) => {
+                if (!res.ok) {
+                    throw new Error(
+                        `Health probe returned status ${res.status}`,
+                    );
+                }
+
+                return res.json();
+            })
             .then((data) => {
                 if (data) {
                     setHealth(data);
                 }
             })
-            .catch(() => {})
+            .catch((err) => {
+                setHealthError(
+                    err instanceof Error
+                        ? err.message
+                        : 'Unable to connect to system health probe.',
+                );
+            })
             .finally(() => setHealthLoading(false));
     };
 
     useEffect(() => {
         let isMounted = true;
         const load = () => {
-            fetch('/operations/admin/health')
-                .then((res) => (res.ok ? res.json() : null))
+            fetch('/operations/admin/health', {
+                headers: { Accept: 'application/json' },
+            })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}`);
+                    }
+
+                    return res.json();
+                })
                 .then((data) => {
                     if (data && isMounted) {
                         setHealth(data);
+                        setHealthError(null);
                     }
                 })
-                .catch(() => {});
+                .catch((err) => {
+                    if (isMounted) {
+                        setHealthError(
+                            err instanceof Error
+                                ? err.message
+                                : 'System health check unavailable.',
+                        );
+                    }
+                });
         };
 
         load();
@@ -1121,9 +1156,13 @@ function SystemAdminDashboardView({
     // GPT AI Circuit Breaker Killswitch
     const [circuitBreakerActive, setCircuitBreakerActive] = useState(false);
     const [togglingCircuitBreaker, setTogglingCircuitBreaker] = useState(false);
+    const [circuitBreakerError, setCircuitBreakerError] = useState<
+        string | null
+    >(null);
 
     const toggleCircuitBreaker = async () => {
         setTogglingCircuitBreaker(true);
+        setCircuitBreakerError(null);
 
         try {
             const token = (
@@ -1140,12 +1179,23 @@ function SystemAdminDashboardView({
                 },
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                setCircuitBreakerActive(Boolean(data.circuit_breaker_active));
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+
+                throw new Error(
+                    errData?.message ||
+                        `Circuit breaker toggle failed (HTTP ${res.status}).`,
+                );
             }
-        } catch {
-            // non-blocking
+
+            const data = await res.json();
+            setCircuitBreakerActive(Boolean(data.circuit_breaker_active));
+        } catch (err) {
+            setCircuitBreakerError(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to toggle GPT advisory circuit breaker.',
+            );
         } finally {
             setTogglingCircuitBreaker(false);
         }
@@ -1297,27 +1347,32 @@ function SystemAdminDashboardView({
                     value={
                         healthLoading && !health
                             ? 'Checking…'
-                            : health?.status === 'healthy'
-                              ? 'Healthy'
-                              : health?.status === 'degraded'
-                                ? 'Degraded'
-                                : 'Optimal'
+                            : healthError
+                              ? 'Unavailable'
+                              : health?.status === 'healthy'
+                                ? 'Healthy'
+                                : health?.status === 'degraded'
+                                  ? 'Degraded'
+                                  : 'Optimal'
                     }
                     subtext={
-                        health?.services.database.latency_ms !== null &&
-                        health?.services.database.latency_ms !== undefined
-                            ? `DB Latency: ${health.services.database.latency_ms} ms · Cache: ${health.services.cache.latency_ms ?? 0} ms`
-                            : 'Synthetic health checks & heartbeat active'
+                        healthError
+                            ? healthError
+                            : health?.services.database.latency_ms !== null &&
+                                health?.services.database.latency_ms !==
+                                    undefined
+                              ? `DB Latency: ${health.services.database.latency_ms} ms · Cache: ${health.services.cache.latency_ms ?? 0} ms`
+                              : 'Synthetic health checks & heartbeat active'
                     }
                     icon={Cpu}
                     tone={
-                        health?.status === 'unhealthy'
+                        healthError || health?.status === 'unhealthy'
                             ? 'danger'
                             : health?.status === 'degraded'
                               ? 'warning'
                               : 'success'
                     }
-                    liveIndicator={health?.status === 'healthy'}
+                    liveIndicator={health?.status === 'healthy' && !healthError}
                     onClick={fetchHealth}
                 />
 
@@ -1930,6 +1985,12 @@ function SystemAdminDashboardView({
                                         : 'Emergency Killswitch'}
                                 </Button>
                             </div>
+
+                            {circuitBreakerError && (
+                                <div className="rounded-lg border border-danger/30 bg-danger-soft/60 p-2.5 text-xs text-danger-strong">
+                                    {circuitBreakerError}
+                                </div>
+                            )}
 
                             <div>
                                 <div className="flex items-center justify-between text-xs">

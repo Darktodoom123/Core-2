@@ -280,6 +280,7 @@ export interface ApiErrorResponse {
     current_version?: number;
     data?: DispatchJob;
     errors?: Record<string, string[]>;
+    request_id?: string;
 }
 
 export interface DispatchAssignmentOfferV2 {

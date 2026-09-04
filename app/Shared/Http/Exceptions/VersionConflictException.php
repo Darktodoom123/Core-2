@@ -37,16 +37,27 @@ final class VersionConflictException extends Exception
 
     public function render(Request $request): JsonResponse
     {
+        $requestId = $request->attributes->get('request_id') ?? $request->header('X-Request-Id');
+
         $payload = [
             'message' => $this->getMessage(),
             'error' => 'stale_version',
             'current_version' => $this->currentVersion,
         ];
 
+        if (is_string($requestId) && $requestId !== '') {
+            $payload['request_id'] = $requestId;
+        }
+
         if ($this->snapshot !== null) {
             $payload['data'] = $this->snapshot;
         }
 
-        return new JsonResponse($payload, Response::HTTP_CONFLICT);
+        $response = new JsonResponse($payload, Response::HTTP_CONFLICT);
+        if (is_string($requestId) && $requestId !== '') {
+            $response->headers->set('X-Request-Id', $requestId);
+        }
+
+        return $response;
     }
 }

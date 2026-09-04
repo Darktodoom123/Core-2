@@ -25,6 +25,7 @@ import { useState } from 'react';
 import type { ComponentType, PropsWithChildren, SVGProps } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Button, PrototypeSandboxBanner } from '@/components/ui';
 import { useTheme } from '@/lib/use-theme';
 import { cn } from '@/lib/utils';
@@ -661,7 +662,9 @@ export function AppShell({
                 </header>
 
                 <main id="main-content" className="min-w-0">
-                    {children}
+                    <ErrorBoundary name="Main Content">
+                        {children}
+                    </ErrorBoundary>
                 </main>
                 <DevUserSwitcher />
             </div>

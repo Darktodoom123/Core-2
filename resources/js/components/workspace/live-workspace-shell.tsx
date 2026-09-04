@@ -28,6 +28,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { ApplicationLogo } from '@/components/application-logo';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Button } from '@/components/ui';
 import { NotificationCenterPopover } from '@/components/workspace/notification-center-popover';
 import { useTheme } from '@/lib/use-theme';
@@ -904,7 +905,9 @@ export function LiveWorkspaceShell({
                         className="min-w-0"
                         tabIndex={-1}
                     >
-                        {children}
+                        <ErrorBoundary name="Workspace Section">
+                            {children}
+                        </ErrorBoundary>
                     </main>
                 </div>
             </div>
