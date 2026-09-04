@@ -9,6 +9,7 @@ use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
@@ -44,6 +45,9 @@ final class ReassignDispatchResources
         int $version = 0,
     ): ReassignmentResult {
         Gate::forUser($actor)->authorize('reassignResources', $job);
+        if (ProjectShift::query()->where('dispatch_job_id', $job->id)->exists()) {
+            throw ValidationException::withMessages(['resources' => 'Use Fill coverage in the project plan to change this shift.']);
+        }
 
         return DB::transaction(function () use (
             $actor,

@@ -47,6 +47,7 @@ export default function DispatchDetail({
     activation,
     progression,
     capabilities,
+    project_context,
 }: DispatchDetailPageProps) {
     const { flash, errors, auth } = usePage().props;
     const personnelCandidates = candidateData<PersonnelCandidateViewModel>(
@@ -117,7 +118,32 @@ export default function DispatchDetail({
     const hasCurrentAssignments =
         job.personnel_assignments.length + job.asset_assignments.length > 0;
     const hasAssignmentNextAction = assignmentSaved || hasCurrentAssignments;
-    const returnTo = getSafeReturnTo();
+    const contextKey = `dispatch-project-return:${job.id}`;
+    let storedContext: string | null = null;
+
+    try {
+        storedContext =
+            typeof window !== 'undefined'
+                ? window.sessionStorage.getItem(contextKey)
+                : null;
+    } catch {
+        /* Storage can be disabled; the server context remains available. */
+    }
+
+    const contextualReturn = getSafeReturnTo(storedContext);
+    const returnTo =
+        contextualReturn === '/'
+            ? (project_context?.return_url ?? '/')
+            : contextualReturn;
+    useEffect(() => {
+        if (project_context && contextualReturn !== '/') {
+            try {
+                window.sessionStorage.setItem(contextKey, contextualReturn);
+            } catch {
+                /* Keep navigation working when storage is disabled. */
+            }
+        }
+    }, [contextKey, contextualReturn, project_context]);
     const canViewFleetAssets = auth.permissions.some((permission) =>
         ['fleet.view_all', 'fleet.view_assigned'].includes(permission),
     );
@@ -208,6 +234,28 @@ export default function DispatchDetail({
                         flash={flash}
                         conflictMessage={conflictMessage}
                     />
+
+                    {project_context && (
+                        <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
+                            <div>
+                                <p className="text-sm font-semibold">
+                                    {project_context.name} ·{' '}
+                                    {project_context.phase}
+                                </p>
+                                <p className="mt-1 text-sm text-ink-soft">
+                                    Crew and asset changes are managed in
+                                    Project plans, with baseline approval and
+                                    the 24-hour confirmation lock.
+                                </p>
+                            </div>
+                            <Link
+                                href={returnTo}
+                                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
+                            >
+                                Return to project coverage
+                            </Link>
+                        </Panel>
+                    )}
 
                     {capabilities.update_own_status && progression !== null ? (
                         <FieldJobWorkspace

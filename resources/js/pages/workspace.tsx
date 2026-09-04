@@ -10,6 +10,7 @@ import { Button, EmptyState, Panel } from '@/components/ui';
 import { LiveDispatchWorkspace } from '@/components/workspace/live-dispatch-workspace';
 import { LiveWorkspaceSection } from '@/components/workspace/live-workspace-sections';
 import { LiveWorkspaceShell } from '@/components/workspace/live-workspace-shell';
+import { DispatchWorkspace } from '@/components/workspace/project-planning-workspace';
 import { getEcho, reconnectEcho } from '@/echo';
 import { getOutboxQueue, queueCommand, syncOutbox } from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
@@ -45,6 +46,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'gptRecommendations',
     ],
     dispatch: [
+        'projectPlanning',
         'jobs',
         'clients',
         'serviceRequests',
@@ -263,6 +265,12 @@ export default function Workspace(props: WorkspacePageProps) {
     const fallbackPoll = usePoll(
         FALLBACK_POLL_INTERVAL_MS,
         () => ({
+            only: [
+                'workspace',
+                'badges',
+                'activeSosIncidents',
+                ...(availableSection ? SECTION_PROPS[availableSection] : []),
+            ],
             onStart: () => beginRefresh('workspace', 'polling'),
             onSuccess: (page) => markRefreshSuccess('workspace', page),
             onError: () =>
@@ -728,20 +736,28 @@ export default function Workspace(props: WorkspacePageProps) {
                         onSectionChange={changeSection}
                     />
                 ) : availableSection === 'dispatch' ? (
-                    <LiveDispatchWorkspace
-                        jobs={props.jobs!}
-                        clients={props.clients!}
-                        serviceRequests={props.serviceRequests!}
-                        rentalHandoffs={props.rentalHandoffs!}
-                        salesHandoffs={props.salesHandoffs!}
-                        assets={props.assets!}
-                        approvals={props.approvals!}
-                        users={props.users!}
-                        gptRecommendations={props.gptRecommendations!}
-                        capabilities={props.capabilities}
-                        canCreate={props.capabilities.create_dispatch}
-                        refreshing={refreshing}
-                        initialServiceRequestId={selectedServiceRequestId}
+                    <DispatchWorkspace
+                        planning={props.projectPlanning}
+                        assets={props.assets ?? []}
+                        dispatches={
+                            <LiveDispatchWorkspace
+                                jobs={props.jobs!}
+                                clients={props.clients!}
+                                serviceRequests={props.serviceRequests!}
+                                rentalHandoffs={props.rentalHandoffs!}
+                                salesHandoffs={props.salesHandoffs!}
+                                assets={props.assets!}
+                                approvals={props.approvals!}
+                                users={props.users!}
+                                gptRecommendations={props.gptRecommendations!}
+                                capabilities={props.capabilities}
+                                canCreate={props.capabilities.create_dispatch}
+                                refreshing={refreshing}
+                                initialServiceRequestId={
+                                    selectedServiceRequestId
+                                }
+                            />
+                        }
                     />
                 ) : (
                     <LiveWorkspaceSection

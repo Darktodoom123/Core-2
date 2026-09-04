@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Modules\Dispatch\Planning\Queries\ProjectPlanningQuery;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Rental\Enums\RentalFulfillmentMode;
 use App\Modules\Rental\Models\RentalReservation;
@@ -38,7 +39,7 @@ final class OperationsWorkspaceController extends Controller
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
         'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
-        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'users', 'gptRecommendations'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'users', 'gptRecommendations', 'projectPlanning'],
         'assets' => ['assets', 'assets_total', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
         'fuel' => ['fuelRequests', 'assets', 'assets_total'],
@@ -99,6 +100,10 @@ final class OperationsWorkspaceController extends Controller
                 ? Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none'))
                 : Inertia::optional($resolver);
         }
+
+        $props['projectPlanning'] = in_array('projectPlanning', self::SECTION_PROPS[$initialSection] ?? [], true)
+            ? Inertia::defer(fn () => app(ProjectPlanningQuery::class)->make($user), 'workspace-'.($initialSection ?? 'none'))
+            : Inertia::optional(fn () => app(ProjectPlanningQuery::class)->make($user));
 
         return Inertia::render('workspace', $props);
     }

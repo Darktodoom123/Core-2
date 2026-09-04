@@ -136,7 +136,7 @@ final class DispatchResourceEligibility
                 : ($excludedAssignmentIds === [] ? AssetUsageType::DispatchAssign : AssetUsageType::DispatchReassign),
             windowStart: $job->scheduled_start?->toImmutable(),
             windowEnd: $job->scheduled_end?->toImmutable(),
-            source: $excludeCurrentJob ? new AssetUsageSource('dispatch_job', (int) $job->id) : null,
+            source: new AssetUsageSource('dispatch_job', (int) $job->id),
             excludedAssignmentIds: $excludedAssignmentIds,
         ));
         $conflicts = [];

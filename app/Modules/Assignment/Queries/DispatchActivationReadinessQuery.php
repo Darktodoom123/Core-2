@@ -6,6 +6,7 @@ use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Facades\Gate;
@@ -20,7 +21,7 @@ final class DispatchActivationReadinessQuery
     /** @return array<string, mixed> */
     public function make(DispatchJob $job): array
     {
-        $blockers = [];
+        $blockers = app(ProjectShiftReadiness::class)->blockers($job);
         $personnelAssignments = $job->personnelAssignments->whereNull('active_until');
         $assetAssignments = $job->assetAssignments->whereNull('active_until');
         $latestApproval = $job->approvals

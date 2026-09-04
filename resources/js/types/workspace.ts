@@ -813,6 +813,7 @@ export interface GptRecommendationViewModel {
 }
 
 export interface WorkspacePageProps {
+    projectPlanning?: ProjectPlanningViewModel | null;
     jobs?: DispatchJobViewModel[];
     clients?: ClientViewModel[];
     serviceRequests?: ServiceRequestViewModel[];
@@ -843,6 +844,76 @@ export interface WorkspacePageProps {
         active_sos?: number;
     };
     activeSosIncidents: SosIncidentViewModel[];
+}
+
+export interface ProjectPlanningViewModel {
+    projects: ProjectPlanViewModel[];
+    page: number;
+    last_page: number;
+    total: number;
+    can_edit: boolean;
+    as_of: string;
+}
+
+export interface ProjectPlanViewModel {
+    id: number;
+    name: string;
+    source_reference: string;
+    client: string;
+    site: string;
+    status: 'draft' | 'pending' | 'approved' | 'rejected';
+    version: number;
+    approved_version: number | null;
+    decision_reason: string | null;
+    can_decide: boolean;
+    phases: ProjectPhaseViewModel[];
+}
+
+export interface ProjectPhaseViewModel {
+    id: number;
+    name: string;
+    kind: string;
+    starts_at: string;
+    ends_at: string;
+    coverage: Record<'driver' | 'crane_operator' | 'rigger', number>;
+    allocations: Array<{
+        id: number;
+        operational_asset_id: number;
+        code: string;
+        name: string;
+        status: string;
+        kind: 'reservation' | 'maintenance';
+        starts_at: string;
+        ends_at: string;
+        notes: string | null;
+    }>;
+    shifts: ProjectShiftViewModel[];
+}
+
+export interface ProjectShiftViewModel {
+    archived?: boolean;
+    id: number;
+    job_id: number;
+    reference: string;
+    status: string;
+    starts_at: string;
+    ends_at: string;
+    version: number;
+    locked: boolean;
+    confirmed_plan_version: number | null;
+    personnel: Array<{
+        user_id: number;
+        name: string;
+        assignment_type: 'driver' | 'crane_operator' | 'rigger';
+        response: string;
+    }>;
+    pending_roster: Array<{
+        name?: string;
+        user_id: number;
+        assignment_type: 'driver' | 'crane_operator' | 'rigger';
+    }> | null;
+    reason: string | null;
+    can_decide: boolean;
 }
 
 export interface AssignmentScheduleConflictViewModel {
@@ -914,6 +985,11 @@ export interface CandidatePageViewModel<T> {
 }
 
 export interface DispatchDetailPageProps {
+    project_context?: {
+        name: string;
+        phase: string;
+        return_url: string;
+    } | null;
     job: DispatchJobViewModel;
     personnel_candidates?:
         | CandidatePageViewModel<PersonnelCandidateViewModel>

@@ -17,6 +17,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\DispatchPlanApproval;
 use App\Modules\Dispatch\Models\DispatchPlanRequirementSlot;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
+use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Modules\Dispatch\Queries\DispatchReadinessEvaluator;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
@@ -376,6 +377,7 @@ final class DispatchV2CommandService
             'dispatch.v2.execution.dispatch',
             'dispatch',
             function (DispatchExecutionAttempt $lockedAttempt) use ($actor, $mutation): DispatchExecutionAttempt {
+                app(ProjectShiftReadiness::class)->assertAttemptReady($lockedAttempt);
                 if ($lockedAttempt->archived_at !== null) {
                     throw $this->archived();
                 }

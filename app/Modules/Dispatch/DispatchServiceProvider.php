@@ -10,6 +10,7 @@ use App\Modules\Dispatch\Contracts\DispatchScheduleReader;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Services\ProjectAssetConflictChecker;
 use App\Modules\Dispatch\Policies\ApprovalRequestPolicy;
 use App\Modules\Dispatch\Policies\DispatchExecutionAttemptPolicy;
 use App\Modules\Dispatch\Policies\DispatchJobPolicy;
@@ -18,6 +19,7 @@ use App\Modules\Dispatch\Services\EloquentDispatchScheduleReader;
 use App\Modules\Dispatch\Services\NullDispatchOutboxDeliveryHandler;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Audit\Contracts\AuditEventRecorder;
+use App\Shared\Assets\Contracts\AssetUsageConflictChecker;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,6 +27,7 @@ final class DispatchServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->tag(ProjectAssetConflictChecker::class, AssetUsageConflictChecker::TAG);
         $this->app->singleton(DispatchScheduleReader::class, EloquentDispatchScheduleReader::class);
         $this->app->bind(AuditEventRecorder::class, RecordAuditEvent::class);
         $this->app->bind(DispatchOutboxRecorder::class, DispatchOutboxIntentRecorder::class);

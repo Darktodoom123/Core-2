@@ -11,6 +11,7 @@ use App\Modules\Dispatch\Models\DispatchAssignmentOffer;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchPlanRequirementSlot;
 use App\Modules\Dispatch\Models\DispatchPlanVersion;
+use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\PersonnelProfile;
@@ -87,8 +88,9 @@ final class DispatchReadinessResourceEvaluator
             $blockers[] = $this->blocking(DispatchReadinessBlockerCode::PendingMandatoryAcceptance, ['offer_ids' => array_values(array_unique($pendingOfferIds))], $plan->version, $attempt->version);
         }
 
-        $blockers = [...$blockers, ...$this->personnelBlockers($attempt, $plan, $relevantOffers, $lock)];
-        $blockers = [...$blockers, ...$this->assetBlockers($attempt, $plan, $lock)];
+        $sourceJobId = $attempt->legacy_dispatch_job_id ?? app(ProjectShiftReadiness::class)->projectJobId($attempt);
+        $blockers = [...$blockers, ...$this->personnelBlockers($attempt, $plan, $relevantOffers, $lock, $sourceJobId)];
+        $blockers = [...$blockers, ...$this->assetBlockers($attempt, $plan, $lock, $sourceJobId)];
 
         return $blockers;
     }
@@ -165,6 +167,7 @@ final class DispatchReadinessResourceEvaluator
         DispatchPlanVersion $plan,
         Collection $offers,
         bool $lock,
+        ?int $sourceJobId,
     ): array {
         if ($offers->isEmpty()) {
             return [];
@@ -223,7 +226,7 @@ final class DispatchReadinessResourceEvaluator
             }
 
             foreach ($user->dispatchAssignments as $assignment) {
-                if ($this->assignmentConflicts($assignment, $attempt)) {
+                if ($this->assignmentConflicts($assignment, $attempt, $sourceJobId)) {
                     $blockers[] = $this->personnelBlocker(
                         DispatchReadinessBlockerCode::PersonnelConflict,
                         $offer,
@@ -257,10 +260,10 @@ final class DispatchReadinessResourceEvaluator
         };
     }
 
-    private function assignmentConflicts(DispatchPersonnelAssignment $assignment, DispatchExecutionAttempt $attempt): bool
+    private function assignmentConflicts(DispatchPersonnelAssignment $assignment, DispatchExecutionAttempt $attempt, ?int $sourceJobId): bool
     {
         $job = $assignment->job;
-        if ($job->id === $attempt->legacy_dispatch_job_id) {
+        if ($job->id === $sourceJobId) {
             return false;
         }
         if ($attempt->scheduled_start === null || $attempt->scheduled_end === null || $job->scheduled_start === null || $job->scheduled_end === null) {
@@ -271,7 +274,7 @@ final class DispatchReadinessResourceEvaluator
     }
 
     /** @return list<DispatchReadinessBlocker> */
-    private function assetBlockers(DispatchExecutionAttempt $attempt, DispatchPlanVersion $plan, bool $lock): array
+    private function assetBlockers(DispatchExecutionAttempt $attempt, DispatchPlanVersion $plan, bool $lock, ?int $sourceJobId): array
     {
         $requirements = $this->assetRequirements($plan);
         if ($requirements === []) {
@@ -335,7 +338,7 @@ final class DispatchReadinessResourceEvaluator
                 AssetUsageType::DispatchActivate,
                 $attempt->scheduled_start !== null && $attempt->scheduled_end !== null ? $attempt->scheduled_start->toImmutable() : null,
                 $attempt->scheduled_start !== null && $attempt->scheduled_end !== null ? $attempt->scheduled_end->toImmutable() : null,
-                $attempt->legacy_dispatch_job_id === null ? null : new AssetUsageSource('dispatch_job', (int) $attempt->legacy_dispatch_job_id),
+                $sourceJobId === null ? null : new AssetUsageSource('dispatch_job', $sourceJobId),
             );
             foreach ($this->availability->assess($request)->conflicts as $conflict) {
                 if (in_array($conflict->code, ['asset.not_found', 'asset.deleted', 'asset.not_dispatchable', 'asset.maintenance_block', 'asset.inspection_required'], true)) {

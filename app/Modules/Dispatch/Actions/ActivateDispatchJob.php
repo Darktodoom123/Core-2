@@ -6,6 +6,7 @@ use App\Modules\Assignment\Services\DispatchResourceEligibility;
 use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Services\ProjectShiftReadiness;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Models\CriticalLiftPlan;
@@ -36,7 +37,10 @@ final class ActivateDispatchJob
         Gate::forUser($actor)->authorize('activate', $job);
 
         return DB::transaction(function () use ($actor, $job, $version): DispatchJob {
+            $projectReadiness = app(ProjectShiftReadiness::class);
+            $projectReadiness->lockPlan((int) $job->id);
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
+            $projectReadiness->assertReady($job);
 
             if ($job->version !== $version) {
                 throw ValidationException::withMessages(['version' => 'This dispatch changed on another device. Refresh and review it again.']);

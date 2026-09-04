@@ -15,6 +15,8 @@ use App\Modules\Dispatch\Actions\CreateManualDispatchHandoff;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Http\Requests\StoreDispatchJobRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Models\ProjectShift;
+use App\Modules\Dispatch\Planning\Services\PlanningAccess;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
@@ -122,7 +124,10 @@ final class DispatchJobController extends Controller
             ->findOrFail($dispatchJob);
         Gate::authorize('view', $job);
 
+        $projectShift = ProjectShift::query()->with('phase.plan')->where('dispatch_job_id', $job->id)->first();
+
         $canAssignResources = Gate::forUser($user)->allows('assignResources', $job)
+            && $projectShift === null
             && $job->scheduled_start !== null
             && $job->scheduled_end !== null
             && in_array($job->status, [
@@ -137,6 +142,11 @@ final class DispatchJobController extends Controller
         );
 
         return Inertia::render('dispatch-detail', [
+            'project_context' => $projectShift !== null && PlanningAccess::view($user) ? [
+                'name' => $projectShift->phase->plan->name,
+                'phase' => $projectShift->phase->name,
+                'return_url' => '/?view=dispatch&dispatch_tab=project-plans&project='.$projectShift->phase->project_plan_id.'&phase='.$projectShift->project_phase_id.'&crew_week='.$job->scheduled_start?->toDateString(),
+            ] : null,
             'job' => OperationsWorkspaceViewModel::job($job),
             'personnel_candidates' => $canViewCandidates
                 ? Inertia::defer(fn (): array => $this->rescueCandidatePage(
@@ -158,7 +168,7 @@ final class DispatchJobController extends Controller
                 : null,
             'capabilities' => [
                 'assign_resources' => $canAssignResources,
-                'reassign_resources' => Gate::forUser($user)->allows('reassignResources', $job),
+                'reassign_resources' => $projectShift === null && Gate::forUser($user)->allows('reassignResources', $job),
                 'view_assignment_candidates' => $canViewCandidates,
                 'activate' => Gate::forUser($user)->allows('activate', $job),
                 'update_own_status' => $canUpdateOwnStatus,

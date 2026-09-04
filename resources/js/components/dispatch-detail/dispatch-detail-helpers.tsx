@@ -58,15 +58,20 @@ export function isAssignmentSuccessFlash(flash: WorkspaceFlash | null) {
     );
 }
 
-export function getSafeReturnTo() {
+export function getSafeReturnTo(fallback?: string | null) {
     if (typeof window === 'undefined') {
         return '/';
     }
 
     const params = new URLSearchParams(window.location.search);
-    const returnTo = params.get('return_to');
+    const returnTo = params.get('return_to') ?? fallback;
 
-    if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
+    if (
+        !returnTo ||
+        !returnTo.startsWith('/') ||
+        returnTo.startsWith('//') ||
+        returnTo.includes('\\')
+    ) {
         return '/';
     }
 

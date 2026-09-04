@@ -23,6 +23,8 @@ use App\Modules\Dispatch\Http\Requests\RestoreDispatchJobRequest;
 use App\Modules\Dispatch\Http\Requests\TransitionDispatchJobRequest;
 use App\Modules\Dispatch\Models\DispatchExecutionAttempt;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Models\ProjectShift;
+use App\Modules\Dispatch\Planning\Services\ProjectShiftLifecycle;
 use App\Shared\Http\Exceptions\VersionConflictException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -76,12 +78,15 @@ final class DispatchWorkflowController extends Controller
         DispatchJob $dispatchJob,
         CancelDispatchJob $action,
         DispatchV2Commands $commands,
+        ProjectShiftLifecycle $projectLifecycle,
     ): RedirectResponse {
         $expectedVersion = (int) $request->validated('version');
         $reason = (string) $request->validated('reason');
         $attempt = $this->resolveV2Attempt($dispatchJob);
 
-        if (config('dispatch.v2_commands_enabled') && $attempt !== null) {
+        if (ProjectShift::query()->where('dispatch_job_id', $dispatchJob->id)->exists()) {
+            $job = $projectLifecycle->cancel($request->user(), $dispatchJob, $expectedVersion, $reason);
+        } elseif (config('dispatch.v2_commands_enabled') && $attempt !== null) {
             $mutation = DispatchV2Mutation::forVersion(
                 expectedVersion: $expectedVersion,
                 reason: $reason,
@@ -120,12 +125,15 @@ final class DispatchWorkflowController extends Controller
         DispatchJob $dispatchJob,
         ReopenDispatchJob $action,
         DispatchV2Commands $commands,
+        ProjectShiftLifecycle $projectLifecycle,
     ): RedirectResponse {
         $expectedVersion = (int) $request->validated('version');
         $reason = (string) $request->validated('reason');
         $attempt = $this->resolveV2Attempt($dispatchJob);
 
-        if (config('dispatch.v2_commands_enabled') && $attempt !== null) {
+        if (ProjectShift::query()->where('dispatch_job_id', $dispatchJob->id)->exists()) {
+            $job = $projectLifecycle->reopen($request->user(), $dispatchJob, $expectedVersion, $reason);
+        } elseif (config('dispatch.v2_commands_enabled') && $attempt !== null) {
             $mutation = DispatchV2Mutation::forVersion(
                 expectedVersion: $expectedVersion,
                 reason: $reason,

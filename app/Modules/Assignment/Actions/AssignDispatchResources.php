@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Enums\ApprovalStatus;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -31,6 +32,9 @@ final class AssignDispatchResources
     public function handle(User $actor, DispatchJob $job, array $personnel, array $assets): DispatchJob
     {
         Gate::forUser($actor)->authorize('assignResources', $job);
+        if (ProjectShift::query()->where('dispatch_job_id', $job->id)->exists()) {
+            throw ValidationException::withMessages(['resources' => 'Use Fill coverage in the project plan to change this shift.']);
+        }
 
         return DB::transaction(function () use ($actor, $job, $personnel, $assets): DispatchJob {
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
