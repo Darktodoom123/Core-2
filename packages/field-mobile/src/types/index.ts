@@ -641,3 +641,19 @@ export interface WeatherStandbyPayload {
     latitude?: number | null;
     longitude?: number | null;
 }
+
+export type NotificationTab = 'all' | 'alerts' | 'dispatches' | 'outbox';
+
+export interface FieldNotificationItem {
+    id: string;
+    type:
+        | 'sync_attention'
+        | 'pending_assignment'
+        | 'system_info'
+        | 'safety_alert';
+    title: string;
+    message: string;
+    timestamp?: string;
+    actionLabel?: string;
+    onAction?: () => void;
+}

@@ -150,6 +150,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         (job) => job.my_assignment?.response_status === 'pending',
     ).length;
     const syncAttentionCount = failedCount + conflictCount;
+    const totalNotificationCount = syncAttentionCount + pendingResponseCount;
     const hasOutboxActivity =
         syncAttentionCount > 0 || queuedCount > 0 || syncingCount > 0;
 
@@ -422,7 +423,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 testID="refresh-control"
             >
                 <FieldHeader
-                    notificationCount={syncAttentionCount}
+                    isOnline={isOnline}
+                    notificationCount={totalNotificationCount}
                     onOpenNotifications={handleOpenNotifications}
                     onOpenProfile={handleOpenProfile}
                     profileOpen={profileSheetOpen}
@@ -771,7 +773,14 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 failedCommands={failedCommands}
                 failedCount={failedCount}
                 isOnline={isOnline}
+                onAcceptJob={(jobId) => {
+                    onSelectJob(jobId);
+                    setNotificationsSheetOpen(false);
+                }}
                 onClose={() => setNotificationsSheetOpen(false)}
+                onDeclineJob={() => {
+                    setNotificationsSheetOpen(false);
+                }}
                 onDiscardCommand={onDiscardCommand}
                 onRetryCommand={onRetryCommand}
                 onSyncNow={onSyncNow}

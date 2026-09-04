@@ -301,19 +301,53 @@ export const OperatorDashboardScreen: React.FC<
 
                     <View style={styles.topActions}>
                         <Pressable
-                            accessibilityLabel="Notifications and alerts"
+                            accessibilityHint="Opens field notifications, alerts, and system sync sheet"
+                            accessibilityLabel={
+                                syncAttentionCount > 0
+                                    ? `Notifications: ${syncAttentionCount} unread`
+                                    : 'Notifications: No unread alerts'
+                            }
                             accessibilityRole="button"
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                             onPress={() => setNotificationsSheetOpen(true)}
-                            style={styles.headerIconButton}
+                            style={({ pressed }) => [
+                                styles.headerIconButton,
+                                isDarkHud && styles.darkHeaderIconButton,
+                                syncAttentionCount > 0 &&
+                                    (isDarkHud
+                                        ? styles.darkNotificationActive
+                                        : styles.notificationActive),
+                                pressed && styles.pressed,
+                            ]}
                             testID="btn-notifications"
                         >
                             <Icon
+                                color={
+                                    syncAttentionCount > 0
+                                        ? isDarkHud
+                                            ? '#F59E0B'
+                                            : colors.amberDark
+                                        : isDarkHud
+                                          ? '#94A3B8'
+                                          : colors.text
+                                }
                                 name="bell"
                                 size={20}
-                                color={isDarkHud ? '#CBD5E1' : colors.text}
                             />
                             {syncAttentionCount > 0 ? (
-                                <View style={styles.badgeIndicator} />
+                                <View
+                                    style={[
+                                        styles.notificationBadge,
+                                        isDarkHud &&
+                                            styles.darkNotificationBadge,
+                                    ]}
+                                >
+                                    <Text style={styles.notificationBadgeText}>
+                                        {syncAttentionCount > 9
+                                            ? '9+'
+                                            : syncAttentionCount}
+                                    </Text>
+                                </View>
                             ) : null}
                         </Pressable>
 
@@ -588,12 +622,48 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
-        height: 38,
+        height: 40,
         justifyContent: 'center',
-        width: 38,
+        position: 'relative',
+        width: 40,
         ...shadows.sm,
+    },
+    darkHeaderIconButton: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    notificationActive: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#FDE68A',
+    },
+    darkNotificationActive: {
+        backgroundColor: '#1E293B',
+        borderColor: '#F59E0B',
+    },
+    notificationBadge: {
+        alignItems: 'center',
+        backgroundColor: colors.red,
+        borderColor: '#FFFFFF',
+        borderRadius: 9,
+        borderWidth: 1.5,
+        height: 18,
+        justifyContent: 'center',
+        minWidth: 18,
+        paddingHorizontal: 3,
+        position: 'absolute',
+        right: -4,
+        top: -4,
+        ...shadows.sm,
+    },
+    darkNotificationBadge: {
+        borderColor: '#0F172A',
+    },
+    notificationBadgeText: {
+        color: colors.white,
+        fontSize: 10,
+        fontWeight: '900',
     },
     badgeIndicator: {
         backgroundColor: colors.red,

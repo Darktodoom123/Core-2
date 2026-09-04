@@ -58,6 +58,7 @@ export const BellIcon: React.FC<BellIconProps> = ({
 export interface ProfileSummaryProps {
     userName?: string | null;
     userRole?: string | null;
+    isOnline?: boolean | null;
     syncTone?: SyncTone;
     profileOpen: boolean;
     onOpenProfile: () => void;
@@ -80,6 +81,7 @@ const initialsFor = (userName?: string | null): string => {
 
 export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     userName,
+    isOnline,
     syncTone = 'online',
     profileOpen,
     onOpenProfile,
@@ -87,6 +89,22 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     onOpenNotifications,
 }) => {
     const { isDarkHud, toggleMode } = useTheme();
+
+    const resolvedIsOnline =
+        isOnline !== undefined
+            ? isOnline
+            : syncTone === 'offline'
+              ? false
+              : syncTone === 'checking'
+                ? null
+                : true;
+
+    const connectionState: 'online' | 'offline' | 'checking' =
+        resolvedIsOnline === null
+            ? 'checking'
+            : resolvedIsOnline
+              ? 'online'
+              : 'offline';
 
     return (
         <View style={styles.profileRow} testID="profile-summary">
@@ -139,29 +157,49 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
             </Pressable>
 
             <View style={styles.headerActions}>
-                {/* Online Synced Pill Badge */}
+                {/* Connection Status Pill Badge: strictly indicates internet connectivity */}
                 <View
-                    accessibilityLabel="Connection status: online synced"
+                    accessibilityLabel={`Connection status: ${
+                        connectionState === 'online'
+                            ? 'online'
+                            : connectionState === 'checking'
+                              ? 'checking connection'
+                              : 'offline'
+                    }`}
                     style={[
                         styles.onlineSyncedPill,
                         isDarkHud && styles.darkOnlineSyncedPill,
+                        connectionState === 'offline' && styles.offlinePill,
+                        isDarkHud &&
+                            connectionState === 'offline' &&
+                            styles.darkOfflinePill,
                     ]}
                     testID="online-synced-pill"
                 >
                     <View
                         style={[
                             styles.onlineSyncedDot,
-                            syncTone === 'online' &&
+                            connectionState === 'online' &&
                                 styles.onlineSyncedDotActive,
+                            connectionState === 'offline' &&
+                                styles.onlineSyncedDotOffline,
                         ]}
                     />
                     <Text
                         style={[
                             styles.onlineSyncedText,
                             isDarkHud && styles.darkOnlineSyncedText,
+                            connectionState === 'offline' && styles.offlineText,
+                            isDarkHud &&
+                                connectionState === 'offline' &&
+                                styles.darkOfflineText,
                         ]}
                     >
-                        {syncTone === 'online' ? 'online synced' : 'offline'}
+                        {connectionState === 'online'
+                            ? 'online'
+                            : connectionState === 'checking'
+                              ? 'checking…'
+                              : 'offline'}
                     </Text>
                 </View>
 
@@ -173,6 +211,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                             : 'Switch to cockpit HUD night mode'
                     }
                     accessibilityRole="button"
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     onPress={toggleMode}
                     style={({ pressed }) => [
                         styles.headerIconButton,
@@ -184,40 +223,59 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
                     <Icon
                         color={isDarkHud ? '#F59E0B' : '#D97706'}
                         name={isDarkHud ? 'sun' : 'moon'}
-                        size={18}
+                        size={20}
                     />
                 </Pressable>
 
-                {notificationCount > 0 ? (
-                    <Pressable
-                        accessibilityHint="Opens field notifications and sync alerts"
-                        accessibilityLabel={
-                            notificationCount > 0
-                                ? `Notifications: ${notificationCount} unread`
-                                : 'Notifications'
+                <Pressable
+                    accessibilityHint="Opens field notifications, alerts, and system sync sheet"
+                    accessibilityLabel={
+                        (notificationCount ?? 0) > 0
+                            ? `Notifications: ${notificationCount} unread items`
+                            : 'Notifications: No unread alerts'
+                    }
+                    accessibilityRole="button"
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    onPress={onOpenNotifications || onOpenProfile}
+                    style={({ pressed }) => [
+                        styles.headerIconButton,
+                        styles.notificationButton,
+                        isDarkHud && styles.darkHeaderIconButton,
+                        (notificationCount ?? 0) > 0 &&
+                            (isDarkHud
+                                ? styles.darkNotificationActive
+                                : styles.notificationActive),
+                        pressed && styles.pressed,
+                    ]}
+                    testID="notification-button"
+                >
+                    <BellIcon
+                        color={
+                            (notificationCount ?? 0) > 0
+                                ? isDarkHud
+                                    ? '#F59E0B'
+                                    : colors.amberDark
+                                : isDarkHud
+                                  ? '#94A3B8'
+                                  : '#64748B'
                         }
-                        accessibilityRole="button"
-                        onPress={onOpenNotifications || onOpenProfile}
-                        style={({ pressed }) => [
-                            styles.notificationButton,
-                            isDarkHud && styles.darkHeaderIconButton,
-                            pressed && styles.pressed,
-                        ]}
-                        testID="notification-button"
-                    >
-                        <BellIcon
-                            color={isDarkHud ? '#F59E0B' : colors.amberDark}
-                            size={18}
-                        />
-                        <View style={styles.notificationBadge}>
+                        size={20}
+                    />
+                    {(notificationCount ?? 0) > 0 ? (
+                        <View
+                            style={[
+                                styles.notificationBadge,
+                                isDarkHud && styles.darkNotificationBadge,
+                            ]}
+                        >
                             <Text style={styles.notificationBadgeText}>
-                                {notificationCount > 9
+                                {notificationCount! > 9
                                     ? '9+'
                                     : notificationCount}
                             </Text>
                         </View>
-                    </Pressable>
-                ) : null}
+                    ) : null}
+                </Pressable>
             </View>
         </View>
     );
@@ -226,6 +284,7 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
 export interface FieldHeaderProps {
     userName?: string | null;
     userRole?: string | null;
+    isOnline?: boolean | null;
     syncStatusLabel: string;
     syncStatusMessage: string;
     syncTone: SyncTone;
@@ -238,6 +297,7 @@ export interface FieldHeaderProps {
 export const FieldHeader: React.FC<FieldHeaderProps> = ({
     userName,
     userRole,
+    isOnline,
     syncStatusLabel,
     syncStatusMessage,
     syncTone,
@@ -265,6 +325,7 @@ export const FieldHeader: React.FC<FieldHeaderProps> = ({
                 <ProfileSummary
                     userName={userName}
                     userRole={userRole}
+                    isOnline={isOnline}
                     syncTone={syncTone}
                     profileOpen={profileOpen}
                     onOpenProfile={onOpenProfile}
@@ -426,40 +487,39 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
     },
-    notificationButton: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderRadius: 17,
-        borderWidth: 1,
-        height: 34,
-        justifyContent: 'center',
-        position: 'relative',
-        width: 34,
-        ...shadows.sm,
-    },
     headerIconButton: {
         alignItems: 'center',
         backgroundColor: colors.surface,
         borderColor: colors.border,
-        borderRadius: 17,
+        borderRadius: 12,
         borderWidth: 1,
-        height: 34,
+        height: 40,
         justifyContent: 'center',
         position: 'relative',
-        width: 34,
+        width: 40,
         ...shadows.sm,
-    },
-    darkHeader: {
-        gap: 8,
-        marginBottom: 12,
     },
     darkHeaderIconButton: {
         backgroundColor: '#1E293B',
         borderColor: '#334155',
-        borderRadius: 17,
-        height: 34,
-        width: 34,
+        borderRadius: 12,
+        height: 40,
+        width: 40,
+    },
+    notificationButton: {
+        position: 'relative',
+    },
+    notificationActive: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#FDE68A',
+    },
+    darkNotificationActive: {
+        backgroundColor: '#1E293B',
+        borderColor: '#F59E0B',
+    },
+    darkHeader: {
+        gap: 8,
+        marginBottom: 12,
     },
     darkProfileCard: {
         backgroundColor: 'transparent',
@@ -507,6 +567,22 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(16, 185, 129, 0.12)',
         borderColor: 'rgba(16, 185, 129, 0.35)',
     },
+    attentionPill: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#FCD34D',
+    },
+    darkAttentionPill: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    offlinePill: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#CBD5E1',
+    },
+    darkOfflinePill: {
+        backgroundColor: 'rgba(100, 116, 139, 0.15)',
+        borderColor: 'rgba(100, 116, 139, 0.35)',
+    },
     onlineSyncedDot: {
         backgroundColor: '#64748B',
         borderRadius: 3.5,
@@ -516,6 +592,12 @@ const styles = StyleSheet.create({
     onlineSyncedDotActive: {
         backgroundColor: '#34D399',
     },
+    onlineSyncedDotAttention: {
+        backgroundColor: '#F59E0B',
+    },
+    onlineSyncedDotOffline: {
+        backgroundColor: '#94A3B8',
+    },
     onlineSyncedText: {
         color: '#10B981',
         fontSize: 12,
@@ -524,21 +606,38 @@ const styles = StyleSheet.create({
     darkOnlineSyncedText: {
         color: '#34D399',
     },
+    attentionText: {
+        color: '#B45309',
+    },
+    darkAttentionText: {
+        color: '#FBBF24',
+    },
+    offlineText: {
+        color: '#64748B',
+    },
+    darkOfflineText: {
+        color: '#94A3B8',
+    },
     bellIcon: {
         fontSize: 18,
     },
     notificationBadge: {
         alignItems: 'center',
         backgroundColor: colors.red,
+        borderColor: '#FFFFFF',
         borderRadius: 9,
+        borderWidth: 1.5,
         height: 18,
         justifyContent: 'center',
         minWidth: 18,
-        paddingHorizontal: 4,
+        paddingHorizontal: 3,
         position: 'absolute',
-        right: -3,
-        top: -3,
+        right: -4,
+        top: -4,
         ...shadows.sm,
+    },
+    darkNotificationBadge: {
+        borderColor: '#0F172A',
     },
     notificationBadgeText: {
         color: colors.white,
