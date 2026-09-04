@@ -121,4 +121,47 @@ describe('HosScreen Component & Workflows', () => {
 
         expect(onBack).toHaveBeenCalled();
     });
+
+    it('renders cleanly in daylight mode with user-friendly helper text', async () => {
+        const view = await render(<HosScreen />);
+
+        // Helper text and section headers
+        expect(view.getByText('SELECT ACTIVE DUTY STATUS')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Tap to switch duty status. Complies with DOLE-OSHC and DOT ELD mandates.',
+            ),
+        ).toBeTruthy();
+        expect(view.getByText('Duty Transition Remarks & Notes')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Visual ELD graph of 24-hour shift status progression (00:00 to 24:00).',
+            ),
+        ).toBeTruthy();
+        expect(
+            view.getByText(
+                'Timestamped change-of-duty event logs with GPS location audits.',
+            ),
+        ).toBeTruthy();
+        expect(
+            view.getByText(
+                'I certify that these duty status entries and hours of service are true, complete, and accurate for this shift.',
+            ),
+        ).toBeTruthy();
+
+        // Toggling certification enables/disables the confirmation button
+        const certCheck = view.getByTestId('hos-cert-check');
+        const confirmBtn = view.getByTestId('confirm-hos-btn');
+
+        // Initially certified (button enabled)
+        expect(confirmBtn.props.accessibilityState?.disabled).toBeFalsy();
+
+        // Uncheck certification
+        await fireEvent.press(certCheck);
+        expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
+
+        // Re-check certification
+        await fireEvent.press(certCheck);
+        expect(confirmBtn.props.accessibilityState?.disabled).toBeFalsy();
+    });
 });

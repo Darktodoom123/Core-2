@@ -268,41 +268,80 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         >
             {/* 1. Fixed Top Header Bar matching DVIR */}
             <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
-                <Pressable
-                    accessibilityLabel="Close and return"
-                    accessibilityRole="button"
-                    onPress={() => {
-                        if (onBack) {
-                            onBack();
-                        }
-                    }}
-                    style={styles.closeHeaderBtn}
-                    testID="hos-back-btn"
-                >
-                    <Icon color="#94A3B8" name="back" size={22} />
-                </Pressable>
-                <View style={styles.headerCenter}>
-                    <Text style={styles.pageCategory}>
+                {/* Top Action Row: Back Button & Duty Status Pill Badge */}
+                <View style={styles.headerTopRow}>
+                    <Pressable
+                        accessibilityLabel="Close and return"
+                        accessibilityRole="button"
+                        onPress={() => {
+                            if (onBack) {
+                                onBack();
+                            }
+                        }}
+                        style={[
+                            styles.closeHeaderBtn,
+                            isDarkHud && styles.darkCloseHeaderBtn,
+                        ]}
+                        testID="hos-back-btn"
+                    >
+                        <Icon
+                            color={isDarkHud ? '#CBD5E1' : '#475569'}
+                            name="back"
+                            size={20}
+                        />
+                    </Pressable>
+
+                    <View
+                        style={[
+                            styles.dutyPillBadge,
+                            isDarkHud && styles.darkDutyPillBadge,
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.dutyBadgeDot,
+                                { backgroundColor: activeConfig.accentColor },
+                            ]}
+                        />
+                        <Text
+                            style={[
+                                styles.dutyPillBadgeText,
+                                isDarkHud && styles.darkDutyPillBadgeText,
+                            ]}
+                        >
+                            {activeConfig.badge}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Main Header Titles (Unconstrained, Full Width) */}
+                <View style={styles.headerTitleBlock}>
+                    <Text
+                        style={[
+                            styles.pageCategory,
+                            isDarkHud && styles.darkPageCategory,
+                        ]}
+                    >
                         HOURS OF SERVICE (HoS) · ELD COCKPIT
                     </Text>
-                    <Text accessibilityRole="header" style={styles.screenTitle}>
+                    <Text
+                        accessibilityRole="header"
+                        style={[
+                            styles.screenTitle,
+                            isDarkHud && styles.darkScreenTitle,
+                        ]}
+                    >
                         Duty Status &amp; Shift Management
                     </Text>
-                    <Text style={styles.headerSubtitle}>
+                    <Text
+                        style={[
+                            styles.headerSubtitle,
+                            isDarkHud && styles.darkHeaderSubtitle,
+                        ]}
+                    >
                         Operator: {operatorName} · Shift Started:{' '}
                         {shiftInfo?.startedAt ?? '08:00 AM'} (
                         {hoursElapsed.toFixed(1)}h Elapsed)
-                    </Text>
-                </View>
-                <View style={styles.dutyPillBadge}>
-                    <View
-                        style={[
-                            styles.dutyBadgeDot,
-                            { backgroundColor: activeConfig.accentColor },
-                        ]}
-                    />
-                    <Text style={styles.dutyPillBadgeText}>
-                        {activeConfig.badge}
                     </Text>
                 </View>
             </View>
@@ -320,14 +359,21 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         style={[
                             styles.doleWarningBanner,
                             isDoleCapExceeded && styles.doleCapBanner,
-                            isDarkHud && styles.darkDoleWarningBanner,
+                            isDarkHud &&
+                                (isDoleCapExceeded
+                                    ? styles.darkDoleCapBanner
+                                    : styles.darkDoleWarningBanner),
                         ]}
                         testID="dole-shift-limit-banner"
                     >
                         <View style={styles.doleWarningContent}>
                             <Icon
                                 color={
-                                    isDoleCapExceeded ? '#EF4444' : '#F59E0B'
+                                    isDoleCapExceeded
+                                        ? '#EF4444'
+                                        : isDarkHud
+                                          ? '#F59E0B'
+                                          : '#D97706'
                                 }
                                 name="alert"
                                 size={18}
@@ -336,7 +382,10 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 style={[
                                     styles.doleWarningText,
                                     isDoleCapExceeded && styles.doleCapText,
-                                    isDarkHud && styles.darkDoleWarningText,
+                                    isDarkHud &&
+                                        (isDoleCapExceeded
+                                            ? styles.darkDoleCapText
+                                            : styles.darkDoleWarningText),
                                 ]}
                             >
                                 {isDoleCapExceeded
@@ -348,10 +397,18 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             accessibilityLabel="Handover equipment to relief operator"
                             accessibilityRole="button"
                             onPress={() => setReliefHandoverOpen(true)}
-                            style={styles.doleHandoverBtn}
+                            style={[
+                                styles.doleHandoverBtn,
+                                isDarkHud && styles.darkDoleHandoverBtn,
+                            ]}
                             testID="hos-relief-handover-btn"
                         >
-                            <Text style={styles.doleHandoverBtnText}>
+                            <Text
+                                style={[
+                                    styles.doleHandoverBtnText,
+                                    isDarkHud && styles.darkDoleHandoverBtnText,
+                                ]}
+                            >
                                 Relief Handover
                             </Text>
                         </Pressable>
@@ -359,15 +416,35 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 ) : null}
 
                 {/* 3. Live ELD Clocks Card */}
-                <View style={styles.clocksCard} testID="hos-eld-clocks-card">
+                <View
+                    style={[
+                        styles.clocksCard,
+                        isDarkHud && styles.darkClocksCard,
+                    ]}
+                    testID="hos-eld-clocks-card"
+                >
                     <View style={styles.cardHeader}>
                         <View style={styles.badgeRow}>
-                            <Icon color="#10B981" name="clock" size={18} />
-                            <Text style={styles.clocksCardHeading}>
+                            <Icon
+                                color={isDarkHud ? '#34D399' : '#059669'}
+                                name="clock"
+                                size={18}
+                            />
+                            <Text
+                                style={[
+                                    styles.clocksCardHeading,
+                                    isDarkHud && styles.darkClocksCardHeading,
+                                ]}
+                            >
                                 LIVE ELD DUTY CLOCKS
                             </Text>
                         </View>
-                        <Text style={styles.cycleText}>
+                        <Text
+                            style={[
+                                styles.cycleText,
+                                isDarkHud && styles.darkCycleText,
+                            ]}
+                        >
                             {userRole.toUpperCase()}
                         </Text>
                     </View>
@@ -375,53 +452,134 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     {/* 4-Cell Dials Grid */}
                     <View style={styles.clocksGrid}>
                         {/* Dial 1: Drive / Operating Remaining */}
-                        <View style={styles.clockCell}>
-                            <Text style={styles.clockCellLabel}>
+                        <View
+                            style={[
+                                styles.clockCell,
+                                isDarkHud && styles.darkClockCell,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.clockCellLabel,
+                                    isDarkHud && styles.darkClockCellLabel,
+                                ]}
+                            >
                                 Drive / Operating
                             </Text>
-                            <Text style={styles.clockCellValueGreen}>
+                            <Text
+                                style={[
+                                    styles.clockCellValueGreen,
+                                    isDarkHud && styles.darkClockCellValueGreen,
+                                ]}
+                            >
                                 {formatHoursMinutes(driveRemainingHours)}
                             </Text>
-                            <Text style={styles.clockCellSub}>
+                            <Text
+                                style={[
+                                    styles.clockCellSub,
+                                    isDarkHud && styles.darkClockCellSub,
+                                ]}
+                            >
                                 of {maxDriveHours}h limit
                             </Text>
                         </View>
 
                         {/* Dial 2: Shift Window Remaining */}
-                        <View style={styles.clockCell}>
-                            <Text style={styles.clockCellLabel}>
+                        <View
+                            style={[
+                                styles.clockCell,
+                                isDarkHud && styles.darkClockCell,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.clockCellLabel,
+                                    isDarkHud && styles.darkClockCellLabel,
+                                ]}
+                            >
                                 Shift Window
                             </Text>
-                            <Text style={styles.clockCellValueBlue}>
+                            <Text
+                                style={[
+                                    styles.clockCellValueBlue,
+                                    isDarkHud && styles.darkClockCellValueBlue,
+                                ]}
+                            >
                                 {formatHoursMinutes(shiftRemainingHours)}
                             </Text>
-                            <Text style={styles.clockCellSub}>
+                            <Text
+                                style={[
+                                    styles.clockCellSub,
+                                    isDarkHud && styles.darkClockCellSub,
+                                ]}
+                            >
                                 of {maxShiftHours}h daily
                             </Text>
                         </View>
 
                         {/* Dial 3: 70-Hr Cycle Remaining */}
-                        <View style={styles.clockCell}>
-                            <Text style={styles.clockCellLabel}>
+                        <View
+                            style={[
+                                styles.clockCell,
+                                isDarkHud && styles.darkClockCell,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.clockCellLabel,
+                                    isDarkHud && styles.darkClockCellLabel,
+                                ]}
+                            >
                                 70-Hr 8-Day Cycle
                             </Text>
-                            <Text style={styles.clockCellValueAmber}>
+                            <Text
+                                style={[
+                                    styles.clockCellValueAmber,
+                                    isDarkHud && styles.darkClockCellValueAmber,
+                                ]}
+                            >
                                 {formatHoursMinutes(cycleRemainingHours)}
                             </Text>
-                            <Text style={styles.clockCellSub}>
+                            <Text
+                                style={[
+                                    styles.clockCellSub,
+                                    isDarkHud && styles.darkClockCellSub,
+                                ]}
+                            >
                                 {cycleHoursElapsed.toFixed(1)}h logged
                             </Text>
                         </View>
 
                         {/* Dial 4: Mandatory Rest Break Countdown */}
-                        <View style={styles.clockCell}>
-                            <Text style={styles.clockCellLabel}>
+                        <View
+                            style={[
+                                styles.clockCell,
+                                isDarkHud && styles.darkClockCell,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.clockCellLabel,
+                                    isDarkHud && styles.darkClockCellLabel,
+                                ]}
+                            >
                                 Break Countdown
                             </Text>
-                            <Text style={styles.clockCellValuePurple}>
+                            <Text
+                                style={[
+                                    styles.clockCellValuePurple,
+                                    isDarkHud &&
+                                        styles.darkClockCellValuePurple,
+                                ]}
+                            >
                                 {formatHoursMinutes(breakCountdownHours)}
                             </Text>
-                            <Text style={styles.clockCellSub}>
+                            <Text
+                                style={[
+                                    styles.clockCellSub,
+                                    isDarkHud && styles.darkClockCellSub,
+                                ]}
+                            >
                                 until 30m rest
                             </Text>
                         </View>
@@ -430,15 +588,30 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     {/* Shift Progress Gauge Bar */}
                     <View style={styles.gaugeContainer}>
                         <View style={styles.gaugeMetaRow}>
-                            <Text style={styles.gaugeMetaLabel}>
+                            <Text
+                                style={[
+                                    styles.gaugeMetaLabel,
+                                    isDarkHud && styles.darkGaugeMetaLabel,
+                                ]}
+                            >
                                 Daily Shift Elapsed: {hoursElapsed.toFixed(1)} /{' '}
                                 {maxShiftHours}h
                             </Text>
-                            <Text style={styles.gaugeMetaPercent}>
+                            <Text
+                                style={[
+                                    styles.gaugeMetaPercent,
+                                    isDarkHud && styles.darkGaugeMetaPercent,
+                                ]}
+                            >
                                 {shiftProgressPercent}% Used
                             </Text>
                         </View>
-                        <View style={styles.gaugeTrack}>
+                        <View
+                            style={[
+                                styles.gaugeTrack,
+                                isDarkHud && styles.darkGaugeTrack,
+                            ]}
+                        >
                             <View
                                 style={[
                                     styles.gaugeFill,
@@ -455,14 +628,28 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 </View>
 
                 {/* 4. Active Duty Status Selector */}
-                <View style={styles.sectionCard} testID="duty-status-selector">
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.darkSectionCard,
+                    ]}
+                    testID="duty-status-selector"
+                >
                     <Text
                         accessibilityRole="header"
-                        style={styles.sectionTitle}
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.darkSectionTitle,
+                        ]}
                     >
                         SELECT ACTIVE DUTY STATUS
                     </Text>
-                    <Text style={styles.sectionHelper}>
+                    <Text
+                        style={[
+                            styles.sectionHelper,
+                            isDarkHud && styles.darkSectionHelper,
+                        ]}
+                    >
                         Tap to switch duty status. Complies with DOLE-OSHC and
                         DOT ELD mandates.
                     </Text>
@@ -482,8 +669,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     }}
                                     style={[
                                         styles.dutyOptionCard,
+                                        isDarkHud && styles.darkDutyOptionCard,
                                         isSelected &&
-                                            styles.dutyOptionCardSelected,
+                                            (isDarkHud
+                                                ? styles.darkDutyOptionCardSelected
+                                                : styles.dutyOptionCardSelected),
                                     ]}
                                     testID={`duty-option-${opt.status}`}
                                 >
@@ -504,8 +694,12 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                             <Text
                                                 style={[
                                                     styles.optionBadgeText,
+                                                    isDarkHud &&
+                                                        styles.darkOptionBadgeText,
                                                     isSelected &&
-                                                        styles.optionBadgeTextActive,
+                                                        (isDarkHud
+                                                            ? styles.darkOptionBadgeTextActive
+                                                            : styles.optionBadgeTextActive),
                                                 ]}
                                             >
                                                 {opt.badge}
@@ -515,13 +709,23 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                             <Text
                                                 style={[
                                                     styles.optionTitle,
+                                                    isDarkHud &&
+                                                        styles.darkOptionTitle,
                                                     isSelected &&
-                                                        styles.optionTitleSelected,
+                                                        (isDarkHud
+                                                            ? styles.darkOptionTitleSelected
+                                                            : styles.optionTitleSelected),
                                                 ]}
                                             >
                                                 {opt.title}
                                             </Text>
-                                            <Text style={styles.optionSubtitle}>
+                                            <Text
+                                                style={[
+                                                    styles.optionSubtitle,
+                                                    isDarkHud &&
+                                                        styles.darkOptionSubtitle,
+                                                ]}
+                                            >
                                                 {opt.subtitle}
                                             </Text>
                                         </View>
@@ -530,13 +734,20 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     <View
                                         style={[
                                             styles.radioButton,
+                                            isDarkHud && styles.darkRadioButton,
                                             isSelected &&
-                                                styles.radioButtonSelected,
+                                                (isDarkHud
+                                                    ? styles.darkRadioButtonSelected
+                                                    : styles.radioButtonSelected),
                                         ]}
                                     >
                                         {isSelected ? (
                                             <View
-                                                style={styles.radioButtonInner}
+                                                style={[
+                                                    styles.radioButtonInner,
+                                                    isDarkHud &&
+                                                        styles.darkRadioButtonInner,
+                                                ]}
                                             />
                                         ) : null}
                                     </View>
@@ -549,16 +760,27 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 {/* 5. Standby & Demurrage Reason Selector (when Standby is chosen) */}
                 {selectedStatus === 'standby' ? (
                     <View
-                        style={styles.sectionCard}
+                        style={[
+                            styles.sectionCard,
+                            isDarkHud && styles.darkSectionCard,
+                        ]}
                         testID="standby-reason-section"
                     >
                         <Text
                             accessibilityRole="header"
-                            style={styles.sectionTitle}
+                            style={[
+                                styles.sectionTitle,
+                                isDarkHud && styles.darkSectionTitle,
+                            ]}
                         >
                             STANDBY &amp; DEMURRAGE REASON
                         </Text>
-                        <Text style={styles.sectionHelper}>
+                        <Text
+                            style={[
+                                styles.sectionHelper,
+                                isDarkHud && styles.darkSectionHelper,
+                            ]}
+                        >
                             Required for client billable delay attribution and
                             contractual demurrage logs.
                         </Text>
@@ -578,20 +800,38 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         }}
                                         style={[
                                             styles.standbyChip,
+                                            isDarkHud && styles.darkStandbyChip,
                                             isSelected &&
-                                                styles.standbyChipSelected,
+                                                (isDarkHud
+                                                    ? styles.darkStandbyChipSelected
+                                                    : styles.standbyChipSelected),
                                         ]}
                                         testID={`standby-reason-${r.reason}`}
                                     >
                                         <Text
                                             style={[
                                                 styles.standbyChipText,
+                                                isDarkHud &&
+                                                    styles.darkStandbyChipText,
                                                 isSelected &&
-                                                    styles.standbyChipTextSelected,
+                                                    (isDarkHud
+                                                        ? styles.darkStandbyChipTextSelected
+                                                        : styles.standbyChipTextSelected),
                                             ]}
                                         >
                                             {r.label}
                                         </Text>
+                                        {isSelected ? (
+                                            <Text
+                                                style={[
+                                                    styles.standbyCheckGlyph,
+                                                    isDarkHud &&
+                                                        styles.darkStandbyCheckGlyph,
+                                                ]}
+                                            >
+                                                ✓
+                                            </Text>
+                                        ) : null}
                                     </Pressable>
                                 );
                             })}
@@ -599,9 +839,19 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     </View>
                 ) : null}
 
-                {/* 6. Remarks / Location Input */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.inputLabel}>
+                {/* 6. Remarks & Duty Transition Submission Card */}
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.darkSectionCard,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.inputLabel,
+                            isDarkHud && styles.darkInputLabel,
+                        ]}
+                    >
                         Duty Transition Remarks &amp; Notes
                     </Text>
                     <TextInput
@@ -613,38 +863,153 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             setIsSaved(false);
                         }}
                         placeholder="e.g. Lift completed at Taguig site; transitioning to road transit back to yard."
-                        placeholderTextColor="#64748B"
-                        style={styles.input}
+                        placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
+                        style={[styles.input, isDarkHud && styles.darkInput]}
                         value={remarks}
                         testID="hos-remarks-input"
                     />
+
+                    {/* Legal Operator Certification */}
+                    <Pressable
+                        accessibilityLabel="Legal certification of hours of service"
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isCertified }}
+                        onPress={() => setIsCertified((prev) => !prev)}
+                        style={styles.certCheckRow}
+                        testID="hos-cert-check"
+                    >
+                        <View
+                            style={[
+                                styles.certBox,
+                                isDarkHud && styles.darkCertBox,
+                                isCertified && styles.certBoxChecked,
+                            ]}
+                        >
+                            {isCertified ? (
+                                <Text style={styles.certCheckMark}>✓</Text>
+                            ) : null}
+                        </View>
+                        <Text
+                            style={[
+                                styles.certCheckLabel,
+                                isDarkHud && styles.darkCertCheckLabel,
+                            ]}
+                        >
+                            I certify that these duty status entries and hours
+                            of service are true, complete, and accurate for this
+                            shift.
+                        </Text>
+                    </Pressable>
+
+                    {/* Update & Certify Duty Status Action Button / Stamp */}
+                    {!isSaved ? (
+                        <Pressable
+                            accessibilityLabel="Update and certify duty status"
+                            accessibilityRole="button"
+                            disabled={!isCertified}
+                            onPress={handleConfirm}
+                            style={({ pressed }) => [
+                                styles.actionButton,
+                                isDarkHud && styles.darkActionButton,
+                                !isCertified &&
+                                    (isDarkHud
+                                        ? styles.darkActionButtonDisabled
+                                        : styles.actionButtonDisabled),
+                                pressed && styles.pressed,
+                            ]}
+                            testID="confirm-hos-btn"
+                        >
+                            <Text style={styles.actionBtnText}>
+                                ✓ Update &amp; Certify Duty Status
+                            </Text>
+                        </Pressable>
+                    ) : (
+                        <View
+                            style={[
+                                styles.signedStamp,
+                                isDarkHud && styles.darkSignedStamp,
+                            ]}
+                            testID="hos-confirmed-stamp"
+                        >
+                            <Text
+                                style={[
+                                    styles.signedStampTitle,
+                                    isDarkHud && styles.darkSignedStampTitle,
+                                ]}
+                            >
+                                ✓ DUTY STATUS UPDATED &amp; CERTIFIED
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.signedStampSub,
+                                    isDarkHud && styles.darkSignedStampSub,
+                                ]}
+                            >
+                                Active: {activeConfig.title} (
+                                {new Date().toLocaleTimeString()})
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* 7. 24-Hour Duty Timeline Graph (Samsara / ELD Visual Graph) */}
-                <View style={styles.sectionCard} testID="hos-timeline-graph">
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.darkSectionCard,
+                    ]}
+                    testID="hos-timeline-graph"
+                >
                     <Text
                         accessibilityRole="header"
-                        style={styles.sectionTitle}
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.darkSectionTitle,
+                        ]}
                     >
                         24-HOUR DUTY TIMELINE (TODAY)
                     </Text>
-                    <Text style={styles.sectionHelper}>
+                    <Text
+                        style={[
+                            styles.sectionHelper,
+                            isDarkHud && styles.darkSectionHelper,
+                        ]}
+                    >
                         Visual ELD graph of 24-hour shift status progression
                         (00:00 to 24:00).
                     </Text>
 
-                    <View style={styles.graphContainer}>
+                    <View
+                        style={[
+                            styles.graphContainer,
+                            isDarkHud && styles.darkGraphContainer,
+                        ]}
+                    >
                         {/* Row: OFF Duty */}
                         <View style={styles.graphRow}>
-                            <Text style={styles.graphRowHeader}>OFF</Text>
-                            <View style={styles.graphRowTrack}>
+                            <Text
+                                style={[
+                                    styles.graphRowHeader,
+                                    isDarkHud && styles.darkGraphRowHeader,
+                                ]}
+                            >
+                                OFF
+                            </Text>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.graphSegment,
                                         {
                                             left: '0%',
                                             width: '33.3%',
-                                            backgroundColor: '#475569',
+                                            backgroundColor: isDarkHud
+                                                ? '#475569'
+                                                : '#64748B',
                                         },
                                     ]}
                                 />
@@ -653,15 +1018,29 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
                         {/* Row: On Break */}
                         <View style={styles.graphRow}>
-                            <Text style={styles.graphRowHeader}>BRK</Text>
-                            <View style={styles.graphRowTrack}>
+                            <Text
+                                style={[
+                                    styles.graphRowHeader,
+                                    isDarkHud && styles.darkGraphRowHeader,
+                                ]}
+                            >
+                                BRK
+                            </Text>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.graphSegment,
                                         {
                                             left: '50%',
                                             width: '2.1%',
-                                            backgroundColor: '#10B981',
+                                            backgroundColor: isDarkHud
+                                                ? '#10B981'
+                                                : '#059669',
                                         },
                                     ]}
                                 />
@@ -670,15 +1049,29 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
                         {/* Row: Driving */}
                         <View style={styles.graphRow}>
-                            <Text style={styles.graphRowHeader}>DRV</Text>
-                            <View style={styles.graphRowTrack}>
+                            <Text
+                                style={[
+                                    styles.graphRowHeader,
+                                    isDarkHud && styles.darkGraphRowHeader,
+                                ]}
+                            >
+                                DRV
+                            </Text>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.graphSegment,
                                         {
                                             left: '33.3%',
                                             width: '6.2%',
-                                            backgroundColor: '#3B82F6',
+                                            backgroundColor: isDarkHud
+                                                ? '#3B82F6'
+                                                : '#2563EB',
                                         },
                                     ]}
                                 />
@@ -687,15 +1080,29 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
                         {/* Row: Operating / On Duty */}
                         <View style={styles.graphRow}>
-                            <Text style={styles.graphRowHeader}>ON</Text>
-                            <View style={styles.graphRowTrack}>
+                            <Text
+                                style={[
+                                    styles.graphRowHeader,
+                                    isDarkHud && styles.darkGraphRowHeader,
+                                ]}
+                            >
+                                ON
+                            </Text>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.graphSegment,
                                         {
                                             left: '39.5%',
                                             width: '10.5%',
-                                            backgroundColor: '#F59E0B',
+                                            backgroundColor: isDarkHud
+                                                ? '#F59E0B'
+                                                : '#D97706',
                                         },
                                     ]}
                                 />
@@ -705,7 +1112,9 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         {
                                             left: '52.1%',
                                             width: '6.2%',
-                                            backgroundColor: '#F59E0B',
+                                            backgroundColor: isDarkHud
+                                                ? '#F59E0B'
+                                                : '#D97706',
                                         },
                                     ]}
                                 />
@@ -713,128 +1122,165 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         </View>
 
                         {/* Timeline Hour Scale */}
-                        <View style={styles.graphTimeScale}>
-                            <Text style={styles.timeMark}>00:00</Text>
-                            <Text style={styles.timeMark}>06:00</Text>
-                            <Text style={styles.timeMark}>12:00</Text>
-                            <Text style={styles.timeMark}>18:00</Text>
-                            <Text style={styles.timeMark}>24:00</Text>
+                        <View
+                            style={[
+                                styles.graphTimeScale,
+                                isDarkHud && styles.darkGraphTimeScale,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.timeMark,
+                                    isDarkHud && styles.darkTimeMark,
+                                ]}
+                            >
+                                00:00
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.timeMark,
+                                    isDarkHud && styles.darkTimeMark,
+                                ]}
+                            >
+                                06:00
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.timeMark,
+                                    isDarkHud && styles.darkTimeMark,
+                                ]}
+                            >
+                                12:00
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.timeMark,
+                                    isDarkHud && styles.darkTimeMark,
+                                ]}
+                            >
+                                18:00
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.timeMark,
+                                    isDarkHud && styles.darkTimeMark,
+                                ]}
+                            >
+                                24:00
+                            </Text>
                         </View>
                     </View>
                 </View>
 
                 {/* 8. Chronological Shift Log Events History */}
-                <View style={styles.sectionCard} testID="hos-activity-logs">
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.darkSectionCard,
+                    ]}
+                    testID="hos-activity-logs"
+                >
                     <Text
                         accessibilityRole="header"
-                        style={styles.sectionTitle}
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.darkSectionTitle,
+                        ]}
                     >
                         TODAY'S SHIFT ACTIVITY LOG
                     </Text>
-                    <Text style={styles.sectionHelper}>
+                    <Text
+                        style={[
+                            styles.sectionHelper,
+                            isDarkHud && styles.darkSectionHelper,
+                        ]}
+                    >
                         Timestamped change-of-duty event logs with GPS location
                         audits.
                     </Text>
 
                     <View style={styles.logEventsList}>
                         {INITIAL_LOG_EVENTS.map((evt) => (
-                            <View key={evt.id} style={styles.logEventCard}>
+                            <View
+                                key={evt.id}
+                                style={[
+                                    styles.logEventCard,
+                                    isDarkHud && styles.darkLogEventCard,
+                                ]}
+                            >
                                 <View style={styles.logEventHeader}>
                                     <View style={styles.logBadgeRow}>
                                         <View
                                             style={[
                                                 styles.logStatusBadge,
                                                 evt.status === 'operating'
-                                                    ? styles.logStatusOperating
+                                                    ? isDarkHud
+                                                        ? styles.darkLogStatusOperating
+                                                        : styles.logStatusOperating
                                                     : evt.status === 'driving'
-                                                      ? styles.logStatusDriving
+                                                      ? isDarkHud
+                                                          ? styles.darkLogStatusDriving
+                                                          : styles.logStatusDriving
                                                       : evt.status ===
                                                           'on_break'
-                                                        ? styles.logStatusBreak
-                                                        : styles.logStatusOff,
+                                                        ? isDarkHud
+                                                            ? styles.darkLogStatusBreak
+                                                            : styles.logStatusBreak
+                                                        : isDarkHud
+                                                          ? styles.darkLogStatusOff
+                                                          : styles.logStatusOff,
                                             ]}
                                         >
-                                            <Text style={styles.logStatusText}>
+                                            <Text
+                                                style={[
+                                                    styles.logStatusText,
+                                                    isDarkHud &&
+                                                        styles.darkLogStatusText,
+                                                ]}
+                                            >
                                                 {evt.status.toUpperCase()}
                                             </Text>
                                         </View>
-                                        <Text style={styles.logTimeRange}>
+                                        <Text
+                                            style={[
+                                                styles.logTimeRange,
+                                                isDarkHud &&
+                                                    styles.darkLogTimeRange,
+                                            ]}
+                                        >
                                             {evt.startTime} – {evt.endTime}
                                         </Text>
                                     </View>
-                                    <Text style={styles.logDuration}>
+                                    <Text
+                                        style={[
+                                            styles.logDuration,
+                                            isDarkHud && styles.darkLogDuration,
+                                        ]}
+                                    >
                                         {evt.durationFormatted}
                                     </Text>
                                 </View>
 
-                                <Text style={styles.logDetails}>
+                                <Text
+                                    style={[
+                                        styles.logDetails,
+                                        isDarkHud && styles.darkLogDetails,
+                                    ]}
+                                >
                                     {evt.details}
                                 </Text>
-                                <Text style={styles.logLocation}>
+                                <Text
+                                    style={[
+                                        styles.logLocation,
+                                        isDarkHud && styles.darkLogLocation,
+                                    ]}
+                                >
                                     📍 {evt.location}
                                 </Text>
                             </View>
                         ))}
                     </View>
                 </View>
-
-                {/* 9. Legal Operator Certification */}
-                <Pressable
-                    accessibilityLabel="Legal certification of hours of service"
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isCertified }}
-                    onPress={() => setIsCertified((prev) => !prev)}
-                    style={styles.certCheckRow}
-                    testID="hos-cert-check"
-                >
-                    <View
-                        style={[
-                            styles.certBox,
-                            isCertified && styles.certBoxChecked,
-                        ]}
-                    >
-                        {isCertified ? (
-                            <Text style={styles.certCheckMark}>✓</Text>
-                        ) : null}
-                    </View>
-                    <Text style={styles.certCheckLabel}>
-                        I certify that these duty status entries and hours of
-                        service are true, complete, and accurate for this shift.
-                    </Text>
-                </Pressable>
-
-                {/* 10. Confirmation & Action Button */}
-                {!isSaved ? (
-                    <Pressable
-                        accessibilityLabel="Update and certify duty status"
-                        accessibilityRole="button"
-                        disabled={!isCertified}
-                        onPress={handleConfirm}
-                        style={({ pressed }) => [
-                            styles.actionButton,
-                            !isCertified && styles.actionButtonDisabled,
-                            pressed && styles.pressed,
-                        ]}
-                        testID="confirm-hos-btn"
-                    >
-                        <Text style={styles.actionBtnText}>
-                            ✓ Update &amp; Certify Duty Status
-                        </Text>
-                    </Pressable>
-                ) : (
-                    <View
-                        style={styles.signedStamp}
-                        testID="hos-confirmed-stamp"
-                    >
-                        <Text style={styles.signedStampTitle}>
-                            ✓ DUTY STATUS UPDATED &amp; CERTIFIED
-                        </Text>
-                        <Text style={styles.signedStampSub}>
-                            Active: {activeConfig.title} (
-                            {new Date().toLocaleTimeString()})
-                        </Text>
-                    </View>
-                )}
             </ScrollView>
 
             {/* End Shift Safeguard Intercept Modal */}
@@ -867,62 +1313,90 @@ export const HosScreen: React.FC<HosScreenProps> = ({
 
 const styles = StyleSheet.create({
     screenRoot: {
-        backgroundColor: '#090E1A',
+        backgroundColor: '#F1F5F9',
         flex: 1,
     },
     darkScreenRoot: {
-        backgroundColor: '#090E1A',
+        backgroundColor: '#090D16',
     },
     headerBar: {
-        alignItems: 'center',
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: '#FFFFFF',
+        borderBottomColor: '#E2E8F0',
         borderBottomWidth: 1,
-        flexDirection: 'row',
-        gap: 12,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingTop: 12,
+        paddingBottom: 14,
     },
     darkHeaderBar: {
         backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        borderBottomColor: '#334155',
+    },
+    headerTopRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
     closeHeaderBtn: {
         alignItems: 'center',
-        height: 38,
+        backgroundColor: '#F1F5F9',
+        borderColor: '#CBD5E1',
+        borderRadius: 18,
+        borderWidth: 1,
+        height: 36,
         justifyContent: 'center',
-        width: 38,
+        width: 36,
     },
-    headerCenter: {
-        flex: 1,
+    darkCloseHeaderBtn: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    headerTitleBlock: {
+        width: '100%',
     },
     pageCategory: {
-        color: '#F59E0B',
-        fontSize: 11,
+        color: '#D97706',
+        fontSize: 10.5,
         fontWeight: '900',
-        letterSpacing: 0.8,
+        letterSpacing: 0.6,
+        marginBottom: 3,
+    },
+    darkPageCategory: {
+        color: '#F59E0B',
     },
     screenTitle: {
-        color: '#FFFFFF',
-        fontSize: 17,
+        color: '#0F172A',
+        fontSize: 18,
         fontWeight: '800',
+        letterSpacing: -0.3,
+    },
+    darkScreenTitle: {
+        color: '#FFFFFF',
     },
     headerSubtitle: {
-        color: '#94A3B8',
+        color: '#64748B',
         fontSize: 12,
         fontWeight: '600',
-        marginTop: 1,
+        lineHeight: 16,
+        marginTop: 3,
+    },
+    darkHeaderSubtitle: {
+        color: '#94A3B8',
     },
     dutyPillBadge: {
         alignItems: 'center',
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: '#F1F5F9',
+        borderColor: '#CBD5E1',
         borderRadius: 8,
         borderWidth: 1,
         flexDirection: 'row',
         gap: 6,
         paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingVertical: 5,
+    },
+    darkDutyPillBadge: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
     },
     dutyBadgeDot: {
         borderRadius: 4,
@@ -930,28 +1404,42 @@ const styles = StyleSheet.create({
         width: 8,
     },
     dutyPillBadgeText: {
-        color: '#F8FAFC',
+        color: '#0F172A',
         fontSize: 12,
         fontWeight: '900',
+    },
+    darkDutyPillBadgeText: {
+        color: '#F8FAFC',
     },
     scrollView: {
         flex: 1,
     },
     contentContainer: {
         alignSelf: 'center',
-        backgroundColor: '#090E1A',
         maxWidth: 720,
         padding: 16,
         paddingBottom: 36,
         width: '100%',
     },
     clocksCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
         borderWidth: 1,
+        elevation: 2,
         marginBottom: 16,
         padding: 16,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+    },
+    darkClocksCard: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        shadowColor: '#000000',
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
     },
     cardHeader: {
         alignItems: 'center',
@@ -965,15 +1453,21 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     clocksCardHeading: {
-        color: '#10B981',
+        color: '#059669',
         fontSize: 13,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
+    darkClocksCardHeading: {
+        color: '#34D399',
+    },
     cycleText: {
-        color: '#94A3B8',
+        color: '#64748B',
         fontSize: 11,
         fontWeight: '700',
+    },
+    darkCycleText: {
+        color: '#94A3B8',
     },
     clocksGrid: {
         flexDirection: 'row',
@@ -982,45 +1476,67 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     clockCell: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
         borderWidth: 1,
         flex: 1,
         minWidth: '45%',
         padding: 12,
     },
+    darkClockCell: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
     clockCellLabel: {
-        color: '#94A3B8',
+        color: '#64748B',
         fontSize: 11,
         fontWeight: '700',
         marginBottom: 4,
     },
+    darkClockCellLabel: {
+        color: '#94A3B8',
+    },
     clockCellValueGreen: {
-        color: '#10B981',
+        color: '#059669',
         fontSize: 18,
         fontWeight: '900',
+    },
+    darkClockCellValueGreen: {
+        color: '#34D399',
     },
     clockCellValueBlue: {
-        color: '#60A5FA',
+        color: '#2563EB',
         fontSize: 18,
         fontWeight: '900',
+    },
+    darkClockCellValueBlue: {
+        color: '#60A5FA',
     },
     clockCellValueAmber: {
-        color: '#FBBF24',
+        color: '#D97706',
         fontSize: 18,
         fontWeight: '900',
+    },
+    darkClockCellValueAmber: {
+        color: '#FBBF24',
     },
     clockCellValuePurple: {
-        color: '#C084FC',
+        color: '#7C3AED',
         fontSize: 18,
         fontWeight: '900',
     },
+    darkClockCellValuePurple: {
+        color: '#C084FC',
+    },
     clockCellSub: {
-        color: '#64748B',
+        color: '#94A3B8',
         fontSize: 10,
         fontWeight: '600',
         marginTop: 2,
+    },
+    darkClockCellSub: {
+        color: '#64748B',
     },
     gaugeContainer: {
         marginTop: 2,
@@ -1031,21 +1547,30 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     gaugeMetaLabel: {
-        color: '#94A3B8',
+        color: '#64748B',
         fontSize: 12,
         fontWeight: '600',
     },
+    darkGaugeMetaLabel: {
+        color: '#94A3B8',
+    },
     gaugeMetaPercent: {
-        color: '#F8FAFC',
+        color: '#0F172A',
         fontSize: 12,
         fontWeight: '800',
     },
+    darkGaugeMetaPercent: {
+        color: '#F8FAFC',
+    },
     gaugeTrack: {
-        backgroundColor: '#162238',
+        backgroundColor: '#E2E8F0',
         borderRadius: 6,
         height: 8,
         overflow: 'hidden',
         width: '100%',
+    },
+    darkGaugeTrack: {
+        backgroundColor: '#0F172A',
     },
     gaugeFill: {
         borderRadius: 6,
@@ -1061,43 +1586,70 @@ const styles = StyleSheet.create({
         backgroundColor: '#EF4444',
     },
     sectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
         borderWidth: 1,
+        elevation: 2,
         marginBottom: 16,
         padding: 16,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+    },
+    darkSectionCard: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        shadowColor: '#000000',
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
     },
     sectionTitle: {
-        color: '#FFFFFF',
-        fontSize: 16,
+        color: '#0F172A',
+        fontSize: 15,
         fontWeight: '800',
         marginBottom: 4,
     },
+    darkSectionTitle: {
+        color: '#FFFFFF',
+    },
     sectionHelper: {
-        color: '#94A3B8',
-        fontSize: 13,
-        lineHeight: 18,
+        color: '#64748B',
+        fontSize: 12,
+        lineHeight: 17,
         marginBottom: 14,
+    },
+    darkSectionHelper: {
+        color: '#94A3B8',
     },
     dutyOptionsList: {
         gap: 10,
     },
     dutyOptionCard: {
         alignItems: 'center',
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
-        borderRadius: 10,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 12,
         borderWidth: 1.5,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        minHeight: 56,
+        minHeight: 60,
         paddingHorizontal: 14,
         paddingVertical: 12,
     },
+    darkDutyOptionCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
     dutyOptionCardSelected: {
-        backgroundColor: '#172554',
+        backgroundColor: '#EFF6FF',
         borderColor: '#2563EB',
+        borderWidth: 2,
+    },
+    darkDutyOptionCardSelected: {
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        borderColor: '#3B82F6',
         borderWidth: 2,
     },
     optionLeft: {
@@ -1116,40 +1668,61 @@ const styles = StyleSheet.create({
         width: 38,
     },
     optionBadgeText: {
-        color: '#F8FAFC',
+        color: '#0F172A',
         fontSize: 11,
         fontWeight: '900',
     },
+    darkOptionBadgeText: {
+        color: '#F8FAFC',
+    },
     optionBadgeTextActive: {
+        color: '#FFFFFF',
+    },
+    darkOptionBadgeTextActive: {
         color: '#FFFFFF',
     },
     optionCopy: {
         flex: 1,
     },
     optionTitle: {
-        color: '#FFFFFF',
-        fontSize: 14,
+        color: '#0F172A',
+        fontSize: 13.5,
         fontWeight: '800',
     },
+    darkOptionTitle: {
+        color: '#FFFFFF',
+    },
     optionTitleSelected: {
+        color: '#1D4ED8',
+    },
+    darkOptionTitleSelected: {
         color: '#60A5FA',
     },
     optionSubtitle: {
-        color: '#94A3B8',
-        fontSize: 12,
+        color: '#64748B',
+        fontSize: 11.5,
         marginTop: 2,
+    },
+    darkOptionSubtitle: {
+        color: '#94A3B8',
     },
     radioButton: {
         alignItems: 'center',
-        borderColor: '#64748B',
+        borderColor: '#94A3B8',
         borderRadius: 10,
         borderWidth: 2,
         height: 20,
         justifyContent: 'center',
         width: 20,
     },
+    darkRadioButton: {
+        borderColor: '#64748B',
+    },
     radioButtonSelected: {
         borderColor: '#2563EB',
+    },
+    darkRadioButtonSelected: {
+        borderColor: '#3B82F6',
     },
     radioButtonInner: {
         backgroundColor: '#2563EB',
@@ -1157,56 +1730,101 @@ const styles = StyleSheet.create({
         height: 10,
         width: 10,
     },
+    darkRadioButtonInner: {
+        backgroundColor: '#3B82F6',
+    },
     standbyChipsGrid: {
         gap: 8,
     },
     standbyChip: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
-        borderRadius: 8,
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
         borderWidth: 1,
-        minHeight: 44,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        minHeight: 46,
         paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingVertical: 11,
+    },
+    darkStandbyChip: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
     },
     standbyChipSelected: {
-        backgroundColor: '#451A03',
+        backgroundColor: '#FEF3C7',
         borderColor: '#D97706',
         borderWidth: 1.5,
     },
+    darkStandbyChipSelected: {
+        backgroundColor: 'rgba(245, 158, 11, 0.18)',
+        borderColor: '#F59E0B',
+        borderWidth: 1.5,
+    },
     standbyChipText: {
-        color: '#94A3B8',
-        fontSize: 13,
+        color: '#475569',
+        flex: 1,
+        fontSize: 12.5,
         fontWeight: '700',
     },
+    darkStandbyChipText: {
+        color: '#94A3B8',
+    },
     standbyChipTextSelected: {
+        color: '#B45309',
+        fontWeight: '800',
+    },
+    darkStandbyChipTextSelected: {
         color: '#FBBF24',
         fontWeight: '800',
     },
+    standbyCheckGlyph: {
+        color: '#B45309',
+        fontSize: 14,
+        fontWeight: '900',
+        marginLeft: 8,
+    },
+    darkStandbyCheckGlyph: {
+        color: '#FBBF24',
+    },
     inputLabel: {
-        color: '#CBD5E1',
+        color: '#334155',
         fontSize: 13,
         fontWeight: '800',
         marginBottom: 8,
     },
+    darkInputLabel: {
+        color: '#CBD5E1',
+    },
     input: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#CBD5E1',
+        borderRadius: 10,
         borderWidth: 1,
-        color: '#FFFFFF',
-        fontSize: 14,
-        minHeight: 64,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
+        color: '#0F172A',
+        fontSize: 13.5,
+        marginBottom: 14,
+        minHeight: 68,
+        paddingHorizontal: 14,
+        paddingVertical: 11,
         textAlignVertical: 'top',
     },
+    darkInput: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+        color: '#FFFFFF',
+    },
     graphContainer: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
         borderWidth: 1,
         padding: 12,
+    },
+    darkGraphContainer: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
     },
     graphRow: {
         alignItems: 'center',
@@ -1215,18 +1833,24 @@ const styles = StyleSheet.create({
         marginVertical: 4,
     },
     graphRowHeader: {
-        color: '#94A3B8',
+        color: '#475569',
         fontSize: 10,
         fontWeight: '900',
         width: 28,
     },
+    darkGraphRowHeader: {
+        color: '#94A3B8',
+    },
     graphRowTrack: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#E2E8F0',
         borderRadius: 4,
         flex: 1,
         height: 14,
         overflow: 'hidden',
         position: 'relative',
+    },
+    darkGraphRowTrack: {
+        backgroundColor: '#0F172A',
     },
     graphSegment: {
         borderRadius: 2,
@@ -1234,7 +1858,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
     },
     graphTimeScale: {
-        borderTopColor: '#1E293B',
+        borderTopColor: '#E2E8F0',
         borderTopWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -1242,20 +1866,31 @@ const styles = StyleSheet.create({
         paddingLeft: 38,
         paddingTop: 4,
     },
+    darkGraphTimeScale: {
+        borderTopColor: '#334155',
+    },
     timeMark: {
         color: '#64748B',
         fontSize: 9,
         fontWeight: '700',
     },
+    darkTimeMark: {
+        color: '#64748B',
+    },
     logEventsList: {
         gap: 8,
     },
     logEventCard: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E293B',
-        borderRadius: 8,
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
         borderWidth: 1,
+        marginBottom: 8,
         padding: 12,
+    },
+    darkLogEventCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
     },
     logEventHeader: {
         alignItems: 'center',
@@ -1274,58 +1909,89 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
     },
     logStatusOperating: {
+        backgroundColor: '#FEF3C7',
+    },
+    darkLogStatusOperating: {
         backgroundColor: '#451A03',
     },
     logStatusDriving: {
+        backgroundColor: '#EFF6FF',
+    },
+    darkLogStatusDriving: {
         backgroundColor: '#172554',
     },
     logStatusBreak: {
+        backgroundColor: '#ECFDF5',
+    },
+    darkLogStatusBreak: {
         backgroundColor: '#06281E',
     },
     logStatusOff: {
+        backgroundColor: '#F1F5F9',
+    },
+    darkLogStatusOff: {
         backgroundColor: '#334155',
     },
     logStatusText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 10,
         fontWeight: '900',
     },
+    darkLogStatusText: {
+        color: '#FFFFFF',
+    },
     logTimeRange: {
-        color: '#94A3B8',
-        fontSize: 12,
+        color: '#64748B',
+        fontSize: 11.5,
         fontWeight: '700',
     },
+    darkLogTimeRange: {
+        color: '#94A3B8',
+    },
     logDuration: {
-        color: '#F8FAFC',
-        fontSize: 12,
+        color: '#0F172A',
+        fontSize: 11.5,
         fontWeight: '800',
     },
+    darkLogDuration: {
+        color: '#F8FAFC',
+    },
     logDetails: {
-        color: '#CBD5E1',
+        color: '#334155',
         fontSize: 12,
         lineHeight: 16,
-        marginTop: 2,
+        marginTop: 4,
+    },
+    darkLogDetails: {
+        color: '#CBD5E1',
     },
     logLocation: {
         color: '#64748B',
         fontSize: 11,
         marginTop: 4,
     },
+    darkLogLocation: {
+        color: '#94A3B8',
+    },
     certCheckRow: {
         alignItems: 'center',
         flexDirection: 'row',
         gap: 10,
-        marginBottom: 16,
-        paddingHorizontal: 4,
+        marginBottom: 14,
+        minHeight: 44,
+        paddingHorizontal: 2,
     },
     certBox: {
         alignItems: 'center',
-        borderColor: '#64748B',
+        borderColor: '#94A3B8',
         borderRadius: 6,
         borderWidth: 2,
         height: 24,
         justifyContent: 'center',
         width: 24,
+    },
+    darkCertBox: {
+        borderColor: '#475569',
     },
     certBoxChecked: {
         backgroundColor: '#2563EB',
@@ -1337,22 +2003,42 @@ const styles = StyleSheet.create({
         fontWeight: '900',
     },
     certCheckLabel: {
-        color: '#94A3B8',
+        color: '#475569',
         flex: 1,
         fontSize: 12,
         lineHeight: 16,
     },
+    darkCertCheckLabel: {
+        color: '#94A3B8',
+    },
     actionButton: {
         alignItems: 'center',
         backgroundColor: '#2563EB',
-        borderRadius: 10,
+        borderRadius: 12,
+        elevation: 3,
         justifyContent: 'center',
-        minHeight: 50,
+        minHeight: 52,
+        shadowColor: '#2563EB',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
         width: '100%',
     },
+    darkActionButton: {
+        backgroundColor: '#3B82F6',
+        shadowColor: '#3B82F6',
+    },
     actionButtonDisabled: {
-        backgroundColor: '#1E293B',
+        backgroundColor: '#94A3B8',
+        elevation: 0,
         opacity: 0.6,
+        shadowOpacity: 0,
+    },
+    darkActionButtonDisabled: {
+        backgroundColor: '#334155',
+        elevation: 0,
+        opacity: 0.6,
+        shadowOpacity: 0,
     },
     actionBtnText: {
         color: '#FFFFFF',
@@ -1360,39 +2046,49 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     signedStamp: {
-        backgroundColor: '#06281E',
+        backgroundColor: '#ECFDF5',
         borderColor: '#059669',
-        borderRadius: 8,
-        borderWidth: 1,
+        borderRadius: 10,
+        borderWidth: 1.5,
         padding: 14,
     },
+    darkSignedStamp: {
+        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+        borderColor: '#10B981',
+    },
     signedStampTitle: {
-        color: '#34D399',
+        color: '#065F46',
         fontSize: 13,
         fontWeight: '900',
         letterSpacing: 0.5,
     },
+    darkSignedStampTitle: {
+        color: '#34D399',
+    },
     signedStampSub: {
-        color: '#6EE7B7',
+        color: '#047857',
         fontSize: 12,
         fontWeight: '600',
         marginTop: 2,
+    },
+    darkSignedStampSub: {
+        color: '#A7F3D0',
     },
     pressed: {
         opacity: 0.78,
     },
     doleWarningBanner: {
+        alignItems: 'center',
         backgroundColor: '#FEF3C7',
         borderColor: '#F59E0B',
         borderRadius: 12,
         borderWidth: 1.5,
         flexDirection: 'row',
-        alignItems: 'center',
+        gap: 10,
         justifyContent: 'space-between',
+        marginBottom: 14,
         paddingHorizontal: 14,
         paddingVertical: 10,
-        marginBottom: 14,
-        gap: 10,
     },
     doleCapBanner: {
         backgroundColor: '#FEE2E2',
@@ -1402,17 +2098,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#1E293B',
         borderColor: '#D97706',
     },
+    darkDoleCapBanner: {
+        backgroundColor: '#1E293B',
+        borderColor: '#EF4444',
+    },
     doleWarningContent: {
-        flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
         flex: 1,
+        flexDirection: 'row',
+        gap: 8,
     },
     doleWarningText: {
         color: '#92400E',
+        flex: 1,
         fontSize: 12,
         fontWeight: '700',
-        flex: 1,
         lineHeight: 16,
     },
     darkDoleWarningText: {
@@ -1421,15 +2121,24 @@ const styles = StyleSheet.create({
     doleCapText: {
         color: '#991B1B',
     },
+    darkDoleCapText: {
+        color: '#F87171',
+    },
     doleHandoverBtn: {
         backgroundColor: '#D97706',
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
+    darkDoleHandoverBtn: {
+        backgroundColor: '#F59E0B',
+    },
     doleHandoverBtnText: {
         color: '#FFFFFF',
         fontSize: 11,
         fontWeight: '800',
+    },
+    darkDoleHandoverBtnText: {
+        color: '#090D16',
     },
 });
