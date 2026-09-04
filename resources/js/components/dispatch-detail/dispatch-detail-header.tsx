@@ -33,16 +33,6 @@ export function DispatchDetailHeader({
                 </Link>
                 <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                        {!capabilities.update_own_status && (
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-md bg-brand-soft/70 px-2 py-0.5 text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                    Dispatch preparation
-                                </span>
-                                <span className="text-xs font-medium text-ink-soft">
-                                    {job.client}
-                                </span>
-                            </div>
-                        )}
                         <div className="mt-1 flex flex-wrap items-center gap-3">
                             <h1 className="text-2xl font-bold tracking-tight text-ink">
                                 {capabilities.update_own_status

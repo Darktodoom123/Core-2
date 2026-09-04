@@ -33,12 +33,7 @@ import {
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
-import { DispatchAdvisoryCard } from '@/components/workspace/dispatch-advisory-card';
-import {
-    AcceptGptModal,
-    RecommendationDetails,
-    RejectGptModal,
-} from '@/components/workspace/gpt-workspace-section';
+import { DispatchGptAdvisory } from '@/components/workspace/dispatch-gpt-advisory';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { ScheduleBoardMonthView } from '@/components/workspace/schedule-board-month-view';
 import { ScheduleBoardWeekView } from '@/components/workspace/schedule-board-week-view';
@@ -4151,115 +4146,6 @@ function DispatchSourceBadge({
     );
 }
 
-function DispatchGptAdvisory({
-    job,
-    recommendations,
-    capabilities,
-}: {
-    job: DispatchJobViewModel;
-    recommendations: GptRecommendationViewModel[];
-    capabilities: WorkspaceCapabilities;
-}) {
-    const returnTo = usePage().url;
-    const { auth, errors } = usePage<{ auth?: Auth }>().props;
-    const errorBag = `dispatchAdvisory${job.id}`;
-    const persistedErrors = errors[errorBag];
-    const persistedRequestError = persistedErrors
-        ? Object.values(persistedErrors).join(' ')
-        : null;
-    const isAdmin =
-        auth?.role === 'system_administrator' ||
-        auth?.role === 'admin' ||
-        auth?.prototype_role === 'system_administrator';
-    const [selectedForAccept, setSelectedForAccept] =
-        useState<GptRecommendationViewModel | null>(null);
-    const [selectedForReject, setSelectedForReject] =
-        useState<GptRecommendationViewModel | null>(null);
-    const [requesting, setRequesting] = useState(false);
-    const [requestError, setRequestError] = useState<string | null>(null);
-    const recommendation = recommendations.reduce<
-        GptRecommendationViewModel | undefined
-    >(
-        (latest, candidate) =>
-            !latest || candidate.id > latest.id ? candidate : latest,
-        undefined,
-    );
-
-    const requestRecommendation = (retry = false) => {
-        setRequestError(null);
-        setRequesting(true);
-        router.post(
-            retry && recommendation
-                ? recommendation.retry_url
-                : '/operations/gpt-recommendations',
-            retry
-                ? {}
-                : {
-                      subject_type: 'dispatch_job',
-                      subject_id: job.id,
-                      purpose: 'dispatch_assignment',
-                  },
-            {
-                preserveScroll: true,
-                errorBag,
-                only: ['gptRecommendations', 'errors', 'flash'],
-                onError: (errors) =>
-                    setRequestError(Object.values(errors).join(' ')),
-                onFinish: () => setRequesting(false),
-            },
-        );
-    };
-
-    return (
-        <>
-            <DispatchAdvisoryCard
-                jobId={job.id}
-                recommendation={recommendation}
-                automatic={Boolean(capabilities.proactive_gpt_assistance)}
-                busy={requesting}
-                canRequest={capabilities.request_gpt_assistance}
-                canReview={capabilities.decide_gpt_recommendation}
-                canRetry={capabilities.retry_gpt_recommendation}
-                canViewHistory={isAdmin || capabilities.request_gpt_assistance}
-                error={
-                    requesting ? null : (requestError ?? persistedRequestError)
-                }
-                assignmentUrl={
-                    !['draft', 'pending_approval', 'scheduled'].includes(
-                        job.status.value,
-                    )
-                        ? assignmentWorkspaceUrl(job.id, returnTo)
-                        : undefined
-                }
-                onRequest={() => requestRecommendation()}
-                onRetry={() => requestRecommendation(true)}
-                onReview={() =>
-                    recommendation && setSelectedForAccept(recommendation)
-                }
-                onReject={() =>
-                    recommendation && setSelectedForReject(recommendation)
-                }
-                details={
-                    recommendation ? (
-                        <RecommendationDetails rec={recommendation} />
-                    ) : undefined
-                }
-            />
-            {selectedForAccept && (
-                <AcceptGptModal
-                    rec={selectedForAccept}
-                    onClose={() => setSelectedForAccept(null)}
-                />
-            )}
-            {selectedForReject && (
-                <RejectGptModal
-                    rec={selectedForReject}
-                    onClose={() => setSelectedForReject(null)}
-                />
-            )}
-        </>
-    );
-}
 function DispatchListSkeleton() {
     return (
         <div

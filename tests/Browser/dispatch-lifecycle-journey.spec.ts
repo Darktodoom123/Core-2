@@ -9,7 +9,9 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
         const fixtures = browserFixtures();
 
         await signIn(page, fixtures.users.manager, fixtures.password);
-        await page.goto(`/operations/dispatch-jobs/${fixtures.job_id}`);
+        await page.goto(
+            `/operations/dispatch-jobs/${fixtures.assignment_review_job_id}`,
+        );
 
         // 1. Verify workspace headers and flow setup
         await expect(
@@ -17,6 +19,10 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
                 name: 'Prepare this dispatch for activation',
             }),
         ).toBeVisible();
+        // Saved assignments may open readiness; explicitly enter resource review.
+        await page
+            .getByRole('button', { name: /Step 2 .*Assign resources/ })
+            .click();
         await expect(
             page.getByRole('heading', { name: 'Select eligible resources' }),
         ).toBeVisible();

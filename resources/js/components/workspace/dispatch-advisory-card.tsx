@@ -137,7 +137,7 @@ export function DispatchAdvisoryCard({
                         id={`dispatch-gpt-advisory-${jobId}`}
                         className="text-sm font-semibold text-ink"
                     >
-                        Crew & equipment
+                        AI assistance
                     </h3>
                     <p className="mt-1 text-xs text-ink-soft">
                         GPT dispatch advisory
@@ -363,7 +363,7 @@ export function DispatchAdvisoryCard({
                 {canViewHistory && (
                     <Link
                         href="/?view=gpt-recommendations"
-                        className="inline-flex min-h-8 items-center gap-1 rounded font-medium text-brand-strong hover:underline"
+                        className="inline-flex min-h-8 items-center gap-1 rounded font-medium text-ink underline decoration-brand underline-offset-2 hover:decoration-2"
                     >
                         Advisory history
                         <ArrowUpRight className="h-3 w-3" aria-hidden="true" />

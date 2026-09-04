@@ -562,6 +562,8 @@ export function deriveDispatchDeskConflicts({
 
     gptRecommendations.forEach((recommendation) => {
         if (
+            recommendation.subject_type !== 'dispatch_job' ||
+            recommendation.purpose !== 'dispatch_assignment' ||
             recommendation.status !== 'pending_review' ||
             recommendation.is_expired ||
             recommendation.conflicts.length === 0

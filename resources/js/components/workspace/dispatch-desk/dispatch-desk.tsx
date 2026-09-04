@@ -28,6 +28,7 @@ import {
 } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { DIRECT_DISPATCH_DISCARD_EVENT } from '@/components/workspace/direct-dispatch';
+import { DispatchGptAdvisory } from '@/components/workspace/dispatch-gpt-advisory';
 import { LiveDispatchIntake } from '@/components/workspace/live-dispatch-intake';
 import { ScheduleBoardTable } from '@/components/workspace/live-dispatch-workspace';
 import type { DerivedConflict } from '@/components/workspace/live-dispatch-workspace';
@@ -38,10 +39,14 @@ import {
     localDateKey,
     shiftLocalDate,
 } from '@/lib/date-utils';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
-import type { DispatchJobViewModel } from '@/types/workspace';
+import type {
+    DispatchJobViewModel,
+    GptRecommendationViewModel,
+    WorkspaceCapabilities,
+} from '@/types/workspace';
 import {
     deriveDispatchDeskConflicts,
     EXECUTION_STATUSES,
@@ -55,6 +60,7 @@ import {
     resourceLabel,
     sourceMatches,
 } from './dispatch-desk-helpers';
+import { DispatchResources } from './dispatch-resources';
 import type {
     DispatchDeskMode,
     DispatchDeskPeriod,
@@ -246,6 +252,7 @@ export function DispatchDesk({
         setIntakeMode,
     } = useDispatchDeskState(initialServiceRequestId, currentWorkspaceUrl);
     const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
+    const [showResources, setShowResources] = useState(false);
     const intakeRequestId = useMemo(() => {
         if (initialServiceRequestId) {
             return initialServiceRequestId;
@@ -456,6 +463,17 @@ export function DispatchDesk({
                 description="Schedule incoming work, assign resources, and follow dispatches through completion."
                 actions={
                     <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowResources((open) => !open)}
+                            aria-expanded={showResources}
+                            aria-controls={
+                                showResources ? 'dispatch-resources' : undefined
+                            }
+                        >
+                            <Users className="h-4 w-4" aria-hidden="true" />
+                            People &amp; assets
+                        </Button>
                         {(canCreate || incomingByCapability.length > 0) &&
                             !isFieldRole && (
                                 <Button
@@ -498,6 +516,17 @@ export function DispatchDesk({
                     </div>
                 }
             />
+
+            {showResources && (
+                <DispatchResources
+                    users={users}
+                    assets={assets}
+                    jobs={jobs}
+                    initialDate={state.date}
+                    returnTo={returnTo}
+                    refreshing={refreshing}
+                />
+            )}
 
             <div className="border-b border-line bg-surface px-5 py-3 lg:px-7">
                 <nav
@@ -668,11 +697,15 @@ export function DispatchDesk({
                                 }
                                 onSelectJob={selectJob}
                             />
-                            <DispatchReviewPanel
-                                job={selectedJob}
-                                conflicts={selectedConflicts}
-                                returnTo={returnTo}
-                            />
+                            {state.mode === 'calendar' && (
+                                <DispatchReviewPanel
+                                    job={selectedJob}
+                                    conflicts={selectedConflicts}
+                                    returnTo={returnTo}
+                                    recommendations={gptRecommendations}
+                                    capabilities={capabilities}
+                                />
+                            )}
                         </>
                     )}
 
@@ -689,6 +722,8 @@ export function DispatchDesk({
                                 job={selectedJob}
                                 conflicts={selectedConflicts}
                                 returnTo={returnTo}
+                                recommendations={gptRecommendations}
+                                capabilities={capabilities}
                             />
                         </div>
                     )}
@@ -1140,10 +1175,14 @@ function DispatchReviewPanel({
     job,
     conflicts,
     returnTo,
+    recommendations,
+    capabilities,
 }: {
     job: DispatchJobViewModel | null;
     conflicts: DerivedConflict[];
     returnTo: string;
+    recommendations: GptRecommendationViewModel[];
+    capabilities: WorkspaceCapabilities;
 }) {
     if (!job) {
         return (
@@ -1220,6 +1259,12 @@ function DispatchReviewPanel({
                                 aria-hidden="true"
                             />
                         </Link>
+                        <a
+                            href="#dispatch-ai-assistance"
+                            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink underline decoration-brand underline-offset-2"
+                        >
+                            AI assistance
+                        </a>
                         <span className="text-xs text-ink-soft">
                             {nextAction.group === 'preparation'
                                 ? 'Review the remaining requirements before activation.'
@@ -1260,10 +1305,6 @@ function DispatchReviewPanel({
                             label="Source"
                             value={job.source?.label ?? 'Direct intake'}
                         />
-                        <DataPair
-                            label="Recorded resources"
-                            value={resourceLabel(job)}
-                        />
                     </dl>
                     <div className="border-t border-line pt-3 md:border-t-0 md:pt-0">
                         <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
@@ -1290,6 +1331,73 @@ function DispatchReviewPanel({
                             </p>
                         )}
                     </div>
+                </div>
+
+                <div className="grid gap-5 border-t border-line px-4 py-4 md:grid-cols-2 md:px-5">
+                    <section aria-labelledby="assigned-personnel-heading">
+                        <h3
+                            id="assigned-personnel-heading"
+                            className="text-sm font-semibold text-ink"
+                        >
+                            Assigned personnel
+                        </h3>
+                        {job.personnel_assignments.length === 0 ? (
+                            <p className="mt-2 text-sm text-ink-soft">
+                                No personnel assigned.
+                            </p>
+                        ) : (
+                            <ul className="mt-2 space-y-3">
+                                {job.personnel_assignments.map((assignment) => (
+                                    <li
+                                        key={assignment.id}
+                                        className="text-sm text-ink"
+                                    >
+                                        <p className="font-medium">
+                                            {assignment.name}
+                                        </p>
+                                        <p className="text-xs text-ink-soft">
+                                            {humanize(assignment.type)} ·{' '}
+                                            {assignment.response_status.label}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                    <section aria-labelledby="assigned-equipment-heading">
+                        <h3
+                            id="assigned-equipment-heading"
+                            className="text-sm font-semibold text-ink"
+                        >
+                            Assigned equipment
+                        </h3>
+                        {job.asset_assignments.length === 0 ? (
+                            <p className="mt-2 text-sm text-ink-soft">
+                                No equipment assigned.
+                            </p>
+                        ) : (
+                            <ul className="mt-2 space-y-3">
+                                {job.asset_assignments.map((assignment) => (
+                                    <li
+                                        key={assignment.id}
+                                        className="text-sm text-ink"
+                                    >
+                                        <p className="font-medium">
+                                            {assignment.code} ·{' '}
+                                            {assignment.name}
+                                        </p>
+                                        <p className="text-xs text-ink-soft">
+                                            {humanize(
+                                                assignment.subtype ??
+                                                    assignment.kind ??
+                                                    assignment.type,
+                                            )}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </section>
                 </div>
 
                 {conflicts.length > 0 && (
@@ -1345,6 +1453,14 @@ function DispatchReviewPanel({
                     </Link>
                 </div>
             </Panel>
+            <div id="dispatch-ai-assistance" className="mt-5 scroll-mt-4">
+                <DispatchGptAdvisory
+                    key={job.id}
+                    job={job}
+                    recommendations={recommendations}
+                    capabilities={capabilities}
+                />
+            </div>
         </section>
     );
 }

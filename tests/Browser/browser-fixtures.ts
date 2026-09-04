@@ -14,6 +14,7 @@ export type BrowserFixtures = {
     };
     password: string;
     job_id: number;
+    assignment_review_job_id: number;
     assigned_job_id: number;
     approval_job_id?: number;
     approval_request_id?: number;

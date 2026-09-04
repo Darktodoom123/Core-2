@@ -430,9 +430,6 @@ export default function DispatchDetail({
                                                         )}
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                                                             <div>
-                                                                <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                                                    Resources
-                                                                </p>
                                                                 <h2 className="mt-1 text-xl font-semibold text-ink">
                                                                     Select
                                                                     eligible

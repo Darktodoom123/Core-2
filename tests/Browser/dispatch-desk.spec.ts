@@ -52,6 +52,9 @@ test('office dispatch desk preserves schedule context and separates operational 
     await expect(
         page.getByRole('heading', { name: /R6-BROWSER-001/ }),
     ).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Select eligible resources' }),
+    ).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
         path: resolve(reviewDirectory, 'dispatch-preparation-desktop.png'),

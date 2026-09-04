@@ -85,6 +85,19 @@ final class BrowserAcceptanceSeeder extends Seeder
             'requirements' => [],
             'created_by' => $manager->id,
         ]);
+        // Keep assignment review independent of desk journeys that mutate $job.
+        $assignmentReviewJob = DispatchJob::query()->create([
+            'reference' => 'R6-BROWSER-006',
+            'client' => 'Browser Acceptance Client',
+            'title' => 'Independent assignment review lift',
+            'site' => 'Browser assignment fixture site',
+            'scheduled_start' => now()->addDays(2),
+            'scheduled_end' => now()->addDays(2)->addHours(4),
+            'priority' => DispatchPriority::Routine,
+            'status' => DispatchStatus::Draft,
+            'requirements' => [],
+            'created_by' => $manager->id,
+        ]);
         $assignedJob = DispatchJob::query()->create([
             'reference' => 'R6-BROWSER-002',
             'client' => 'Browser Assigned Client',
@@ -356,6 +369,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             ],
             'password' => 'password',
             'job_id' => $job->id,
+            'assignment_review_job_id' => $assignmentReviewJob->id,
             'assigned_job_id' => $assignedJob->id,
             'approval_job_id' => $approvalJob->id,
             'approval_request_id' => $approvalRequest->id,

@@ -7,6 +7,11 @@ import {
     jobOverlapsPeriod,
     nextActionForJob,
 } from '@/components/workspace/dispatch-desk/dispatch-desk-helpers';
+import {
+    DispatchResources,
+    hasResourceOverlap,
+    resourceCommitments,
+} from '@/components/workspace/dispatch-desk/dispatch-resources';
 import { readDispatchDeskState } from '@/components/workspace/dispatch-desk/use-dispatch-desk-state';
 import type {
     ApprovalViewModel,
@@ -91,6 +96,158 @@ function job(
         asset_assignments: [],
     };
 }
+
+describe('dispatch resources', () => {
+    const assignment = {
+        id: 1,
+        user_id: 21,
+        name: 'Casey Rigger',
+        type: 'rigger',
+        response_status: {
+            value: 'pending' as const,
+            label: 'Pending response',
+        },
+        responded_at: null,
+        response_reason: null,
+    };
+
+    it('keeps undated commitments visible and excludes terminal assignments', () => {
+        const active = {
+            ...job(1),
+            scheduled_start: null,
+            scheduled_end: null,
+            personnel_assignments: [assignment],
+        };
+        const completed = {
+            ...job(2, 'completed'),
+            personnel_assignments: [assignment],
+        };
+        expect(
+            resourceCommitments(
+                [active, completed],
+                'people',
+                21,
+                '2026-09-05',
+            ),
+        ).toEqual([active]);
+        expect(
+            resourceCommitments([active], 'assets', 21, '2026-09-05'),
+        ).toEqual([]);
+    });
+
+    it('distinguishes actual overlaps from adjacent assignments', () => {
+        const first = job(1);
+        const second = job(2);
+        expect(hasResourceOverlap([first, second])).toBe(true);
+        expect(
+            hasResourceOverlap([
+                first,
+                {
+                    ...second,
+                    scheduled_start: first.scheduled_end,
+                    scheduled_end: new Date(
+                        new Date(first.scheduled_end!).getTime() + 3600000,
+                    ).toISOString(),
+                },
+            ]),
+        ).toBe(false);
+    });
+
+    it('shows personnel availability, searches, and switches to asset records', () => {
+        render(
+            <DispatchResources
+                users={[
+                    {
+                        id: 21,
+                        name: 'Casey Rigger',
+                        email: 'not-displayed@example.test',
+                        role: 'rigger',
+                        role_label: 'Rigger',
+                        is_active: true,
+                        profile: {
+                            employee_number: null,
+                            availability_status: 'on_leave',
+                            emergency_contact_name: null,
+                            emergency_contact_phone: null,
+                        },
+                    },
+                ]}
+                assets={[]}
+                jobs={[]}
+                initialDate="2026-09-05"
+                returnTo="/?view=dispatch"
+                refreshing={false}
+            />,
+        );
+        expect(screen.getByText('Casey Rigger')).toBeInTheDocument();
+        expect(screen.getByText('Availability: on leave')).toBeInTheDocument();
+        expect(
+            screen.queryByText('not-displayed@example.test'),
+        ).not.toBeInTheDocument();
+        fireEvent.change(
+            screen.getByRole('searchbox', { name: 'Search people and assets' }),
+            { target: { value: 'missing' } },
+        );
+        expect(
+            screen.getByText(
+                'No matches. Try another name, role, or asset code.',
+            ),
+        ).toBeInTheDocument();
+        fireEvent.change(
+            screen.getByRole('searchbox', { name: 'Search people and assets' }),
+            { target: { value: '' } },
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Assets' }));
+        expect(
+            screen.getByText('No asset records are loaded for your access.'),
+        ).toBeInTheDocument();
+    });
+
+    it('exposes resources independently of job selection and separates assigned crew and equipment', () => {
+        window.history.replaceState({}, '', '/?dispatch_view=schedule');
+        const assigned = {
+            ...job(1),
+            personnel_assignments: [assignment],
+            asset_assignments: [
+                {
+                    id: 2,
+                    operational_asset_id: 3,
+                    code: 'CR-21',
+                    name: 'Mobile crane',
+                    type: 'crane',
+                },
+            ],
+        };
+        render(
+            <DispatchDesk
+                jobs={[assigned]}
+                clients={[]}
+                serviceRequests={[]}
+                rentalHandoffs={[]}
+                salesHandoffs={[]}
+                capabilities={capabilities()}
+                canCreate={false}
+                refreshing={false}
+            />,
+        );
+        fireEvent.click(
+            screen.getByRole('button', { name: 'People & assets' }),
+        );
+        expect(
+            screen.getByRole('heading', { name: 'People & assets' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', { name: 'Assigned personnel' }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', { name: 'Assigned equipment' }),
+        ).toBeInTheDocument();
+        expect(screen.getByText('CR-21 · Mobile crane')).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', { name: 'AI assistance' }),
+        ).toHaveAttribute('href', '#dispatch-ai-assistance');
+    });
+});
 
 describe('dispatch desk URL state', () => {
     it('maps legacy project planning links to resource coverage mode', () => {
@@ -248,9 +405,9 @@ describe('dispatch desk derived behavior', () => {
             jobId: 4,
         };
 
-        expect(nextActionForJob(job(4, 'draft'), [approvalConflict]).label).toBe(
-            'Review approval',
-        );
+        expect(
+            nextActionForJob(job(4, 'draft'), [approvalConflict]).label,
+        ).toBe('Review approval');
         expect(nextActionForJob(job(5, 'pending_approval'), []).label).toBe(
             'Review approval',
         );
@@ -344,7 +501,10 @@ describe('DispatchDesk', () => {
 
         expect(
             screen.getByRole('link', { name: 'Review approval' }),
-        ).toHaveAttribute('href', expect.stringContaining('#dispatch-activation'));
+        ).toHaveAttribute(
+            'href',
+            expect.stringContaining('#dispatch-activation'),
+        );
     });
 
     it('composes search and attention filters in the URL', () => {
@@ -427,6 +587,9 @@ describe('DispatchDesk', () => {
         ).toBeInTheDocument();
         expect(screen.getByText('Coverage surface')).toBeInTheDocument();
         expect(
+            screen.queryByRole('heading', { name: 'Select a dispatch' }),
+        ).not.toBeInTheDocument();
+        expect(
             screen.queryByLabelText('Selected schedule date'),
         ).not.toBeInTheDocument();
     });
@@ -455,7 +618,9 @@ describe('DispatchDesk', () => {
             screen.queryByRole('button', { name: /Create direct dispatch/i }),
         ).not.toBeInTheDocument();
         expect(
-            screen.queryByRole('button', { name: /Submit|Save draft|Create dispatch/i }),
+            screen.queryByRole('button', {
+                name: /Submit|Save draft|Create dispatch/i,
+            }),
         ).not.toBeInTheDocument();
         expect(screen.queryByRole('form')).not.toBeInTheDocument();
     });
