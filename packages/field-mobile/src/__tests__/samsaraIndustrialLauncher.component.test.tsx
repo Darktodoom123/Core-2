@@ -170,6 +170,14 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByTestId('tile-vehicle')).toBeTruthy();
             expect(view.getByTestId('tile-forms')).toBeTruthy();
 
+            // UX User-Friendly Text Labels
+            expect(view.getByText('Hours of\nService')).toBeTruthy();
+            expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
+            expect(view.getByText('Drive\nRoutes')).toBeTruthy();
+            expect(view.getByText('Lift Plans\n& Docs')).toBeTruthy();
+            expect(view.getByText('Crane\nLoad Charts')).toBeTruthy();
+            expect(view.getByText('Active\nDispatches')).toBeTruthy();
+
             // Tapping DVIR tile
             await fireEvent.press(view.getByTestId('tile-dvir'));
             expect(onOpenDvir).toHaveBeenCalled();
@@ -286,6 +294,71 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Verified immediate update on screen
             expect(view.getByText('On Duty — Standby / Delay')).toBeTruthy();
             expect(view.getByText('SBY')).toBeTruthy();
+        });
+
+        it('renders 6 solid-color centered launcher tiles with user-friendly text', async () => {
+            const onOpenHos = jest.fn();
+            const onOpenDvir = jest.fn();
+            const onOpenRoutes = jest.fn();
+            const onOpenDocs = jest.fn();
+            const onOpenVehicle = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[mockJob]}
+                    onOpenDocuments={onOpenDocs}
+                    onOpenDvir={onOpenDvir}
+                    onOpenHos={onOpenHos}
+                    onOpenRoutes={onOpenRoutes}
+                    onOpenVehicle={onOpenVehicle}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.0,
+                    }}
+                />,
+            );
+
+            // Verify friendly text labels
+            expect(view.getByText('Hours of\nService')).toBeTruthy();
+            expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
+            expect(view.getByText('Drive\nRoutes')).toBeTruthy();
+            expect(view.getByText('Lift Plans\n& Docs')).toBeTruthy();
+            expect(view.getByText('Crane\nLoad Charts')).toBeTruthy();
+            expect(view.getByText('Active\nDispatches')).toBeTruthy();
+
+            // Verify testIDs
+            expect(view.getByTestId('tile-hos')).toBeTruthy();
+            expect(view.getByTestId('tile-dvir')).toBeTruthy();
+            expect(view.getByTestId('tile-routes')).toBeTruthy();
+            expect(view.getByTestId('tile-documents')).toBeTruthy();
+            expect(view.getByTestId('tile-vehicle')).toBeTruthy();
+            expect(view.getByTestId('tile-forms')).toBeTruthy();
+
+            // Tapping HOS opens HOS callback
+            await fireEvent.press(view.getByTestId('tile-hos'));
+            expect(onOpenHos).toHaveBeenCalled();
+
+            // Tapping DVIR opens DVIR callback
+            await fireEvent.press(view.getByTestId('tile-dvir'));
+            expect(onOpenDvir).toHaveBeenCalled();
+
+            // Tapping Routes opens Routes callback
+            await fireEvent.press(view.getByTestId('tile-routes'));
+            expect(onOpenRoutes).toHaveBeenCalled();
+
+            // Tapping Documents opens Documents callback
+            await fireEvent.press(view.getByTestId('tile-documents'));
+            expect(onOpenDocs).toHaveBeenCalled();
+
+            // Tapping Vehicle opens Vehicle callback
+            await fireEvent.press(view.getByTestId('tile-vehicle'));
+            expect(onOpenVehicle).toHaveBeenCalled();
         });
     });
 

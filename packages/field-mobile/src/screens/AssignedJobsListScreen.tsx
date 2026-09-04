@@ -278,75 +278,75 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const DASHBOARD_TILES: TileItem[] = [
         {
             id: 'hos',
-            title: 'HOS',
+            title: 'Hours of\nService',
             sublabel: 'Shift & Hours',
             iconName: 'clock',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#D97706',
-            darkBgColor: '#271E16',
-            darkBorderColor: '#78350F',
-            darkIconColor: '#F59E0B',
+            bgColor: '#D97706',
+            borderColor: '#B45309',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#B45309',
+            darkBorderColor: '#F59E0B',
+            darkIconColor: '#FFFFFF',
         },
         {
             id: 'dvir',
-            title: 'DVIR',
+            title: 'Vehicle\nInspection',
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#059669',
-            darkBgColor: '#132F28',
-            darkBorderColor: '#065F46',
-            darkIconColor: '#34D399',
+            bgColor: '#059669',
+            borderColor: '#047857',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#047857',
+            darkBorderColor: '#10B981',
+            darkIconColor: '#FFFFFF',
         },
         {
             id: 'routes',
-            title: 'Crane Drive\nRoutes',
+            title: 'Drive\nRoutes',
             sublabel: 'Heavy Transit',
             iconName: 'route',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#0284C7',
-            darkBgColor: '#162E48',
-            darkBorderColor: '#075985',
-            darkIconColor: '#38BDF8',
+            bgColor: '#0284C7',
+            borderColor: '#0369A1',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#0369A1',
+            darkBorderColor: '#38BDF8',
+            darkIconColor: '#FFFFFF',
         },
         {
             id: 'documents',
-            title: 'Documents\nLift Plans',
+            title: 'Lift Plans\n& Docs',
             sublabel: 'Permits & Certs',
             iconName: 'document',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#7E22CE',
-            darkBgColor: '#2A163B',
-            darkBorderColor: '#6B21A8',
-            darkIconColor: '#C084FC',
+            bgColor: '#7C3AED',
+            borderColor: '#6D28D9',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#6D28D9',
+            darkBorderColor: '#A78BFA',
+            darkIconColor: '#FFFFFF',
         },
         {
             id: 'vehicle',
-            title: 'Vehicle\nLoad Chart',
+            title: 'Crane\nLoad Charts',
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#65A30D',
-            darkBgColor: '#253218',
-            darkBorderColor: '#4D7C0F',
-            darkIconColor: '#A3E635',
+            bgColor: '#4D7C0F',
+            borderColor: '#3F6212',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#3F6212',
+            darkBorderColor: '#A3E635',
+            darkIconColor: '#FFFFFF',
         },
         {
             id: 'forms',
-            title: 'Dispatches',
+            title: 'Active\nDispatches',
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
-            bgColor: '#FFFFFF',
-            borderColor: '#E2E8F0',
-            iconColor: '#475569',
-            darkBgColor: '#1A2536',
-            darkBorderColor: '#334155',
-            darkIconColor: '#94A3B8',
+            bgColor: '#334155',
+            borderColor: '#1E293B',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: '#64748B',
+            darkIconColor: '#FFFFFF',
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
     ];
@@ -617,7 +617,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 >
                     {DASHBOARD_TILES.map((tile) => (
                         <Pressable
-                            accessibilityLabel={`${tile.title} tile, ${tile.sublabel}`}
+                            accessibilityLabel={`${tile.title.replace('\n', ' ')} tile, ${tile.sublabel}`}
                             accessibilityRole="button"
                             key={tile.id}
                             onPress={() => handleTilePress(tile.id)}
@@ -629,13 +629,21 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                         : tile.bgColor,
                                     borderColor: isDarkHud
                                         ? tile.darkBorderColor || '#334155'
-                                        : tile.borderColor || '#E2E8F0',
+                                        : 'transparent',
+                                    borderWidth: isDarkHud ? 1.5 : 0,
                                 },
                                 isDarkHud && styles.darkTileCard,
                                 pressed && styles.pressedTile,
                             ]}
                             testID={`tile-${tile.id}`}
                         >
+                            {tile.badgeCount ? (
+                                <View style={styles.tileBadgePill}>
+                                    <Text style={styles.tileBadgePillText}>
+                                        {tile.badgeCount}
+                                    </Text>
+                                </View>
+                            ) : null}
                             <View
                                 style={[
                                     styles.tileIconContainer,
@@ -643,21 +651,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 ]}
                             >
                                 <Icon
-                                    color={
-                                        isDarkHud
-                                            ? tile.darkIconColor || '#FFFFFF'
-                                            : tile.iconColor || '#0F172A'
-                                    }
+                                    color="#FFFFFF"
                                     name={tile.iconName}
-                                    size={24}
+                                    size={28}
                                 />
-                                {tile.badgeCount ? (
-                                    <View style={styles.tileBadgePill}>
-                                        <Text style={styles.tileBadgePillText}>
-                                            {tile.badgeCount}
-                                        </Text>
-                                    </View>
-                                ) : null}
                             </View>
                             <Text
                                 style={[
@@ -1006,75 +1003,87 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     tileCard: {
-        alignItems: 'flex-start',
-        borderColor: '#E2E8F0',
-        borderRadius: 14,
-        borderWidth: 1,
+        alignItems: 'center',
+        borderColor: 'transparent',
+        borderRadius: 16,
+        borderWidth: 0,
         flexBasis: '31%',
         flexGrow: 1,
-        justifyContent: 'space-between',
-        minHeight: 96,
-        padding: 10,
+        justifyContent: 'center',
+        minHeight: 106,
+        paddingHorizontal: 6,
+        paddingVertical: 12,
+        position: 'relative',
         ...shadows.sm,
     },
     darkTileCard: {
-        alignItems: 'flex-start',
-        borderColor: '#334155',
-        borderRadius: 14,
-        borderWidth: 1,
-        justifyContent: 'space-between',
-        minHeight: 96,
-        padding: 10,
+        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1.5,
+        justifyContent: 'center',
+        minHeight: 106,
+        paddingHorizontal: 6,
+        paddingVertical: 12,
+        position: 'relative',
     },
     tileIconContainer: {
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
-        marginBottom: 8,
-        width: '100%',
+        alignItems: 'center',
+        height: 36,
+        justifyContent: 'center',
+        marginBottom: 6,
+        width: 36,
     },
     darkTileIconContainer: {
-        alignItems: 'flex-start',
-        justifyContent: 'flex-start',
-        marginBottom: 8,
-        width: '100%',
+        alignItems: 'center',
+        height: 36,
+        justifyContent: 'center',
+        marginBottom: 6,
+        width: 36,
     },
     tileTitle: {
-        color: '#0F172A',
+        color: '#FFFFFF',
         fontSize: 12,
         fontWeight: '800',
-        letterSpacing: 0,
+        letterSpacing: 0.1,
         lineHeight: 15,
-        textAlign: 'left',
+        textAlign: 'center',
     },
     darkTileTitle: {
-        color: '#F8FAFC',
+        color: '#FFFFFF',
         fontSize: 12,
         fontWeight: '800',
-        letterSpacing: 0,
+        letterSpacing: 0.1,
         lineHeight: 15,
-        textAlign: 'left',
+        textAlign: 'center',
     },
     tileSublabel: {
         color: 'rgba(255, 255, 255, 0.85)',
         fontSize: 9,
         fontWeight: '700',
-        marginTop: 1,
+        marginTop: 2,
         textAlign: 'center',
     },
     tileBadgePill: {
-        backgroundColor: '#E0F2FE',
-        borderColor: '#BAE6FD',
-        borderRadius: 8,
-        borderWidth: 1,
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        elevation: 3,
+        height: 18,
+        justifyContent: 'center',
+        minWidth: 18,
         paddingHorizontal: 5,
-        paddingVertical: 1,
         position: 'absolute',
-        right: -6,
-        top: -4,
+        right: 8,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.25,
+        shadowRadius: 2,
+        top: 8,
+        zIndex: 2,
     },
     tileBadgePillText: {
-        color: '#0369A1',
-        fontSize: 9,
+        color: '#0F172A',
+        fontSize: 10,
         fontWeight: '900',
     },
     errorBox: {

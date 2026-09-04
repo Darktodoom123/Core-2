@@ -198,45 +198,45 @@ export const OperatorDashboardScreen: React.FC<
     const DASHBOARD_TILES: DashboardTileConfig[] = [
         {
             id: 'hos',
-            title: 'HoS',
+            title: 'Hours of\nService',
             sublabel: 'Shift & Hours',
             iconName: 'clock',
-            bgColor: '#2563EB', // Blue
+            bgColor: '#D97706', // Industrial Safety Amber
         },
         {
             id: 'dvir',
-            title: 'DVIR',
+            title: 'Vehicle\nInspection',
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
-            bgColor: '#059669', // Green
+            bgColor: '#059669', // Compliance Emerald
         },
         {
             id: 'routes',
-            title: 'Routes',
+            title: 'Drive\nRoutes',
             sublabel: 'Heavy Transit',
             iconName: 'route',
-            bgColor: '#DC2626', // Red
+            bgColor: '#0284C7', // Navigation Sky Blue
         },
         {
             id: 'documents',
-            title: 'Documents',
+            title: 'Lift Plans\n& Docs',
             sublabel: 'Permits & Certs',
             iconName: 'document',
-            bgColor: '#7E22CE', // Purple
+            bgColor: '#7C3AED', // Blueprint Purple
         },
         {
             id: 'vehicle',
-            title: 'Vehicle',
+            title: 'Crane\nLoad Charts',
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
-            bgColor: '#D97706', // Yellow / Amber
+            bgColor: '#4D7C0F', // Rigging Lime / Olive
         },
         {
             id: 'forms',
-            title: 'Forms',
+            title: 'Active\nDispatches',
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
-            bgColor: '#0284C7', // Cyan / Blue
+            bgColor: '#334155', // Operations Slate
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
     ];
@@ -468,8 +468,8 @@ export const OperatorDashboardScreen: React.FC<
                 >
                     {DASHBOARD_TILES.map((tile) => (
                         <Pressable
-                            accessibilityHint={`Opens ${tile.title} workspace`}
-                            accessibilityLabel={`${tile.title} tile, ${tile.sublabel}`}
+                            accessibilityHint={`Opens ${tile.title.replace('\n', ' ')} workspace`}
+                            accessibilityLabel={`${tile.title.replace('\n', ' ')} tile, ${tile.sublabel}`}
                             accessibilityRole="button"
                             key={tile.id}
                             onPress={() => handleTilePress(tile.id)}
@@ -480,24 +480,21 @@ export const OperatorDashboardScreen: React.FC<
                             ]}
                             testID={`tile-${tile.id}`}
                         >
+                            {tile.badgeCount ? (
+                                <View style={styles.tileBadgePill}>
+                                    <Text style={styles.tileBadgePillText}>
+                                        {tile.badgeCount}
+                                    </Text>
+                                </View>
+                            ) : null}
                             <View style={styles.tileIconContainer}>
                                 <Icon
                                     name={tile.iconName}
-                                    size={36}
+                                    size={28}
                                     color="#FFFFFF"
                                 />
-                                {tile.badgeCount ? (
-                                    <View style={styles.tileBadgePill}>
-                                        <Text style={styles.tileBadgePillText}>
-                                            {tile.badgeCount}
-                                        </Text>
-                                    </View>
-                                ) : null}
                             </View>
                             <Text style={styles.tileTitle}>{tile.title}</Text>
-                            <Text style={styles.tileSublabel}>
-                                {tile.sublabel}
-                            </Text>
                         </Pressable>
                     ))}
                 </View>
@@ -856,21 +853,23 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         minHeight: 112,
-        padding: 12,
+        padding: 10,
+        position: 'relative',
         ...shadows.md,
     },
     tileIconContainer: {
         alignItems: 'center',
-        height: 44,
+        height: 38,
         justifyContent: 'center',
-        marginBottom: 4,
-        width: 44,
+        marginBottom: 6,
+        width: 38,
     },
     tileTitle: {
         color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '900',
-        letterSpacing: 0.2,
+        fontSize: 13,
+        fontWeight: '800',
+        letterSpacing: 0.1,
+        lineHeight: 16,
         textAlign: 'center',
     },
     tileSublabel: {
@@ -881,16 +880,25 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     tileBadgePill: {
+        alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 10,
-        paddingHorizontal: 6,
-        paddingVertical: 1,
+        elevation: 3,
+        height: 18,
+        justifyContent: 'center',
+        minWidth: 18,
+        paddingHorizontal: 5,
         position: 'absolute',
-        right: -6,
-        top: -4,
+        right: 8,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.25,
+        shadowRadius: 2,
+        top: 8,
+        zIndex: 2,
     },
     tileBadgePillText: {
-        color: '#0284C7',
+        color: '#0F172A',
         fontSize: 10,
         fontWeight: '900',
     },
