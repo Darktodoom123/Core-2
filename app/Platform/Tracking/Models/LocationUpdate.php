@@ -52,13 +52,14 @@ class LocationUpdate extends Model
 
         // Freshness is based on when the server received the update. The
         // device-captured timestamp is still retained for audit and display.
+        // Degradation timeline: <=3m fresh, >3m delayed, >=15m stale, >30m offline.
         $secondsAgo = (int) abs(now()->diffInSeconds($freshnessTimestamp));
 
-        if ($secondsAgo <= 120) {
+        if ($secondsAgo <= 180) {
             return 'fresh';
         }
 
-        if ($secondsAgo <= 600) {
+        if ($secondsAgo < 900) {
             return 'delayed';
         }
 

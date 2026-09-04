@@ -20,6 +20,7 @@
         "test:unit": "vitest run",
         "types:check:mobile": "npm --prefix packages/field-mobile run types:check",
         "test:mobile": "npm --prefix packages/field-mobile run test",
+        "test:mobile:lifecycle": "php artisan test tests/Feature/MobileLifecycle/MobileLifecycleEndToEndTest.php",
         "verify:frontend-build": "node scripts/verify-frontend-build.cjs",
         "mobile:doctor": "npm --prefix packages/field-mobile run doctor",
         "mobile:start": "npm --prefix packages/field-mobile run start -- --dev-client",

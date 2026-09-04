@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
+import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
+import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useTheme } from '../theme';
 import type { DutyStatus, ShiftInfo, StandbyReason } from '../types/index';
 
@@ -16,6 +18,7 @@ export interface HosScreenProps {
     operatorName?: string;
     userRole?: string;
     shiftInfo?: ShiftInfo;
+    linkedAssetCode?: string | null;
     maxDriveHours?: number;
     maxShiftHours?: number;
     cycleHoursLimit?: number;
@@ -25,6 +28,7 @@ export interface HosScreenProps {
         standbyReason?: StandbyReason,
         remarks?: string,
     ) => void;
+    onReleaseUnit?: (assetCode: string) => void;
 }
 
 interface DutyStatusOptionConfig {
@@ -168,11 +172,13 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         startedAt: '08:00 AM',
         hoursElapsed: 4.5,
     },
+    linkedAssetCode = 'CRN-101',
     maxDriveHours = 11,
     maxShiftHours = 14,
     cycleHoursLimit = 70,
     onBack,
     onUpdateDutyStatus,
+    onReleaseUnit,
 }) => {
     const { isDarkHud } = useTheme();
     const [selectedStatus, setSelectedStatus] = useState<DutyStatus>(
@@ -183,10 +189,16 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     const [remarks, setRemarks] = useState('');
     const [isCertified, setIsCertified] = useState(true);
     const [isSaved, setIsSaved] = useState(false);
+    const [safeguardModalOpen, setSafeguardModalOpen] = useState(false);
+    const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
 
     const hoursElapsed = shiftInfo.hoursElapsed ?? 4.5;
     const driveHoursElapsed = 3.5;
     const cycleHoursElapsed = 52.5;
+
+    // DOLE 10-Hour Shift Limit Compliance Checks
+    const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
+    const isDoleCapExceeded = hoursElapsed >= 10.0;
 
     // Remaining ELD calculations
     const driveRemainingHours = Math.max(0, maxDriveHours - driveHoursElapsed);
@@ -210,13 +222,23 @@ export const HosScreen: React.FC<HosScreenProps> = ({
         return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
     };
 
-    const handleConfirm = () => {
+    const executeDutyUpdate = (statusToSet: DutyStatus = selectedStatus) => {
         setIsSaved(true);
         onUpdateDutyStatus?.(
-            selectedStatus,
-            selectedStatus === 'standby' ? standbyReason : undefined,
+            statusToSet,
+            statusToSet === 'standby' ? standbyReason : undefined,
             remarks.trim() ? remarks.trim() : undefined,
         );
+    };
+
+    const handleConfirm = () => {
+        if (selectedStatus === 'off_duty' && linkedAssetCode) {
+            setSafeguardModalOpen(true);
+
+            return;
+        }
+
+        executeDutyUpdate();
     };
 
     const activeConfig = useMemo(() => {
@@ -278,6 +300,51 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                 contentContainerStyle={styles.contentContainer}
                 style={styles.scrollView}
             >
+                {/* DOLE 10-Hour Shift Limit Compliance Warning / Hard Stop Banner */}
+                {isDoleWarning || isDoleCapExceeded ? (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.doleWarningBanner,
+                            isDoleCapExceeded && styles.doleCapBanner,
+                            isDarkHud && styles.darkDoleWarningBanner,
+                        ]}
+                        testID="dole-shift-limit-banner"
+                    >
+                        <View style={styles.doleWarningContent}>
+                            <Icon
+                                color={
+                                    isDoleCapExceeded ? '#EF4444' : '#F59E0B'
+                                }
+                                name="alert"
+                                size={18}
+                            />
+                            <Text
+                                style={[
+                                    styles.doleWarningText,
+                                    isDoleCapExceeded && styles.doleCapText,
+                                    isDarkHud && styles.darkDoleWarningText,
+                                ]}
+                            >
+                                {isDoleCapExceeded
+                                    ? '10h Maximum Operating Cap Exceeded — Mandatory Rest Period.'
+                                    : 'Approaching 10h Operating Limit — Prepare for Handover or Shift Closure.'}
+                            </Text>
+                        </View>
+                        <Pressable
+                            accessibilityLabel="Handover equipment to relief operator"
+                            accessibilityRole="button"
+                            onPress={() => setReliefHandoverOpen(true)}
+                            style={styles.doleHandoverBtn}
+                            testID="hos-relief-handover-btn"
+                        >
+                            <Text style={styles.doleHandoverBtnText}>
+                                Relief Handover
+                            </Text>
+                        </Pressable>
+                    </View>
+                ) : null}
+
                 {/* 3. Live ELD Clocks Card */}
                 <View style={styles.clocksCard} testID="hos-eld-clocks-card">
                     <View style={styles.cardHeader}>
@@ -756,6 +823,31 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     </View>
                 )}
             </ScrollView>
+
+            {/* End Shift Safeguard Intercept Modal */}
+            <EndShiftSafeguardModal
+                assetCode={linkedAssetCode || 'CRN-101'}
+                onCancel={() => setSafeguardModalOpen(false)}
+                onConfirmReleaseAndClockOut={() => {
+                    setSafeguardModalOpen(false);
+                    onReleaseUnit?.(linkedAssetCode || 'CRN-101');
+                    executeDutyUpdate();
+                }}
+                visible={safeguardModalOpen}
+            />
+
+            {/* Smart Dual Hot-Seating Relief Handover Modal */}
+            <ReliefHandoverModal
+                assetCode={linkedAssetCode || 'CRN-101'}
+                handoverPin="8421"
+                mode="outgoing_offer"
+                onClose={() => setReliefHandoverOpen(false)}
+                onInitiatePushHandover={() => {
+                    // Push notification alert dispatched to scheduled incoming relief operator
+                }}
+                reliefOperatorName="Carlos Reyes (Night Shift)"
+                visible={reliefHandoverOpen}
+            />
         </View>
     );
 };
@@ -1275,5 +1367,56 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.78,
+    },
+    doleWarningBanner: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 12,
+        borderWidth: 1.5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 14,
+        gap: 10,
+    },
+    doleCapBanner: {
+        backgroundColor: '#FEE2E2',
+        borderColor: '#EF4444',
+    },
+    darkDoleWarningBanner: {
+        backgroundColor: '#1E293B',
+        borderColor: '#D97706',
+    },
+    doleWarningContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flex: 1,
+    },
+    doleWarningText: {
+        color: '#92400E',
+        fontSize: 12,
+        fontWeight: '700',
+        flex: 1,
+        lineHeight: 16,
+    },
+    darkDoleWarningText: {
+        color: '#FBBF24',
+    },
+    doleCapText: {
+        color: '#991B1B',
+    },
+    doleHandoverBtn: {
+        backgroundColor: '#D97706',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    doleHandoverBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '800',
     },
 });

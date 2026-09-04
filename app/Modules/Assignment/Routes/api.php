@@ -1,12 +1,17 @@
 <?php
 
 use App\Modules\Assignment\Http\Controllers\Api\V1\AssignmentResponseController;
+use App\Modules\Assignment\Http\Controllers\Api\V1\EquipmentHandoverController;
 use App\Modules\Assignment\Http\Controllers\Api\V2\AssignmentOfferV2Controller;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function (): void {
     Route::post('/dispatch-jobs/{dispatchJob}/assignments/{assignment}/response', [AssignmentResponseController::class, 'store'])
         ->name('dispatch-jobs.assignments.response');
+    Route::post('/dispatch-jobs/{dispatchJob}/handover/initiate', [EquipmentHandoverController::class, 'initiate'])
+        ->name('dispatch-jobs.handover.initiate');
+    Route::post('/dispatch-jobs/{dispatchJob}/handover/claim', [EquipmentHandoverController::class, 'claim'])
+        ->name('dispatch-jobs.handover.claim');
 });
 
 Route::prefix('v2')->name('api.v2.')->middleware(['auth:sanctum', 'active', 'api-token', 'throttle:120,1'])->group(function (): void {

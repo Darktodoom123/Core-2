@@ -20,6 +20,7 @@ import { Icon } from '../components/common/Icon';
 import { FieldProgressionStepper } from '../components/layout/FieldProgressionStepper';
 import { colors, shadows } from '../components/nativeStyles';
 import { CommandConflictBanner } from '../components/panels/CommandConflictBanner';
+import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import {
@@ -87,6 +88,9 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
 }) => {
     const [driveModeOpen, setDriveModeOpen] = useState(false);
     const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+    const [onSiteModalOpen, setOnSiteModalOpen] = useState(false);
+    const [pendingNextStatus, setPendingNextStatus] =
+        useState<DispatchStatus | null>(null);
     const [parkedSecuredState, setParkedSecuredState] =
         useState<ParkedSecuredState | null>(null);
     const [craneSetupState, setCraneSetupState] =
@@ -118,7 +122,30 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
             return;
         }
 
+        // PRD Step 4 / Edge Case 4.2: Guard against early commute leaks when starting unit
+        if (
+            (job.status.value === 'accepted' ||
+                job.status.value === 'dispatched') &&
+            (nextStatus === 'en_route' ||
+                nextStatus === 'arrived' ||
+                nextStatus === 'working')
+        ) {
+            setPendingNextStatus(nextStatus);
+            setOnSiteModalOpen(true);
+
+            return;
+        }
+
         onTransitionStatus(jobId, nextStatus, version);
+    };
+
+    const handleConfirmOnSite = () => {
+        setOnSiteModalOpen(false);
+
+        if (pendingNextStatus) {
+            onTransitionStatus(job.id, pendingNextStatus, job.version);
+            setPendingNextStatus(null);
+        }
     };
 
     const handleConfirmSignature = (data: DigitalSignatureData) => {
@@ -563,6 +590,17 @@ export const JobDetailScreen: React.FC<JobDetailScreenProps> = ({
                 onClose={() => setSignatureModalOpen(false)}
                 onConfirmSignature={handleConfirmSignature}
                 visible={signatureModalOpen}
+            />
+
+            {/* On-Site Unit Physical Presence Confirmation Modal */}
+            <OnSiteConfirmationModal
+                assetCode={primaryAsset?.asset_code || 'CRN-101'}
+                onCancel={() => {
+                    setOnSiteModalOpen(false);
+                    setPendingNextStatus(null);
+                }}
+                onConfirm={handleConfirmOnSite}
+                visible={onSiteModalOpen}
             />
         </ScrollView>
     );

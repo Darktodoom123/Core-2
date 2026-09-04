@@ -19,6 +19,7 @@ export interface AssetVehicleCardProps {
     dispatchPrefix?: string;
     engineHours?: string | number;
     fuelPercent?: number;
+    onChangeUnit?: () => void;
     onPress?: () => void;
 }
 
@@ -33,6 +34,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
     dispatchPrefix = '',
     engineHours = '4,820 hrs',
     fuelPercent = 82,
+    onChangeUnit,
     onPress,
 }) => {
     const { isDarkHud } = useTheme();
@@ -212,7 +214,35 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     </View>
                 </View>
 
-                {renderDvirBadge()}
+                <View style={styles.badgeAndActionsWrap}>
+                    {renderDvirBadge()}
+                    {onChangeUnit ? (
+                        <Pressable
+                            accessibilityLabel="Change assigned unit"
+                            accessibilityRole="button"
+                            onPress={onChangeUnit}
+                            style={[
+                                styles.changeUnitBtn,
+                                isDarkHud && styles.darkChangeUnitBtn,
+                            ]}
+                            testID="vehicle-card-change-unit-btn"
+                        >
+                            <Icon
+                                color={isDarkHud ? '#60A5FA' : colors.primary}
+                                name="sync"
+                                size={11}
+                            />
+                            <Text
+                                style={[
+                                    styles.changeUnitText,
+                                    isDarkHud && styles.darkChangeUnitText,
+                                ]}
+                            >
+                                Change Unit
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
             </View>
 
             {/* Divider */}
@@ -666,6 +696,33 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkActionPromptText: {
+        color: '#60A5FA',
+    },
+    badgeAndActionsWrap: {
+        alignItems: 'flex-end',
+        gap: 6,
+    },
+    changeUnitBtn: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 6,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    darkChangeUnitBtn: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    changeUnitText: {
+        color: colors.primary,
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    darkChangeUnitText: {
         color: '#60A5FA',
     },
 });

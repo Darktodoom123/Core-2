@@ -751,14 +751,14 @@ final class OperationsWorkspaceViewModel
 
         $capturedAt = $model->getAttribute('location_captured_at') ?? $model->getAttribute('captured_at');
         $capturedAt = $capturedAt instanceof Carbon ? $capturedAt->toIso8601String() : (is_string($capturedAt) ? $capturedAt : null);
-        $age = $capturedAt === null ? null : now()->diffInSeconds(Carbon::parse($capturedAt), false);
+        $age = $capturedAt === null ? null : (int) abs(now()->diffInSeconds(Carbon::parse($capturedAt)));
 
         return [
             'latitude' => (float) $latitude,
             'longitude' => (float) $longitude,
             'accuracy_metres' => $model->getAttribute('accuracy_metres') === null ? null : (float) $model->getAttribute('accuracy_metres'),
             'captured_at' => $capturedAt,
-            'freshness_status' => $age === null || $age > 1800 ? 'offline' : ($age > 600 ? 'stale' : ($age > 120 ? 'delayed' : 'fresh')),
+            'freshness_status' => $age === null || $age > 1800 ? 'offline' : ($age >= 900 ? 'stale' : ($age > 180 ? 'delayed' : 'fresh')),
             'context' => $model->getAttribute('location_context'),
         ];
     }

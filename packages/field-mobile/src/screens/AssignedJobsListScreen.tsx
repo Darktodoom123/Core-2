@@ -22,9 +22,13 @@ import type { SyncTone } from '../components/layout/field-header';
 import { colors, shadows, sharedStyles } from '../components/nativeStyles';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
+import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
+import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
+import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
+import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
@@ -114,6 +118,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
+    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
+    const [endShiftSafeguardOpen, setEndShiftSafeguardOpen] = useState(false);
+    const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
+    const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
+    const [overriddenUnitCode, setOverriddenUnitCode] = useState<string | null>(
+        null,
+    );
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
@@ -246,7 +257,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     // Primary Active Vehicle & Dispatch
     const activeJob = jobs[0] || null;
     const primaryAsset = activeJob?.asset_assignments?.[0] || null;
-    const assetCode = primaryAsset?.asset_code || 'ALB-CRN-050';
+    const assetCode =
+        overriddenUnitCode || primaryAsset?.asset_code || 'CRN-101';
+    const hoursElapsed = shiftInfo.hoursElapsed ?? 4;
+    const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
+    const isDoleCapExceeded = hoursElapsed >= 10.0;
 
     // 6 Dashboard Tiles
     const DASHBOARD_TILES: TileItem[] = [
@@ -404,6 +419,51 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     userRole={userRole}
                 />
 
+                {/* DOLE 10-Hour Shift Limit Compliance Warning / Hard Stop Banner */}
+                {isDoleWarning || isDoleCapExceeded ? (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.doleWarningBanner,
+                            isDoleCapExceeded && styles.doleCapBanner,
+                            isDarkHud && styles.darkDoleWarningBanner,
+                        ]}
+                        testID="dole-shift-limit-banner"
+                    >
+                        <View style={styles.doleWarningContent}>
+                            <Icon
+                                color={
+                                    isDoleCapExceeded ? '#EF4444' : '#F59E0B'
+                                }
+                                name="alert"
+                                size={18}
+                            />
+                            <Text
+                                style={[
+                                    styles.doleWarningText,
+                                    isDoleCapExceeded && styles.doleCapText,
+                                    isDarkHud && styles.darkDoleWarningText,
+                                ]}
+                            >
+                                {isDoleCapExceeded
+                                    ? '10h Maximum Operating Cap Exceeded — Mandatory Rest Period.'
+                                    : 'Approaching 10h Operating Limit — Prepare for Handover or Shift Closure.'}
+                            </Text>
+                        </View>
+                        <Pressable
+                            accessibilityLabel="Initiate handover to relief crew"
+                            accessibilityRole="button"
+                            onPress={() => setReliefHandoverOpen(true)}
+                            style={styles.doleHandoverBtn}
+                            testID="dole-handover-trigger-btn"
+                        >
+                            <Text style={styles.doleHandoverBtnText}>
+                                Relief Handover
+                            </Text>
+                        </Pressable>
+                    </View>
+                ) : null}
+
                 {/* Samsara-Style Persistent Duty Status Bar */}
                 <Pressable
                     accessibilityHint="Tap to change active duty status or view shift fatigue gauge"
@@ -472,9 +532,27 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     dvirStatus="cleared"
                     engineHours="4,820 hrs"
                     fuelPercent={82}
+                    onChangeUnit={() => setChangeUnitModalOpen(true)}
                     onPress={onOpenVehicle}
                     ratedCapacity="50T All-Terrain"
                 />
+
+                {/* On-Site Unit Start Safeguard Button when accepted */}
+                {activeJob?.status.value === 'accepted' ||
+                activeJob?.my_assignment?.response_status === 'accepted' ? (
+                    <Pressable
+                        accessibilityLabel={`I'm On Site — Start Unit for ${assetCode}`}
+                        accessibilityRole="button"
+                        onPress={() => setOnSiteConfirmationOpen(true)}
+                        style={styles.startUnitBtn}
+                        testID="start-unit-on-site-btn"
+                    >
+                        <Icon color="#FFFFFF" name="location" size={18} />
+                        <Text style={styles.startUnitBtnText}>
+                            I'm On Site — Start Unit ({assetCode})
+                        </Text>
+                    </Pressable>
+                ) : null}
 
                 {/* 6-Tile Industrial Launcher Grid */}
                 <View
@@ -519,13 +597,17 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 <ShiftStatusCard
                     locationSharingActive={locationSharingActive}
                     onToggleLocationSharing={onToggleLocationSharing}
-                    onToggleShift={() =>
-                        onToggleShift?.(
-                            shiftInfo.status === 'on_shift'
-                                ? 'on_break'
-                                : 'on_shift',
-                        )
-                    }
+                    onToggleShift={() => {
+                        if (shiftInfo.status === 'on_shift' && primaryAsset) {
+                            setEndShiftSafeguardOpen(true);
+                        } else {
+                            onToggleShift?.(
+                                shiftInfo.status === 'on_shift'
+                                    ? 'on_break'
+                                    : 'on_shift',
+                            );
+                        }
+                    }}
                     shiftInfo={shiftInfo}
                 />
 
@@ -686,6 +768,56 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 userName={userName}
                 userRole={userRole}
                 visible={profileSheetOpen}
+            />
+
+            {/* On-Site Confirmation Modal */}
+            <OnSiteConfirmationModal
+                assetCode={assetCode}
+                onCancel={() => setOnSiteConfirmationOpen(false)}
+                onConfirm={() => {
+                    setOnSiteConfirmationOpen(false);
+
+                    if (onToggleLocationSharing && !locationSharingActive) {
+                        onToggleLocationSharing();
+                    }
+                }}
+                visible={onSiteConfirmationOpen}
+            />
+
+            {/* End Shift Safeguard Intercept Modal */}
+            <EndShiftSafeguardModal
+                assetCode={assetCode}
+                onCancel={() => setEndShiftSafeguardOpen(false)}
+                onConfirmReleaseAndClockOut={() => {
+                    setEndShiftSafeguardOpen(false);
+                    onToggleShift?.('off_shift');
+                    onChangeDutyStatus?.('off_duty');
+                }}
+                visible={endShiftSafeguardOpen}
+            />
+
+            {/* Change Unit Override Modal */}
+            <ChangeUnitModal
+                currentAssetCode={assetCode}
+                onClose={() => setChangeUnitModalOpen(false)}
+                onConfirmUnitChange={(newUnitCode) => {
+                    setOverriddenUnitCode(newUnitCode);
+                    setChangeUnitModalOpen(false);
+                }}
+                visible={changeUnitModalOpen}
+            />
+
+            {/* Smart Dual Hot-Seating Relief Handover Modal */}
+            <ReliefHandoverModal
+                assetCode={assetCode}
+                handoverPin="8421"
+                mode="outgoing_offer"
+                onClose={() => setReliefHandoverOpen(false)}
+                onInitiatePushHandover={() => {
+                    // Push notification alert dispatched to scheduled incoming relief operator
+                }}
+                reliefOperatorName="Carlos Reyes (Night Shift)"
+                visible={reliefHandoverOpen}
             />
         </View>
     );
@@ -907,5 +1039,76 @@ const styles = StyleSheet.create({
     pressedTile: {
         opacity: 0.85,
         transform: [{ scale: 0.96 }],
+    },
+    doleWarningBanner: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 12,
+        borderWidth: 1.5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 12,
+        gap: 10,
+        ...shadows.sm,
+    },
+    doleCapBanner: {
+        backgroundColor: '#FEE2E2',
+        borderColor: '#EF4444',
+    },
+    darkDoleWarningBanner: {
+        backgroundColor: '#1E293B',
+        borderColor: '#D97706',
+    },
+    doleWarningContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flex: 1,
+    },
+    doleWarningText: {
+        color: '#92400E',
+        fontSize: 12,
+        fontWeight: '700',
+        flex: 1,
+        lineHeight: 16,
+    },
+    darkDoleWarningText: {
+        color: '#FBBF24',
+    },
+    doleCapText: {
+        color: '#991B1B',
+    },
+    doleHandoverBtn: {
+        backgroundColor: '#D97706',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    doleHandoverBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    startUnitBtn: {
+        backgroundColor: '#059669',
+        borderRadius: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginTop: 10,
+        marginBottom: 14,
+        ...shadows.sm,
+    },
+    startUnitBtnText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 0.2,
     },
 });
