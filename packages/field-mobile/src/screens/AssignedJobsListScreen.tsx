@@ -80,6 +80,7 @@ interface TileItem {
     darkBgColor?: string;
     darkBorderColor?: string;
     darkIconColor?: string;
+    darkHaloBg?: string;
     badgeCount?: number;
 }
 
@@ -282,11 +283,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Shift & Hours',
             iconName: 'clock',
             bgColor: '#D97706',
-            borderColor: '#B45309',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
-            darkBgColor: '#B45309',
-            darkBorderColor: '#F59E0B',
-            darkIconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(245, 158, 11, 0.45)',
+            darkIconColor: '#F59E0B',
+            darkHaloBg: 'rgba(245, 158, 11, 0.15)',
         },
         {
             id: 'dvir',
@@ -294,11 +296,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
             bgColor: '#059669',
-            borderColor: '#047857',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
-            darkBgColor: '#047857',
-            darkBorderColor: '#10B981',
-            darkIconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(16, 185, 129, 0.45)',
+            darkIconColor: '#34D399',
+            darkHaloBg: 'rgba(16, 185, 129, 0.15)',
         },
         {
             id: 'routes',
@@ -306,11 +309,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Heavy Transit',
             iconName: 'route',
             bgColor: '#0284C7',
-            borderColor: '#0369A1',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
-            darkBgColor: '#0369A1',
-            darkBorderColor: '#38BDF8',
-            darkIconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(56, 189, 248, 0.45)',
+            darkIconColor: '#38BDF8',
+            darkHaloBg: 'rgba(56, 189, 248, 0.15)',
         },
         {
             id: 'documents',
@@ -318,11 +322,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Permits & Certs',
             iconName: 'document',
             bgColor: '#7C3AED',
-            borderColor: '#6D28D9',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
-            darkBgColor: '#6D28D9',
-            darkBorderColor: '#A78BFA',
-            darkIconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(192, 132, 252, 0.45)',
+            darkIconColor: '#C084FC',
+            darkHaloBg: 'rgba(192, 132, 252, 0.15)',
         },
         {
             id: 'vehicle',
@@ -330,11 +335,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
             bgColor: '#4D7C0F',
-            borderColor: '#3F6212',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
-            darkBgColor: '#3F6212',
-            darkBorderColor: '#A3E635',
-            darkIconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(163, 230, 53, 0.45)',
+            darkIconColor: '#A3E635',
+            darkHaloBg: 'rgba(163, 230, 53, 0.15)',
         },
         {
             id: 'forms',
@@ -342,11 +348,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
             bgColor: '#334155',
-            borderColor: '#1E293B',
+            borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
-            darkBorderColor: '#64748B',
-            darkIconColor: '#FFFFFF',
+            darkBorderColor: 'rgba(148, 163, 184, 0.35)',
+            darkIconColor: '#94A3B8',
+            darkHaloBg: 'rgba(148, 163, 184, 0.15)',
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
     ];
@@ -638,8 +645,19 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             testID={`tile-${tile.id}`}
                         >
                             {tile.badgeCount ? (
-                                <View style={styles.tileBadgePill}>
-                                    <Text style={styles.tileBadgePillText}>
+                                <View
+                                    style={[
+                                        styles.tileBadgePill,
+                                        isDarkHud && styles.darkTileBadgePill,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.tileBadgePillText,
+                                            isDarkHud &&
+                                                styles.darkTileBadgePillText,
+                                        ]}
+                                    >
                                         {tile.badgeCount}
                                     </Text>
                                 </View>
@@ -648,12 +666,20 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 style={[
                                     styles.tileIconContainer,
                                     isDarkHud && styles.darkTileIconContainer,
+                                    isDarkHud &&
+                                        Boolean(tile.darkHaloBg) && {
+                                            backgroundColor: tile.darkHaloBg,
+                                        },
                                 ]}
                             >
                                 <Icon
-                                    color="#FFFFFF"
+                                    color={
+                                        isDarkHud
+                                            ? tile.darkIconColor || '#FFFFFF'
+                                            : '#FFFFFF'
+                                    }
                                     name={tile.iconName}
-                                    size={28}
+                                    size={isDarkHud ? 22 : 28}
                                 />
                             </View>
                             <Text
@@ -1018,6 +1044,7 @@ const styles = StyleSheet.create({
     },
     darkTileCard: {
         alignItems: 'center',
+        backgroundColor: '#1E293B',
         borderRadius: 16,
         borderWidth: 1.5,
         justifyContent: 'center',
@@ -1035,6 +1062,7 @@ const styles = StyleSheet.create({
     },
     darkTileIconContainer: {
         alignItems: 'center',
+        borderRadius: 18,
         height: 36,
         justifyContent: 'center',
         marginBottom: 6,
@@ -1049,7 +1077,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     darkTileTitle: {
-        color: '#FFFFFF',
+        color: '#F8FAFC',
         fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.1,
@@ -1081,10 +1109,16 @@ const styles = StyleSheet.create({
         top: 8,
         zIndex: 2,
     },
+    darkTileBadgePill: {
+        backgroundColor: '#F59E0B',
+    },
     tileBadgePillText: {
         color: '#0F172A',
         fontSize: 10,
         fontWeight: '900',
+    },
+    darkTileBadgePillText: {
+        color: '#090D16',
     },
     errorBox: {
         alignItems: 'center',

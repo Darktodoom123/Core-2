@@ -65,6 +65,10 @@ interface DashboardTileConfig {
     bgColor: string;
     badgeCount?: number;
     sublabel: string;
+    darkBgColor?: string;
+    darkBorderColor?: string;
+    darkIconColor?: string;
+    darkHaloBg?: string;
 }
 
 export const OperatorDashboardScreen: React.FC<
@@ -202,6 +206,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: 'Shift & Hours',
             iconName: 'clock',
             bgColor: '#D97706', // Industrial Safety Amber
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(245, 158, 11, 0.45)',
+            darkIconColor: '#F59E0B',
+            darkHaloBg: 'rgba(245, 158, 11, 0.15)',
         },
         {
             id: 'dvir',
@@ -209,6 +217,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
             bgColor: '#059669', // Compliance Emerald
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(16, 185, 129, 0.45)',
+            darkIconColor: '#34D399',
+            darkHaloBg: 'rgba(16, 185, 129, 0.15)',
         },
         {
             id: 'routes',
@@ -216,6 +228,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: 'Heavy Transit',
             iconName: 'route',
             bgColor: '#0284C7', // Navigation Sky Blue
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(56, 189, 248, 0.45)',
+            darkIconColor: '#38BDF8',
+            darkHaloBg: 'rgba(56, 189, 248, 0.15)',
         },
         {
             id: 'documents',
@@ -223,6 +239,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: 'Permits & Certs',
             iconName: 'document',
             bgColor: '#7C3AED', // Blueprint Purple
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(192, 132, 252, 0.45)',
+            darkIconColor: '#C084FC',
+            darkHaloBg: 'rgba(192, 132, 252, 0.15)',
         },
         {
             id: 'vehicle',
@@ -230,6 +250,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
             bgColor: '#4D7C0F', // Rigging Lime / Olive
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(163, 230, 53, 0.45)',
+            darkIconColor: '#A3E635',
+            darkHaloBg: 'rgba(163, 230, 53, 0.15)',
         },
         {
             id: 'forms',
@@ -237,6 +261,10 @@ export const OperatorDashboardScreen: React.FC<
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
             bgColor: '#334155', // Operations Slate
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(148, 163, 184, 0.35)',
+            darkIconColor: '#94A3B8',
+            darkHaloBg: 'rgba(148, 163, 184, 0.15)',
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
     ];
@@ -475,26 +503,66 @@ export const OperatorDashboardScreen: React.FC<
                             onPress={() => handleTilePress(tile.id)}
                             style={({ pressed }) => [
                                 styles.tileCard,
-                                { backgroundColor: tile.bgColor },
+                                {
+                                    backgroundColor: isDarkHud
+                                        ? tile.darkBgColor || '#1E293B'
+                                        : tile.bgColor,
+                                    borderColor: isDarkHud
+                                        ? tile.darkBorderColor || '#334155'
+                                        : 'transparent',
+                                    borderWidth: isDarkHud ? 1.5 : 0,
+                                },
+                                isDarkHud && styles.darkTileCard,
                                 pressed && styles.pressedTile,
                             ]}
                             testID={`tile-${tile.id}`}
                         >
                             {tile.badgeCount ? (
-                                <View style={styles.tileBadgePill}>
-                                    <Text style={styles.tileBadgePillText}>
+                                <View
+                                    style={[
+                                        styles.tileBadgePill,
+                                        isDarkHud && styles.darkTileBadgePill,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.tileBadgePillText,
+                                            isDarkHud &&
+                                                styles.darkTileBadgePillText,
+                                        ]}
+                                    >
                                         {tile.badgeCount}
                                     </Text>
                                 </View>
                             ) : null}
-                            <View style={styles.tileIconContainer}>
+                            <View
+                                style={[
+                                    styles.tileIconContainer,
+                                    isDarkHud && styles.darkTileIconContainer,
+                                    isDarkHud &&
+                                        Boolean(tile.darkHaloBg) && {
+                                            backgroundColor: tile.darkHaloBg,
+                                        },
+                                ]}
+                            >
                                 <Icon
+                                    color={
+                                        isDarkHud
+                                            ? tile.darkIconColor || '#FFFFFF'
+                                            : '#FFFFFF'
+                                    }
                                     name={tile.iconName}
-                                    size={28}
-                                    color="#FFFFFF"
+                                    size={isDarkHud ? 22 : 28}
                                 />
                             </View>
-                            <Text style={styles.tileTitle}>{tile.title}</Text>
+                            <Text
+                                style={[
+                                    styles.tileTitle,
+                                    isDarkHud && styles.darkTileTitle,
+                                ]}
+                            >
+                                {tile.title}
+                            </Text>
                         </Pressable>
                     ))}
                 </View>
@@ -848,7 +916,9 @@ const styles = StyleSheet.create({
     },
     tileCard: {
         alignItems: 'center',
+        borderColor: 'transparent',
         borderRadius: 18,
+        borderWidth: 0,
         flexBasis: '31%',
         flexGrow: 1,
         justifyContent: 'center',
@@ -897,10 +967,42 @@ const styles = StyleSheet.create({
         top: 8,
         zIndex: 2,
     },
+    darkTileBadgePill: {
+        backgroundColor: '#F59E0B',
+    },
     tileBadgePillText: {
         color: '#0F172A',
         fontSize: 10,
         fontWeight: '900',
+    },
+    darkTileBadgePillText: {
+        color: '#090D16',
+    },
+    darkTileCard: {
+        alignItems: 'center',
+        backgroundColor: '#1E293B',
+        borderRadius: 18,
+        borderWidth: 1.5,
+        justifyContent: 'center',
+        minHeight: 112,
+        padding: 10,
+        position: 'relative',
+    },
+    darkTileIconContainer: {
+        alignItems: 'center',
+        borderRadius: 19,
+        height: 38,
+        justifyContent: 'center',
+        marginBottom: 6,
+        width: 38,
+    },
+    darkTileTitle: {
+        color: '#F8FAFC',
+        fontSize: 13,
+        fontWeight: '800',
+        letterSpacing: 0.1,
+        lineHeight: 16,
+        textAlign: 'center',
     },
     pressed: {
         opacity: 0.78,
