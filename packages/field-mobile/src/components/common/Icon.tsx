@@ -44,6 +44,8 @@ export type IconName =
     | 'car'
     | 'flash'
     | 'search'
+    | 'sun'
+    | 'moon'
     | 'chevron-up';
 
 export interface IconProps {
@@ -218,6 +220,10 @@ export const Icon: React.FC<IconProps> = ({
             return <Ionicons name="flash" size={size} color={color} />;
         case 'search':
             return <Ionicons name="search-outline" size={size} color={color} />;
+        case 'sun':
+            return <Ionicons name="sunny-outline" size={size} color={color} />;
+        case 'moon':
+            return <Ionicons name="moon-outline" size={size} color={color} />;
         case 'chevron-up':
             return <Ionicons name="chevron-up" size={size} color={color} />;
         default:

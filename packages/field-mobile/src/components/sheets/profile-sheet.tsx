@@ -9,6 +9,8 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme';
+import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
 export interface ProfileSheetProps {
@@ -54,6 +56,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
 }) => {
     const insets = useContext(SafeAreaInsetsContext);
     const bottomInset = insets?.bottom ?? 0;
+    const { isDarkHud, setMode } = useTheme();
 
     const formattedRole = userRole
         ? userRole.replaceAll('_', ' ')
@@ -123,6 +126,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                 <Animated.View
                     style={[
                         styles.sheet,
+                        isDarkHud && styles.darkSheet,
                         {
                             paddingBottom: Math.max(24, bottomInset + 16),
                             transform: [{ translateY: panY }],
@@ -130,11 +134,19 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                     ]}
                 >
                     <View {...panResponder.panHandlers} style={styles.dragZone}>
-                        <View style={styles.handle} />
+                        <View
+                            style={[
+                                styles.handle,
+                                isDarkHud && styles.darkHandle,
+                            ]}
+                        />
                         <View style={styles.sheetHeader}>
                             <Text
                                 accessibilityRole="header"
-                                style={styles.title}
+                                style={[
+                                    styles.title,
+                                    isDarkHud && styles.darkTitle,
+                                ]}
                             >
                                 Profile
                             </Text>
@@ -144,11 +156,17 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 onPress={onClose}
                                 style={({ pressed }) => [
                                     styles.closeButton,
+                                    isDarkHud && styles.darkCloseButton,
                                     pressed && styles.pressed,
                                 ]}
                                 testID="profile-sheet-close"
                             >
-                                <Text style={styles.closeButtonText}>
+                                <Text
+                                    style={[
+                                        styles.closeButtonText,
+                                        isDarkHud && styles.darkCloseButtonText,
+                                    ]}
+                                >
                                     Close
                                 </Text>
                             </Pressable>
@@ -156,19 +174,53 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                     </View>
 
                     <View style={styles.identityRow}>
-                        <View style={styles.avatarCircle}>
-                            <Text style={styles.avatarInitials}>
+                        <View
+                            style={[
+                                styles.avatarCircle,
+                                isDarkHud && styles.darkAvatarCircle,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.avatarInitials,
+                                    isDarkHud && styles.darkAvatarInitials,
+                                ]}
+                            >
                                 {initialsFor(userName)}
                             </Text>
                         </View>
                         <View style={styles.identityCopy}>
-                            <Text selectable style={styles.name}>
+                            <Text
+                                selectable
+                                style={[
+                                    styles.name,
+                                    isDarkHud && styles.darkName,
+                                ]}
+                            >
                                 {userName || 'Field worker'}
                             </Text>
-                            <Text style={styles.role}>{formattedRole}</Text>
+                            <Text
+                                style={[
+                                    styles.role,
+                                    isDarkHud && styles.darkRole,
+                                ]}
+                            >
+                                {formattedRole}
+                            </Text>
                             {assignedAssetLabel ? (
-                                <View style={styles.assetBadge}>
-                                    <Text style={styles.assetBadgeText}>
+                                <View
+                                    style={[
+                                        styles.assetBadge,
+                                        isDarkHud && styles.darkAssetBadge,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.assetBadgeText,
+                                            isDarkHud &&
+                                                styles.darkAssetBadgeText,
+                                        ]}
+                                    >
                                         🚜 {assignedAssetLabel}
                                     </Text>
                                 </View>
@@ -176,15 +228,161 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                         </View>
                     </View>
 
-                    <View style={styles.divider} />
+                    <View
+                        style={[
+                            styles.divider,
+                            isDarkHud && styles.darkDivider,
+                        ]}
+                    />
+
+                    {/* Display & Lighting (Theme Selector) */}
+                    <View style={styles.systemSection}>
+                        <Text
+                            style={[
+                                styles.sectionLabel,
+                                isDarkHud && styles.darkSectionLabel,
+                            ]}
+                        >
+                            Display & Lighting
+                        </Text>
+                        <View
+                            style={[
+                                styles.themeSelectorCard,
+                                isDarkHud && styles.darkThemeSelectorCard,
+                            ]}
+                            testID="theme-selector-card"
+                        >
+                            <Pressable
+                                accessibilityHint="Switches to high-contrast outdoor daylight theme"
+                                accessibilityLabel="Daylight outdoor theme"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: !isDarkHud }}
+                                onPress={() => setMode('light')}
+                                style={({ pressed }) => [
+                                    styles.themeOption,
+                                    !isDarkHud && styles.themeOptionActive,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="theme-option-light"
+                            >
+                                <Icon
+                                    color={
+                                        !isDarkHud
+                                            ? '#D97706'
+                                            : isDarkHud
+                                              ? '#94A3B8'
+                                              : colors.secondary
+                                    }
+                                    name="sun"
+                                    size={18}
+                                />
+                                <View style={styles.themeOptionCopy}>
+                                    <Text
+                                        style={[
+                                            styles.themeOptionTitle,
+                                            !isDarkHud &&
+                                                styles.themeOptionTitleActive,
+                                            isDarkHud &&
+                                                styles.darkThemeOptionTitle,
+                                        ]}
+                                    >
+                                        Daylight
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.themeOptionSublabel,
+                                            !isDarkHud &&
+                                                styles.themeOptionSublabelActive,
+                                            isDarkHud &&
+                                                styles.darkThemeOptionSublabel,
+                                        ]}
+                                    >
+                                        Outdoor High-Contrast
+                                    </Text>
+                                </View>
+                                {!isDarkHud ? (
+                                    <Text style={styles.themeCheckmark}>✓</Text>
+                                ) : null}
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityHint="Switches to low-glare cockpit night HUD theme"
+                                accessibilityLabel="Cockpit HUD night theme"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isDarkHud }}
+                                onPress={() => setMode('dark_hud')}
+                                style={({ pressed }) => [
+                                    styles.themeOption,
+                                    isDarkHud && styles.themeOptionActiveDark,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="theme-option-dark"
+                            >
+                                <Icon
+                                    color={
+                                        isDarkHud ? '#F59E0B' : colors.secondary
+                                    }
+                                    name="moon"
+                                    size={18}
+                                />
+                                <View style={styles.themeOptionCopy}>
+                                    <Text
+                                        style={[
+                                            styles.themeOptionTitle,
+                                            isDarkHud &&
+                                                styles.themeOptionTitleActiveDark,
+                                        ]}
+                                    >
+                                        Cockpit HUD
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.themeOptionSublabel,
+                                            isDarkHud &&
+                                                styles.themeOptionSublabelActiveDark,
+                                        ]}
+                                    >
+                                        Night Ops & In-Cab
+                                    </Text>
+                                </View>
+                                {isDarkHud ? (
+                                    <Text style={styles.themeCheckmarkDark}>
+                                        ✓
+                                    </Text>
+                                ) : null}
+                            </Pressable>
+                        </View>
+                    </View>
+
+                    <View
+                        style={[
+                            styles.divider,
+                            isDarkHud && styles.darkDivider,
+                        ]}
+                    />
 
                     <View style={styles.systemSection}>
-                        <Text style={styles.sectionLabel}>
+                        <Text
+                            style={[
+                                styles.sectionLabel,
+                                isDarkHud && styles.darkSectionLabel,
+                            ]}
+                        >
                             System & Sync Health
                         </Text>
-                        <View style={styles.healthCard}>
+                        <View
+                            style={[
+                                styles.healthCard,
+                                isDarkHud && styles.darkHealthCard,
+                            ]}
+                        >
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>
+                                <Text
+                                    style={[
+                                        styles.healthLabel,
+                                        isDarkHud && styles.darkHealthLabel,
+                                    ]}
+                                >
                                     Connection:
                                 </Text>
                                 <View style={styles.statusPill}>
@@ -196,7 +394,12 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                                 : styles.statusDotOnline,
                                         ]}
                                     />
-                                    <Text style={styles.healthValue}>
+                                    <Text
+                                        style={[
+                                            styles.healthValue,
+                                            isDarkHud && styles.darkHealthValue,
+                                        ]}
+                                    >
                                         {isOnline === false
                                             ? 'Offline (Saved locally)'
                                             : 'Online'}
@@ -204,12 +407,18 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 </View>
                             </View>
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>
+                                <Text
+                                    style={[
+                                        styles.healthLabel,
+                                        isDarkHud && styles.darkHealthLabel,
+                                    ]}
+                                >
                                     Outbox Data:
                                 </Text>
                                 <Text
                                     style={[
                                         styles.healthValue,
+                                        isDarkHud && styles.darkHealthValue,
                                         queuedCount > 0 &&
                                             styles.healthValueWarning,
                                     ]}
@@ -222,7 +431,12 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                                 </Text>
                             </View>
                             <View style={styles.healthRow}>
-                                <Text style={styles.healthLabel}>
+                                <Text
+                                    style={[
+                                        styles.healthLabel,
+                                        isDarkHud && styles.darkHealthLabel,
+                                    ]}
+                                >
                                     Field App:
                                 </Text>
                                 <Text style={styles.healthValueMuted}>
@@ -249,7 +463,12 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                         </View>
                     </View>
 
-                    <View style={styles.divider} />
+                    <View
+                        style={[
+                            styles.divider,
+                            isDarkHud && styles.darkDivider,
+                        ]}
+                    />
 
                     {signOutConfirmationOpen ? (
                         <View style={styles.confirmation}>
@@ -313,19 +532,38 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({
                             onPress={onStartSignOut}
                             style={({ pressed }) => [
                                 styles.signOutRow,
+                                isDarkHud && styles.darkSignOutRow,
                                 pressed && styles.pressed,
                             ]}
                             testID="account-sign-out-button"
                         >
                             <View style={styles.signOutCopy}>
-                                <Text style={styles.signOutTitle}>
+                                <Text
+                                    style={[
+                                        styles.signOutTitle,
+                                        isDarkHud && styles.darkSignOutTitle,
+                                    ]}
+                                >
                                     Sign out
                                 </Text>
-                                <Text style={styles.signOutDescription}>
+                                <Text
+                                    style={[
+                                        styles.signOutDescription,
+                                        isDarkHud &&
+                                            styles.darkSignOutDescription,
+                                    ]}
+                                >
                                     End this field session on this device.
                                 </Text>
                             </View>
-                            <Text style={styles.chevron}>›</Text>
+                            <Text
+                                style={[
+                                    styles.chevron,
+                                    isDarkHud && styles.darkChevron,
+                                ]}
+                            >
+                                ›
+                            </Text>
                         </Pressable>
                     )}
                 </Animated.View>
@@ -599,5 +837,143 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.78,
+    },
+    darkSheet: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+        boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.4)',
+    },
+    darkHandle: {
+        backgroundColor: '#475569',
+    },
+    darkTitle: {
+        color: '#F8FAFC',
+    },
+    darkCloseButton: {
+        borderColor: '#334155',
+    },
+    darkCloseButtonText: {
+        color: '#94A3B8',
+    },
+    darkAvatarCircle: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: '#F59E0B',
+    },
+    darkAvatarInitials: {
+        color: '#F59E0B',
+    },
+    darkName: {
+        color: '#F8FAFC',
+    },
+    darkRole: {
+        color: '#94A3B8',
+    },
+    darkAssetBadge: {
+        backgroundColor: '#090D16',
+        borderColor: '#334155',
+    },
+    darkAssetBadgeText: {
+        color: '#F8FAFC',
+    },
+    darkDivider: {
+        backgroundColor: '#334155',
+    },
+    darkSectionLabel: {
+        color: '#94A3B8',
+    },
+    darkHealthCard: {
+        backgroundColor: '#090D16',
+        borderColor: '#334155',
+    },
+    darkHealthLabel: {
+        color: '#94A3B8',
+    },
+    darkHealthValue: {
+        color: '#F8FAFC',
+    },
+    darkSignOutRow: {
+        borderColor: '#334155',
+    },
+    darkSignOutTitle: {
+        color: '#F8FAFC',
+    },
+    darkSignOutDescription: {
+        color: '#94A3B8',
+    },
+    darkChevron: {
+        color: '#94A3B8',
+    },
+    themeSelectorCard: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 8,
+        padding: 8,
+    },
+    darkThemeSelectorCard: {
+        backgroundColor: '#090D16',
+        borderColor: '#334155',
+    },
+    themeOption: {
+        alignItems: 'center',
+        borderColor: 'transparent',
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    themeOptionActive: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#D97706',
+    },
+    themeOptionActiveDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: '#F59E0B',
+    },
+    themeOptionCopy: {
+        flex: 1,
+        gap: 2,
+    },
+    themeOptionTitle: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    themeOptionTitleActive: {
+        color: '#D97706',
+        fontWeight: '800',
+    },
+    darkThemeOptionTitle: {
+        color: '#F8FAFC',
+    },
+    themeOptionTitleActiveDark: {
+        color: '#F59E0B',
+        fontWeight: '800',
+    },
+    themeOptionSublabel: {
+        color: colors.muted,
+        fontSize: 11,
+    },
+    themeOptionSublabelActive: {
+        color: '#92400E',
+    },
+    darkThemeOptionSublabel: {
+        color: '#94A3B8',
+    },
+    themeOptionSublabelActiveDark: {
+        color: '#FDE68A',
+    },
+    themeCheckmark: {
+        color: '#D97706',
+        fontSize: 14,
+        fontWeight: '900',
+    },
+    themeCheckmarkDark: {
+        color: '#F59E0B',
+        fontSize: 14,
+        fontWeight: '900',
     },
 });

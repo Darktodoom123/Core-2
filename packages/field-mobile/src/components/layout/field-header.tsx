@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../theme';
 import { Icon } from '../common/Icon';
 import { colors, shadows } from '../nativeStyles';
 
@@ -85,75 +86,134 @@ export const ProfileSummary: React.FC<ProfileSummaryProps> = ({
     onOpenProfile,
     notificationCount = 0,
     onOpenNotifications,
-}) => (
-    <View style={styles.profileRow} testID="profile-summary">
-        <Pressable
-            accessibilityLabel="Open profile"
-            accessibilityHint="Shows profile and account actions"
-            accessibilityRole="button"
-            accessibilityState={{ expanded: profileOpen }}
-            onPress={onOpenProfile}
-            style={({ pressed }) => [
-                styles.profileCard,
-                pressed && styles.pressed,
-            ]}
-            testID="profile-button"
-        >
-            <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>
-                    {initialsFor(userName)}
-                </Text>
-            </View>
-            <View style={styles.profileCopy}>
-                <View style={styles.profileNameRow}>
-                    <Text style={styles.profileName} selectable>
-                        {userName || 'Field worker'}
-                    </Text>
-                    <View
-                        accessibilityLabel={`Status dot: ${syncTone}`}
-                        style={[
-                            styles.nameStatusDot,
-                            syncTone === 'checking' && styles.syncMarkChecking,
-                            syncTone === 'online' && styles.syncMarkOnline,
-                            syncTone === 'offline' && styles.syncMarkOffline,
-                            syncTone === 'attention' &&
-                                styles.syncMarkAttention,
-                        ]}
-                        testID="profile-status-dot"
-                    />
-                </View>
-                <Text style={styles.profileRole}>
-                    {userRole || 'Field worker'}
-                </Text>
-            </View>
-        </Pressable>
+}) => {
+    const { isDarkHud, toggleMode } = useTheme();
 
-        <Pressable
-            accessibilityLabel={
-                notificationCount > 0
-                    ? `Notifications: ${notificationCount} unread`
-                    : 'Notifications'
-            }
-            accessibilityHint="Opens field notifications and sync alerts"
-            accessibilityRole="button"
-            onPress={onOpenNotifications || onOpenProfile}
-            style={({ pressed }) => [
-                styles.notificationButton,
-                pressed && styles.pressed,
-            ]}
-            testID="notification-button"
-        >
-            <BellIcon color={colors.amberDark} size={20} />
-            {notificationCount > 0 ? (
-                <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                        {notificationCount > 9 ? '9+' : notificationCount}
+    return (
+        <View style={styles.profileRow} testID="profile-summary">
+            <Pressable
+                accessibilityHint="Shows profile and account actions"
+                accessibilityLabel="Open profile"
+                accessibilityRole="button"
+                accessibilityState={{ expanded: profileOpen }}
+                onPress={onOpenProfile}
+                style={({ pressed }) => [
+                    styles.profileCard,
+                    isDarkHud && styles.darkProfileCard,
+                    pressed && styles.pressed,
+                ]}
+                testID="profile-button"
+            >
+                <View
+                    style={[
+                        styles.avatarCircle,
+                        isDarkHud && styles.darkAvatarCircle,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.avatarInitials,
+                            isDarkHud && styles.darkAvatarInitials,
+                        ]}
+                    >
+                        {initialsFor(userName)}
                     </Text>
                 </View>
-            ) : null}
-        </Pressable>
-    </View>
-);
+                <View style={styles.profileCopy}>
+                    <View style={styles.profileNameRow}>
+                        <Text
+                            selectable
+                            style={[
+                                styles.profileName,
+                                isDarkHud && styles.darkProfileName,
+                            ]}
+                        >
+                            {userName || 'Field worker'}
+                        </Text>
+                        <View
+                            accessibilityLabel={`Status dot: ${syncTone}`}
+                            style={[
+                                styles.nameStatusDot,
+                                syncTone === 'checking' &&
+                                    styles.syncMarkChecking,
+                                syncTone === 'online' && styles.syncMarkOnline,
+                                syncTone === 'offline' &&
+                                    styles.syncMarkOffline,
+                                syncTone === 'attention' &&
+                                    styles.syncMarkAttention,
+                            ]}
+                            testID="profile-status-dot"
+                        />
+                    </View>
+                    <Text
+                        style={[
+                            styles.profileRole,
+                            isDarkHud && styles.darkProfileRole,
+                        ]}
+                    >
+                        {userRole || 'Field worker'}
+                    </Text>
+                </View>
+            </Pressable>
+
+            <View style={styles.headerActions}>
+                <Pressable
+                    accessibilityHint="Toggles between daylight and cockpit night HUD lighting"
+                    accessibilityLabel={
+                        isDarkHud
+                            ? 'Switch to daylight outdoor mode'
+                            : 'Switch to cockpit HUD night mode'
+                    }
+                    accessibilityRole="button"
+                    onPress={toggleMode}
+                    style={({ pressed }) => [
+                        styles.headerIconButton,
+                        isDarkHud && styles.darkHeaderIconButton,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="theme-mode-toggle"
+                >
+                    <Icon
+                        color={isDarkHud ? '#F59E0B' : '#D97706'}
+                        name={isDarkHud ? 'sun' : 'moon'}
+                        size={20}
+                    />
+                </Pressable>
+
+                <Pressable
+                    accessibilityHint="Opens field notifications and sync alerts"
+                    accessibilityLabel={
+                        notificationCount > 0
+                            ? `Notifications: ${notificationCount} unread`
+                            : 'Notifications'
+                    }
+                    accessibilityRole="button"
+                    onPress={onOpenNotifications || onOpenProfile}
+                    style={({ pressed }) => [
+                        styles.notificationButton,
+                        isDarkHud && styles.darkHeaderIconButton,
+                        pressed && styles.pressed,
+                    ]}
+                    testID="notification-button"
+                >
+                    <BellIcon
+                        color={isDarkHud ? '#F59E0B' : colors.amberDark}
+                        size={20}
+                    />
+                    {notificationCount > 0 ? (
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.notificationBadgeText}>
+                                {notificationCount > 9
+                                    ? '9+'
+                                    : notificationCount}
+                            </Text>
+                        </View>
+                    ) : null}
+                </Pressable>
+            </View>
+        </View>
+    );
+};
 
 export interface FieldHeaderProps {
     userName?: string | null;
@@ -380,6 +440,39 @@ const styles = StyleSheet.create({
         position: 'relative',
         width: 48,
         ...shadows.sm,
+    },
+    headerIconButton: {
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 16,
+        borderWidth: 1,
+        height: 48,
+        justifyContent: 'center',
+        position: 'relative',
+        width: 48,
+        ...shadows.sm,
+    },
+    darkHeaderIconButton: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    darkProfileCard: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    darkAvatarCircle: {
+        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        borderColor: '#F59E0B',
+    },
+    darkAvatarInitials: {
+        color: '#F59E0B',
+    },
+    darkProfileName: {
+        color: '#F8FAFC',
+    },
+    darkProfileRole: {
+        color: '#94A3B8',
     },
     bellIcon: {
         fontSize: 18,
