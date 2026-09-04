@@ -44,6 +44,13 @@ export default function ErrorPage({
                 'Your session timed out due to inactivity. Please refresh the page and sign in again.',
             icon: RefreshCw,
         },
+        429: {
+            title: 'Too Many Requests',
+            description:
+                message ||
+                'You have exceeded the request rate limit. Please pause for a moment and try again.',
+            icon: AlertCircle,
+        },
         500: {
             title: 'Internal Server Error',
             description:

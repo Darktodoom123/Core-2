@@ -281,6 +281,7 @@ export interface ApiErrorResponse {
     data?: DispatchJob;
     errors?: Record<string, string[]>;
     request_id?: string;
+    retry_after?: number;
 }
 
 export interface DispatchAssignmentOfferV2 {
