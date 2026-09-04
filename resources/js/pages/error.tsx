@@ -7,9 +7,14 @@ import { Button } from '@/components/ui';
 interface ErrorPageProps {
     status: number;
     message?: string;
+    requestId?: string;
 }
 
-export default function ErrorPage({ status, message }: ErrorPageProps) {
+export default function ErrorPage({
+    status,
+    message,
+    requestId,
+}: ErrorPageProps) {
     const errorDetails = {
         401: {
             title: 'Authentication Required',
@@ -101,19 +106,39 @@ export default function ErrorPage({ status, message }: ErrorPageProps) {
                             {errorDetails.description}
                         </p>
 
+                        {requestId && (
+                            <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-surface-subtle px-3 py-1.5 text-xs text-ink-soft">
+                                <span>Reference ID:</span>
+                                <code className="font-mono text-xs font-semibold text-ink select-all">
+                                    {requestId}
+                                </code>
+                            </div>
+                        )}
+
                         <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
-                            <Link href="/">
-                                <Button
-                                    variant="primary"
-                                    className="w-full gap-2 sm:w-auto"
-                                >
-                                    <Home
-                                        className="h-4 w-4"
-                                        aria-hidden="true"
-                                    />
-                                    Return to Workspace
-                                </Button>
-                            </Link>
+                            {status === 401 ? (
+                                <Link href="/login">
+                                    <Button
+                                        variant="primary"
+                                        className="w-full gap-2 sm:w-auto"
+                                    >
+                                        Sign In
+                                    </Button>
+                                </Link>
+                            ) : (
+                                <Link href="/">
+                                    <Button
+                                        variant="primary"
+                                        className="w-full gap-2 sm:w-auto"
+                                    >
+                                        <Home
+                                            className="h-4 w-4"
+                                            aria-hidden="true"
+                                        />
+                                        Return to Workspace
+                                    </Button>
+                                </Link>
+                            )}
 
                             <Button
                                 variant="secondary"

@@ -104,9 +104,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (ModelNotFoundException|NotFoundHttpException $e, Request $request) use ($resolveRequestId) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 $requestId = $resolveRequestId($request);
+                $message = $e instanceof ModelNotFoundException
+                    ? 'The requested resource could not be found.'
+                    : ($e->getMessage() ?: 'Resource not found.');
 
                 return response()->json([
-                    'message' => $e->getMessage() ?: 'Resource not found.',
+                    'message' => $message,
                     'error' => 'not_found',
                     'request_id' => $requestId,
                 ], 404)->header('X-Request-Id', $requestId);
@@ -213,7 +216,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->respond(function (SymfonyResponse $response, Throwable $exception, Request $request) {
+        $exceptions->respond(function (SymfonyResponse $response, Throwable $exception, Request $request) use ($resolveRequestId) {
             if ($response->getStatusCode() === 419) {
                 return back()->with('flash', [
                     'tone' => 'warning',
@@ -225,10 +228,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ! app()->environment(['local', 'testing'])
                 && ! $request->is('api/*')
                 && ! $request->expectsJson()
-                && in_array($response->getStatusCode(), [403, 404, 500, 503], true)
+                && in_array($response->getStatusCode(), [403, 404, 429, 500, 503], true)
             ) {
                 return Inertia::render('error', [
                     'status' => $response->getStatusCode(),
+                    'requestId' => $resolveRequestId($request),
                 ])->toResponse($request)->setStatusCode($response->getStatusCode());
             }
 
