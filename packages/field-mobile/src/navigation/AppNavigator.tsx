@@ -1091,6 +1091,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                         ?.asset_name ||
                                     '50T Tadano All-Terrain Crane'
                                 }
+                                jobs={jobs}
                                 onArrived={(jobId, version) => {
                                     handleTransitionStatus(
                                         jobId,

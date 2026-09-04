@@ -214,4 +214,79 @@ describe('HeavyCraneDriveModeScreen Component & Workflows', () => {
         expect(view.getByText('TURN 2 OF 4')).toBeTruthy();
         expect(view.getByText('In 4.2 km')).toBeTruthy();
     });
+
+    it('toggles simulation drive mode', async () => {
+        const view = await render(
+            <HeavyCraneDriveModeScreen activeJob={mockJob} />,
+        );
+
+        const simBtn = view.getByTestId('toggle-nav-sim-btn');
+        expect(view.getByText('DEMO')).toBeTruthy();
+
+        await fireEvent.press(simBtn);
+        expect(view.getByText('SIM')).toBeTruthy();
+
+        await fireEvent.press(simBtn);
+        expect(view.getByText('DEMO')).toBeTruthy();
+    });
+
+    it('opens Heavy Transit Route Setup modal and configures From and To locations', async () => {
+        const secondJob: DispatchJob = {
+            id: 102,
+            reference: 'DISP-2026-0942',
+            title: 'Subic Rigging Project',
+            client: 'Subic Heavy Rigging Ltd',
+            site: 'Subic Marine Terminal Expansion',
+            site_latitude: 14.821,
+            site_longitude: 120.2833,
+            status: {
+                value: 'dispatched',
+                label: 'Dispatched',
+            },
+            priority: {
+                value: 'priority',
+                label: 'Priority',
+            },
+            capabilities: {
+                can_respond: true,
+                can_update_status: true,
+                can_share_location: true,
+            },
+            scheduled_start: '2026-09-04T08:00:00Z',
+            scheduled_end: '2026-09-04T18:00:00Z',
+            version: 1,
+        };
+
+        const view = await render(
+            <HeavyCraneDriveModeScreen
+                activeJob={mockJob}
+                jobs={[mockJob, secondJob]}
+            />,
+        );
+
+        // Open Route Configurator
+        await fireEvent.press(view.getByTestId('open-route-config-btn'));
+
+        expect(view.getByTestId('route-config-modal')).toBeTruthy();
+        expect(view.getByText('FROM · STARTING LOCATION')).toBeTruthy();
+        expect(view.getByText('TO · DESIGNATED PROJECT SITE')).toBeTruthy();
+
+        // Select Manila Yard as Origin
+        await fireEvent.press(view.getByTestId('origin-option-manila_yard'));
+
+        // Select Subic Marine Terminal as Destination
+        await fireEvent.press(view.getByTestId('dest-option-subic_marine'));
+
+        // Verify Heavy Equipment Safety Assessment
+        expect(view.getAllByText(/CORRIDOR/i).length).toBeGreaterThan(1);
+
+        // Apply Route
+        await fireEvent.press(view.getByTestId('apply-route-btn'));
+
+        // Verify the destination updated on the screen
+        expect(
+            view.getAllByText(/Subic Marine Terminal Heavy Rigging Base/i)
+                .length,
+        ).toBeGreaterThan(0);
+    });
 });

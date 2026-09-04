@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../nativeStyles';
@@ -14,6 +14,11 @@ export interface MapLibreWebContainerProps {
     testID?: string;
     style?: StyleProp<ViewStyle>;
     apiKey?: string;
+    vehicleCoords?: [number, number];
+    vehicleBearing?: number;
+    followVehicle?: boolean;
+    customRouteCoordinates?: [number, number][];
+    currentRoadName?: string;
 }
 
 export function resolveStadiaApiKey(configuredKey?: string): string {
@@ -53,11 +58,33 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
     testID = 'maplibre-web-container',
     style,
     apiKey,
+    vehicleCoords,
+    vehicleBearing = 0,
+    followVehicle = true,
+    customRouteCoordinates,
+    currentRoadName,
 }) => {
     const [selectedPin, setSelectedPin] = useState<string | null>(null);
+    const webViewRef = useRef<any>(null);
+
+    useEffect(() => {
+        if (!vehicleCoords) {
+            return;
+        }
+
+        const script = `if (window.updateVehiclePosition) { window.updateVehiclePosition(${vehicleCoords[0]}, ${vehicleCoords[1]}, ${vehicleBearing}, ${Boolean(followVehicle)}, ${JSON.stringify(currentRoadName || '')}); } true;`;
+
+        if (webViewRef.current?.injectJavaScript) {
+            webViewRef.current.injectJavaScript(script);
+        }
+    }, [vehicleCoords, vehicleBearing, followVehicle, currentRoadName]);
 
     // Generate route coordinates GeoJSON LineString
     const routeCoordinates = useMemo(() => {
+        if (customRouteCoordinates && customRouteCoordinates.length > 0) {
+            return customRouteCoordinates;
+        }
+
         const coords: [number, number][] = [originCoords];
         waypoints.forEach((wp) => {
             coords.push([wp.longitude, wp.latitude]);
@@ -65,7 +92,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
         coords.push(destinationCoords);
 
         return coords;
-    }, [originCoords, destinationCoords, waypoints]);
+    }, [customRouteCoordinates, originCoords, destinationCoords, waypoints]);
 
     // Build self-contained MapLibre HTML template for WebView / Web
     const mapHtml = useMemo(() => {
@@ -130,9 +157,10 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
         .marker-dest { width: 28px; height: 28px; background: #2563eb; border: 2.5px solid #ffffff; border-radius: 50%; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
         .marker-wp { width: 18px; height: 18px; background: #38bdf8; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
         .marker-hazard { width: 24px; height: 24px; background: #dc2626; border: 2px solid #ffffff; border-radius: 50%; font-size: 13px; font-weight: 900; color: #fff; box-shadow: 0 2px 8px rgba(220,38,38,0.7); }
-        .marker-vehicle { width: 40px; height: 40px; position: relative; }
-        .vehicle-pulse { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: rgba(14, 165, 233, 0.4); animation: pulse 2s infinite ease-out; }
-        .vehicle-arrow { width: 24px; height: 24px; border-radius: 50%; background: #0284c7; border: 2.5px solid #ffffff; color: #ffffff; font-size: 11px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.7); z-index: 2; transform: rotate(30deg); }
+        .marker-vehicle { width: 64px; height: 64px; position: relative; display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .vehicle-pulse { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: rgba(37, 99, 235, 0.25); animation: pulse 2s infinite ease-out; }
+        .vehicle-puck { width: 36px; height: 36px; border-radius: 50%; background: #1a73e8; border: 3.5px solid #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .vehicle-arrow { color: #ffffff; font-size: 20px; font-weight: 900; line-height: 20px; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.4); transform-origin: center center; }
         @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.8); opacity: 0; } }
         .maplibregl-popup-content { background: #1e293b; color: #ffffff; padding: 8px 12px; border-radius: 8px; font-size: 12px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: #1e293b; }
@@ -148,13 +176,19 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
             const origin = ${originJson};
             const dest = ${destJson};
 
+            const isFollow = ${Boolean(followVehicle)};
+            const startCenter = ${vehicleCoords ? JSON.stringify(vehicleCoords) : 'origin.coords'};
+            const startZoom = isFollow ? 18 : 14.5;
+            const startPitch = isFollow ? 65 : 50;
+            const startBearing = ${typeof vehicleBearing === 'number' ? vehicleBearing : 0};
+
             const map = new maplibregl.Map({
                 container: 'map',
                 style: ${resolvedKey ? `'${styleUrl}'` : osmFallbackStyleJson},
-                center: origin.coords,
-                zoom: 12,
-                pitch: 45,
-                bearing: -15,
+                center: startCenter,
+                zoom: startZoom,
+                pitch: startPitch,
+                bearing: startBearing,
                 attributionControl: false
             });
 
@@ -174,14 +208,14 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                 });
 
                 map.addLayer({
-                    id: 'route-glow',
+                    id: 'route-casing',
                     type: 'line',
                     source: 'route',
                     layout: { 'line-join': 'round', 'line-cap': 'round' },
                     paint: {
-                        'line-color': '#0ea5e9',
-                        'line-width': 8,
-                        'line-opacity': 0.4
+                        'line-color': '#1558B0',
+                        'line-width': 11,
+                        'line-opacity': 0.8
                     }
                 });
 
@@ -191,25 +225,46 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     source: 'route',
                     layout: { 'line-join': 'round', 'line-cap': 'round' },
                     paint: {
-                        'line-color': '#38bdf8',
-                        'line-width': 4
+                        'line-color': '#388AF6',
+                        'line-width': 7
                     }
                 });
 
-                // Live Vehicle navigation arrow
+                // Live Vehicle navigation arrow puck (clean Google Maps style, no redundant text bubble)
                 const vehicleEl = document.createElement('div');
                 vehicleEl.className = 'marker marker-vehicle';
-                vehicleEl.innerHTML = '<div class="vehicle-pulse"></div><div class="vehicle-arrow">▲</div>';
-                new maplibregl.Marker({ element: vehicleEl })
-                    .setLngLat(origin.coords)
+                vehicleEl.innerHTML = '<div class="vehicle-pulse"></div><div class="vehicle-puck"><span class="vehicle-arrow">▲</span></div>';
+                window.vehicleMarker = new maplibregl.Marker({ element: vehicleEl })
+                    .setLngLat(startCenter)
                     .addTo(map);
 
-                const originEl = document.createElement('div');
-                originEl.className = 'marker marker-origin';
-                new maplibregl.Marker({ element: originEl })
-                    .setLngLat(origin.coords)
-                    .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML('<strong>Departure:</strong> ' + origin.label))
-                    .addTo(map);
+                window.updateVehiclePosition = function(lng, lat, heading, follow) {
+                    if (window.vehicleMarker) {
+                        window.vehicleMarker.setLngLat([lng, lat]);
+                        const arrow = document.querySelector('.vehicle-arrow');
+                        if (arrow && typeof heading === 'number') {
+                            arrow.style.transform = 'rotate(' + heading + 'deg)';
+                        }
+                    }
+                    if (follow && map) {
+                        map.easeTo({
+                            center: [lng, lat],
+                            pitch: 65,
+                            zoom: 18,
+                            bearing: typeof heading === 'number' ? heading : map.getBearing(),
+                            duration: 800
+                        });
+                    }
+                };
+
+                if (!isFollow) {
+                    const originEl = document.createElement('div');
+                    originEl.className = 'marker marker-origin';
+                    new maplibregl.Marker({ element: originEl })
+                        .setLngLat(origin.coords)
+                        .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML('<strong>Departure:</strong> ' + origin.label))
+                        .addTo(map);
+                }
 
                 const destEl = document.createElement('div');
                 destEl.className = 'marker marker-dest';
@@ -233,7 +288,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                         .addTo(map);
                 });
 
-                if (routeCoords.length > 0) {
+                if (!isFollow && routeCoords.length > 0) {
                     const bounds = routeCoords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
                     map.fitBounds(bounds, { padding: 48, maxZoom: 14 });
                 }
@@ -254,6 +309,9 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
         waypoints,
         routeCoordinates,
         apiKey,
+        followVehicle,
+        vehicleCoords,
+        vehicleBearing,
     ]);
 
     // On Native with WebView: render WebView safely if available in binary
@@ -264,6 +322,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     domStorageEnabled
                     javaScriptEnabled
                     originWhitelist={['*']}
+                    ref={webViewRef}
                     source={{ html: mapHtml }}
                     style={styles.webView}
                 />
