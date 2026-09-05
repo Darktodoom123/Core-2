@@ -58,7 +58,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             page.getByRole('heading', { name: 'Draft resource selection' }),
         ).toBeVisible();
         await expect(page.getByText('Pending changes')).toBeVisible();
-        await expect(page.getByText('Draft assignment pending')).toBeVisible();
+        await expect(page.getByText('1 selected but not saved')).toBeVisible();
 
         // 5. Submit assignment
         const assignButton = page.getByRole('button', {

@@ -10,6 +10,7 @@ import type {
 } from './types';
 
 const DESK_KEYS = [
+    'dispatch_page',
     'dispatch_view',
     'dispatch_mode',
     'dispatch_period',
@@ -101,6 +102,13 @@ export function readDispatchDeskState(
     const hasExplicitIntake = params.has('dispatch_intake');
 
     return {
+        page: Math.max(
+            1,
+            Math.min(
+                1000000,
+                Number.parseInt(params.get('dispatch_page') ?? '1', 10) || 1,
+            ),
+        ),
         view: hasExplicitView
             ? parseView(
                   params.get('dispatch_view') ?? params.get('dispatch_tab'),
@@ -134,6 +142,7 @@ function writeStateToUrl(state: DispatchDeskUrlState) {
     const params = url.searchParams;
 
     params.set('dispatch_view', state.view);
+    params.set('dispatch_page', String(state.page));
     params.set('dispatch_mode', state.mode);
     params.set('dispatch_period', state.period);
     params.set('dispatch_date', state.date);
@@ -172,6 +181,8 @@ function writeStateToUrl(state: DispatchDeskUrlState) {
         preserveScroll: true,
         preserveState: true,
     });
+
+    return nextUrl;
 }
 
 function searchFromUrl(url: string | undefined): string {
@@ -199,6 +210,8 @@ export function useDispatchDeskState(
     );
     const stateRef = useRef(state);
     const urlRef = useRef(resolvedUrl);
+    const supersededUrls = useRef(new Set<string>());
+    const latestLocalUrl = useRef<string | undefined>(undefined);
 
     useEffect(() => {
         stateRef.current = state;
@@ -210,6 +223,18 @@ export function useDispatchDeskState(
         }
 
         urlRef.current = resolvedUrl;
+
+        // Deferred responses can finish after a local filter/view change. Restore
+        // the newer URL instead of letting an older response close a live draft.
+        if (
+            supersededUrls.current.has(resolvedUrl) &&
+            latestLocalUrl.current !== resolvedUrl
+        ) {
+            latestLocalUrl.current = writeStateToUrl(stateRef.current);
+
+            return;
+        }
+
         const next = readDispatchDeskState(
             searchFromUrl(resolvedUrl || undefined),
             initialServiceRequestId,
@@ -220,6 +245,8 @@ export function useDispatchDeskState(
 
     useEffect(() => {
         const onPopState = () => {
+            supersededUrls.current.clear();
+            latestLocalUrl.current = undefined;
             const next = readDispatchDeskState(
                 typeof window === 'undefined' ? '' : window.location.search,
                 initialServiceRequestId,
@@ -234,15 +261,34 @@ export function useDispatchDeskState(
     }, [initialServiceRequestId]);
 
     const update = useCallback((patch: Partial<DispatchDeskUrlState>) => {
-        const next = { ...stateRef.current, ...patch };
+        const filtersChanged = [
+            'view',
+            'mode',
+            'period',
+            'date',
+            'query',
+            'source',
+        ].some((key) => key in patch);
+        const next = {
+            ...stateRef.current,
+            ...(filtersChanged ? { page: 1 } : {}),
+            ...patch,
+        };
         stateRef.current = next;
         setState(next);
-        writeStateToUrl(next);
+        supersededUrls.current.add(urlRef.current);
+
+        if (latestLocalUrl.current) {
+            supersededUrls.current.add(latestLocalUrl.current);
+        }
+
+        latestLocalUrl.current = writeStateToUrl(next);
     }, []);
 
     return useMemo(
         () => ({
             state,
+            setPage: (page: number) => update({ page, selectedJobId: null }),
             setView: (view: DispatchDeskView) => update({ view }),
             setMode: (mode: DispatchDeskMode) => update({ mode }),
             setPeriod: (period: DispatchDeskPeriod) => update({ period }),

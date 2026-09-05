@@ -221,6 +221,7 @@ export default function Workspace(props: WorkspacePageProps) {
             }
 
             router.reload({
+                preserveUrl: availableSection === 'dispatch',
                 only: [
                     'workspace',
                     'badges',
@@ -442,6 +443,7 @@ export default function Workspace(props: WorkspacePageProps) {
 
             if (nextSection) {
                 router.reload({
+                    preserveUrl: true,
                     only: [
                         'workspace',
                         'badges',

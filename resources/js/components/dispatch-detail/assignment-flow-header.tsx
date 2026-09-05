@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import type { DispatchDetailPageProps } from '@/types/workspace';
+import { AssignmentReadinessSummary } from './assignment-readiness-summary';
 import { formatResourceCounts } from './dispatch-detail-helpers';
 
 export function AssignmentFlowHeader({
@@ -51,6 +52,13 @@ export function AssignmentFlowHeader({
                 </p>
             </div>
 
+            <AssignmentReadinessSummary
+                activation={activation}
+                personnelCount={job.personnel_assignments.length}
+                assetCount={job.asset_assignments.length}
+                hasPendingSelections={hasPendingSelections}
+                onReview={() => onSelectStep(3)}
+            />
             <nav
                 aria-label="Dispatch setup progress"
                 className="overflow-hidden rounded-xl border border-line bg-surface shadow-xs"
@@ -229,7 +237,7 @@ export function AssignmentFlowHeader({
                                     >
                                         {activation.ready
                                             ? 'Ready to activate'
-                                            : 'Server readiness check'}
+                                            : 'Review assignments and blockers'}
                                     </span>
                                 </span>
                             </button>

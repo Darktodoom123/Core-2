@@ -25,7 +25,7 @@ test('office dispatch desk preserves schedule context and separates operational 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const date = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
     await page.getByLabel('Selected schedule date').fill(date);
-    await page.getByLabel('Search loaded dispatches').fill('R6-BROWSER-001');
+    await page.getByLabel('Search dispatches').fill('R6-BROWSER-001');
     await page
         .getByRole('complementary', { name: 'Dispatch list' })
         .getByRole('button', { name: /R6-BROWSER-001/ })
@@ -72,7 +72,7 @@ test('office dispatch desk preserves schedule context and separates operational 
     await page
         .getByRole('link', { name: 'Back to dispatch workspace' })
         .click();
-    await expect(page.getByLabel('Search loaded dispatches')).toHaveValue(
+    await expect(page.getByLabel('Search dispatches')).toHaveValue(
         'R6-BROWSER-001',
     );
     await expect(page.getByLabel('Selected schedule date')).toHaveValue(date);

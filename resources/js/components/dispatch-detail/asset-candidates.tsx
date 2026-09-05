@@ -1,8 +1,7 @@
 import type { CancelToken } from '@inertiajs/core';
 import { Link, router } from '@inertiajs/react';
-import { Search, Truck } from 'lucide-react';
+import { Search } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
     AssetCandidateViewModel,
@@ -170,140 +169,134 @@ export function AssetCandidates({
                 </div>
             </div>
 
-            <div className="grid gap-4 2xl:grid-cols-3">
-                {groups.map((group) => {
-                    const groupCandidates = candidates.filter(
-                        (candidate) =>
-                            (typeFilter === 'all' ||
-                                (typeFilter === 'crane' &&
-                                    ['crane', 'mobile_crane'].includes(
-                                        candidate.assignment_type,
-                                    )) ||
-                                candidate.assignment_type === typeFilter) &&
-                            candidate.assignment_type === group.type,
-                    );
-                    const catalogAccess =
-                        group.type === 'truck'
-                            ? assetCatalogAccess.fleet
-                            : assetCatalogAccess.equipment;
-                    const catalogHref =
-                        group.type === 'truck'
-                            ? '/operations/fleet/assets'
-                            : '/operations/equipment/assets';
-                    const catalogLabel =
-                        group.type === 'truck'
-                            ? 'Open fleet asset catalog'
-                            : 'Open equipment catalog';
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+                {groups
+                    .filter(
+                        (group) =>
+                            typeFilter === 'all' ||
+                            group.type === typeFilter ||
+                            (typeFilter === 'crane' &&
+                                group.type === 'mobile_crane'),
+                    )
+                    .map((group) => {
+                        const groupCandidates = candidates.filter(
+                            (candidate) =>
+                                (typeFilter === 'all' ||
+                                    (typeFilter === 'crane' &&
+                                        ['crane', 'mobile_crane'].includes(
+                                            candidate.assignment_type,
+                                        )) ||
+                                    candidate.assignment_type === typeFilter) &&
+                                candidate.assignment_type === group.type,
+                        );
+                        const catalogAccess =
+                            group.type === 'truck'
+                                ? assetCatalogAccess.fleet
+                                : assetCatalogAccess.equipment;
+                        const catalogHref =
+                            group.type === 'truck'
+                                ? '/operations/fleet/assets'
+                                : '/operations/equipment/assets';
+                        const catalogLabel =
+                            group.type === 'truck'
+                                ? 'Open fleet asset catalog'
+                                : 'Open equipment catalog';
 
-                    const filtered = groupCandidates.filter((c) => {
-                        if (showEligibleOnly && !c.eligible) {
-                            return false;
-                        }
+                        const filtered = groupCandidates.filter((c) => {
+                            if (showEligibleOnly && !c.eligible) {
+                                return false;
+                            }
 
-                        if (searchQuery.trim()) {
-                            const q = searchQuery.toLowerCase();
+                            if (searchQuery.trim()) {
+                                const q = searchQuery.toLowerCase();
 
-                            return (
-                                c.code.toLowerCase().includes(q) ||
-                                c.name.toLowerCase().includes(q) ||
-                                c.assignment_label.toLowerCase().includes(q)
-                            );
-                        }
+                                return (
+                                    c.code.toLowerCase().includes(q) ||
+                                    c.name.toLowerCase().includes(q) ||
+                                    c.assignment_label.toLowerCase().includes(q)
+                                );
+                            }
 
-                        return true;
-                    });
+                            return true;
+                        });
 
-                    return (
-                        <fieldset
-                            key={group.type}
-                            className="min-w-0 rounded-xl border border-line bg-surface shadow-2xs"
-                        >
-                            <legend className="sr-only">{group.label}</legend>
-                            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                                <div>
-                                    <h3 className="text-sm font-semibold">
-                                        {group.label}
-                                    </h3>
-                                    <p className="mt-0.5 text-xs text-ink-soft">
-                                        {
-                                            groupCandidates.filter(
-                                                (resource) => resource.eligible,
-                                            ).length
-                                        }{' '}
-                                        eligible of {groupCandidates.length}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {catalogAccess && (
-                                        <Link
-                                            href={catalogHref}
-                                            className="text-xs font-medium text-brand-strong hover:underline"
-                                        >
-                                            {catalogLabel}
-                                        </Link>
-                                    )}
-                                    <span
-                                        className={cn(
-                                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                            groupCandidates.some(
-                                                (c) => c.eligible,
-                                            )
-                                                ? 'bg-success-soft text-success-strong'
-                                                : 'bg-surface-subtle text-ink-soft',
-                                        )}
-                                    >
-                                        {
-                                            groupCandidates.filter(
-                                                (c) => c.eligible,
-                                            ).length
-                                        }{' '}
-                                        ready
-                                    </span>
-                                </div>
-                            </div>
-                            {filtered.length === 0 ? (
-                                <EmptyState
-                                    compact
-                                    icon={Truck}
-                                    title={
-                                        groupCandidates.length === 0
-                                            ? `No ${group.label.toLowerCase()}`
-                                            : `No matching ${group.label.toLowerCase()}`
-                                    }
-                                    message={
-                                        catalogAccess
-                                            ? 'No Core 3 assets in this category are available for this dispatch window.'
-                                            : 'Ask the Core 3 asset administrator to import an eligible asset for this dispatch.'
-                                    }
-                                    primaryAction={
-                                        catalogAccess ? (
+                        return (
+                            <fieldset
+                                key={group.type}
+                                className="min-w-0 rounded-xl border border-line bg-surface shadow-2xs"
+                            >
+                                <legend className="sr-only">
+                                    {group.label}
+                                </legend>
+                                <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold">
+                                            {group.label}
+                                        </h3>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {
+                                                groupCandidates.filter(
+                                                    (resource) =>
+                                                        resource.eligible,
+                                                ).length
+                                            }{' '}
+                                            eligible of {groupCandidates.length}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {catalogAccess && (
                                             <Link
                                                 href={catalogHref}
-                                                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-line-strong bg-surface px-3 text-sm font-medium text-ink transition-colors hover:bg-surface-subtle"
+                                                className="text-xs font-medium text-brand-strong hover:underline"
                                             >
                                                 {catalogLabel}
                                             </Link>
-                                        ) : undefined
-                                    }
-                                />
-                            ) : (
-                                <ul className="divide-y divide-line">
-                                    {filtered.map((candidate) => (
-                                        <AssetCandidate
-                                            key={candidate.id}
-                                            candidate={candidate}
-                                            selected={selectedIds.includes(
-                                                candidate.id,
+                                        )}
+                                        <span
+                                            className={cn(
+                                                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                                groupCandidates.some(
+                                                    (c) => c.eligible,
+                                                )
+                                                    ? 'bg-success-soft text-success-strong'
+                                                    : 'bg-surface-subtle text-ink-soft',
                                             )}
-                                            canAssign={canAssign}
-                                            onToggle={onToggle}
-                                        />
-                                    ))}
-                                </ul>
-                            )}
-                        </fieldset>
-                    );
-                })}
+                                        >
+                                            {
+                                                groupCandidates.filter(
+                                                    (c) => c.eligible,
+                                                ).length
+                                            }{' '}
+                                            ready
+                                        </span>
+                                    </div>
+                                </div>
+                                {filtered.length === 0 ? (
+                                    <p className="px-4 py-3 text-sm text-ink-soft">
+                                        No matching {group.label.toLowerCase()}{' '}
+                                        on this page.{' '}
+                                        {catalogAccess
+                                            ? 'Try another filter or check the asset catalog.'
+                                            : 'Try another filter or ask your asset administrator for suitable equipment.'}
+                                    </p>
+                                ) : (
+                                    <ul className="divide-y divide-line">
+                                        {filtered.map((candidate) => (
+                                            <AssetCandidate
+                                                key={candidate.id}
+                                                candidate={candidate}
+                                                selected={selectedIds.includes(
+                                                    candidate.id,
+                                                )}
+                                                canAssign={canAssign}
+                                                onToggle={onToggle}
+                                            />
+                                        ))}
+                                    </ul>
+                                )}
+                            </fieldset>
+                        );
+                    })}
             </div>
             {page?.error && (
                 <p

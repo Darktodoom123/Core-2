@@ -1,25 +1,32 @@
-# Core-2
+# DESIGN AND IMPLEMENTATION OF A GPT MINI POWERED DISPATCH AND RESOURCE MANAGEMENT PLATFORM WITH MOBILE APPLICATION FOR REAL TIME TRACKING FOR FIELD SERVICE MONITORING
 
-A modern full-stack web application for Alibaton's heavy-equipment rental and
-service operations, built with **Laravel 13**, **Inertia 3**, **React 19**,
-**TypeScript**, **Vite**,
-and **Tailwind CSS v4**, paired with a **React Native / Expo** mobile application
-for field operations. Alibaton also sells heavy equipment. The repository now
-contains partial, API-first rental and sales workflows; customer-facing
-commercial screens, contracts, payments, billing, and complete dispatch
-handoffs remain roadmap work.
+**Core Transaction 2 (CT2) — Operations, Dispatch, and Resource Management**
 
-See the [Alibaton business context and CT2 capstone scope](Docs/product/alibaton-business-scope.md)
-for the current rental, sales, and service boundary.
+A modern full-stack web and mobile platform for heavy-equipment operations, dispatch scheduling, and field resource management, built with **Laravel 13**, **Inertia 3**, **React 19**, **TypeScript**, **Vite**, and **Tailwind CSS v4**, paired with a **React Native / Expo** mobile application for real-time tracking and field service monitoring. Powered by OpenAI **GPT-5-mini** advisory dispatch intelligence.
+
+### 5 Main Operational Modules
+1. **Dispatch Job and Scheduling (Real-Time Activation)** — Client service requests, dispatch job creation, priority/emergency approvals, schedule boards, and real-time activation.
+2. **Assign Driver/Operator and Equipment** — Worker eligibility, qualification credential checks, equipment assignment, and conflict detection.
+3. **Fleet Management** — Fleet vehicles, transport trucks, trailers, roadworthiness, and maintenance tracking.
+4. **Crane and Equipment Management** — Mobile/tower crane specifications, boom/tonnage capacity charts, pre-use safety checklists, and defect lockouts.
+5. **Fuel Management** — Multi-step fuel requests, independent approval, verification, consumption tracking, and logging.
+
+### System Users
+The platform strictly serves **3 User Roles**:
+- **System Administrator** (`system_administrator`) — User provisioning, security, and break-glass administrative overrides.
+- **Operations Manager** (`operations_manager`) — Central dispatch authority, schedule boards, approvals, fleet readiness, and operations oversight.
+- **Operator** (`operator` / `crane_operator`) — Field mobile user advancing dispatch milestones, vehicle inspections, duty logging, and real-time GPS tracking.
+
+See the [Alibaton business context and CT2 capstone scope](Docs/product/alibaton-business-scope.md) for the commercial transaction boundary.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend**: PHP 8.3+, Laravel 13, Laravel Sanctum, Spatie Laravel Permission, Laravel Reverb (WebSockets), Pest 4, PHPStan, Pint.
-- **Frontend**: React 19, Inertia 3, TypeScript 5.7+, Vite 8, Tailwind CSS v4, ESLint, Prettier.
-- **Database**: SQLite (default for development), MySQL / PostgreSQL compatible.
-- **Mobile App**: Expo 57, React Native 0.86, Expo SQLite, Detox E2E.
+- **Backend**: PHP 8.3+, Laravel 13, Laravel Sanctum, Spatie Laravel Permission (3 users: `System Administrator`, `Operations Manager`, `Operator`), Laravel Reverb (WebSockets), Pest 4, PHPStan, Pint.
+- **Frontend**: React 19, Inertia 3, TypeScript 5.7+, Vite 8, Tailwind CSS v4, CVA tokens, MapLibre GL, ESLint, Prettier.
+- **Database**: SQLite (default for local development and testing), PostgreSQL 16+ / Supabase compatible.
+- **Mobile App**: Expo 57, React Native 0.86, Expo SQLite (offline outbox), Tactical Cockpit HUD, Real-Time GPS Tracking, Detox E2E.
 
 ---
 
@@ -175,7 +182,13 @@ These credentials describe the local developer seed only. Production/bootstrap s
 
 ## 📱 Field Mobile App (`packages/field-mobile`)
 
-The mobile workspace is located under `packages/field-mobile`.
+The mobile workspace is located under `packages/field-mobile`. It delivers a native field experience tailored for equipment operators and field crews:
+- **Tactical Cockpit HUD**: Daylight and high-contrast Tactical Dark HUD mode tokens.
+- **Hours of Service (HoS)**: Shift clock-in/out, duty status toggles (`off_duty`, `sleeper_berth`, `driving`, `on_duty_not_driving`), and real-time cycle compliance limits.
+- **Driver Vehicle Inspection Report (DVIR)**: Pre/post-trip inspections, asset classification (heavy crane, earthmoving, transport), 360-degree walkaround photo defect tagging, and digital driver certification.
+- **In-Cab Heavy Crane Drive Mode**: Turn-by-turn navigation HUD with road clearance, bridge height, and corridor warning overlays.
+- **Floating SOS Jewel**: Docked in a scooped bottom-navigation cradle notch with a 2-second hold trigger modal to prevent accidental activation.
+- **Offline-First SQLite Architecture**: Transactional command outbox with bounded exponential backoff and HTTP 429 `Retry-After` rate limit handling.
 
 To start the mobile development server:
 

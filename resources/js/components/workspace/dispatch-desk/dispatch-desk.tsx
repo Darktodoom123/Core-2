@@ -16,7 +16,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Button,
@@ -69,6 +69,7 @@ import type {
     DispatchSourceFilter,
 } from './types';
 import { useDispatchDeskState } from './use-dispatch-desk-state';
+import { useDispatchSearch } from './use-dispatch-search';
 
 const SOURCE_FILTERS: Array<{ value: DispatchSourceFilter; label: string }> = [
     { value: 'all', label: 'All sources' },
@@ -218,7 +219,7 @@ function priorityClasses(value: string): string {
 }
 
 export function DispatchDesk({
-    jobs,
+    jobs: initialJobs,
     clients,
     serviceRequests,
     rentalHandoffs,
@@ -250,9 +251,21 @@ export function DispatchDesk({
         setSelectedJobId,
         setShowIntake,
         setIntakeMode,
+        setPage,
     } = useDispatchDeskState(initialServiceRequestId, currentWorkspaceUrl);
+    const search = useDispatchSearch(state, initialJobs, refreshing);
+    const { jobs, contextJobs } = search;
     const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
     const [showResources, setShowResources] = useState(false);
+    const [mobileReview, setMobileReview] = useState(
+        state.selectedJobId !== null,
+    );
+    const listPosition = useRef(0);
+    const selectedRow = useRef<HTMLElement | null>(null);
+    const reviewRef = useRef<HTMLDivElement>(null);
+    const resourceRef = useRef<HTMLDivElement>(null);
+    const resourceTrigger = useRef<HTMLButtonElement>(null);
+    const listStorageKey = `dispatch-list:${state.view}:${state.mode}:${state.period}:${state.date}:${state.query}:${state.source}:${state.attentionOnly}:${state.page}`;
     const intakeRequestId = useMemo(() => {
         if (initialServiceRequestId) {
             return initialServiceRequestId;
@@ -271,12 +284,12 @@ export function DispatchDesk({
     const conflicts = useMemo(
         () =>
             deriveDispatchDeskConflicts({
-                jobs,
+                jobs: contextJobs,
                 assets,
                 approvals,
                 gptRecommendations,
             }),
-        [approvals, assets, gptRecommendations, jobs],
+        [approvals, assets, gptRecommendations, contextJobs],
     );
     const incoming = useMemo(
         () =>
@@ -320,7 +333,7 @@ export function DispatchDesk({
                 return false;
             }
 
-            if (!sourceMatches(job.source, state.source)) {
+            if (!search.page && !sourceMatches(job.source, state.source)) {
                 return false;
             }
 
@@ -363,13 +376,14 @@ export function DispatchDesk({
             }
 
             return (
+                Boolean(search.page) ||
                 normalizedQuery === '' ||
                 `${job.reference} ${job.title} ${job.client} ${job.site} ${job.source?.reference ?? ''}`
                     .toLowerCase()
                     .includes(normalizedQuery)
             );
         });
-    }, [conflicts, jobs, state]);
+    }, [conflicts, jobs, state, search.page]);
 
     const selectedJob = useMemo(
         () =>
@@ -424,7 +438,51 @@ export function DispatchDesk({
     };
 
     const selectJob = (jobId: number) => {
+        listPosition.current = window.scrollY;
+
+        try {
+            sessionStorage.setItem(listStorageKey, String(window.scrollY));
+        } catch {
+            // In-memory restoration still works when browser storage is disabled.
+        }
+
+        selectedRow.current =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
         setSelectedJobId(jobId);
+        setMobileReview(true);
+
+        if (window.innerWidth < 1024) {
+            requestAnimationFrame(() => {
+                reviewRef.current?.focus({ preventScroll: true });
+                reviewRef.current?.scrollIntoView({ block: 'start' });
+            });
+        }
+    };
+
+    const backToResults = () => {
+        setMobileReview(false);
+
+        try {
+            const saved = sessionStorage.getItem(listStorageKey);
+
+            if (saved !== null && Number.isFinite(Number(saved))) {
+                listPosition.current = Math.max(0, Number(saved));
+            }
+        } catch {
+            // Use the position captured in this mounted desk.
+        }
+
+        requestAnimationFrame(() => {
+            const row = selectedRow.current?.isConnected
+                ? selectedRow.current
+                : document.getElementById(
+                      `dispatch-row-${state.selectedJobId}`,
+                  );
+            row?.focus({ preventScroll: true });
+            window.scrollTo({ top: listPosition.current, behavior: 'instant' });
+        });
     };
 
     const toggleIntake = () => {
@@ -464,8 +522,20 @@ export function DispatchDesk({
                 actions={
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
+                            ref={resourceTrigger}
                             variant="secondary"
-                            onClick={() => setShowResources((open) => !open)}
+                            onClick={() => {
+                                setShowResources((open) => !open);
+
+                                if (!showResources) {
+                                    requestAnimationFrame(() =>
+                                        resourceRef.current?.focus({
+                                            preventScroll:
+                                                window.innerWidth >= 1280,
+                                        }),
+                                    );
+                                }
+                            }}
                             aria-expanded={showResources}
                             aria-controls={
                                 showResources ? 'dispatch-resources' : undefined
@@ -517,218 +587,423 @@ export function DispatchDesk({
                 }
             />
 
-            {showResources && (
-                <DispatchResources
-                    users={users}
-                    assets={assets}
-                    jobs={jobs}
-                    initialDate={state.date}
-                    returnTo={returnTo}
-                    refreshing={refreshing}
-                />
-            )}
-
-            <div className="border-b border-line bg-surface px-5 py-3 lg:px-7">
-                <nav
-                    className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap"
-                    aria-label="Dispatch work views"
+            <div
+                className={cn(
+                    'grid min-w-0 items-start',
+                    showResources && 'xl:grid-cols-[minmax(0,1fr)_22rem]',
+                )}
+            >
+                <div
+                    className={cn(
+                        'min-w-0',
+                        showResources && 'hidden xl:block',
+                    )}
                 >
-                    {VIEW_ITEMS.map(({ value, label, icon: Icon }) => (
-                        <button
-                            key={value}
-                            type="button"
-                            className={cn(
-                                'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
-                                state.view === value
-                                    ? 'bg-brand-soft text-ink'
-                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
-                            )}
-                            aria-current={
-                                state.view === value ? 'page' : undefined
-                            }
-                            onClick={() =>
-                                changeDesk(() => {
-                                    setView(value);
+                    <div className="border-b border-line bg-surface px-5 py-3 lg:px-7">
+                        <nav
+                            className="grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap"
+                            aria-label="Dispatch work views"
+                        >
+                            {VIEW_ITEMS.map(({ value, label, icon: Icon }) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={cn(
+                                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        state.view === value
+                                            ? 'bg-brand-soft text-ink'
+                                            : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                    )}
+                                    aria-current={
+                                        state.view === value
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                    onClick={() =>
+                                        changeDesk(() => {
+                                            setMobileReview(false);
+                                            setView(value);
 
-                                    if (value === 'incoming') {
-                                        setShowIntake(true);
-                                        setIntakeMode(null);
-                                    } else {
+                                            if (value === 'incoming') {
+                                                setShowIntake(true);
+                                                setIntakeMode(null);
+                                            } else {
+                                                setShowIntake(false);
+                                                setIntakeMode(null);
+                                            }
+                                        })
+                                    }
+                                >
+                                    <Icon
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                    <span>{label}</span>
+                                    {value === 'incoming' && (
+                                        <span className="rounded-full bg-surface-subtle px-1.5 text-xs text-ink-soft tabular-nums">
+                                            {jobCounts[value]}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </nav>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-subtle px-5 py-3 lg:px-7">
+                        <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
+                            <span>
+                                {state.view === 'incoming' ||
+                                isResourceCoverageMode
+                                    ? 'Resource context uses loaded, permitted records'
+                                    : search.page
+                                      ? `${search.page.total} dispatch${search.page.total === 1 ? '' : 'es'} found · Page ${search.page.current_page} of ${search.page.last_page}`
+                                      : search.error
+                                        ? 'Showing a limited snapshot; complete search is unavailable'
+                                        : 'Showing the loaded snapshot while complete results load'}
+                            </span>
+                            {(refreshing || search.pending) && (
+                                <span
+                                    className="inline-flex items-center gap-1 text-info-strong"
+                                    role="status"
+                                >
+                                    <RefreshCw
+                                        className="h-3.5 w-3.5 animate-spin"
+                                        aria-hidden="true"
+                                    />
+                                    Refreshing
+                                </span>
+                            )}
+                        </div>
+                        {state.view !== 'incoming' && (
+                            <span
+                                className="text-xs text-ink-soft"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                {filteredJobs.length} shown on this page
+                            </span>
+                        )}
+                    </div>
+                    {search.error && (
+                        <div
+                            role="alert"
+                            className="flex flex-wrap items-center gap-3 border-b border-line bg-warning-soft p-4 text-sm text-ink"
+                        >
+                            {search.error}
+                            <Button variant="secondary" onClick={search.retry}>
+                                Retry search
+                            </Button>
+                        </div>
+                    )}
+                    {search.page && search.page.last_page > 1 && (
+                        <nav
+                            aria-label="Dispatch result pages"
+                            className="flex flex-wrap items-center justify-between gap-2 border-b border-line p-3"
+                        >
+                            <Button
+                                variant="secondary"
+                                disabled={search.pending || state.page <= 1}
+                                onClick={() => {
+                                    setMobileReview(false);
+                                    setPage(state.page - 1);
+                                }}
+                            >
+                                Previous page
+                            </Button>
+                            <span className="text-xs text-ink-soft">
+                                Search covers all permitted dispatches.
+                                Attention checks use this page and loaded
+                                resource records.
+                            </span>
+                            <Button
+                                variant="secondary"
+                                disabled={
+                                    search.pending ||
+                                    state.page >= search.page.last_page
+                                }
+                                onClick={() => {
+                                    setMobileReview(false);
+                                    setPage(state.page + 1);
+                                }}
+                            >
+                                Next page
+                            </Button>
+                        </nav>
+                    )}
+
+                    {search.page && state.page > search.page.last_page && (
+                        <Button
+                            variant="secondary"
+                            className="m-3"
+                            onClick={() => {
+                                setMobileReview(false);
+                                setPage(1);
+                            }}
+                        >
+                            Back to first page
+                        </Button>
+                    )}
+                    {state.view === 'incoming' ? (
+                        <section
+                            id="incoming-work-panel"
+                            className="bg-canvas p-4 lg:p-6"
+                            aria-labelledby="incoming-work-heading"
+                        >
+                            <div className="mx-auto max-w-6xl">
+                                <div className="border-b border-line pb-4">
+                                    <h2
+                                        id="incoming-work-heading"
+                                        className="text-lg font-semibold tracking-[-0.02em] text-ink"
+                                    >
+                                        Incoming work
+                                    </h2>
+                                    <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
+                                        Review source-aware handoffs and decide
+                                        whether to convert, reconcile, or create
+                                        a manual operational draft.
+                                    </p>
+                                </div>
+                                <LiveDispatchIntake
+                                    clients={clients}
+                                    serviceRequests={serviceRequests}
+                                    rentalHandoffs={rentalHandoffs}
+                                    salesHandoffs={salesHandoffs}
+                                    jobs={jobs}
+                                    capabilities={capabilities}
+                                    initialRequestId={intakeRequestId}
+                                    initialMode={state.intakeMode}
+                                    showQueueWhenEmpty
+                                    onDirtyChange={setDirectIntakeDirty}
+                                    onClose={() => {
+                                        setDirectIntakeDirty(false);
                                         setShowIntake(false);
                                         setIntakeMode(null);
-                                    }
-                                })
-                            }
-                        >
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                            <span>{label}</span>
-                            <span className="rounded-full bg-surface-subtle px-1.5 text-xs text-ink-soft tabular-nums">
-                                {jobCounts[value]}
-                            </span>
-                        </button>
-                    ))}
-                </nav>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-subtle px-5 py-3 lg:px-7">
-                <div className="flex min-w-0 items-center gap-2 text-xs text-ink-soft">
-                    <span>Up to 100 dispatches loaded for this view</span>
-                    {refreshing && (
-                        <span
-                            className="inline-flex items-center gap-1 text-info-strong"
-                            role="status"
-                        >
-                            <RefreshCw
-                                className="h-3.5 w-3.5 animate-spin"
-                                aria-hidden="true"
-                            />
-                            Refreshing
-                        </span>
-                    )}
-                </div>
-                {state.view !== 'incoming' && (
-                    <span
-                        className="text-xs text-ink-soft"
-                        role="status"
-                        aria-live="polite"
-                    >
-                        {filteredJobs.length} matching dispatch
-                        {filteredJobs.length === 1 ? '' : 's'}
-                    </span>
-                )}
-            </div>
-
-            {state.view === 'incoming' ? (
-                <section
-                    id="incoming-work-panel"
-                    className="bg-canvas p-4 lg:p-6"
-                    aria-labelledby="incoming-work-heading"
-                >
-                    <div className="mx-auto max-w-6xl">
-                        <div className="border-b border-line pb-4">
-                            <h2
-                                id="incoming-work-heading"
-                                className="text-lg font-semibold tracking-[-0.02em] text-ink"
-                            >
-                                Incoming work
-                            </h2>
-                            <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-soft">
-                                Review source-aware handoffs and decide whether
-                                to convert, reconcile, or create a manual
-                                operational draft.
-                            </p>
-                        </div>
-                        <LiveDispatchIntake
-                            clients={clients}
-                            serviceRequests={serviceRequests}
-                            rentalHandoffs={rentalHandoffs}
-                            salesHandoffs={salesHandoffs}
-                            jobs={jobs}
-                            capabilities={capabilities}
-                            initialRequestId={intakeRequestId}
-                            initialMode={state.intakeMode}
-                            showQueueWhenEmpty
-                            onDirtyChange={setDirectIntakeDirty}
-                            onClose={() => {
-                                setDirectIntakeDirty(false);
-                                setShowIntake(false);
-                                setIntakeMode(null);
-                                setView('schedule');
-                            }}
-                        />
-                    </div>
-                </section>
-            ) : (
-                <>
-                    {!isResourceCoverageMode && (
-                        <DeskFilters
-                            query={state.query}
-                            source={state.source}
-                            attentionOnly={state.attentionOnly}
-                            onQuery={(value) =>
-                                changeDesk(() => setQuery(value))
-                            }
-                            onSource={(value) =>
-                                changeDesk(() => setSource(value))
-                            }
-                            onAttention={(value) =>
-                                changeDesk(() => setAttentionOnly(value))
-                            }
-                            onReset={() =>
-                                changeDesk(() => {
-                                    setQuery('');
-                                    setSource('all');
-                                    setAttentionOnly(false);
-                                })
-                            }
-                        />
-                    )}
-
-                    {showScheduleControls && (
-                        <ScheduleControls
-                            date={state.date}
-                            mode={state.mode}
-                            period={state.period}
-                            onDate={(value) => changeDesk(() => setDate(value))}
-                            onMode={(value) => changeDesk(() => setMode(value))}
-                            onPeriod={(value) =>
-                                changeDesk(() => setPeriod(value))
-                            }
-                        />
-                    )}
-
-                    {showScheduleControls && state.mode !== 'list' && (
-                        <>
-                            <ScheduleSurface
-                                mode={state.mode}
-                                jobs={scheduleJobs}
-                                assets={assets}
-                                users={users.filter(
-                                    (user) =>
-                                        user.role === 'driver' ||
-                                        user.role === 'crane_operator',
-                                )}
-                                conflicts={conflicts}
-                                date={state.date}
-                                period={state.period}
-                                resourceCoverage={resourceCoverage}
-                                onDate={(value) =>
-                                    changeDesk(() => setDate(value))
-                                }
-                                onSelectJob={selectJob}
-                            />
-                            {state.mode === 'calendar' && (
-                                <DispatchReviewPanel
-                                    job={selectedJob}
-                                    conflicts={selectedConflicts}
-                                    returnTo={returnTo}
-                                    recommendations={gptRecommendations}
-                                    capabilities={capabilities}
+                                        setView('schedule');
+                                    }}
                                 />
+                            </div>
+                        </section>
+                    ) : (
+                        <>
+                            <div
+                                className={cn(
+                                    mobileReview && 'hidden lg:block',
+                                )}
+                            >
+                                {!isResourceCoverageMode && (
+                                    <DeskFilters
+                                        query={state.query}
+                                        source={state.source}
+                                        attentionOnly={state.attentionOnly}
+                                        onQuery={(value) =>
+                                            changeDesk(() => setQuery(value))
+                                        }
+                                        onSource={(value) =>
+                                            changeDesk(() => setSource(value))
+                                        }
+                                        onAttention={(value) =>
+                                            changeDesk(() =>
+                                                setAttentionOnly(value),
+                                            )
+                                        }
+                                        onReset={() =>
+                                            changeDesk(() => {
+                                                setQuery('');
+                                                setSource('all');
+                                                setAttentionOnly(false);
+                                            })
+                                        }
+                                    />
+                                )}
+
+                                {showScheduleControls && (
+                                    <ScheduleControls
+                                        date={state.date}
+                                        mode={state.mode}
+                                        period={state.period}
+                                        onDate={(value) =>
+                                            changeDesk(() => setDate(value))
+                                        }
+                                        onMode={(value) =>
+                                            changeDesk(() => setMode(value))
+                                        }
+                                        onPeriod={(value) =>
+                                            changeDesk(() => setPeriod(value))
+                                        }
+                                    />
+                                )}
+                            </div>
+
+                            {showScheduleControls && state.mode !== 'list' && (
+                                <>
+                                    <div
+                                        className={cn(
+                                            mobileReview && 'hidden lg:block',
+                                        )}
+                                    >
+                                        <ScheduleSurface
+                                            mode={state.mode}
+                                            jobs={scheduleJobs}
+                                            assets={assets}
+                                            users={users.filter(
+                                                (user) =>
+                                                    user.role === 'driver' ||
+                                                    user.role ===
+                                                        'crane_operator',
+                                            )}
+                                            conflicts={conflicts}
+                                            date={state.date}
+                                            period={state.period}
+                                            resourceCoverage={resourceCoverage}
+                                            onDate={(value) =>
+                                                changeDesk(() => setDate(value))
+                                            }
+                                            onSelectJob={selectJob}
+                                        />
+                                    </div>
+                                    {state.mode === 'calendar' && (
+                                        <div
+                                            ref={reviewRef}
+                                            tabIndex={-1}
+                                            className={cn(
+                                                'scroll-mt-20 outline-none',
+                                                !mobileReview &&
+                                                    'hidden lg:block',
+                                            )}
+                                        >
+                                            <Button
+                                                variant="secondary"
+                                                className="m-4 lg:hidden"
+                                                onClick={backToResults}
+                                            >
+                                                <ChevronLeft
+                                                    className="h-4 w-4"
+                                                    aria-hidden="true"
+                                                />
+                                                Back to results
+                                            </Button>
+                                            <DispatchReviewPanel
+                                                job={selectedJob}
+                                                conflicts={selectedConflicts}
+                                                returnTo={returnTo}
+                                                recommendations={
+                                                    gptRecommendations
+                                                }
+                                                capabilities={capabilities}
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {(state.mode === 'list' ||
+                                !showScheduleControls) && (
+                                <div className="grid min-w-0 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
+                                    <div
+                                        className={cn(
+                                            'min-w-0',
+                                            mobileReview && 'hidden lg:block',
+                                        )}
+                                    >
+                                        <DeskJobList
+                                            jobs={filteredJobs}
+                                            conflicts={conflicts}
+                                            selectedJobId={
+                                                selectedJob?.id ?? null
+                                            }
+                                            refreshing={refreshing}
+                                            onSelectJob={selectJob}
+                                        />
+                                    </div>
+                                    <div
+                                        ref={reviewRef}
+                                        tabIndex={-1}
+                                        className={cn(
+                                            'min-w-0 scroll-mt-20 outline-none',
+                                            !mobileReview && 'hidden lg:block',
+                                        )}
+                                    >
+                                        <Button
+                                            variant="secondary"
+                                            className="m-4 lg:hidden"
+                                            onClick={backToResults}
+                                        >
+                                            <ChevronLeft
+                                                className="h-4 w-4"
+                                                aria-hidden="true"
+                                            />
+                                            Back to results
+                                        </Button>
+                                        <DispatchReviewPanel
+                                            job={selectedJob}
+                                            conflicts={selectedConflicts}
+                                            returnTo={returnTo}
+                                            recommendations={gptRecommendations}
+                                            capabilities={capabilities}
+                                        />
+                                    </div>
+                                </div>
                             )}
                         </>
                     )}
-
-                    {(state.mode === 'list' || !showScheduleControls) && (
-                        <div className="grid min-w-0 lg:grid-cols-[minmax(18rem,25rem)_minmax(0,1fr)]">
-                            <DeskJobList
-                                jobs={filteredJobs}
-                                conflicts={conflicts}
-                                selectedJobId={selectedJob?.id ?? null}
-                                refreshing={refreshing}
-                                onSelectJob={selectJob}
-                            />
-                            <DispatchReviewPanel
-                                job={selectedJob}
-                                conflicts={selectedConflicts}
-                                returnTo={returnTo}
-                                recommendations={gptRecommendations}
-                                capabilities={capabilities}
-                            />
+                </div>
+                {showResources && (
+                    <div
+                        ref={resourceRef}
+                        tabIndex={-1}
+                        className="min-w-0 border-line bg-surface outline-none xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:border-l"
+                    >
+                        <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-ink">
+                                    {selectedJob
+                                        ? `${selectedJob.reference} · ${selectedJob.title}`
+                                        : 'Resource overview'}
+                                </p>
+                                {selectedJob && (
+                                    <p className="mt-1 text-xs text-ink-soft">
+                                        {formatSchedule(selectedJob)}
+                                    </p>
+                                )}
+                                {selectedJob && (
+                                    <Link
+                                        href={dispatchDetailUrl(
+                                            selectedJob,
+                                            returnTo,
+                                            selectedConflicts,
+                                        )}
+                                        className="inline-flex min-h-11 items-center text-sm font-semibold text-ink underline decoration-brand underline-offset-2"
+                                    >
+                                        {jobGroup(selectedJob) === 'preparation'
+                                            ? 'Check eligibility & assign'
+                                            : 'View dispatch resources'}
+                                    </Link>
+                                )}
+                            </div>
+                            <Button
+                                variant="secondary"
+                                aria-label="Close people and assets"
+                                onClick={() => {
+                                    setShowResources(false);
+                                    requestAnimationFrame(() =>
+                                        resourceTrigger.current?.focus(),
+                                    );
+                                }}
+                            >
+                                <X className="h-4 w-4" aria-hidden="true" />
+                            </Button>
                         </div>
-                    )}
-                </>
-            )}
+                        <DispatchResources
+                            users={users}
+                            assets={assets}
+                            jobs={contextJobs}
+                            initialDate={state.date}
+                            returnTo={returnTo}
+                            refreshing={refreshing}
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -758,13 +1033,14 @@ function DeskFilters({
             aria-label="Dispatch filters"
         >
             <label className="relative min-w-[14rem] flex-1 sm:max-w-sm">
-                <span className="sr-only">Search loaded dispatches</span>
+                <span className="sr-only">Search dispatches</span>
                 <Search
                     className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
                     aria-hidden="true"
                 />
                 <input
                     type="search"
+                    maxLength={200}
                     value={query}
                     onChange={(event) => onQuery(event.target.value)}
                     placeholder="Search job, site, client"
@@ -794,7 +1070,7 @@ function DeskFilters({
                 onClick={() => onAttention(!attentionOnly)}
             >
                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                Needs attention
+                Needs attention on this page
             </Button>
             {hasFilters && (
                 <Button size="sm" variant="quiet" onClick={onReset}>
@@ -1056,7 +1332,7 @@ function DeskJobList({
                     compact
                     icon={ClipboardList}
                     title="No dispatches match"
-                    message="Clear a filter or choose another schedule date to review the dispatches loaded for this view."
+                    message="Clear a filter, choose another schedule date, or check another results page."
                 />
             ) : (
                 <ul className="divide-y divide-line">
@@ -1071,6 +1347,7 @@ function DeskJobList({
                             <li key={job.id}>
                                 <button
                                     type="button"
+                                    id={`dispatch-row-${job.id}`}
                                     onClick={() => onSelectJob(job.id)}
                                     aria-current={
                                         selectedJobId === job.id
@@ -1184,6 +1461,8 @@ function DispatchReviewPanel({
     recommendations: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
 }) {
+    const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
+
     if (!job) {
         return (
             <section
@@ -1207,7 +1486,7 @@ function DispatchReviewPanel({
 
     return (
         <section
-            className="min-w-0 bg-canvas p-4 md:p-6"
+            className="@container min-w-0 bg-canvas p-4 md:p-6"
             aria-labelledby="dispatch-review-heading"
         >
             <Panel className="overflow-hidden">
@@ -1275,7 +1554,7 @@ function DispatchReviewPanel({
                     </div>
                 </div>
 
-                <div className="grid gap-x-8 px-4 py-4 md:grid-cols-2 md:px-5">
+                <div className="grid gap-x-8 px-4 py-4 md:px-5 @lg:grid-cols-2">
                     <dl className="divide-y divide-line">
                         <DataPair
                             label="Site"
@@ -1306,7 +1585,7 @@ function DispatchReviewPanel({
                             value={job.source?.label ?? 'Direct intake'}
                         />
                     </dl>
-                    <div className="border-t border-line pt-3 md:border-t-0 md:pt-0">
+                    <div className="border-t border-line pt-3 @lg:border-t-0 @lg:pt-0">
                         <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
                             Requirements
                         </h3>
@@ -1333,7 +1612,7 @@ function DispatchReviewPanel({
                     </div>
                 </div>
 
-                <div className="grid gap-5 border-t border-line px-4 py-4 md:grid-cols-2 md:px-5">
+                <div className="grid gap-5 border-t border-line px-4 py-4 md:px-5 @lg:grid-cols-2">
                     <section aria-labelledby="assigned-personnel-heading">
                         <h3
                             id="assigned-personnel-heading"
@@ -1415,7 +1694,10 @@ function DispatchReviewPanel({
                                     Review before the next action
                                 </h3>
                                 <ul className="mt-2 space-y-2 text-sm text-ink">
-                                    {conflicts.slice(0, 4).map((conflict) => (
+                                    {(expandedJobId === job.id
+                                        ? conflicts
+                                        : conflicts.slice(0, 4)
+                                    ).map((conflict) => (
                                         <li key={conflict.id}>
                                             <span className="font-semibold">
                                                 {conflict.title}.
@@ -1433,6 +1715,24 @@ function DispatchReviewPanel({
                                         </li>
                                     ))}
                                 </ul>
+                                {conflicts.length > 4 && (
+                                    <button
+                                        type="button"
+                                        aria-expanded={expandedJobId === job.id}
+                                        onClick={() =>
+                                            setExpandedJobId(
+                                                expandedJobId === job.id
+                                                    ? null
+                                                    : job.id,
+                                            )
+                                        }
+                                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand"
+                                    >
+                                        {expandedJobId === job.id
+                                            ? 'Show fewer issues'
+                                            : `Show ${conflicts.length - 4} more issues`}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

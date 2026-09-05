@@ -119,7 +119,7 @@ export function ActiveSosBanner({
                                     className="h-3.5 w-3.5"
                                     aria-hidden="true"
                                 />
-                                Server state is authoritative. Open the queue to
+                                Open the queue to review the latest alerts and
                                 respond.
                             </p>
                         </div>

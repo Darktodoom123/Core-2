@@ -133,7 +133,7 @@ export function AssignmentStageSummaries({
                                 Review readiness and activate
                             </span>
                             <span className="block truncate text-xs text-ink-soft">
-                                Check server readiness before activation
+                                Check assignments and blockers before activation
                             </span>
                         </span>
                     </span>

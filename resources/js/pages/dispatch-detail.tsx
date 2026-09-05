@@ -303,9 +303,6 @@ export default function DispatchDetail({
                                         <div className="animate-in fade-in space-y-5 duration-150">
                                             <div className="flex items-center justify-between border-b border-line pb-3">
                                                 <div>
-                                                    <p className="text-xs font-semibold tracking-wider text-success-strong uppercase">
-                                                        Schedule & Requirements
-                                                    </p>
                                                     <h2 className="mt-1 text-xl font-semibold text-ink">
                                                         Review schedule and
                                                         requirements
@@ -441,13 +438,14 @@ export default function DispatchDetail({
                                                                     assets for
                                                                     this
                                                                     dispatch.
-                                                                    Every option
-                                                                    below is
-                                                                    checked
-                                                                    against the
+                                                                    Eligibility
+                                                                    is checked
+                                                                    for this
                                                                     scheduled
-                                                                    window by
-                                                                    the server.
+                                                                    window and
+                                                                    checked
+                                                                    again when
+                                                                    you save.
                                                                 </p>
                                                             </div>
                                                             <a
@@ -639,9 +637,6 @@ export default function DispatchDetail({
                                         <div className="animate-in fade-in space-y-5 duration-150">
                                             <div className="flex items-center justify-between border-b border-line pb-3">
                                                 <div>
-                                                    <p className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                                        Readiness & Activation
-                                                    </p>
                                                     <h2 className="mt-1 text-xl font-semibold text-ink">
                                                         Review readiness and
                                                         activate dispatch
@@ -663,7 +658,7 @@ export default function DispatchDetail({
 
                                             <div className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-2xs">
                                                 <h3 className="text-base font-semibold text-ink">
-                                                    Server readiness checks
+                                                    Activation checks
                                                 </h3>
                                                 <ActivationPrerequisiteChecklist
                                                     job={job}

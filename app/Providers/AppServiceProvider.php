@@ -71,8 +71,6 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('safety', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
 
-        RateLimiter::for('weather', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?: $request->ip() ?: 'unknown'));
-
         RateLimiter::for('sos', static fn (Request $request): Limit => Limit::perMinute(12)->by(sprintf(
             '%s:%s',
             $request->user()?->id ?: $request->ip() ?: 'unknown',

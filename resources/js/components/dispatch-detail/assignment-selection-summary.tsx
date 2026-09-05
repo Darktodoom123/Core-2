@@ -109,8 +109,8 @@ export function AssignmentSelectionSummary({
                         Selection status
                     </p>
                     <p className="text-xs leading-5 text-ink-soft">
-                        The server rechecks eligibility, conflicts, safety, and
-                        approval before saving and activating.
+                        Eligibility, schedule conflicts, safety, and approvals
+                        are checked again when you save or activate.
                     </p>
                 </div>
 

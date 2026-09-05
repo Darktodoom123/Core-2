@@ -418,6 +418,22 @@ final class BrowserAcceptanceSeeder extends Seeder
             'recommendations' => collect($recommendations)->mapWithKeys(static fn (GptRecommendation $rec, string $key): array => [$key => $rec->id])->all(),
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
 
+        // A separate history fixture exercises the desk beyond its initial snapshot.
+        for ($index = 0; $index < 102; $index++) {
+            DispatchJob::query()->create([
+                'reference' => $index === 0 ? 'DESK-HISTORY-OLDEST' : sprintf('DESK-HISTORY-%03d', $index),
+                'client' => 'History acceptance client',
+                'title' => 'Completed equipment delivery',
+                'site' => 'Manila history yard',
+                'status' => 'completed',
+                'priority' => 'routine',
+                'scheduled_start' => now()->subYear()->startOfDay(),
+                'scheduled_end' => now()->subYear()->startOfDay()->addHours(4),
+                'created_by' => $manager->id,
+                'updated_at' => now()->subDays(200 - $index),
+            ]);
+        }
+
         $this->call(ProjectPlanningDemoSeeder::class);
     }
 

@@ -240,10 +240,7 @@ export function DispatchResources({
                 ) : (
                     <ul className="divide-y divide-line">
                         {rows.map((row) => (
-                            <li
-                                key={row.id}
-                                className="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-                            >
+                            <li key={row.id} className="grid gap-2 px-4 py-3">
                                 <div className="min-w-0">
                                     <p className="text-sm font-semibold break-words text-ink">
                                         {row.name}

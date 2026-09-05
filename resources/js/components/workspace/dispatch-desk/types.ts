@@ -40,6 +40,7 @@ export interface DispatchDeskProps {
 }
 
 export interface DispatchDeskUrlState {
+    page: number;
     view: DispatchDeskView;
     mode: DispatchDeskMode;
     period: DispatchDeskPeriod;

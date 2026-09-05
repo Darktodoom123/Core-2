@@ -1,8 +1,8 @@
 import { router, usePage } from '@inertiajs/react';
-import { Check, ClipboardList, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import React, { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, Panel } from '@/components/ui';
+import { Button, Panel } from '@/components/ui';
 import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -154,20 +154,11 @@ export function CurrentAssignments({
                 </p>
             </div>
             {assignmentCount === 0 ? (
-                <EmptyState
-                    compact
-                    icon={ClipboardList}
-                    title={
-                        hasPendingSelections
-                            ? 'Draft assignment pending'
-                            : 'No resources assigned'
-                    }
-                    message={
-                        hasPendingSelections
-                            ? 'Save the selected resources above to create active assignments.'
-                            : 'Eligible selections confirmed below will appear here.'
-                    }
-                />
+                <p className="px-4 py-3 text-sm text-ink-soft">
+                    {hasPendingSelections
+                        ? 'Save your selection to assign these resources.'
+                        : 'Choose eligible people and equipment, then save your selection.'}
+                </p>
             ) : (
                 <ul className="divide-y divide-line">
                     {job.personnel_assignments.map((assignment) => {

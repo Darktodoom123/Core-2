@@ -1,8 +1,7 @@
 import type { CancelToken } from '@inertiajs/core';
 import { router } from '@inertiajs/react';
-import { Search, UserRound } from 'lucide-react';
+import { Search } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
     CandidatePageViewModel,
@@ -168,106 +167,127 @@ export function PersonnelCandidates({
                 </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {groups.map((group) => {
-                    const groupCandidates = candidates.filter(
-                        (candidate) =>
-                            (typeFilter === 'all' ||
-                                candidate.assignment_type === typeFilter) &&
-                            candidate.assignment_type === group.type,
-                    );
-                    const filtered = groupCandidates.filter((c) => {
-                        if (showEligibleOnly && !c.eligible) {
-                            return false;
-                        }
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+                {groups
+                    .filter(
+                        (group) =>
+                            typeFilter === 'all' || group.type === typeFilter,
+                    )
+                    .sort(
+                        (first, second) =>
+                            Number(
+                                candidates.some(
+                                    (candidate) =>
+                                        candidate.assignment_type ===
+                                        second.type,
+                                ),
+                            ) -
+                            Number(
+                                candidates.some(
+                                    (candidate) =>
+                                        candidate.assignment_type ===
+                                        first.type,
+                                ),
+                            ),
+                    )
+                    .map((group) => {
+                        const groupCandidates = candidates.filter(
+                            (candidate) =>
+                                (typeFilter === 'all' ||
+                                    candidate.assignment_type === typeFilter) &&
+                                candidate.assignment_type === group.type,
+                        );
+                        const filtered = groupCandidates.filter((c) => {
+                            if (showEligibleOnly && !c.eligible) {
+                                return false;
+                            }
 
-                        if (searchQuery.trim()) {
-                            const q = searchQuery.toLowerCase();
+                            if (searchQuery.trim()) {
+                                const q = searchQuery.toLowerCase();
 
-                            return (
-                                c.name.toLowerCase().includes(q) ||
-                                c.assignment_label.toLowerCase().includes(q) ||
-                                Boolean(
-                                    c.credential.label &&
-                                    c.credential.label
+                                return (
+                                    c.name.toLowerCase().includes(q) ||
+                                    c.assignment_label
                                         .toLowerCase()
-                                        .includes(q),
-                                )
-                            );
-                        }
+                                        .includes(q) ||
+                                    Boolean(
+                                        c.credential.label &&
+                                        c.credential.label
+                                            .toLowerCase()
+                                            .includes(q),
+                                    )
+                                );
+                            }
 
-                        return true;
-                    });
+                            return true;
+                        });
 
-                    return (
-                        <fieldset
-                            key={group.type}
-                            className="min-w-0 rounded-xl border border-line bg-surface shadow-2xs"
-                        >
-                            <legend className="sr-only">{group.label}</legend>
-                            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-                                <div>
-                                    <h3 className="text-sm font-semibold">
-                                        {group.label}
-                                    </h3>
-                                    <p className="mt-0.5 text-xs text-ink-soft">
+                        return (
+                            <fieldset
+                                key={group.type}
+                                className="min-w-0 rounded-xl border border-line bg-surface shadow-2xs"
+                            >
+                                <legend className="sr-only">
+                                    {group.label}
+                                </legend>
+                                <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold">
+                                            {group.label}
+                                        </h3>
+                                        <p className="mt-0.5 text-xs text-ink-soft">
+                                            {
+                                                groupCandidates.filter(
+                                                    (resource) =>
+                                                        resource.eligible,
+                                                ).length
+                                            }{' '}
+                                            eligible of {groupCandidates.length}
+                                        </p>
+                                    </div>
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                            groupCandidates.some(
+                                                (c) => c.eligible,
+                                            )
+                                                ? 'bg-success-soft text-success-strong'
+                                                : 'bg-surface-subtle text-ink-soft',
+                                        )}
+                                    >
                                         {
                                             groupCandidates.filter(
-                                                (resource) => resource.eligible,
+                                                (c) => c.eligible,
                                             ).length
                                         }{' '}
-                                        eligible of {groupCandidates.length}
-                                    </p>
+                                        ready
+                                    </span>
                                 </div>
-                                <span
-                                    className={cn(
-                                        'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                        groupCandidates.some((c) => c.eligible)
-                                            ? 'bg-success-soft text-success-strong'
-                                            : 'bg-surface-subtle text-ink-soft',
-                                    )}
-                                >
-                                    {
-                                        groupCandidates.filter(
-                                            (c) => c.eligible,
-                                        ).length
-                                    }{' '}
-                                    ready
-                                </span>
-                            </div>
-                            {filtered.length === 0 ? (
-                                <EmptyState
-                                    compact
-                                    icon={UserRound}
-                                    title={
-                                        groupCandidates.length === 0
-                                            ? `No ${group.label.toLowerCase()}`
-                                            : `No matching ${group.label.toLowerCase()}`
-                                    }
-                                    message={
-                                        groupCandidates.length === 0
-                                            ? 'Qualified personnel will appear after their operational role is provisioned.'
-                                            : 'No candidates match the active filters.'
-                                    }
-                                />
-                            ) : (
-                                <ul className="divide-y divide-line">
-                                    {filtered.map((candidate) => (
-                                        <PersonnelCandidate
-                                            key={candidate.id}
-                                            candidate={candidate}
-                                            selected={selectedIds.includes(
-                                                candidate.id,
-                                            )}
-                                            canAssign={canAssign}
-                                            onToggle={onToggle}
-                                        />
-                                    ))}
-                                </ul>
-                            )}
-                        </fieldset>
-                    );
-                })}
+                                {filtered.length === 0 ? (
+                                    <p className="px-4 py-3 text-sm text-ink-soft">
+                                        No matching {group.label.toLowerCase()}{' '}
+                                        on this page. Try another filter or ask
+                                        your workforce coordinator for suitable
+                                        personnel.
+                                    </p>
+                                ) : (
+                                    <ul className="divide-y divide-line">
+                                        {filtered.map((candidate) => (
+                                            <PersonnelCandidate
+                                                key={candidate.id}
+                                                candidate={candidate}
+                                                selected={selectedIds.includes(
+                                                    candidate.id,
+                                                )}
+                                                canAssign={canAssign}
+                                                onToggle={onToggle}
+                                            />
+                                        ))}
+                                    </ul>
+                                )}
+                            </fieldset>
+                        );
+                    })}
             </div>
             {page?.error && (
                 <p
