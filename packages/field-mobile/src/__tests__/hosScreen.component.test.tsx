@@ -164,4 +164,103 @@ describe('HosScreen Component & Workflows', () => {
         await fireEvent.press(certCheck);
         expect(confirmBtn.props.accessibilityState?.disabled).toBeFalsy();
     });
+
+    it('navigates across 8-day timeline history and synchronizes shift activity logs', async () => {
+        const view = await render(<HosScreen />);
+
+        // Initially shows Today
+        expect(view.getByText('24-HOUR DUTY TIMELINE (TODAY)')).toBeTruthy();
+        expect(view.getByText("TODAY'S SHIFT ACTIVITY LOG")).toBeTruthy();
+        expect(view.getByText('Active Shift in Progress')).toBeTruthy();
+        expect(
+            view.getByText('Sign off and certify log at end of shift'),
+        ).toBeTruthy();
+
+        // Step back to Yesterday (Sep 4)
+        const prevBtn = view.getByTestId('hos-prev-day-btn');
+        await fireEvent.press(prevBtn);
+
+        expect(
+            view.getByText('24-HOUR DUTY TIMELINE — THU, SEP 4 (YESTERDAY)'),
+        ).toBeTruthy();
+        expect(
+            view.getByText('SHIFT ACTIVITY LOG — THU, SEP 4 (YESTERDAY)'),
+        ).toBeTruthy();
+        expect(view.getByText('6 EVENTS')).toBeTruthy();
+        expect(
+            view.getByText('✓ Certified by Alex Rivera · Sep 4, 17:18 PHT'),
+        ).toBeTruthy();
+        expect(
+            view.getByText(
+                'Lowbed equipment transit via SLEX to Calamba construction hub',
+            ),
+        ).toBeTruthy();
+
+        // Step forward back to Today
+        const nextBtn = view.getByTestId('hos-next-day-btn');
+        await fireEvent.press(nextBtn);
+
+        expect(view.getByText('24-HOUR DUTY TIMELINE (TODAY)')).toBeTruthy();
+        expect(view.getByText("TODAY'S SHIFT ACTIVITY LOG")).toBeTruthy();
+    });
+
+    it('jumps directly to historical rest days via quick-jump day pills', async () => {
+        const view = await render(<HosScreen />);
+
+        // Tap Day Pill 4 (Mon, Sep 1 - 34h restart)
+        const dayPill4 = view.getByTestId('hos-day-pill-4');
+        await fireEvent.press(dayPill4);
+
+        expect(
+            view.getByText('24-HOUR DUTY TIMELINE — MON, SEP 1'),
+        ).toBeTruthy();
+        expect(
+            view.getByText('✓ 34-Hour Restart Period · Off Duty Logged'),
+        ).toBeTruthy();
+        expect(view.getByText('SHIFT ACTIVITY LOG — MON, SEP 1')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Mandatory 34-Hour HoS Cycle Restart — 24 consecutive hours off-duty',
+            ),
+        ).toBeTruthy();
+        expect(view.getAllByText('24h 00m').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders empty log rest placeholder when historical day has no transition events', async () => {
+        const customHistory = [
+            {
+                id: 'day-empty',
+                dayLabel: 'Sun, Aug 24',
+                dateFormatted: 'Sunday, Aug 24, 2026',
+                shortDate: 'Aug 24',
+                isToday: false,
+                driveHoursFormatted: '0h 00m',
+                onDutyHoursFormatted: '0h 00m',
+                offDutyHoursFormatted: '24h 00m',
+                totalShiftFormatted: '0h 00m',
+                certificationStatus: 'restart' as const,
+                certifiedByText: '✓ 34-Hour Restart Period · Off Duty Logged',
+                segments: {
+                    off: [{ left: '0%' as any, width: '100%' as any }],
+                    brk: [],
+                    drv: [],
+                    on: [],
+                },
+                events: [],
+            },
+        ];
+
+        const view = await render(
+            <HosScreen timelineHistory={customHistory} />,
+        );
+
+        expect(
+            view.getByText('34-Hour Restart / Full Off-Duty Rest Period'),
+        ).toBeTruthy();
+        expect(
+            view.getByText(
+                'No duty status transitions recorded. Consecutive 24-hour off-duty rest period logged.',
+            ),
+        ).toBeTruthy();
+    });
 });

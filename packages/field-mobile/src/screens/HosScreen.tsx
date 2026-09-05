@@ -9,6 +9,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import type { DimensionValue } from 'react-native';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
@@ -24,6 +25,7 @@ export interface HosScreenProps {
     maxDriveHours?: number;
     maxShiftHours?: number;
     cycleHoursLimit?: number;
+    timelineHistory?: TimelineDayHistory[];
     onBack?: () => void;
     onUpdateDutyStatus?: (
         dutyStatus: DutyStatus,
@@ -116,7 +118,7 @@ const STANDBY_REASONS: Array<{ reason: StandbyReason; label: string }> = [
     },
 ];
 
-interface ShiftLogEvent {
+export interface ShiftLogEvent {
     id: string;
     status: DutyStatus;
     startTime: string;
@@ -126,7 +128,33 @@ interface ShiftLogEvent {
     location: string;
 }
 
-const INITIAL_LOG_EVENTS: ShiftLogEvent[] = [
+export interface TimelineSegment {
+    left: DimensionValue;
+    width: DimensionValue;
+}
+
+export interface TimelineDayHistory {
+    id: string;
+    dayLabel: string;
+    dateFormatted: string;
+    shortDate: string;
+    isToday: boolean;
+    driveHoursFormatted: string;
+    onDutyHoursFormatted: string;
+    offDutyHoursFormatted: string;
+    totalShiftFormatted: string;
+    certificationStatus: 'active' | 'certified' | 'restart';
+    certifiedByText: string;
+    segments: {
+        off: TimelineSegment[];
+        brk: TimelineSegment[];
+        drv: TimelineSegment[];
+        on: TimelineSegment[];
+    };
+    events: ShiftLogEvent[];
+}
+
+export const INITIAL_LOG_EVENTS: ShiftLogEvent[] = [
     {
         id: 'log-1',
         status: 'driving',
@@ -165,6 +193,464 @@ const INITIAL_LOG_EVENTS: ShiftLogEvent[] = [
     },
 ];
 
+export const TIMELINE_HISTORY_DAYS: TimelineDayHistory[] = [
+    {
+        id: 'day-0',
+        dayLabel: 'Today (Sep 5)',
+        dateFormatted: 'Friday, Sep 5, 2026',
+        shortDate: 'Today',
+        isToday: true,
+        driveHoursFormatted: '1h 30m',
+        onDutyHoursFormatted: '4h 00m',
+        offDutyHoursFormatted: '8h 00m',
+        totalShiftFormatted: '5h 30m',
+        certificationStatus: 'active',
+        certifiedByText: 'Sign off and certify log at end of shift',
+        segments: {
+            off: [{ left: '0%', width: '33.3%' }],
+            brk: [{ left: '50%', width: '2.1%' }],
+            drv: [{ left: '33.3%', width: '6.2%' }],
+            on: [
+                { left: '39.5%', width: '10.5%' },
+                { left: '52.1%', width: '6.2%' },
+            ],
+        },
+        events: INITIAL_LOG_EVENTS,
+    },
+    {
+        id: 'day-1',
+        dayLabel: 'Thu, Sep 4 (Yesterday)',
+        dateFormatted: 'Thursday, Sep 4, 2026',
+        shortDate: 'Sep 4',
+        isToday: false,
+        driveHoursFormatted: '6h 15m',
+        onDutyHoursFormatted: '3h 00m',
+        offDutyHoursFormatted: '14h 45m',
+        totalShiftFormatted: '9h 15m',
+        certificationStatus: 'certified',
+        certifiedByText: '✓ Certified by Alex Rivera · Sep 4, 17:18 PHT',
+        segments: {
+            off: [
+                { left: '0%', width: '29.2%' },
+                { left: '70.8%', width: '29.2%' },
+            ],
+            brk: [{ left: '47.9%', width: '3.1%' }],
+            drv: [
+                { left: '33.3%', width: '14.6%' },
+                { left: '51%', width: '11.5%' },
+            ],
+            on: [
+                { left: '29.2%', width: '4.1%' },
+                { left: '62.5%', width: '8.3%' },
+            ],
+        },
+        events: [
+            {
+                id: 'log-sep4-1',
+                status: 'operating',
+                startTime: '07:00 AM',
+                endTime: '08:00 AM',
+                durationFormatted: '1h 00m',
+                details:
+                    'Pre-trip walkaround, outrigger hydraulic inspection & load chart verify',
+                location: 'Depot Yard 2, Manila',
+            },
+            {
+                id: 'log-sep4-2',
+                status: 'driving',
+                startTime: '08:00 AM',
+                endTime: '11:30 AM',
+                durationFormatted: '3h 30m',
+                details:
+                    'Lowbed equipment transit via SLEX to Calamba construction hub',
+                location: 'SLEX Southbound Km 42',
+            },
+            {
+                id: 'log-sep4-3',
+                status: 'on_break',
+                startTime: '11:30 AM',
+                endTime: '12:15 PM',
+                durationFormatted: '0h 45m',
+                details: 'Mandatory mid-shift driver meal & thermal break',
+                location: 'Calamba Oasis Station',
+            },
+            {
+                id: 'log-sep4-4',
+                status: 'driving',
+                startTime: '12:15 PM',
+                endTime: '03:00 PM',
+                durationFormatted: '2h 45m',
+                details: 'Equipment transit to Batangas Industrial Plant',
+                location: 'STAR Tollway Corridor',
+            },
+            {
+                id: 'log-sep4-5',
+                status: 'operating',
+                startTime: '03:00 PM',
+                endTime: '05:00 PM',
+                durationFormatted: '2h 00m',
+                details:
+                    'Equipment placement & post-trip safety checklist audit',
+                location: 'Batangas Port Terminal',
+            },
+            {
+                id: 'log-sep4-6',
+                status: 'off_duty',
+                startTime: '05:00 PM',
+                endTime: '11:59 PM',
+                durationFormatted: '7h 00m',
+                details:
+                    'Shift finalized and certified. 10-hour rest clock active.',
+                location: 'Driver Rest Lodge',
+            },
+        ],
+    },
+    {
+        id: 'day-2',
+        dayLabel: 'Wed, Sep 3',
+        dateFormatted: 'Wednesday, Sep 3, 2026',
+        shortDate: 'Sep 3',
+        isToday: false,
+        driveHoursFormatted: '2h 00m',
+        onDutyHoursFormatted: '7h 15m',
+        offDutyHoursFormatted: '14h 45m',
+        totalShiftFormatted: '9h 15m',
+        certificationStatus: 'certified',
+        certifiedByText: '✓ Certified by Alex Rivera · Sep 3, 16:42 PHT',
+        segments: {
+            off: [
+                { left: '0%', width: '27.1%' },
+                { left: '68.8%', width: '31.2%' },
+            ],
+            brk: [{ left: '54.2%', width: '3.1%' }],
+            drv: [{ left: '33.3%', width: '8.3%' }],
+            on: [
+                { left: '27.1%', width: '6.2%' },
+                { left: '41.6%', width: '12.6%' },
+                { left: '57.3%', width: '11.5%' },
+            ],
+        },
+        events: [
+            {
+                id: 'log-sep3-1',
+                status: 'operating',
+                startTime: '06:30 AM',
+                endTime: '08:00 AM',
+                durationFormatted: '1h 30m',
+                details:
+                    'Safety toolbox briefing and crane wire-rope spooling check',
+                location: 'BGC Site A, Taguig',
+            },
+            {
+                id: 'log-sep3-2',
+                status: 'driving',
+                startTime: '08:00 AM',
+                endTime: '10:00 AM',
+                durationFormatted: '2h 00m',
+                details: 'Transfer mobile crane unit to Tower 2 Crane Pad',
+                location: 'BGC Metro Corridor',
+            },
+            {
+                id: 'log-sep3-3',
+                status: 'operating',
+                startTime: '10:00 AM',
+                endTime: '01:00 PM',
+                durationFormatted: '3h 00m',
+                details:
+                    'Precast beam hoisting and level 12 structural placement',
+                location: 'Tower 2 Site Pad',
+            },
+            {
+                id: 'log-sep3-4',
+                status: 'on_break',
+                startTime: '01:00 PM',
+                endTime: '01:45 PM',
+                durationFormatted: '0h 45m',
+                details: 'Meal pause and hydration break',
+                location: 'Site Welfare Quarter',
+            },
+            {
+                id: 'log-sep3-5',
+                status: 'operating',
+                startTime: '01:45 PM',
+                endTime: '04:30 PM',
+                durationFormatted: '2h 45m',
+                details:
+                    'Precision HVAC chiller unit roof lift and outrigger stowage',
+                location: 'Tower 2 Rooftop Pad',
+            },
+        ],
+    },
+    {
+        id: 'day-3',
+        dayLabel: 'Tue, Sep 2',
+        dateFormatted: 'Tuesday, Sep 2, 2026',
+        shortDate: 'Sep 2',
+        isToday: false,
+        driveHoursFormatted: '8h 00m',
+        onDutyHoursFormatted: '1h 00m',
+        offDutyHoursFormatted: '15h 00m',
+        totalShiftFormatted: '9h 00m',
+        certificationStatus: 'certified',
+        certifiedByText: '✓ Certified by Alex Rivera · Sep 2, 16:15 PHT',
+        segments: {
+            off: [
+                { left: '0%', width: '25%' },
+                { left: '66.7%', width: '33.3%' },
+            ],
+            brk: [{ left: '47.9%', width: '4.2%' }],
+            drv: [
+                { left: '29.2%', width: '18.7%' },
+                { left: '52.1%', width: '14.6%' },
+            ],
+            on: [{ left: '25%', width: '4.2%' }],
+        },
+        events: [
+            {
+                id: 'log-sep2-1',
+                status: 'operating',
+                startTime: '06:00 AM',
+                endTime: '07:00 AM',
+                durationFormatted: '1h 00m',
+                details:
+                    'Pre-trip equipment inspection, tire pressure and brake line check',
+                location: 'Subic Bay Depot',
+            },
+            {
+                id: 'log-sep2-2',
+                status: 'driving',
+                startTime: '07:00 AM',
+                endTime: '11:30 AM',
+                durationFormatted: '4h 30m',
+                details: 'Long-haul transport via SCTEX & NLEX southward',
+                location: 'NLEX Km 65 Northbound',
+            },
+            {
+                id: 'log-sep2-3',
+                status: 'on_break',
+                startTime: '11:30 AM',
+                endTime: '12:30 PM',
+                durationFormatted: '1h 00m',
+                details:
+                    'Driver lunch and mandatory DOT 30-min compliance break',
+                location: 'NLEX Mega Station',
+            },
+            {
+                id: 'log-sep2-4',
+                status: 'driving',
+                startTime: '12:30 PM',
+                endTime: '04:00 PM',
+                durationFormatted: '3h 30m',
+                details:
+                    'Delivery transit to Manila International Container Yard',
+                location: 'R-10 Highway Manila',
+            },
+        ],
+    },
+    {
+        id: 'day-4',
+        dayLabel: 'Mon, Sep 1',
+        dateFormatted: 'Monday, Sep 1, 2026',
+        shortDate: 'Sep 1',
+        isToday: false,
+        driveHoursFormatted: '0h 00m',
+        onDutyHoursFormatted: '0h 00m',
+        offDutyHoursFormatted: '24h 00m',
+        totalShiftFormatted: '0h 00m',
+        certificationStatus: 'restart',
+        certifiedByText: '✓ 34-Hour Restart Period · Off Duty Logged',
+        segments: {
+            off: [{ left: '0%', width: '100%' }],
+            brk: [],
+            drv: [],
+            on: [],
+        },
+        events: [
+            {
+                id: 'log-sep1-1',
+                status: 'off_duty',
+                startTime: '12:00 AM',
+                endTime: '11:59 PM',
+                durationFormatted: '24h 00m',
+                details:
+                    'Mandatory 34-Hour HoS Cycle Restart — 24 consecutive hours off-duty',
+                location: 'Operator Residence',
+            },
+        ],
+    },
+    {
+        id: 'day-5',
+        dayLabel: 'Sun, Aug 31',
+        dateFormatted: 'Sunday, Aug 31, 2026',
+        shortDate: 'Aug 31',
+        isToday: false,
+        driveHoursFormatted: '0h 00m',
+        onDutyHoursFormatted: '0h 00m',
+        offDutyHoursFormatted: '24h 00m',
+        totalShiftFormatted: '0h 00m',
+        certificationStatus: 'restart',
+        certifiedByText: '✓ 34-Hour Restart Period · Off Duty Logged',
+        segments: {
+            off: [{ left: '0%', width: '100%' }],
+            brk: [],
+            drv: [],
+            on: [],
+        },
+        events: [
+            {
+                id: 'log-aug31-1',
+                status: 'off_duty',
+                startTime: '12:00 AM',
+                endTime: '11:59 PM',
+                durationFormatted: '24h 00m',
+                details:
+                    'Mandatory 34-Hour HoS Cycle Restart — 24 consecutive hours off-duty',
+                location: 'Operator Residence',
+            },
+        ],
+    },
+    {
+        id: 'day-6',
+        dayLabel: 'Sat, Aug 30',
+        dateFormatted: 'Saturday, Aug 30, 2026',
+        shortDate: 'Aug 30',
+        isToday: false,
+        driveHoursFormatted: '6h 00m',
+        onDutyHoursFormatted: '3h 00m',
+        offDutyHoursFormatted: '15h 00m',
+        totalShiftFormatted: '9h 00m',
+        certificationStatus: 'certified',
+        certifiedByText: '✓ Certified by Alex Rivera · Aug 30, 17:10 PHT',
+        segments: {
+            off: [
+                { left: '0%', width: '31.2%' },
+                { left: '70.8%', width: '29.2%' },
+            ],
+            brk: [{ left: '52.1%', width: '2.1%' }],
+            drv: [
+                { left: '37.5%', width: '14.6%' },
+                { left: '54.2%', width: '10.4%' },
+            ],
+            on: [
+                { left: '31.2%', width: '6.3%' },
+                { left: '64.6%', width: '6.2%' },
+            ],
+        },
+        events: [
+            {
+                id: 'log-aug30-1',
+                status: 'operating',
+                startTime: '07:30 AM',
+                endTime: '09:00 AM',
+                durationFormatted: '1h 30m',
+                details:
+                    'Boom extension & load moment indicator calibration test',
+                location: 'Clark Heavy Depot',
+            },
+            {
+                id: 'log-aug30-2',
+                status: 'driving',
+                startTime: '09:00 AM',
+                endTime: '12:30 PM',
+                durationFormatted: '3h 30m',
+                details: 'Transit convoy escort to Subic Freeport gate',
+                location: 'SCTEX Clark-Subic',
+            },
+            {
+                id: 'log-aug30-3',
+                status: 'on_break',
+                startTime: '12:30 PM',
+                endTime: '01:00 PM',
+                durationFormatted: '0h 30m',
+                details: 'Midday lunch & mandatory rest',
+                location: 'Subic Toll Plaza Rest',
+            },
+            {
+                id: 'log-aug30-4',
+                status: 'driving',
+                startTime: '01:00 PM',
+                endTime: '03:30 PM',
+                durationFormatted: '2h 30m',
+                details: 'On-site transit to drydock berth 4',
+                location: 'Subic Shipyard Zone',
+            },
+            {
+                id: 'log-aug30-5',
+                status: 'operating',
+                startTime: '03:30 PM',
+                endTime: '05:00 PM',
+                durationFormatted: '1h 30m',
+                details: 'Tandem hoist positioning and outrigger lock',
+                location: 'Drydock Berth 4',
+            },
+        ],
+    },
+    {
+        id: 'day-7',
+        dayLabel: 'Fri, Aug 29',
+        dateFormatted: 'Friday, Aug 29, 2026',
+        shortDate: 'Aug 29',
+        isToday: false,
+        driveHoursFormatted: '3h 30m',
+        onDutyHoursFormatted: '5h 00m',
+        offDutyHoursFormatted: '15h 30m',
+        totalShiftFormatted: '8h 30m',
+        certificationStatus: 'certified',
+        certifiedByText: '✓ Certified by Alex Rivera · Aug 29, 16:15 PHT',
+        segments: {
+            off: [
+                { left: '0%', width: '29.2%' },
+                { left: '66.7%', width: '33.3%' },
+            ],
+            brk: [{ left: '50%', width: '3.1%' }],
+            drv: [{ left: '35.4%', width: '14.6%' }],
+            on: [
+                { left: '29.2%', width: '6.2%' },
+                { left: '53.1%', width: '13.6%' },
+            ],
+        },
+        events: [
+            {
+                id: 'log-aug29-1',
+                status: 'operating',
+                startTime: '07:00 AM',
+                endTime: '08:30 AM',
+                durationFormatted: '1h 30m',
+                details: 'Equipment rigging and outrigger cribbing checks',
+                location: 'Clark Freeport Zone',
+            },
+            {
+                id: 'log-aug29-2',
+                status: 'driving',
+                startTime: '08:30 AM',
+                endTime: '12:00 PM',
+                durationFormatted: '3h 30m',
+                details: 'Highway transit of 50T hydraulic crane',
+                location: 'MacArthur Highway',
+            },
+            {
+                id: 'log-aug29-3',
+                status: 'on_break',
+                startTime: '12:00 PM',
+                endTime: '12:45 PM',
+                durationFormatted: '0h 45m',
+                details: 'Mandatory rest & lunch period',
+                location: 'San Fernando Oasis',
+            },
+            {
+                id: 'log-aug29-4',
+                status: 'operating',
+                startTime: '12:45 PM',
+                endTime: '04:00 PM',
+                durationFormatted: '3h 15m',
+                details:
+                    'Bridge girder positioning lifts & post-shift walkaround',
+                location: 'Pampanga River Bridge Site',
+            },
+        ],
+    },
+];
+
 export const HosScreen: React.FC<HosScreenProps> = ({
     operatorName = 'Alex Rivera',
     userRole = 'Certified Crane Operator',
@@ -178,11 +664,31 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     maxDriveHours = 11,
     maxShiftHours = 14,
     cycleHoursLimit = 70,
+    timelineHistory = TIMELINE_HISTORY_DAYS,
     onBack,
     onUpdateDutyStatus,
     onReleaseUnit,
 }) => {
     const { isDarkHud } = useTheme();
+    const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+    const historyDays =
+        timelineHistory && timelineHistory.length > 0
+            ? timelineHistory
+            : TIMELINE_HISTORY_DAYS;
+    const selectedDay = historyDays[selectedDayIndex] ?? historyDays[0];
+
+    const handlePrevDay = () => {
+        if (selectedDayIndex < historyDays.length - 1) {
+            setSelectedDayIndex((prev) => prev + 1);
+        }
+    };
+
+    const handleNextDay = () => {
+        if (selectedDayIndex > 0) {
+            setSelectedDayIndex((prev) => prev - 1);
+        }
+    };
+
     const [overriddenStatus, setOverriddenStatus] = useState<{
         propStatus?: DutyStatus;
         localStatus: DutyStatus;
@@ -1032,7 +1538,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     )}
                 </View>
 
-                {/* 7. 24-Hour Duty Timeline Graph (Samsara / ELD Visual Graph) */}
+                {/* 7. 24-Hour Duty Timeline Graph (Samsara / ELD Visual Graph) & 8-Day Cycle History */}
                 <View
                     style={[
                         styles.sectionCard,
@@ -1040,24 +1546,209 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     ]}
                     testID="hos-timeline-graph"
                 >
-                    <Text
-                        accessibilityRole="header"
+                    <View style={styles.timelineHeaderRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                accessibilityRole="header"
+                                style={[
+                                    styles.sectionTitle,
+                                    isDarkHud && styles.darkSectionTitle,
+                                ]}
+                            >
+                                {selectedDay.isToday
+                                    ? '24-HOUR DUTY TIMELINE (TODAY)'
+                                    : `24-HOUR DUTY TIMELINE — ${selectedDay.dayLabel.toUpperCase()}`}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.sectionHelper,
+                                    isDarkHud && styles.darkSectionHelper,
+                                ]}
+                            >
+                                Visual ELD graph of 24-hour shift status
+                                progression (00:00 to 24:00).
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.cycleBadge,
+                                isDarkHud && styles.darkCycleBadge,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.cycleBadgeText,
+                                    isDarkHud && styles.darkCycleBadgeText,
+                                ]}
+                            >
+                                8-DAY CYCLE
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Unified 8-Day Cycle Date Navigator */}
+                    <View
                         style={[
-                            styles.sectionTitle,
-                            isDarkHud && styles.darkSectionTitle,
+                            styles.unifiedDateNavContainer,
+                            isDarkHud && styles.darkUnifiedDateNavContainer,
                         ]}
                     >
-                        24-HOUR DUTY TIMELINE (TODAY)
-                    </Text>
-                    <Text
-                        style={[
-                            styles.sectionHelper,
-                            isDarkHud && styles.darkSectionHelper,
-                        ]}
-                    >
-                        Visual ELD graph of 24-hour shift status progression
-                        (00:00 to 24:00).
-                    </Text>
+                        {/* Stepper Header Row */}
+                        <View style={styles.stepperHeaderRow}>
+                            <Pressable
+                                testID="hos-prev-day-btn"
+                                accessibilityRole="button"
+                                accessibilityLabel="View previous day's shift timeline and logs"
+                                disabled={
+                                    selectedDayIndex >= historyDays.length - 1
+                                }
+                                onPress={handlePrevDay}
+                                style={({ pressed }) => [
+                                    styles.stepperNavBtn,
+                                    isDarkHud && styles.darkStepperNavBtn,
+                                    selectedDayIndex >=
+                                        historyDays.length - 1 &&
+                                        styles.stepperNavBtnDisabled,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.stepperNavBtnIcon,
+                                        isDarkHud &&
+                                            styles.darkStepperNavBtnIcon,
+                                        selectedDayIndex >=
+                                            historyDays.length - 1 &&
+                                            styles.stepperNavBtnIconDisabled,
+                                    ]}
+                                >
+                                    ‹
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.stepperNavBtnText,
+                                        isDarkHud &&
+                                            styles.darkStepperNavBtnText,
+                                        selectedDayIndex >=
+                                            historyDays.length - 1 &&
+                                            styles.stepperNavBtnTextDisabled,
+                                    ]}
+                                >
+                                    Prev
+                                </Text>
+                            </Pressable>
+
+                            <View
+                                style={[
+                                    styles.stepperCenterPill,
+                                    isDarkHud && styles.darkStepperCenterPill,
+                                ]}
+                            >
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.stepperDayLabel,
+                                        isDarkHud && styles.darkStepperDayLabel,
+                                    ]}
+                                >
+                                    {selectedDay.dayLabel}
+                                </Text>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.stepperDateSub,
+                                        isDarkHud && styles.darkStepperDateSub,
+                                    ]}
+                                >
+                                    {selectedDay.dateFormatted}
+                                </Text>
+                            </View>
+
+                            <Pressable
+                                testID="hos-next-day-btn"
+                                accessibilityRole="button"
+                                accessibilityLabel="View next day's shift timeline and logs"
+                                disabled={selectedDayIndex <= 0}
+                                onPress={handleNextDay}
+                                style={({ pressed }) => [
+                                    styles.stepperNavBtn,
+                                    isDarkHud && styles.darkStepperNavBtn,
+                                    selectedDayIndex <= 0 &&
+                                        styles.stepperNavBtnDisabled,
+                                    pressed && styles.pressed,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.stepperNavBtnText,
+                                        isDarkHud &&
+                                            styles.darkStepperNavBtnText,
+                                        selectedDayIndex <= 0 &&
+                                            styles.stepperNavBtnTextDisabled,
+                                    ]}
+                                >
+                                    Next
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.stepperNavBtnIcon,
+                                        isDarkHud &&
+                                            styles.darkStepperNavBtnIcon,
+                                        selectedDayIndex <= 0 &&
+                                            styles.stepperNavBtnIconDisabled,
+                                    ]}
+                                >
+                                    ›
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        {/* Integrated Horizontal Day Ribbon */}
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.dayPillsScrollContent}
+                            style={styles.dayPillsScroll}
+                        >
+                            {historyDays.map((day, idx) => {
+                                const isSelected = idx === selectedDayIndex;
+
+                                return (
+                                    <Pressable
+                                        key={day.id}
+                                        testID={`hos-day-pill-${idx}`}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Select ${day.dayLabel}`}
+                                        onPress={() => setSelectedDayIndex(idx)}
+                                        style={({ pressed }) => [
+                                            styles.dayPill,
+                                            isDarkHud && styles.darkDayPill,
+                                            isSelected &&
+                                                (isDarkHud
+                                                    ? styles.darkDayPillSelected
+                                                    : styles.dayPillSelected),
+                                            pressed && styles.pressed,
+                                        ]}
+                                    >
+                                        <Text
+                                            numberOfLines={1}
+                                            style={[
+                                                styles.dayPillText,
+                                                isDarkHud &&
+                                                    styles.darkDayPillText,
+                                                isSelected &&
+                                                    (isDarkHud
+                                                        ? styles.darkDayPillTextSelected
+                                                        : styles.dayPillTextSelected),
+                                            ]}
+                                        >
+                                            {day.shortDate}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
 
                     <View
                         style={[
@@ -1065,139 +1756,271 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             isDarkHud && styles.darkGraphContainer,
                         ]}
                     >
-                        {/* Row: OFF Duty */}
-                        <View style={styles.graphRow}>
-                            <Text
-                                style={[
-                                    styles.graphRowHeader,
-                                    isDarkHud && styles.darkGraphRowHeader,
-                                ]}
-                            >
-                                OFF
-                            </Text>
-                            <View
-                                style={[
-                                    styles.graphRowTrack,
-                                    isDarkHud && styles.darkGraphRowTrack,
-                                ]}
-                            >
+                        {/* Visual Graph Legend */}
+                        <View style={styles.graphLegendRow}>
+                            <View style={styles.legendItem}>
                                 <View
                                     style={[
-                                        styles.graphSegment,
+                                        styles.legendDot,
                                         {
-                                            left: '0%',
-                                            width: '33.3%',
                                             backgroundColor: isDarkHud
-                                                ? '#475569'
+                                                ? '#64748B'
                                                 : '#64748B',
                                         },
                                     ]}
                                 />
+                                <Text
+                                    style={[
+                                        styles.legendText,
+                                        isDarkHud && styles.darkLegendText,
+                                    ]}
+                                >
+                                    Off Duty
+                                </Text>
                             </View>
-                        </View>
-
-                        {/* Row: On Break */}
-                        <View style={styles.graphRow}>
-                            <Text
-                                style={[
-                                    styles.graphRowHeader,
-                                    isDarkHud && styles.darkGraphRowHeader,
-                                ]}
-                            >
-                                BRK
-                            </Text>
-                            <View
-                                style={[
-                                    styles.graphRowTrack,
-                                    isDarkHud && styles.darkGraphRowTrack,
-                                ]}
-                            >
+                            <View style={styles.legendItem}>
                                 <View
                                     style={[
-                                        styles.graphSegment,
+                                        styles.legendDot,
                                         {
-                                            left: '50%',
-                                            width: '2.1%',
                                             backgroundColor: isDarkHud
                                                 ? '#10B981'
                                                 : '#059669',
                                         },
                                     ]}
                                 />
+                                <Text
+                                    style={[
+                                        styles.legendText,
+                                        isDarkHud && styles.darkLegendText,
+                                    ]}
+                                >
+                                    Break
+                                </Text>
                             </View>
-                        </View>
-
-                        {/* Row: Driving */}
-                        <View style={styles.graphRow}>
-                            <Text
-                                style={[
-                                    styles.graphRowHeader,
-                                    isDarkHud && styles.darkGraphRowHeader,
-                                ]}
-                            >
-                                DRV
-                            </Text>
-                            <View
-                                style={[
-                                    styles.graphRowTrack,
-                                    isDarkHud && styles.darkGraphRowTrack,
-                                ]}
-                            >
+                            <View style={styles.legendItem}>
                                 <View
                                     style={[
-                                        styles.graphSegment,
+                                        styles.legendDot,
                                         {
-                                            left: '33.3%',
-                                            width: '6.2%',
                                             backgroundColor: isDarkHud
                                                 ? '#3B82F6'
                                                 : '#2563EB',
                                         },
                                     ]}
                                 />
+                                <Text
+                                    style={[
+                                        styles.legendText,
+                                        isDarkHud && styles.darkLegendText,
+                                    ]}
+                                >
+                                    Driving
+                                </Text>
+                            </View>
+                            <View style={styles.legendItem}>
+                                <View
+                                    style={[
+                                        styles.legendDot,
+                                        {
+                                            backgroundColor: isDarkHud
+                                                ? '#F59E0B'
+                                                : '#D97706',
+                                        },
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.legendText,
+                                        isDarkHud && styles.darkLegendText,
+                                    ]}
+                                >
+                                    On Duty
+                                </Text>
                             </View>
                         </View>
 
-                        {/* Row: Operating / On Duty */}
+                        {/* Row: OFF Duty */}
                         <View style={styles.graphRow}>
-                            <Text
-                                style={[
-                                    styles.graphRowHeader,
-                                    isDarkHud && styles.darkGraphRowHeader,
-                                ]}
-                            >
-                                ON
-                            </Text>
+                            <View style={styles.graphRowLabelGroup}>
+                                <View
+                                    style={[
+                                        styles.graphRowDot,
+                                        {
+                                            backgroundColor: isDarkHud
+                                                ? '#64748B'
+                                                : '#64748B',
+                                        },
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.graphRowHeader,
+                                        isDarkHud && styles.darkGraphRowHeader,
+                                    ]}
+                                >
+                                    OFF
+                                </Text>
+                            </View>
                             <View
                                 style={[
                                     styles.graphRowTrack,
                                     isDarkHud && styles.darkGraphRowTrack,
                                 ]}
                             >
+                                {selectedDay.segments.off.map((seg, sIdx) => (
+                                    <View
+                                        key={`off-${sIdx}`}
+                                        style={[
+                                            styles.graphSegment,
+                                            {
+                                                left: seg.left,
+                                                width: seg.width,
+                                                backgroundColor: isDarkHud
+                                                    ? '#475569'
+                                                    : '#64748B',
+                                            },
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Row: On Break */}
+                        <View style={styles.graphRow}>
+                            <View style={styles.graphRowLabelGroup}>
                                 <View
                                     style={[
-                                        styles.graphSegment,
+                                        styles.graphRowDot,
                                         {
-                                            left: '39.5%',
-                                            width: '10.5%',
+                                            backgroundColor: isDarkHud
+                                                ? '#10B981'
+                                                : '#059669',
+                                        },
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.graphRowHeader,
+                                        isDarkHud && styles.darkGraphRowHeader,
+                                    ]}
+                                >
+                                    BRK
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
+                                {selectedDay.segments.brk.map((seg, sIdx) => (
+                                    <View
+                                        key={`brk-${sIdx}`}
+                                        style={[
+                                            styles.graphSegment,
+                                            {
+                                                left: seg.left,
+                                                width: seg.width,
+                                                backgroundColor: isDarkHud
+                                                    ? '#10B981'
+                                                    : '#059669',
+                                            },
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Row: Driving */}
+                        <View style={styles.graphRow}>
+                            <View style={styles.graphRowLabelGroup}>
+                                <View
+                                    style={[
+                                        styles.graphRowDot,
+                                        {
+                                            backgroundColor: isDarkHud
+                                                ? '#3B82F6'
+                                                : '#2563EB',
+                                        },
+                                    ]}
+                                />
+                                <Text
+                                    style={[
+                                        styles.graphRowHeader,
+                                        isDarkHud && styles.darkGraphRowHeader,
+                                    ]}
+                                >
+                                    DRV
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
+                                {selectedDay.segments.drv.map((seg, sIdx) => (
+                                    <View
+                                        key={`drv-${sIdx}`}
+                                        style={[
+                                            styles.graphSegment,
+                                            {
+                                                left: seg.left,
+                                                width: seg.width,
+                                                backgroundColor: isDarkHud
+                                                    ? '#3B82F6'
+                                                    : '#2563EB',
+                                            },
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Row: Operating / On Duty */}
+                        <View style={styles.graphRow}>
+                            <View style={styles.graphRowLabelGroup}>
+                                <View
+                                    style={[
+                                        styles.graphRowDot,
+                                        {
                                             backgroundColor: isDarkHud
                                                 ? '#F59E0B'
                                                 : '#D97706',
                                         },
                                     ]}
                                 />
-                                <View
+                                <Text
                                     style={[
-                                        styles.graphSegment,
-                                        {
-                                            left: '52.1%',
-                                            width: '6.2%',
-                                            backgroundColor: isDarkHud
-                                                ? '#F59E0B'
-                                                : '#D97706',
-                                        },
+                                        styles.graphRowHeader,
+                                        isDarkHud && styles.darkGraphRowHeader,
                                     ]}
-                                />
+                                >
+                                    ON
+                                </Text>
+                            </View>
+                            <View
+                                style={[
+                                    styles.graphRowTrack,
+                                    isDarkHud && styles.darkGraphRowTrack,
+                                ]}
+                            >
+                                {selectedDay.segments.on.map((seg, sIdx) => (
+                                    <View
+                                        key={`on-${sIdx}`}
+                                        style={[
+                                            styles.graphSegment,
+                                            {
+                                                left: seg.left,
+                                                width: seg.width,
+                                                backgroundColor: isDarkHud
+                                                    ? '#F59E0B'
+                                                    : '#D97706',
+                                            },
+                                        ]}
+                                    />
+                                ))}
                             </View>
                         </View>
 
@@ -1250,6 +2073,376 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             </Text>
                         </View>
                     </View>
+
+                    {/* Daily Shift Summary Recap Row */}
+                    <View style={styles.historyMetricsGrid}>
+                        <View
+                            style={[
+                                styles.historyMetricCell,
+                                isDarkHud && styles.darkHistoryMetricCell,
+                            ]}
+                        >
+                            <View style={styles.metricCellHeader}>
+                                <View
+                                    style={[
+                                        styles.metricIndicatorDot,
+                                        { backgroundColor: '#2563EB' },
+                                    ]}
+                                />
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="clip"
+                                    style={[
+                                        styles.historyMetricLabel,
+                                        isDarkHud &&
+                                            styles.darkHistoryMetricLabel,
+                                    ]}
+                                >
+                                    DRIVE
+                                </Text>
+                            </View>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.historyMetricVal,
+                                    styles.metricValBlue,
+                                ]}
+                            >
+                                {selectedDay.driveHoursFormatted}
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.historyMetricCell,
+                                isDarkHud && styles.darkHistoryMetricCell,
+                            ]}
+                        >
+                            <View style={styles.metricCellHeader}>
+                                <View
+                                    style={[
+                                        styles.metricIndicatorDot,
+                                        { backgroundColor: '#D97706' },
+                                    ]}
+                                />
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="clip"
+                                    style={[
+                                        styles.historyMetricLabel,
+                                        isDarkHud &&
+                                            styles.darkHistoryMetricLabel,
+                                    ]}
+                                >
+                                    ON DUTY
+                                </Text>
+                            </View>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.historyMetricVal,
+                                    styles.metricValAmber,
+                                ]}
+                            >
+                                {selectedDay.onDutyHoursFormatted}
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.historyMetricCell,
+                                isDarkHud && styles.darkHistoryMetricCell,
+                            ]}
+                        >
+                            <View style={styles.metricCellHeader}>
+                                <View
+                                    style={[
+                                        styles.metricIndicatorDot,
+                                        { backgroundColor: '#64748B' },
+                                    ]}
+                                />
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="clip"
+                                    style={[
+                                        styles.historyMetricLabel,
+                                        isDarkHud &&
+                                            styles.darkHistoryMetricLabel,
+                                    ]}
+                                >
+                                    OFF DUTY
+                                </Text>
+                            </View>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.historyMetricVal,
+                                    isDarkHud
+                                        ? styles.darkMetricValSlate
+                                        : styles.metricValSlate,
+                                ]}
+                            >
+                                {selectedDay.offDutyHoursFormatted}
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.historyMetricCell,
+                                isDarkHud && styles.darkHistoryMetricCell,
+                            ]}
+                        >
+                            <View style={styles.metricCellHeader}>
+                                <View
+                                    style={[
+                                        styles.metricIndicatorDot,
+                                        { backgroundColor: '#059669' },
+                                    ]}
+                                />
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="clip"
+                                    style={[
+                                        styles.historyMetricLabel,
+                                        isDarkHud &&
+                                            styles.darkHistoryMetricLabel,
+                                    ]}
+                                >
+                                    TOTAL
+                                </Text>
+                            </View>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.historyMetricVal,
+                                    styles.metricValEmerald,
+                                ]}
+                            >
+                                {selectedDay.totalShiftFormatted}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Certification & Compliance Audit Stamp */}
+                    <View
+                        style={[
+                            styles.certAuditBadge,
+                            selectedDay.certificationStatus === 'active'
+                                ? styles.certAuditActive
+                                : selectedDay.certificationStatus ===
+                                    'certified'
+                                  ? styles.certAuditCertified
+                                  : styles.certAuditRestart,
+                            isDarkHud &&
+                                (selectedDay.certificationStatus === 'active'
+                                    ? styles.darkCertAuditActive
+                                    : selectedDay.certificationStatus ===
+                                        'certified'
+                                      ? styles.darkCertAuditCertified
+                                      : styles.darkCertAuditRestart),
+                        ]}
+                    >
+                        <View style={styles.certAuditCardInner}>
+                            <View
+                                style={[
+                                    styles.certAuditIconCircle,
+                                    selectedDay.certificationStatus === 'active'
+                                        ? styles.certAuditIconCircleActive
+                                        : selectedDay.certificationStatus ===
+                                            'certified'
+                                          ? styles.certAuditIconCircleCertified
+                                          : styles.certAuditIconCircleRestart,
+                                    isDarkHud &&
+                                        (selectedDay.certificationStatus ===
+                                        'active'
+                                            ? styles.darkCertAuditIconCircleActive
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? styles.darkCertAuditIconCircleCertified
+                                              : styles.darkCertAuditIconCircleRestart),
+                                ]}
+                            >
+                                <Icon
+                                    name={
+                                        selectedDay.certificationStatus ===
+                                        'active'
+                                            ? 'clock'
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? 'check-circle'
+                                              : 'shield-check'
+                                    }
+                                    size={16}
+                                    color={
+                                        selectedDay.certificationStatus ===
+                                        'active'
+                                            ? isDarkHud
+                                                ? '#FBBF24'
+                                                : '#D97706'
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? isDarkHud
+                                                  ? '#34D399'
+                                                  : '#059669'
+                                              : isDarkHud
+                                                ? '#94A3B8'
+                                                : '#64748B'
+                                    }
+                                />
+                            </View>
+
+                            <View style={styles.certAuditTextContainer}>
+                                <View style={styles.certAuditHeaderRow}>
+                                    <Text
+                                        numberOfLines={1}
+                                        style={[
+                                            styles.certAuditTitle,
+                                            selectedDay.certificationStatus ===
+                                            'active'
+                                                ? styles.certAuditActiveTitle
+                                                : selectedDay.certificationStatus ===
+                                                    'certified'
+                                                  ? styles.certAuditCertifiedTitle
+                                                  : styles.certAuditRestartTitle,
+                                            isDarkHud &&
+                                                (selectedDay.certificationStatus ===
+                                                'active'
+                                                    ? styles.darkCertAuditActiveTitle
+                                                    : selectedDay.certificationStatus ===
+                                                        'certified'
+                                                      ? styles.darkCertAuditCertifiedTitle
+                                                      : styles.darkCertAuditRestartTitle),
+                                        ]}
+                                    >
+                                        {selectedDay.certificationStatus ===
+                                        'active'
+                                            ? 'Active Shift in Progress'
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? 'Shift Certified'
+                                              : '34-Hour HoS Restart'}
+                                    </Text>
+                                    <View
+                                        style={[
+                                            styles.certStatusPill,
+                                            selectedDay.certificationStatus ===
+                                            'active'
+                                                ? styles.certStatusPillActive
+                                                : selectedDay.certificationStatus ===
+                                                    'certified'
+                                                  ? styles.certStatusPillCertified
+                                                  : styles.certStatusPillRestart,
+                                            isDarkHud &&
+                                                (selectedDay.certificationStatus ===
+                                                'active'
+                                                    ? styles.darkCertStatusPillActive
+                                                    : selectedDay.certificationStatus ===
+                                                        'certified'
+                                                      ? styles.darkCertStatusPillCertified
+                                                      : styles.darkCertStatusPillRestart),
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.certStatusPillText,
+                                                selectedDay.certificationStatus ===
+                                                'active'
+                                                    ? styles.certStatusPillActiveText
+                                                    : selectedDay.certificationStatus ===
+                                                        'certified'
+                                                      ? styles.certStatusPillCertifiedText
+                                                      : styles.certStatusPillRestartText,
+                                                isDarkHud &&
+                                                    (selectedDay.certificationStatus ===
+                                                    'active'
+                                                        ? styles.darkCertStatusPillActiveText
+                                                        : selectedDay.certificationStatus ===
+                                                            'certified'
+                                                          ? styles.darkCertStatusPillCertifiedText
+                                                          : styles.darkCertStatusPillRestartText),
+                                            ]}
+                                        >
+                                            {selectedDay.certificationStatus ===
+                                            'active'
+                                                ? 'LIVE'
+                                                : selectedDay.certificationStatus ===
+                                                    'certified'
+                                                  ? 'LOCKED'
+                                                  : 'REST'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={[
+                                        styles.certAuditSub,
+                                        selectedDay.certificationStatus ===
+                                        'active'
+                                            ? styles.certAuditActiveSub
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? styles.certAuditCertifiedSub
+                                              : styles.certAuditRestartSub,
+                                        isDarkHud &&
+                                            (selectedDay.certificationStatus ===
+                                            'active'
+                                                ? styles.darkCertAuditActiveSub
+                                                : selectedDay.certificationStatus ===
+                                                    'certified'
+                                                  ? styles.darkCertAuditCertifiedSub
+                                                  : styles.darkCertAuditRestartSub),
+                                    ]}
+                                >
+                                    {selectedDay.certifiedByText}
+                                </Text>
+
+                                <View
+                                    style={[
+                                        styles.certAuditComplianceRow,
+                                        selectedDay.certificationStatus ===
+                                        'active'
+                                            ? styles.certAuditComplianceRowActive
+                                            : selectedDay.certificationStatus ===
+                                                'certified'
+                                              ? styles.certAuditComplianceRowCertified
+                                              : styles.certAuditComplianceRowRestart,
+                                        isDarkHud &&
+                                            styles.darkCertAuditComplianceRow,
+                                    ]}
+                                >
+                                    <Icon
+                                        name="shield-check"
+                                        size={12}
+                                        color={
+                                            selectedDay.certificationStatus ===
+                                            'active'
+                                                ? isDarkHud
+                                                    ? '#F59E0B'
+                                                    : '#D97706'
+                                                : selectedDay.certificationStatus ===
+                                                    'certified'
+                                                  ? isDarkHud
+                                                      ? '#10B981'
+                                                      : '#059669'
+                                                  : isDarkHud
+                                                    ? '#94A3B8'
+                                                    : '#64748B'
+                                        }
+                                    />
+                                    <Text
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                        style={[
+                                            styles.certAuditLegalSub,
+                                            isDarkHud &&
+                                                styles.darkCertAuditLegalSub,
+                                        ]}
+                                    >
+                                        DOT 49 CFR § 395.8 · DOLE-OSHC Verified
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
                 </View>
 
                 {/* 8. Chronological Shift Log Events History */}
@@ -1260,105 +2453,156 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                     ]}
                     testID="hos-activity-logs"
                 >
-                    <Text
-                        accessibilityRole="header"
-                        style={[
-                            styles.sectionTitle,
-                            isDarkHud && styles.darkSectionTitle,
-                        ]}
-                    >
-                        TODAY'S SHIFT ACTIVITY LOG
-                    </Text>
-                    <Text
-                        style={[
-                            styles.sectionHelper,
-                            isDarkHud && styles.darkSectionHelper,
-                        ]}
-                    >
-                        Timestamped change-of-duty event logs with GPS location
-                        audits.
-                    </Text>
-
-                    <View style={styles.logEventsList}>
-                        {INITIAL_LOG_EVENTS.map((evt) => (
-                            <View
-                                key={evt.id}
+                    <View style={styles.logSectionHeaderRow}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                accessibilityRole="header"
                                 style={[
-                                    styles.logEventCard,
-                                    isDarkHud && styles.darkLogEventCard,
+                                    styles.sectionTitle,
+                                    isDarkHud && styles.darkSectionTitle,
                                 ]}
                             >
-                                <View style={styles.logEventHeader}>
-                                    <View style={styles.logBadgeRow}>
-                                        <View
-                                            style={[
-                                                styles.logStatusBadge,
-                                                evt.status === 'operating'
-                                                    ? isDarkHud
-                                                        ? styles.darkLogStatusOperating
-                                                        : styles.logStatusOperating
-                                                    : evt.status === 'driving'
-                                                      ? isDarkHud
-                                                          ? styles.darkLogStatusDriving
-                                                          : styles.logStatusDriving
-                                                      : evt.status ===
-                                                          'on_break'
-                                                        ? isDarkHud
-                                                            ? styles.darkLogStatusBreak
-                                                            : styles.logStatusBreak
-                                                        : isDarkHud
-                                                          ? styles.darkLogStatusOff
-                                                          : styles.logStatusOff,
-                                            ]}
-                                        >
-                                            <Text
+                                {selectedDay.isToday
+                                    ? "TODAY'S SHIFT ACTIVITY LOG"
+                                    : `SHIFT ACTIVITY LOG — ${selectedDay.dayLabel.toUpperCase()}`}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.sectionHelper,
+                                    isDarkHud && styles.darkSectionHelper,
+                                ]}
+                            >
+                                Timestamped change-of-duty event logs with GPS
+                                location audits.
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.logCountBadge,
+                                isDarkHud && styles.darkLogCountBadge,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.logCountBadgeText,
+                                    isDarkHud && styles.darkLogCountBadgeText,
+                                ]}
+                            >
+                                {selectedDay.events.length} EVENTS
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.logEventsList}>
+                        {selectedDay.events.length === 0 ? (
+                            <View
+                                style={[
+                                    styles.emptyLogCard,
+                                    isDarkHud && styles.darkEmptyLogCard,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.emptyLogTitle,
+                                        isDarkHud && styles.darkEmptyLogTitle,
+                                    ]}
+                                >
+                                    34-Hour Restart / Full Off-Duty Rest Period
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.emptyLogSub,
+                                        isDarkHud && styles.darkEmptyLogSub,
+                                    ]}
+                                >
+                                    No duty status transitions recorded.
+                                    Consecutive 24-hour off-duty rest period
+                                    logged.
+                                </Text>
+                            </View>
+                        ) : (
+                            selectedDay.events.map((evt) => (
+                                <View
+                                    key={evt.id}
+                                    style={[
+                                        styles.logEventCard,
+                                        isDarkHud && styles.darkLogEventCard,
+                                    ]}
+                                >
+                                    <View style={styles.logEventHeader}>
+                                        <View style={styles.logBadgeRow}>
+                                            <View
                                                 style={[
-                                                    styles.logStatusText,
-                                                    isDarkHud &&
-                                                        styles.darkLogStatusText,
+                                                    styles.logStatusBadge,
+                                                    evt.status === 'operating'
+                                                        ? isDarkHud
+                                                            ? styles.darkLogStatusOperating
+                                                            : styles.logStatusOperating
+                                                        : evt.status ===
+                                                            'driving'
+                                                          ? isDarkHud
+                                                              ? styles.darkLogStatusDriving
+                                                              : styles.logStatusDriving
+                                                          : evt.status ===
+                                                              'on_break'
+                                                            ? isDarkHud
+                                                                ? styles.darkLogStatusBreak
+                                                                : styles.logStatusBreak
+                                                            : isDarkHud
+                                                              ? styles.darkLogStatusOff
+                                                              : styles.logStatusOff,
                                                 ]}
                                             >
-                                                {evt.status.toUpperCase()}
+                                                <Text
+                                                    style={[
+                                                        styles.logStatusText,
+                                                        isDarkHud &&
+                                                            styles.darkLogStatusText,
+                                                    ]}
+                                                >
+                                                    {evt.status.toUpperCase()}
+                                                </Text>
+                                            </View>
+                                            <Text
+                                                style={[
+                                                    styles.logTimeRange,
+                                                    isDarkHud &&
+                                                        styles.darkLogTimeRange,
+                                                ]}
+                                            >
+                                                {evt.startTime} – {evt.endTime}
                                             </Text>
                                         </View>
                                         <Text
                                             style={[
-                                                styles.logTimeRange,
+                                                styles.logDuration,
                                                 isDarkHud &&
-                                                    styles.darkLogTimeRange,
+                                                    styles.darkLogDuration,
                                             ]}
                                         >
-                                            {evt.startTime} – {evt.endTime}
+                                            {evt.durationFormatted}
                                         </Text>
                                     </View>
+
                                     <Text
                                         style={[
-                                            styles.logDuration,
-                                            isDarkHud && styles.darkLogDuration,
+                                            styles.logDetails,
+                                            isDarkHud && styles.darkLogDetails,
                                         ]}
                                     >
-                                        {evt.durationFormatted}
+                                        {evt.details}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.logLocation,
+                                            isDarkHud && styles.darkLogLocation,
+                                        ]}
+                                    >
+                                        📍 {evt.location}
                                     </Text>
                                 </View>
-
-                                <Text
-                                    style={[
-                                        styles.logDetails,
-                                        isDarkHud && styles.darkLogDetails,
-                                    ]}
-                                >
-                                    {evt.details}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.logLocation,
-                                        isDarkHud && styles.darkLogLocation,
-                                    ]}
-                                >
-                                    📍 {evt.location}
-                                </Text>
-                            </View>
-                        ))}
+                            ))
+                        )}
                     </View>
                 </View>
             </ScrollView>
@@ -1924,10 +3168,497 @@ const styles = StyleSheet.create({
         borderColor: '#334155',
         color: '#FFFFFF',
     },
-    graphContainer: {
+    timelineHeaderRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    cycleBadge: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#CBD5E1',
+        borderRadius: 9999,
+        borderWidth: 1,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    darkCycleBadge: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    cycleBadgeText: {
+        color: '#475569',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    darkCycleBadgeText: {
+        color: '#94A3B8',
+    },
+    unifiedDateNavContainer: {
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 12,
+        padding: 10,
+    },
+    darkUnifiedDateNavContainer: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    stepperHeaderRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    stepperNavBtn: {
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 3,
+        justifyContent: 'center',
+        minHeight: 36,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    darkStepperNavBtn: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    stepperNavBtnDisabled: {
+        opacity: 0.35,
+    },
+    stepperNavBtnIcon: {
+        color: '#D97706',
+        fontSize: 16,
+        fontWeight: '800',
+        lineHeight: 18,
+    },
+    darkStepperNavBtnIcon: {
+        color: '#F59E0B',
+    },
+    stepperNavBtnIconDisabled: {
+        color: '#94A3B8',
+    },
+    stepperNavBtnText: {
+        color: '#D97706',
+        fontSize: 11.5,
+        fontWeight: '700',
+    },
+    darkStepperNavBtnText: {
+        color: '#F59E0B',
+    },
+    stepperNavBtnTextDisabled: {
+        color: '#94A3B8',
+    },
+    stepperCenterPill: {
+        alignItems: 'center',
+        flex: 1,
+        paddingHorizontal: 6,
+    },
+    darkStepperCenterPill: {},
+    stepperDayLabel: {
+        color: '#0F172A',
+        fontSize: 13,
+        fontWeight: '800',
+        textAlign: 'center',
+    },
+    darkStepperDayLabel: {
+        color: '#F8FAFC',
+    },
+    stepperDateSub: {
+        color: '#64748B',
+        fontSize: 10.5,
+        fontWeight: '600',
+        marginTop: 1,
+        textAlign: 'center',
+    },
+    darkStepperDateSub: {
+        color: '#94A3B8',
+    },
+    dayPillsScroll: {
+        marginBottom: 2,
+    },
+    dayPillsScrollContent: {
+        flexDirection: 'row',
+        gap: 6,
+        paddingVertical: 2,
+    },
+    dayPill: {
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 20,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 32,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    darkDayPill: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    dayPillSelected: {
+        backgroundColor: '#0F172A',
+        borderColor: '#0F172A',
+    },
+    darkDayPillSelected: {
+        backgroundColor: '#F59E0B',
+        borderColor: '#F59E0B',
+    },
+    dayPillText: {
+        color: '#64748B',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    darkDayPillText: {
+        color: '#94A3B8',
+    },
+    dayPillTextSelected: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+    },
+    darkDayPillTextSelected: {
+        color: '#090D16',
+        fontWeight: '800',
+    },
+    historyMetricsGrid: {
+        flexDirection: 'row',
+        gap: 6,
+        marginTop: 12,
+    },
+    historyMetricCell: {
+        alignItems: 'center',
         backgroundColor: '#F8FAFC',
         borderColor: '#E2E8F0',
         borderRadius: 10,
+        borderWidth: 1,
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+        paddingVertical: 10,
+    },
+    darkHistoryMetricCell: {
+        backgroundColor: '#0F172A',
+        borderColor: '#1E293B',
+    },
+    metricCellHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 3,
+        marginBottom: 3,
+    },
+    metricIndicatorDot: {
+        borderRadius: 2.5,
+        height: 5,
+        width: 5,
+    },
+    historyMetricLabel: {
+        color: '#64748B',
+        fontSize: 9.5,
+        fontWeight: '800',
+        letterSpacing: 0.2,
+        textAlign: 'center',
+    },
+    darkHistoryMetricLabel: {
+        color: '#94A3B8',
+    },
+    historyMetricVal: {
+        fontSize: 13.5,
+        fontWeight: '900',
+        letterSpacing: -0.2,
+        textAlign: 'center',
+    },
+    metricValBlue: {
+        color: '#2563EB',
+    },
+    metricValAmber: {
+        color: '#D97706',
+    },
+    metricValSlate: {
+        color: '#475569',
+    },
+    darkMetricValSlate: {
+        color: '#94A3B8',
+    },
+    metricValEmerald: {
+        color: '#059669',
+    },
+    certAuditBadge: {
+        borderRadius: 12,
+        borderWidth: 1,
+        marginTop: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    darkCertAuditBadge: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    certAuditActive: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+    },
+    darkCertAuditActive: {
+        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+        borderColor: 'rgba(245, 158, 11, 0.28)',
+    },
+    certAuditCertified: {
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
+    },
+    darkCertAuditCertified: {
+        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+        borderColor: 'rgba(16, 185, 129, 0.25)',
+    },
+    certAuditRestart: {
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+    },
+    darkCertAuditRestart: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    certAuditCardInner: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 10,
+    },
+    certAuditIconCircle: {
+        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1,
+        height: 32,
+        justifyContent: 'center',
+        width: 32,
+    },
+    certAuditIconCircleActive: {
+        backgroundColor: '#FEF3C7',
+        borderColor: 'rgba(245, 158, 11, 0.3)',
+    },
+    darkCertAuditIconCircleActive: {
+        backgroundColor: 'rgba(245, 158, 11, 0.18)',
+        borderColor: 'rgba(245, 158, 11, 0.35)',
+    },
+    certAuditIconCircleCertified: {
+        backgroundColor: '#D1FAE5',
+        borderColor: 'rgba(16, 185, 129, 0.3)',
+    },
+    darkCertAuditIconCircleCertified: {
+        backgroundColor: 'rgba(16, 185, 129, 0.18)',
+        borderColor: 'rgba(16, 185, 129, 0.35)',
+    },
+    certAuditIconCircleRestart: {
+        backgroundColor: '#F1F5F9',
+        borderColor: 'rgba(148, 163, 184, 0.3)',
+    },
+    darkCertAuditIconCircleRestart: {
+        backgroundColor: 'rgba(148, 163, 184, 0.15)',
+        borderColor: 'rgba(148, 163, 184, 0.3)',
+    },
+    certAuditTextContainer: {
+        flex: 1,
+    },
+    certAuditHeaderRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 2,
+    },
+    certAuditTitle: {
+        flex: 1,
+        fontSize: 12.5,
+        fontWeight: '800',
+        marginRight: 8,
+    },
+    certAuditActiveTitle: {
+        color: '#92400E',
+    },
+    darkCertAuditActiveTitle: {
+        color: '#FBBF24',
+    },
+    certAuditCertifiedTitle: {
+        color: '#065F46',
+    },
+    darkCertAuditCertifiedTitle: {
+        color: '#34D399',
+    },
+    certAuditRestartTitle: {
+        color: '#334155',
+    },
+    darkCertAuditRestartTitle: {
+        color: '#CBD5E1',
+    },
+    certStatusPill: {
+        borderRadius: 9999,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 1.5,
+    },
+    certStatusPillActive: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+    },
+    darkCertStatusPillActive: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: '#F59E0B',
+    },
+    certStatusPillCertified: {
+        backgroundColor: '#D1FAE5',
+        borderColor: '#10B981',
+    },
+    darkCertStatusPillCertified: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderColor: '#10B981',
+    },
+    certStatusPillRestart: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#94A3B8',
+    },
+    darkCertStatusPillRestart: {
+        backgroundColor: 'rgba(148, 163, 184, 0.15)',
+        borderColor: '#64748B',
+    },
+    certStatusPillText: {
+        fontSize: 9,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    certStatusPillActiveText: {
+        color: '#B45309',
+    },
+    darkCertStatusPillActiveText: {
+        color: '#FBBF24',
+    },
+    certStatusPillCertifiedText: {
+        color: '#047857',
+    },
+    darkCertStatusPillCertifiedText: {
+        color: '#34D399',
+    },
+    certStatusPillRestartText: {
+        color: '#475569',
+    },
+    darkCertStatusPillRestartText: {
+        color: '#94A3B8',
+    },
+    certAuditSub: {
+        fontSize: 11,
+        fontWeight: '600',
+        lineHeight: 15,
+        marginBottom: 5,
+    },
+    certAuditActiveSub: {
+        color: '#78350F',
+    },
+    darkCertAuditActiveSub: {
+        color: '#FDE68A',
+    },
+    certAuditCertifiedSub: {
+        color: '#047857',
+    },
+    darkCertAuditCertifiedSub: {
+        color: '#A7F3D0',
+    },
+    certAuditRestartSub: {
+        color: '#64748B',
+    },
+    darkCertAuditRestartSub: {
+        color: '#94A3B8',
+    },
+    certAuditComplianceRow: {
+        alignItems: 'center',
+        borderTopWidth: 1,
+        flexDirection: 'row',
+        gap: 5,
+        paddingTop: 4,
+    },
+    certAuditComplianceRowActive: {
+        borderTopColor: 'rgba(245, 158, 11, 0.2)',
+    },
+    certAuditComplianceRowCertified: {
+        borderTopColor: 'rgba(16, 185, 129, 0.2)',
+    },
+    certAuditComplianceRowRestart: {
+        borderTopColor: 'rgba(148, 163, 184, 0.2)',
+    },
+    darkCertAuditComplianceRow: {
+        borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    certAuditLegalSub: {
+        color: '#78350F',
+        fontSize: 9.5,
+        fontWeight: '600',
+    },
+    darkCertAuditLegalSub: {
+        color: '#94A3B8',
+    },
+    logSectionHeaderRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    logCountBadge: {
+        backgroundColor: '#F1F5F9',
+        borderColor: '#CBD5E1',
+        borderRadius: 9999,
+        borderWidth: 1,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    darkLogCountBadge: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    logCountBadgeText: {
+        color: '#475569',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    darkLogCountBadgeText: {
+        color: '#94A3B8',
+    },
+    emptyLogCard: {
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 10,
+        borderWidth: 1,
+        padding: 16,
+    },
+    darkEmptyLogCard: {
+        backgroundColor: '#0F172A',
+        borderColor: '#334155',
+    },
+    emptyLogTitle: {
+        color: '#059669',
+        fontSize: 13,
+        fontWeight: '800',
+        marginBottom: 4,
+    },
+    darkEmptyLogTitle: {
+        color: '#34D399',
+    },
+    emptyLogSub: {
+        color: '#64748B',
+        fontSize: 11.5,
+        textAlign: 'center',
+    },
+    darkEmptyLogSub: {
+        color: '#94A3B8',
+    },
+    graphContainer: {
+        backgroundColor: '#F8FAFC',
+        borderColor: '#E2E8F0',
+        borderRadius: 12,
         borderWidth: 1,
         padding: 12,
     },
@@ -1935,34 +3666,69 @@ const styles = StyleSheet.create({
         backgroundColor: '#0F172A',
         borderColor: '#334155',
     },
+    graphLegendRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    legendItem: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
+    },
+    legendDot: {
+        borderRadius: 3,
+        height: 6,
+        width: 6,
+    },
+    legendText: {
+        color: '#64748B',
+        fontSize: 10.5,
+        fontWeight: '700',
+    },
+    darkLegendText: {
+        color: '#94A3B8',
+    },
     graphRow: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 10,
+        gap: 8,
         marginVertical: 4,
+    },
+    graphRowLabelGroup: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 4,
+        width: 38,
+    },
+    graphRowDot: {
+        borderRadius: 2.5,
+        height: 5,
+        width: 5,
     },
     graphRowHeader: {
         color: '#475569',
         fontSize: 10,
         fontWeight: '900',
-        width: 28,
     },
     darkGraphRowHeader: {
         color: '#94A3B8',
     },
     graphRowTrack: {
         backgroundColor: '#E2E8F0',
-        borderRadius: 4,
+        borderRadius: 6,
         flex: 1,
-        height: 14,
+        height: 16,
         overflow: 'hidden',
         position: 'relative',
     },
     darkGraphRowTrack: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#1E293B',
     },
     graphSegment: {
-        borderRadius: 2,
+        borderRadius: 4,
         height: '100%',
         position: 'absolute',
     },
@@ -1972,7 +3738,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 8,
-        paddingLeft: 38,
+        paddingLeft: 46,
         paddingTop: 4,
     },
     darkGraphTimeScale: {
