@@ -15,6 +15,7 @@ import {
     DvirWalkaroundPhotos,
 } from '../components/inspection';
 import type {
+    CraneEquipmentFilter,
     WalkaroundAngle,
     WalkaroundPhotosMap,
 } from '../components/inspection';
@@ -25,10 +26,17 @@ import type {
     DvirInspectionRecord,
     TechnicianInspectionCheck,
 } from '../types/index';
+import {
+    getDefaultInspectionChecks,
+    getEquipmentPresentation,
+    resolveDesignatedEquipmentType,
+} from '../utils/equipmentClassification';
 
 export interface DvirScreenProps {
     assetCode?: string;
     assetName?: string;
+    assetKind?: string;
+    equipmentType?: CraneEquipmentFilter;
     inspectorName?: string;
     activeJobReference?: string;
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
@@ -178,6 +186,8 @@ const INITIAL_HISTORY: DvirInspectionRecord[] = [
 export const DvirScreen: React.FC<DvirScreenProps> = ({
     assetCode = 'ALB-CRN-050',
     assetName = '50T Tadano All-Terrain Crane',
+    assetKind,
+    equipmentType,
     inspectorName = 'Alex Rivera (Certified Crane Operator)',
     activeJobReference = 'DISP-2026-0891',
     initialMode = 'pre_trip',
@@ -287,31 +297,22 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const [parkingBrakeSet, setParkingBrakeSet] = useState(true);
     const [outriggersStowed, setOutriggersStowed] = useState(true);
 
-    // Determine default crane equipment filter
-    const initialEquipmentFilter = useMemo(() => {
-        const combined = `${assetCode} ${assetName}`.toLowerCase();
+    // Resolve designated equipment type and presentation attributes
+    const designatedEquipment = useMemo(
+        () =>
+            resolveDesignatedEquipmentType({
+                assetCode,
+                assetName,
+                assetKind,
+                equipmentType,
+            }),
+        [assetCode, assetName, assetKind, equipmentType],
+    );
 
-        if (
-            combined.includes('tower') ||
-            combined.includes('twr') ||
-            combined.includes('potain') ||
-            combined.includes('wolff')
-        ) {
-            return 'tower_crane' as const;
-        }
-
-        if (
-            combined.includes('crane') ||
-            combined.includes('crn') ||
-            combined.includes('tadano') ||
-            combined.includes('all-terrain') ||
-            combined.includes('crawler')
-        ) {
-            return 'mobile_crane' as const;
-        }
-
-        return 'all' as const;
-    }, [assetCode, assetName]);
+    const presentation = useMemo(
+        () => getEquipmentPresentation(designatedEquipment),
+        [designatedEquipment],
+    );
 
     // Lookup selected defects details
     const selectedDefects = useMemo(() => {
@@ -363,9 +364,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     };
 
     const handleCompleteDvir = () => {
-        // Construct checks list with default items + selected defects
+        // Construct checks list with tailored default items for equipment + selected defects
+        const defaultChecks = getDefaultInspectionChecks(designatedEquipment);
         const checksList: TechnicianInspectionCheck[] = [
-            ...DEFAULT_CHECKS.map((chk) => ({ ...chk })),
+            ...defaultChecks.map((chk) => ({ ...chk })),
             ...selectedDefects.map((def) => {
                 const mappedCategory: TechnicianInspectionCheck['category'] =
                     def.categoryKey === 'tires_wheels'
@@ -483,23 +485,25 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         >
             {/* Header matching screenshot */}
             <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
-                <Pressable
-                    accessibilityLabel="Back or dismiss"
-                    accessibilityRole="button"
-                    onPress={() => {
-                        if (onBack) {
-                            onBack();
-                        }
-                    }}
-                    style={styles.closeHeaderBtn}
-                    testID="dvir-back-button"
-                >
-                    <Icon
-                        color={isDarkHud ? '#F8FAFC' : colors.text}
-                        name="close"
-                        size={22}
-                    />
-                </Pressable>
+                {onBack ? (
+                    <Pressable
+                        accessibilityLabel="Back or dismiss"
+                        accessibilityRole="button"
+                        onPress={() => {
+                            if (onBack) {
+                                onBack();
+                            }
+                        }}
+                        style={styles.closeHeaderBtn}
+                        testID="dvir-back-button"
+                    >
+                        <Icon
+                            color={isDarkHud ? '#F8FAFC' : colors.text}
+                            name="back"
+                            size={22}
+                        />
+                    </Pressable>
+                ) : null}
 
                 <View style={styles.headerCenter}>
                     <Text
@@ -519,7 +523,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         DVIR Inspection Engine
                     </Text>
                     {activeJobReference ? (
-                        <Text style={styles.jobRefSubtext}>
+                        <Text
+                            style={[
+                                styles.jobRefSubtext,
+                                isDarkHud && styles.darkJobRefSubtext,
+                            ]}
+                        >
                             Ref: {activeJobReference}
                         </Text>
                     ) : null}
@@ -535,18 +544,29 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     }}
                     style={[
                         styles.historyToggleBadge,
+                        isDarkHud && styles.darkHistoryToggleBadge,
                         mode === 'history' && styles.historyToggleBadgeActive,
+                        isDarkHud &&
+                            mode === 'history' &&
+                            styles.darkHistoryToggleBadgeActive,
                     ]}
                     testID="tab-history"
                 >
                     <Icon
-                        color={mode === 'history' ? '#FFFFFF' : '#38BDF8'}
+                        color={
+                            mode === 'history'
+                                ? '#FFFFFF'
+                                : isDarkHud
+                                  ? '#F59E0B'
+                                  : colors.amber
+                        }
                         name="file-text"
                         size={14}
                     />
                     <Text
                         style={[
                             styles.historyToggleText,
+                            isDarkHud && styles.darkHistoryToggleText,
                             mode === 'history' &&
                                 styles.historyToggleTextActive,
                         ]}
@@ -600,8 +620,14 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 >
                                     TODAY'S SHIFT INSPECTIONS
                                 </Text>
-                                <Text style={styles.timelineSectionBadge}>
-                                    {todayRecords.length} Today
+                                <Text
+                                    style={[
+                                        styles.timelineSectionCount,
+                                        isDarkHud &&
+                                            styles.darkTimelineSectionCount,
+                                    ]}
+                                >
+                                    {todayRecords.length}
                                 </Text>
                             </View>
                             {todayRecords.length > 0 ? (
@@ -615,8 +641,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     styles.darkHistoryCard,
                                                 item.criticalDefectsCount > 0 ||
                                                 item.hasDefects
-                                                    ? styles.historyCardDefect
-                                                    : styles.historyCardClean,
+                                                    ? isDarkHud
+                                                        ? styles.darkHistoryCardDefect
+                                                        : styles.historyCardDefect
+                                                    : isDarkHud
+                                                      ? styles.darkHistoryCardClean
+                                                      : styles.historyCardClean,
                                             ]}
                                             testID={`history-card-${item.id}`}
                                         >
@@ -629,13 +659,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     }
                                                 >
                                                     <Text
-                                                        style={
-                                                            styles.historyTypeBadge
-                                                        }
+                                                        style={[
+                                                            styles.historyTypeBadge,
+                                                            isDarkHud &&
+                                                                styles.darkHistoryTypeBadge,
+                                                        ]}
                                                     >
                                                         {item.type ===
                                                         'pre_trip'
-                                                            ? 'PRE-TRIP GAUNTLET'
+                                                            ? 'PRE-TRIP INSPECTION'
                                                             : 'POST-TRIP CHECK'}
                                                     </Text>
                                                     <Text
@@ -649,24 +681,33 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     </Text>
                                                 </View>
                                                 <View
-                                                    style={[
-                                                        styles.statusPill,
-                                                        item.hasDefects
-                                                            ? styles.statusPillDefect
-                                                            : styles.statusPillClean,
-                                                    ]}
+                                                    style={
+                                                        styles.statusIndicator
+                                                    }
                                                 >
+                                                    <View
+                                                        style={[
+                                                            styles.statusDot,
+                                                            item.hasDefects
+                                                                ? styles.statusDotDefect
+                                                                : styles.statusDotClean,
+                                                        ]}
+                                                    />
                                                     <Text
                                                         style={[
-                                                            styles.statusPillText,
+                                                            styles.statusText,
                                                             item.hasDefects
-                                                                ? styles.statusTextDefect
-                                                                : styles.statusTextClean,
+                                                                ? isDarkHud
+                                                                    ? styles.darkStatusTextDefect
+                                                                    : styles.statusTextDefect
+                                                                : isDarkHud
+                                                                  ? styles.darkStatusTextClean
+                                                                  : styles.statusTextClean,
                                                         ]}
                                                     >
                                                         {item.hasDefects
                                                             ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
-                                                            : '✓ Clean Pass'}
+                                                            : 'Clean Pass'}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -681,10 +722,22 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                 {item.assetCode} ·{' '}
                                                 {item.assetName}
                                             </Text>
-                                            <Text style={styles.historyMeta}>
+                                            <Text
+                                                style={[
+                                                    styles.historyMeta,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryMeta,
+                                                ]}
+                                            >
                                                 Inspector: {item.inspectorName}
                                             </Text>
-                                            <Text style={styles.historyMeta}>
+                                            <Text
+                                                style={[
+                                                    styles.historyMeta,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryMeta,
+                                                ]}
+                                            >
                                                 Logged:{' '}
                                                 {new Date(
                                                     item.completedAt,
@@ -692,9 +745,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                             </Text>
                                             {item.remarks ? (
                                                 <Text
-                                                    style={
-                                                        styles.historyRemarks
-                                                    }
+                                                    style={[
+                                                        styles.historyRemarks,
+                                                        isDarkHud &&
+                                                            styles.darkHistoryRemarks,
+                                                    ]}
                                                 >
                                                     "{item.remarks}"
                                                 </Text>
@@ -703,8 +758,14 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     ))}
                                 </View>
                             ) : (
-                                <View style={styles.emptyTimelineCard}>
-                                    <Text style={styles.emptyTimelineText}>
+                                <View style={styles.emptyTimelineContainer}>
+                                    <Text
+                                        style={[
+                                            styles.emptyTimelineText,
+                                            isDarkHud &&
+                                                styles.darkEmptyTimelineText,
+                                        ]}
+                                    >
                                         No inspections logged today yet. Use
                                         Pre-Trip or Post-Trip above.
                                     </Text>
@@ -723,8 +784,14 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 >
                                     PAST 7 DAYS (SAFETY COMPLIANCE)
                                 </Text>
-                                <Text style={styles.timelineSectionBadge}>
-                                    {past7DaysRecords.length} Records
+                                <Text
+                                    style={[
+                                        styles.timelineSectionCount,
+                                        isDarkHud &&
+                                            styles.darkTimelineSectionCount,
+                                    ]}
+                                >
+                                    {past7DaysRecords.length}
                                 </Text>
                             </View>
                             {past7DaysRecords.length > 0 ? (
@@ -738,8 +805,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     styles.darkHistoryCard,
                                                 item.criticalDefectsCount > 0 ||
                                                 item.hasDefects
-                                                    ? styles.historyCardDefect
-                                                    : styles.historyCardClean,
+                                                    ? isDarkHud
+                                                        ? styles.darkHistoryCardDefect
+                                                        : styles.historyCardDefect
+                                                    : isDarkHud
+                                                      ? styles.darkHistoryCardClean
+                                                      : styles.historyCardClean,
                                             ]}
                                             testID={`history-card-${item.id}`}
                                         >
@@ -752,13 +823,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     }
                                                 >
                                                     <Text
-                                                        style={
-                                                            styles.historyTypeBadge
-                                                        }
+                                                        style={[
+                                                            styles.historyTypeBadge,
+                                                            isDarkHud &&
+                                                                styles.darkHistoryTypeBadge,
+                                                        ]}
                                                     >
                                                         {item.type ===
                                                         'pre_trip'
-                                                            ? 'PRE-TRIP GAUNTLET'
+                                                            ? 'PRE-TRIP INSPECTION'
                                                             : 'POST-TRIP CHECK'}
                                                     </Text>
                                                     <Text
@@ -772,24 +845,33 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     </Text>
                                                 </View>
                                                 <View
-                                                    style={[
-                                                        styles.statusPill,
-                                                        item.hasDefects
-                                                            ? styles.statusPillDefect
-                                                            : styles.statusPillClean,
-                                                    ]}
+                                                    style={
+                                                        styles.statusIndicator
+                                                    }
                                                 >
+                                                    <View
+                                                        style={[
+                                                            styles.statusDot,
+                                                            item.hasDefects
+                                                                ? styles.statusDotDefect
+                                                                : styles.statusDotClean,
+                                                        ]}
+                                                    />
                                                     <Text
                                                         style={[
-                                                            styles.statusPillText,
+                                                            styles.statusText,
                                                             item.hasDefects
-                                                                ? styles.statusTextDefect
-                                                                : styles.statusTextClean,
+                                                                ? isDarkHud
+                                                                    ? styles.darkStatusTextDefect
+                                                                    : styles.statusTextDefect
+                                                                : isDarkHud
+                                                                  ? styles.darkStatusTextClean
+                                                                  : styles.statusTextClean,
                                                         ]}
                                                     >
                                                         {item.hasDefects
                                                             ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
-                                                            : '✓ Clean Pass'}
+                                                            : 'Clean Pass'}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -804,10 +886,22 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                 {item.assetCode} ·{' '}
                                                 {item.assetName}
                                             </Text>
-                                            <Text style={styles.historyMeta}>
+                                            <Text
+                                                style={[
+                                                    styles.historyMeta,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryMeta,
+                                                ]}
+                                            >
                                                 Inspector: {item.inspectorName}
                                             </Text>
-                                            <Text style={styles.historyMeta}>
+                                            <Text
+                                                style={[
+                                                    styles.historyMeta,
+                                                    isDarkHud &&
+                                                        styles.darkHistoryMeta,
+                                                ]}
+                                            >
                                                 Logged:{' '}
                                                 {new Date(
                                                     item.completedAt,
@@ -815,9 +909,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                             </Text>
                                             {item.remarks ? (
                                                 <Text
-                                                    style={
-                                                        styles.historyRemarks
-                                                    }
+                                                    style={[
+                                                        styles.historyRemarks,
+                                                        isDarkHud &&
+                                                            styles.darkHistoryRemarks,
+                                                    ]}
                                                 >
                                                     "{item.remarks}"
                                                 </Text>
@@ -826,8 +922,14 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     ))}
                                 </View>
                             ) : (
-                                <View style={styles.emptyTimelineCard}>
-                                    <Text style={styles.emptyTimelineText}>
+                                <View style={styles.emptyTimelineContainer}>
+                                    <Text
+                                        style={[
+                                            styles.emptyTimelineText,
+                                            isDarkHud &&
+                                                styles.darkEmptyTimelineText,
+                                        ]}
+                                    >
                                         No prior inspections recorded within the
                                         past 7 days.
                                     </Text>
@@ -847,7 +949,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     style={styles.archiveToggleBtn}
                                     testID="toggle-older-archive"
                                 >
-                                    <Text style={styles.archiveToggleText}>
+                                    <Text
+                                        style={[
+                                            styles.archiveToggleText,
+                                            isDarkHud &&
+                                                styles.darkArchiveToggleText,
+                                        ]}
+                                    >
                                         {showOlderArchive
                                             ? `▼ Hide 30-Day Archive (${olderRecords.length} Records)`
                                             : `▶ Load 30-Day Archive (${olderRecords.length} Older Records)`}
@@ -869,8 +977,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                         styles.darkHistoryCard,
                                                     item.criticalDefectsCount >
                                                         0 || item.hasDefects
-                                                        ? styles.historyCardDefect
-                                                        : styles.historyCardClean,
+                                                        ? isDarkHud
+                                                            ? styles.darkHistoryCardDefect
+                                                            : styles.historyCardDefect
+                                                        : isDarkHud
+                                                          ? styles.darkHistoryCardClean
+                                                          : styles.historyCardClean,
                                                 ]}
                                                 testID={`history-card-${item.id}`}
                                             >
@@ -885,13 +997,15 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                         }
                                                     >
                                                         <Text
-                                                            style={
-                                                                styles.historyTypeBadge
-                                                            }
+                                                            style={[
+                                                                styles.historyTypeBadge,
+                                                                isDarkHud &&
+                                                                    styles.darkHistoryTypeBadge,
+                                                            ]}
                                                         >
                                                             {item.type ===
                                                             'pre_trip'
-                                                                ? 'PRE-TRIP GAUNTLET'
+                                                                ? 'PRE-TRIP INSPECTION'
                                                                 : 'POST-TRIP CHECK'}
                                                         </Text>
                                                         <Text
@@ -905,24 +1019,33 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                         </Text>
                                                     </View>
                                                     <View
-                                                        style={[
-                                                            styles.statusPill,
-                                                            item.hasDefects
-                                                                ? styles.statusPillDefect
-                                                                : styles.statusPillClean,
-                                                        ]}
+                                                        style={
+                                                            styles.statusIndicator
+                                                        }
                                                     >
+                                                        <View
+                                                            style={[
+                                                                styles.statusDot,
+                                                                item.hasDefects
+                                                                    ? styles.statusDotDefect
+                                                                    : styles.statusDotClean,
+                                                            ]}
+                                                        />
                                                         <Text
                                                             style={[
-                                                                styles.statusPillText,
+                                                                styles.statusText,
                                                                 item.hasDefects
-                                                                    ? styles.statusTextDefect
-                                                                    : styles.statusTextClean,
+                                                                    ? isDarkHud
+                                                                        ? styles.darkStatusTextDefect
+                                                                        : styles.statusTextDefect
+                                                                    : isDarkHud
+                                                                      ? styles.darkStatusTextClean
+                                                                      : styles.statusTextClean,
                                                             ]}
                                                         >
                                                             {item.hasDefects
                                                                 ? `${item.criticalDefectsCount > 0 ? item.criticalDefectsCount : 'Defects'} Logged`
-                                                                : '✓ Clean Pass'}
+                                                                : 'Clean Pass'}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -938,13 +1061,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                     {item.assetName}
                                                 </Text>
                                                 <Text
-                                                    style={styles.historyMeta}
+                                                    style={[
+                                                        styles.historyMeta,
+                                                        isDarkHud &&
+                                                            styles.darkHistoryMeta,
+                                                    ]}
                                                 >
                                                     Inspector:{' '}
                                                     {item.inspectorName}
                                                 </Text>
                                                 <Text
-                                                    style={styles.historyMeta}
+                                                    style={[
+                                                        styles.historyMeta,
+                                                        isDarkHud &&
+                                                            styles.darkHistoryMeta,
+                                                    ]}
                                                 >
                                                     Logged:{' '}
                                                     {new Date(
@@ -953,9 +1084,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                 </Text>
                                                 {item.remarks ? (
                                                     <Text
-                                                        style={
-                                                            styles.historyRemarks
-                                                        }
+                                                        style={[
+                                                            styles.historyRemarks,
+                                                            isDarkHud &&
+                                                                styles.darkHistoryRemarks,
+                                                        ]}
                                                     >
                                                         "{item.remarks}"
                                                     </Text>
@@ -972,7 +1105,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     <View style={styles.formContainer}>
                         {/* Section 1: Choose inspection type (Required) */}
                         <View style={styles.formSection}>
-                            <Text style={styles.formSectionTitle}>
+                            <Text
+                                style={[
+                                    styles.formSectionTitle,
+                                    isDarkHud && styles.darkFormSectionTitle,
+                                ]}
+                            >
                                 Choose inspection type
                             </Text>
                             <Text style={styles.requiredBadge}>Required</Text>
@@ -990,16 +1128,25 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     }}
                                     style={[
                                         styles.toggleCard,
+                                        isDarkHud && styles.darkToggleCard,
                                         mode === 'pre_trip' &&
                                             styles.toggleCardActive,
+                                        isDarkHud &&
+                                            mode === 'pre_trip' &&
+                                            styles.darkToggleCardActive,
                                     ]}
                                     testID="tab-pre-trip"
                                 >
                                     <Text
                                         style={[
                                             styles.toggleCardText,
+                                            isDarkHud &&
+                                                styles.darkToggleCardText,
                                             mode === 'pre_trip' &&
                                                 styles.toggleCardTextActive,
+                                            isDarkHud &&
+                                                mode === 'pre_trip' &&
+                                                styles.darkToggleCardTextActive,
                                         ]}
                                     >
                                         1. Pre-Trip
@@ -1018,16 +1165,25 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     }}
                                     style={[
                                         styles.toggleCard,
+                                        isDarkHud && styles.darkToggleCard,
                                         mode === 'post_trip' &&
                                             styles.toggleCardActive,
+                                        isDarkHud &&
+                                            mode === 'post_trip' &&
+                                            styles.darkToggleCardActive,
                                     ]}
                                     testID="tab-post-trip"
                                 >
                                     <Text
                                         style={[
                                             styles.toggleCardText,
+                                            isDarkHud &&
+                                                styles.darkToggleCardText,
                                             mode === 'post_trip' &&
                                                 styles.toggleCardTextActive,
+                                            isDarkHud &&
+                                                mode === 'post_trip' &&
+                                                styles.darkToggleCardTextActive,
                                         ]}
                                     >
                                         2. Post-Trip
@@ -1044,24 +1200,41 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                             title="Take walkaround photos"
                         />
 
-                        {/* Section 3: Add new vehicle defects */}
+                        {/* Section 3: Add new defects tailored to designated equipment */}
                         <View style={styles.formSection}>
-                            <Text style={styles.formSectionTitle}>
-                                Add new vehicle defects
+                            <Text
+                                style={[
+                                    styles.formSectionTitle,
+                                    isDarkHud && styles.darkFormSectionTitle,
+                                ]}
+                                testID="dvir-defects-section-title"
+                            >
+                                {presentation.defectsSectionTitle.replace(
+                                    'Add ',
+                                    'Add new ',
+                                )}
                             </Text>
-                            <Text style={styles.helperNotice}>
-                                Any vehicle attributes not displayed are
-                                certified safe by the driver
+                            <Text
+                                style={[
+                                    styles.helperNotice,
+                                    isDarkHud && styles.darkHelperNotice,
+                                ]}
+                            >
+                                {presentation.safetyDisclaimer}
                             </Text>
 
                             <Pressable
-                                accessibilityLabel="Add vehicle defects"
+                                accessibilityLabel={`Add ${presentation.shortLabel.toLowerCase()} defects`}
                                 accessibilityRole="button"
                                 onPress={() => setIsDefectsModalOpen(true)}
                                 style={({ pressed }) => [
                                     styles.addDefectsBtn,
+                                    isDarkHud && styles.darkAddDefectsBtn,
                                     selectedDefectIds.length > 0 &&
                                         styles.addDefectsBtnActive,
+                                    isDarkHud &&
+                                        selectedDefectIds.length > 0 &&
+                                        styles.darkAddDefectsBtnActive,
                                     pressed && styles.pressed,
                                 ]}
                                 testID="add-defects-button"
@@ -1069,8 +1242,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                 <Text
                                     style={[
                                         styles.addDefectsBtnText,
+                                        isDarkHud &&
+                                            styles.darkAddDefectsBtnText,
                                         selectedDefectIds.length > 0 &&
                                             styles.addDefectsBtnTextActive,
+                                        isDarkHud &&
+                                            selectedDefectIds.length > 0 &&
+                                            styles.darkAddDefectsBtnTextActive,
                                     ]}
                                 >
                                     {selectedDefectIds.length > 0
@@ -1088,13 +1266,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                             style={[
                                                 styles.defectChip,
                                                 defect.critical
-                                                    ? styles.defectChipCritical
-                                                    : styles.defectChipNormal,
+                                                    ? isDarkHud
+                                                        ? styles.darkDefectChipCritical
+                                                        : styles.defectChipCritical
+                                                    : isDarkHud
+                                                      ? styles.darkDefectChipNormal
+                                                      : styles.defectChipNormal,
                                             ]}
                                         >
                                             <Text
                                                 numberOfLines={1}
-                                                style={styles.defectChipText}
+                                                style={[
+                                                    styles.defectChipText,
+                                                    isDarkHud &&
+                                                        styles.darkDefectChipText,
+                                                ]}
                                             >
                                                 {defect.label}
                                             </Text>
@@ -1110,7 +1296,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                                 style={styles.removeChipBtn}
                                             >
                                                 <Icon
-                                                    color="#FFFFFF"
+                                                    color={
+                                                        isDarkHud
+                                                            ? '#FFFFFF'
+                                                            : defect.critical
+                                                              ? '#991B1B'
+                                                              : colors.amberDark
+                                                    }
                                                     name="close"
                                                     size={12}
                                                 />
@@ -1123,7 +1315,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
                         {/* Section 4: Choose safety status (Required) */}
                         <View style={styles.formSection}>
-                            <Text style={styles.formSectionTitle}>
+                            <Text
+                                style={[
+                                    styles.formSectionTitle,
+                                    isDarkHud && styles.darkFormSectionTitle,
+                                ]}
+                            >
                                 Choose safety status
                             </Text>
                             <Text style={styles.requiredBadge}>Required</Text>
@@ -1141,19 +1338,28 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     }}
                                     style={[
                                         styles.toggleCard,
+                                        isDarkHud && styles.darkToggleCard,
                                         safetyStatus === 'safe' &&
                                             styles.toggleCardActive,
+                                        isDarkHud &&
+                                            safetyStatus === 'safe' &&
+                                            styles.darkToggleCardActive,
                                     ]}
                                     testID="safety-status-safe"
                                 >
                                     <Text
                                         style={[
                                             styles.toggleCardText,
+                                            isDarkHud &&
+                                                styles.darkToggleCardText,
                                             safetyStatus === 'safe' &&
                                                 styles.toggleCardTextActive,
+                                            isDarkHud &&
+                                                safetyStatus === 'safe' &&
+                                                styles.darkToggleCardTextActive,
                                         ]}
                                     >
-                                        Safe to drive
+                                        {presentation.safetySafeLabel}
                                     </Text>
                                 </Pressable>
 
@@ -1169,16 +1375,25 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     }}
                                     style={[
                                         styles.toggleCard,
+                                        isDarkHud && styles.darkToggleCard,
                                         safetyStatus === 'unsafe' &&
                                             styles.toggleCardUnsafeActive,
+                                        isDarkHud &&
+                                            safetyStatus === 'unsafe' &&
+                                            styles.darkToggleCardUnsafeActive,
                                     ]}
                                     testID="safety-status-unsafe"
                                 >
                                     <Text
                                         style={[
                                             styles.toggleCardText,
+                                            isDarkHud &&
+                                                styles.darkToggleCardText,
                                             safetyStatus === 'unsafe' &&
                                                 styles.toggleCardUnsafeTextActive,
+                                            isDarkHud &&
+                                                safetyStatus === 'unsafe' &&
+                                                styles.darkToggleCardUnsafeTextActive,
                                         ]}
                                     >
                                         Unsafe
@@ -1190,15 +1405,33 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         {/* Critical Dispatch Lockout Warning if Unsafe */}
                         {isUnsafe ? (
                             <View
-                                style={styles.lockoutBanner}
+                                style={[
+                                    styles.lockoutBanner,
+                                    isDarkHud && styles.darkLockoutBanner,
+                                ]}
                                 testID="dvir-lockout-banner"
                             >
-                                <Icon color="#EF4444" name="alert" size={20} />
+                                <Icon
+                                    color={isDarkHud ? '#EF4444' : '#DC2626'}
+                                    name="alert"
+                                    size={20}
+                                />
                                 <View style={styles.lockoutCopy}>
-                                    <Text style={styles.lockoutTitle}>
+                                    <Text
+                                        style={[
+                                            styles.lockoutTitle,
+                                            isDarkHud &&
+                                                styles.darkLockoutTitle,
+                                        ]}
+                                    >
                                         DISPATCH LOCKOUT ACTIVE
                                     </Text>
-                                    <Text style={styles.lockoutText}>
+                                    <Text
+                                        style={[
+                                            styles.lockoutText,
+                                            isDarkHud && styles.darkLockoutText,
+                                        ]}
+                                    >
                                         Vehicle marked unsafe or contains
                                         critical defects. Machine is locked from
                                         dispatch until verified by a certified
@@ -1209,13 +1442,28 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         ) : null}
 
                         {/* Inline Meters Input Row (Preserving Test Compatibility) */}
-                        <View style={styles.telemetryCard}>
-                            <Text style={styles.telemetryHeading}>
+                        <View
+                            style={[
+                                styles.telemetryCard,
+                                isDarkHud && styles.darkTelemetryCard,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.telemetryHeading,
+                                    isDarkHud && styles.darkTelemetryHeading,
+                                ]}
+                            >
                                 METERS & BASELINE READINGS
                             </Text>
                             <View style={styles.inputsRow}>
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>
+                                    <Text
+                                        style={[
+                                            styles.inputLabel,
+                                            isDarkHud && styles.darkInputLabel,
+                                        ]}
+                                    >
                                         Odometer (km)
                                     </Text>
                                     <TextInput
@@ -1224,13 +1472,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                             setOdometerKm(val);
                                             setIsSaved(false);
                                         }}
-                                        style={styles.textInput}
+                                        style={[
+                                            styles.textInput,
+                                            isDarkHud && styles.darkTextInput,
+                                        ]}
                                         testID="input-odometer"
                                         value={odometerKm}
                                     />
                                 </View>
                                 <View style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>
+                                    <Text
+                                        style={[
+                                            styles.inputLabel,
+                                            isDarkHud && styles.darkInputLabel,
+                                        ]}
+                                    >
                                         Engine Hours (hrs)
                                     </Text>
                                     <TextInput
@@ -1239,7 +1495,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                             setEngineHours(val);
                                             setIsSaved(false);
                                         }}
-                                        style={styles.textInput}
+                                        style={[
+                                            styles.textInput,
+                                            isDarkHud && styles.darkTextInput,
+                                        ]}
                                         testID="input-engine-hours"
                                         value={engineHours}
                                     />
@@ -1249,8 +1508,19 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
                         {/* Post-Trip Specific: Parked & Secured Verification */}
                         {mode === 'post_trip' ? (
-                            <View style={styles.postTripSecureCard}>
-                                <Text style={styles.telemetryHeading}>
+                            <View
+                                style={[
+                                    styles.postTripSecureCard,
+                                    isDarkHud && styles.darkPostTripSecureCard,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.telemetryHeading,
+                                        isDarkHud &&
+                                            styles.darkTelemetryHeading,
+                                    ]}
+                                >
                                     PARKED & SECURED SHUTDOWN CHECKLIST
                                 </Text>
 
@@ -1259,14 +1529,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     onPress={() =>
                                         setParkingBrakeSet(!parkingBrakeSet)
                                     }
-                                    style={styles.secureCheckItem}
+                                    style={[
+                                        styles.secureCheckItem,
+                                        isDarkHud && styles.darkSecureCheckItem,
+                                    ]}
                                     testID="check-parking-brake"
                                 >
                                     <Icon
                                         color={
                                             parkingBrakeSet
-                                                ? '#10B981'
-                                                : '#94A3B8'
+                                                ? isDarkHud
+                                                    ? '#10B981'
+                                                    : colors.green
+                                                : isDarkHud
+                                                  ? '#64748B'
+                                                  : '#CBD5E1'
                                         }
                                         name={
                                             parkingBrakeSet
@@ -1275,7 +1552,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                         }
                                         size={18}
                                     />
-                                    <Text style={styles.secureCheckLabel}>
+                                    <Text
+                                        style={[
+                                            styles.secureCheckLabel,
+                                            isDarkHud &&
+                                                styles.darkSecureCheckLabel,
+                                        ]}
+                                    >
                                         Air brake & spring emergency brake fully
                                         engaged
                                     </Text>
@@ -1286,14 +1569,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     onPress={() =>
                                         setChocksDeployed(!chocksDeployed)
                                     }
-                                    style={styles.secureCheckItem}
+                                    style={[
+                                        styles.secureCheckItem,
+                                        isDarkHud && styles.darkSecureCheckItem,
+                                    ]}
                                     testID="check-wheel-chocks"
                                 >
                                     <Icon
                                         color={
                                             chocksDeployed
-                                                ? '#10B981'
-                                                : '#94A3B8'
+                                                ? isDarkHud
+                                                    ? '#10B981'
+                                                    : colors.green
+                                                : isDarkHud
+                                                  ? '#64748B'
+                                                  : '#CBD5E1'
                                         }
                                         name={
                                             chocksDeployed
@@ -1302,7 +1592,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                         }
                                         size={18}
                                     />
-                                    <Text style={styles.secureCheckLabel}>
+                                    <Text
+                                        style={[
+                                            styles.secureCheckLabel,
+                                            isDarkHud &&
+                                                styles.darkSecureCheckLabel,
+                                        ]}
+                                    >
                                         Heavy wheel chocks firmly deployed on
                                         drive axles
                                     </Text>
@@ -1313,14 +1609,21 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                     onPress={() =>
                                         setOutriggersStowed(!outriggersStowed)
                                     }
-                                    style={styles.secureCheckItem}
+                                    style={[
+                                        styles.secureCheckItem,
+                                        isDarkHud && styles.darkSecureCheckItem,
+                                    ]}
                                     testID="check-outriggers-stowed"
                                 >
                                     <Icon
                                         color={
                                             outriggersStowed
-                                                ? '#10B981'
-                                                : '#94A3B8'
+                                                ? isDarkHud
+                                                    ? '#10B981'
+                                                    : colors.green
+                                                : isDarkHud
+                                                  ? '#64748B'
+                                                  : '#CBD5E1'
                                         }
                                         name={
                                             outriggersStowed
@@ -1329,7 +1632,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                         }
                                         size={18}
                                     />
-                                    <Text style={styles.secureCheckLabel}>
+                                    <Text
+                                        style={[
+                                            styles.secureCheckLabel,
+                                            isDarkHud &&
+                                                styles.darkSecureCheckLabel,
+                                        ]}
+                                    >
                                         Outrigger beams & hydraulic jacks
                                         retracted & locked
                                     </Text>
@@ -1338,8 +1647,18 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         ) : null}
 
                         {/* Inspector Remarks */}
-                        <View style={styles.telemetryCard}>
-                            <Text style={styles.telemetryHeading}>
+                        <View
+                            style={[
+                                styles.telemetryCard,
+                                isDarkHud && styles.darkTelemetryCard,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.telemetryHeading,
+                                    isDarkHud && styles.darkTelemetryHeading,
+                                ]}
+                            >
                                 INSPECTOR SIGN-OFF REMARKS
                             </Text>
                             <TextInput
@@ -1354,8 +1673,13 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                         ? 'Note walkaround observation, fluid levels, tire status...'
                                         : 'Note post-operation condition, site clearance...'
                                 }
-                                placeholderTextColor="#64748B"
-                                style={styles.remarksInput}
+                                placeholderTextColor={
+                                    isDarkHud ? '#64748B' : colors.muted
+                                }
+                                style={[
+                                    styles.remarksInput,
+                                    isDarkHud && styles.darkRemarksInput,
+                                ]}
                                 testID="dvir-remarks-input"
                                 value={remarks}
                             />
@@ -1378,11 +1702,17 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                         onPress={handleNextOrSubmit}
                         style={({ pressed }) => [
                             styles.nextButton,
+                            isDarkHud && styles.darkNextButton,
                             pressed && styles.pressed,
                         ]}
                         testID="complete-dvir-button"
                     >
-                        <Text style={styles.nextButtonText}>
+                        <Text
+                            style={[
+                                styles.nextButtonText,
+                                isDarkHud && styles.darkNextButtonText,
+                            ]}
+                        >
                             {isSaved ? '✓ DVIR Certified & Synced' : 'Next'}
                         </Text>
                     </Pressable>
@@ -1391,7 +1721,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
             {/* Defects Modal (Screenshot 3) */}
             <DvirDefectsModal
-                initialEquipmentFilter={initialEquipmentFilter}
+                assetCode={assetCode}
+                assetKind={assetKind}
+                assetName={assetName}
+                designatedEquipment={designatedEquipment}
+                initialEquipmentFilter={designatedEquipment}
                 onApplyDefects={handleApplyDefects}
                 onClose={() => setIsDefectsModalOpen(false)}
                 selectedDefectIds={selectedDefectIds}
@@ -1403,7 +1737,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
 const styles = StyleSheet.create({
     screenRoot: {
-        backgroundColor: '#090E1A', // Deep navy black
+        backgroundColor: colors.background,
         flex: 1,
     },
     darkScreenRoot: {
@@ -1411,8 +1745,8 @@ const styles = StyleSheet.create({
     },
     headerBar: {
         alignItems: 'center',
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
         flexDirection: 'row',
         gap: 12,
@@ -1433,7 +1767,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     screenTitle: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 17,
         fontWeight: '800',
     },
@@ -1441,7 +1775,7 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     headerSubtitle: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 11,
         marginTop: 1,
     },
@@ -1449,14 +1783,17 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     jobRefSubtext: {
-        color: '#64748B',
+        color: colors.muted,
         fontSize: 10,
         fontWeight: '500',
     },
+    darkJobRefSubtext: {
+        color: '#64748B',
+    },
     historyToggleBadge: {
         alignItems: 'center',
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: '#F8FAFC',
+        borderColor: colors.border,
         borderRadius: 8,
         borderWidth: 1,
         flexDirection: 'row',
@@ -1464,14 +1801,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
+    darkHistoryToggleBadge: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
     historyToggleBadgeActive: {
-        backgroundColor: '#0284C7',
-        borderColor: '#38BDF8',
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
+    },
+    darkHistoryToggleBadgeActive: {
+        backgroundColor: '#B45309',
+        borderColor: '#F59E0B',
     },
     historyToggleText: {
-        color: '#38BDF8',
+        color: colors.amberDark,
         fontSize: 12,
         fontWeight: '700',
+    },
+    darkHistoryToggleText: {
+        color: '#F59E0B',
     },
     historyToggleTextActive: {
         color: '#FFFFFF',
@@ -1490,10 +1838,13 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     formSectionTitle: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 17,
         fontWeight: '800',
         letterSpacing: 0.1,
+    },
+    darkFormSectionTitle: {
+        color: '#FFFFFF',
     },
     requiredBadge: {
         color: '#EF4444',
@@ -1503,11 +1854,14 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     helperNotice: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 13,
         lineHeight: 18,
         marginBottom: 12,
         marginTop: 2,
+    },
+    darkHelperNotice: {
+        color: '#94A3B8',
     },
     toggleRow: {
         flexDirection: 'row',
@@ -1515,8 +1869,8 @@ const styles = StyleSheet.create({
     },
     toggleCard: {
         alignItems: 'center',
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 10,
         borderWidth: 1.5,
         flex: 1,
@@ -1524,33 +1878,58 @@ const styles = StyleSheet.create({
         minHeight: 52,
         paddingHorizontal: 12,
     },
+    darkToggleCard: {
+        backgroundColor: '#101A2E',
+        borderColor: '#1E3254',
+    },
     toggleCardActive: {
-        backgroundColor: '#172554',
-        borderColor: '#2563EB',
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amber,
+        borderWidth: 2,
+    },
+    darkToggleCardActive: {
+        backgroundColor: '#451A03',
+        borderColor: '#F59E0B',
         borderWidth: 2,
     },
     toggleCardUnsafeActive: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#DC2626',
+        borderWidth: 2,
+    },
+    darkToggleCardUnsafeActive: {
         backgroundColor: '#450A0A',
         borderColor: '#DC2626',
         borderWidth: 2,
     },
     toggleCardText: {
-        color: '#CBD5E1',
+        color: colors.text,
         fontSize: 15,
         fontWeight: '700',
     },
+    darkToggleCardText: {
+        color: '#CBD5E1',
+    },
     toggleCardTextActive: {
-        color: '#60A5FA',
+        color: colors.amberDark,
+        fontWeight: '800',
+    },
+    darkToggleCardTextActive: {
+        color: '#FDE68A',
         fontWeight: '800',
     },
     toggleCardUnsafeTextActive: {
+        color: '#B91C1C',
+        fontWeight: '800',
+    },
+    darkToggleCardUnsafeTextActive: {
         color: '#F87171',
         fontWeight: '800',
     },
     addDefectsBtn: {
         alignItems: 'center',
-        backgroundColor: 'transparent',
-        borderColor: '#2563EB',
+        backgroundColor: colors.surface,
+        borderColor: colors.amber,
         borderRadius: 8,
         borderWidth: 1.5,
         justifyContent: 'center',
@@ -1558,17 +1937,31 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         width: '100%',
     },
+    darkAddDefectsBtn: {
+        backgroundColor: 'transparent',
+        borderColor: '#F59E0B',
+    },
     addDefectsBtnActive: {
-        backgroundColor: '#1E293B',
-        borderColor: '#38BDF8',
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amber,
+    },
+    darkAddDefectsBtnActive: {
+        backgroundColor: '#451A03',
+        borderColor: '#F59E0B',
     },
     addDefectsBtnText: {
-        color: '#38BDF8',
+        color: colors.amber,
         fontSize: 15,
         fontWeight: '800',
     },
+    darkAddDefectsBtnText: {
+        color: '#F59E0B',
+    },
     addDefectsBtnTextActive: {
-        color: '#38BDF8',
+        color: colors.amberDark,
+    },
+    darkAddDefectsBtnTextActive: {
+        color: '#FDE68A',
     },
     defectChipsContainer: {
         flexDirection: 'row',
@@ -1585,61 +1978,91 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     defectChipNormal: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+        borderWidth: 1,
+    },
+    darkDefectChipNormal: {
+        backgroundColor: '#2A1805',
+        borderColor: '#78350F',
         borderWidth: 1,
     },
     defectChipCritical: {
+        backgroundColor: '#FEE2E2',
+        borderColor: '#FECACA',
+        borderWidth: 1,
+    },
+    darkDefectChipCritical: {
         backgroundColor: '#7F1D1D',
         borderColor: '#DC2626',
         borderWidth: 1,
     },
     defectChipText: {
-        color: '#F8FAFC',
+        color: colors.text,
         fontSize: 12,
         fontWeight: '700',
+    },
+    darkDefectChipText: {
+        color: '#F8FAFC',
     },
     removeChipBtn: {
         padding: 2,
     },
     lockoutBanner: {
         alignItems: 'center',
-        backgroundColor: '#450A0A',
-        borderColor: '#DC2626',
+        backgroundColor: '#FEF2F2',
+        borderColor: '#EF4444',
         borderRadius: 12,
         borderWidth: 1.5,
         flexDirection: 'row',
         gap: 12,
         padding: 14,
     },
+    darkLockoutBanner: {
+        backgroundColor: '#450A0A',
+        borderColor: '#DC2626',
+    },
     lockoutCopy: {
         flex: 1,
     },
     lockoutTitle: {
-        color: '#FCA5A5',
+        color: '#991B1B',
         fontSize: 13,
         fontWeight: '900',
         letterSpacing: 0.3,
     },
+    darkLockoutTitle: {
+        color: '#FCA5A5',
+    },
     lockoutText: {
-        color: '#FECACA',
+        color: '#B91C1C',
         fontSize: 12,
         lineHeight: 16,
         marginTop: 2,
     },
+    darkLockoutText: {
+        color: '#FECACA',
+    },
     telemetryCard: {
-        backgroundColor: '#0F1A2E',
-        borderColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
         padding: 14,
     },
+    darkTelemetryCard: {
+        backgroundColor: '#0F1A2E',
+        borderColor: '#1E293B',
+    },
     telemetryHeading: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 11,
         fontWeight: '800',
         letterSpacing: 0.5,
         marginBottom: 10,
+    },
+    darkTelemetryHeading: {
+        color: '#94A3B8',
     },
     inputsRow: {
         flexDirection: 'row',
@@ -1649,57 +2072,80 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     inputLabel: {
-        color: '#CBD5E1',
+        color: colors.text,
         fontSize: 12,
         fontWeight: '600',
         marginBottom: 4,
     },
+    darkInputLabel: {
+        color: '#CBD5E1',
+    },
     textInput: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
+        backgroundColor: '#F8FAFC',
+        borderColor: colors.borderStrong,
         borderRadius: 8,
         borderWidth: 1,
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 14,
         fontWeight: '700',
         minHeight: 44,
         paddingHorizontal: 12,
     },
-    remarksInput: {
+    darkTextInput: {
         backgroundColor: '#162238',
         borderColor: '#1E3A8A',
+        color: '#FFFFFF',
+    },
+    remarksInput: {
+        backgroundColor: '#F8FAFC',
+        borderColor: colors.borderStrong,
         borderRadius: 8,
         borderWidth: 1,
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 13,
         minHeight: 70,
         padding: 10,
         textAlignVertical: 'top',
     },
+    darkRemarksInput: {
+        backgroundColor: '#162238',
+        borderColor: '#1E3A8A',
+        color: '#FFFFFF',
+    },
     postTripSecureCard: {
-        backgroundColor: '#0F1A2E',
-        borderColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
         padding: 14,
     },
+    darkPostTripSecureCard: {
+        backgroundColor: '#0F1A2E',
+        borderColor: '#1E293B',
+    },
     secureCheckItem: {
         alignItems: 'center',
-        borderBottomColor: '#1E293B',
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
         flexDirection: 'row',
         gap: 10,
         paddingVertical: 10,
     },
+    darkSecureCheckItem: {
+        borderBottomColor: '#1E293B',
+    },
     secureCheckLabel: {
-        color: '#E2E8F0',
+        color: colors.text,
         flex: 1,
         fontSize: 13,
         fontWeight: '600',
     },
+    darkSecureCheckLabel: {
+        color: '#E2E8F0',
+    },
     summaryCard: {
-        backgroundColor: '#0F1A2E',
-        borderColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
         gap: 8,
@@ -1710,12 +2156,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     summaryKey: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 13,
         fontWeight: '600',
     },
     summaryValue: {
-        color: '#F8FAFC',
+        color: colors.text,
         fontSize: 13,
         fontWeight: '700',
     },
@@ -1727,8 +2173,8 @@ const styles = StyleSheet.create({
     },
     certBox: {
         alignItems: 'center',
-        backgroundColor: '#0F2744',
-        borderColor: '#0284C7',
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
         borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
@@ -1736,7 +2182,7 @@ const styles = StyleSheet.create({
         padding: 14,
     },
     certText: {
-        color: '#BAE6FD',
+        color: colors.amberDark,
         flex: 1,
         fontSize: 12,
         lineHeight: 17,
@@ -1753,48 +2199,45 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 2,
     },
-    timelineSectionBadge: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
-        borderRadius: 8,
-        borderWidth: 1,
-        color: '#38BDF8',
-        fontSize: 11,
-        fontWeight: '700',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
+    timelineSectionCount: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '600',
     },
-    emptyTimelineCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 10,
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        padding: 14,
+    darkTimelineSectionCount: {
+        color: '#94A3B8',
+    },
+    emptyTimelineContainer: {
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 18,
     },
     emptyTimelineText: {
-        color: '#64748B',
-        fontSize: 12,
-        fontStyle: 'italic',
+        color: colors.muted,
+        fontSize: 13,
+        lineHeight: 18,
         textAlign: 'center',
+    },
+    darkEmptyTimelineText: {
+        color: '#64748B',
     },
     archiveToggleBtn: {
         alignItems: 'center',
-        backgroundColor: '#0F1A2E',
-        borderColor: '#1E3254',
-        borderRadius: 10,
-        borderWidth: 1,
         justifyContent: 'center',
         paddingVertical: 12,
     },
+    darkArchiveToggleBtn: {},
     archiveToggleText: {
-        color: '#60A5FA',
-        fontSize: 12,
+        color: colors.amberDark,
+        fontSize: 13,
         fontWeight: '700',
-        letterSpacing: 0.3,
+        letterSpacing: 0.2,
+    },
+    darkArchiveToggleText: {
+        color: '#F59E0B',
     },
     sectionHeading: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 11,
         fontWeight: '800',
         letterSpacing: 0.5,
@@ -1807,7 +2250,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     historyCard: {
-        backgroundColor: '#0F1A2E',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 12,
         borderWidth: 1,
         padding: 14,
@@ -1817,9 +2261,15 @@ const styles = StyleSheet.create({
         borderColor: '#1E293B',
     },
     historyCardClean: {
+        borderColor: '#10B981',
+    },
+    darkHistoryCardClean: {
         borderColor: '#059669',
     },
     historyCardDefect: {
+        borderColor: '#EF4444',
+    },
+    darkHistoryCardDefect: {
         borderColor: '#DC2626',
     },
     historyCardHeader: {
@@ -1832,42 +2282,56 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     historyTypeBadge: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
+    darkHistoryTypeBadge: {
+        color: '#94A3B8',
+    },
     historyId: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 14,
         fontWeight: '800',
     },
     darkHistoryId: {
         color: '#F8FAFC',
     },
-    statusPill: {
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
+    statusIndicator: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
     },
-    statusPillClean: {
-        backgroundColor: '#064E3B',
+    statusDot: {
+        borderRadius: 4,
+        height: 7,
+        width: 7,
     },
-    statusPillDefect: {
-        backgroundColor: '#7F1D1D',
+    statusDotClean: {
+        backgroundColor: '#10B981',
     },
-    statusPillText: {
-        fontSize: 11,
-        fontWeight: '800',
+    statusDotDefect: {
+        backgroundColor: '#EF4444',
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: '700',
     },
     statusTextClean: {
-        color: '#6EE7B7',
+        color: '#059669',
+    },
+    darkStatusTextClean: {
+        color: '#34D399',
     },
     statusTextDefect: {
-        color: '#FCA5A5',
+        color: '#DC2626',
+    },
+    darkStatusTextDefect: {
+        color: '#F87171',
     },
     historyAsset: {
-        color: '#E2E8F0',
+        color: colors.text,
         fontSize: 13,
         fontWeight: '700',
         marginTop: 2,
@@ -1876,37 +2340,50 @@ const styles = StyleSheet.create({
         color: '#CBD5E1',
     },
     historyMeta: {
-        color: '#94A3B8',
+        color: colors.textSecondary,
         fontSize: 11,
         marginTop: 2,
     },
-    historyRemarks: {
+    darkHistoryMeta: {
         color: '#94A3B8',
+    },
+    historyRemarks: {
+        color: colors.textSecondary,
         fontStyle: 'italic',
         fontSize: 12,
         marginTop: 6,
     },
+    darkHistoryRemarks: {
+        color: '#94A3B8',
+    },
     footerContainer: {
-        backgroundColor: '#0F172A',
-        borderTopColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderTopColor: colors.border,
         borderTopWidth: 1,
         padding: 16,
     },
     darkFooterContainer: {
         backgroundColor: '#0F172A',
+        borderTopColor: '#1E293B',
     },
     nextButton: {
         alignItems: 'center',
-        backgroundColor: '#2563EB',
+        backgroundColor: colors.amber,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 52,
         width: '100%',
     },
+    darkNextButton: {
+        backgroundColor: '#F59E0B',
+    },
     nextButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '800',
+    },
+    darkNextButtonText: {
+        color: '#0F172A',
     },
     pressed: {
         opacity: 0.8,

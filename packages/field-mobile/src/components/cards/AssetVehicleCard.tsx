@@ -74,7 +74,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         <Icon
                             color={isDarkHud ? '#34D399' : colors.greenDark}
                             name="check-circle"
-                            size={13}
+                            size={12}
                         />
                         <Text
                             style={[
@@ -100,7 +100,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         <Icon
                             color={isDarkHud ? '#F87171' : colors.redDark}
                             name="alert-circle"
-                            size={13}
+                            size={12}
                         />
                         <Text
                             style={[
@@ -127,7 +127,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         <Icon
                             color={isDarkHud ? '#FBBF24' : colors.amberDark}
                             name="alert"
-                            size={13}
+                            size={12}
                         />
                         <Text
                             style={[
@@ -195,7 +195,9 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             <Icon
                                 name="fuel"
                                 size={18}
-                                color={isDarkHud ? '#94A3B8' : '#64748B'}
+                                color={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
                             />
                             <View style={styles.heroTeleTextCol}>
                                 <Text
@@ -223,7 +225,9 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             <Icon
                                 name="engine"
                                 size={18}
-                                color={isDarkHud ? '#94A3B8' : '#64748B'}
+                                color={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
                             />
                             <View style={styles.heroTeleTextCol}>
                                 <Text
@@ -299,9 +303,9 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         ]}
                     >
                         <Icon
-                            color={isDarkHud ? '#F59E0B' : '#D97706'}
+                            color={isDarkHud ? colors.hudAmber : colors.amber}
                             name={getMachineIcon()}
-                            size={22}
+                            size={20}
                         />
                     </View>
                     <View style={styles.titleWrap}>
@@ -357,7 +361,9 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             testID="vehicle-card-change-unit-btn"
                         >
                             <Icon
-                                color={isDarkHud ? '#F59E0B' : colors.primary}
+                                color={
+                                    isDarkHud ? colors.hudAmber : colors.amber
+                                }
                                 name="sync"
                                 size={11}
                             />
@@ -389,9 +395,9 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                 </Text>
                 <View style={styles.configValueRow}>
                     <Icon
-                        color={isDarkHud ? '#94A3B8' : colors.secondary}
+                        color={isDarkHud ? colors.hudTextDim : colors.muted}
                         name="tools"
-                        size={14}
+                        size={13}
                     />
                     <Text
                         numberOfLines={1}
@@ -448,10 +454,12 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             <View style={styles.dispatchLocationRow}>
                                 <Icon
                                     color={
-                                        isDarkHud ? '#F59E0B' : colors.primary
+                                        isDarkHud
+                                            ? colors.hudAmber
+                                            : colors.amber
                                     }
                                     name="location"
-                                    size={13}
+                                    size={12}
                                 />
                                 <Text
                                     numberOfLines={1}
@@ -489,9 +497,11 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     {engineHours ? (
                         <View style={styles.telemetryItem}>
                             <Icon
-                                color={isDarkHud ? '#94A3B8' : colors.muted}
+                                color={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
                                 name="clock"
-                                size={13}
+                                size={12}
                             />
                             <Text
                                 style={[
@@ -506,9 +516,11 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                     {fuelPercent !== undefined ? (
                         <View style={styles.telemetryItem}>
                             <Icon
-                                color={isDarkHud ? '#94A3B8' : colors.muted}
+                                color={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
                                 name="fuel"
-                                size={13}
+                                size={12}
                             />
                             <Text
                                 style={[
@@ -533,7 +545,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                             Equipment Setup
                         </Text>
                         <Icon
-                            color={isDarkHud ? '#F59E0B' : colors.primary}
+                            color={isDarkHud ? colors.hudAmber : colors.amber}
                             name="chevron-right"
                             size={14}
                         />
@@ -547,23 +559,21 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
 const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
-        borderRadius: 16,
-        borderWidth: 1.5,
+        borderColor: colors.border,
+        borderRadius: 14,
+        borderWidth: 1,
         marginBottom: 12,
         padding: 14,
         width: '100%',
         ...shadows.sm,
     },
     darkCard: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-        shadowColor: '#000000',
-        shadowOpacity: 0.3,
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        shadowColor: 'transparent',
     },
     pressed: {
-        opacity: 0.88,
-        transform: [{ scale: 0.99 }],
+        opacity: 0.9,
     },
     headerRow: {
         alignItems: 'center',
@@ -579,11 +589,11 @@ const styles = StyleSheet.create({
     },
     machineIconBox: {
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        borderRadius: 10,
-        height: 40,
+        backgroundColor: colors.amberLight,
+        borderRadius: 8,
+        height: 38,
         justifyContent: 'center',
-        width: 40,
+        width: 38,
     },
     darkMachineIconBox: {
         backgroundColor: 'rgba(245, 158, 11, 0.16)',
@@ -594,28 +604,25 @@ const styles = StyleSheet.create({
     codeLine: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     assetCodeText: {
         color: colors.text,
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '800',
         letterSpacing: 0.3,
     },
     darkAssetCodeText: {
-        color: '#F8FAFC',
+        color: colors.hudText,
     },
     tonnagePill: {
         backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 6,
-        borderWidth: 1,
+        borderRadius: 4,
         paddingHorizontal: 6,
         paddingVertical: 1,
     },
     darkTonnagePill: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
+        backgroundColor: colors.surfaceDark,
     },
     tonnagePillText: {
         color: colors.textSecondary,
@@ -623,27 +630,31 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkTonnagePillText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     assetNameText: {
         color: colors.muted,
         fontSize: 12,
         fontWeight: '500',
-        marginTop: 1,
+        marginTop: 2,
     },
     darkAssetNameText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
+    },
+    badgeAndActionsWrap: {
+        alignItems: 'flex-end',
+        gap: 6,
     },
     dvirBadge: {
         alignItems: 'center',
-        borderRadius: 8,
+        borderRadius: 6,
         flexDirection: 'row',
-        gap: 5,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        gap: 4,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
     },
     dvirBadgeCleared: {
-        backgroundColor: '#ECFDF5',
+        backgroundColor: colors.greenLight,
     },
     darkDvirBadgeCleared: {
         backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -653,42 +664,57 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     dvirBadgeTextCleared: {
-        color: '#047857',
+        color: colors.greenDark,
     },
     darkDvirBadgeTextCleared: {
         color: '#34D399',
     },
     dvirBadgePending: {
-        backgroundColor: '#FFFBEB',
+        backgroundColor: colors.amberLight,
     },
     darkDvirBadgePending: {
         backgroundColor: 'rgba(245, 158, 11, 0.15)',
     },
     dvirBadgeTextPending: {
-        color: '#B45309',
+        color: colors.amberDark,
     },
     darkDvirBadgeTextPending: {
         color: '#FBBF24',
     },
     dvirBadgeDefect: {
-        backgroundColor: '#FEF2F2',
+        backgroundColor: colors.redLight,
     },
     darkDvirBadgeDefect: {
         backgroundColor: 'rgba(239, 68, 68, 0.15)',
     },
     dvirBadgeTextDefect: {
-        color: '#B91C1C',
+        color: colors.redDark,
     },
     darkDvirBadgeTextDefect: {
         color: '#F87171',
     },
+    changeUnitBtn: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 3,
+        paddingVertical: 2,
+    },
+    darkChangeUnitBtn: {},
+    changeUnitText: {
+        color: colors.amber,
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    darkChangeUnitText: {
+        color: colors.hudAmber,
+    },
     divider: {
         backgroundColor: colors.borderSubtle,
-        height: 1,
+        height: StyleSheet.hairlineWidth,
         marginVertical: 10,
     },
     darkDivider: {
-        backgroundColor: '#334155',
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
     },
     sectionRow: {
         marginBottom: 8,
@@ -698,10 +724,10 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.6,
-        marginBottom: 3,
+        marginBottom: 4,
     },
     darkSectionLabel: {
-        color: '#64748B',
+        color: colors.hudTextDim,
     },
     configValueRow: {
         alignItems: 'center',
@@ -709,16 +735,15 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     configValueText: {
-        color: colors.textSecondary,
-        flex: 1,
-        fontSize: 12,
+        color: colors.text,
+        fontSize: 13,
         fontWeight: '600',
     },
     darkConfigValueText: {
-        color: '#CBD5E1',
+        color: colors.hudText,
     },
     dispatchDetailsWrap: {
-        gap: 3,
+        gap: 4,
     },
     dispatchPrimaryRow: {
         alignItems: 'center',
@@ -726,30 +751,30 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     dispatchBadge: {
-        backgroundColor: colors.primaryLight,
-        borderRadius: 5,
+        backgroundColor: colors.amberLight,
+        borderRadius: 4,
         paddingHorizontal: 6,
         paddingVertical: 1,
     },
     darkDispatchBadge: {
-        backgroundColor: 'rgba(245, 158, 11, 0.16)',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
     },
     dispatchBadgeText: {
-        color: colors.primaryDark,
+        color: colors.amberDark,
         fontSize: 11,
         fontWeight: '800',
     },
     darkDispatchBadgeText: {
-        color: '#F59E0B',
+        color: colors.hudAmber,
     },
     dispatchTitleText: {
         color: colors.text,
         flex: 1,
-        fontSize: 12,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '700',
     },
     darkDispatchTitleText: {
-        color: '#F1F5F9',
+        color: colors.hudText,
     },
     dispatchLocationRow: {
         alignItems: 'center',
@@ -757,13 +782,11 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     dispatchLocationText: {
-        color: colors.secondary,
-        flex: 1,
-        fontSize: 11,
-        fontWeight: '500',
+        color: colors.muted,
+        fontSize: 12,
     },
     darkDispatchLocationText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     standbyRow: {
         alignItems: 'center',
@@ -771,33 +794,32 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     standbyDot: {
-        backgroundColor: '#10B981',
-        borderRadius: 3,
-        height: 6,
-        width: 6,
+        backgroundColor: colors.green,
+        borderRadius: 4,
+        height: 8,
+        width: 8,
     },
     standbyText: {
-        color: colors.secondary,
+        color: colors.textSecondary,
         fontSize: 12,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     darkStandbyText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     footerRow: {
         alignItems: 'center',
         borderTopColor: colors.borderSubtle,
-        borderTopWidth: 1,
+        borderTopWidth: StyleSheet.hairlineWidth,
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 4,
-        paddingTop: 8,
+        paddingTop: 10,
     },
     darkFooterRow: {
-        borderTopColor: '#334155',
+        borderTopColor: 'rgba(255, 255, 255, 0.08)',
     },
     telemetryGroup: {
-        alignItems: 'center',
         flexDirection: 'row',
         gap: 12,
     },
@@ -812,7 +834,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     darkTelemetryText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     actionPromptWrap: {
         alignItems: 'center',
@@ -820,134 +842,105 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     actionPromptText: {
-        color: colors.primary,
-        fontSize: 11,
+        color: colors.amber,
+        fontSize: 12,
         fontWeight: '700',
     },
     darkActionPromptText: {
-        color: '#F59E0B',
-    },
-    badgeAndActionsWrap: {
-        alignItems: 'flex-end',
-        gap: 6,
-    },
-    changeUnitBtn: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 6,
-        borderWidth: 1,
-        flexDirection: 'row',
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-    },
-    darkChangeUnitBtn: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
-    },
-    changeUnitText: {
-        color: colors.primary,
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    darkChangeUnitText: {
-        color: '#F59E0B',
+        color: colors.hudAmber,
     },
     heroCardRoot: {
         backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
+        borderColor: colors.border,
         borderRadius: 14,
-        borderWidth: 1.5,
-        marginBottom: 12,
+        borderWidth: 1,
         padding: 16,
         ...shadows.sm,
     },
     darkHeroCardRoot: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        shadowColor: 'transparent',
     },
     heroCardSubtitle: {
-        color: colors.secondary,
-        fontSize: 12,
-        fontWeight: '500',
-        marginBottom: 2,
+        color: colors.muted,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
     },
     darkHeroCardSubtitle: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     heroUnitCode: {
-        color: colors.text,
-        fontSize: 24,
+        color: colors.amber,
+        fontSize: 20,
         fontWeight: '900',
-        letterSpacing: -0.5,
-        marginBottom: 2,
+        marginTop: 2,
     },
     darkHeroUnitCode: {
-        color: '#F8FAFC',
+        color: colors.hudAmber,
     },
     heroModelText: {
-        color: colors.secondary,
+        color: colors.text,
         fontSize: 14,
-        fontWeight: '500',
-        marginBottom: 14,
+        fontWeight: '700',
+        marginTop: 2,
     },
     darkHeroModelText: {
-        color: '#CBD5E1',
+        color: colors.hudText,
     },
     heroFooterRow: {
         alignItems: 'center',
+        borderTopColor: colors.borderSubtle,
+        borderTopWidth: StyleSheet.hairlineWidth,
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginTop: 12,
+        paddingTop: 10,
     },
     heroTelematicsGroup: {
-        alignItems: 'center',
         flexDirection: 'row',
-        gap: 18,
+        gap: 16,
     },
     heroTeleItem: {
         alignItems: 'center',
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
-    heroTeleTextCol: {
-        flexDirection: 'column',
-    },
+    heroTeleTextCol: {},
     heroTeleValue: {
         color: colors.text,
         fontSize: 13,
-        fontWeight: '700',
-        lineHeight: 16,
+        fontWeight: '800',
     },
     darkHeroTeleValue: {
-        color: '#F8FAFC',
+        color: colors.hudText,
     },
     heroTeleLabel: {
-        color: '#94A3B8',
-        fontSize: 11,
-        fontWeight: '500',
-        lineHeight: 14,
+        color: colors.muted,
+        fontSize: 10,
     },
     lightHeroTeleLabel: {
-        color: '#64748B',
+        color: colors.muted,
     },
     heroChangeUnitBtn: {
-        backgroundColor: '#F59E0B',
-        borderRadius: 8,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        ...shadows.sm,
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 6,
+        justifyContent: 'center',
+        minHeight: 32,
+        paddingHorizontal: 10,
     },
     darkHeroChangeUnitBtn: {
-        backgroundColor: '#F59E0B',
+        backgroundColor: colors.surfaceDark,
     },
     heroChangeUnitText: {
-        color: '#0F172A',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.1,
+        color: colors.text,
+        fontSize: 11,
+        fontWeight: '700',
     },
     darkHeroChangeUnitText: {
-        color: '#0F172A',
+        color: colors.hudText,
     },
 });

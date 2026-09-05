@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '../../theme';
 import type { ConditionRating, TechnicianHandover } from '../../types/index';
-import { sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface HandoverTabProps {
     assetCode: string;
@@ -45,223 +46,483 @@ export const HandoverTab: React.FC<HandoverTabProps> = ({
     };
 
     return (
-        <View
-            style={[styles.sectionCard, isDarkHud && styles.darkSectionCard]}
-            testID="handover-section"
-        >
-            <Text
-                accessibilityRole="header"
-                style={[styles.cardHeading, isDarkHud && styles.darkText]}
+        <View style={styles.tabRoot} testID="handover-section">
+            <View
+                style={[
+                    styles.sectionCard,
+                    isDarkHud && styles.darkSectionCard,
+                ]}
             >
-                Technician Asset Handover Sign-Off
-            </Text>
-            <Text style={[styles.cardHelper, isDarkHud && styles.darkHelper]}>
-                Formal custody and operational readiness transfer between
-                technician and crane operator.
-            </Text>
+                <View style={styles.cardHeaderRow}>
+                    <View style={styles.headerIconWrap}>
+                        <Icon
+                            color={isDarkHud ? colors.hudAmber : colors.amber}
+                            name="signature"
+                            size={18}
+                        />
+                    </View>
+                    <View style={styles.headerTitles}>
+                        <Text
+                            accessibilityRole="header"
+                            style={[
+                                styles.cardHeading,
+                                isDarkHud && styles.darkText,
+                            ]}
+                        >
+                            Technician Asset Handover Sign-Off
+                        </Text>
+                        <Text
+                            style={[
+                                styles.cardHelper,
+                                isDarkHud && styles.darkHelper,
+                            ]}
+                        >
+                            Formal custody and operational readiness transfer
+                            between technician and crane operator.
+                        </Text>
+                    </View>
+                </View>
 
-            <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, isDarkHud && styles.darkLabel]}>
-                    Receiving Operator Name
-                </Text>
-                <TextInput
-                    accessibilityLabel="Receiving operator name"
-                    editable={!complete}
-                    onChangeText={setRecipient}
-                    placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
-                    style={[styles.input, isDarkHud && styles.darkInput]}
-                    value={recipient}
-                    testID="handover-recipient-input"
-                />
+                {/* Handover Status Banner */}
+                <View
+                    style={[
+                        styles.statusBanner,
+                        complete
+                            ? styles.statusBannerPassed
+                            : styles.statusBannerPending,
+                        isDarkHud &&
+                            (complete
+                                ? styles.darkStatusBannerPassed
+                                : styles.darkStatusBannerPending),
+                    ]}
+                >
+                    <Icon
+                        color={
+                            complete
+                                ? isDarkHud
+                                    ? '#34D399'
+                                    : colors.greenDark
+                                : isDarkHud
+                                  ? '#FBBF24'
+                                  : colors.amberDark
+                        }
+                        name={complete ? 'check-circle' : 'alert-circle'}
+                        size={16}
+                    />
+                    <Text
+                        style={[
+                            styles.statusBannerText,
+                            complete && styles.statusBannerTextPassed,
+                            isDarkHud &&
+                                (complete
+                                    ? styles.darkStatusBannerTextPassed
+                                    : styles.darkStatusBannerTextPending),
+                        ]}
+                    >
+                        {complete
+                            ? '✓ CUSTODY TRANSFERRED & DIGITALLY CONFIRMED'
+                            : 'PENDING OPERATOR ACCEPTANCE · CUSTODY TRANSFER'}
+                    </Text>
+                </View>
 
-                <Text style={[styles.formLabel, isDarkHud && styles.darkLabel]}>
-                    Asset Operational Condition Rating
-                </Text>
-                <View style={styles.severityRow}>
-                    {(
-                        ['excellent', 'good', 'fair', 'out_of_service'] as const
-                    ).map((r) => {
-                        const isSelected = rating === r;
+                {/* Asset & Custody Meta */}
+                <View
+                    style={[
+                        styles.assetMetaRow,
+                        isDarkHud && styles.darkAssetMetaRow,
+                    ]}
+                >
+                    <View style={styles.metaBadge}>
+                        <Icon
+                            color={isDarkHud ? colors.hudAmber : colors.amber}
+                            name="truck"
+                            size={14}
+                        />
+                        <Text
+                            style={[
+                                styles.metaBadgeText,
+                                isDarkHud && styles.darkText,
+                            ]}
+                        >
+                            Asset {assetCode}
+                        </Text>
+                    </View>
+                    <View style={styles.metaBadge}>
+                        <Icon
+                            color={isDarkHud ? '#94A3B8' : colors.secondary}
+                            name="profile"
+                            size={14}
+                        />
+                        <Text
+                            style={[
+                                styles.metaBadgeText,
+                                isDarkHud && styles.darkHelper,
+                            ]}
+                        >
+                            From: {technicianName}
+                        </Text>
+                    </View>
+                </View>
 
-                        return (
-                            <Pressable
-                                key={r}
-                                accessibilityLabel={`Condition rating ${r}`}
-                                accessibilityRole="button"
-                                disabled={complete}
-                                onPress={() => setRating(r)}
-                                style={[
-                                    styles.severityOption,
-                                    isDarkHud && styles.darkSeverityOption,
-                                    isSelected && styles.severityOptionSelected,
-                                    isSelected &&
-                                        isDarkHud &&
-                                        (r === 'excellent'
-                                            ? styles.darkExcellentSelected
-                                            : r === 'good'
-                                              ? styles.darkGoodSelected
-                                              : r === 'fair'
-                                                ? styles.darkFairSelected
-                                                : styles.darkOosSelected),
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.severityText,
-                                        isDarkHud && styles.darkSeverityText,
+                <View style={styles.formGroup}>
+                    <Text
+                        style={[
+                            styles.formLabel,
+                            isDarkHud && styles.darkLabel,
+                        ]}
+                    >
+                        Receiving Operator Name
+                    </Text>
+                    <TextInput
+                        accessibilityLabel="Receiving operator name"
+                        editable={!complete}
+                        onChangeText={setRecipient}
+                        placeholderTextColor={
+                            isDarkHud ? '#64748B' : colors.muted
+                        }
+                        style={[
+                            styles.input,
+                            isDarkHud && styles.darkInput,
+                            complete && styles.inputDisabled,
+                        ]}
+                        value={recipient}
+                        testID="handover-recipient-input"
+                    />
+
+                    <Text
+                        style={[
+                            styles.formLabel,
+                            isDarkHud && styles.darkLabel,
+                        ]}
+                    >
+                        Asset Operational Condition Rating
+                    </Text>
+                    <View style={styles.severityRow}>
+                        {(
+                            [
+                                'excellent',
+                                'good',
+                                'fair',
+                                'out_of_service',
+                            ] as const
+                        ).map((r) => {
+                            const isSelected = rating === r;
+
+                            return (
+                                <Pressable
+                                    key={r}
+                                    accessibilityLabel={`Condition rating ${r}`}
+                                    accessibilityRole="button"
+                                    disabled={complete}
+                                    onPress={() => setRating(r)}
+                                    style={({ pressed }) => [
+                                        styles.severityOption,
+                                        isDarkHud && styles.darkSeverityOption,
                                         isSelected &&
-                                            styles.severityTextSelected,
+                                            (r === 'excellent'
+                                                ? styles.excellentSelected
+                                                : r === 'good'
+                                                  ? styles.goodSelected
+                                                  : r === 'fair'
+                                                    ? styles.fairSelected
+                                                    : styles.oosSelected),
                                         isSelected &&
                                             isDarkHud &&
                                             (r === 'excellent'
-                                                ? styles.darkExcellentText
+                                                ? styles.darkExcellentSelected
                                                 : r === 'good'
-                                                  ? styles.darkGoodText
+                                                  ? styles.darkGoodSelected
                                                   : r === 'fair'
-                                                    ? styles.darkFairText
-                                                    : styles.darkOosText),
+                                                    ? styles.darkFairSelected
+                                                    : styles.darkOosSelected),
+                                        pressed && !complete && styles.pressed,
                                     ]}
                                 >
-                                    {r.replace('_', ' ').toUpperCase()}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-                </View>
-
-                <Text style={[styles.formLabel, isDarkHud && styles.darkLabel]}>
-                    Handover & Pre-Start Remarks
-                </Text>
-                <TextInput
-                    accessibilityLabel="Handover remarks"
-                    editable={!complete}
-                    multiline
-                    numberOfLines={3}
-                    onChangeText={setRemarks}
-                    placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
-                    style={[
-                        styles.input,
-                        styles.textArea,
-                        isDarkHud && styles.darkInput,
-                    ]}
-                    value={remarks}
-                    testID="handover-remarks-input"
-                />
-
-                {!complete ? (
-                    <Pressable
-                        accessibilityLabel="Complete technician asset handover"
-                        accessibilityRole="button"
-                        onPress={handleConfirm}
-                        style={({ pressed }) => [
-                            sharedStyles.button,
-                            styles.actionButton,
-                            isDarkHud && styles.darkActionButton,
-                            pressed && styles.pressed,
-                        ]}
-                        testID="confirm-handover-btn"
-                    >
-                        <Text
-                            style={[
-                                sharedStyles.buttonText,
-                                styles.actionBtnText,
-                            ]}
-                        >
-                            ✓ Sign & Complete Handover
-                        </Text>
-                    </Pressable>
-                ) : (
-                    <View
-                        style={[
-                            styles.signedStamp,
-                            isDarkHud && styles.darkSignedStamp,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.signedStampTitle,
-                                isDarkHud && styles.darkSignedStampTitle,
-                            ]}
-                        >
-                            ✓ HANDOVER COMPLETED
-                        </Text>
-                        <Text
-                            style={[
-                                styles.signedStampSub,
-                                isDarkHud && styles.darkSignedStampSub,
-                            ]}
-                        >
-                            Transferred from {technicianName} to {recipient}
-                        </Text>
+                                    <Text
+                                        style={[
+                                            styles.severityText,
+                                            isDarkHud &&
+                                                styles.darkSeverityText,
+                                            isSelected &&
+                                                styles.severityTextSelected,
+                                            isSelected &&
+                                                (r === 'excellent'
+                                                    ? styles.excellentText
+                                                    : r === 'good'
+                                                      ? styles.goodText
+                                                      : r === 'fair'
+                                                        ? styles.fairText
+                                                        : styles.oosText),
+                                            isSelected &&
+                                                isDarkHud &&
+                                                (r === 'excellent'
+                                                    ? styles.darkExcellentText
+                                                    : r === 'good'
+                                                      ? styles.darkGoodText
+                                                      : r === 'fair'
+                                                        ? styles.darkFairText
+                                                        : styles.darkOosText),
+                                        ]}
+                                    >
+                                        {r.replace('_', ' ').toUpperCase()}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
                     </View>
-                )}
+
+                    <Text
+                        style={[
+                            styles.formLabel,
+                            isDarkHud && styles.darkLabel,
+                        ]}
+                    >
+                        Handover & Pre-Start Remarks
+                    </Text>
+                    <TextInput
+                        accessibilityLabel="Handover remarks"
+                        editable={!complete}
+                        multiline
+                        numberOfLines={3}
+                        onChangeText={setRemarks}
+                        placeholderTextColor={
+                            isDarkHud ? '#64748B' : colors.muted
+                        }
+                        style={[
+                            styles.input,
+                            styles.textArea,
+                            isDarkHud && styles.darkInput,
+                            complete && styles.inputDisabled,
+                        ]}
+                        value={remarks}
+                        testID="handover-remarks-input"
+                    />
+
+                    {!complete ? (
+                        <Pressable
+                            accessibilityLabel="Complete technician asset handover"
+                            accessibilityRole="button"
+                            onPress={handleConfirm}
+                            style={({ pressed }) => [
+                                styles.actionButton,
+                                isDarkHud && styles.darkActionButton,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="confirm-handover-btn"
+                        >
+                            <Icon
+                                color={
+                                    isDarkHud ? colors.surfaceDark : '#FFFFFF'
+                                }
+                                name="check"
+                                size={18}
+                            />
+                            <Text
+                                style={[
+                                    styles.actionBtnText,
+                                    isDarkHud && styles.darkActionBtnText,
+                                ]}
+                            >
+                                Sign & Complete Handover
+                            </Text>
+                        </Pressable>
+                    ) : (
+                        <View
+                            style={[
+                                styles.signedStamp,
+                                isDarkHud && styles.darkSignedStamp,
+                            ]}
+                        >
+                            <View style={styles.stampHeader}>
+                                <Icon
+                                    color={
+                                        isDarkHud ? '#34D399' : colors.greenDark
+                                    }
+                                    name="check-circle"
+                                    size={20}
+                                />
+                                <Text
+                                    style={[
+                                        styles.signedStampTitle,
+                                        isDarkHud &&
+                                            styles.darkSignedStampTitle,
+                                    ]}
+                                >
+                                    HANDOVER COMPLETED & SIGNED
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.signedStampSub,
+                                    isDarkHud && styles.darkSignedStampSub,
+                                ]}
+                            >
+                                Custody officially transferred from{' '}
+                                {technicianName} to {recipient}
+                            </Text>
+                        </View>
+                    )}
+                </View>
             </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    tabRoot: {
+        gap: 14,
+    },
     sectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 12,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 14,
         borderWidth: 1,
-        marginBottom: 16,
         padding: 16,
+        ...shadows.sm,
     },
     darkSectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        shadowColor: 'transparent',
+    },
+    cardHeaderRow: {
+        alignItems: 'flex-start',
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 14,
+    },
+    headerIconWrap: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        height: 36,
+        justifyContent: 'center',
+        width: 36,
+    },
+    headerTitles: {
+        flex: 1,
     },
     cardHeading: {
-        color: '#FFFFFF',
-        fontSize: 17,
+        color: colors.text,
+        fontSize: 15,
         fontWeight: '800',
     },
     darkText: {
-        color: '#FFFFFF',
+        color: colors.hudText,
     },
     cardHelper: {
-        color: '#94A3B8',
-        fontSize: 13,
-        lineHeight: 18,
-        marginBottom: 12,
-        marginTop: 4,
+        color: colors.muted,
+        fontSize: 12,
+        lineHeight: 16,
+        marginTop: 2,
     },
     darkHelper: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
-    formGroup: {
-        gap: 8,
-        marginTop: 8,
-    },
-    formLabel: {
-        color: '#CBD5E1',
-        fontSize: 13,
-        fontWeight: '800',
-        marginTop: 4,
-    },
-    darkLabel: {
-        color: '#CBD5E1',
-    },
-    input: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
+    statusBanner: {
+        alignItems: 'center',
+        borderRadius: 10,
         borderWidth: 1,
-        color: '#FFFFFF',
-        fontSize: 14,
-        minHeight: 48,
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 14,
         paddingHorizontal: 12,
         paddingVertical: 10,
     },
+    statusBannerPending: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+    },
+    statusBannerPassed: {
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+    },
+    darkStatusBannerPending: {
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        borderColor: '#F59E0B',
+    },
+    darkStatusBannerPassed: {
+        backgroundColor: 'rgba(5, 150, 105, 0.15)',
+        borderColor: '#059669',
+    },
+    statusBannerText: {
+        color: colors.amberDark,
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    statusBannerTextPassed: {
+        color: colors.greenDark,
+    },
+    darkStatusBannerTextPending: {
+        color: '#FBBF24',
+    },
+    darkStatusBannerTextPassed: {
+        color: '#34D399',
+    },
+    assetMetaRow: {
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 14,
+        paddingBottom: 12,
+    },
+    darkAssetMetaRow: {
+        borderBottomColor: colors.hudBorder,
+    },
+    metaBadge: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    metaBadgeText: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    formGroup: {
+        gap: 10,
+    },
+    formLabel: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    darkLabel: {
+        color: colors.hudTextDim,
+    },
+    input: {
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        color: colors.text,
+        fontSize: 14,
+        minHeight: 44,
+        paddingHorizontal: 12,
+    },
     darkInput: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        color: '#FFFFFF',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+        color: colors.hudText,
+    },
+    inputDisabled: {
+        opacity: 0.75,
     },
     textArea: {
-        minHeight: 70,
+        minHeight: 80,
+        paddingTop: 10,
         textAlignVertical: 'top',
     },
     severityRow: {
@@ -270,98 +531,132 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     severityOption: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
         borderRadius: 8,
         borderWidth: 1,
-        minHeight: 48,
+        justifyContent: 'center',
+        minHeight: 38,
         paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingVertical: 6,
     },
     darkSeverityOption: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
     },
     severityOptionSelected: {
-        backgroundColor: '#172554',
-        borderColor: '#2563EB',
-        borderWidth: 1.5,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+    },
+    excellentSelected: {
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+    },
+    goodSelected: {
+        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+        borderColor: '#0284C7',
+    },
+    fairSelected: {
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
+    },
+    oosSelected: {
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: '#DC2626',
     },
     darkExcellentSelected: {
-        backgroundColor: '#06281E',
+        backgroundColor: 'rgba(5, 150, 105, 0.2)',
         borderColor: '#059669',
-        borderWidth: 1.5,
     },
     darkGoodSelected: {
-        backgroundColor: '#172554',
-        borderColor: '#2563EB',
-        borderWidth: 1.5,
+        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+        borderColor: '#38BDF8',
     },
     darkFairSelected: {
-        backgroundColor: '#451A03',
-        borderColor: '#D97706',
-        borderWidth: 1.5,
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: '#F59E0B',
     },
     darkOosSelected: {
-        backgroundColor: '#450A0A',
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
         borderColor: '#DC2626',
-        borderWidth: 1.5,
     },
     severityText: {
-        color: '#94A3B8',
-        fontSize: 11,
-        fontWeight: '800',
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
     },
     darkSeverityText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     severityTextSelected: {
-        color: '#FFFFFF',
+        fontWeight: '800',
+    },
+    excellentText: {
+        color: colors.greenDark,
+    },
+    goodText: {
+        color: '#0369A1',
+    },
+    fairText: {
+        color: colors.amberDark,
+    },
+    oosText: {
+        color: '#B91C1C',
     },
     darkExcellentText: {
         color: '#34D399',
-        fontWeight: '900',
     },
     darkGoodText: {
-        color: '#60A5FA',
-        fontWeight: '900',
+        color: '#38BDF8',
     },
     darkFairText: {
         color: '#FBBF24',
-        fontWeight: '900',
     },
     darkOosText: {
         color: '#F87171',
-        fontWeight: '900',
     },
     actionButton: {
-        backgroundColor: '#2563EB',
-        marginTop: 12,
+        alignItems: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 10,
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
         minHeight: 48,
-        width: '100%',
+        marginTop: 10,
     },
     darkActionButton: {
-        backgroundColor: '#2563EB',
+        backgroundColor: colors.hudAmber,
     },
     actionBtnText: {
         color: '#FFFFFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '800',
     },
+    darkActionBtnText: {
+        color: colors.surfaceDark,
+    },
     signedStamp: {
-        backgroundColor: '#06281E',
-        borderColor: '#059669',
-        borderRadius: 8,
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+        borderRadius: 12,
         borderWidth: 1,
         marginTop: 12,
-        padding: 12,
+        padding: 14,
     },
     darkSignedStamp: {
-        backgroundColor: '#06281E',
+        backgroundColor: 'rgba(5, 150, 105, 0.15)',
         borderColor: '#059669',
     },
+    stampHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 4,
+    },
     signedStampTitle: {
-        color: '#34D399',
+        color: colors.greenDark,
         fontSize: 13,
         fontWeight: '900',
         letterSpacing: 0.5,
@@ -370,15 +665,14 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     signedStampSub: {
-        color: '#6EE7B7',
+        color: colors.greenDark,
         fontSize: 12,
-        fontWeight: '600',
-        marginTop: 2,
+        lineHeight: 16,
     },
     darkSignedStampSub: {
         color: '#6EE7B7',
     },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.85,
     },
 });

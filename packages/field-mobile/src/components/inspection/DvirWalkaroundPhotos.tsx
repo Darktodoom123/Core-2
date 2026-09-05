@@ -217,7 +217,11 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
                             >
                                 {isLoading ? (
                                     <ActivityIndicator
-                                        color={colors.primary}
+                                        color={
+                                            isDarkHud
+                                                ? '#F59E0B'
+                                                : colors.primary
+                                        }
                                         size="small"
                                     />
                                 ) : photo ? (
@@ -257,7 +261,7 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
                                         <Icon
                                             color={
                                                 isDarkHud
-                                                    ? '#38BDF8'
+                                                    ? '#F59E0B'
                                                     : colors.primary
                                             }
                                             name="camera"
@@ -272,7 +276,10 @@ export const DvirWalkaroundPhotos: React.FC<DvirWalkaroundPhotosProps> = ({
                                 style={[
                                     styles.slotLabel,
                                     isDarkHud && styles.darkSlotLabel,
-                                    photo && styles.slotLabelActive,
+                                    photo &&
+                                        (isDarkHud
+                                            ? styles.darkSlotLabelActive
+                                            : styles.slotLabelActive),
                                 ]}
                             >
                                 {angleConfig.label}
@@ -290,7 +297,7 @@ const styles = StyleSheet.create({
         marginBottom: 18,
     },
     sectionTitle: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 16,
         fontWeight: '800',
         letterSpacing: 0.1,
@@ -310,8 +317,8 @@ const styles = StyleSheet.create({
     },
     photoSlot: {
         alignItems: 'center',
-        backgroundColor: '#172554',
-        borderColor: '#1E3A8A',
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
         borderRadius: 12,
         borderWidth: 1.5,
         height: 72,
@@ -321,8 +328,8 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     darkPhotoSlot: {
-        backgroundColor: '#0F1E36',
-        borderColor: '#1E3A8A',
+        backgroundColor: '#101A2E',
+        borderColor: '#1E3254',
     },
     photoSlotCaptured: {
         borderColor: '#059669',
@@ -363,7 +370,7 @@ const styles = StyleSheet.create({
         width: 18,
     },
     slotLabel: {
-        color: '#94A3B8',
+        color: colors.secondary,
         fontSize: 11,
         fontWeight: '700',
         marginTop: 6,
@@ -373,6 +380,10 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     slotLabelActive: {
+        color: colors.blue,
+        fontWeight: '800',
+    },
+    darkSlotLabelActive: {
         color: '#38BDF8',
         fontWeight: '800',
     },

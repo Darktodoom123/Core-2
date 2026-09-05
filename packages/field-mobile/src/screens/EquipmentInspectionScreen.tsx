@@ -6,7 +6,6 @@ import {
     HandoverTab,
     InspectionChecklistTab,
     MaintenanceWorkOrderTab,
-    SafeReleaseTab,
 } from '../components/inspection';
 import { colors } from '../components/nativeStyles';
 import { useTheme } from '../theme';
@@ -82,13 +81,8 @@ export const EquipmentInspectionScreen: React.FC<
 }) => {
     const { isDarkHud } = useTheme();
     const [activeTab, setActiveTab] = useState<
-        | 'setup'
-        | 'work_order'
-        | 'safe_release'
-        | 'fuel'
-        | 'handover'
-        | 'checklist'
-    >('setup');
+        'work_order' | 'fuel' | 'handover' | 'checklist'
+    >('work_order');
 
     const [checks, setChecks] =
         useState<TechnicianInspectionCheck[]>(INITIAL_CHECKS);
@@ -179,12 +173,16 @@ export const EquipmentInspectionScreen: React.FC<
                         accessibilityLabel="Close and return"
                         accessibilityRole="button"
                         onPress={onBack}
-                        style={styles.closeHeaderBtn}
+                        style={({ pressed }) => [
+                            styles.closeHeaderBtn,
+                            isDarkHud && styles.darkCloseHeaderBtn,
+                            pressed && styles.pressed,
+                        ]}
                     >
                         <Icon
-                            color={isDarkHud ? '#94A3B8' : colors.text}
+                            color={isDarkHud ? colors.hudText : colors.text}
                             name="back"
-                            size={22}
+                            size={18}
                         />
                     </Pressable>
                 ) : null}
@@ -195,7 +193,7 @@ export const EquipmentInspectionScreen: React.FC<
                             isDarkHud && styles.darkPageCategory,
                         ]}
                     >
-                        VEHICLE SETUP &amp; FLEET HUB
+                        VEHICLE MAINTENANCE & FLEET HUB
                     </Text>
                     <Text
                         accessibilityRole="header"
@@ -231,49 +229,20 @@ export const EquipmentInspectionScreen: React.FC<
                     contentContainerStyle={styles.tabBarScroll}
                 >
                     <Pressable
-                        accessibilityLabel="Vehicle setup and telematics"
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected: activeTab === 'setup' }}
-                        onPress={() => setActiveTab('setup')}
-                        style={[
-                            styles.tabPill,
-                            isDarkHud && styles.darkTabPill,
-                            activeTab === 'setup' && styles.tabPillActive,
-                            isDarkHud &&
-                                activeTab === 'setup' &&
-                                styles.darkTabPillActive,
-                        ]}
-                        testID="tab-setup-telematics"
-                    >
-                        <Text
-                            style={[
-                                styles.tabPillText,
-                                isDarkHud && styles.darkTabPillText,
-                                activeTab === 'setup' &&
-                                    styles.tabPillTextActive,
-                                isDarkHud &&
-                                    activeTab === 'setup' &&
-                                    styles.darkTabPillTextActive,
-                            ]}
-                        >
-                            Setup &amp; Specs
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
                         accessibilityLabel="Maintenance work orders"
                         accessibilityRole="tab"
                         accessibilityState={{
                             selected: activeTab === 'work_order',
                         }}
                         onPress={() => setActiveTab('work_order')}
-                        style={[
+                        style={({ pressed }) => [
                             styles.tabPill,
                             isDarkHud && styles.darkTabPill,
                             activeTab === 'work_order' && styles.tabPillActive,
                             isDarkHud &&
                                 activeTab === 'work_order' &&
                                 styles.darkTabPillActive,
+                            pressed && styles.pressed,
                         ]}
                         testID="tab-work-orders"
                     >
@@ -288,41 +257,33 @@ export const EquipmentInspectionScreen: React.FC<
                                     styles.darkTabPillTextActive,
                             ]}
                         >
-                            Work Orders ({workOrders.length})
+                            Work Orders
                         </Text>
-                    </Pressable>
-
-                    <Pressable
-                        accessibilityLabel="Safe release certification"
-                        accessibilityRole="tab"
-                        accessibilityState={{
-                            selected: activeTab === 'safe_release',
-                        }}
-                        onPress={() => setActiveTab('safe_release')}
-                        style={[
-                            styles.tabPill,
-                            isDarkHud && styles.darkTabPill,
-                            activeTab === 'safe_release' &&
-                                styles.tabPillActive,
-                            isDarkHud &&
-                                activeTab === 'safe_release' &&
-                                styles.darkTabPillActive,
-                        ]}
-                        testID="tab-safe-release"
-                    >
-                        <Text
+                        <View
                             style={[
-                                styles.tabPillText,
-                                isDarkHud && styles.darkTabPillText,
-                                activeTab === 'safe_release' &&
-                                    styles.tabPillTextActive,
+                                styles.countBadge,
+                                isDarkHud && styles.darkCountBadge,
+                                activeTab === 'work_order' &&
+                                    styles.countBadgeActive,
                                 isDarkHud &&
-                                    activeTab === 'safe_release' &&
-                                    styles.darkTabPillTextActive,
+                                    activeTab === 'work_order' &&
+                                    styles.darkCountBadgeActive,
                             ]}
                         >
-                            Safe Release
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.countBadgeText,
+                                    isDarkHud && styles.darkCountBadgeText,
+                                    activeTab === 'work_order' &&
+                                        styles.countBadgeTextActive,
+                                    isDarkHud &&
+                                        activeTab === 'work_order' &&
+                                        styles.darkCountBadgeTextActive,
+                                ]}
+                            >
+                                {workOrders.length}
+                            </Text>
+                        </View>
                     </Pressable>
 
                     <Pressable
@@ -330,13 +291,14 @@ export const EquipmentInspectionScreen: React.FC<
                         accessibilityRole="tab"
                         accessibilityState={{ selected: activeTab === 'fuel' }}
                         onPress={() => setActiveTab('fuel')}
-                        style={[
+                        style={({ pressed }) => [
                             styles.tabPill,
                             isDarkHud && styles.darkTabPill,
                             activeTab === 'fuel' && styles.tabPillActive,
                             isDarkHud &&
                                 activeTab === 'fuel' &&
                                 styles.darkTabPillActive,
+                            pressed && styles.pressed,
                         ]}
                         testID="tab-fuel"
                     >
@@ -351,8 +313,32 @@ export const EquipmentInspectionScreen: React.FC<
                                     styles.darkTabPillTextActive,
                             ]}
                         >
-                            Fuel ({fuelLogs.length})
+                            Fuel
                         </Text>
+                        <View
+                            style={[
+                                styles.countBadge,
+                                isDarkHud && styles.darkCountBadge,
+                                activeTab === 'fuel' && styles.countBadgeActive,
+                                isDarkHud &&
+                                    activeTab === 'fuel' &&
+                                    styles.darkCountBadgeActive,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.countBadgeText,
+                                    isDarkHud && styles.darkCountBadgeText,
+                                    activeTab === 'fuel' &&
+                                        styles.countBadgeTextActive,
+                                    isDarkHud &&
+                                        activeTab === 'fuel' &&
+                                        styles.darkCountBadgeTextActive,
+                                ]}
+                            >
+                                {fuelLogs.length}
+                            </Text>
+                        </View>
                     </Pressable>
 
                     <Pressable
@@ -362,13 +348,14 @@ export const EquipmentInspectionScreen: React.FC<
                             selected: activeTab === 'handover',
                         }}
                         onPress={() => setActiveTab('handover')}
-                        style={[
+                        style={({ pressed }) => [
                             styles.tabPill,
                             isDarkHud && styles.darkTabPill,
                             activeTab === 'handover' && styles.tabPillActive,
                             isDarkHud &&
                                 activeTab === 'handover' &&
                                 styles.darkTabPillActive,
+                            pressed && styles.pressed,
                         ]}
                         testID="tab-handover"
                     >
@@ -391,248 +378,14 @@ export const EquipmentInspectionScreen: React.FC<
 
             {/* Scrollable Content Container matching DVIR Form */}
             <ScrollView
-                accessibilityLabel="Vehicle setup, fleet telematics and maintenance workflows"
+                accessibilityLabel="Vehicle maintenance and fleet workflows"
                 contentContainerStyle={[
                     styles.contentContainer,
                     isDarkHud && styles.darkContentContainer,
                 ]}
                 style={styles.scrollView}
             >
-                {/* TAB 1: Setup, Telematics & DVIR Status Card */}
-                {activeTab === 'setup' ? (
-                    <View style={styles.setupTabContent}>
-                        {/* Primary DVIR Status Guarantee Banner */}
-                        <View
-                            style={[
-                                styles.dvirStatusCard,
-                                isDarkHud && styles.darkDvirStatusCard,
-                            ]}
-                            testID="dvir-unified-status-card"
-                        >
-                            <View style={styles.dvirCardHeader}>
-                                <View style={styles.dvirBadge}>
-                                    <Icon
-                                        color="#10B981"
-                                        name="shield-check"
-                                        size={20}
-                                    />
-                                    <Text style={styles.dvirBadgeText}>
-                                        UNIFIED DVIR ENGINE
-                                    </Text>
-                                </View>
-                                <Text style={styles.dvirSubBadge}>
-                                    Single Source of Truth
-                                </Text>
-                            </View>
-
-                            <Text style={styles.dvirTitle}>
-                                Pre-Trip &amp; Post-Trip Inspection Active
-                            </Text>
-                            <Text style={styles.dvirDescription}>
-                                All vehicle and crane defects, 4-angle
-                                walkaround photos, safety statuses, and
-                                regulatory DOT/OSHA sign-offs are consolidated
-                                in the primary DVIR module.
-                            </Text>
-
-                            {onOpenDvir ? (
-                                <Pressable
-                                    accessibilityLabel="Open full DVIR inspection engine"
-                                    accessibilityRole="button"
-                                    onPress={onOpenDvir}
-                                    style={styles.openDvirBtn}
-                                    testID="open-dvir-engine-btn"
-                                >
-                                    <Icon
-                                        color="#FFFFFF"
-                                        name="clipboard"
-                                        size={18}
-                                    />
-                                    <Text style={styles.openDvirBtnText}>
-                                        Open DVIR Inspection Engine
-                                    </Text>
-                                    <Icon
-                                        color="#93C5FD"
-                                        name="chevron-right"
-                                        size={16}
-                                    />
-                                </Pressable>
-                            ) : null}
-                        </View>
-
-                        {/* Telemetrics & Specs Grid */}
-                        <View
-                            style={[
-                                styles.specsCard,
-                                isDarkHud && styles.darkSpecsCard,
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.sectionTitle,
-                                    isDarkHud && styles.darkText,
-                                ]}
-                            >
-                                Live Telemetry &amp; Operating Specs
-                            </Text>
-
-                            <View style={styles.telemetryGrid}>
-                                <View
-                                    style={[
-                                        styles.telemetryCell,
-                                        isDarkHud && styles.darkTelemetryCell,
-                                    ]}
-                                >
-                                    <Text style={styles.telemetryLabel}>
-                                        Odometer
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.telemetryValue,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        42,150 km
-                                    </Text>
-                                </View>
-
-                                <View
-                                    style={[
-                                        styles.telemetryCell,
-                                        isDarkHud && styles.darkTelemetryCell,
-                                    ]}
-                                >
-                                    <Text style={styles.telemetryLabel}>
-                                        Engine Hours
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.telemetryValue,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        1,842.5 hrs
-                                    </Text>
-                                </View>
-
-                                <View
-                                    style={[
-                                        styles.telemetryCell,
-                                        isDarkHud && styles.darkTelemetryCell,
-                                    ]}
-                                >
-                                    <Text style={styles.telemetryLabel}>
-                                        Fuel Level
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.telemetryValue,
-                                            styles.telemetryGreen,
-                                        ]}
-                                    >
-                                        88% · Diesel
-                                    </Text>
-                                </View>
-
-                                <View
-                                    style={[
-                                        styles.telemetryCell,
-                                        isDarkHud && styles.darkTelemetryCell,
-                                    ]}
-                                >
-                                    <Text style={styles.telemetryLabel}>
-                                        Battery Voltage
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.telemetryValue,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        24.6 V (Normal)
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Crane Rigging & Outrigger Readiness */}
-                        <View
-                            style={[
-                                styles.specsCard,
-                                isDarkHud && styles.darkSpecsCard,
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.sectionTitle,
-                                    isDarkHud && styles.darkText,
-                                ]}
-                            >
-                                Crane &amp; Outrigger Configuration
-                            </Text>
-
-                            <View style={styles.configRows}>
-                                <View style={styles.configRow}>
-                                    <Text style={styles.configKey}>
-                                        Outrigger Spread
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.configVal,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        100% Full Extension (Mid-Lock Engaged)
-                                    </Text>
-                                </View>
-
-                                <View style={styles.configRow}>
-                                    <Text style={styles.configKey}>
-                                        Inclinometer Level
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.configVal,
-                                            styles.telemetryGreen,
-                                        ]}
-                                    >
-                                        0.0° Level (Within Safe &lt; 0.5°)
-                                    </Text>
-                                </View>
-
-                                <View style={styles.configRow}>
-                                    <Text style={styles.configKey}>
-                                        Boom &amp; Fly Jib
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.configVal,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        40.0m Telescopic + 9.2m Lattice Jib
-                                    </Text>
-                                </View>
-
-                                <View style={styles.configRow}>
-                                    <Text style={styles.configKey}>
-                                        Counterweight
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.configVal,
-                                            isDarkHud && styles.darkText,
-                                        ]}
-                                    >
-                                        12.5 Tonnes Full Slabs Mounted
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                ) : null}
-
-                {/* TAB 2: Work Orders */}
+                {/* TAB 1: Work Orders */}
                 {activeTab === 'work_order' ? (
                     <MaintenanceWorkOrderTab
                         assetCode={assetCode}
@@ -643,17 +396,7 @@ export const EquipmentInspectionScreen: React.FC<
                     />
                 ) : null}
 
-                {/* TAB 3: Safe Release */}
-                {activeTab === 'safe_release' ? (
-                    <SafeReleaseTab
-                        assetCode={assetCode}
-                        assetName={assetName}
-                        onSafeRelease={onSafeRelease ?? (() => {})}
-                        technicianName={technicianName}
-                    />
-                ) : null}
-
-                {/* TAB 4: Fuel Receipts */}
+                {/* TAB 2: Fuel Receipts */}
                 {activeTab === 'fuel' ? (
                     <FuelReceiptTab
                         assetCode={assetCode}
@@ -662,7 +405,7 @@ export const EquipmentInspectionScreen: React.FC<
                     />
                 ) : null}
 
-                {/* TAB 5: Handover */}
+                {/* TAB 4: Handover */}
                 {activeTab === 'handover' ? (
                     <HandoverTab
                         assetCode={assetCode}
@@ -687,16 +430,16 @@ export const EquipmentInspectionScreen: React.FC<
 
 const styles = StyleSheet.create({
     screenRoot: {
-        backgroundColor: '#090E1A',
+        backgroundColor: colors.background,
         flex: 1,
     },
     darkScreenRoot: {
-        backgroundColor: '#090E1A',
+        backgroundColor: colors.hudBackground,
     },
     headerBar: {
         alignItems: 'center',
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
         flexDirection: 'row',
         gap: 12,
@@ -704,53 +447,61 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     darkHeaderBar: {
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorder,
     },
     closeHeaderBtn: {
         alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
         height: 38,
         justifyContent: 'center',
         width: 38,
+    },
+    darkCloseHeaderBtn: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
     },
     headerCenter: {
         flex: 1,
     },
     pageCategory: {
-        color: '#F59E0B',
+        color: colors.amber,
         fontSize: 11,
         fontWeight: '900',
         letterSpacing: 0.8,
     },
     darkPageCategory: {
-        color: '#F59E0B',
+        color: colors.hudAmber,
     },
     screenTitle: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 17,
         fontWeight: '800',
     },
     darkScreenTitle: {
-        color: '#FFFFFF',
+        color: colors.hudText,
     },
     headerSubtitle: {
-        color: '#94A3B8',
+        color: colors.muted,
         fontSize: 12,
         fontWeight: '600',
         marginTop: 1,
     },
     darkHeaderSubtitle: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     tabBarContainer: {
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
         paddingVertical: 8,
     },
     darkTabBarContainer: {
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorder,
     },
     tabBarScroll: {
         flexDirection: 'row',
@@ -759,43 +510,77 @@ const styles = StyleSheet.create({
     },
     tabPill: {
         alignItems: 'center',
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
         borderRadius: 20,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
         justifyContent: 'center',
-        minHeight: 36,
+        minHeight: 38,
         paddingHorizontal: 14,
         paddingVertical: 6,
     },
     darkTabPill: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
     },
     tabPillActive: {
-        backgroundColor: '#172554',
-        borderColor: '#2563EB',
-        borderWidth: 1.5,
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
     },
     darkTabPillActive: {
-        backgroundColor: '#172554',
-        borderColor: '#2563EB',
-        borderWidth: 1.5,
+        backgroundColor: colors.hudAmber,
+        borderColor: colors.hudAmber,
     },
     tabPillText: {
-        color: '#94A3B8',
+        color: colors.muted,
         fontSize: 13,
         fontWeight: '700',
     },
     darkTabPillText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     tabPillTextActive: {
-        color: '#60A5FA',
+        color: '#FFFFFF',
         fontWeight: '800',
     },
     darkTabPillTextActive: {
-        color: '#60A5FA',
+        color: colors.surfaceDark,
+        fontWeight: '800',
+    },
+    countBadge: {
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.08)',
+        borderRadius: 10,
+        justifyContent: 'center',
+        minWidth: 18,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+    },
+    darkCountBadge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    },
+    countBadgeActive: {
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    darkCountBadgeActive: {
+        backgroundColor: 'rgba(15, 23, 42, 0.25)',
+    },
+    countBadgeText: {
+        color: colors.muted,
+        fontSize: 11,
+        fontWeight: '800',
+    },
+    darkCountBadgeText: {
+        color: colors.hudTextDim,
+    },
+    countBadgeTextActive: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+    },
+    darkCountBadgeTextActive: {
+        color: colors.surfaceDark,
         fontWeight: '800',
     },
     scrollView: {
@@ -803,150 +588,15 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         alignSelf: 'center',
-        backgroundColor: '#090E1A',
         maxWidth: 720,
         padding: 16,
-        paddingBottom: 32,
+        paddingBottom: 36,
         width: '100%',
     },
     darkContentContainer: {
-        backgroundColor: '#090E1A',
+        backgroundColor: colors.hudBackground,
     },
-    setupTabContent: {
-        gap: 16,
-    },
-    dvirStatusCard: {
-        backgroundColor: '#06281E',
-        borderColor: '#065F46',
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 16,
-    },
-    darkDvirStatusCard: {
-        backgroundColor: '#06281E',
-        borderColor: '#065F46',
-    },
-    dvirCardHeader: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-    },
-    dvirBadge: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 6,
-    },
-    dvirBadgeText: {
-        color: '#059669',
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 0.5,
-    },
-    dvirSubBadge: {
-        color: '#6EE7B7',
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    dvirTitle: {
-        color: '#34D399',
-        fontSize: 16,
-        fontWeight: '800',
-        marginBottom: 6,
-    },
-    dvirDescription: {
-        color: '#A7F3D0',
-        fontSize: 13,
-        lineHeight: 18,
-        marginBottom: 14,
-    },
-    openDvirBtn: {
-        alignItems: 'center',
-        backgroundColor: '#059669',
-        borderRadius: 8,
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    openDvirBtnText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '800',
-    },
-    specsCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 16,
-    },
-    darkSpecsCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-    },
-    sectionTitle: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '800',
-        marginBottom: 12,
-    },
-    darkText: {
-        color: '#FFFFFF',
-    },
-    telemetryGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    telemetryCell: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
-        borderWidth: 1,
-        flex: 1,
-        minWidth: '45%',
-        padding: 12,
-    },
-    darkTelemetryCell: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderWidth: 1,
-    },
-    telemetryLabel: {
-        color: '#64748B',
-        fontSize: 11,
-        fontWeight: '700',
-        marginBottom: 4,
-    },
-    telemetryValue: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '800',
-    },
-    telemetryGreen: {
-        color: '#10B981',
-    },
-    configRows: {
-        gap: 10,
-    },
-    configRow: {
-        borderBottomColor: '#1E293B',
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingBottom: 8,
-    },
-    configKey: {
-        color: '#94A3B8',
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    configVal: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '700',
-        textAlign: 'right',
+    pressed: {
+        opacity: 0.85,
     },
 });

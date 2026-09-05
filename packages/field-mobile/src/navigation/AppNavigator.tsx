@@ -1034,14 +1034,28 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ) : activeAppView === 'dvir' ? (
                             <DvirScreen
                                 activeJobReference={
-                                    jobs[0]?.reference || 'DISP-2026-0891'
+                                    activeJob?.reference ||
+                                    jobs[0]?.reference ||
+                                    'DISP-2026-0891'
                                 }
                                 apiClient={apiClient}
                                 assetCode={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_code ||
                                     jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code || 'ALB-CRN-050'
+                                        ?.asset_code ||
+                                    'ALB-CRN-050'
+                                }
+                                assetKind={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_kind ||
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_kind ||
+                                    'mobile_crane'
                                 }
                                 assetName={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_name ||
                                     jobs[0]?.asset_assignments?.[0]
                                         ?.asset_name ||
                                     '50T Tadano All-Terrain Crane'

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
 import type { TechnicianInspectionCheck } from '../../types/index';
-import { colors } from '../nativeStyles';
+import { colors, shadows } from '../nativeStyles';
 
 export interface InspectionChecklistTabProps {
     checks: TechnicianInspectionCheck[];
@@ -74,8 +74,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             isDarkHud && styles.darkCardHelper,
                         ]}
                     >
-                        DOLE-OSHC Certified Daily Gauntlet • 48px Glove-Friendly
-                        Rockers
+                        DOLE-OSHC Certified Daily Pre-Operational Inspection
                     </Text>
                 </View>
             </View>
@@ -90,23 +89,24 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             key={cat.key}
                             accessibilityRole="button"
                             onPress={() => setSelectedCategory(cat.key)}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.categoryPill,
                                 isDarkHud && styles.darkCategoryPill,
-                                isActive &&
-                                    (isDarkHud
-                                        ? styles.darkCategoryPillActive
-                                        : styles.categoryPillActive),
+                                isActive && styles.categoryPillActive,
+                                isDarkHud &&
+                                    isActive &&
+                                    styles.darkCategoryPillActive,
+                                pressed && styles.pressed,
                             ]}
                         >
                             <Text
                                 style={[
                                     styles.categoryPillText,
                                     isDarkHud && styles.darkCategoryPillText,
-                                    isActive &&
-                                        (isDarkHud
-                                            ? styles.darkCategoryPillTextActive
-                                            : styles.categoryPillTextActive),
+                                    isActive && styles.categoryPillTextActive,
+                                    isDarkHud &&
+                                        isActive &&
+                                        styles.darkCategoryPillTextActive,
                                 ]}
                             >
                                 {cat.label}
@@ -131,7 +131,7 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                 isDarkHud && styles.darkCriticalTitle,
                             ]}
                         >
-                            CRITICAL DEFECT DETECTED • DISPATCH LOCKOUT
+                            CRITICAL DEFECT DETECTED · DISPATCH LOCKOUT
                         </Text>
                         <Text
                             style={[
@@ -159,18 +159,16 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             style={[
                                 styles.checkRowContainer,
                                 isDarkHud && styles.darkCheckRowContainer,
-                                isPass &&
-                                    (isDarkHud
-                                        ? styles.darkCheckRowPass
-                                        : styles.checkRowPass),
-                                isAttention &&
-                                    (isDarkHud
-                                        ? styles.darkCheckRowAttention
-                                        : styles.checkRowAttention),
-                                isCritical &&
-                                    (isDarkHud
-                                        ? styles.darkCheckRowCritical
-                                        : styles.checkRowCritical),
+                                isPass && styles.checkRowPass,
+                                isDarkHud && isPass && styles.darkCheckRowPass,
+                                isAttention && styles.checkRowAttention,
+                                isDarkHud &&
+                                    isAttention &&
+                                    styles.darkCheckRowAttention,
+                                isCritical && styles.checkRowCritical,
+                                isDarkHud &&
+                                    isCritical &&
+                                    styles.darkCheckRowCritical,
                             ]}
                         >
                             <Pressable
@@ -204,13 +202,15 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                                                 styles.checkStatus,
                                                 isPass && styles.statusGood,
                                                 isAttention &&
-                                                    (isDarkHud
-                                                        ? styles.darkStatusAttention
-                                                        : styles.statusAttention),
+                                                    styles.statusAttention,
+                                                isDarkHud &&
+                                                    isAttention &&
+                                                    styles.darkStatusAttention,
                                                 isCritical &&
-                                                    (isDarkHud
-                                                        ? styles.darkStatusCritical
-                                                        : styles.statusCritical),
+                                                    styles.statusCritical,
+                                                isDarkHud &&
+                                                    isCritical &&
+                                                    styles.darkStatusCritical,
                                             ]}
                                         >
                                             {item.statusLabel}
@@ -220,7 +220,12 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
                             </Pressable>
 
                             {/* Glove-Friendly Tri-State Rocker Segmented Control */}
-                            <View style={styles.segmentedRockerRail}>
+                            <View
+                                style={[
+                                    styles.segmentedRockerRail,
+                                    isDarkHud && styles.darkSegmentedRockerRail,
+                                ]}
+                            >
                                 <Pressable
                                     accessibilityLabel={`Mark ${item.label} as Pass`}
                                     accessibilityRole="button"
@@ -368,35 +373,34 @@ export const InspectionChecklistTab: React.FC<InspectionChecklistTabProps> = ({
 const styles = StyleSheet.create({
     sectionCard: {
         backgroundColor: colors.surface,
-        borderColor: colors.borderStrong,
         borderRadius: 14,
-        borderWidth: 1,
         marginBottom: 16,
         padding: 16,
+        ...shadows.sm,
     },
     darkSectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
+        backgroundColor: colors.hudSurface,
+        shadowColor: 'transparent',
     },
     headerRow: {
         marginBottom: 12,
     },
     cardHeading: {
         color: colors.text,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '800',
-        letterSpacing: 0.2,
+        letterSpacing: 0.3,
     },
     darkCardHeading: {
-        color: '#F8FAFC',
+        color: colors.hudText,
     },
     cardHelper: {
-        color: colors.secondary,
+        color: colors.muted,
         fontSize: 12,
         marginTop: 2,
     },
     darkCardHelper: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     categoryRail: {
         flexDirection: 'row',
@@ -405,24 +409,25 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     categoryPill: {
+        alignItems: 'center',
         backgroundColor: colors.surfaceMuted,
         borderColor: colors.border,
-        borderRadius: 8,
+        borderRadius: 16,
         borderWidth: 1,
         paddingHorizontal: 10,
         paddingVertical: 6,
     },
     darkCategoryPill: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
     },
     categoryPillActive: {
-        backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
     },
     darkCategoryPillActive: {
-        backgroundColor: '#78350F',
-        borderColor: '#F59E0B',
+        backgroundColor: colors.hudAmber,
+        borderColor: colors.hudAmber,
     },
     categoryPillText: {
         color: colors.muted,
@@ -430,13 +435,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     darkCategoryPillText: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     categoryPillTextActive: {
-        color: colors.amberDark,
+        color: '#FFFFFF',
     },
     darkCategoryPillTextActive: {
-        color: '#FBBF24',
+        color: colors.surfaceDark,
     },
     criticalBanner: {
         backgroundColor: colors.redLight,
@@ -449,11 +454,8 @@ const styles = StyleSheet.create({
         padding: 12,
     },
     darkCriticalBanner: {
-        backgroundColor: '#7F1D1D',
-        borderColor: '#EF4444',
-    },
-    criticalIcon: {
-        fontSize: 20,
+        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+        borderColor: '#DC2626',
     },
     criticalCopy: {
         flex: 1,
@@ -465,7 +467,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.3,
     },
     darkCriticalTitle: {
-        color: '#FCA5A5',
+        color: '#F87171',
     },
     criticalBody: {
         color: colors.redDark,
@@ -481,45 +483,36 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     checkRowContainer: {
+        backgroundColor: colors.surfaceMuted,
         borderRadius: 10,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.surface,
-        padding: 10,
+        padding: 12,
     },
     darkCheckRowContainer: {
-        backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        backgroundColor: colors.surfaceDark,
     },
     checkRowPass: {
         backgroundColor: colors.greenLight,
-        borderColor: colors.greenBorder,
     },
     darkCheckRowPass: {
-        backgroundColor: '#064E3B',
-        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.12)',
     },
     checkRowAttention: {
-        backgroundColor: colors.warningLight,
-        borderColor: colors.warningBorder,
+        backgroundColor: colors.amberLight,
     },
     darkCheckRowAttention: {
-        backgroundColor: '#451A03',
-        borderColor: '#D97706',
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
     },
     checkRowCritical: {
         backgroundColor: colors.redLight,
-        borderColor: colors.redBorder,
     },
     darkCheckRowCritical: {
-        backgroundColor: '#7F1D1D',
-        borderColor: '#EF4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.12)',
     },
     checkHeaderTouch: {
+        alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     checkLeft: {
         alignItems: 'center',
@@ -528,29 +521,29 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     checkIcon: {
-        fontSize: 20,
+        fontSize: 18,
     },
     checkCopy: {
         flex: 1,
     },
     checkLabel: {
         color: colors.text,
-        fontSize: 14,
-        fontWeight: '800',
+        fontSize: 13,
+        fontWeight: '700',
     },
     darkCheckLabel: {
-        color: '#F8FAFC',
+        color: colors.hudText,
     },
     checkStatus: {
         fontSize: 12,
-        fontWeight: '700',
+        fontWeight: '600',
         marginTop: 2,
     },
     statusGood: {
         color: colors.greenDark,
     },
     statusAttention: {
-        color: colors.warningDark,
+        color: colors.amberDark,
     },
     darkStatusAttention: {
         color: '#FBBF24',
@@ -559,24 +552,24 @@ const styles = StyleSheet.create({
         color: colors.redDark,
     },
     darkStatusCritical: {
-        color: '#FCA5A5',
+        color: '#F87171',
     },
     segmentedRockerRail: {
-        flexDirection: 'row',
-        backgroundColor: colors.surfaceMuted,
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
         borderRadius: 8,
-        padding: 3,
+        flexDirection: 'row',
         gap: 4,
+        padding: 3,
     },
     darkSegmentedRockerRail: {
-        backgroundColor: '#0F172A',
+        backgroundColor: 'rgba(255, 255, 255, 0.06)',
     },
     rockerSegment: {
-        flex: 1,
-        minHeight: 38,
         alignItems: 'center',
-        justifyContent: 'center',
         borderRadius: 6,
+        flex: 1,
+        justifyContent: 'center',
+        minHeight: 38,
     },
     rockerSegmentPass: {
         backgroundColor: colors.green,
@@ -597,21 +590,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#EF4444',
     },
     rockerText: {
+        color: colors.muted,
         fontSize: 11,
         fontWeight: '800',
-        color: colors.muted,
     },
     rockerTextPass: {
         color: '#FFFFFF',
     },
     darkRockerTextPass: {
-        color: '#0F172A',
+        color: colors.surfaceDark,
     },
     rockerTextAttention: {
         color: '#FFFFFF',
     },
     darkRockerTextAttention: {
-        color: '#0F172A',
+        color: colors.surfaceDark,
     },
     rockerTextCritical: {
         color: '#FFFFFF',
@@ -621,24 +614,23 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         alignItems: 'center',
-        backgroundColor: colors.surfaceDark,
+        backgroundColor: colors.amber,
         borderRadius: 10,
         justifyContent: 'center',
-        minHeight: 52,
+        minHeight: 50,
         width: '100%',
     },
     darkSaveButton: {
-        backgroundColor: '#10B981',
+        backgroundColor: colors.hudAmber,
     },
     saveButtonText: {
         color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '800',
         letterSpacing: 0.3,
-        textTransform: 'uppercase',
     },
     darkSaveButtonText: {
-        color: '#0F172A',
+        color: colors.surfaceDark,
     },
     pressed: {
         opacity: 0.85,

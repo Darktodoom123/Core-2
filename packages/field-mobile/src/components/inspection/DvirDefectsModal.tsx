@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme';
+import {
+    getEquipmentPresentation,
+    resolveDesignatedEquipmentType,
+} from '../../utils/equipmentClassification';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
@@ -738,6 +742,10 @@ export interface DvirDefectsModalProps {
     visible: boolean;
     selectedDefectIds: string[];
     initialEquipmentFilter?: CraneEquipmentFilter;
+    designatedEquipment?: CraneEquipmentFilter;
+    assetCode?: string;
+    assetName?: string;
+    assetKind?: string;
     onClose: () => void;
     onApplyDefects: (selectedIds: string[]) => void;
 }
@@ -745,14 +753,54 @@ export interface DvirDefectsModalProps {
 export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
     visible,
     selectedDefectIds,
-    initialEquipmentFilter = 'all',
+    initialEquipmentFilter,
+    designatedEquipment,
+    assetCode,
+    assetName,
+    assetKind,
     onClose,
     onApplyDefects,
 }) => {
     const { isDarkHud } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
+
+    const effectiveEquipmentType = useMemo(() => {
+        if (designatedEquipment && designatedEquipment !== 'all') {
+            return designatedEquipment;
+        }
+
+        if (initialEquipmentFilter && initialEquipmentFilter !== 'all') {
+            return initialEquipmentFilter;
+        }
+
+        return resolveDesignatedEquipmentType({
+            assetCode,
+            assetName,
+            assetKind,
+        });
+    }, [
+        designatedEquipment,
+        initialEquipmentFilter,
+        assetCode,
+        assetName,
+        assetKind,
+    ]);
+
+    const presentation = useMemo(
+        () => getEquipmentPresentation(effectiveEquipmentType),
+        [effectiveEquipmentType],
+    );
+
+    const defaultFilter: CraneEquipmentFilter = useMemo(() => {
+        if (initialEquipmentFilter) {
+            return initialEquipmentFilter;
+        }
+
+        return effectiveEquipmentType;
+    }, [initialEquipmentFilter, effectiveEquipmentType]);
+
     const [equipmentFilter, setEquipmentFilter] =
-        useState<CraneEquipmentFilter>(initialEquipmentFilter);
+        useState<CraneEquipmentFilter>(defaultFilter);
     const [localSelectedIds, setLocalSelectedIds] =
         useState<string[]>(selectedDefectIds);
     const [collapsedCategories, setCollapsedCategories] = useState<
@@ -762,20 +810,27 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
         selectedDefectIds,
         visible,
         initialEquipmentFilter,
+        designatedEquipment,
+        assetCode,
     });
 
     if (
         prevSync.visible !== visible ||
         prevSync.selectedDefectIds !== selectedDefectIds ||
-        prevSync.initialEquipmentFilter !== initialEquipmentFilter
+        prevSync.initialEquipmentFilter !== initialEquipmentFilter ||
+        prevSync.designatedEquipment !== designatedEquipment ||
+        prevSync.assetCode !== assetCode
     ) {
-        setPrevSync({ selectedDefectIds, visible, initialEquipmentFilter });
+        setPrevSync({
+            selectedDefectIds,
+            visible,
+            initialEquipmentFilter,
+            designatedEquipment,
+            assetCode,
+        });
         setLocalSelectedIds(selectedDefectIds);
         setSearchQuery('');
-
-        if (initialEquipmentFilter) {
-            setEquipmentFilter(initialEquipmentFilter);
-        }
+        setEquipmentFilter(defaultFilter);
     }
 
     const handleToggleDefect = (id: string) => {
@@ -844,6 +899,7 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
         >
             <SafeAreaView
                 style={[styles.modalRoot, isDarkHud && styles.darkModalRoot]}
+                testID="defects-modal-container"
             >
                 {/* Header with Search and Done */}
                 <View
@@ -872,8 +928,9 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                 styles.headerTitle,
                                 isDarkHud && styles.darkHeaderTitle,
                             ]}
+                            testID="defects-modal-title"
                         >
-                            Add vehicle defects
+                            {presentation.modalTitle}
                         </Text>
 
                         <Pressable
@@ -883,7 +940,12 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             style={styles.doneBtn}
                             testID="defects-modal-done"
                         >
-                            <Text style={styles.doneBtnText}>
+                            <Text
+                                style={[
+                                    styles.doneBtnText,
+                                    isDarkHud && styles.darkDoneBtnText,
+                                ]}
+                            >
                                 Done{' '}
                                 {localSelectedIds.length > 0
                                     ? `(${localSelectedIds.length})`
@@ -891,6 +953,63 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             </Text>
                         </Pressable>
                     </View>
+
+                    {/* Designated Asset Context Banner */}
+                    {assetCode || assetName ? (
+                        <View
+                            style={[
+                                styles.assetContextBanner,
+                                isDarkHud && styles.darkAssetContextBanner,
+                            ]}
+                            testID="designated-asset-banner"
+                        >
+                            <Text style={styles.assetContextIcon}>
+                                {presentation.icon}
+                            </Text>
+                            <View style={styles.assetContextDetails}>
+                                <View style={styles.assetContextRow}>
+                                    <Text
+                                        style={[
+                                            styles.assetContextCode,
+                                            isDarkHud &&
+                                                styles.darkAssetContextCode,
+                                        ]}
+                                    >
+                                        {assetCode || 'DESIGNATED UNIT'}
+                                    </Text>
+                                    <View
+                                        style={[
+                                            styles.designatedBadge,
+                                            isDarkHud &&
+                                                styles.darkDesignatedBadge,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.designatedBadgeText,
+                                                isDarkHud &&
+                                                    styles.darkDesignatedBadgeText,
+                                            ]}
+                                        >
+                                            {presentation.designatedBadgeLabel}
+                                        </Text>
+                                    </View>
+                                </View>
+                                {assetName ? (
+                                    <Text
+                                        numberOfLines={1}
+                                        style={[
+                                            styles.assetContextName,
+                                            isDarkHud &&
+                                                styles.darkAssetContextName,
+                                        ]}
+                                    >
+                                        {assetName}
+                                    </Text>
+                                ) : null}
+                            </View>
+                        </View>
+                    ) : null}
 
                     {/* Search Bar matching screenshot */}
                     <View
@@ -910,7 +1029,7 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             autoCorrect={false}
                             clearButtonMode="while-editing"
                             onChangeText={setSearchQuery}
-                            placeholder="Search crane & vehicle defects..."
+                            placeholder={presentation.searchPlaceholder}
                             placeholderTextColor={
                                 isDarkHud ? '#64748B' : colors.muted
                             }
@@ -952,17 +1071,17 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                     },
                                     {
                                         key: 'mobile_crane',
-                                        label: '🏗️ Mobile Crane',
+                                        label: `🏗️ Mobile Crane${effectiveEquipmentType === 'mobile_crane' ? ' (Designated)' : ''}`,
                                         testID: 'filter-mobile-crane',
                                     },
                                     {
                                         key: 'tower_crane',
-                                        label: '🗼 Tower Crane',
+                                        label: `🗼 Tower Crane${effectiveEquipmentType === 'tower_crane' ? ' (Designated)' : ''}`,
                                         testID: 'filter-tower-crane',
                                     },
                                     {
                                         key: 'carrier',
-                                        label: '🚛 Carrier & Road',
+                                        label: `🚛 Carrier & Road${effectiveEquipmentType === 'carrier' ? ' (Designated)' : ''}`,
                                         testID: 'filter-carrier',
                                     },
                                 ] as const
@@ -985,6 +1104,9 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                             styles.filterPill,
                                             isDarkHud && styles.darkFilterPill,
                                             isActive && styles.filterPillActive,
+                                            isDarkHud &&
+                                                isActive &&
+                                                styles.darkFilterPillActive,
                                         ]}
                                         testID={filterOpt.testID}
                                     >
@@ -1029,7 +1151,10 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             return (
                                 <View
                                     key={group.key}
-                                    style={styles.categorySection}
+                                    style={[
+                                        styles.categorySection,
+                                        isDarkHud && styles.darkCategorySection,
+                                    ]}
                                     testID={`category-section-${group.key}`}
                                 >
                                     {/* Category Header Accordion */}
@@ -1039,7 +1164,11 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                         onPress={() =>
                                             handleToggleCategory(group.key)
                                         }
-                                        style={styles.categoryHeaderRow}
+                                        style={[
+                                            styles.categoryHeaderRow,
+                                            isDarkHud &&
+                                                styles.darkCategoryHeaderRow,
+                                        ]}
                                     >
                                         <View style={styles.categoryTitleGroup}>
                                             <Text
@@ -1084,7 +1213,13 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
 
                                     {/* Category Checklist Items */}
                                     {!isCollapsed ? (
-                                        <View style={styles.itemList}>
+                                        <View
+                                            style={[
+                                                styles.itemList,
+                                                isDarkHud &&
+                                                    styles.darkItemList,
+                                            ]}
+                                        >
                                             {group.items.map((item) => {
                                                 const isSelected =
                                                     localSelectedIds.includes(
@@ -1145,7 +1280,9 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                                                 isDarkHud &&
                                                                     styles.darkItemLabel,
                                                                 isSelected &&
-                                                                    styles.itemLabelSelected,
+                                                                    (isDarkHud
+                                                                        ? styles.darkItemLabelSelected
+                                                                        : styles.itemLabelSelected),
                                                             ]}
                                                         >
                                                             {item.label}
@@ -1192,19 +1329,19 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
 
 const styles = StyleSheet.create({
     modalRoot: {
-        backgroundColor: '#0A1120',
+        backgroundColor: colors.background,
         flex: 1,
     },
     darkModalRoot: {
-        backgroundColor: '#0A1120',
+        backgroundColor: '#090D16',
     },
     headerContainer: {
-        backgroundColor: '#0F1A2E',
-        borderBottomColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
+        paddingBottom: 12,
         paddingHorizontal: 16,
         paddingTop: 12,
-        paddingBottom: 12,
     },
     darkHeaderContainer: {
         backgroundColor: '#0F1A2E',
@@ -1223,7 +1360,7 @@ const styles = StyleSheet.create({
         width: 36,
     },
     headerTitle: {
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 17,
         fontWeight: '800',
     },
@@ -1237,14 +1374,17 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     doneBtnText: {
-        color: '#38BDF8',
+        color: colors.amber,
         fontSize: 15,
         fontWeight: '800',
     },
+    darkDoneBtnText: {
+        color: '#F59E0B',
+    },
     searchBarWrapper: {
         alignItems: 'center',
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
         borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
@@ -1257,7 +1397,7 @@ const styles = StyleSheet.create({
         borderColor: '#1E3A5F',
     },
     searchInput: {
-        color: '#FFFFFF',
+        color: colors.text,
         flex: 1,
         fontSize: 15,
         height: '100%',
@@ -1277,8 +1417,8 @@ const styles = StyleSheet.create({
     },
     filterPill: {
         alignItems: 'center',
-        backgroundColor: '#162238',
-        borderColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
         borderRadius: 20,
         borderWidth: 1,
         justifyContent: 'center',
@@ -1290,11 +1430,15 @@ const styles = StyleSheet.create({
         borderColor: '#1E293B',
     },
     filterPillActive: {
-        backgroundColor: '#0284C7',
-        borderColor: '#38BDF8',
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
+    },
+    darkFilterPillActive: {
+        backgroundColor: '#B45309',
+        borderColor: '#F59E0B',
     },
     filterPillText: {
-        color: '#94A3B8',
+        color: colors.secondary,
         fontSize: 12,
         fontWeight: '700',
     },
@@ -1312,16 +1456,25 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
     },
     categorySection: {
-        borderBottomColor: '#1E293B',
+        borderBottomColor: colors.border,
         borderBottomWidth: 1,
+    },
+    darkCategorySection: {
+        borderBottomColor: '#1E293B',
     },
     categoryHeaderRow: {
         alignItems: 'center',
-        backgroundColor: '#0D172A',
+        backgroundColor: '#F8FAFC',
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 14,
+    },
+    darkCategoryHeaderRow: {
+        backgroundColor: '#0D172A',
+        borderBottomColor: '#1E293B',
     },
     categoryTitleGroup: {
         alignItems: 'center',
@@ -1329,7 +1482,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     categoryTitle: {
-        color: '#94A3B8',
+        color: colors.text,
         fontSize: 15,
         fontWeight: '800',
         letterSpacing: 0.2,
@@ -1352,11 +1505,14 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     itemList: {
+        backgroundColor: colors.surface,
+    },
+    darkItemList: {
         backgroundColor: '#0A1120',
     },
     itemRow: {
         alignItems: 'center',
-        borderBottomColor: '#131F35',
+        borderBottomColor: colors.borderSubtle,
         borderBottomWidth: 1,
         flexDirection: 'row',
         gap: 14,
@@ -1368,15 +1524,15 @@ const styles = StyleSheet.create({
         borderBottomColor: '#131F35',
     },
     itemRowSelected: {
-        backgroundColor: '#172554',
+        backgroundColor: colors.amberLight,
     },
     darkItemRowSelected: {
-        backgroundColor: '#14203D',
+        backgroundColor: '#351F05',
     },
     checkbox: {
         alignItems: 'center',
-        backgroundColor: '#1E293B',
-        borderColor: '#475569',
+        backgroundColor: colors.surface,
+        borderColor: colors.borderStrong,
         borderRadius: 6,
         borderWidth: 1.5,
         height: 22,
@@ -1388,11 +1544,11 @@ const styles = StyleSheet.create({
         borderColor: '#475569',
     },
     checkboxSelected: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
     },
     itemLabel: {
-        color: '#E2E8F0',
+        color: colors.text,
         flex: 1,
         fontSize: 15,
         fontWeight: '600',
@@ -1401,6 +1557,10 @@ const styles = StyleSheet.create({
         color: '#E2E8F0',
     },
     itemLabelSelected: {
+        color: colors.amberDark,
+        fontWeight: '800',
+    },
+    darkItemLabelSelected: {
         color: '#FFFFFF',
         fontWeight: '800',
     },
@@ -1409,22 +1569,23 @@ const styles = StyleSheet.create({
         padding: 32,
     },
     noResultsText: {
-        color: '#64748B',
+        color: colors.secondary,
         fontSize: 14,
         textAlign: 'center',
     },
     bottomBar: {
-        backgroundColor: '#0F1A2E',
-        borderTopColor: '#1E293B',
+        backgroundColor: colors.surface,
+        borderTopColor: colors.border,
         borderTopWidth: 1,
         padding: 16,
     },
     darkBottomBar: {
         backgroundColor: '#0F1A2E',
+        borderTopColor: '#1E293B',
     },
     applyButton: {
         alignItems: 'center',
-        backgroundColor: '#2563EB',
+        backgroundColor: colors.amber,
         borderRadius: 10,
         justifyContent: 'center',
         minHeight: 48,
@@ -1437,5 +1598,70 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.8,
+    },
+    assetContextBanner: {
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        borderColor: colors.border,
+        borderRadius: 10,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    darkAssetContextBanner: {
+        backgroundColor: '#131F35',
+        borderColor: '#1E293B',
+    },
+    assetContextIcon: {
+        fontSize: 24,
+    },
+    assetContextDetails: {
+        flex: 1,
+    },
+    assetContextRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
+    assetContextCode: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    darkAssetContextCode: {
+        color: '#F1F5F9',
+    },
+    assetContextName: {
+        color: colors.secondary,
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    darkAssetContextName: {
+        color: '#94A3B8',
+    },
+    designatedBadge: {
+        backgroundColor: 'rgba(217, 119, 6, 0.12)',
+        borderColor: 'rgba(217, 119, 6, 0.3)',
+        borderRadius: 4,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    darkDesignatedBadge: {
+        backgroundColor: 'rgba(251, 191, 36, 0.15)',
+        borderColor: 'rgba(251, 191, 36, 0.35)',
+    },
+    designatedBadgeText: {
+        color: colors.amberDark,
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    darkDesignatedBadgeText: {
+        color: '#FBBF24',
     },
 });

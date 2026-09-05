@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '../../theme';
 import type { SafeReleaseVerification } from '../../types/index';
-import { sharedStyles } from '../nativeStyles';
+import { Icon } from '../common/Icon';
+import { colors, shadows } from '../nativeStyles';
 
 export interface SafeReleaseTabProps {
     assetCode: string;
@@ -40,48 +41,102 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
             style={[styles.sectionCard, isDarkHud && styles.darkSectionCard]}
             testID="safe-release-section"
         >
-            <Text
-                accessibilityRole="header"
-                style={[styles.cardHeading, isDarkHud && styles.darkText]}
-            >
-                Safe-Release Post-Repair Verification
-            </Text>
-            <Text style={[styles.cardHelper, isDarkHud && styles.darkHelper]}>
-                Formal safety certification required before asset returns to
-                active service after inspection or repair.
-            </Text>
+            <View style={styles.cardHeaderRow}>
+                <View style={styles.headerIconWrap}>
+                    <Icon
+                        color={isDarkHud ? colors.hudAmber : colors.amber}
+                        name="shield-check"
+                        size={18}
+                    />
+                </View>
+                <View style={styles.headerTitles}>
+                    <Text
+                        accessibilityRole="header"
+                        style={[
+                            styles.cardHeading,
+                            isDarkHud && styles.darkText,
+                        ]}
+                    >
+                        Safe-Release Post-Repair Verification
+                    </Text>
+                    <Text
+                        style={[
+                            styles.cardHelper,
+                            isDarkHud && styles.darkHelper,
+                        ]}
+                    >
+                        Formal safety certification required before asset
+                        returns to active service after inspection or repair.
+                    </Text>
+                </View>
+            </View>
 
             <View
                 style={[
                     styles.certCard,
                     isDarkHud && styles.darkCertCard,
-                    certified
-                        ? isDarkHud
+                    certified &&
+                        (isDarkHud
                             ? styles.darkCertCardPassed
-                            : styles.certCardPassed
-                        : isDarkHud
-                          ? styles.darkCertCardPending
-                          : styles.certCardPending,
+                            : styles.certCardPassed),
                 ]}
             >
-                <Text
+                <View
                     style={[
-                        styles.certBadge,
+                        styles.certStatusBanner,
+                        certified
+                            ? styles.certStatusBannerPassed
+                            : styles.certStatusBannerPending,
                         isDarkHud &&
                             (certified
-                                ? styles.darkCertBadgePassed
-                                : styles.darkCertBadgePending),
+                                ? styles.darkCertStatusBannerPassed
+                                : styles.darkCertStatusBannerPending),
                     ]}
                 >
-                    {certified
-                        ? '✓ CERTIFIED SAFE FOR RELEASE'
-                        : 'PENDING TECHNICIAN SIGN-OFF'}
-                </Text>
-                <Text
-                    style={[styles.certAssetCode, isDarkHud && styles.darkText]}
-                >
-                    {assetCode} · {assetName}
-                </Text>
+                    <Icon
+                        color={
+                            certified
+                                ? isDarkHud
+                                    ? '#34D399'
+                                    : colors.greenDark
+                                : isDarkHud
+                                  ? '#FBBF24'
+                                  : colors.amberDark
+                        }
+                        name={certified ? 'shield-check' : 'alert-circle'}
+                        size={16}
+                    />
+                    <Text
+                        style={[
+                            styles.certBadge,
+                            certified && styles.certBadgePassed,
+                            isDarkHud &&
+                                (certified
+                                    ? styles.darkCertBadgePassed
+                                    : styles.darkCertBadgePending),
+                        ]}
+                    >
+                        {certified
+                            ? '✓ CERTIFIED SAFE FOR RELEASE'
+                            : 'PENDING TECHNICIAN SIGN-OFF'}
+                    </Text>
+                </View>
+
+                <View style={styles.assetRow}>
+                    <Icon
+                        color={isDarkHud ? colors.hudAmber : colors.amber}
+                        name="truck"
+                        size={16}
+                    />
+                    <Text
+                        style={[
+                            styles.certAssetCode,
+                            isDarkHud && styles.darkText,
+                        ]}
+                    >
+                        {assetCode} · {assetName}
+                    </Text>
+                </View>
 
                 <View style={styles.formGroup}>
                     <Text
@@ -96,7 +151,9 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                         accessibilityLabel="Certificate number"
                         editable={!certified}
                         onChangeText={setCertNumber}
-                        placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
+                        placeholderTextColor={
+                            isDarkHud ? '#64748B' : colors.muted
+                        }
                         style={[styles.input, isDarkHud && styles.darkInput]}
                         value={certNumber}
                         testID="cert-number-input"
@@ -116,7 +173,9 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                         multiline
                         numberOfLines={3}
                         onChangeText={setRemarks}
-                        placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
+                        placeholderTextColor={
+                            isDarkHud ? '#64748B' : colors.muted
+                        }
                         style={[
                             styles.input,
                             styles.textArea,
@@ -133,7 +192,6 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                         accessibilityRole="button"
                         onPress={handleCertify}
                         style={({ pressed }) => [
-                            sharedStyles.button,
                             styles.certifyButton,
                             isDarkHud && styles.darkCertifyButton,
                             pressed && styles.pressed,
@@ -142,8 +200,8 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                     >
                         <Text
                             style={[
-                                sharedStyles.buttonText,
                                 styles.certifyBtnText,
+                                isDarkHud && styles.darkCertifyBtnText,
                             ]}
                         >
                             ✓ Certify & Sign Safe Release
@@ -156,14 +214,21 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                             isDarkHud && styles.darkSignedStamp,
                         ]}
                     >
-                        <Text
-                            style={[
-                                styles.signedStampTitle,
-                                isDarkHud && styles.darkSignedStampTitle,
-                            ]}
-                        >
-                            ✓ CERTIFIED & DIGITALLY SIGNED
-                        </Text>
+                        <View style={styles.stampHeader}>
+                            <Icon
+                                color={isDarkHud ? '#34D399' : colors.greenDark}
+                                name="check-circle"
+                                size={18}
+                            />
+                            <Text
+                                style={[
+                                    styles.signedStampTitle,
+                                    isDarkHud && styles.darkSignedStampTitle,
+                                ]}
+                            >
+                                ✓ CERTIFIED & DIGITALLY SIGNED
+                            </Text>
+                        </View>
                         <Text
                             style={[
                                 styles.signedStampSub,
@@ -172,6 +237,14 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
                         >
                             Certified by: {technicianName} on{' '}
                             {new Date().toLocaleDateString()}
+                        </Text>
+                        <Text
+                            style={[
+                                styles.certNumberStamp,
+                                isDarkHud && styles.darkCertNumberStamp,
+                            ]}
+                        >
+                            Reference: {certNumber}
                         </Text>
                     </View>
                 )}
@@ -182,141 +255,192 @@ export const SafeReleaseTab: React.FC<SafeReleaseTabProps> = ({
 
 const styles = StyleSheet.create({
     sectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
-        borderRadius: 12,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 14,
         borderWidth: 1,
         marginBottom: 16,
         padding: 16,
+        ...shadows.sm,
     },
     darkSectionCard: {
-        backgroundColor: '#0F172A',
-        borderColor: '#1E293B',
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        shadowColor: 'transparent',
+    },
+    cardHeaderRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 12,
+    },
+    headerIconWrap: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        height: 34,
+        justifyContent: 'center',
+        width: 34,
+    },
+    headerTitles: {
+        flex: 1,
     },
     cardHeading: {
-        color: '#FFFFFF',
-        fontSize: 17,
+        color: colors.text,
+        fontSize: 16,
         fontWeight: '800',
     },
     darkText: {
-        color: '#FFFFFF',
+        color: colors.hudText,
     },
     cardHelper: {
-        color: '#94A3B8',
-        fontSize: 13,
-        lineHeight: 18,
-        marginBottom: 12,
-        marginTop: 4,
+        color: colors.muted,
+        fontSize: 12,
+        lineHeight: 16,
+        marginTop: 2,
     },
     darkHelper: {
-        color: '#94A3B8',
+        color: colors.hudTextDim,
     },
     certCard: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
-        borderRadius: 10,
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 12,
         borderWidth: 1,
-        marginTop: 8,
         padding: 16,
     },
     darkCertCard: {
-        borderRadius: 12,
-    },
-    certCardPending: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
-    },
-    darkCertCardPending: {
-        backgroundColor: '#101A2E',
-        borderColor: '#1E3254',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
     },
     certCardPassed: {
-        backgroundColor: '#06281E',
-        borderColor: '#059669',
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
     },
     darkCertCardPassed: {
-        backgroundColor: '#06281E',
-        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.12)',
+        borderColor: 'rgba(5, 150, 105, 0.3)',
+    },
+    certStatusBanner: {
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        borderRadius: 6,
+        flexDirection: 'row',
+        gap: 6,
+        marginBottom: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    certStatusBannerPending: {
+        backgroundColor: colors.amberLight,
+    },
+    darkCertStatusBannerPending: {
+        backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    },
+    certStatusBannerPassed: {
+        backgroundColor: colors.greenSoft,
+    },
+    darkCertStatusBannerPassed: {
+        backgroundColor: 'rgba(5, 150, 105, 0.22)',
     },
     certBadge: {
-        color: '#38BDF8',
+        color: colors.amberDark,
         fontSize: 11,
-        fontWeight: '900',
-        letterSpacing: 0.8,
-        marginBottom: 4,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    certBadgePassed: {
+        color: colors.greenDark,
     },
     darkCertBadgePending: {
-        color: '#38BDF8',
+        color: '#FBBF24',
     },
     darkCertBadgePassed: {
         color: '#34D399',
     },
-    certAssetCode: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '800',
+    assetRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
         marginBottom: 12,
+    },
+    certAssetCode: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '700',
     },
     formGroup: {
         gap: 8,
     },
     formLabel: {
-        color: '#CBD5E1',
-        fontSize: 13,
-        fontWeight: '800',
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
         marginTop: 4,
     },
     darkLabel: {
-        color: '#CBD5E1',
+        color: colors.hudTextDim,
     },
     input: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        borderRadius: 8,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderRadius: 10,
         borderWidth: 1,
-        color: '#FFFFFF',
+        color: colors.text,
         fontSize: 14,
-        minHeight: 48,
+        minHeight: 44,
         paddingHorizontal: 12,
-        paddingVertical: 10,
     },
     darkInput: {
-        backgroundColor: '#162238',
-        borderColor: '#1E3A8A',
-        color: '#FFFFFF',
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+        color: colors.hudText,
     },
     textArea: {
-        minHeight: 70,
+        minHeight: 76,
+        paddingTop: 10,
         textAlignVertical: 'top',
     },
     certifyButton: {
-        backgroundColor: '#059669',
-        marginTop: 16,
+        alignItems: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 10,
+        justifyContent: 'center',
         minHeight: 48,
-        width: '100%',
+        marginTop: 14,
     },
     darkCertifyButton: {
-        backgroundColor: '#059669',
+        backgroundColor: colors.hudAmber,
     },
     certifyBtnText: {
         color: '#FFFFFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '800',
     },
+    darkCertifyBtnText: {
+        color: colors.surfaceDark,
+    },
     signedStamp: {
-        backgroundColor: '#06281E',
-        borderColor: '#059669',
-        borderRadius: 8,
+        alignItems: 'center',
+        backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
+        borderRadius: 10,
         borderWidth: 1,
-        marginTop: 16,
-        padding: 12,
+        marginTop: 14,
+        padding: 14,
     },
     darkSignedStamp: {
-        backgroundColor: '#06281E',
+        backgroundColor: 'rgba(5, 150, 105, 0.15)',
         borderColor: '#059669',
     },
+    stampHeader: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
     signedStampTitle: {
-        color: '#34D399',
+        color: colors.greenDark,
         fontSize: 13,
         fontWeight: '900',
         letterSpacing: 0.5,
@@ -325,15 +449,23 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     signedStampSub: {
-        color: '#6EE7B7',
+        color: colors.greenDark,
         fontSize: 12,
-        fontWeight: '600',
-        marginTop: 2,
+        marginTop: 4,
     },
     darkSignedStampSub: {
         color: '#6EE7B7',
     },
+    certNumberStamp: {
+        color: colors.muted,
+        fontSize: 11,
+        fontWeight: '600',
+        marginTop: 4,
+    },
+    darkCertNumberStamp: {
+        color: colors.hudTextDim,
+    },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.85,
     },
 });

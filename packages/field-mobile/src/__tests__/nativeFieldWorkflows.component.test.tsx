@@ -355,45 +355,25 @@ describe('Native Field Workflows Component Tests', () => {
             );
         });
 
-        it('renders full EquipmentInspectionScreen as Vehicle Setup & Fleet Hub and switches tabs', async () => {
-            const onOpenDvir = jest.fn();
+        it('renders full EquipmentInspectionScreen as Vehicle Maintenance & Fleet Hub and switches tabs', async () => {
             const view = await render(
                 <EquipmentInspectionScreen
                     assetCode="CRN-07"
                     assetName="50-Ton Mobile All-Terrain Crane"
-                    onOpenDvir={onOpenDvir}
                     technicianName="Alex Rivera"
                 />,
             );
 
-            expect(view.getByText('VEHICLE SETUP & FLEET HUB')).toBeTruthy();
+            expect(
+                view.getByText('VEHICLE MAINTENANCE & FLEET HUB'),
+            ).toBeTruthy();
             expect(
                 view.getByText('CRN-07 · 50-Ton Mobile All-Terrain Crane'),
             ).toBeTruthy();
 
-            // Default Setup & Specs Tab
-            expect(view.getByTestId('dvir-unified-status-card')).toBeTruthy();
-            expect(
-                view.getByText('Live Telemetry & Operating Specs'),
-            ).toBeTruthy();
-            expect(
-                view.getByText('Crane & Outrigger Configuration'),
-            ).toBeTruthy();
-
-            // Tap Open DVIR Engine button
-            await fireEvent.press(view.getByTestId('open-dvir-engine-btn'));
-            expect(onOpenDvir).toHaveBeenCalledTimes(1);
-
-            // Switch to Work Orders tab
-            await fireEvent.press(view.getByTestId('tab-work-orders'));
+            // Default active tab is now Work Orders
             expect(
                 view.getByText('Log Maintenance Defect / Work Order'),
-            ).toBeTruthy();
-
-            // Switch to Safe Release tab
-            await fireEvent.press(view.getByTestId('tab-safe-release'));
-            expect(
-                view.getByText('Safe-Release Post-Repair Verification'),
             ).toBeTruthy();
 
             // Switch to Fuel tab
@@ -406,6 +386,12 @@ describe('Native Field Workflows Component Tests', () => {
             await fireEvent.press(view.getByTestId('tab-handover'));
             expect(
                 view.getByText('Technician Asset Handover Sign-Off'),
+            ).toBeTruthy();
+
+            // Switch back to Work Orders tab
+            await fireEvent.press(view.getByTestId('tab-work-orders'));
+            expect(
+                view.getByText('Log Maintenance Defect / Work Order'),
             ).toBeTruthy();
         });
     });

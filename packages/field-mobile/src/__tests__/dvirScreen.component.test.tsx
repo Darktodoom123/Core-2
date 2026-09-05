@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldApiClient } from '../services/apiClient';
+import { ThemeProvider } from '../theme';
 
 describe('DvirScreen Component & Workflows', () => {
     jest.setTimeout(15000);
@@ -25,7 +26,7 @@ describe('DvirScreen Component & Workflows', () => {
         expect(view.getByText('Create DVIR')).toBeTruthy();
         expect(view.getByText('Choose inspection type')).toBeTruthy();
         expect(view.getByText('Take walkaround photos')).toBeTruthy();
-        expect(view.getByText('Add new vehicle defects')).toBeTruthy();
+        expect(view.getByText('Add new mobile crane defects')).toBeTruthy();
         expect(view.getByText('Choose safety status')).toBeTruthy();
 
         // 4 Walkaround Photo Slots
@@ -503,5 +504,157 @@ describe('DvirScreen Component & Workflows', () => {
 
         // Cached/initial records are still visible
         expect(view.getByTestId('history-card-DVIR-2026-0831-01')).toBeTruthy();
+    });
+
+    it('renders properly in Light mode with mobile design system surface and tokens', async () => {
+        const onBack = jest.fn();
+        const view = await render(
+            <ThemeProvider initialMode="light">
+                <DvirScreen
+                    activeJobReference="DISP-2026-0891"
+                    assetCode="ALB-CRN-050"
+                    onBack={onBack}
+                />
+            </ThemeProvider>,
+        );
+
+        // Core screen and back button render
+        expect(view.getByTestId('dvir-screen')).toBeTruthy();
+        expect(view.getByTestId('dvir-back-button')).toBeTruthy();
+
+        // 4 walkaround camera photo slots render
+        expect(view.getByTestId('slot-driver-side')).toBeTruthy();
+        expect(view.getByTestId('slot-front')).toBeTruthy();
+        expect(view.getByTestId('slot-passenger-side')).toBeTruthy();
+        expect(view.getByTestId('slot-back')).toBeTruthy();
+
+        // Defects modal can open in light theme
+        await fireEvent.press(view.getByTestId('add-defects-button'));
+        expect(view.getByTestId('defects-modal-container')).toBeTruthy();
+        expect(view.getByTestId('defects-search-input')).toBeTruthy();
+        expect(view.getByTestId('filter-all')).toBeTruthy();
+
+        // Filter and select an item in light mode
+        await fireEvent.press(view.getByTestId('filter-carrier'));
+        await fireEvent.press(view.getByTestId('defects-modal-done'));
+
+        // Action button renders
+        expect(view.getByTestId('complete-dvir-button')).toBeTruthy();
+    });
+
+    it('renders properly in Dark HUD mode matching industrial telemetry tokens', async () => {
+        const onBack = jest.fn();
+        const view = await render(
+            <ThemeProvider initialMode="dark_hud">
+                <DvirScreen
+                    activeJobReference="DISP-2026-0891"
+                    assetCode="ALB-CRN-050"
+                    onBack={onBack}
+                />
+            </ThemeProvider>,
+        );
+
+        // Screen and HUD back button render
+        expect(view.getByTestId('dvir-screen')).toBeTruthy();
+        expect(view.getByTestId('dvir-back-button')).toBeTruthy();
+
+        // Safe/Unsafe toggle switches to unsafe and displays critical lockout banner
+        await fireEvent.press(view.getByTestId('safety-status-unsafe'));
+        expect(view.getByTestId('dvir-lockout-banner')).toBeTruthy();
+        expect(view.getByText('DISPATCH LOCKOUT ACTIVE')).toBeTruthy();
+
+        // Defects modal in dark HUD mode
+        await fireEvent.press(view.getByTestId('add-defects-button'));
+        expect(view.getByTestId('defects-modal-container')).toBeTruthy();
+        expect(view.getByTestId('filter-mobile-crane')).toBeTruthy();
+
+        // Close modal
+        await fireEvent.press(view.getByTestId('defects-modal-done'));
+    });
+
+    it('dynamically adapts defect reporting and modal for a designated Vehicle / Carrier', async () => {
+        const view = await render(
+            <DvirScreen
+                assetCode="TRK-202"
+                assetKind="truck"
+                assetName="Heavy Rig Truck"
+            />,
+        );
+
+        // Section header and helper are tailored to vehicle
+        expect(view.getByText('Add new vehicle defects')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Any vehicle attributes not displayed are certified safe by the driver',
+            ),
+        ).toBeTruthy();
+        expect(view.getByText('Safe to drive')).toBeTruthy();
+
+        // Open defects modal
+        await fireEvent.press(view.getByTestId('add-defects-button'));
+
+        // Modal title reflects vehicle
+        expect(view.getByTestId('defects-modal-title')).toBeTruthy();
+        expect(view.getByText('Add Vehicle Defects')).toBeTruthy();
+
+        // Designated asset banner displays vehicle context
+        expect(view.getByTestId('designated-asset-banner')).toBeTruthy();
+        expect(view.getByText('TRK-202')).toBeTruthy();
+        expect(view.getByText('Heavy Rig Truck')).toBeTruthy();
+        expect(view.getByText('Carrier & Road (Designated)')).toBeTruthy();
+
+        // Vehicle categories are displayed
+        expect(view.getByText('Exterior - Front')).toBeTruthy();
+        expect(view.getByText('Exterior - Sides & Cab')).toBeTruthy();
+        expect(view.getByText('Brakes & Suspension')).toBeTruthy();
+        expect(view.getByText('Tires & Wheels')).toBeTruthy();
+
+        // Close modal
+        await fireEvent.press(view.getByTestId('defects-modal-done'));
+    });
+
+    it('dynamically adapts defect reporting and modal for a designated Tower Crane', async () => {
+        const view = await render(
+            <DvirScreen
+                assetCode="TWR-CRN-280"
+                assetKind="tower_crane"
+                assetName="Liebherr 280 EC-H Tower Crane"
+            />,
+        );
+
+        // Section header and helper are tailored to crane tower
+        expect(view.getByText('Add new crane tower defects')).toBeTruthy();
+        expect(
+            view.getByText(
+                'Any crane tower attributes not displayed are certified safe by the crane operator',
+            ),
+        ).toBeTruthy();
+        expect(view.getByText('Safe to operate')).toBeTruthy();
+
+        // Open defects modal
+        await fireEvent.press(view.getByTestId('add-defects-button'));
+
+        // Modal title reflects tower crane
+        expect(view.getByTestId('defects-modal-title')).toBeTruthy();
+        expect(view.getByText('Add Tower Crane Defects')).toBeTruthy();
+
+        // Designated asset banner displays tower crane context
+        expect(view.getByTestId('designated-asset-banner')).toBeTruthy();
+        expect(view.getByText('TWR-CRN-280')).toBeTruthy();
+        expect(view.getByText('Tower Crane (Designated)')).toBeTruthy();
+
+        // Tower crane categories are immediately visible without manual tab switching
+        expect(
+            view.getByText('Tower Crane: Mast, Anchors & Ties'),
+        ).toBeTruthy();
+        expect(
+            view.getByText('Tower Crane: Jib & Weather-Vaning'),
+        ).toBeTruthy();
+        expect(
+            view.getByText('Tower Crane: Trolley & Luffing Drive'),
+        ).toBeTruthy();
+
+        // Close modal
+        await fireEvent.press(view.getByTestId('defects-modal-done'));
     });
 });
