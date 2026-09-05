@@ -75,6 +75,8 @@ interface TileItem {
     sublabel: string;
     iconName: IconName;
     bgColor: string;
+    lightHaloBg?: string;
+    lightIconColor?: string;
     borderColor?: string;
     iconColor?: string;
     darkBgColor?: string;
@@ -283,6 +285,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Shift & Hours',
             iconName: 'clock',
             bgColor: '#D97706',
+            lightHaloBg: 'rgba(217, 119, 6, 0.12)',
+            lightIconColor: '#D97706',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -296,6 +300,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Pre & Post Trip',
             iconName: 'clipboard',
             bgColor: '#059669',
+            lightHaloBg: 'rgba(5, 150, 105, 0.12)',
+            lightIconColor: '#059669',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -309,6 +315,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Heavy Transit',
             iconName: 'route',
             bgColor: '#0284C7',
+            lightHaloBg: 'rgba(2, 132, 199, 0.12)',
+            lightIconColor: '#0284C7',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -322,6 +330,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Permits & Certs',
             iconName: 'document',
             bgColor: '#7C3AED',
+            lightHaloBg: 'rgba(124, 58, 237, 0.12)',
+            lightIconColor: '#7C3AED',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -335,6 +345,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
             bgColor: '#4D7C0F',
+            lightHaloBg: 'rgba(77, 124, 15, 0.12)',
+            lightIconColor: '#4D7C0F',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -348,6 +360,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             sublabel: `${jobs.length} Dispatches`,
             iconName: 'file-text',
             bgColor: '#334155',
+            lightHaloBg: 'rgba(51, 65, 85, 0.12)',
+            lightIconColor: '#475569',
             borderColor: 'transparent',
             iconColor: '#FFFFFF',
             darkBgColor: '#1E293B',
@@ -630,15 +644,6 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             onPress={() => handleTilePress(tile.id)}
                             style={({ pressed }) => [
                                 styles.tileCard,
-                                {
-                                    backgroundColor: isDarkHud
-                                        ? tile.darkBgColor || tile.bgColor
-                                        : tile.bgColor,
-                                    borderColor: isDarkHud
-                                        ? tile.darkBorderColor || '#334155'
-                                        : 'transparent',
-                                    borderWidth: isDarkHud ? 1.5 : 0,
-                                },
                                 isDarkHud && styles.darkTileCard,
                                 pressed && styles.pressedTile,
                             ]}
@@ -665,21 +670,25 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             <View
                                 style={[
                                     styles.tileIconContainer,
+                                    {
+                                        backgroundColor: isDarkHud
+                                            ? tile.darkHaloBg ||
+                                              'rgba(245, 158, 11, 0.15)'
+                                            : tile.lightHaloBg ||
+                                              'rgba(217, 119, 6, 0.12)',
+                                    },
                                     isDarkHud && styles.darkTileIconContainer,
-                                    isDarkHud &&
-                                        Boolean(tile.darkHaloBg) && {
-                                            backgroundColor: tile.darkHaloBg,
-                                        },
                                 ]}
                             >
                                 <Icon
                                     color={
                                         isDarkHud
-                                            ? tile.darkIconColor || '#FFFFFF'
-                                            : '#FFFFFF'
+                                            ? tile.darkIconColor || '#F59E0B'
+                                            : tile.lightIconColor ||
+                                              tile.bgColor
                                     }
                                     name={tile.iconName}
-                                    size={isDarkHud ? 22 : 28}
+                                    size={24}
                                 />
                             </View>
                             <Text
@@ -689,6 +698,14 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                                 ]}
                             >
                                 {tile.title}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.tileSublabel,
+                                    isDarkHud && styles.darkTileSublabel,
+                                ]}
+                            >
+                                {tile.sublabel}
                             </Text>
                         </Pressable>
                     ))}
@@ -1030,70 +1047,74 @@ const styles = StyleSheet.create({
     },
     tileCard: {
         alignItems: 'center',
-        borderColor: 'transparent',
-        borderRadius: 16,
-        borderWidth: 0,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderRadius: 18,
+        borderWidth: 1,
         flexBasis: '31%',
         flexGrow: 1,
         justifyContent: 'center',
-        minHeight: 106,
-        paddingHorizontal: 6,
-        paddingVertical: 12,
+        minHeight: 116,
+        padding: 10,
         position: 'relative',
         ...shadows.sm,
     },
     darkTileCard: {
-        alignItems: 'center',
         backgroundColor: '#1E293B',
-        borderRadius: 16,
-        borderWidth: 1.5,
-        justifyContent: 'center',
-        minHeight: 106,
-        paddingHorizontal: 6,
-        paddingVertical: 12,
-        position: 'relative',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 1,
+        shadowColor: '#000000',
+        shadowOpacity: 0.3,
     },
     tileIconContainer: {
         alignItems: 'center',
-        height: 36,
+        borderRadius: 22,
+        height: 44,
         justifyContent: 'center',
         marginBottom: 6,
-        width: 36,
+        width: 44,
     },
     darkTileIconContainer: {
         alignItems: 'center',
-        borderRadius: 18,
-        height: 36,
+        borderRadius: 22,
+        height: 44,
         justifyContent: 'center',
         marginBottom: 6,
-        width: 36,
+        width: 44,
     },
     tileTitle: {
-        color: '#FFFFFF',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.1,
+        color: '#0F172A',
+        fontSize: 12.5,
+        fontWeight: '700',
+        letterSpacing: -0.1,
         lineHeight: 15,
         textAlign: 'center',
     },
     darkTileTitle: {
         color: '#F8FAFC',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 0.1,
+        fontSize: 12.5,
+        fontWeight: '700',
+        letterSpacing: -0.1,
         lineHeight: 15,
         textAlign: 'center',
     },
     tileSublabel: {
-        color: 'rgba(255, 255, 255, 0.85)',
-        fontSize: 9,
-        fontWeight: '700',
+        color: '#64748B',
+        fontSize: 10,
+        fontWeight: '600',
+        marginTop: 2,
+        textAlign: 'center',
+    },
+    darkTileSublabel: {
+        color: '#94A3B8',
+        fontSize: 10,
+        fontWeight: '600',
         marginTop: 2,
         textAlign: 'center',
     },
     tileBadgePill: {
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#D97706',
         borderRadius: 10,
         elevation: 3,
         height: 18,
@@ -1113,7 +1134,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F59E0B',
     },
     tileBadgePillText: {
-        color: '#0F172A',
+        color: '#FFFFFF',
         fontSize: 10,
         fontWeight: '900',
     },

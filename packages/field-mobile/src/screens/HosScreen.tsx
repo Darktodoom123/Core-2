@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+    Animated,
+    Easing,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -204,6 +206,50 @@ export const HosScreen: React.FC<HosScreenProps> = ({
     const [isSaved, setIsSaved] = useState(false);
     const [safeguardModalOpen, setSafeguardModalOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
+
+    // Confirmation & Micro-interaction Animations (Apple HIG spring & hardware-accelerated transforms)
+    const stampScale = useMemo(() => new Animated.Value(0.95), []);
+    const stampOpacity = useMemo(() => new Animated.Value(0), []);
+    const certCheckScale = useMemo(() => new Animated.Value(1), []);
+
+    const handleToggleCert = () => {
+        Animated.sequence([
+            Animated.timing(certCheckScale, {
+                toValue: 0.88,
+                duration: 80,
+                useNativeDriver: true,
+            }),
+            Animated.spring(certCheckScale, {
+                toValue: 1,
+                friction: 5,
+                tension: 140,
+                useNativeDriver: true,
+            }),
+        ]).start();
+        setIsCertified((prev) => !prev);
+    };
+
+    useEffect(() => {
+        if (isSaved) {
+            Animated.parallel([
+                Animated.timing(stampOpacity, {
+                    toValue: 1,
+                    duration: 200,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.spring(stampScale, {
+                    toValue: 1,
+                    friction: 6,
+                    tension: 90,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        } else {
+            stampScale.setValue(0.95);
+            stampOpacity.setValue(0);
+        }
+    }, [isSaved, stampOpacity, stampScale]);
 
     const hoursElapsed = shiftInfo.hoursElapsed ?? 4.5;
     const driveHoursElapsed = 3.5;
@@ -677,13 +723,14 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                         setSelectedStatus(opt.status);
                                         setIsSaved(false);
                                     }}
-                                    style={[
+                                    style={({ pressed }) => [
                                         styles.dutyOptionCard,
                                         isDarkHud && styles.darkDutyOptionCard,
                                         isSelected &&
                                             (isDarkHud
                                                 ? styles.darkDutyOptionCardSelected
                                                 : styles.dutyOptionCardSelected),
+                                        pressed && styles.dutyOptionCardPressed,
                                     ]}
                                     testID={`duty-option-${opt.status}`}
                                 >
@@ -808,13 +855,14 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                             setStandbyReason(r.reason);
                                             setIsSaved(false);
                                         }}
-                                        style={[
+                                        style={({ pressed }) => [
                                             styles.standbyChip,
                                             isDarkHud && styles.darkStandbyChip,
                                             isSelected &&
                                                 (isDarkHud
                                                     ? styles.darkStandbyChipSelected
                                                     : styles.standbyChipSelected),
+                                            pressed && styles.pressed,
                                         ]}
                                         testID={`standby-reason-${r.reason}`}
                                     >
@@ -884,11 +932,11 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                         accessibilityLabel="Legal certification of hours of service"
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: isCertified }}
-                        onPress={() => setIsCertified((prev) => !prev)}
+                        onPress={handleToggleCert}
                         style={styles.certCheckRow}
                         testID="hos-cert-check"
                     >
-                        <View
+                        <Animated.View
                             style={[
                                 styles.certBox,
                                 isDarkHud && styles.darkCertBox,
@@ -896,6 +944,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     (isDarkHud
                                         ? styles.darkCertBoxChecked
                                         : styles.certBoxChecked),
+                                { transform: [{ scale: certCheckScale }] },
                             ]}
                         >
                             {isCertified ? (
@@ -908,7 +957,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     ✓
                                 </Text>
                             ) : null}
-                        </View>
+                        </Animated.View>
                         <Text
                             style={[
                                 styles.certCheckLabel,
@@ -935,7 +984,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                     (isDarkHud
                                         ? styles.darkActionButtonDisabled
                                         : styles.actionButtonDisabled),
-                                pressed && styles.pressed,
+                                pressed && styles.actionButtonPressed,
                             ]}
                             testID="confirm-hos-btn"
                         >
@@ -951,10 +1000,14 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             </Text>
                         </Pressable>
                     ) : (
-                        <View
+                        <Animated.View
                             style={[
                                 styles.signedStamp,
                                 isDarkHud && styles.darkSignedStamp,
+                                {
+                                    opacity: stampOpacity,
+                                    transform: [{ scale: stampScale }],
+                                },
                             ]}
                             testID="hos-confirmed-stamp"
                         >
@@ -975,7 +1028,7 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 Active: {activeConfig.title} (
                                 {new Date().toLocaleTimeString()})
                             </Text>
-                        </View>
+                        </Animated.View>
                     )}
                 </View>
 
@@ -1366,16 +1419,16 @@ const styles = StyleSheet.create({
     },
     closeHeaderBtn: {
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F8FAFC',
         borderColor: '#E2E8F0',
-        borderRadius: 12,
-        borderWidth: 1.5,
-        elevation: 2,
+        borderRadius: 20,
+        borderWidth: 1,
+        elevation: 1,
         height: 40,
         justifyContent: 'center',
         shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.06,
         shadowRadius: 2,
         width: 40,
     },
@@ -1394,17 +1447,17 @@ const styles = StyleSheet.create({
     },
     pageCategory: {
         color: '#D97706',
-        fontSize: 10.5,
-        fontWeight: '900',
-        letterSpacing: 0.7,
-        marginBottom: 2,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.8,
+        marginBottom: 3,
     },
     darkPageCategory: {
         color: '#F59E0B',
     },
     screenTitle: {
         color: '#0F172A',
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '800',
         letterSpacing: -0.3,
     },
@@ -1412,23 +1465,17 @@ const styles = StyleSheet.create({
         color: '#F8FAFC',
     },
     telemetryShelf: {
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
-        borderRadius: 8,
-        borderWidth: 1,
-        marginTop: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
+        backgroundColor: 'transparent',
+        marginTop: 4,
     },
     darkTelemetryShelf: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
+        backgroundColor: 'transparent',
     },
     headerSubtitle: {
         color: '#64748B',
-        fontSize: 11.5,
-        fontWeight: '600',
-        lineHeight: 16,
+        fontSize: 12,
+        fontWeight: '500',
+        lineHeight: 17,
     },
     darkHeaderSubtitle: {
         color: '#94A3B8',
@@ -1441,21 +1488,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: 'row',
         gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 4.5,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
     },
     darkDutyPillBadge: {
         backgroundColor: '#0F172A',
         borderColor: '#334155',
     },
     dutyBadgeDot: {
-        borderRadius: 3.5,
-        height: 7,
-        width: 7,
+        borderRadius: 4,
+        height: 8,
+        width: 8,
     },
     dutyPillBadgeText: {
         color: '#0F172A',
-        fontSize: 11,
+        fontSize: 11.5,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
@@ -1679,29 +1726,40 @@ const styles = StyleSheet.create({
     },
     dutyOptionCard: {
         alignItems: 'center',
-        backgroundColor: 'transparent',
+        backgroundColor: '#FFFFFF',
         borderColor: '#E2E8F0',
-        borderRadius: 12,
-        borderWidth: 1.5,
+        borderRadius: 14,
+        borderWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        minHeight: 60,
-        paddingHorizontal: 14,
+        minHeight: 64,
+        paddingHorizontal: 16,
         paddingVertical: 12,
+        elevation: 1,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 2,
     },
     darkDutyOptionCard: {
-        backgroundColor: 'transparent',
-        borderColor: '#334155',
+        backgroundColor: '#1E293B',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        shadowColor: '#000000',
+        shadowOpacity: 0.2,
     },
     dutyOptionCardSelected: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#FFFBEB',
         borderColor: '#D97706',
         borderWidth: 2,
     },
     darkDutyOptionCardSelected: {
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(245, 158, 11, 0.12)',
         borderColor: '#F59E0B',
         borderWidth: 2,
+    },
+    dutyOptionCardPressed: {
+        opacity: 0.88,
+        transform: [{ scale: 0.99 }],
     },
     optionLeft: {
         alignItems: 'center',
@@ -1712,11 +1770,11 @@ const styles = StyleSheet.create({
     optionBadge: {
         alignItems: 'center',
         backgroundColor: 'transparent',
-        borderRadius: 6,
+        borderRadius: 8,
         borderWidth: 1.5,
-        height: 28,
+        height: 30,
         justifyContent: 'center',
-        width: 38,
+        width: 42,
     },
     optionBadgeText: {
         color: '#0F172A',
@@ -1737,8 +1795,8 @@ const styles = StyleSheet.create({
     },
     optionTitle: {
         color: '#0F172A',
-        fontSize: 13.5,
-        fontWeight: '800',
+        fontSize: 14,
+        fontWeight: '700',
     },
     darkOptionTitle: {
         color: '#FFFFFF',
@@ -1751,7 +1809,7 @@ const styles = StyleSheet.create({
     },
     optionSubtitle: {
         color: '#64748B',
-        fontSize: 11.5,
+        fontSize: 12,
         marginTop: 2,
     },
     darkOptionSubtitle: {
@@ -1759,15 +1817,15 @@ const styles = StyleSheet.create({
     },
     radioButton: {
         alignItems: 'center',
-        borderColor: '#94A3B8',
-        borderRadius: 10,
+        borderColor: '#CBD5E1',
+        borderRadius: 11,
         borderWidth: 2,
-        height: 20,
+        height: 22,
         justifyContent: 'center',
-        width: 20,
+        width: 22,
     },
     darkRadioButton: {
-        borderColor: '#64748B',
+        borderColor: '#475569',
     },
     radioButtonSelected: {
         borderColor: '#D97706',
@@ -1777,9 +1835,9 @@ const styles = StyleSheet.create({
     },
     radioButtonInner: {
         backgroundColor: '#D97706',
-        borderRadius: 5,
-        height: 10,
-        width: 10,
+        borderRadius: 5.5,
+        height: 11,
+        width: 11,
     },
     darkRadioButtonInner: {
         backgroundColor: '#F59E0B',
@@ -1789,27 +1847,27 @@ const styles = StyleSheet.create({
     },
     standbyChip: {
         alignItems: 'center',
-        backgroundColor: 'transparent',
+        backgroundColor: '#FFFFFF',
         borderColor: '#E2E8F0',
-        borderRadius: 10,
+        borderRadius: 12,
         borderWidth: 1,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        minHeight: 46,
+        minHeight: 48,
         paddingHorizontal: 14,
-        paddingVertical: 11,
+        paddingVertical: 12,
     },
     darkStandbyChip: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#0F172A',
         borderColor: '#334155',
     },
     standbyChipSelected: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#FFFBEB',
         borderColor: '#D97706',
         borderWidth: 1.5,
     },
     darkStandbyChipSelected: {
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
         borderColor: '#F59E0B',
         borderWidth: 1.5,
     },
@@ -2085,6 +2143,10 @@ const styles = StyleSheet.create({
     darkActionButton: {
         backgroundColor: '#F59E0B',
         shadowColor: '#F59E0B',
+    },
+    actionButtonPressed: {
+        opacity: 0.88,
+        transform: [{ scale: 0.97 }],
     },
     actionButtonDisabled: {
         backgroundColor: '#94A3B8',

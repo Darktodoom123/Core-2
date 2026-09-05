@@ -28,7 +28,7 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
         >
             <View style={styles.overlay} testID="end-shift-safeguard-modal">
                 <View style={[styles.dialog, isDarkHud && styles.darkDialog]}>
-                    {/* Warning Badge */}
+                    {/* Ambient Amber Warning Badge */}
                     <View
                         style={[
                             styles.iconBadge,
@@ -36,9 +36,9 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
                         ]}
                     >
                         <Icon
-                            color={isDarkHud ? '#FBBF24' : '#D97706'}
+                            color={isDarkHud ? '#F59E0B' : '#D97706'}
                             name="alert-circle"
-                            size={28}
+                            size={32}
                         />
                     </View>
 
@@ -50,7 +50,7 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
                         Active Equipment Warning
                     </Text>
 
-                    {/* PRD Specified Safeguard Prompt */}
+                    {/* Safeguard Prompt */}
                     <Text
                         style={[
                             styles.promptText,
@@ -58,30 +58,53 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
                         ]}
                     >
                         You are still linked to{' '}
-                        <Text style={styles.assetHighlight}>{assetCode}</Text>.
-                        Release unit and turn off tracking?
+                        <Text
+                            style={[
+                                styles.assetHighlight,
+                                isDarkHud && styles.darkAssetHighlight,
+                            ]}
+                        >
+                            {assetCode}
+                        </Text>
+                        . Release unit and turn off tracking?
                     </Text>
 
-                    <Text
+                    {/* Warm Helper Guidance Card */}
+                    <View
                         style={[
-                            styles.guardrailNotice,
-                            isDarkHud && styles.darkGuardrailNotice,
+                            styles.guardrailContainer,
+                            isDarkHud && styles.darkGuardrailContainer,
                         ]}
                     >
-                        Releasing automatically closes your equipment telemetry
-                        proxy and makes {assetCode} available for relief crews
-                        or the central dispatch depot.
-                    </Text>
+                        <View style={styles.guardrailIcon}>
+                            <Icon
+                                color={isDarkHud ? '#94A3B8' : '#64748B'}
+                                name="shield-check"
+                                size={16}
+                            />
+                        </View>
+                        <Text
+                            style={[
+                                styles.guardrailNotice,
+                                isDarkHud && styles.darkGuardrailNotice,
+                            ]}
+                        >
+                            Releasing automatically closes your equipment
+                            telemetry proxy and makes {assetCode} available for
+                            relief crews or the central dispatch depot.
+                        </Text>
+                    </View>
 
-                    {/* Action Buttons */}
+                    {/* Ergonomic Action Buttons */}
                     <View style={styles.actionRow}>
                         <Pressable
                             accessibilityLabel="Cancel clock out"
                             accessibilityRole="button"
                             onPress={onCancel}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.cancelButton,
                                 isDarkHud && styles.darkCancelButton,
+                                pressed && styles.buttonPressed,
                             ]}
                             testID="cancel-safeguard-btn"
                         >
@@ -99,14 +122,20 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
                             accessibilityLabel="Confirm release unit and clock out"
                             accessibilityRole="button"
                             onPress={onConfirmReleaseAndClockOut}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.confirmButton,
                                 isDarkHud && styles.darkConfirmButton,
+                                pressed && styles.buttonPressed,
                             ]}
                             testID="confirm-safeguard-btn"
                         >
-                            <Text style={styles.confirmButtonText}>
-                                Confirm & Release
+                            <Text
+                                style={[
+                                    styles.confirmButtonText,
+                                    isDarkHud && styles.darkConfirmButtonText,
+                                ]}
+                            >
+                                Confirm &amp; Release
                             </Text>
                         </Pressable>
                     </View>
@@ -119,40 +148,49 @@ export const EndShiftSafeguardModal: React.FC<EndShiftSafeguardModalProps> = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
     },
     dialog: {
         width: '100%',
-        maxWidth: 400,
+        maxWidth: 390,
         backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 24,
+        borderRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 28,
+        paddingBottom: 24,
         alignItems: 'center',
         ...shadows.lg,
     },
     darkDialog: {
         backgroundColor: '#1E293B',
-        borderColor: '#334155',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         borderWidth: 1,
+        shadowColor: '#000000',
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
     },
     iconBadge: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         backgroundColor: '#FEF3C7',
+        borderColor: 'rgba(217, 119, 6, 0.25)',
+        borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 18,
     },
     darkIconBadge: {
-        backgroundColor: '#78350F',
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        borderColor: 'rgba(245, 158, 11, 0.35)',
     },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: -0.3,
         color: '#0F172A',
         marginBottom: 10,
         textAlign: 'center',
@@ -163,30 +201,47 @@ const styles = StyleSheet.create({
     promptText: {
         fontSize: 15,
         lineHeight: 22,
-        color: '#64748B',
+        color: '#475569',
         textAlign: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
+        paddingHorizontal: 6,
     },
     darkPromptText: {
         color: '#94A3B8',
     },
     assetHighlight: {
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#D97706',
     },
-    guardrailNotice: {
-        fontSize: 12,
-        lineHeight: 17,
-        color: '#64748B',
-        textAlign: 'center',
-        marginBottom: 24,
+    darkAssetHighlight: {
+        color: '#FBBF24',
+    },
+    guardrailContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
         backgroundColor: '#F8FAFC',
-        padding: 10,
-        borderRadius: 8,
+        borderColor: '#E2E8F0',
+        borderWidth: 1,
+        borderRadius: 14,
+        padding: 12,
+        marginBottom: 24,
         width: '100%',
+        gap: 10,
+    },
+    darkGuardrailContainer: {
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        borderColor: '#334155',
+    },
+    guardrailIcon: {
+        marginTop: 2,
+    },
+    guardrailNotice: {
+        flex: 1,
+        fontSize: 12.5,
+        lineHeight: 18,
+        color: '#64748B',
     },
     darkGuardrailNotice: {
-        backgroundColor: '#090D16',
         color: '#94A3B8',
     },
     actionRow: {
@@ -196,38 +251,53 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
+        height: 48,
+        borderRadius: 14,
+        backgroundColor: '#F1F5F9',
         borderWidth: 1,
         borderColor: '#E2E8F0',
         alignItems: 'center',
         justifyContent: 'center',
     },
     darkCancelButton: {
-        borderColor: '#334155',
+        backgroundColor: '#334155',
+        borderColor: '#475569',
     },
     cancelButtonText: {
         fontSize: 15,
-        fontWeight: '600',
-        color: '#64748B',
+        fontWeight: '700',
+        color: '#475569',
     },
     darkCancelButtonText: {
-        color: '#94A3B8',
+        color: '#F1F5F9',
     },
     confirmButton: {
         flex: 1.4,
-        paddingVertical: 14,
-        borderRadius: 12,
+        height: 48,
+        borderRadius: 14,
         backgroundColor: '#D97706',
         alignItems: 'center',
         justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#D97706',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
     },
     darkConfirmButton: {
         backgroundColor: '#F59E0B',
+        shadowColor: '#F59E0B',
     },
     confirmButtonText: {
         fontSize: 15,
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#FFFFFF',
+    },
+    darkConfirmButtonText: {
+        color: '#090D16',
+    },
+    buttonPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.98 }],
     },
 });
