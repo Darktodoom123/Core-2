@@ -2394,52 +2394,6 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                                 >
                                     {selectedDay.certifiedByText}
                                 </Text>
-
-                                <View
-                                    style={[
-                                        styles.certAuditComplianceRow,
-                                        selectedDay.certificationStatus ===
-                                        'active'
-                                            ? styles.certAuditComplianceRowActive
-                                            : selectedDay.certificationStatus ===
-                                                'certified'
-                                              ? styles.certAuditComplianceRowCertified
-                                              : styles.certAuditComplianceRowRestart,
-                                        isDarkHud &&
-                                            styles.darkCertAuditComplianceRow,
-                                    ]}
-                                >
-                                    <Icon
-                                        name="shield-check"
-                                        size={12}
-                                        color={
-                                            selectedDay.certificationStatus ===
-                                            'active'
-                                                ? isDarkHud
-                                                    ? '#F59E0B'
-                                                    : '#D97706'
-                                                : selectedDay.certificationStatus ===
-                                                    'certified'
-                                                  ? isDarkHud
-                                                      ? '#10B981'
-                                                      : '#059669'
-                                                  : isDarkHud
-                                                    ? '#94A3B8'
-                                                    : '#64748B'
-                                        }
-                                    />
-                                    <Text
-                                        numberOfLines={1}
-                                        ellipsizeMode="tail"
-                                        style={[
-                                            styles.certAuditLegalSub,
-                                            isDarkHud &&
-                                                styles.darkCertAuditLegalSub,
-                                        ]}
-                                    >
-                                        DOT 49 CFR § 395.8 · DOLE-OSHC Verified
-                                    </Text>
-                                </View>
                             </View>
                         </View>
                     </View>
@@ -3549,10 +3503,9 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
     },
     certAuditSub: {
-        fontSize: 11,
+        fontSize: 11.5,
         fontWeight: '600',
-        lineHeight: 15,
-        marginBottom: 5,
+        lineHeight: 16,
     },
     certAuditActiveSub: {
         color: '#78350F',
@@ -3570,33 +3523,6 @@ const styles = StyleSheet.create({
         color: '#64748B',
     },
     darkCertAuditRestartSub: {
-        color: '#94A3B8',
-    },
-    certAuditComplianceRow: {
-        alignItems: 'center',
-        borderTopWidth: 1,
-        flexDirection: 'row',
-        gap: 5,
-        paddingTop: 4,
-    },
-    certAuditComplianceRowActive: {
-        borderTopColor: 'rgba(245, 158, 11, 0.2)',
-    },
-    certAuditComplianceRowCertified: {
-        borderTopColor: 'rgba(16, 185, 129, 0.2)',
-    },
-    certAuditComplianceRowRestart: {
-        borderTopColor: 'rgba(148, 163, 184, 0.2)',
-    },
-    darkCertAuditComplianceRow: {
-        borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    },
-    certAuditLegalSub: {
-        color: '#78350F',
-        fontSize: 9.5,
-        fontWeight: '600',
-    },
-    darkCertAuditLegalSub: {
         color: '#94A3B8',
     },
     logSectionHeaderRow: {
