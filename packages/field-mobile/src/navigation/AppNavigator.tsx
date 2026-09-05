@@ -576,7 +576,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             if (state === 'active' && status === 'authenticated' && user) {
                 void commandOutbox
                     .activateActor(user.id)
-                    .then(() => void syncQueue());
+                    .then(() => void syncQueue())
+                    .catch((error: unknown) => {
+                        console.warn(
+                            'Failed to reactivate outbox on app resume:',
+                            error,
+                        );
+                    });
             }
         });
 

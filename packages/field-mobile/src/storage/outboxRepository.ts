@@ -241,7 +241,9 @@ export class MemoryOutboxRepository implements OutboxRepository {
 async function openDefaultDatabase(): Promise<OutboxDatabase> {
     const sqlite = await import('expo-sqlite');
 
-    return sqlite.openDatabaseAsync('core2-field-outbox.db');
+    return sqlite.openDatabaseAsync('core2-field-outbox.db', {
+        useNewConnection: true,
+    });
 }
 
 export class SqliteOutboxRepository implements OutboxRepository {
@@ -256,6 +258,27 @@ export class SqliteOutboxRepository implements OutboxRepository {
         this.databasePromise ??= this.databaseFactory();
 
         return this.databasePromise;
+    }
+
+    private resetConnection(): void {
+        this.databasePromise = null;
+        this.initializePromise = null;
+    }
+
+    private isRecoverableNativeError(error: unknown): boolean {
+        if (!error) {
+            return false;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+
+        return (
+            message.includes('NullPointerException') ||
+            message.includes('prepareAsync') ||
+            message.includes('AccessClosedResourceException') ||
+            message.includes('already closed') ||
+            message.includes('database is locked')
+        );
     }
 
     public initialize(): Promise<void> {
@@ -315,125 +338,241 @@ export class SqliteOutboxRepository implements OutboxRepository {
         }
     }
 
-    public async listForActor(actorId: number): Promise<OutboxCommand[]> {
-        await this.initialize();
-        const database = await this.database();
-        const rows = await database.getAllAsync<OutboxRow>(
-            `SELECT * FROM field_command_outbox
-             WHERE actor_id = ?
-             ORDER BY created_at ASC, id ASC`,
-            [actorId],
-        );
+    private async executeWithRetry<T>(
+        operation: (database: OutboxDatabase) => Promise<T>,
+    ): Promise<T> {
+        try {
+            await this.initialize();
+            const database = await this.database();
 
-        return rows.map(deserializeRow);
+            return await operation(database);
+        } catch (error: unknown) {
+            if (this.isRecoverableNativeError(error)) {
+                this.resetConnection();
+                await this.initialize();
+                const freshDatabase = await this.database();
+
+                return await operation(freshDatabase);
+            }
+
+            throw error;
+        }
+    }
+
+    public async listForActor(actorId: number): Promise<OutboxCommand[]> {
+        return this.executeWithRetry(async (database) => {
+            const rows = await database.getAllAsync<OutboxRow>(
+                `SELECT * FROM field_command_outbox
+                 WHERE actor_id = ?
+                 ORDER BY created_at ASC, id ASC`,
+                [actorId],
+            );
+
+            return rows.map(deserializeRow);
+        });
     }
 
     public async save(command: OutboxCommand): Promise<void> {
-        await this.initialize();
-        const database = await this.database();
-
-        await database.runAsync(
-            `INSERT INTO field_command_outbox (
-                id, actor_id, command_type, job_id, assignment_id,
-                payload_json, payload_hash, expected_version, state, attempts,
-                priority, expires_at, error_json, created_at, updated_at,
-                last_attempt_at, next_attempt_at, completed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                actor_id = excluded.actor_id,
-                command_type = excluded.command_type,
-                job_id = excluded.job_id,
-                assignment_id = excluded.assignment_id,
-                payload_json = excluded.payload_json,
-                payload_hash = excluded.payload_hash,
-                expected_version = excluded.expected_version,
-                state = excluded.state,
-                priority = excluded.priority,
-                expires_at = excluded.expires_at,
-                attempts = excluded.attempts,
-                error_json = excluded.error_json,
-                updated_at = excluded.updated_at,
-                last_attempt_at = excluded.last_attempt_at,
-                next_attempt_at = excluded.next_attempt_at,
-                completed_at = excluded.completed_at`,
-            [
-                command.id,
-                command.actorId,
-                command.type,
-                command.jobId ?? null,
-                command.assignmentId ?? null,
-                JSON.stringify(command.payload),
-                command.payloadHash,
-                command.expectedVersion ?? null,
-                command.state,
-                command.attempts,
-                command.priority ?? 'ordinary',
-                command.expiresAt ?? null,
-                command.error ? JSON.stringify(command.error) : null,
-                command.createdAt,
-                command.updatedAt,
-                command.lastAttemptAt ?? null,
-                command.nextAttemptAt ?? null,
-                command.completedAt ?? null,
-            ],
-        );
+        return this.executeWithRetry(async (database) => {
+            await database.runAsync(
+                `INSERT INTO field_command_outbox (
+                    id, actor_id, command_type, job_id, assignment_id,
+                    payload_json, payload_hash, expected_version, state, attempts,
+                    priority, expires_at, error_json, created_at, updated_at,
+                    last_attempt_at, next_attempt_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    actor_id = excluded.actor_id,
+                    command_type = excluded.command_type,
+                    job_id = excluded.job_id,
+                    assignment_id = excluded.assignment_id,
+                    payload_json = excluded.payload_json,
+                    payload_hash = excluded.payload_hash,
+                    expected_version = excluded.expected_version,
+                    state = excluded.state,
+                    priority = excluded.priority,
+                    expires_at = excluded.expires_at,
+                    attempts = excluded.attempts,
+                    error_json = excluded.error_json,
+                    updated_at = excluded.updated_at,
+                    last_attempt_at = excluded.last_attempt_at,
+                    next_attempt_at = excluded.next_attempt_at,
+                    completed_at = excluded.completed_at`,
+                [
+                    command.id,
+                    command.actorId,
+                    command.type,
+                    command.jobId ?? null,
+                    command.assignmentId ?? null,
+                    JSON.stringify(command.payload),
+                    command.payloadHash,
+                    command.expectedVersion ?? null,
+                    command.state,
+                    command.attempts,
+                    command.priority ?? 'ordinary',
+                    command.expiresAt ?? null,
+                    command.error ? JSON.stringify(command.error) : null,
+                    command.createdAt,
+                    command.updatedAt,
+                    command.lastAttemptAt ?? null,
+                    command.nextAttemptAt ?? null,
+                    command.completedAt ?? null,
+                ],
+            );
+        });
     }
 
     public async remove(actorId: number, commandId: string): Promise<void> {
-        await this.initialize();
-        const database = await this.database();
-        await database.runAsync(
-            'DELETE FROM field_command_outbox WHERE actor_id = ? AND id = ?',
-            [actorId, commandId],
-        );
+        return this.executeWithRetry(async (database) => {
+            await database.runAsync(
+                'DELETE FROM field_command_outbox WHERE actor_id = ? AND id = ?',
+                [actorId, commandId],
+            );
+        });
     }
 
     public async clearActor(actorId: number): Promise<void> {
-        await this.initialize();
-        const database = await this.database();
-        await database.runAsync(
-            'DELETE FROM field_command_outbox WHERE actor_id = ?',
-            [actorId],
-        );
+        return this.executeWithRetry(async (database) => {
+            await database.runAsync(
+                'DELETE FROM field_command_outbox WHERE actor_id = ?',
+                [actorId],
+            );
+        });
     }
 
     public async clearCompletedBefore(
         actorId: number,
         completedBefore: string,
     ): Promise<void> {
-        await this.initialize();
-        const database = await this.database();
-        await database.runAsync(
-            `DELETE FROM field_command_outbox
-             WHERE actor_id = ? AND state = 'completed' AND completed_at < ?`,
-            [actorId, completedBefore],
-        );
+        return this.executeWithRetry(async (database) => {
+            await database.runAsync(
+                `DELETE FROM field_command_outbox
+                 WHERE actor_id = ? AND state = 'completed' AND completed_at < ?`,
+                [actorId, completedBefore],
+            );
+        });
     }
 
     public async recoverInterrupted(
         actorId: number,
         recoveredAt: string,
     ): Promise<void> {
-        await this.initialize();
-        const database = await this.database();
-        await database.runAsync(
-            `UPDATE field_command_outbox
-             SET state = 'queued', updated_at = ?, next_attempt_at = NULL,
-                 error_json = ?
-             WHERE actor_id = ? AND state = 'syncing'`,
-            [
-                recoveredAt,
-                JSON.stringify({
-                    code: 'PROCESS_INTERRUPTED',
-                    message: 'Sync was interrupted and is ready to retry.',
-                    retryable: true,
-                }),
-                actorId,
-            ],
+        return this.executeWithRetry(async (database) => {
+            await database.runAsync(
+                `UPDATE field_command_outbox
+                 SET state = 'queued', updated_at = ?, next_attempt_at = NULL,
+                     error_json = ?
+                 WHERE actor_id = ? AND state = 'syncing'`,
+                [
+                    recoveredAt,
+                    JSON.stringify({
+                        code: 'PROCESS_INTERRUPTED',
+                        message: 'Sync was interrupted and is ready to retry.',
+                        retryable: true,
+                    }),
+                    actorId,
+                ],
+            );
+        });
+    }
+}
+
+export class ResilientOutboxRepository implements OutboxRepository {
+    private activeBackend: OutboxRepository;
+    private memoryFallback: MemoryOutboxRepository | null = null;
+
+    constructor(
+        private readonly primary: OutboxRepository = new SqliteOutboxRepository(),
+        private readonly fallbackFactory: () => MemoryOutboxRepository = () =>
+            new MemoryOutboxRepository(),
+    ) {
+        this.activeBackend = this.primary;
+    }
+
+    private fallback(error: unknown): OutboxRepository {
+        console.warn(
+            'SQLite outbox repository encountered an unrecoverable failure; activating in-memory fallback store:',
+            error,
         );
+
+        if (!this.memoryFallback) {
+            this.memoryFallback = this.fallbackFactory();
+        }
+
+        this.activeBackend = this.memoryFallback;
+
+        return this.activeBackend;
+    }
+
+    public async initialize(): Promise<void> {
+        try {
+            await this.activeBackend.initialize();
+        } catch (error) {
+            await this.fallback(error).initialize();
+        }
+    }
+
+    public async listForActor(actorId: number): Promise<OutboxCommand[]> {
+        try {
+            return await this.activeBackend.listForActor(actorId);
+        } catch (error) {
+            return this.fallback(error).listForActor(actorId);
+        }
+    }
+
+    public async save(command: OutboxCommand): Promise<void> {
+        try {
+            await this.activeBackend.save(command);
+        } catch (error) {
+            await this.fallback(error).save(command);
+        }
+    }
+
+    public async remove(actorId: number, commandId: string): Promise<void> {
+        try {
+            await this.activeBackend.remove(actorId, commandId);
+        } catch (error) {
+            await this.fallback(error).remove(actorId, commandId);
+        }
+    }
+
+    public async clearActor(actorId: number): Promise<void> {
+        try {
+            await this.activeBackend.clearActor(actorId);
+        } catch (error) {
+            await this.fallback(error).clearActor(actorId);
+        }
+    }
+
+    public async clearCompletedBefore(
+        actorId: number,
+        completedBefore: string,
+    ): Promise<void> {
+        try {
+            await this.activeBackend.clearCompletedBefore(
+                actorId,
+                completedBefore,
+            );
+        } catch (error) {
+            await this.fallback(error).clearCompletedBefore(
+                actorId,
+                completedBefore,
+            );
+        }
+    }
+
+    public async recoverInterrupted(
+        actorId: number,
+        recoveredAt: string,
+    ): Promise<void> {
+        try {
+            await this.activeBackend.recoverInterrupted(actorId, recoveredAt);
+        } catch (error) {
+            await this.fallback(error).recoverInterrupted(actorId, recoveredAt);
+        }
     }
 }
 
 export function createDefaultOutboxRepository(): OutboxRepository {
-    return new SqliteOutboxRepository();
+    return new ResilientOutboxRepository(new SqliteOutboxRepository());
 }

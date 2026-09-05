@@ -4,7 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, test } from 'node:test';
-import { SqliteOutboxRepository } from '../storage/outboxRepository';
+import {
+    MemoryOutboxRepository,
+    ResilientOutboxRepository,
+    SqliteOutboxRepository,
+} from '../storage/outboxRepository';
 import type { OutboxDatabase } from '../storage/outboxRepository';
 import type { OutboxCommand } from '../types/index';
 
@@ -158,5 +162,57 @@ describe('SqliteOutboxRepository', () => {
         assert.equal(malformed.error?.code, 'MALFORMED_COMMAND');
         assert.equal(malformed.error?.retryable, false);
         assert.deepEqual(malformed.payload, {});
+    });
+
+    test('recovers and retries when encountering a simulated NullPointerException on stale connection', async () => {
+        let connectionCount = 0;
+        const memoryDb = new DatabaseSync(':memory:');
+        const nodeDb = new NodeSqliteDatabase(memoryDb);
+        let shouldThrowNpe = true;
+
+        const faultyDb: OutboxDatabase = {
+            execAsync: (sql) => nodeDb.execAsync(sql),
+            runAsync: async (sql, params) => {
+                if (shouldThrowNpe) {
+                    shouldThrowNpe = false;
+                    throw new Error(
+                        "Call to function 'NativeDatabase.prepareAsync' has been rejected. \n Caused by: java.lang.NullPointerException: java.lang.NullPointerException",
+                    );
+                }
+                return nodeDb.runAsync(sql, params);
+            },
+            getAllAsync: (sql, params) => nodeDb.getAllAsync(sql, params),
+        };
+
+        const repository = new SqliteOutboxRepository(async () => {
+            connectionCount++;
+            return connectionCount === 1 ? faultyDb : nodeDb;
+        });
+
+        const command = commandFixture();
+        // First save will encounter the NPE on faultyDb, auto-reset the connection, and succeed on nodeDb!
+        await repository.save(command);
+
+        assert.equal(connectionCount, 2);
+        const [saved] = await repository.listForActor(command.actorId);
+        assert.equal(saved.id, command.id);
+    });
+
+    test('ResilientOutboxRepository gracefully falls back to in-memory storage when SQLite fails', async () => {
+        const failingRepository = new SqliteOutboxRepository(async () => {
+            throw new Error('Fatal SQLite initialization error');
+        });
+        const resilientRepo = new ResilientOutboxRepository(
+            failingRepository,
+            () => new MemoryOutboxRepository(),
+        );
+
+        const command = commandFixture({ id: 'fallback-cmd-1' });
+        // Should seamlessly save to in-memory fallback without throwing
+        await resilientRepo.save(command);
+
+        const restored = await resilientRepo.listForActor(command.actorId);
+        assert.equal(restored.length, 1);
+        assert.equal(restored[0].id, 'fallback-cmd-1');
     });
 });
