@@ -281,6 +281,58 @@ it('derives the initial workspace section from the authorized navigation', funct
             ->where('navigation', fn ($navigation): bool => ! collect($navigation)->contains('id', 'dispatch')));
 });
 
+it('limits dispatch personnel props to resource discovery fields', function (): void {
+    $manager = User::factory()->create();
+    $manager->syncRoles([RoleName::OperationsManager->value]);
+    $operator = User::factory()->create([
+        'email' => 'private.operator@example.test',
+        'phone' => '+63 917 000 0000',
+    ]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
+    $operator->personnelProfile()->create([
+        'employee_number' => 'EMP-PRIVATE-01',
+        'availability_status' => 'available',
+        'emergency_contact_name' => 'Private Contact',
+        'emergency_contact_phone' => '+63 918 000 0000',
+    ]);
+    $operator->personnelCredentials()->create([
+        'kind' => 'operator_certification',
+        'credential_number' => 'CERT-PRIVATE-01',
+        'credential_type' => 'Mobile crane operator',
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($manager)->get('/?view=dispatch')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->loadDeferredProps('workspace-dispatch', fn (Assert $section) => $section
+                ->missing('users')
+                ->where('dispatchResourceUsers', function ($users) use ($operator): bool {
+                    $resource = collect($users)->firstWhere('id', $operator->id);
+
+                    expect($resource)->toMatchArray([
+                        'id' => $operator->id,
+                        'name' => $operator->name,
+                        'role' => RoleName::CraneOperator->value,
+                        'availability_status' => 'available',
+                        'has_credentials' => true,
+                    ])->not->toHaveKeys([
+                        'username',
+                        'email',
+                        'phone',
+                        'profile',
+                        'credentials',
+                        'employee_number',
+                        'emergency_contact_name',
+                        'emergency_contact_phone',
+                        'credential_number',
+                    ]);
+
+                    return true;
+                }))
+            ->reloadOnly('users', fn (Assert $partial) => $partial->has('users', 0)));
+});
+
 it('projects canonical manual provenance independently from the reference prefix', function () {
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);

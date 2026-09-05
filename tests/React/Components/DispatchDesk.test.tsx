@@ -160,16 +160,12 @@ describe('dispatch resources', () => {
                     {
                         id: 21,
                         name: 'Casey Rigger',
-                        email: 'not-displayed@example.test',
                         role: 'rigger',
                         role_label: 'Rigger',
                         is_active: true,
-                        profile: {
-                            employee_number: null,
-                            availability_status: 'on_leave',
-                            emergency_contact_name: null,
-                            emergency_contact_phone: null,
-                        },
+                        suspended_at: null,
+                        availability_status: 'on_leave',
+                        has_credentials: false,
                     },
                 ]}
                 assets={[]}
@@ -181,9 +177,6 @@ describe('dispatch resources', () => {
         );
         expect(screen.getByText('Casey Rigger')).toBeInTheDocument();
         expect(screen.getByText('Availability: on leave')).toBeInTheDocument();
-        expect(
-            screen.queryByText('not-displayed@example.test'),
-        ).not.toBeInTheDocument();
         fireEvent.change(
             screen.getByRole('searchbox', { name: 'Search people and assets' }),
             { target: { value: 'missing' } },

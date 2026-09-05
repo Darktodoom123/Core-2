@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
     DispatchJobViewModel,
-    WorkspaceUserViewModel,
+    DispatchResourceUserViewModel,
 } from '@/types/workspace';
 
 /** Categories shared by the day, week, and month schedule-board surfaces. */
@@ -39,7 +39,7 @@ export interface ScheduleBoardMonthViewProps {
     conflictsOnly: boolean;
     derivedConflicts: readonly ScheduleBoardConflict[];
     assets?: AssetViewModel[];
-    users?: WorkspaceUserViewModel[];
+    users?: DispatchResourceUserViewModel[];
 }
 
 interface LocalDateSpan {

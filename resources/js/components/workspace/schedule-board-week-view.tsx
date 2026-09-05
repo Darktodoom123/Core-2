@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
     DispatchJobViewModel,
-    WorkspaceUserViewModel,
+    DispatchResourceUserViewModel,
 } from '@/types/workspace';
 
 export type ScheduleBoardWeekCategory =
@@ -45,7 +45,7 @@ export interface ScheduleBoardWeekViewProps {
     conflictsOnly: boolean;
     derivedConflicts: readonly ScheduleBoardConflict[];
     assets?: AssetViewModel[];
-    users?: WorkspaceUserViewModel[];
+    users?: DispatchResourceUserViewModel[];
 }
 
 export type ScheduleBoardResourceCategory =

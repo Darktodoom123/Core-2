@@ -452,6 +452,17 @@ export interface WorkspaceUserViewModel {
     credentials?: PersonnelCredentialViewModel[];
 }
 
+export interface DispatchResourceUserViewModel {
+    id: number;
+    name: string;
+    is_active: boolean;
+    suspended_at: string | null;
+    role: string | null;
+    role_label: string | null;
+    availability_status: string | null;
+    has_credentials: boolean;
+}
+
 export interface AuditEventViewModel {
     id: number;
     action: string;
@@ -825,6 +836,7 @@ export interface WorkspacePageProps {
     locations?: LocationUpdateViewModel[];
     approvals?: ApprovalViewModel[];
     users?: WorkspaceUserViewModel[];
+    dispatchResourceUsers?: DispatchResourceUserViewModel[];
     auditEvents?: AuditEventViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     jobReports?: JobReportViewModel[];

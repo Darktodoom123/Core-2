@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
     DispatchJobViewModel,
-    WorkspaceUserViewModel,
+    DispatchResourceUserViewModel,
 } from '@/types/workspace';
 import { HISTORY_STATUSES, jobOverlapsDate } from './dispatch-desk-helpers';
 
@@ -62,7 +62,7 @@ export function DispatchResources({
     returnTo,
     refreshing,
 }: {
-    users: WorkspaceUserViewModel[];
+    users: DispatchResourceUserViewModel[];
     assets: AssetViewModel[];
     jobs: DispatchJobViewModel[];
     initialDate: string;
@@ -82,8 +82,8 @@ export function DispatchResources({
                         'rigger',
                         'field_foreman',
                     ].includes(user.role ?? '') ||
-                    user.profile ||
-                    (user.credentials?.length ?? 0) > 0,
+                    user.availability_status !== null ||
+                    user.has_credentials,
             )
             .map((user) => ({
                 id: user.id,
@@ -92,15 +92,15 @@ export function DispatchResources({
                 status:
                     !user.is_active || user.suspended_at
                         ? 'Account unavailable'
-                        : user.profile?.availability_status
-                          ? `Availability: ${humanize(user.profile.availability_status)}`
+                        : user.availability_status
+                          ? `Availability: ${humanize(user.availability_status)}`
                           : 'Availability not recorded',
                 warning:
                     !user.is_active ||
                     Boolean(user.suspended_at) ||
                     Boolean(
-                        user.profile?.availability_status &&
-                        user.profile.availability_status !== 'available',
+                        user.availability_status &&
+                        user.availability_status !== 'available',
                     ),
             }));
         const equipment = assets.map((asset) => ({
@@ -111,7 +111,11 @@ export function DispatchResources({
                 asset.blocking_work_orders_count > 0
                     ? 'Maintenance blocks dispatch'
                     : !asset.is_dispatchable
-                      ? `Not dispatchable · ${asset.status.label}`
+                      ? ['available', 'ready_for_service'].includes(
+                            asset.status.value,
+                        )
+                          ? `Inspection clearance required · Recorded status: ${asset.status.label}`
+                          : `${asset.status.label} · Not available for assignment`
                       : `Recorded status: ${asset.status.label}`,
             warning:
                 !asset.is_dispatchable || asset.blocking_work_orders_count > 0,
@@ -194,7 +198,7 @@ export function DispatchResources({
                         );
                     })}
                 </div>
-                <label className="relative min-w-0 flex-1 sm:max-w-sm">
+                <label className="relative basis-full sm:max-w-sm sm:flex-1 sm:basis-auto">
                     <Search
                         className="pointer-events-none absolute top-3.5 left-3 h-4 w-4 text-ink-soft"
                         aria-hidden="true"

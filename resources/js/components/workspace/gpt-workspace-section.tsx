@@ -15,9 +15,9 @@ import {
     User,
     XCircle,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, PageHeading, Panel } from '@/components/ui';
+import { Button, Modal, PageHeading, Panel } from '@/components/ui';
 import { formatDateTime, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
@@ -40,6 +40,7 @@ export function GptRecommendationsSurface({
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
+    const [modalTrigger, setModalTrigger] = useState<HTMLElement | null>(null);
     const [retryingId, setRetryingId] = useState<number | null>(null);
     const [pollingStoppedFor, setPollingStoppedFor] = useState<string | null>(
         null,
@@ -440,8 +441,24 @@ export function GptRecommendationsSurface({
                                     key={rec.id}
                                     rec={rec}
                                     capabilities={capabilities}
-                                    onAccept={() => setSelectedForAccept(rec)}
-                                    onReject={() => setSelectedForReject(rec)}
+                                    onAccept={() => {
+                                        setModalTrigger(
+                                            document.activeElement instanceof
+                                                HTMLElement
+                                                ? document.activeElement
+                                                : null,
+                                        );
+                                        setSelectedForAccept(rec);
+                                    }}
+                                    onReject={() => {
+                                        setModalTrigger(
+                                            document.activeElement instanceof
+                                                HTMLElement
+                                                ? document.activeElement
+                                                : null,
+                                        );
+                                        setSelectedForReject(rec);
+                                    }}
                                 />
                             ))}
                         </div>
@@ -805,6 +822,7 @@ export function GptRecommendationsSurface({
                 <AcceptGptModal
                     rec={selectedForAccept}
                     onClose={() => setSelectedForAccept(null)}
+                    returnFocusTo={modalTrigger}
                 />
             )}
 
@@ -813,6 +831,7 @@ export function GptRecommendationsSurface({
                 <RejectGptModal
                     rec={selectedForReject}
                     onClose={() => setSelectedForReject(null)}
+                    returnFocusTo={modalTrigger}
                 />
             )}
         </div>
@@ -1214,16 +1233,14 @@ function Gpt15MinCountdown({
 export function AcceptGptModal({
     rec,
     onClose,
+    returnFocusTo,
 }: {
     rec: GptRecommendationViewModel;
     onClose: () => void;
+    returnFocusTo?: HTMLElement | null;
 }) {
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        document.getElementById('accept-gpt-cancel-btn')?.focus();
-    }, []);
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -1244,29 +1261,26 @@ export function AcceptGptModal({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div
-                className="w-full max-w-md space-y-4 rounded-xl bg-surface p-6 shadow-xl"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={`accept-gpt-title-${rec.id}`}
-            >
-                <div className="flex items-center gap-3 text-success-strong">
-                    <CheckCircle className="h-6 w-6" />
-                    <h3
-                        id={`accept-gpt-title-${rec.id}`}
-                        className="text-lg font-semibold text-ink"
-                    >
-                        Review crew & equipment
-                    </h3>
-                </div>
-
-                <p className="text-sm leading-relaxed text-ink-soft">
-                    Confirm this resource plan for Dispatch #{rec.subject_id}.
-                    Availability and job requirements will be checked again
-                    before any assignments are applied.
-                </p>
-
+        <Modal
+            open
+            size="sm"
+            onClose={() => {
+                if (!processing) {
+                    onClose();
+                }
+            }}
+            closeOnEscape={!processing}
+            closeOnBackdrop={!processing}
+            returnFocusTo={returnFocusTo}
+            title={
+                <span className="flex items-center gap-3 text-success-strong">
+                    <CheckCircle className="h-6 w-6" aria-hidden="true" />
+                    Review crew &amp; equipment
+                </span>
+            }
+            description={`Confirm this resource plan for Dispatch #${rec.subject_id}. Availability and job requirements will be checked again before any assignments are applied.`}
+        >
+            <div className="space-y-4">
                 <div className="space-y-1.5 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
                     <p className="font-semibold text-ink">Resources to apply</p>
                     <ul className="space-y-2 pt-1 text-ink-soft">
@@ -1309,7 +1323,6 @@ export function AcceptGptModal({
                     className="flex justify-end gap-3 pt-2"
                 >
                     <Button
-                        id="accept-gpt-cancel-btn"
                         autoFocus
                         type="button"
                         variant="secondary"
@@ -1329,25 +1342,22 @@ export function AcceptGptModal({
                     </Button>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 }
 
 export function RejectGptModal({
     rec,
     onClose,
+    returnFocusTo,
 }: {
     rec: GptRecommendationViewModel;
     onClose: () => void;
+    returnFocusTo?: HTMLElement | null;
 }) {
     const form = useForm({
         reason: '',
     });
-    const reasonRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        reasonRef.current?.focus();
-    }, []);
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -1358,35 +1368,33 @@ export function RejectGptModal({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div
-                className="w-full max-w-md space-y-4 rounded-xl bg-surface p-6 shadow-xl"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={`reject-gpt-title-${rec.id}`}
-            >
-                <div className="flex items-center gap-3 text-danger">
-                    <XCircle className="h-6 w-6" />
-                    <h3
-                        id={`reject-gpt-title-${rec.id}`}
-                        className="text-lg font-semibold text-ink"
-                    >
-                        Reject AI Recommendation
-                    </h3>
-                </div>
-
-                <p className="text-sm text-ink-soft">
-                    Rejecting Recommendation #{rec.id} will mark it as rejected
-                    and preserve a structured audit log.
-                </p>
-
+        <Modal
+            open
+            size="sm"
+            onClose={() => {
+                if (!form.processing) {
+                    onClose();
+                }
+            }}
+            closeOnEscape={!form.processing}
+            closeOnBackdrop={!form.processing}
+            returnFocusTo={returnFocusTo}
+            title={
+                <span className="flex items-center gap-3 text-danger">
+                    <XCircle className="h-6 w-6" aria-hidden="true" />
+                    Reject AI recommendation
+                </span>
+            }
+            description={`Rejecting Recommendation #${rec.id} will mark it as rejected and preserve a structured audit log.`}
+        >
+            <div className="space-y-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="mb-1 block text-xs font-semibold text-ink uppercase">
                             Rejection Reason (Optional)
                         </label>
                         <input
-                            ref={reasonRef}
+                            autoFocus
                             type="text"
                             className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
                             placeholder="e.g. Driver requested off shift / Site requires 80T crane instead"
@@ -1424,6 +1432,6 @@ export function RejectGptModal({
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 }

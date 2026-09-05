@@ -4,12 +4,12 @@ import type {
     AssetViewModel,
     ClientViewModel,
     DispatchJobViewModel,
+    DispatchResourceUserViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
     SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
-    WorkspaceUserViewModel,
 } from '@/types/workspace';
 
 export type DispatchDeskView =
@@ -30,7 +30,7 @@ export interface DispatchDeskProps {
     salesHandoffs: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
-    users?: WorkspaceUserViewModel[];
+    users?: DispatchResourceUserViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
     canCreate: boolean;

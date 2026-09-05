@@ -289,4 +289,57 @@ describe('dispatch GPT advisory', () => {
         );
         expect(screen.getByText('Second job operator')).toBeInTheDocument();
     });
+
+    it('traps modal focus, closes on Escape, and restores the review trigger', async () => {
+        render(
+            <DispatchGptAdvisory
+                job={job(10)}
+                capabilities={capabilities()}
+                recommendations={[
+                    recommendation({
+                        id: 1,
+                        subject_id: 10,
+                        proposed_personnel: [
+                            {
+                                user_id: 2,
+                                name: 'Qualified operator',
+                                assignment_type: 'crane_operator',
+                            },
+                        ],
+                    }),
+                ]}
+            />,
+        );
+
+        const trigger = screen.getByRole('button', {
+            name: 'Review & apply suggestion',
+        });
+        trigger.focus();
+        fireEvent.click(trigger);
+
+        const dialog = screen.getByRole('dialog');
+        const confirm = screen.getByRole('button', {
+            name: 'Confirm & Apply Resource Plan',
+        });
+        await waitFor(() =>
+            expect(
+                screen.getByRole('button', { name: 'Close dialog' }),
+            ).toHaveFocus(),
+        );
+        expect(document.body.style.overflow).toBe('hidden');
+
+        confirm.focus();
+        fireEvent.keyDown(window, { key: 'Tab' });
+        expect(
+            screen.getByRole('button', { name: 'Close dialog' }),
+        ).toHaveFocus();
+        expect(dialog).toBeInTheDocument();
+
+        fireEvent.keyDown(window, { key: 'Escape' });
+        await waitFor(() =>
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        await waitFor(() => expect(trigger).toHaveFocus());
+        expect(document.body.style.overflow).toBe('');
+    });
 });

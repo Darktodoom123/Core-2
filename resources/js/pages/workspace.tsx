@@ -54,7 +54,7 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'assets',
         'assets_total',
         'approvals',
-        'users',
+        'dispatchResourceUsers',
         'gptRecommendations',
     ],
     assets: ['assets', 'assets_total', 'locations'],
@@ -744,7 +744,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         salesHandoffs={props.salesHandoffs ?? []}
                         assets={props.assets ?? []}
                         approvals={props.approvals ?? []}
-                        users={props.users ?? []}
+                        users={props.dispatchResourceUsers ?? []}
                         gptRecommendations={props.gptRecommendations ?? []}
                         capabilities={props.capabilities}
                         canCreate={props.capabilities.create_dispatch}

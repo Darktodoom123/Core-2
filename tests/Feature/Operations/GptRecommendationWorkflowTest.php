@@ -14,6 +14,7 @@ use App\Platform\Gpt\Services\BoundedContextBuilder;
 use App\Platform\Gpt\Services\OpenAiClientWrapper;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -112,6 +113,29 @@ it('accepts the public dispatch subject sent by the request now button', functio
 
     expect(GptRecommendation::query()->sole()->subject_type)->toBe($job->getMorphClass());
     Queue::assertPushed(GenerateGptRecommendationJob::class, 1);
+});
+
+it('exposes stored dispatch recommendations through the public workspace subject alias', function (): void {
+    $dispatcher = createGptUser(RoleName::OperationsManager);
+    $job = createGptJob($dispatcher);
+
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'workspace-contract-hash',
+        'input_references' => [],
+        'recommendation' => [],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'pending_review',
+        'expires_at' => now()->addMinutes(15),
+    ])->load(['requestedBy', 'decidedBy']);
+
+    $viewModel = OperationsWorkspaceViewModel::gptRecommendations(collect([$recommendation]));
+
+    expect($viewModel[0]['subject_type'])->toBe('dispatch_job');
 });
 
 it('rejects unsupported subjects without queuing a request', function (): void {

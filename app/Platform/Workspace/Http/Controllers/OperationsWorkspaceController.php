@@ -39,7 +39,7 @@ final class OperationsWorkspaceController extends Controller
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
         'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
-        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'users', 'gptRecommendations', 'projectPlanning'],
+        'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
         'assets' => ['assets', 'assets_total', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
         'fuel' => ['fuelRequests', 'assets', 'assets_total'],
@@ -149,7 +149,7 @@ final class OperationsWorkspaceController extends Controller
                 'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
                 'assets_total' => $defaultAssetsTotal,
                 'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
-                'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
+                'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
                 'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             ],
             'assets', 'tracking' => [
@@ -207,6 +207,7 @@ final class OperationsWorkspaceController extends Controller
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
             'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+            'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
             'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user)),
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
@@ -432,6 +433,20 @@ final class OperationsWorkspaceController extends Controller
     /** @return Collection<int, User> */
     private function fetchUsers(User $user, int $limit = 200): Collection
     {
+        if (! $user->can(PermissionName::UsersManage->value)) {
+            return collect();
+        }
+
+        return User::query()
+            ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials'])
+            ->orderBy('name')
+            ->limit($limit)
+            ->get();
+    }
+
+    /** @return Collection<int, User> */
+    private function fetchDispatchResourceUsers(User $user, int $limit = 200): Collection
+    {
         if (
             ! $user->can(PermissionName::UsersManage->value) &&
             ! $user->can(PermissionName::AssignmentsViewAll->value) &&
@@ -441,7 +456,12 @@ final class OperationsWorkspaceController extends Controller
         }
 
         return User::query()
-            ->with(['roles:id,name', 'personnelProfile', 'personnelCredentials'])
+            ->select(['id', 'name', 'is_active', 'suspended_at'])
+            ->with([
+                'roles:id,name',
+                'personnelProfile:id,user_id,availability_status',
+                'personnelCredentials:id,user_id',
+            ])
             ->orderBy('name')
             ->limit($limit)
             ->get();

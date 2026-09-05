@@ -19,7 +19,7 @@ test('office users inspect people and assets and review AI before applying', asy
     );
     await expect(
         page.getByRole('heading', { name: 'Assigned personnel' }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 20_000 });
     await expect(
         page.getByRole('heading', { name: 'Assigned equipment' }),
     ).toBeVisible();
@@ -41,7 +41,16 @@ test('office users inspect people and assets and review AI before applying', asy
     await expect(
         resources.getByText('CRN-01 · 50T Mobile Crane'),
     ).toBeVisible();
+    await resources.getByRole('searchbox').fill('TRK-01');
+    await expect(
+        resources.getByText(
+            'Inspection clearance required · Recorded status: Available',
+        ),
+    ).toBeVisible();
     await resources.getByRole('searchbox').fill('CRN-01');
+    await expect(
+        resources.getByText('Recorded status: Available', { exact: true }),
+    ).toBeVisible();
     await expect(resources.getByText('TRK-01 · Heavy Rig Truck')).toHaveCount(
         0,
     );
@@ -51,6 +60,11 @@ test('office users inspect people and assets and review AI before applying', asy
         animations: 'disabled',
     });
     await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+        await resources
+            .getByRole('searchbox')
+            .evaluate((node) => node.clientWidth),
+    ).toBeGreaterThan(300);
     const sizes = await page
         .locator('.workspace-width-contained')
         .evaluate((node) => ({
@@ -82,14 +96,11 @@ test('office users inspect people and assets and review AI before applying', asy
         exact: true,
     });
     await expect(advisory).toBeVisible();
-    await advisory
-        .getByRole('button', { name: 'Request now', exact: true })
-        .click();
     await expect(
         advisory.getByRole('button', {
             name: /Review (& apply suggestion|advisory)/,
         }),
-    ).toBeVisible({ timeout: 30000 });
+    ).toBeVisible();
     await advisory
         .getByRole('button', { name: /Review (& apply suggestion|advisory)/ })
         .click();

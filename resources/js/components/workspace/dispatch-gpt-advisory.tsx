@@ -49,6 +49,7 @@ export function DispatchGptAdvisory({
         useState<GptRecommendationViewModel | null>(null);
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
+    const [modalTrigger, setModalTrigger] = useState<HTMLElement | null>(null);
     const [requesting, setRequesting] = useState(false);
     const [requestError, setRequestError] = useState<string | null>(null);
     const recommendation = useMemo(
@@ -118,12 +119,30 @@ export function DispatchGptAdvisory({
                 }
                 onRequest={() => requestRecommendation()}
                 onRetry={() => requestRecommendation(true)}
-                onReview={() =>
-                    recommendation && setSelectedForAccept(recommendation)
-                }
-                onReject={() =>
-                    recommendation && setSelectedForReject(recommendation)
-                }
+                onReview={() => {
+                    if (!recommendation) {
+                        return;
+                    }
+
+                    setModalTrigger(
+                        document.activeElement instanceof HTMLElement
+                            ? document.activeElement
+                            : null,
+                    );
+                    setSelectedForAccept(recommendation);
+                }}
+                onReject={() => {
+                    if (!recommendation) {
+                        return;
+                    }
+
+                    setModalTrigger(
+                        document.activeElement instanceof HTMLElement
+                            ? document.activeElement
+                            : null,
+                    );
+                    setSelectedForReject(recommendation);
+                }}
                 details={
                     recommendation ? (
                         <RecommendationDetails rec={recommendation} />
@@ -134,12 +153,14 @@ export function DispatchGptAdvisory({
                 <AcceptGptModal
                     rec={selectedForAccept}
                     onClose={() => setSelectedForAccept(null)}
+                    returnFocusTo={modalTrigger}
                 />
             )}
             {selectedForReject && (
                 <RejectGptModal
                     rec={selectedForReject}
                     onClose={() => setSelectedForReject(null)}
+                    returnFocusTo={modalTrigger}
                 />
             )}
         </>

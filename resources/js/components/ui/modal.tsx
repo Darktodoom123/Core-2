@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 
@@ -15,6 +16,7 @@ export interface ModalProps {
     className?: string;
     closeOnEscape?: boolean;
     closeOnBackdrop?: boolean;
+    returnFocusTo?: HTMLElement | null;
 }
 
 const sizeClasses: Record<NonNullable<ModalProps['size']>, string> = {
@@ -36,29 +38,105 @@ export function Modal({
     className,
     closeOnEscape = true,
     closeOnBackdrop = true,
+    returnFocusTo,
 }: ModalProps) {
     const prefersReducedMotion = useReducedMotion() ?? false;
     const dialogRef = useRef<HTMLDivElement>(null);
+    const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+    const onCloseRef = useRef(onClose);
+    const closeOnEscapeRef = useRef(closeOnEscape);
+    const titleId = useId();
 
     useEffect(() => {
-        if (!open) return;
+        onCloseRef.current = onClose;
+        closeOnEscapeRef.current = closeOnEscape;
+    }, [closeOnEscape, onClose]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        previouslyFocusedRef.current =
+            returnFocusTo ??
+            (document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null);
+        const dialog = dialogRef.current;
+        const focusableElements = () =>
+            Array.from(
+                dialog?.querySelectorAll<HTMLElement>(
+                    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+                ) ?? [],
+            );
+        const initialFocus =
+            dialog?.querySelector<HTMLElement>('[autofocus]') ??
+            focusableElements()[0] ??
+            dialog;
+        initialFocus?.focus({ preventScroll: true });
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && closeOnEscape) {
+            if (event.key === 'Escape' && closeOnEscapeRef.current) {
                 event.preventDefault();
-                onClose();
+                onCloseRef.current();
+
+                return;
+            }
+
+            if (event.key !== 'Tab' || !dialog) {
+                return;
+            }
+
+            const focusable = focusableElements();
+            const first = focusable[0];
+            const last = focusable.at(-1);
+
+            if (!first || !last) {
+                event.preventDefault();
+                dialog.focus({ preventScroll: true });
+
+                return;
+            }
+
+            if (
+                event.shiftKey &&
+                (document.activeElement === first ||
+                    !dialog.contains(document.activeElement))
+            ) {
+                event.preventDefault();
+                last.focus({ preventScroll: true });
+            } else if (
+                !event.shiftKey &&
+                (document.activeElement === last ||
+                    !dialog.contains(document.activeElement))
+            ) {
+                event.preventDefault();
+                first.focus({ preventScroll: true });
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
+
         const originalOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = originalOverflow;
+
+            const previouslyFocused = previouslyFocusedRef.current;
+            previouslyFocusedRef.current = null;
+
+            if (previouslyFocused?.isConnected) {
+                previouslyFocused.focus({ preventScroll: true });
+                window.requestAnimationFrame?.(() => {
+                    if (previouslyFocused.isConnected) {
+                        previouslyFocused.focus({ preventScroll: true });
+                    }
+                });
+            }
         };
-    }, [open, closeOnEscape, onClose]);
+    }, [open, returnFocusTo]);
 
     return (
         <AnimatePresence>
@@ -67,7 +145,7 @@ export function Modal({
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
                     role="dialog"
                     aria-modal="true"
-                    aria-labelledby={title ? 'modal-title' : undefined}
+                    aria-labelledby={title ? titleId : undefined}
                 >
                     {/* Backdrop */}
                     <motion.div
@@ -85,6 +163,7 @@ export function Modal({
                     {/* Dialog Card */}
                     <motion.div
                         ref={dialogRef}
+                        tabIndex={-1}
                         initial={
                             prefersReducedMotion
                                 ? false
@@ -113,7 +192,7 @@ export function Modal({
                                 <div className="space-y-1">
                                     {title && (
                                         <h2
-                                            id="modal-title"
+                                            id={titleId}
                                             className="text-lg font-semibold tracking-tight text-ink"
                                         >
                                             {title}

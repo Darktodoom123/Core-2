@@ -95,7 +95,7 @@ final class BrowserAcceptanceSeeder extends Seeder
             'scheduled_end' => now()->addDays(2)->addHours(4),
             'priority' => DispatchPriority::Routine,
             'status' => DispatchStatus::Draft,
-            'requirements' => [],
+            'requirements' => ['Certified crane operator', '50T mobile crane'],
             'created_by' => $manager->id,
         ]);
         $assignedJob = DispatchJob::query()->create([
@@ -210,6 +210,38 @@ final class BrowserAcceptanceSeeder extends Seeder
         $crane = OperationalAsset::query()->firstOrCreate(
             ['code' => 'CRN-01'],
             ['name' => '50T Mobile Crane', 'kind' => 'crane', 'status' => AssetStatus::Available]
+        );
+        $crane->inspections()->create([
+            'technician_id' => $manager->id,
+            'type' => 'daily_safety',
+            'result' => 'passed',
+            'checklist' => ['fixture_readiness' => true],
+            'completed_at' => now()->subHour(),
+        ]);
+        $recommendations['dispatch_desk'] = $this->recommendation(
+            $assignmentReviewJob,
+            $manager,
+            GptRecommendationStatus::PendingReview,
+            [
+                'recommendation' => [
+                    'summary' => 'Assign the qualified operator and available mobile crane to this lift.',
+                    'reasons' => ['The crew credential and equipment status match the recorded job requirements.'],
+                    'assumptions' => ['The displayed availability remains current until the dispatcher confirms.'],
+                    'conflicts' => [],
+                    'proposed_personnel' => [[
+                        'user_id' => $operator->id,
+                        'name' => $operator->name,
+                        'role' => 'crane_operator',
+                        'assignment_type' => 'operator',
+                    ]],
+                    'proposed_assets' => [[
+                        'operational_asset_id' => $crane->id,
+                        'asset_code' => $crane->code,
+                        'name' => $crane->name,
+                        'assignment_type' => 'primary_crane',
+                    ]],
+                ],
+            ],
         );
 
         $approvalJob = DispatchJob::query()->create([

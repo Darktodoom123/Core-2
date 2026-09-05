@@ -51,13 +51,13 @@ import type {
     ClientViewModel,
     DispatchJobViewModel,
     DispatchPriorityValue,
+    DispatchResourceUserViewModel,
     DispatchSourceViewModel,
     GptRecommendationViewModel,
     RentalDispatchHandoffViewModel,
     SalesDispatchHandoffViewModel,
     ServiceRequestViewModel,
     WorkspaceCapabilities,
-    WorkspaceUserViewModel,
 } from '@/types/workspace';
 
 type ViewMode = 'list' | 'board' | 'conflicts';
@@ -84,7 +84,7 @@ const ATTENTION_FILTERS: ConflictTypeFilter[] = [
 
 const FIELD_USER_ROLES = new Set(['driver', 'crane_operator']);
 
-function isFieldUser(user: WorkspaceUserViewModel): boolean {
+function isFieldUser(user: DispatchResourceUserViewModel): boolean {
     return user.role !== null && FIELD_USER_ROLES.has(user.role);
 }
 
@@ -318,7 +318,7 @@ export function LiveDispatchWorkspace({
     salesHandoffs: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
     approvals?: ApprovalViewModel[];
-    users?: WorkspaceUserViewModel[];
+    users?: DispatchResourceUserViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     capabilities: WorkspaceCapabilities;
     canCreate: boolean;
@@ -2067,7 +2067,7 @@ export function ScheduleBoardTable({
 }: {
     jobs: DispatchJobViewModel[];
     assets: AssetViewModel[];
-    users: WorkspaceUserViewModel[];
+    users: DispatchResourceUserViewModel[];
     derivedConflicts: DerivedConflict[];
     category: BoardCategory;
     conflictsOnly: boolean;

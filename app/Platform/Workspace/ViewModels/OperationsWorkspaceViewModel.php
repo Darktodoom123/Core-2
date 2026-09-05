@@ -426,6 +426,32 @@ final class OperationsWorkspaceViewModel
     }
 
     /**
+     * Personnel fields required by dispatch resource discovery. Contact details,
+     * employee numbers, and credential identifiers stay out of the browser payload.
+     *
+     * @param  Collection<int, User>  $users
+     * @return array<int, array<string, mixed>>
+     */
+    public static function dispatchResourceUsers(Collection $users): array
+    {
+        return $users->map(static function (User $user): array {
+            $profile = $user->relationLoaded('personnelProfile') ? $user->personnelProfile : null;
+            $credentials = $user->relationLoaded('personnelCredentials') ? $user->personnelCredentials : collect();
+
+            return [
+                'id' => (int) $user->getKey(),
+                'name' => $user->name,
+                'is_active' => (bool) $user->is_active,
+                'suspended_at' => $user->suspended_at?->toIso8601String(),
+                'role' => $user->operationalRole()?->value,
+                'role_label' => $user->operationalRole()?->label(),
+                'availability_status' => $profile?->availability_status,
+                'has_credentials' => $credentials->isNotEmpty(),
+            ];
+        })->values()->all();
+    }
+
+    /**
      * @param  Collection<int, AuditEvent>  $events
      * @return array<int, array<string, mixed>>
      */
@@ -830,9 +856,13 @@ final class OperationsWorkspaceViewModel
      */
     public static function gptRecommendations(Collection $recommendations): array
     {
+        $dispatchMorphClass = (new DispatchJob)->getMorphClass();
+
         return $recommendations->map(static fn (GptRecommendation $rec): array => [
             'id' => (int) $rec->getKey(),
-            'subject_type' => $rec->subject_type,
+            'subject_type' => in_array($rec->subject_type, [DispatchJob::class, $dispatchMorphClass], true)
+                ? 'dispatch_job'
+                : $rec->subject_type,
             'subject_id' => $rec->subject_id,
             'purpose' => $rec->purpose,
             'context_hash' => $rec->context_hash,
