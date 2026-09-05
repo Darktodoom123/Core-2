@@ -517,6 +517,15 @@ export const OperatorDashboardScreen: React.FC<
                             onPress={() => handleTilePress(tile.id)}
                             style={({ pressed }) => [
                                 styles.tileCard,
+                                {
+                                    backgroundColor: isDarkHud
+                                        ? tile.darkBgColor || '#1E293B'
+                                        : tile.bgColor,
+                                    borderColor: isDarkHud
+                                        ? tile.darkBorderColor || '#334155'
+                                        : 'transparent',
+                                    borderWidth: isDarkHud ? 1.5 : 0,
+                                },
                                 isDarkHud && styles.darkTileCard,
                                 pressed && styles.pressedTile,
                             ]}
@@ -543,25 +552,21 @@ export const OperatorDashboardScreen: React.FC<
                             <View
                                 style={[
                                     styles.tileIconContainer,
-                                    {
-                                        backgroundColor: isDarkHud
-                                            ? tile.darkHaloBg ||
-                                              'rgba(245, 158, 11, 0.15)'
-                                            : tile.lightHaloBg ||
-                                              'rgba(217, 119, 6, 0.12)',
-                                    },
                                     isDarkHud && styles.darkTileIconContainer,
+                                    isDarkHud &&
+                                        Boolean(tile.darkHaloBg) && {
+                                            backgroundColor: tile.darkHaloBg,
+                                        },
                                 ]}
                             >
                                 <Icon
                                     color={
                                         isDarkHud
-                                            ? tile.darkIconColor || '#F59E0B'
-                                            : tile.lightIconColor ||
-                                              tile.bgColor
+                                            ? tile.darkIconColor || '#FFFFFF'
+                                            : '#FFFFFF'
                                     }
                                     name={tile.iconName}
-                                    size={24}
+                                    size={isDarkHud ? 22 : 28}
                                 />
                             </View>
                             <Text
@@ -933,61 +938,63 @@ const styles = StyleSheet.create({
     },
     tileCard: {
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderColor: '#E2E8F0',
+        borderColor: 'transparent',
         borderRadius: 18,
-        borderWidth: 1,
+        borderWidth: 0,
         flexBasis: '31%',
         flexGrow: 1,
         justifyContent: 'center',
-        minHeight: 116,
+        minHeight: 114,
         padding: 10,
         position: 'relative',
-        ...shadows.sm,
+        ...shadows.md,
     },
     darkTileCard: {
         backgroundColor: '#1E293B',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        borderWidth: 1,
+        borderRadius: 18,
+        borderWidth: 1.5,
+        justifyContent: 'center',
+        minHeight: 114,
+        padding: 10,
+        position: 'relative',
         shadowColor: '#000000',
         shadowOpacity: 0.3,
     },
     tileIconContainer: {
         alignItems: 'center',
-        borderRadius: 22,
-        height: 44,
+        height: 38,
         justifyContent: 'center',
         marginBottom: 6,
-        width: 44,
+        width: 38,
     },
     darkTileIconContainer: {
         alignItems: 'center',
-        borderRadius: 22,
-        height: 44,
+        borderRadius: 19,
+        height: 38,
         justifyContent: 'center',
         marginBottom: 6,
-        width: 44,
+        width: 38,
     },
     tileTitle: {
-        color: '#0F172A',
+        color: '#FFFFFF',
         fontSize: 12.5,
-        fontWeight: '700',
-        letterSpacing: -0.1,
+        fontWeight: '800',
+        letterSpacing: 0.1,
         lineHeight: 15,
         textAlign: 'center',
     },
     darkTileTitle: {
         color: '#F8FAFC',
         fontSize: 12.5,
-        fontWeight: '700',
-        letterSpacing: -0.1,
+        fontWeight: '800',
+        letterSpacing: 0.1,
         lineHeight: 15,
         textAlign: 'center',
     },
     tileSublabel: {
-        color: '#64748B',
+        color: 'rgba(255, 255, 255, 0.85)',
         fontSize: 10,
-        fontWeight: '600',
+        fontWeight: '700',
         marginTop: 2,
         textAlign: 'center',
     },
@@ -1000,7 +1007,7 @@ const styles = StyleSheet.create({
     },
     tileBadgePill: {
         alignItems: 'center',
-        backgroundColor: '#D97706',
+        backgroundColor: '#FFFFFF',
         borderRadius: 10,
         elevation: 3,
         height: 18,
@@ -1020,7 +1027,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F59E0B',
     },
     tileBadgePillText: {
-        color: '#FFFFFF',
+        color: '#0F172A',
         fontSize: 10,
         fontWeight: '900',
     },
