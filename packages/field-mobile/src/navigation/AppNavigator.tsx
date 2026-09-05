@@ -10,6 +10,7 @@ import React, {
 import {
     ActivityIndicator,
     AppState,
+    AppStateStatus,
     BackHandler,
     Pressable,
     StatusBar,
@@ -34,7 +35,10 @@ import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
-import { JobDetailScreen } from '../screens/JobDetailScreen';
+import {
+    startBackgroundLocationUpdates,
+    stopBackgroundLocationUpdates,
+} from '../native/backgroundLocationBridge';
 import { ApiClientError } from '../services/apiClient';
 import {
     CommandOutboxManager,
@@ -59,6 +63,7 @@ import type {
     ShiftInfo,
     ShiftStatus,
     StandbyReason,
+    WeatherTelemetry,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -217,6 +222,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         startedAt: '08:00 AM',
         hoursElapsed: 4,
     });
+    const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
+    const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+    const [weatherError, setWeatherError] = useState<string | null>(null);
     const previousOnlineRef = useRef<boolean | null>(null);
     const { width } = useWindowDimensions();
     const isCompact = width < 600;
@@ -238,7 +246,8 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox],
     );
     const getCurrentLocation = useCallback(
-        () => nativeLocationAdapter.getCurrentLocation(),
+        (isStationary = false) =>
+            nativeLocationAdapter.getCurrentLocation(isStationary),
         [],
     );
 
@@ -385,6 +394,87 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             setIsLoadingJobs(false);
         }
     }, [apiClient, handleRequestFailure, isOnline, status]);
+
+    const refreshWeather = useCallback(async () => {
+        setIsLoadingWeather(true);
+        setWeatherError(null);
+
+        try {
+            let lat: number;
+            let lon: number;
+            let localCity: string | null = null;
+
+            try {
+                const loc = await getCurrentLocation(false);
+
+                if (
+                    loc?.latitude === undefined ||
+                    loc?.longitude === undefined ||
+                    loc?.latitude === null ||
+                    loc?.longitude === null
+                ) {
+                    throw new Error('Device GPS location is unavailable.');
+                }
+
+                lat = loc.latitude;
+                lon = loc.longitude;
+                localCity = await nativeLocationAdapter.reverseGeocodeCity(
+                    lat,
+                    lon,
+                );
+            } catch (geoErr) {
+                const raw =
+                    geoErr instanceof Error ? geoErr.message.toLowerCase() : '';
+                let friendly =
+                    'Turn on GPS or step into an open area, then tap retry.';
+                if (
+                    raw.includes('permission') ||
+                    raw.includes('denied') ||
+                    raw.includes('settings')
+                ) {
+                    friendly =
+                        'Allow location in your phone settings to see site wind and safety.';
+                }
+                setWeatherError(friendly);
+                setWeather(null);
+                return;
+            }
+
+            try {
+                const [cityResult, weatherResult] = await Promise.allSettled([
+                    nativeLocationAdapter.reverseGeocodeCity(lat, lon),
+                    apiClient.fetchLocationWeather(lat, lon),
+                ]);
+
+                if (weatherResult.status === 'rejected') {
+                    throw weatherResult.reason;
+                }
+
+                const data = weatherResult.value;
+                const localCity =
+                    cityResult.status === 'fulfilled' ? cityResult.value : null;
+
+                if (localCity && localCity.trim() !== '') {
+                    data.location_name = localCity.trim();
+                } else if (
+                    !data.location_name ||
+                    data.location_name.trim() === ''
+                ) {
+                    data.location_name = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+                }
+
+                setWeather(data);
+                setWeatherError(null);
+            } catch {
+                setWeatherError(
+                    'Check your Wi-Fi or cellular data, then tap retry.',
+                );
+                setWeather(null);
+            }
+        } finally {
+            setIsLoadingWeather(false);
+        }
+    }, [apiClient, getCurrentLocation]);
 
     const syncQueue = useCallback(async () => {
         if (status !== 'authenticated' || isOnline !== true || !isOutboxReady) {
@@ -538,15 +628,21 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     }, [commandOutbox, status, user]);
 
     useEffect(() => {
-        if (status === 'authenticated' && isOnline === true) {
-            queueMicrotask(() => void fetchJobs());
-        } else if (status !== 'authenticated') {
+        if (status === 'authenticated') {
+            queueMicrotask(() => void refreshWeather());
+
+            if (isOnline === true) {
+                queueMicrotask(() => void fetchJobs());
+            }
+        } else {
             queueMicrotask(() => {
                 setJobs([]);
                 setSelectedJobId(null);
+                setWeather(null);
+                setWeatherError(null);
             });
         }
-    }, [fetchJobs, isOnline, status]);
+    }, [fetchJobs, isOnline, refreshWeather, status]);
 
     useEffect(() => {
         if (isOnline === true && isOutboxReady) {
@@ -832,6 +928,64 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     );
 
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
+    const activeTrackingJob = activeJob || jobs[0] || null;
+
+    useEffect(() => {
+        if (
+            !activeTrackingJob ||
+            !user ||
+            !getCurrentLocation ||
+            !locationService.canShareLocation(user, activeTrackingJob)
+        ) {
+            return;
+        }
+
+        let disposed = false;
+        const context = { actorId: user.id, jobId: activeTrackingJob.id };
+        const startForegroundTracking = () => {
+            if (!disposed) {
+                locationService.startAutoTracking(
+                    user,
+                    activeTrackingJob,
+                    getCurrentLocation,
+                );
+            }
+        };
+        const syncBackgroundTracking = (nextState: AppStateStatus) => {
+            if (disposed) {
+                return;
+            }
+
+            if (nextState === 'active') {
+                void stopBackgroundLocationUpdates().catch(() => undefined);
+                startForegroundTracking();
+
+                return;
+            }
+
+            locationService.stopAutoTracking();
+            void startBackgroundLocationUpdates(context).catch(() => undefined);
+        };
+
+        if (AppState.currentState === 'active') {
+            startForegroundTracking();
+        } else {
+            syncBackgroundTracking(AppState.currentState);
+        }
+
+        const subscription = AppState.addEventListener(
+            'change',
+            syncBackgroundTracking,
+        );
+
+        return () => {
+            disposed = true;
+            subscription.remove();
+            locationService.stopAutoTracking();
+            void stopBackgroundLocationUpdates().catch(() => undefined);
+        };
+    }, [activeTrackingJob, getCurrentLocation, locationService, user]);
+
     const handleGlobalSosHold = useCallback(() => {
         setSosSheetOpen(true);
     }, []);
@@ -1004,22 +1158,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 </Text>
                             </View>
                         ) : null}
-                        {selectedJobId !== null && activeJob && user ? (
-                            <JobDetailScreen
-                                getCurrentLocation={getCurrentLocation}
-                                job={activeJob}
-                                locationService={locationService}
-                                onAcceptAssignment={handleAcceptAssignment}
-                                onAcceptServerState={handleAcceptServerState}
-                                onBackToList={handleBackToList}
-                                onLocationQueued={() => void syncQueue()}
-                                onRejectAssignment={handleRejectAssignment}
-                                onRetryNewVersion={handleRetryNewVersion}
-                                onTransitionStatus={handleTransitionStatus}
-                                outboxCommands={outboxCommands}
-                                user={user}
-                            />
-                        ) : activeAppView === 'hos' ? (
+                        {activeAppView === 'hos' ? (
                             <HosScreen
                                 operatorName={user?.name || 'Alex Rivera'}
                                 shiftInfo={shiftInfo}
@@ -1132,9 +1271,17 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onOpenVehicle={() =>
                                     setActiveAppView('inspection')
                                 }
-                                onRefresh={() => void fetchJobs()}
+                                onRefresh={() => {
+                                    void fetchJobs();
+                                    void refreshWeather();
+                                }}
                                 onRetryCommand={handleRetryCommand}
                                 onSelectJob={handleSelectJob}
+                                onAcceptAssignment={handleAcceptAssignment}
+                                onAcceptServerState={handleAcceptServerState}
+                                onRejectAssignment={handleRejectAssignment}
+                                onRetryNewVersion={handleRetryNewVersion}
+                                onTransitionStatus={handleTransitionStatus}
                                 onSyncNow={() => void syncQueue()}
                                 onToggleLocationSharing={
                                     handleToggleLocationSharing
@@ -1144,6 +1291,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 shiftInfo={shiftInfo}
                                 userName={user?.name}
                                 userRole={user?.role.replaceAll('_', ' ')}
+                                weather={weather}
+                                isLoadingWeather={isLoadingWeather}
+                                weatherError={weatherError}
+                                onRefreshWeather={() => void refreshWeather()}
                             />
                         )}
                     </View>

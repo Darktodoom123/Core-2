@@ -11,6 +11,7 @@ import {
 import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
+import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
@@ -30,11 +31,13 @@ import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
+    DispatchStatus,
     DutyStatus,
     OutboxCommand,
     ShiftInfo,
     ShiftStatus,
     StandbyReason,
+    WeatherTelemetry,
 } from '../types/index';
 
 export interface AssignedJobsListScreenProps {
@@ -50,7 +53,23 @@ export interface AssignedJobsListScreenProps {
     onSosHoldComplete: () => void;
     sosDisabled?: boolean;
     onRefresh: () => void;
-    onSelectJob: (jobId: number) => void;
+    onSelectJob?: (jobId: number) => void;
+    onAcceptAssignment?: (
+        jobId: number,
+        assignmentId: number,
+        version: number,
+    ) => void;
+    onRejectAssignment?: (
+        jobId: number,
+        assignmentId: number,
+        reason: string,
+        version: number,
+    ) => void;
+    onTransitionStatus?: (
+        jobId: number,
+        nextStatus: DispatchStatus,
+        version: number,
+    ) => void;
     onToggleShift?: (nextStatus: ShiftStatus) => void;
     onChangeDutyStatus?: (
         dutyStatus: DutyStatus,
@@ -67,6 +86,12 @@ export interface AssignedJobsListScreenProps {
     onSyncNow?: () => void;
     onRetryCommand?: (commandId: string) => void;
     onDiscardCommand?: (commandId: string) => void;
+    onAcceptServerState?: (commandId: string) => void;
+    onRetryNewVersion?: (commandId: string, newVersion: number) => void;
+    weather?: WeatherTelemetry | null;
+    isLoadingWeather?: boolean;
+    weatherError?: string | null;
+    onRefreshWeather?: () => void;
 }
 
 interface TileItem {
@@ -105,6 +130,9 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     sosDisabled = false,
     onRefresh,
     onSelectJob,
+    onAcceptAssignment,
+    onRejectAssignment,
+    onTransitionStatus,
     onToggleShift,
     onChangeDutyStatus,
     onOpenDvir,
@@ -117,6 +145,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onSyncNow,
     onRetryCommand,
     onDiscardCommand,
+    onAcceptServerState,
+    onRetryNewVersion,
+    weather,
+    isLoadingWeather = false,
+    weatherError,
+    onRefreshWeather,
 }) => {
     const { isDarkHud } = useTheme();
     const [dutyModalOpen, setDutyModalOpen] = useState(false);
@@ -527,6 +561,14 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     </View>
                 ) : null}
 
+                {/* Real-time Location Weather Telemetry Card */}
+                <LocationWeatherCard
+                    error={weatherError}
+                    isLoading={isLoadingWeather}
+                    onRefresh={onRefreshWeather}
+                    weather={weather}
+                />
+
                 {/* Samsara-Style Persistent Duty Status Bar */}
                 <Pressable
                     accessibilityHint="Tap to change active duty status or view shift fatigue gauge"
@@ -825,13 +867,40 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                         ) : null}
 
                         <View style={styles.jobList}>
-                            {jobs.map((job) => (
-                                <JobListItemCard
-                                    job={job}
-                                    key={job.id}
-                                    onSelectJob={onSelectJob}
-                                />
-                            ))}
+                            {jobs.map((job) => {
+                                const jobConflictedCommands =
+                                    outboxCommands.filter(
+                                        (command) =>
+                                            command.state === 'conflict' &&
+                                            (command.jobId === job.id ||
+                                                (command.payload as any)
+                                                    ?.dispatch_job_id ===
+                                                    job.id ||
+                                                (command.payload as any)
+                                                    ?.jobId === job.id ||
+                                                (!command.jobId &&
+                                                    jobs.length === 1)),
+                                    );
+
+                                return (
+                                    <JobListItemCard
+                                        conflictedCommands={
+                                            jobConflictedCommands
+                                        }
+                                        job={job}
+                                        key={job.id}
+                                        onAcceptAssignment={onAcceptAssignment}
+                                        onAcceptServerState={
+                                            onAcceptServerState
+                                        }
+                                        onOpenDriveRoutes={onOpenRoutes}
+                                        onRejectAssignment={onRejectAssignment}
+                                        onRetryNewVersion={onRetryNewVersion}
+                                        onSelectJob={onSelectJob}
+                                        onTransitionStatus={onTransitionStatus}
+                                    />
+                                );
+                            })}
                         </View>
                     </>
                 ) : null}
@@ -866,7 +935,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 failedCount={failedCount}
                 isOnline={isOnline}
                 onAcceptJob={(jobId) => {
-                    onSelectJob(jobId);
+                    onSelectJob?.(jobId);
                     setNotificationsSheetOpen(false);
                 }}
                 onClose={() => setNotificationsSheetOpen(false)}

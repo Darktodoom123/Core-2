@@ -46,8 +46,4 @@ return [
         'proactive_cooldown_minutes' => 5,
     ],
 
-    'tomorrow_io' => [
-        'key' => env('TOMORROW_IO_API_KEY'),
-    ],
-
 ];

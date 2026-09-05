@@ -1349,9 +1349,10 @@ describe('native application component tree', () => {
                 tokenStorage={new TestTokenStorage(rawToken)}
             />,
         );
-        await fireEvent.press(
+
+        expect(
             await screen.findByTestId(`job-card-${fieldJob.id}`),
-        );
+        ).toBeVisible();
 
         expect(screen.getByText('Full PPE')).toBeVisible();
         expect(
@@ -1362,15 +1363,11 @@ describe('native application component tree', () => {
                 'Check in with the site supervisor at the east gate.',
             ),
         ).toBeVisible();
-        expect(screen.getByText('Location sharing available')).toBeVisible();
-        expect(screen.getByText('Routine')).toBeVisible();
-        expect(screen.getByText('Record version 3')).toBeVisible();
-        expect(screen.getByText('YOUR NEXT ACTION')).toBeVisible();
-        expect(screen.getByText('Server will record: Accepted')).toBeVisible();
+        expect(screen.getByText(fieldJob.reference)).toBeVisible();
+        expect(screen.getByText(fieldJob.title)).toBeVisible();
+        expect(screen.getByText(fieldJob.site)).toBeVisible();
         expect(screen.queryByText(/Lift and set HVAC/i)).toBeNull();
         expect(screen.queryByText(/ETA 7:28/i)).toBeNull();
-        expect(screen.getByText('Accept job responsibility')).toBeVisible();
-        expect(screen.queryByText('Accept job responsibility (v3)')).toBeNull();
     });
 
     it('redirects to Heavy Crane Drive Mode when clicking Routes tile and returns to main on back', async () => {

@@ -1,8 +1,7 @@
 import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
 import React from 'react';
-import { CraneSetupSafetyCard } from '../components/cards/CraneSetupSafetyCard';
 import { HeavyCraneDriveModeModal } from '../components/cards/HeavyCraneDriveModeModal';
-import { ParkedSecuredCard } from '../components/cards/ParkedSecuredCard';
+import { JobListItemCard } from '../components/cards/JobListItemCard';
 import {
     FuelReceiptTab,
     HandoverTab,
@@ -11,10 +10,7 @@ import {
     SafeReleaseTab,
 } from '../components/inspection';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
-import type {
-    ParkedSecuredChecklist,
-    TechnicianInspectionCheck,
-} from '../types/index';
+import type { DispatchJob, TechnicianInspectionCheck } from '../types/index';
 
 jest.setTimeout(25000);
 
@@ -88,107 +84,170 @@ describe('Native Field Workflows Component Tests', () => {
         });
     });
 
-    describe('ParkedSecuredCard', () => {
-        it('requires explicit confirmation before exposing crane setup', async () => {
-            const onConfirm = jest.fn();
+    describe('JobListItemCard (Upgraded Dispatch Card)', () => {
+        const mockJob: DispatchJob = {
+            id: 101,
+            reference: 'DSP-2026-0894',
+            client: 'Megawide Construction',
+            title: 'Steel Girder Erection',
+            site: 'Batangas Port Pier 4 - Alibaton PH',
+            site_notes: 'Enter via South Gate pad 2',
+            scheduled_start: '2026-08-15T08:00:00Z',
+            priority: { value: 'priority', label: 'Priority' },
+            status: { value: 'accepted', label: 'Accepted' },
+            version: 2,
+            requirements: ['50T lift', 'Tandem lift'],
+            capabilities: {
+                can_respond: true,
+                can_update_status: true,
+                can_share_location: true,
+            },
+            asset_assignments: [
+                {
+                    id: 1,
+                    operational_asset_id: 55,
+                    asset_code: 'CRN-101',
+                    asset_name: 'Liebherr LTM 1050-3.1',
+                    asset_kind: 'mobile_crane',
+                },
+            ],
+            personnel_assignments: [],
+            my_assignment: {
+                id: 42,
+                response_status: 'accepted',
+                response_status_label: 'Accepted',
+            },
+        };
+
+        it('renders full job details: reference, title, client, location, equipment, and scope', async () => {
+            const view = await render(
+                <JobListItemCard
+                    job={mockJob}
+                    onOpenDriveRoutes={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onTransitionStatus={jest.fn()}
+                />,
+            );
+
+            expect(view.getByText('DSP-2026-0894')).toBeTruthy();
+            expect(view.getByText('Steel Girder Erection')).toBeTruthy();
+            expect(view.getByText('Megawide Construction')).toBeTruthy();
+            expect(
+                view.getByText('Batangas Port Pier 4 - Alibaton PH'),
+            ).toBeTruthy();
+            expect(view.getByText('Enter via South Gate pad 2')).toBeTruthy();
+            expect(
+                view.getByText('CRN-101 · Liebherr LTM 1050-3.1'),
+            ).toBeTruthy();
+            expect(view.getByText('50T lift')).toBeTruthy();
+            expect(view.getByText('Tandem lift')).toBeTruthy();
+        });
+
+        it('handles direct one-tap assignment acceptance and rejection when pending', async () => {
+            const pendingJob: DispatchJob = {
+                ...mockJob,
+                my_assignment: {
+                    id: 99,
+                    response_status: 'pending',
+                    response_status_label: 'Pending Response',
+                },
+            };
+
+            const onAccept = jest.fn();
+            const onReject = jest.fn();
 
             const view = await render(
-                <ParkedSecuredCard
-                    isArrived={true}
-                    onConfirm={onConfirm}
-                    state={null}
+                <JobListItemCard
+                    job={pendingJob}
+                    onAcceptAssignment={onAccept}
+                    onRejectAssignment={onReject}
                 />,
             );
 
             expect(
-                view.getByText('Parked & Secured Confirmation'),
+                view.getByText('Operator assignment requires confirmation'),
             ).toBeTruthy();
-            expect(view.getByText('ACTION REQUIRED UPON ARRIVAL')).toBeTruthy();
 
-            // Toggle all 4 checklist items
-            await fireEvent.press(view.getByTestId('parked-check-brake'));
-            await fireEvent.press(view.getByTestId('parked-check-chocks'));
-            await fireEvent.press(view.getByTestId('parked-check-beacons'));
-            await fireEvent.press(view.getByTestId('parked-check-surface'));
-
-            // Press confirm button
+            // Accept
             await fireEvent.press(
-                view.getByTestId('confirm-parked-secured-btn'),
+                view.getByTestId('accept-assignment-btn-101'),
             );
-            expect(onConfirm).toHaveBeenCalledTimes(1);
-            expect(onConfirm).toHaveBeenCalledWith({
-                parkingBrakeEngaged: true,
-                wheelChocksDeployed: true,
-                hazardBeaconsActive: true,
-                surfaceAssessed: true,
-            });
+            expect(onAccept).toHaveBeenCalledWith(101, 99, 2);
+
+            // Decline
+            await fireEvent.press(
+                view.getByTestId('decline-assignment-btn-101'),
+            );
+            expect(onReject).toHaveBeenCalledWith(
+                101,
+                99,
+                'Declined by mobile operator',
+                2,
+            );
         });
 
-        it('shows verified state when state is already confirmed', async () => {
-            const confirmedChecklist: ParkedSecuredChecklist = {
-                parkingBrakeEngaged: true,
-                wheelChocksDeployed: true,
-                hazardBeaconsActive: true,
-                surfaceAssessed: true,
-            };
-
-            const view = await render(
-                <ParkedSecuredCard
-                    isArrived={true}
-                    onConfirm={jest.fn()}
-                    state={{
-                        isConfirmed: true,
-                        confirmedAt: '2026-08-15T01:00:00Z',
-                        confirmedBy: 'Marcus Operator',
-                        checklist: confirmedChecklist,
+        it('renders clean status badges without in-progress progression buttons for active jobs', async () => {
+            // 1. Accepted state
+            const acceptedView = await render(
+                <JobListItemCard
+                    job={{
+                        ...mockJob,
+                        status: { value: 'accepted', label: 'Accepted' },
                     }}
                 />,
             );
-
-            expect(view.getByText('SAFETY VERIFIED')).toBeTruthy();
+            expect(acceptedView.getByText('Accepted')).toBeTruthy();
             expect(
-                view.getByText('Parked & Secured Confirmation'),
-            ).toBeTruthy();
-        });
-    });
+                acceptedView.queryByTestId('action-en-route-btn-101'),
+            ).toBeNull();
 
-    describe('CraneSetupSafetyCard', () => {
-        it('renders site map, hazard identification, and blocking checklist', async () => {
-            const onVerifySetup = jest.fn();
+            await cleanup();
 
-            const view = await render(
-                <CraneSetupSafetyCard
-                    isCraneAsset={true}
-                    isParkedAndSecured={true}
-                    onVerifySetup={onVerifySetup}
-                    state={null}
+            // 2. En Route state
+            const enRouteView = await render(
+                <JobListItemCard
+                    job={{
+                        ...mockJob,
+                        status: { value: 'en_route', label: 'En Route' },
+                    }}
                 />,
             );
-
+            expect(enRouteView.getByText('En Route')).toBeTruthy();
             expect(
-                view.getByText('Setup & Exclusion Zone Verification'),
-            ).toBeTruthy();
-            expect(view.getByText('15m Exclusion Zone')).toBeTruthy();
-            expect(
-                view.getByText('Overhead 13.8kV Distribution Line'),
-            ).toBeTruthy();
+                enRouteView.queryByTestId('action-arrive-btn-101'),
+            ).toBeNull();
 
-            // Mitigate hazard
-            await fireEvent.press(
-                view.getByTestId('hazard-item-hazard-powerlines'),
+            await cleanup();
+
+            // 3. Arrived state
+            const arrivedView = await render(
+                <JobListItemCard
+                    job={{
+                        ...mockJob,
+                        status: { value: 'arrived', label: 'Arrived on Site' },
+                    }}
+                />,
             );
+            expect(arrivedView.getByText('Arrived on Site')).toBeTruthy();
+            expect(
+                arrivedView.queryByTestId('action-start-work-btn-101'),
+            ).toBeNull();
 
-            // Complete blocking checklist
-            await fireEvent.press(view.getByTestId('setup-check-ground'));
-            await fireEvent.press(view.getByTestId('setup-check-outriggers'));
-            await fireEvent.press(view.getByTestId('setup-check-level'));
-            await fireEvent.press(view.getByTestId('setup-check-powerline'));
-            await fireEvent.press(view.getByTestId('setup-check-barricade'));
-            await fireEvent.press(view.getByTestId('setup-check-wind'));
+            await cleanup();
 
-            // Unlock crane operation
-            await fireEvent.press(view.getByTestId('verify-crane-setup-btn'));
-            expect(onVerifySetup).toHaveBeenCalledTimes(1);
+            // 4. Working state
+            const workingView = await render(
+                <JobListItemCard
+                    job={{
+                        ...mockJob,
+                        status: { value: 'working', label: 'Working' },
+                    }}
+                />,
+            );
+            expect(workingView.getByText('Working')).toBeTruthy();
+            expect(
+                workingView.queryByTestId('action-complete-btn-101'),
+            ).toBeNull();
         });
     });
 

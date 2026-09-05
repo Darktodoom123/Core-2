@@ -57,3 +57,70 @@ jest.mock('@expo/vector-icons', () => {
             ),
     };
 });
+
+jest.mock('expo-location', () => ({
+    Accuracy: {
+        Lowest: 1,
+        Low: 2,
+        Balanced: 3,
+        High: 4,
+        Highest: 5,
+        BestForNavigation: 6,
+    },
+    getForegroundPermissionsAsync: jest.fn(async () => ({
+        granted: true,
+        canAskAgain: true,
+        status: 'granted',
+        expires: 'never',
+    })),
+    requestForegroundPermissionsAsync: jest.fn(async () => ({
+        granted: true,
+        canAskAgain: true,
+        status: 'granted',
+        expires: 'never',
+    })),
+    getBackgroundPermissionsAsync: jest.fn(async () => ({
+        granted: true,
+        canAskAgain: true,
+        status: 'granted',
+        expires: 'never',
+    })),
+    requestBackgroundPermissionsAsync: jest.fn(async () => ({
+        granted: true,
+        canAskAgain: true,
+        status: 'granted',
+        expires: 'never',
+    })),
+    getLastKnownPositionAsync: jest.fn(async () => null),
+    getCurrentPositionAsync: jest.fn(async () => ({
+        coords: {
+            latitude: 14.6091,
+            longitude: 121.0223,
+            accuracy: 10,
+            altitude: 20,
+            altitudeAccuracy: 5,
+            heading: 0,
+            speed: 0,
+        },
+        timestamp: Date.now(),
+    })),
+    reverseGeocodeAsync: jest.fn(async () => [
+        {
+            city: 'Quezon City',
+            subregion: 'Metro Manila',
+            district: 'Diliman',
+            region: 'NCR',
+            country: 'Philippines',
+            postalCode: '1101',
+            name: 'Quezon City',
+            isoCountryCode: 'PH',
+            timezone: 'Asia/Manila',
+            street: null,
+            streetNumber: null,
+            formattedAddress: 'Quezon City, Metro Manila, Philippines',
+        },
+    ]),
+    hasStartedLocationUpdatesAsync: jest.fn(async () => false),
+    startLocationUpdatesAsync: jest.fn(async () => undefined),
+    stopLocationUpdatesAsync: jest.fn(async () => undefined),
+}));

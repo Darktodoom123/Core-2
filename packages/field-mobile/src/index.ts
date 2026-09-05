@@ -12,6 +12,5 @@ export * from './auth/LoginScreen';
 export * from './navigation/AppNavigator';
 export * from './components/index';
 export * from './screens/AssignedJobsListScreen';
-export * from './screens/JobDetailScreen';
 export * from './theme';
 export * from './utils/formatters';

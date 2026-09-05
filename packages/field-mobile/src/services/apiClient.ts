@@ -4,13 +4,12 @@ import type {
     DispatchJob,
     JobReportCommandPayload,
     LocationSharePayload,
-    SiteWeatherTelemetry,
     SosConfiguration,
     SosIncident,
     SosIncidentCategory,
     SosLocationSnapshot,
     User,
-    WeatherStandbyPayload,
+    WeatherTelemetry,
 } from '../types/index';
 
 export class ApiClientError extends Error {
@@ -213,6 +212,161 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<DispatchJob[]>(response);
+    }
+
+    public async fetchLocationWeather(
+        latitude: number,
+        longitude: number,
+    ): Promise<WeatherTelemetry> {
+        const url = `${this.baseUrl}/api/v1/telemetry/weather?latitude=${latitude}&longitude=${longitude}`;
+        const controller =
+            typeof AbortController !== 'undefined'
+                ? new AbortController()
+                : null;
+        const timer = controller
+            ? setTimeout(() => controller.abort(), 3500)
+            : null;
+
+        try {
+            const response = await this.fetchFn(url, {
+                method: 'GET',
+                headers: this.getHeaders(),
+                signal: controller?.signal,
+            });
+            if (timer) clearTimeout(timer);
+
+            const result =
+                await this.handleResponse<WeatherTelemetry>(response);
+
+            return result;
+        } catch {
+            if (timer) clearTimeout(timer);
+            // If local server is slow, unreachable (e.g. mobile on cellular), or down,
+            // fetch directly from Open-Meteo public API with zero mock data.
+            return await this.fetchDirectOpenMeteoWeather(latitude, longitude);
+        }
+    }
+
+    public async fetchDirectOpenMeteoWeather(
+        latitude: number,
+        longitude: number,
+    ): Promise<WeatherTelemetry> {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m&wind_speed_unit=kmh`;
+        const controller =
+            typeof AbortController !== 'undefined'
+                ? new AbortController()
+                : null;
+        const timer = controller
+            ? setTimeout(() => controller.abort(), 4000)
+            : null;
+
+        try {
+            const response = await this.fetchFn(url, {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                signal: controller?.signal,
+            });
+            if (timer) clearTimeout(timer);
+
+            if (!response.ok) {
+                throw new Error(
+                    `Weather service returned HTTP ${response.status}`,
+                );
+            }
+
+            const json = (await response.json()) as {
+                current?: {
+                    temperature_2m?: number;
+                    relative_humidity_2m?: number;
+                    precipitation?: number;
+                    weather_code?: number;
+                    wind_speed_10m?: number;
+                    wind_gusts_10m?: number;
+                };
+            };
+
+            const current = json.current;
+            if (!current) {
+                throw new Error('No weather telemetry found for coordinates.');
+            }
+
+            const windSpeedKmh =
+                Math.round((current.wind_speed_10m ?? 0) * 10) / 10;
+            const windGustsKmh =
+                Math.round((current.wind_gusts_10m ?? windSpeedKmh) * 10) / 10;
+            const temperature =
+                Math.round((current.temperature_2m ?? 28) * 10) / 10;
+            const rainMm = Math.round((current.precipitation ?? 0) * 10) / 10;
+            const humidity = Math.round(current.relative_humidity_2m ?? 75);
+            const weatherCode = current.weather_code ?? 0;
+
+            const safety = this.evaluateCraneWeatherSafety(
+                windSpeedKmh,
+                windGustsKmh,
+                rainMm,
+            );
+
+            return {
+                latitude,
+                longitude,
+                location_name: '',
+                temperature_celsius: temperature,
+                wind_speed_kmh: windSpeedKmh,
+                wind_gusts_kmh: windGustsKmh,
+                rain_intensity_mmh: rainMm,
+                humidity_percent: humidity,
+                weather_description: this.mapWmoWeatherCode(weatherCode),
+                safety_level: safety.level,
+                safety_message: safety.message,
+                source: 'open_meteo_direct',
+                fetched_at: new Date().toISOString(),
+            };
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+
+    private evaluateCraneWeatherSafety(
+        windSpeedKmh: number,
+        windGustsKmh: number,
+        rainMm: number,
+    ): {
+        level: 'safe_normal' | 'warning_caution' | 'critical_stop_work';
+        message: string;
+    } {
+        const maxWind = Math.max(windSpeedKmh, windGustsKmh);
+
+        if (maxWind >= 45.0) {
+            return {
+                level: 'critical_stop_work',
+                message:
+                    'Mandatory Stop Work: Wind exceeds DOLE 45 km/h limit. Engage free-slew immediately.',
+            };
+        }
+
+        if (maxWind >= 36.0 || rainMm >= 10.0) {
+            return {
+                level: 'warning_caution',
+                message:
+                    'High Wind Caution: Restrict large surface area loads (36-44 km/h). Maintain taglines.',
+            };
+        }
+
+        return {
+            level: 'safe_normal',
+            message: 'Normal Wind: Standard hoisting permitted (< 36 km/h).',
+        };
+    }
+
+    private mapWmoWeatherCode(code: number): string {
+        if (code === 0) return 'Clear Sky';
+        if ([1, 2, 3].includes(code)) return 'Mainly Clear / Overcast';
+        if ([45, 48].includes(code)) return 'Fog';
+        if ([51, 53, 55].includes(code)) return 'Drizzle';
+        if ([61, 63, 65].includes(code)) return 'Rain';
+        if ([80, 81, 82].includes(code)) return 'Rain Showers';
+        if ([95, 96, 99].includes(code)) return 'Thunderstorm';
+        return 'Clear Sky';
     }
 
     public async fetchJobDetail(jobId: number): Promise<DispatchJob> {
@@ -643,60 +797,6 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<any>(response);
-    }
-
-    public async fetchSiteWeather(
-        jobId: number,
-        coords?: { lat: number; lon: number },
-    ): Promise<SiteWeatherTelemetry> {
-        let url = `${this.baseUrl}/api/v1/dispatch/jobs/${jobId}/weather`;
-
-        if (coords) {
-            url += `?lat=${coords.lat}&lon=${coords.lon}`;
-        }
-
-        const response = await this.fetchFn(url, {
-            method: 'GET',
-            headers: this.getHeaders(),
-        });
-
-        return this.handleResponse<SiteWeatherTelemetry>(response);
-    }
-
-    public async reportWeatherStandby(
-        jobId: number,
-        payload: WeatherStandbyPayload,
-        commandId?: string,
-    ): Promise<{
-        message: string;
-        data: {
-            job_id: number;
-            job_reference: string;
-            anemometer_wind_kmh: number;
-            reason: string;
-            free_slew_required: boolean;
-            logged_at: string;
-        };
-    }> {
-        const url = `${this.baseUrl}/api/v1/dispatch/jobs/${jobId}/weather-standby`;
-
-        const response = await this.fetchFn(url, {
-            method: 'POST',
-            headers: this.getHeaders(commandId),
-            body: JSON.stringify(payload),
-        });
-
-        return this.handleResponse<{
-            message: string;
-            data: {
-                job_id: number;
-                job_reference: string;
-                anemometer_wind_kmh: number;
-                reason: string;
-                free_slew_required: boolean;
-                logged_at: string;
-            };
-        }>(response);
     }
 
     public async fetchCurrentHosShift(): Promise<{

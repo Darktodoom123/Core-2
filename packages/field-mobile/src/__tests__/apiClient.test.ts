@@ -322,4 +322,81 @@ describe('FieldApiClient', () => {
         assert.equal(serverErr.isRateLimited, false);
         assert.equal(serverErr.retryAfter, undefined);
     });
+
+    test('fetchLocationWeather returns telemetry from local backend server when available', async () => {
+        const mockBackendTelemetry = {
+            latitude: 14.5995,
+            longitude: 120.9842,
+            location_name: 'Manila',
+            temperature_celsius: 28.5,
+            wind_speed_kmh: 15.2,
+            wind_gusts_kmh: 22.1,
+            rain_intensity_mmh: 0.0,
+            humidity_percent: 75,
+            weather_description: 'Clear Sky',
+            safety_level: 'safe_normal',
+            safety_message: 'Normal Wind: Standard hoisting permitted (< 36 km/h).',
+            source: 'open_meteo',
+            fetched_at: '2026-09-05T19:00:00Z',
+        };
+
+        const mockFetch = async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('/api/v1/telemetry/weather')) {
+                return new Response(
+                    JSON.stringify({ data: mockBackendTelemetry }),
+                    { status: 200 },
+                );
+            }
+            throw new Error('Not found');
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        const weather = await client.fetchLocationWeather(14.5995, 120.9842);
+        assert.equal(weather.temperature_celsius, 28.5);
+        assert.equal(weather.wind_speed_kmh, 15.2);
+        assert.equal(weather.safety_level, 'safe_normal');
+    });
+
+    test('fetchLocationWeather falls back to direct Open-Meteo when backend is down or times out', async () => {
+        const mockOpenMeteoResponse = {
+            current: {
+                temperature_2m: 29.1,
+                relative_humidity_2m: 80,
+                precipitation: 0.0,
+                weather_code: 0,
+                wind_speed_10m: 18.5,
+                wind_gusts_10m: 25.0,
+            },
+        };
+
+        const mockFetch = async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.includes('api.open-meteo.com')) {
+                return new Response(
+                    JSON.stringify(mockOpenMeteoResponse),
+                    { status: 200 },
+                );
+            }
+            // Backend server fails/times out
+            throw new Error('Network request failed: Connection refused');
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://192.168.254.110:8000',
+            getToken: () => 'token',
+            fetchFn: mockFetch as any,
+        });
+
+        const weather = await client.fetchLocationWeather(14.5995, 120.9842);
+        assert.equal(weather.temperature_celsius, 29.1);
+        assert.equal(weather.wind_speed_kmh, 18.5);
+        assert.equal(weather.source, 'open_meteo_direct');
+        assert.equal(weather.safety_level, 'safe_normal');
+    });
 });

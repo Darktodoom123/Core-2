@@ -613,37 +613,6 @@ export interface TechnicianHandover {
     timestamp: string;
 }
 
-export interface SiteWeatherTelemetry {
-    latitude: number;
-    longitude: number;
-    temperature_celsius: number;
-    wind_speed_kmh: number;
-    wind_gusts_kmh: number;
-    rain_intensity_mmh: number;
-    humidity_percent: number;
-    weather_description: string;
-    safety_level: 'safe_normal' | 'warning_caution' | 'critical_stop_work';
-    safety_message: string;
-    source: string;
-    fetched_at: string;
-    job_id?: number;
-    job_reference?: string;
-    site_name?: string;
-}
-
-export interface WeatherStandbyPayload {
-    anemometer_wind_kmh: number;
-    reason:
-        | 'high_wind'
-        | 'thunderstorm'
-        | 'heavy_rain'
-        | 'typhoon_signal'
-        | 'other_weather';
-    remarks?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-}
-
 export type NotificationTab = 'all' | 'alerts' | 'dispatches' | 'outbox';
 
 export interface FieldNotificationItem {
@@ -658,4 +627,20 @@ export interface FieldNotificationItem {
     timestamp?: string;
     actionLabel?: string;
     onAction?: () => void;
+}
+
+export interface WeatherTelemetry {
+    latitude: number;
+    longitude: number;
+    location_name: string;
+    temperature_celsius: number;
+    wind_speed_kmh: number;
+    wind_gusts_kmh: number;
+    rain_intensity_mmh: number;
+    humidity_percent: number;
+    weather_description: string;
+    safety_level: 'safe_normal' | 'warning_caution' | 'critical_stop_work';
+    safety_message: string;
+    source: string;
+    fetched_at: string;
 }
