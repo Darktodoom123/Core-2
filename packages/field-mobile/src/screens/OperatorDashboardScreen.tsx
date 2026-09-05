@@ -243,7 +243,7 @@ export const OperatorDashboardScreen: React.FC<
         },
         {
             id: 'documents',
-            title: 'Lift Plans\n& Docs',
+            title: 'Documents',
             sublabel: 'Permits & Certs',
             iconName: 'document',
             bgColor: '#7C3AED',
@@ -256,7 +256,7 @@ export const OperatorDashboardScreen: React.FC<
         },
         {
             id: 'vehicle',
-            title: 'Crane\nLoad Charts',
+            title: 'Machine\nProfile',
             sublabel: 'Setup & Fleet',
             iconName: 'crane',
             bgColor: '#4D7C0F',
@@ -269,8 +269,8 @@ export const OperatorDashboardScreen: React.FC<
         },
         {
             id: 'forms',
-            title: 'Active\nDispatches',
-            sublabel: `${jobs.length} Dispatches`,
+            title: 'Dispatch',
+            sublabel: 'Shift Schedule',
             iconName: 'file-text',
             bgColor: '#334155',
             lightHaloBg: 'rgba(51, 65, 85, 0.12)',

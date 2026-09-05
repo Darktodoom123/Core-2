@@ -174,9 +174,9 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Hours of\nService')).toBeTruthy();
             expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
             expect(view.getByText('Drive\nRoutes')).toBeTruthy();
-            expect(view.getByText('Lift Plans\n& Docs')).toBeTruthy();
-            expect(view.getByText('Crane\nLoad Charts')).toBeTruthy();
-            expect(view.getByText('Active\nDispatches')).toBeTruthy();
+            expect(view.getByText('Documents')).toBeTruthy();
+            expect(view.getByText('Machine\nProfile')).toBeTruthy();
+            expect(view.getByText('Dispatch')).toBeTruthy();
 
             // Tapping DVIR tile
             await fireEvent.press(view.getByTestId('tile-dvir'));
@@ -328,9 +328,9 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Hours of\nService')).toBeTruthy();
             expect(view.getByText('Vehicle\nInspection')).toBeTruthy();
             expect(view.getByText('Drive\nRoutes')).toBeTruthy();
-            expect(view.getByText('Lift Plans\n& Docs')).toBeTruthy();
-            expect(view.getByText('Crane\nLoad Charts')).toBeTruthy();
-            expect(view.getByText('Active\nDispatches')).toBeTruthy();
+            expect(view.getByText('Documents')).toBeTruthy();
+            expect(view.getByText('Machine\nProfile')).toBeTruthy();
+            expect(view.getByText('Dispatch')).toBeTruthy();
 
             // Verify testIDs
             expect(view.getByTestId('tile-hos')).toBeTruthy();
@@ -434,7 +434,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                 />,
             );
 
-            expect(view.getByText('Cab Documents Wallet')).toBeTruthy();
+            expect(view.getByText('Documents & Permits')).toBeTruthy();
             expect(
                 view.getByText('DPWH Special Heavy-Load Road Transit Permit'),
             ).toBeTruthy();
@@ -459,7 +459,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(
                 view.getAllByText('DPWH-NCR-2026-SP-8821').length,
             ).toBeGreaterThanOrEqual(1);
-            expect(view.getByText('✓ Cryptographically Verified')).toBeTruthy();
+            expect(view.getByText('✓ Verified Compliance Record')).toBeTruthy();
         });
     });
 });
