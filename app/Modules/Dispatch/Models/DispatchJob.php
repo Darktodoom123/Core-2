@@ -7,6 +7,8 @@ use App\Modules\Assignment\Models\DispatchPersonnelAssignment;
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\DispatchStatus;
+use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Fuel\Models\FuelRequest;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Models\JobReport;
@@ -119,6 +121,18 @@ class DispatchJob extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(JobReport::class);
+    }
+
+    /** @return HasMany<DvirInspection, $this> */
+    public function dvirInspections(): HasMany
+    {
+        return $this->hasMany(DvirInspection::class, 'dispatch_job_id');
+    }
+
+    /** @return HasMany<FuelRequest, $this> */
+    public function fuelRequests(): HasMany
+    {
+        return $this->hasMany(FuelRequest::class, 'dispatch_job_id');
     }
 
     /** @return HasMany<LocationUpdate, $this> */

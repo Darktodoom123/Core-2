@@ -111,9 +111,14 @@ final class OperationalAssetAvailability
             );
         }
 
-        $hasInspection = $asset->inspections()->exists();
-        $hasPassingInspection = $asset->inspections()->where('result', 'passed')->whereNotNull('completed_at')->exists();
-        if (($targetRequiresReadiness || $hasInspection) && ! $hasPassingInspection) {
+        $hasLegacyPassing = $asset->inspections()->where('result', 'passed')->whereNotNull('completed_at')->exists();
+        $hasDvirPassing = $asset->dvirInspections()->where('has_defects', false)->where('critical_defects_count', 0)->whereNotNull('completed_at')->exists();
+        $hasPassingInspection = $hasLegacyPassing || $hasDvirPassing;
+
+        $hasAnyInspection = $asset->inspections()->exists() || $asset->dvirInspections()->exists();
+        $isManagerOverride = $request->source?->aggregateType === 'managerial_override';
+
+        if (($targetRequiresReadiness || $hasAnyInspection) && ! $hasPassingInspection && ! $isManagerOverride) {
             $conflicts[] = new AssetUsageConflict('asset.inspection_required', 'A completed passing inspection is required before using the asset.');
         }
 

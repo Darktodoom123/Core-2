@@ -352,6 +352,11 @@ final class OperationsWorkspaceController extends Controller
             ->with([
                 'inspections' => fn ($query) => $query->latest('completed_at')->limit(10),
                 'maintenanceWorkOrders' => fn ($query) => $query->latest('created_at')->limit(10),
+                'activeOperatorShift.user:id,name',
+                'activeOperatorShift.activeDutyLog',
+                'latestDvirInspection.photos',
+                'latestDvirInspection.checks',
+                'activeBlockingWorkOrder',
             ])
             ->orderBy('code')
             ->limit($limit)
@@ -388,7 +393,9 @@ final class OperationsWorkspaceController extends Controller
                 'requester:id,name',
                 'job:id,reference,title',
                 'asset:id,code,name,kind,subtype,registration_number,manufacturer,model,meter_type,meter_value,baseline_burn_rate,burn_rate_unit',
+                'shift.user:id,name',
                 'logs.recorder:id,name',
+                'logs.attachments',
             ])
             ->latest()
             ->limit(100)
@@ -622,7 +629,13 @@ final class OperationsWorkspaceController extends Controller
 
         return JobReport::query()
             ->visibleTo($user)
-            ->with(['job:id,reference,title', 'author:id,name', 'attachments'])
+            ->with([
+                'job:id,reference,title',
+                'job.dvirInspections:id,dispatch_job_id,inspection_type,has_defects,critical_defects_count',
+                'job.fuelRequests:id,dispatch_job_id,reference,quantity_litres',
+                'author:id,name',
+                'attachments',
+            ])
             ->latest('submitted_at')
             ->limit(100)
             ->get();

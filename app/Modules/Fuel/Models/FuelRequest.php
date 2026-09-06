@@ -4,6 +4,7 @@ namespace App\Modules\Fuel\Models;
 
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
+use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int $requester_id
  * @property int|null $dispatch_job_id
  * @property int|null $operational_asset_id
+ * @property int|null $operator_shift_id
  * @property string $quantity_litres
  * @property string $fuel_type
  * @property string $purpose
@@ -34,11 +36,12 @@ use Illuminate\Support\Carbon;
  * @property User $requester
  * @property DispatchJob|null $job
  * @property OperationalAsset|null $asset
+ * @property OperatorShift|null $shift
  * @property Collection<int, FuelLog> $logs
  */
 class FuelRequest extends Model
 {
-    protected $fillable = ['reference', 'requester_id', 'dispatch_job_id', 'operational_asset_id', 'quantity_litres', 'fuel_type', 'purpose', 'status', 'reviewed_by', 'approved_by', 'verified_by', 'reviewed_at', 'approved_at', 'verified_at', 'decision_reason'];
+    protected $fillable = ['reference', 'requester_id', 'dispatch_job_id', 'operational_asset_id', 'operator_shift_id', 'quantity_litres', 'fuel_type', 'purpose', 'status', 'reviewed_by', 'approved_by', 'verified_by', 'reviewed_at', 'approved_at', 'verified_at', 'decision_reason'];
 
     protected function casts(): array
     {
@@ -61,6 +64,12 @@ class FuelRequest extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(OperationalAsset::class, 'operational_asset_id');
+    }
+
+    /** @return BelongsTo<OperatorShift, $this> */
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(OperatorShift::class, 'operator_shift_id');
     }
 
     /** @return HasMany<FuelLog, $this> */

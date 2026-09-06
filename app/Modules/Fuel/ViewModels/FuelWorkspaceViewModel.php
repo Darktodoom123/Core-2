@@ -4,7 +4,9 @@ namespace App\Modules\Fuel\ViewModels;
 
 use App\Modules\Fuel\Models\FuelLog;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Platform\Attachments\Models\Attachment;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 final class FuelWorkspaceViewModel
 {
@@ -33,6 +35,10 @@ final class FuelWorkspaceViewModel
                 'id' => (int) $request->job->getKey(),
                 'reference' => $request->job->reference,
                 'title' => $request->job->title,
+            ],
+            'shift' => $request->shift === null ? null : [
+                'id' => (int) $request->shift->getKey(),
+                'operator_name' => $request->shift->relationLoaded('user') ? $request->shift->user->name : null,
             ],
             'asset' => $request->asset === null ? null : [
                 'id' => (int) $request->asset->getKey(),
@@ -76,6 +82,7 @@ final class FuelWorkspaceViewModel
                     'is_anomaly' => (bool) $log->is_anomaly,
                     'anomaly_reason' => $log->anomaly_reason,
                     'receipt_path' => $log->receipt_path,
+                    'receipt_url' => self::resolveReceiptUrl($log),
                     'recorded_by' => $log->relationLoaded('recorder') ? [
                         'id' => (int) $log->recorder->getKey(),
                         'name' => $log->recorder->name,
@@ -84,5 +91,38 @@ final class FuelWorkspaceViewModel
                 ])->values()->all()
                 : [],
         ];
+    }
+
+    public static function resolveReceiptUrl(FuelLog $log): ?string
+    {
+        if (empty($log->receipt_path)) {
+            return null;
+        }
+
+        if (str_starts_with($log->receipt_path, 'http://') || str_starts_with($log->receipt_path, 'https://')) {
+            return $log->receipt_path;
+        }
+
+        if ($log->relationLoaded('attachments') && $log->attachments->isNotEmpty()) {
+            $attachment = $log->attachments->firstWhere('path', $log->receipt_path) ?? $log->attachments->first();
+
+            return "/operations/attachments/{$attachment->id}/download";
+        }
+
+        $attachment = Attachment::query()
+            ->where('owner_type', $log->getMorphClass())
+            ->where('owner_id', $log->id)
+            ->first();
+
+        if ($attachment !== null) {
+            return "/operations/attachments/{$attachment->id}/download";
+        }
+
+        $disk = (string) config('attachments.disk', 'private');
+        try {
+            return Storage::disk($disk)->url($log->receipt_path);
+        } catch (\Throwable) {
+            return "/storage/{$log->receipt_path}";
+        }
     }
 }

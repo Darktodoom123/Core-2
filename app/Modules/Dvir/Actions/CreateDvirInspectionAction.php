@@ -7,9 +7,15 @@ use App\Modules\Dvir\Http\Requests\Api\V1\CreateDvirInspectionRequest;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Dvir\Models\DvirInspectionCheck;
 use App\Modules\Dvir\Models\DvirInspectionPhoto;
+use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
+use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Enums\AssetUsageType;
+use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
+use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use finfo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +25,8 @@ class CreateDvirInspectionAction
 {
     public function __construct(
         private readonly ?StorageFallbackServiceInterface $storageFallback = null,
+        private readonly ?OperationalAssetStatusGuard $statusGuard = null,
+        private readonly ?RecordAuditEvent $audit = null,
     ) {}
 
     /**
@@ -39,7 +47,7 @@ class CreateDvirInspectionAction
 
         $inspectionData = $this->buildInspectionAttributes($validated, $user, $checksPayload);
 
-        [$inspection, $checks, $photos] = DB::transaction(function () use ($inspectionData, $checksPayload, $photosPayload): array {
+        [$inspection, $checks, $photos] = DB::transaction(function () use ($inspectionData, $checksPayload, $photosPayload, $user): array {
             $inspection = DvirInspection::query()->create($inspectionData);
 
             $checks = [];
@@ -72,6 +80,16 @@ class CreateDvirInspectionAction
                 ]);
             }
 
+            $defectChecks = array_values(array_filter(
+                $checksPayload,
+                fn (array $c): bool => in_array($c['status'] ?? '', [DvirCheckStatus::CRITICAL->value, DvirCheckStatus::ATTENTION->value, 'critical', 'attention'], true),
+            ));
+            $isLockoutRequired = ($inspection->critical_defects_count > 0) || ! empty($defectChecks);
+
+            if ($isLockoutRequired && $inspection->operational_asset_id !== null) {
+                $this->applySafetyLockout((int) $inspection->operational_asset_id, $inspection, $defectChecks, $user);
+            }
+
             return [$inspection, $checks, $photos];
         });
 
@@ -92,6 +110,8 @@ class CreateDvirInspectionAction
         $asset = null;
         if (isset($validated['operational_asset_id'])) {
             $asset = OperationalAsset::query()->whereKey((int) $validated['operational_asset_id'])->first();
+        } elseif (! empty($validated['asset_code'])) {
+            $asset = OperationalAsset::query()->where('code', $validated['asset_code'])->first();
         }
 
         $statuses = collect($checksPayload)->pluck('status');
@@ -196,5 +216,77 @@ class CreateDvirInspectionAction
             'mime_type' => 'image/jpeg',
             'sha256_checksum' => null,
         ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $defectChecks
+     */
+    private function applySafetyLockout(
+        int $operationalAssetId,
+        DvirInspection $inspection,
+        array $defectChecks,
+        User $user,
+    ): MaintenanceWorkOrder {
+        $asset = OperationalAsset::query()->lockForUpdate()->findOrFail($operationalAssetId);
+        $previousStatus = $asset->status;
+
+        $statusGuard = $this->statusGuard ?? app(OperationalAssetStatusGuard::class);
+        $statusGuard->transition($asset, AssetStatus::UnderMaintenance, new AssetUsageRequest(
+            assetId: (int) $asset->id,
+            usageType: AssetUsageType::AssetStatusChange,
+            targetStatus: AssetStatus::UnderMaintenance,
+        ));
+
+        $defectLines = collect($defectChecks)->map(function (array $check): string {
+            $category = $check['category'] ?? 'General';
+            $label = $check['label'] ?? 'Unknown Item';
+            $status = strtoupper((string) ($check['status'] ?? 'DEFECT'));
+            $notes = ! empty($check['notes']) ? ": {$check['notes']}" : '';
+
+            return "• [{$status}] {$label} ({$category}){$notes}";
+        })->implode("\n");
+
+        $defectDescription = "Critical DVIR Defect Flagged ({$inspection->reference}):\n"
+            .($defectLines ?: 'Critical defects flagged during inspection walkaround.');
+
+        if (! empty($inspection->remarks)) {
+            $defectDescription .= "\nRemarks: {$inspection->remarks}";
+        }
+
+        $workOrder = $asset->maintenanceWorkOrders()->create([
+            'technician_id' => $user->id,
+            'status' => 'pending',
+            'defect' => $defectDescription,
+            'dispatch_blocking' => true,
+            'scheduled_at' => now(),
+            'remarks' => "Automatic lockout triggered by DVIR inspection #{$inspection->reference}",
+        ]);
+
+        $auditService = $this->audit ?? app(RecordAuditEvent::class);
+        $auditService->handle(
+            actor: $user,
+            subject: $asset,
+            action: 'asset.safety_lockout_dvir',
+            before: ['status' => $previousStatus->value],
+            after: [
+                'status' => AssetStatus::UnderMaintenance->value,
+                'dvir_id' => $inspection->id,
+                'dvir_reference' => $inspection->reference,
+                'maintenance_work_order_id' => $workOrder->id,
+                'critical_defects_count' => $inspection->critical_defects_count,
+            ],
+            reason: "Critical DVIR defect flagged during inspection #{$inspection->reference}",
+        );
+
+        $auditService->handle(
+            actor: $user,
+            subject: $workOrder,
+            action: 'maintenance.opened',
+            before: null,
+            after: $workOrder->toArray(),
+            reason: "Automatic dispatch-blocking work order generated from DVIR #{$inspection->reference}",
+        );
+
+        return $workOrder;
     }
 }

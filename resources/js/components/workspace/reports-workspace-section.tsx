@@ -31,6 +31,11 @@ import { Button, EmptyState, PageHeading, Panel, Stat } from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
+import {
+    JobReportCrossReferences,
+    JobReportDelayLogsTable,
+    JobReportSignatureCard,
+} from '@/components/workspace/reports';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
@@ -1498,6 +1503,15 @@ function ReportDetailPane({
                 </div>
             )}
 
+            {/* Client Digital Sign-Off Verification */}
+            <JobReportSignatureCard
+                signerName={report.signer_name}
+                signerRole={report.signer_role}
+                signedAt={report.signed_at}
+                latitude={report.latitude}
+                longitude={report.longitude}
+            />
+
             {/* Execution Timing & Telemetry Readings */}
             <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-4">
                 <div>
@@ -1567,6 +1581,9 @@ function ReportDetailPane({
                     </div>
                 </div>
             )}
+
+            {/* Standby & Demurrage Breakdown Logs */}
+            <JobReportDelayLogsTable delayLogs={report.delay_logs} />
 
             {/* Verified Attachments Section */}
             <div className="border-t border-line pt-4">
@@ -1673,6 +1690,11 @@ function ReportDetailPane({
                     </ul>
                 )}
             </div>
+
+            {/* Field DVIR & Fuel Ticket Cross-References */}
+            <JobReportCrossReferences
+                crossReferences={report.cross_references}
+            />
 
             {/* Review Controls (Manager Authorization) */}
             {capabilities.review_job_report &&

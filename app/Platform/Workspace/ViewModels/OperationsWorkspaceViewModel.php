@@ -9,8 +9,12 @@ use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Models\ServiceRequest;
+use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fuel\Models\FuelRequest;
 use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
+use App\Modules\HoursOfService\Enums\DutyStatus;
+use App\Modules\HoursOfService\Enums\StandbyReason;
+use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\Rental\Models\RentalReservation;
 use App\Modules\Rental\ViewModels\RentalHandoffViewModel;
 use App\Modules\Sales\Models\SalesOrder;
@@ -247,8 +251,113 @@ final class OperationsWorkspaceViewModel
             $blockingCount = (int) $asset->getAttribute('blocking_work_orders_count');
             $inspections = $asset->relationLoaded('inspections') ? $asset->inspections : collect();
             $maintenanceOrders = $asset->relationLoaded('maintenanceWorkOrders') ? $asset->maintenanceWorkOrders : collect();
-            $hasPassingInspection = $inspections->contains(static fn ($i): bool => $i->result === 'passed' && $i->completed_at !== null);
+            $latestDvir = $asset->relationLoaded('latestDvirInspection') ? $asset->latestDvirInspection : null;
+            $hasPassingInspection = $inspections->contains(static fn ($i): bool => $i->result === 'passed' && $i->completed_at !== null)
+                || ($latestDvir !== null && ! $latestDvir->has_defects && $latestDvir->critical_defects_count === 0);
             $isDispatchable = $asset->status->dispatchable() && $blockingCount === 0 && $hasPassingInspection;
+
+            $activeShift = $asset->relationLoaded('activeOperatorShift') ? $asset->activeOperatorShift : null;
+            $activeOperator = null;
+            $hosData = null;
+            if ($activeShift !== null) {
+                $shiftStartedAt = $activeShift->started_at;
+                $shiftDurationMinutes = (int) abs(now()->diffInMinutes($shiftStartedAt));
+                $hoursElapsed = round($shiftDurationMinutes / 60, 2);
+                $activeDutyLog = $activeShift->relationLoaded('activeDutyLog') ? $activeShift->activeDutyLog : null;
+                $dutyStatus = $activeDutyLog?->duty_status->value ?? ($activeShift->status->value === 'on_break' ? 'on_break' : 'operating');
+                $dutyStatusLabel = match ($dutyStatus) {
+                    'operating' => 'Operating',
+                    'driving' => 'Driving',
+                    'standby' => 'Standby',
+                    'on_break' => 'On Break',
+                    default => ucfirst($dutyStatus),
+                };
+                $doleWarning = $hoursElapsed >= 9.0;
+                $fatigueStatus = match (true) {
+                    $hoursElapsed >= 14.0 => 'violation',
+                    $hoursElapsed >= 10.0 => 'critical',
+                    $hoursElapsed >= 8.0 => 'warning',
+                    default => 'normal',
+                };
+
+                $telemetryTimestamp = $activeDutyLog !== null
+                    ? ($activeDutyLog->updated_at ?? $activeDutyLog->started_at)
+                    : $shiftStartedAt;
+                $telemetryAgeSeconds = (int) abs(now()->diffInSeconds($telemetryTimestamp));
+                $telemetryStatus = match (true) {
+                    $telemetryAgeSeconds > 1800 => 'offline',
+                    $telemetryAgeSeconds <= 180 => 'fresh',
+                    $telemetryAgeSeconds < 900 => 'delayed',
+                    default => 'stale',
+                };
+
+                $activeOperator = [
+                    'id' => (int) $activeShift->user->id,
+                    'name' => $activeShift->user->name,
+                    'avatar' => null,
+                    'shift_started_at' => $shiftStartedAt->toIso8601String(),
+                    'shift_duration_minutes' => $shiftDurationMinutes,
+                    'hours_elapsed' => $hoursElapsed,
+                    'telemetry_status' => $telemetryStatus,
+                ];
+
+                $hosData = [
+                    'duty_status' => $dutyStatus,
+                    'duty_status_label' => $dutyStatusLabel,
+                    'hours_elapsed' => $hoursElapsed,
+                    'fatigue_status' => $fatigueStatus,
+                    'dole_warning' => $doleWarning,
+                ];
+            }
+
+            $dvirData = null;
+            if ($latestDvir !== null) {
+                $criticalCount = (int) $latestDvir->critical_defects_count;
+                $dvirStatus = match (true) {
+                    $criticalCount > 0 => 'critical_defect',
+                    (bool) $latestDvir->has_defects => 'defect_flagged',
+                    default => 'passed',
+                };
+                $photos = $latestDvir->relationLoaded('photos')
+                    ? $latestDvir->photos->map(static fn ($p): array => [
+                        'id' => (int) $p->id,
+                        'angle' => $p->angle,
+                        'url' => $p->url,
+                        'file_name' => $p->file_name ?? "{$p->angle}.jpg",
+                    ])->values()->all()
+                    : [];
+                $dvirData = [
+                    'id' => (int) $latestDvir->id,
+                    'inspection_type' => $latestDvir->inspection_type->value,
+                    'type' => $latestDvir->inspection_type->value,
+                    'status' => $dvirStatus,
+                    'has_defects' => (bool) $latestDvir->has_defects,
+                    'critical_defects_count' => $criticalCount,
+                    'completed_at' => $latestDvir->completed_at->toIso8601String(),
+                    'inspector_name' => $latestDvir->inspector_name,
+                    'photos' => $photos,
+                ];
+            }
+
+            $blockingOrder = $asset->relationLoaded('activeBlockingWorkOrder')
+                ? $asset->activeBlockingWorkOrder
+                : ($asset->relationLoaded('maintenanceWorkOrders')
+                    ? $asset->maintenanceWorkOrders->first(fn ($o) => (bool) $o->dispatch_blocking && $o->released_at === null)
+                    : null);
+            $isLockedOut = $asset->status->value === 'under_maintenance' || $blockingCount > 0 || $blockingOrder !== null;
+            $lockoutReason = null;
+            if ($isLockedOut) {
+                $lockoutReason = $blockingOrder !== null
+                    ? $blockingOrder->defect
+                    : ($blockingCount > 0 ? "Blocked by {$blockingCount} active maintenance order(s)" : 'Equipment under maintenance');
+            }
+            $lockoutData = [
+                'is_locked_out' => $isLockedOut,
+                'lockout_reason' => $lockoutReason,
+                'critical_defects_count' => $latestDvir !== null ? (int) $latestDvir->critical_defects_count : 0,
+                'can_override' => true,
+                'blocking_work_order_id' => $blockingOrder?->id,
+            ];
 
             return [
                 'id' => (int) $asset->getKey(),
@@ -271,6 +380,10 @@ final class OperationsWorkspaceViewModel
                 ],
                 'blocking_work_orders_count' => $blockingCount,
                 'is_dispatchable' => $isDispatchable,
+                'active_operator' => $activeOperator,
+                'hos' => $hosData,
+                'latest_dvir' => $dvirData,
+                'lockout' => $lockoutData,
                 'inspections' => $inspections->map(static fn ($inspection): array => [
                     'id' => (int) $inspection->getKey(),
                     'type' => $inspection->type,
@@ -912,46 +1025,144 @@ final class OperationsWorkspaceViewModel
      */
     public static function jobReports(Collection $reports): array
     {
-        return $reports->map(static fn (JobReport $report): array => [
-            'id' => (int) $report->getKey(),
-            'dispatch_job_id' => (int) $report->dispatch_job_id,
-            'job' => $report->relationLoaded('job') ? [
-                'id' => (int) $report->job->getKey(),
-                'reference' => $report->job->reference,
-                'title' => $report->job->title,
-            ] : null,
-            'author' => $report->relationLoaded('author') && $report->author !== null ? [
-                'id' => (int) $report->author->getKey(),
-                'name' => $report->author->name,
-            ] : null,
-            'status' => [
-                'value' => $report->status->value,
-                'label' => $report->status->label(),
-            ],
-            'work_summary' => $report->work_summary,
-            'remarks' => $report->remarks,
-            'rejection_reason' => $report->rejection_reason,
-            'ending_meter_value' => $report->ending_meter_value !== null ? (float) $report->ending_meter_value : null,
-            'meter_type' => $report->meter_type,
-            'latitude' => $report->latitude !== null ? (float) $report->latitude : null,
-            'longitude' => $report->longitude !== null ? (float) $report->longitude : null,
-            'resubmitted_count' => (int) $report->resubmitted_count,
-            'can_be_resubmitted' => $report->canBeResubmitted(),
-            'started_at' => $report->started_at?->toIso8601String(),
-            'ended_at' => $report->ended_at?->toIso8601String(),
-            'submitted_at' => $report->submitted_at?->toIso8601String(),
-            'attachments' => $report->relationLoaded('attachments')
-                ? $report->attachments->map(static fn (Attachment $attachment): array => [
-                    'id' => (int) $attachment->getKey(),
-                    'kind' => $attachment->kind,
-                    'original_filename' => $attachment->original_filename,
-                    'mime_type' => $attachment->mime_type,
-                    'size_bytes' => (int) $attachment->size_bytes,
-                    'checksum_sha256' => $attachment->checksum_sha256,
-                    'download_url' => "/operations/attachments/{$attachment->getKey()}/download",
+        $jobIds = $reports->pluck('dispatch_job_id')->filter()->unique()->values()->all();
+
+        $delayLogsByJob = [];
+        if (! empty($jobIds)) {
+            $dutyLogs = OperatorDutyLog::query()
+                ->whereHas('shift', fn ($q) => $q->whereIn('dispatch_job_id', $jobIds))
+                ->where(fn ($q) => $q->where('duty_status', DutyStatus::STANDBY->value)->orWhereNotNull('standby_reason'))
+                ->with('shift:id,dispatch_job_id')
+                ->orderBy('started_at')
+                ->get();
+
+            foreach ($dutyLogs as $log) {
+                $jobId = (int) $log->shift->dispatch_job_id;
+                if ($jobId > 0) {
+                    $delayLogsByJob[$jobId][] = [
+                        'id' => (int) $log->id,
+                        'duty_status' => $log->duty_status->value,
+                        'standby_reason' => $log->standby_reason instanceof StandbyReason ? $log->standby_reason->value : ($log->duty_status === DutyStatus::STANDBY ? 'standby' : ''),
+                        'is_demurrage_billable' => (bool) $log->is_demurrage_billable,
+                        'started_at' => $log->started_at->toIso8601String(),
+                        'ended_at' => $log->ended_at?->toIso8601String(),
+                        'duration_minutes' => $log->duration_minutes,
+                    ];
+                }
+            }
+        }
+
+        $missingDvirJobIds = [];
+        $missingFuelJobIds = [];
+        foreach ($reports as $r) {
+            $jid = (int) $r->dispatch_job_id;
+            if ($jid <= 0) {
+                continue;
+            }
+            if (! ($r->relationLoaded('job') && $r->job->relationLoaded('dvirInspections'))) {
+                $missingDvirJobIds[] = $jid;
+            }
+            if (! ($r->relationLoaded('job') && $r->job->relationLoaded('fuelRequests'))) {
+                $missingFuelJobIds[] = $jid;
+            }
+        }
+
+        $dvirsByJob = [];
+        if (! empty($missingDvirJobIds)) {
+            $dvirs = DvirInspection::query()
+                ->whereIn('dispatch_job_id', array_unique($missingDvirJobIds))
+                ->get(['id', 'dispatch_job_id', 'inspection_type', 'has_defects', 'critical_defects_count']);
+            foreach ($dvirs as $d) {
+                $dvirsByJob[(int) $d->dispatch_job_id][] = [
+                    'id' => (int) $d->id,
+                    'reference' => sprintf('DVIR-%06d', $d->id),
+                    'has_defects' => (bool) $d->has_defects,
+                    'critical_defects_count' => (int) $d->critical_defects_count,
+                ];
+            }
+        }
+
+        $fuelByJob = [];
+        if (! empty($missingFuelJobIds)) {
+            $fuels = FuelRequest::query()
+                ->whereIn('dispatch_job_id', array_unique($missingFuelJobIds))
+                ->get(['id', 'dispatch_job_id', 'reference', 'quantity_litres']);
+            foreach ($fuels as $f) {
+                $fuelByJob[(int) $f->dispatch_job_id][] = [
+                    'id' => (int) $f->id,
+                    'reference' => (string) $f->reference,
+                    'quantity_litres' => (string) $f->quantity_litres,
+                ];
+            }
+        }
+
+        return $reports->map(static function (JobReport $report) use ($delayLogsByJob, $dvirsByJob, $fuelByJob): array {
+            $dvirsList = $report->relationLoaded('job') && $report->job->relationLoaded('dvirInspections')
+                ? $report->job->dvirInspections->map(static fn ($d): array => [
+                    'id' => (int) $d->id,
+                    'reference' => sprintf('DVIR-%06d', $d->id),
+                    'has_defects' => (bool) $d->has_defects,
+                    'critical_defects_count' => (int) $d->critical_defects_count,
                 ])->values()->all()
-                : [],
-        ])->values()->all();
+                : ($dvirsByJob[(int) $report->dispatch_job_id] ?? []);
+
+            $fuelsList = $report->relationLoaded('job') && $report->job->relationLoaded('fuelRequests')
+                ? $report->job->fuelRequests->map(static fn ($f): array => [
+                    'id' => (int) $f->id,
+                    'reference' => (string) $f->reference,
+                    'quantity_litres' => (string) $f->quantity_litres,
+                ])->values()->all()
+                : ($fuelByJob[(int) $report->dispatch_job_id] ?? []);
+
+            return [
+                'id' => (int) $report->getKey(),
+                'dispatch_job_id' => (int) $report->dispatch_job_id,
+                'job' => $report->relationLoaded('job') ? [
+                    'id' => (int) $report->job->getKey(),
+                    'reference' => $report->job->reference,
+                    'title' => $report->job->title,
+                ] : null,
+                'author' => $report->relationLoaded('author') && $report->author !== null ? [
+                    'id' => (int) $report->author->getKey(),
+                    'name' => $report->author->name,
+                ] : null,
+                'status' => [
+                    'value' => $report->status->value,
+                    'label' => $report->status->label(),
+                ],
+                'work_summary' => $report->work_summary,
+                'remarks' => $report->remarks,
+                'rejection_reason' => $report->rejection_reason,
+                'ending_meter_value' => $report->ending_meter_value !== null ? (float) $report->ending_meter_value : null,
+                'meter_type' => $report->meter_type,
+                'latitude' => $report->latitude !== null ? (float) $report->latitude : null,
+                'longitude' => $report->longitude !== null ? (float) $report->longitude : null,
+                'resubmitted_count' => (int) $report->resubmitted_count,
+                'can_be_resubmitted' => $report->canBeResubmitted(),
+                'started_at' => $report->started_at?->toIso8601String(),
+                'ended_at' => $report->ended_at?->toIso8601String(),
+                'submitted_at' => $report->submitted_at?->toIso8601String(),
+                'signer_name' => $report->signer_name,
+                'signer_role' => $report->signer_role,
+                'signed_at' => $report->signed_at?->toIso8601String(),
+                'delay_logs' => $delayLogsByJob[(int) $report->dispatch_job_id] ?? [],
+                'cross_references' => [
+                    'associated_dvirs' => $dvirsList,
+                    'associated_fuel_requests' => $fuelsList,
+                ],
+                'attachments' => $report->relationLoaded('attachments')
+                    ? $report->attachments->map(static fn (Attachment $attachment): array => [
+                        'id' => (int) $attachment->getKey(),
+                        'kind' => $attachment->kind,
+                        'original_filename' => $attachment->original_filename,
+                        'mime_type' => $attachment->mime_type,
+                        'size_bytes' => (int) $attachment->size_bytes,
+                        'checksum_sha256' => $attachment->checksum_sha256,
+                        'download_url' => "/operations/attachments/{$attachment->getKey()}/download",
+                    ])->values()->all()
+                    : [],
+            ];
+        })->values()->all();
     }
 
     /**

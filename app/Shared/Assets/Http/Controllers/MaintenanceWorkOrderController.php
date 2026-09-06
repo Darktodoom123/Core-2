@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Shared\Assets\Data\AssetUsageRequest;
+use App\Shared\Assets\Data\AssetUsageSource;
 use App\Shared\Assets\Enums\AssetStatus;
 use App\Shared\Assets\Enums\AssetUsageType;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
@@ -74,6 +75,8 @@ final class MaintenanceWorkOrderController extends Controller
             'release_checklist' => ['nullable', 'array'],
             'remarks' => ['nullable', 'string', 'max:2000'],
             'next_due_at' => ['nullable', 'date'],
+            'managerial_override' => ['sometimes', 'boolean'],
+            'override_reason' => ['required_if:managerial_override,true', 'nullable', 'string', 'max:2000'],
         ]);
 
         DB::transaction(function () use ($request, $maintenanceWorkOrder, $validated, $audit, $statusGuard): void {
@@ -81,11 +84,27 @@ final class MaintenanceWorkOrderController extends Controller
             $asset = OperationalAsset::query()->withTrashed()->lockForUpdate()->findOrFail($work->operational_asset_id);
             $isFleet = in_array($asset->kind, ['truck', 'vehicle'], true);
             Gate::forUser($request->user())->authorize(($isFleet ? PermissionName::FleetMaintain : PermissionName::EquipmentMaintain)->value);
-            if (! $asset->inspections()->where('result', 'passed')->where('completed_at', '>=', $work->created_at)->exists()) {
+
+            $hasLegacyPassing = $asset->inspections()
+                ->where('result', 'passed')
+                ->where('completed_at', '>=', $work->created_at)
+                ->exists();
+
+            $hasPassingDvir = $asset->dvirInspections()
+                ->where('has_defects', false)
+                ->where('critical_defects_count', 0)
+                ->where('completed_at', '>=', $work->created_at)
+                ->exists();
+
+            $hasPassingInspection = $hasLegacyPassing || $hasPassingDvir;
+            $isManagerOverride = (bool) ($validated['managerial_override'] ?? false);
+
+            if (! $hasPassingInspection && ! $isManagerOverride) {
                 throw ValidationException::withMessages([
                     'inspection' => 'A passing inspection completed after the repair is required before releasing a blocking maintenance order.',
                 ]);
             }
+
             $updateData = [
                 'work_performed' => $validated['work_performed'],
                 'parts' => $validated['parts'] ?? [],
@@ -112,14 +131,21 @@ final class MaintenanceWorkOrderController extends Controller
                     assetId: (int) $asset->id,
                     usageType: AssetUsageType::AssetStatusChange,
                     targetStatus: AssetStatus::ReadyForService,
+                    source: $isManagerOverride ? new AssetUsageSource('managerial_override', (int) $work->id) : null,
                 ));
             }
 
-            $audit->handle($request->user(), $work, 'maintenance.released', null, [
+            $auditPayload = [
                 'status' => AssetStatus::ReadyForService->value,
                 'released_at' => now()->toIso8601String(),
                 'release_verified_by' => $request->user()->id,
-            ]);
+            ];
+            if ($isManagerOverride) {
+                $auditPayload['managerial_override'] = true;
+                $auditPayload['override_reason'] = $validated['override_reason'] ?? null;
+            }
+
+            $audit->handle($request->user(), $work, 'maintenance.released', null, $auditPayload);
         });
 
         if ($request->expectsJson()) {

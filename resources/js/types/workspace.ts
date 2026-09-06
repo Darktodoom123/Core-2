@@ -284,6 +284,80 @@ export interface MaintenanceWorkOrderViewModel {
     remarks: string | null;
 }
 
+export type TelemetryFreshnessStatus =
+    'fresh' | 'delayed' | 'stale' | 'offline';
+
+export interface OperatorBindingViewModel {
+    id: number;
+    name: string;
+    avatar?: string | null;
+    avatar_url?: string | null;
+    shift_started_at: string | null;
+    shift_duration_minutes?: number;
+    hours_elapsed: number;
+    telemetry_status: TelemetryFreshnessStatus;
+}
+
+export type HosDutyStatusValue =
+    'operating' | 'driving' | 'standby' | 'on_break' | 'off_duty' | string;
+
+export type FatigueStatusValue =
+    'normal' | 'warning' | 'critical' | 'violation';
+
+export interface EquipmentHosViewModel {
+    duty_status: HosDutyStatusValue;
+    duty_status_label: string;
+    hours_elapsed: number;
+    fatigue_status: FatigueStatusValue;
+    dole_warning: boolean;
+    daily_operating_hours?: number;
+    drive_remaining_minutes?: number;
+    shift_window_remaining_minutes?: number;
+    break_countdown_minutes?: number;
+    active_demurrage?: boolean;
+}
+
+export type DvirOverallStatusValue =
+    | 'passed'
+    | 'defect_flagged'
+    | 'critical_defect'
+    | 'pending_inspection'
+    | string;
+
+export interface DvirPhotoViewModel {
+    id: number;
+    angle: string;
+    url: string;
+    file_name: string;
+    file_size_bytes?: number;
+    is_defect_photo?: boolean;
+    defect_notes?: string | null;
+    sha256_checksum?: string | null;
+    uploaded_at?: string | null;
+}
+
+export interface DvirInspectionSummaryViewModel {
+    id: number;
+    inspection_type?: 'pre_trip' | 'post_trip' | string;
+    type: 'pre_trip' | 'post_trip' | string;
+    status: DvirOverallStatusValue;
+    has_defects: boolean;
+    critical_defects_count: number;
+    completed_at: string | null;
+    inspector_name?: string | null;
+    photos: DvirPhotoViewModel[];
+}
+
+export interface AssetLockoutViewModel {
+    is_locked_out: boolean;
+    lockout_reason: string | null;
+    critical_defects_count: number;
+    can_override: boolean;
+    blocking_work_order_id?: number | null;
+    locked_at?: string | null;
+    latest_critical_dvir_id?: number | null;
+}
+
 export interface AssetViewModel {
     id: number;
     code: string;
@@ -304,6 +378,10 @@ export interface AssetViewModel {
     status: StatusViewModel<AssetStatusValue>;
     blocking_work_orders_count: number;
     is_dispatchable: boolean;
+    active_operator?: OperatorBindingViewModel | null;
+    hos?: EquipmentHosViewModel | null;
+    latest_dvir?: DvirInspectionSummaryViewModel | null;
+    lockout?: AssetLockoutViewModel | null;
     inspections: InspectionViewModel[];
     maintenance_work_orders: MaintenanceWorkOrderViewModel[];
 }
@@ -324,6 +402,7 @@ export interface FuelLogViewModel {
     is_anomaly?: boolean;
     anomaly_reason?: string | null;
     receipt_path: string | null;
+    receipt_url?: string | null;
     recorded_by: {
         id: number;
         name: string;
@@ -342,6 +421,10 @@ export interface FuelRequestViewModel {
         id: number;
         reference: string;
         title: string;
+    } | null;
+    shift?: {
+        id: number;
+        operator_name?: string | null;
     } | null;
     asset: {
         id: number;
@@ -553,6 +636,31 @@ export interface JobReportViewModel {
     started_at: string | null;
     ended_at: string | null;
     submitted_at: string | null;
+    signer_name?: string | null;
+    signer_role?: string | null;
+    signed_at?: string | null;
+    delay_logs?: Array<{
+        id: number;
+        duty_status: string;
+        standby_reason: string;
+        is_demurrage_billable: boolean;
+        started_at: string;
+        ended_at: string | null;
+        duration_minutes?: number | null;
+    }>;
+    cross_references?: {
+        associated_dvirs?: Array<{
+            id: number;
+            reference: string;
+            has_defects: boolean;
+            critical_defects_count?: number;
+        }>;
+        associated_fuel_requests?: Array<{
+            id: number;
+            reference: string;
+            quantity_litres: string;
+        }>;
+    };
     attachments: AttachmentViewModel[];
 }
 

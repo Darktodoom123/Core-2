@@ -2,12 +2,17 @@
 
 namespace App\Shared\Assets\Models;
 
+use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\HoursOfService\Enums\ShiftStatus;
+use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -28,6 +33,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $meter_value
  * @property string|null $baseline_burn_rate
  * @property string|null $burn_rate_unit
+ * @property-read Collection<int, MaintenanceWorkOrder> $maintenanceWorkOrders
+ * @property-read Collection<int, Inspection> $inspections
+ * @property-read Collection<int, DvirInspection> $dvirInspections
+ * @property-read DvirInspection|null $latestDvirInspection
+ * @property-read Collection<int, OperatorShift> $operatorShifts
+ * @property-read OperatorShift|null $activeOperatorShift
+ * @property-read MaintenanceWorkOrder|null $activeBlockingWorkOrder
  */
 class OperationalAsset extends Model
 {
@@ -50,6 +62,43 @@ class OperationalAsset extends Model
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class);
+    }
+
+    /** @return HasMany<DvirInspection, $this> */
+    public function dvirInspections(): HasMany
+    {
+        return $this->hasMany(DvirInspection::class, 'operational_asset_id');
+    }
+
+    /** @return HasOne<DvirInspection, $this> */
+    public function latestDvirInspection(): HasOne
+    {
+        return $this->hasOne(DvirInspection::class, 'operational_asset_id')
+            ->whereNotNull('completed_at')
+            ->latestOfMany('completed_at');
+    }
+
+    /** @return HasMany<OperatorShift, $this> */
+    public function operatorShifts(): HasMany
+    {
+        return $this->hasMany(OperatorShift::class, 'operational_asset_id');
+    }
+
+    /** @return HasOne<OperatorShift, $this> */
+    public function activeOperatorShift(): HasOne
+    {
+        return $this->hasOne(OperatorShift::class, 'operational_asset_id')
+            ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
+            ->latestOfMany('started_at');
+    }
+
+    /** @return HasOne<MaintenanceWorkOrder, $this> */
+    public function activeBlockingWorkOrder(): HasOne
+    {
+        return $this->hasOne(MaintenanceWorkOrder::class, 'operational_asset_id')
+            ->where('dispatch_blocking', true)
+            ->whereNull('released_at')
+            ->latestOfMany();
     }
 
     /**

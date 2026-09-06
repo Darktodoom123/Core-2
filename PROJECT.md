@@ -1,61 +1,148 @@
-# Project: Cloudflare R2 Object Storage Integration
+# Project: Web Dispatch & Operations Workspace Parity
 
 ## Architecture
-- **Public Media Tier (`r2` / `r2-public`)**: Object storage disk configured with public visibility and CDN domain resolution (`R2_PUBLIC_URL` / `R2_URL`) for vehicle walkaround inspection photos (`dvir_photos`), equipment assets, and operator avatars.
-- **Protected Documents Tier (`r2-private`)**: Object storage disk configured with private visibility and `url => null` for signed job completion forms, DVIR compliance sheets, equipment handover audit logs, and report exports (`exports/`).
-- **Resilience & Graceful Fallback**: Three-layer fallback architecture: pre-flight configuration validation + runtime S3/network exception catching with fallback to local `public` / `private` disks and structured warning logging.
-- **CORS & Access Security**: S3 CORS rules supporting GET, HEAD, PUT, OPTIONS from web dispatch and mobile dev origins. Strict zero credential leaks: secrets exclusively in `.env`.
-- **Integrity Controls**: MIME-type magic-byte validation via `finfo` (JPEG, PNG, WebP) and cryptographic SHA-256 checksums computed and recorded on upload.
-- **Lifecycle & Retention**: Short-term export draft cleanup (7-day purge via `PruneExpiredExportsJob`) vs 7-year statutory retention (2555 days via `PruneExpiredAttachmentsJob`).
+- **Backend Domain Integration**: Direct bridge between Laravel core modules (`App\Modules\HoursOfService`, `App\Modules\Dvir`, `App\Modules\Fuel`, `App\Platform\Reporting`, `App\Modules\Assignment`) and the Web Operations Workspace (`OperationsWorkspaceController` and `OperationsWorkspaceViewModel`).
+- **Data Persistence & Relationships**:
+  - `OperationalAsset` linked to `dvirInspections()`, `latestDvirInspection()`, and `activeOperatorShift()`.
+  - `FuelRequest` linked to `operator_shift_id`.
+  - `JobReport` linked to `OperatorDutyLog` (standby/delay logs) and cross-referenced with `DvirInspection` and `FuelRequest` for the parent dispatch job.
+- **Safety Lockout Architecture**:
+  - `CreateDvirInspectionAction` automatically triggers equipment lockout when critical defects exist: updates `OperationalAsset.status` to `AssetStatus::UnderMaintenance` and creates a dispatch-blocking `MaintenanceWorkOrder`.
+  - Dispatch board prevents assignment of locked-out assets; authorized managers can clear lockout via audited safety override.
+- **Frontend Architecture & Modular Decomposition**:
+  - Authoritative entrypoint: `resources/js/pages/workspace.tsx` and `components/workspace/live-workspace-shell.tsx`.
+  - Decompose monolithic `live-workspace-sections.tsx` (4,816 lines) into modular SOLID domain directories:
+    * `resources/js/components/workspace/fleet/` (AssetsSurface, operator binding, HoS clocks, DOLE warnings, DVIR photo gallery, safety lockout)
+    * `resources/js/components/workspace/fuel/` (FuelSurface, 5-stage transition modal, meter validation, receipt photo upload, variance & anomaly alerts)
+    * `resources/js/components/workspace/reports/` (ReportsSurface, digital signatures, delay/demurrage logs, review dialog, cross-references)
+  - Prototype Debt Elimination: Purge unrouted simulation wrappers (`operations.tsx`, `operations-reducer.ts`, `data/fixtures/`, `PrototypeSandboxBanner`).
+- **Design System & Industrial Tokens**:
+  - Tailwind tokens, `Panel`, `CanonicalStatusBadge`, `Stat`, `EmptyState`, Instrument Sans typography, and high-density monospaced data tags.
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| 1 | R2 Storage Architecture & CORS | S3 CORS policy definition, dual-bucket architecture, and .env.example configuration | M1 | ORIGINAL_REQUEST §R1 |
-| 2 | Dual-Tier Filesystem Disks | `r2`/`r2-public` and `r2-private` disks in `config/filesystems.php` with `use_path_style_endpoint => true` | M1 | ORIGINAL_REQUEST §R2 |
-| 3 | Storage Fallback Service & Logging | Preflight credential check + runtime exception fallback to `public`/`private` with logging | M1 | ORIGINAL_REQUEST Acceptance Criteria |
-| 4 | DVIR Schema Migration | `storage_disk` and `sha256_checksum` columns on `dvir_inspection_photos` | M2 | Survey Explorer 2 |
-| 5 | DVIR Walkaround Photo Pipeline | Magic-byte MIME validation, SHA-256 calculation, fault-tolerant write to `r2-public` in `CreateDvirInspectionAction` | M2 | ORIGINAL_REQUEST §R3 |
-| 6 | Public CDN URL Resolution | `DvirInspectionPhoto::url()` and `DvirInspectionPhotoResource` resolving via recorded `storage_disk` | M2 | ORIGINAL_REQUEST §R2, §R3 |
-| 7 | Protected PDF & Export Generation | Update `GenerateReportExportJob`: in-memory/stream SHA-256 checksum (eliminating remote `Storage::path()` crash), local mPDF font cache (`storage_path('app/temp/mpdf_cache')`), write to `r2-private` | M3 | ORIGINAL_REQUEST §R3 |
-| 8 | Protected Document Access Mechanisms | Hybrid download support in `ReportExportController` & `AttachmentController`: authenticated streaming default + temporary pre-signed URLs (15-min) | M3 | ORIGINAL_REQUEST §R2, Acceptance Criteria |
-| 9 | Signed Job Report Attachments | Wire `JobReport` digital signatures and attachments to `r2-private` via `config/attachments.php` | M3 | ORIGINAL_REQUEST §R3 |
-| 10 | Short-term Export Pruning | Update `PruneExpiredExportsJob` to target configured protected disk and register console command `reports:prune-expired` | M4 | ORIGINAL_REQUEST §R4 |
-| 11 | 7-Year Statutory Compliance Retention | Validate `PruneExpiredAttachmentsJob` (2555-day retention) and register console command `attachments:prune-expired` | M4 | ORIGINAL_REQUEST §R4 |
-| 12 | Test Suite Hardening & False Positive Elimination | Fix `DvirInspectionApiTest` line 388 false positive; add tests for R2 upload, fallback, invalid MIME rejection, and pre-signed URLs | M5 | Survey Explorer 2 & 3 |
+| 1 | Live Operator Binding & Telemetry Proxy | Display active operator, shift start time, duration, and telemetry freshness (`Fresh`, `Delayed`, `Stale`, `Offline`) per asset. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 2 | Equipment Hours of Service (HoS) Clocks | Display current duty status (`Operating`, `Driving`, `Standby`, `Rest/Break`, `Off Duty`) and cumulative shift operating hours on web. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 3 | DOLE 10-Hour Fatigue Warnings | Detect and display fatigue cautions at 9.0h and critical hard-cap warnings at 10.0h with relief handover prompts. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 4 | Pre/Post-Trip DVIR Badges & Details | Expose inspection status badges (`Passed`, `Defect Flagged`, `Pending Inspection`) and checklist logs on asset cards/tables. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 5 | Walkaround Defect Photo Viewer | 4-angle exterior walkaround photo gallery loaded directly from Cloudflare R2 CDN URLs with SHA-256 integrity tags. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 6 | Critical Defect Automatic Lockout | Automatically lock asset to `UnderMaintenance` and create dispatch-blocking work order upon critical DVIR defect submission. | M1, M2 | ORIGINAL_REQUEST §R1, Acceptance Criteria |
+| 7 | Managerial Safety Lockout Override | Allow authorized operations managers to clear lockout with audited justification and work order sign-off. | M1, M2 | ORIGINAL_REQUEST §R1 |
+| 8 | Production Fuel Request Integration | Connect web fuel requests directly to `App\Modules\Fuel` backend, replacing mock reducers with live Eloquent models. | M1, M3 | ORIGINAL_REQUEST §R2 |
+| 9 | Comprehensive Refueling Log & Meters | Support logging dispensed liters, odometer km, engine hours, price/L, total PHP cost, vendor, and receipt photo uploads. | M1, M3 | ORIGINAL_REQUEST §R2 |
+| 10 | Monotonic Meter Validation | Enforce that logged odometer km and engine hours cannot be less than current asset meter readings. | M1, M3 | ORIGINAL_REQUEST §R2, Spec Miner |
+| 11 | Fuel Consumption Variance & Anomaly Detection | Automatic anomaly flagging when volume variance >= 15% or burn rate exceeds equipment baseline by >= 15%. | M1, M3 | ORIGINAL_REQUEST §R2 |
+| 12 | Fuel Request Approval & Segregation | Role-gated 5-stage transition state machine (`Submitted` → `Forwarded` → `Approved`/`Rejected` → `Verified` → `Logged`) with self-approval prevention. | M1, M3 | ORIGINAL_REQUEST §R2 |
+| 13 | Rich Job Reports Display | Comprehensive web inspector for job reports: start/end timestamps, ending meters (engine hours/odometer), work summary. | M1, M4 | ORIGINAL_REQUEST §R3 |
+| 14 | Standby & Demurrage Delay Breakdown | Display delay logs categorized by `StandbyReason` and highlight billable demurrage hours for client invoicing. | M1, M4 | ORIGINAL_REQUEST §R3 |
+| 15 | Client Digital Sign-Off & Verification | Display client name, role, timestamp, signature image, and geolocation verification distance from site. | M1, M4 | ORIGINAL_REQUEST §R3 |
+| 16 | Supervisory Review & Job Auto-Completion | Approval/rejection workflow for managers; approving a report automatically transitions parent `DispatchJob` to `completed`. | M1, M4 | ORIGINAL_REQUEST §R3 |
+| 17 | Cross-Referencing Operational Records | Direct cross-reference navigation linking Job Reports to associated DVIR inspection sheets and fuel tickets. | M1, M4 | ORIGINAL_REQUEST §R3 |
+| 18 | Prototype Sandbox Debt Elimination | Eliminate `PrototypeSandboxBanner`, `operations-reducer.ts`, and in-memory mock states from `operations.tsx` and `resource-surfaces.tsx`. | M5 | ORIGINAL_REQUEST §R4 |
+| 19 | SOLID UI Modularization | Decompose 4,816-line monolith `live-workspace-sections.tsx` into modular domain directories (`fleet/`, `fuel/`, `reports/`). | M2, M3, M4, M5 | ORIGINAL_REQUEST §R4, AGENTS.md |
+| 20 | Real-Time / Polling Reactivity | Ensure web dashboards update seamlessly when field operators clock in, submit DVIRs, or log fuel. | M5 | ORIGINAL_REQUEST §R4 |
+| 21 | Full Verification & Quality Gates | Pass all backend tests (`Hos`, `Dvir`, `Fuel`, `JobReport`), PHPStan (`composer types:check`), TypeScript (`npm run types:check`), ESLint (`npm run lint:check`), and production build (`npm run build`). | M6 | ORIGINAL_REQUEST Acceptance Criteria |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | R2 Storage Configuration & Dual Disks | S3 CORS policy, `config/filesystems.php` dual disks (`r2`/`r2-public`, `r2-private`), `.env.example`, and fallback service | none | PLANNED |
-| M2 | DVIR Photo Persistence & CDN Resolution | Migration for `storage_disk` and `sha256_checksum`, `CreateDvirInspectionAction` refactor with MIME/SHA-256/fallback, model and resource updates | M1 | PLANNED |
-| M3 | Protected Documents, PDF Generation & Signed URLs | `GenerateReportExportJob` remote checksum fix + mPDF cache, `ReportExportController`/`AttachmentController` streaming & pre-signed URLs, `JobReport` attachment integration | M1 | PLANNED |
-| M4 | Lifecycle Retention & Pruning | Update `PruneExpiredExportsJob` for protected disk, register `reports:prune-expired` and `attachments:prune-expired` console commands | M1, M3 | PLANNED |
-| M5 | E2E Testing, Quality Gates & Verification | Comprehensive Pest tests across DVIR photos, report exports, storage drivers, PHPStan (0 errors), Pint (0 issues) | M2, M3, M4 | PLANNED |
+| M1 | Backend Schema, Relationships, Safety Lockout & ViewModel Prop Bridges | `OperationalAsset` relations, `CreateDvirInspectionAction` critical lockout, `OperationsWorkspaceViewModel` enrichment (HoS, DVIR, Fuel, Job Reports), fuel shift linking | none | PLANNED |
+| M2 | Web Fleet Management Parity (`fleet/` UI & HoS/DVIR Integration) | Decompose `AssetsSurface` into `components/workspace/fleet/`, live operator binding, HoS chips, DOLE warnings, DVIR badges, photo carousel, lockout alert & override | M1 | PLANNED |
+| M3 | Web Fuel Requests & Refueling Logs Parity (`fuel/` UI) | Decompose `FuelSurface` into `components/workspace/fuel/`, live CRUD, 5-stage workflow, monotonic meters, receipt upload, variance & anomaly alerts | M1 | PLANNED |
+| M4 | Web Job Reports & Field Handover Review Parity (`reports/` UI) | Decompose `ReportsSurface` into `components/workspace/reports/`, meters, delay/demurrage table, client digital sign-offs, supervisory review, cross-references | M1 | PLANNED |
+| M5 | Architecture Consistency, Prototype Debt Elimination & Clean-up | Purge unrouted simulation wrappers (`operations.tsx`, `operations-reducer.ts`, fixtures, `PrototypeSandboxBanner`), wire live props, ensure Echo/polling updates | M2, M3, M4 | PLANNED |
+| M6 | E2E Testing, Quality Gates & Parity Verification | Comprehensive verification: `Hos`, `Dvir`, `Fuel`, `JobReport` Pest tests, PHPStan level 8, TypeScript compilation, ESLint, and Vite build | M1, M2, M3, M4, M5 | PLANNED |
 
 ## Interface Contracts
-### Public Media Interface
-- Disk name: `r2` (alias `r2-public`).
-- Public URL generation: `Storage::disk('r2')->url($path)` returns `{$R2_PUBLIC_URL}/{$path}`.
-- Upload contract: `Storage::disk('r2')->put($path, $binary, ['visibility' => 'public'])`.
+### Asset ViewModel Contract (`AssetViewModel`)
+```typescript
+export interface AssetViewModel {
+    id: number;
+    code: string;
+    name: string;
+    kind: string;
+    subtype: string | null;
+    status: StatusViewModel<AssetStatusValue>;
+    is_dispatchable: boolean;
+    blocking_work_orders_count: number;
+    active_operator?: {
+        id: number;
+        name: string;
+        shift_started_at: string | null;
+        hours_elapsed: number;
+        telemetry_status: 'fresh' | 'delayed' | 'stale' | 'offline';
+    } | null;
+    hos?: {
+        duty_status: 'operating' | 'driving' | 'standby' | 'on_break' | 'off_duty';
+        duty_status_label: string;
+        hours_elapsed: number;
+        fatigue_status: 'normal' | 'warning' | 'critical' | 'violation';
+        dole_warning: boolean;
+    } | null;
+    latest_dvir?: {
+        id: number;
+        type: 'pre_trip' | 'post_trip';
+        status: 'passed' | 'defect_flagged' | 'critical_defect' | 'pending_inspection';
+        has_defects: boolean;
+        critical_defects_count: number;
+        completed_at: string | null;
+        photos: Array<{ id: number; angle: string; url: string; file_name: string }>;
+    } | null;
+    lockout?: {
+        is_locked_out: boolean;
+        lockout_reason: string | null;
+        critical_defects_count: number;
+        can_override: boolean;
+    } | null;
+}
+```
 
-### Protected Documents Interface
-- Disk name: `r2-private` (configurable via `config('filesystems.protected_disk', 'r2-private')`).
-- Access contract:
-  * Authenticated streaming: `Storage::disk('r2-private')->download($path, $filename, $headers)`.
-  * Pre-signed URL: `Storage::disk('r2-private')->temporaryUrl($path, now()->addMinutes(15), $options)`.
-- Checksum contract: SHA-256 calculated in-memory or via streaming BEFORE calling remote storage; never call `Storage::path()` on remote disks.
+### Job Report ViewModel Contract (`JobReportViewModel`)
+```typescript
+export interface JobReportViewModel {
+    id: number;
+    dispatch_job_id: number;
+    job: { id: number; reference: string; title: string } | null;
+    author: { id: number; name: string } | null;
+    status: StatusViewModel<'draft' | 'submitted' | 'approved' | 'rejected'>;
+    work_summary: string;
+    remarks: string | null;
+    rejection_reason?: string | null;
+    ending_meter_value?: number | null;
+    meter_type?: string | null;
+    started_at: string | null;
+    ended_at: string | null;
+    submitted_at: string | null;
+    signer_name: string | null;
+    signer_role: string | null;
+    signed_at: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    delay_logs?: Array<{
+        id: number;
+        duty_status: string;
+        standby_reason: string;
+        is_demurrage_billable: boolean;
+        started_at: string;
+        ended_at: string | null;
+        duration_minutes: number | null;
+    }>;
+    attachments: AttachmentViewModel[];
+    cross_references?: {
+        associated_dvirs?: Array<{ id: number; reference: string; has_defects: boolean }>;
+        associated_fuel_requests?: Array<{ id: number; reference: string; quantity_litres: string }>;
+    };
+}
+```
 
 ## Code Layout
-- `config/filesystems.php`: Dual-tier disks configuration (`r2`, `r2-public`, `r2-private`).
-- `config/attachments.php`: Protected documents disk binding.
-- `database/migrations/`: New migration for `dvir_inspection_photos` (`storage_disk`, `sha256_checksum`).
-- `app/Modules/Dvir/Actions/CreateDvirInspectionAction.php`: MIME magic-byte validation, SHA-256 calculation, fault-tolerant write.
-- `app/Modules/Dvir/Models/DvirInspectionPhoto.php`: Fillable fields, disk-aware URL accessor.
-- `app/Modules/Dvir/Http/Resources/V1/DvirInspectionPhotoResource.php`: Expose `sha256_checksum`.
-- `app/Platform/Reporting/Jobs/GenerateReportExportJob.php`: In-memory/stream SHA-256, persistent mPDF font cache, protected disk.
-- `app/Platform/Reporting/Jobs/PruneExpiredExportsJob.php`: Protected disk pruning.
-- `app/Platform/Reporting/Http/Controllers/ReportExportController.php`: Hybrid streaming & pre-signed URL download.
-- `app/Platform/Attachments/Http/Controllers/AttachmentController.php`: Hybrid streaming & pre-signed URL download.
-- `routes/console.php`: Prune console command registrations.
-- `tests/Feature/`: Pest tests for DVIR photos, report exports, pre-signed URLs, and fallback resilience.
+- `app/Shared/Assets/Models/OperationalAsset.php`: Relationships `dvirInspections()`, `latestDvirInspection()`, `activeOperatorShift()`.
+- `app/Modules/Dvir/Actions/CreateDvirInspectionAction.php`: Safety lockout logic on critical defects.
+- `app/Platform/Workspace/ViewModels/OperationsWorkspaceViewModel.php`: Asset HoS/DVIR serialization and JobReport signature/delay serialization.
+- `app/Modules/Fuel/ViewModels/FuelWorkspaceViewModel.php`: Download URL resolution for receipt photos.
+- `resources/js/components/workspace/fleet/`: Modular Fleet management UI.
+- `resources/js/components/workspace/fuel/`: Modular Fuel management UI.
+- `resources/js/components/workspace/reports/`: Modular Job Reports UI.
+- `resources/js/components/workspace/live-workspace-sections.tsx`: Refactored thin switchboard.
+- `tests/Feature/Operations/`: Feature and integration tests verifying HoS, DVIR, Fuel, and JobReport parity.
