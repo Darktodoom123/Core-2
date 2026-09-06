@@ -49,7 +49,7 @@ export interface OperatorDashboardScreenProps {
     onOpenDocuments: () => void;
     onOpenRoutes: () => void;
     onOpenVehicle: () => void;
-    onOpenForms: () => void;
+    onOpenForms?: () => void;
     onOpenRental?: () => void;
     onOpenSales?: () => void;
     onAcceptAssignment?: (
@@ -319,13 +319,13 @@ export const OperatorDashboardScreen: React.FC<
             title: 'Dispatch',
             sublabel: 'Intake & Orders',
             iconName: 'file-text',
-            bgColor: '#334155',
-            lightHaloBg: 'rgba(51, 65, 85, 0.12)',
-            lightIconColor: '#475569',
+            bgColor: '#2563EB',
+            lightHaloBg: 'rgba(37, 99, 235, 0.12)',
+            lightIconColor: '#2563EB',
             darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(148, 163, 184, 0.35)',
-            darkIconColor: '#94A3B8',
-            darkHaloBg: 'rgba(148, 163, 184, 0.15)',
+            darkBorderColor: 'rgba(96, 165, 250, 0.45)',
+            darkIconColor: '#60A5FA',
+            darkHaloBg: 'rgba(96, 165, 250, 0.15)',
             badgeCount:
                 pendingResponseCount > 0
                     ? pendingResponseCount
@@ -399,7 +399,7 @@ export const OperatorDashboardScreen: React.FC<
                 break;
             case 'forms':
                 setDispatchIntakeOpen(true);
-                onOpenForms();
+                onOpenForms?.();
                 break;
             case 'rental':
                 onOpenRental?.();
@@ -590,7 +590,7 @@ export const OperatorDashboardScreen: React.FC<
                         if (activeJob) {
                             onSelectJob(activeJob.id);
                         } else {
-                            onOpenForms();
+                            onOpenForms?.();
                         }
                     }}
                     ratedCapacity="50T All-Terrain"

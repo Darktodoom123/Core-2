@@ -34,6 +34,7 @@ import {
 } from '../native/backgroundLocationBridge';
 import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
+import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
@@ -224,6 +225,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'routes'
         | 'rental'
         | 'sales'
+        | 'dispatch'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
@@ -1330,6 +1332,21 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setActiveAppView('main')
                                 }
                             />
+                        ) : activeAppView === 'dispatch' ? (
+                            <DispatchOrdersScreen
+                                conflictedCommands={outboxCommands?.filter(
+                                    (command) => command.state === 'conflict',
+                                )}
+                                jobs={jobs}
+                                onAcceptAssignment={handleAcceptAssignment}
+                                onAcceptServerState={handleAcceptServerState}
+                                onBack={() => setActiveAppView('main')}
+                                onOpenRoutes={() => setActiveAppView('routes')}
+                                onRejectAssignment={handleRejectAssignment}
+                                onRetryNewVersion={handleRetryNewVersion}
+                                onSelectJob={handleSelectJob}
+                                onTransitionStatus={handleTransitionStatus}
+                            />
                         ) : (
                             <AssignedJobsListScreen
                                 apiClient={apiClient}
@@ -1347,6 +1364,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setActiveAppView('documents')
                                 }
                                 onOpenDvir={() => setActiveAppView('dvir')}
+                                onOpenForms={() => setActiveAppView('dispatch')}
                                 onOpenHos={() => setActiveAppView('hos')}
                                 onOpenRental={() => setActiveAppView('rental')}
                                 onOpenRoutes={() => setActiveAppView('routes')}
