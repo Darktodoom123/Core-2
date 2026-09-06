@@ -29,6 +29,9 @@ use Illuminate\Support\Carbon;
  * @property float|null $longitude
  * @property string|null $rejection_reason
  * @property int $resubmitted_count
+ * @property string|null $signer_name
+ * @property string|null $signer_role
+ * @property Carbon|null $signed_at
  * @property DispatchJob $job
  * @property User|null $author
  */
@@ -49,6 +52,9 @@ class JobReport extends Model
         'status',
         'resubmitted_count',
         'submitted_at',
+        'signer_name',
+        'signer_role',
+        'signed_at',
     ];
 
     protected function casts(): array
@@ -62,7 +68,23 @@ class JobReport extends Model
             'longitude' => 'float',
             'resubmitted_count' => 'integer',
             'status' => JobReportStatus::class,
+            'signed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (JobReport $report): void {
+            if (empty($report->signer_name) && request()->filled('signer_name')) {
+                $report->signer_name = request()->string('signer_name')->value();
+            }
+            if (empty($report->signer_role) && request()->filled('signer_role')) {
+                $report->signer_role = request()->string('signer_role')->value();
+            }
+            if (empty($report->signed_at) && request()->filled('signed_at')) {
+                $report->signed_at = request()->date('signed_at');
+            }
+        });
     }
 
     public function canBeResubmitted(): bool

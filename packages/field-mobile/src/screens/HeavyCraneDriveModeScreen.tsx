@@ -365,7 +365,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
         if (selectedOriginId === 'current_gps' && liveGpsCoords) {
             return {
                 id: 'current_gps',
-                label: '📍 Current Location (GPS)',
+                label: 'Current Location (GPS)',
                 description: `${liveGpsCoords[1].toFixed(4)}°N, ${liveGpsCoords[0].toFixed(4)}°E (Live Fix)`,
                 coords: liveGpsCoords,
                 type: 'origin',
@@ -848,7 +848,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
                                     styles.lanePillTextActive,
                             ]}
                         >
-                            🚛 WIDE ESCORT
+                            WIDE ESCORT
                         </Text>
                     </View>
                 </View>
@@ -1244,7 +1244,7 @@ export const HeavyCraneDriveModeScreen: React.FC<
                             </Text>
                             {clearanceAssessment.warningNote ? (
                                 <Text style={styles.clearanceWarningText}>
-                                    ⚠️ {clearanceAssessment.warningNote}
+                                    {clearanceAssessment.warningNote}
                                 </Text>
                             ) : null}
                         </View>

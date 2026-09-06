@@ -44,8 +44,6 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
     onSelectJob,
     onAcceptAssignment,
     onRejectAssignment,
-    onTransitionStatus,
-    onOpenDriveRoutes,
 }) => {
     const { isDarkHud } = useTheme();
 
@@ -68,6 +66,7 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
                 dot: '#F59E0B',
             };
         }
+
         switch (status) {
             case 'dispatched':
             case 'scheduled':
@@ -119,13 +118,18 @@ export const JobListItemCard: React.FC<JobListItemCardProps> = ({
 
     // Format scope requirements
     const formatRequirements = (): string | null => {
-        if (!job.requirements) return null;
+        if (!job.requirements) {
+            return null;
+        }
+
         if (Array.isArray(job.requirements)) {
             return job.requirements.join(' · ');
         }
+
         if (typeof job.requirements === 'object') {
             return Object.values(job.requirements).filter(Boolean).join(' · ');
         }
+
         return String(job.requirements);
     };
 

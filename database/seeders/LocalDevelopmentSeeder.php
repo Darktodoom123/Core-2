@@ -44,21 +44,27 @@ final class LocalDevelopmentSeeder extends Seeder
         $assets = [
             [
                 'code' => 'CRN-101',
-                'name' => '55T Mobile Hydraulic Crane',
+                'name' => '50T Tadano All-Terrain Crane',
                 'kind' => 'crane',
                 'subtype' => 'All-Terrain',
-                'status' => AssetStatus::ReadyForService->value,
+                'status' => AssetStatus::Assigned->value,
                 'registration_number' => 'CRN-5501-PH',
-                'manufacturer' => 'Liebherr',
-                'model' => 'LTM 1055-3.2',
-                'rated_capacity' => 55.0,
+                'manufacturer' => 'Tadano',
+                'model' => 'ATF 50G-3',
+                'rated_capacity' => 50.0,
                 'capacity_unit' => 'tonnes',
                 'meter_type' => 'hour_meter',
                 'meter_value' => 1420.5,
                 'baseline_burn_rate' => 18.50,
                 'burn_rate_unit' => 'L/hr',
-                'location' => 'Central Depot Yard (Bay 3)',
-                'specifications' => ['boom_length' => '40m', 'counterweight' => '12t', 'outrigger_spread' => '6.3m'],
+                'location' => 'North Staging Terminal - Pier 4',
+                'specifications' => [
+                    'boom_length' => '40m',
+                    'counterweight' => '12t',
+                    'outrigger_spread' => '6.3m',
+                    'jib_length_meters' => 60,
+                    'attachments' => ['20T Counterweight', 'Jib Extension'],
+                ],
             ],
             [
                 'code' => 'TRK-201',
@@ -165,6 +171,7 @@ final class LocalDevelopmentSeeder extends Seeder
         }
 
         $this->call(PhilippineSafetyOperationsSeeder::class);
+        $this->call(OperationalTestSeeder::class);
     }
 
     /**

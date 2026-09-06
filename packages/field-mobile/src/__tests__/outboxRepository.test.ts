@@ -175,10 +175,12 @@ describe('SqliteOutboxRepository', () => {
             runAsync: async (sql, params) => {
                 if (shouldThrowNpe) {
                     shouldThrowNpe = false;
+
                     throw new Error(
                         "Call to function 'NativeDatabase.prepareAsync' has been rejected. \n Caused by: java.lang.NullPointerException: java.lang.NullPointerException",
                     );
                 }
+
                 return nodeDb.runAsync(sql, params);
             },
             getAllAsync: (sql, params) => nodeDb.getAllAsync(sql, params),
@@ -186,6 +188,7 @@ describe('SqliteOutboxRepository', () => {
 
         const repository = new SqliteOutboxRepository(async () => {
             connectionCount++;
+
             return connectionCount === 1 ? faultyDb : nodeDb;
         });
 

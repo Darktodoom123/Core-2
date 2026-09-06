@@ -251,7 +251,7 @@ final class LocationWeatherService
             return 'Davao City';
         }
 
-        return round($latitude, 2) . '°, ' . round($longitude, 2) . '°';
+        return round($latitude, 2).'°, '.round($longitude, 2).'°';
     }
 
     /**

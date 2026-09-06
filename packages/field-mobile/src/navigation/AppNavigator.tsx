@@ -7,10 +7,10 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import type { AppStateStatus } from 'react-native';
 import {
     ActivityIndicator,
     AppState,
-    AppStateStatus,
     BackHandler,
     Pressable,
     StatusBar,
@@ -28,6 +28,10 @@ import type { DigitalSignatureData } from '../components/signature/DigitalSignat
 import { EmergencySosSheet } from '../components/sos';
 import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
+import {
+    startBackgroundLocationUpdates,
+    stopBackgroundLocationUpdates,
+} from '../native/backgroundLocationBridge';
 import { nativeLocationAdapter } from '../native/locationAdapter';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
@@ -37,10 +41,6 @@ import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen'
 import { HosScreen } from '../screens/HosScreen';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
 import { SalesDeliveryScreen } from '../screens/SalesDeliveryScreen';
-import {
-    startBackgroundLocationUpdates,
-    stopBackgroundLocationUpdates,
-} from '../native/backgroundLocationBridge';
 import { ApiClientError } from '../services/apiClient';
 import {
     CommandOutboxManager,
@@ -411,7 +411,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         try {
             let lat: number;
             let lon: number;
-            let localCity: string | null = null;
 
             try {
                 const loc = await getCurrentLocation(false);
@@ -427,15 +426,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
                 lat = loc.latitude;
                 lon = loc.longitude;
-                localCity = await nativeLocationAdapter.reverseGeocodeCity(
-                    lat,
-                    lon,
-                );
             } catch (geoErr) {
                 const raw =
                     geoErr instanceof Error ? geoErr.message.toLowerCase() : '';
                 let friendly =
                     'Turn on GPS or step into an open area, then tap retry.';
+
                 if (
                     raw.includes('permission') ||
                     raw.includes('denied') ||
@@ -444,8 +440,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     friendly =
                         'Allow location in your phone settings to see site wind and safety.';
                 }
+
                 setWeatherError(friendly);
                 setWeather(null);
+
                 return;
             }
 
@@ -484,6 +482,58 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             setIsLoadingWeather(false);
         }
     }, [apiClient, getCurrentLocation]);
+
+    const refreshHosClocks = useCallback(async () => {
+        if (status !== 'authenticated' || isOnline !== true) {
+            return;
+        }
+
+        try {
+            const currentShift = await apiClient.fetchCurrentHosShift();
+
+            if (currentShift?.clocks && currentShift.clocks.shift_active) {
+                const clock = currentShift.clocks;
+                const statusMap: Record<string, DutyStatus> = {
+                    operating: 'operating',
+                    driving: 'driving',
+                    standby: 'standby',
+                    on_break: 'on_break',
+                    off_duty: 'off_duty',
+                };
+                const dutyStatus: DutyStatus =
+                    statusMap[clock.current_duty_status] ?? 'operating';
+                const nextShiftStatus: ShiftStatus =
+                    dutyStatus === 'off_duty'
+                        ? 'off_shift'
+                        : dutyStatus === 'on_break'
+                          ? 'on_break'
+                          : dutyStatus === 'standby'
+                            ? 'standby'
+                            : 'on_shift';
+
+                setShiftInfo({
+                    status: nextShiftStatus,
+                    dutyStatus,
+                    startedAt: clock.started_at
+                        ? new Date(clock.started_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                          })
+                        : '08:00 AM',
+                    hoursElapsed: clock.hours_elapsed ?? 0,
+                });
+            } else if (currentShift && !currentShift.clocks?.shift_active) {
+                setShiftInfo({
+                    status: 'off_shift',
+                    dutyStatus: 'off_duty',
+                    startedAt: '--:--',
+                    hoursElapsed: 0,
+                });
+            }
+        } catch {
+            // Keep local shift info if offline or fetch fails
+        }
+    }, [apiClient, isOnline, status]);
 
     const syncQueue = useCallback(async () => {
         if (status !== 'authenticated' || isOnline !== true || !isOutboxReady) {
@@ -642,6 +692,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
             if (isOnline === true) {
                 queueMicrotask(() => void fetchJobs());
+                queueMicrotask(() => void refreshHosClocks());
             }
         } else {
             queueMicrotask(() => {
@@ -651,7 +702,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 setWeatherError(null);
             });
         }
-    }, [fetchJobs, isOnline, refreshWeather, status]);
+    }, [fetchJobs, isOnline, refreshHosClocks, refreshWeather, status]);
 
     useEffect(() => {
         if (isOnline === true && isOutboxReady) {
@@ -721,7 +772,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         (jobId: number) => setSelectedJobId(jobId),
         [],
     );
-    const handleBackToList = useCallback(() => setSelectedJobId(null), []);
 
     const handleToggleShift = useCallback((nextStatus: ShiftStatus) => {
         setShiftInfo((prev) => ({
@@ -751,6 +801,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 dutyStatus,
             }));
 
+            if (dutyStatus === 'off_duty') {
+                setLocationSharingActive(false);
+            }
+
             try {
                 if (dutyStatus === 'off_duty') {
                     await apiClient.certifyHosShift({
@@ -765,11 +819,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         remarks,
                     });
                 }
+
+                await refreshHosClocks();
             } catch {
                 // Offline fallback - state is preserved locally
             }
         },
-        [apiClient],
+        [apiClient, refreshHosClocks],
     );
 
     const handleToggleLocationSharing = useCallback(() => {
@@ -938,6 +994,21 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
     const activeTrackingJob = activeJob || jobs[0] || null;
+    const currentAsset =
+        activeJob?.asset_assignments?.[0] ||
+        jobs[0]?.asset_assignments?.[0] ||
+        null;
+    const resolvedAssetCode =
+        currentAsset?.asset_code ||
+        (jobs.length > 0 ? 'Assigned Unit' : 'UNASSIGNED');
+    const resolvedAssetName =
+        currentAsset?.asset_name ||
+        (jobs.length > 0 ? 'Heavy Equipment Unit' : 'No Equipment Assigned');
+    const resolvedOperatorName = user?.name || 'Field Operator';
+    const resolvedJobReference =
+        activeJob?.reference || jobs[0]?.reference || 'NO-DISPATCH';
+    const resolvedClientName =
+        activeJob?.client || jobs[0]?.client || 'Client Account';
 
     useEffect(() => {
         if (
@@ -1169,84 +1240,61 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                         ) : null}
                         {activeAppView === 'hos' ? (
                             <HosScreen
-                                operatorName={user?.name || 'Alex Rivera'}
-                                shiftInfo={shiftInfo}
+                                activeJobId={activeJob?.id || jobs[0]?.id}
+                                apiClient={apiClient}
+                                linkedAssetCode={
+                                    currentAsset?.asset_code || null
+                                }
                                 onBack={() => setActiveAppView('main')}
+                                onEndShift={() => {
+                                    handleToggleShift('off_shift');
+                                    setLocationSharingActive(false);
+                                }}
+                                onReleaseUnit={() => {
+                                    setLocationSharingActive(false);
+                                }}
+                                onToggleShift={handleToggleShift}
                                 onUpdateDutyStatus={handleChangeDutyStatus}
+                                operatorName={resolvedOperatorName}
+                                shiftInfo={shiftInfo}
                                 userRole={
                                     user?.role
                                         ? user.role.replaceAll('_', ' ')
-                                        : 'Certified Crane Operator'
+                                        : 'Field Operator'
                                 }
                             />
                         ) : activeAppView === 'dvir' ? (
                             <DvirScreen
-                                activeJobReference={
-                                    activeJob?.reference ||
-                                    jobs[0]?.reference ||
-                                    'DISP-2026-0891'
-                                }
+                                activeJobReference={resolvedJobReference}
                                 apiClient={apiClient}
-                                assetCode={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_code ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code ||
-                                    'ALB-CRN-050'
-                                }
+                                assetCode={resolvedAssetCode}
                                 assetKind={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_kind ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_kind ||
-                                    'mobile_crane'
+                                    currentAsset?.asset_kind || 'mobile_crane'
                                 }
-                                assetName={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    '50T Tadano All-Terrain Crane'
-                                }
-                                inspectorName={user?.name || 'Alex Rivera'}
+                                assetName={resolvedAssetName}
+                                commandOutbox={commandOutbox}
+                                inspectorName={resolvedOperatorName}
                                 onBack={() => setActiveAppView('main')}
                             />
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen
-                                assetCode={
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code || 'ALB-CRN-050'
-                                }
+                                assetCode={resolvedAssetCode}
                                 onBack={() => setActiveAppView('main')}
-                                operatorName={user?.name || 'Alex Rivera'}
+                                operatorName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'inspection' ? (
                             <EquipmentInspectionScreen
-                                assetCode={
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code || 'ALB-CRN-050'
-                                }
-                                assetName={
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    '50T Tadano All-Terrain Crane'
-                                }
+                                assetCode={resolvedAssetCode}
+                                assetName={resolvedAssetName}
                                 onBack={() => setActiveAppView('main')}
                                 onOpenDvir={() => setActiveAppView('dvir')}
-                                technicianName={user?.name || 'Alex Rivera'}
+                                technicianName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'routes' ? (
                             <HeavyCraneDriveModeScreen
                                 activeJob={activeJob || jobs[0] || null}
-                                assetCode={
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code || 'ALB-CRN-050'
-                                }
-                                assetName={
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    '50T Tadano All-Terrain Crane'
-                                }
+                                assetCode={resolvedAssetCode}
+                                assetName={resolvedAssetName}
                                 jobs={jobs}
                                 onArrived={(jobId, version) => {
                                     handleTransitionStatus(
@@ -1257,29 +1305,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     setActiveAppView('main');
                                 }}
                                 onBack={() => setActiveAppView('main')}
-                                operatorName={user?.name || 'Alex Rivera'}
+                                operatorName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'rental' ? (
                             <RentalHandoverScreen
-                                assetCode={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_code ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_code ||
-                                    'ALB-CRN-050'
-                                }
-                                assetName={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    '50T Tadano All-Terrain Crane'
-                                }
-                                clientName={
-                                    activeJob?.client ||
-                                    jobs[0]?.client ||
-                                    'DMCI Construction & Power Inc.'
-                                }
+                                assetCode={resolvedAssetCode}
+                                assetName={resolvedAssetName}
+                                clientName={resolvedClientName}
                                 onBack={() => setActiveAppView('main')}
                                 onCompleteCheckout={() =>
                                     setActiveAppView('main')
@@ -1290,18 +1322,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'sales' ? (
                             <SalesDeliveryScreen
-                                clientName={
-                                    activeJob?.client ||
-                                    jobs[0]?.client ||
-                                    'San Miguel Infrastructure Corp.'
-                                }
-                                equipmentName={
-                                    activeJob?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    jobs[0]?.asset_assignments?.[0]
-                                        ?.asset_name ||
-                                    'Caterpillar 320 GC Hydraulic Excavator'
-                                }
+                                clientName={resolvedClientName}
+                                equipmentName={resolvedAssetName}
+                                orderReference={resolvedJobReference}
                                 onBack={() => setActiveAppView('main')}
                                 onCompleteDelivery={() =>
                                     setActiveAppView('main')
@@ -1309,6 +1332,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : (
                             <AssignedJobsListScreen
+                                apiClient={apiClient}
                                 onSosHoldComplete={handleGlobalSosHold}
                                 sosDisabled={isSosActivating}
                                 error={jobsError}
@@ -1333,6 +1357,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onRefresh={() => {
                                     void fetchJobs();
                                     void refreshWeather();
+                                    void refreshHosClocks();
                                 }}
                                 onRetryCommand={handleRetryCommand}
                                 onSelectJob={handleSelectJob}
@@ -1345,6 +1370,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onToggleLocationSharing={
                                     handleToggleLocationSharing
                                 }
+                                onReleaseUnit={() => {
+                                    setLocationSharingActive(false);
+                                }}
                                 onToggleShift={handleToggleShift}
                                 outboxCommands={outboxCommands}
                                 shiftInfo={shiftInfo}

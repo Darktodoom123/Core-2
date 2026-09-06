@@ -377,6 +377,18 @@ export class CommandOutboxManager {
         );
     }
 
+    public enqueueSubmitDvir(
+        payload: Record<string, unknown>,
+        jobId?: number | null,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_dvir',
+            jobId ?? (payload.dispatch_job_id as number) ?? null,
+            null,
+            payload,
+        );
+    }
+
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
@@ -598,6 +610,13 @@ export class CommandOutboxManager {
             } else if (command.type === 'submit_job_report') {
                 response = await apiClient.submitJobReport(
                     command.payload as unknown as JobReportCommandPayload,
+                    command.id,
+                );
+            } else if (command.type === 'submit_dvir') {
+                response = await apiClient.createDvirInspection(
+                    command.payload as unknown as Parameters<
+                        typeof apiClient.createDvirInspection
+                    >[0],
                     command.id,
                 );
             }

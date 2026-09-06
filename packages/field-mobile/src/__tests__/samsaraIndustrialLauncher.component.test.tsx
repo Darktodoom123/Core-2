@@ -1,4 +1,9 @@
-import { cleanup, fireEvent, render } from '@testing-library/react-native/pure';
+import {
+    cleanup,
+    fireEvent,
+    render,
+    within,
+} from '@testing-library/react-native/pure';
 import '@testing-library/react-native/matchers';
 import React from 'react';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
@@ -188,11 +193,23 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                 ]),
             );
 
-            // 2x4 Column Layout Verification (Column 4 dedicated to Rental & Sales)
-            expect(view.getByTestId('tile-column-1')).toBeTruthy();
-            expect(view.getByTestId('tile-column-2')).toBeTruthy();
-            expect(view.getByTestId('tile-column-3')).toBeTruthy();
-            expect(view.getByTestId('tile-column-4')).toBeTruthy();
+            // 2x4 Column Layout Verification
+            // Col 1: HOS (top) & Documents (bottom)
+            // Col 2: Vehicle Inspection (top) & Machine Profile (bottom)
+            // Col 3: Routes (top) & Dispatch Schedule (bottom)
+            // Col 4: Rental Handover (top) & Sales Delivery (bottom)
+            const col1 = view.getByTestId('tile-column-1');
+            const col2 = view.getByTestId('tile-column-2');
+            const col3 = view.getByTestId('tile-column-3');
+            const col4 = view.getByTestId('tile-column-4');
+            expect(within(col1).getByTestId('tile-hos')).toBeTruthy();
+            expect(within(col1).getByTestId('tile-documents')).toBeTruthy();
+            expect(within(col2).getByTestId('tile-dvir')).toBeTruthy();
+            expect(within(col2).getByTestId('tile-vehicle')).toBeTruthy();
+            expect(within(col3).getByTestId('tile-routes')).toBeTruthy();
+            expect(within(col3).getByTestId('tile-forms')).toBeTruthy();
+            expect(within(col4).getByTestId('tile-rental')).toBeTruthy();
+            expect(within(col4).getByTestId('tile-sales')).toBeTruthy();
 
             // UX User-Friendly Text Labels
             expect(view.getByText('Hours of\nService')).toBeTruthy();
@@ -201,6 +218,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Documents')).toBeTruthy();
             expect(view.getByText('Machine\nProfile')).toBeTruthy();
             expect(view.getByText('Dispatch')).toBeTruthy();
+            expect(view.getByText('Intake & Orders')).toBeTruthy();
             expect(view.getByText('Rental\nHandover')).toBeTruthy();
             expect(view.getByText('Sales\nDelivery')).toBeTruthy();
 
@@ -281,6 +299,82 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Verified immediate update on dashboard screen
             expect(view.getByText('On Duty — Driving / Transit')).toBeTruthy();
             expect(view.getByText('DRV')).toBeTruthy();
+        });
+
+        it('opens DispatchIntakeSheet from Dispatch tile to inspect orders and accept assignment', async () => {
+            const onAccept = jest.fn();
+            const onReject = jest.fn();
+            const onOpenForms = jest.fn();
+
+            const pendingJob: DispatchJob = {
+                ...mockJob,
+                id: 202,
+                version: 3,
+                status: {
+                    value: 'dispatched',
+                    label: 'Dispatched',
+                },
+                my_assignment: {
+                    id: 77,
+                    response_status: 'pending',
+                    response_status_label: 'Pending Response',
+                    assigned_at: '2026-08-31T08:00:00Z',
+                },
+            };
+
+            const view = await render(
+                <OperatorDashboardScreen
+                    isLoading={false}
+                    jobs={[pendingJob]}
+                    onAcceptAssignment={onAccept}
+                    onDiscardCommand={jest.fn()}
+                    onLogout={jest.fn()}
+                    onOpenDocuments={jest.fn()}
+                    onOpenDvir={jest.fn()}
+                    onOpenForms={onOpenForms}
+                    onOpenRental={jest.fn()}
+                    onOpenRoutes={jest.fn()}
+                    onOpenSales={jest.fn()}
+                    onOpenVehicle={jest.fn()}
+                    onRefresh={jest.fn()}
+                    onRejectAssignment={onReject}
+                    onRetryCommand={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.5,
+                    }}
+                    userName="Alex Rivera"
+                    userRole="Master Crane Rigger"
+                />,
+            );
+
+            // Sublabel displayed on tile
+            expect(view.getByText('Intake & Orders')).toBeTruthy();
+
+            // Press Dispatch tile
+            await fireEvent.press(view.getByTestId('tile-forms'));
+            expect(onOpenForms).toHaveBeenCalled();
+
+            // Sheet opens and displays pending assignment
+            expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
+            expect(view.getByText('Dispatch Intake & Orders')).toBeTruthy();
+            expect(view.getByText('Needs Response (1)')).toBeTruthy();
+            expect(view.getByTestId('dispatch-intake-job-202')).toBeTruthy();
+            expect(view.getByTestId('accept-assignment-btn')).toBeTruthy();
+
+            // Accept assignment
+            await fireEvent.press(view.getByTestId('accept-assignment-btn'));
+            expect(onAccept).toHaveBeenCalledWith(202, 77, 3);
+
+            // Close sheet
+            await fireEvent.press(
+                view.getByTestId('close-dispatch-intake-btn'),
+            );
+            expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
         });
     });
 
@@ -369,6 +463,7 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Documents')).toBeTruthy();
             expect(view.getByText('Machine\nProfile')).toBeTruthy();
             expect(view.getByText('Dispatch')).toBeTruthy();
+            expect(view.getByText('Intake & Orders')).toBeTruthy();
             expect(view.getByText('Rental\nHandover')).toBeTruthy();
             expect(view.getByText('Sales\nDelivery')).toBeTruthy();
 
@@ -394,11 +489,31 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                 ]),
             );
 
-            // 2x4 Column Layout Verification (Column 4 dedicated to Rental & Sales)
-            expect(view.getByTestId('tile-column-1')).toBeTruthy();
-            expect(view.getByTestId('tile-column-2')).toBeTruthy();
-            expect(view.getByTestId('tile-column-3')).toBeTruthy();
-            expect(view.getByTestId('tile-column-4')).toBeTruthy();
+            // 2x4 Column Layout Verification
+            // Col 1: HOS (top) & Documents (bottom)
+            // Col 2: Vehicle Inspection (top) & Machine Profile (bottom)
+            // Col 3: Routes (top) & Dispatch Schedule (bottom)
+            // Col 4: Rental Handover (top) & Sales Delivery (bottom)
+            const assignedCol1 = view.getByTestId('tile-column-1');
+            const assignedCol2 = view.getByTestId('tile-column-2');
+            const assignedCol3 = view.getByTestId('tile-column-3');
+            const assignedCol4 = view.getByTestId('tile-column-4');
+            expect(within(assignedCol1).getByTestId('tile-hos')).toBeTruthy();
+            expect(
+                within(assignedCol1).getByTestId('tile-documents'),
+            ).toBeTruthy();
+            expect(within(assignedCol2).getByTestId('tile-dvir')).toBeTruthy();
+            expect(
+                within(assignedCol2).getByTestId('tile-vehicle'),
+            ).toBeTruthy();
+            expect(
+                within(assignedCol3).getByTestId('tile-routes'),
+            ).toBeTruthy();
+            expect(within(assignedCol3).getByTestId('tile-forms')).toBeTruthy();
+            expect(
+                within(assignedCol4).getByTestId('tile-rental'),
+            ).toBeTruthy();
+            expect(within(assignedCol4).getByTestId('tile-sales')).toBeTruthy();
 
             // Tapping HOS opens HOS callback
             await fireEvent.press(view.getByTestId('tile-hos'));
@@ -427,6 +542,134 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Tapping Sales opens Sales callback
             await fireEvent.press(view.getByTestId('tile-sales'));
             expect(onOpenSales).toHaveBeenCalled();
+        });
+
+        it('opens DispatchIntakeSheet from Dispatch tile and allows rejecting assignment with reason', async () => {
+            const onAccept = jest.fn();
+            const onReject = jest.fn();
+
+            const pendingJob: DispatchJob = {
+                ...mockJob,
+                id: 303,
+                version: 2,
+                status: {
+                    value: 'dispatched',
+                    label: 'Dispatched',
+                },
+                my_assignment: {
+                    id: 99,
+                    response_status: 'pending',
+                    response_status_label: 'Pending Response',
+                    assigned_at: '2026-08-31T08:00:00Z',
+                },
+            };
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[pendingJob]}
+                    onAcceptAssignment={onAccept}
+                    onRefresh={jest.fn()}
+                    onRejectAssignment={onReject}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.0,
+                    }}
+                />,
+            );
+
+            // Sublabel displayed on tile
+            expect(view.getByText('Intake & Orders')).toBeTruthy();
+
+            // Press Dispatch tile
+            await fireEvent.press(view.getByTestId('tile-forms'));
+
+            // Sheet opens and displays pending assignment
+            expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
+            expect(view.getByText('Dispatch Intake & Orders')).toBeTruthy();
+            expect(view.getByTestId('dispatch-intake-job-303')).toBeTruthy();
+            expect(view.getByTestId('reject-assignment-btn')).toBeTruthy();
+
+            // Press reject assignment button to show reason input
+            await fireEvent.press(view.getByTestId('reject-assignment-btn'));
+            expect(view.getByTestId('rejection-reason-input')).toBeTruthy();
+
+            // Fill reason and submit rejection
+            await fireEvent.changeText(
+                view.getByTestId('rejection-reason-input'),
+                'Boom extension not rated for 50T lift at DMCI site.',
+            );
+            await fireEvent.press(view.getByTestId('submit-rejection-btn'));
+
+            expect(onReject).toHaveBeenCalledWith(
+                303,
+                99,
+                'Boom extension not rated for 50T lift at DMCI site.',
+                2,
+            );
+
+            // Close sheet
+            await fireEvent.press(
+                view.getByTestId('close-dispatch-intake-btn'),
+            );
+            expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
+        });
+
+        it('auto-selects All Orders tab in DispatchIntakeSheet when opened with zero pending orders and allows selecting a job', async () => {
+            const onSelectJob = jest.fn();
+
+            const acceptedJob: DispatchJob = {
+                ...mockJob,
+                id: 404,
+                version: 4,
+                status: {
+                    value: 'working',
+                    label: 'Working On Site',
+                },
+                my_assignment: {
+                    id: 112,
+                    response_status: 'accepted',
+                    response_status_label: 'Accepted',
+                    assigned_at: '2026-08-31T08:00:00Z',
+                },
+            };
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[acceptedJob]}
+                    onRefresh={jest.fn()}
+                    onSelectJob={onSelectJob}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        hoursElapsed: 4.0,
+                    }}
+                />,
+            );
+
+            // Open Dispatch tile
+            await fireEvent.press(view.getByTestId('tile-forms'));
+
+            // Sheet should open on All Orders tab since 0 pending orders
+            expect(view.getByTestId('dispatch-intake-sheet')).toBeTruthy();
+            expect(view.getByText('All Orders (1)')).toBeTruthy();
+            expect(view.getByTestId('dispatch-intake-job-404')).toBeTruthy();
+
+            // Select job closes sheet and invokes callback
+            await fireEvent.press(
+                within(view.getByTestId('dispatch-intake-sheet')).getByTestId(
+                    'job-card-404',
+                ),
+            );
+            expect(onSelectJob).toHaveBeenCalledWith(404);
+            expect(view.queryByTestId('dispatch-intake-sheet')).toBeNull();
         });
     });
 

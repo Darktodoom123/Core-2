@@ -146,6 +146,12 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
     const CardContainer = onPress ? Pressable : View;
 
     if (variant === 'hero') {
+        const displayEngineHours = engineHours
+            ? String(engineHours).toLowerCase().includes('engine')
+                ? String(engineHours)
+                : `${String(engineHours).replace(/hrs/i, '').trim()} Engine Hours`
+            : '4,820 Engine Hours';
+
         return (
             <CardContainer
                 accessibilityHint={
@@ -153,7 +159,7 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                         ? 'Tap to view equipment specifications or setup fleet status'
                         : undefined
                 }
-                accessibilityLabel={`Assigned vehicle hero card ${assetCode}, ${assetName}`}
+                accessibilityLabel={`Assigned vehicle ${assetCode}, ${assetName}`}
                 accessibilityRole={onPress ? 'button' : undefined}
                 onPress={onPress}
                 style={({ pressed }: { pressed?: boolean } = {}) => [
@@ -163,41 +169,78 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                 ]}
                 testID="hero-vehicle-card"
             >
-                <Text
+                <View style={styles.heroHeaderRow}>
+                    <Text
+                        style={[
+                            styles.heroCardSubtitle,
+                            isDarkHud && styles.darkHeroCardSubtitle,
+                        ]}
+                    >
+                        ASSIGNED VEHICLE
+                    </Text>
+                    {renderDvirBadge()}
+                </View>
+
+                <View style={styles.heroIdentityRow}>
+                    <View style={styles.heroIdentityTextCol}>
+                        <View style={styles.heroCodeLine}>
+                            <Text
+                                style={[
+                                    styles.heroUnitCode,
+                                    isDarkHud && styles.darkHeroUnitCode,
+                                ]}
+                                testID="vehicle-card-code"
+                            >
+                                {assetCode}
+                            </Text>
+                            {ratedCapacity ? (
+                                <View
+                                    style={[
+                                        styles.tonnagePill,
+                                        isDarkHud && styles.darkTonnagePill,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.tonnagePillText,
+                                            isDarkHud &&
+                                                styles.darkTonnagePillText,
+                                        ]}
+                                    >
+                                        {ratedCapacity}
+                                    </Text>
+                                </View>
+                            ) : null}
+                        </View>
+                        <Text
+                            style={[
+                                styles.heroModelText,
+                                isDarkHud && styles.darkHeroModelText,
+                            ]}
+                        >
+                            {assetName}
+                        </Text>
+                    </View>
+                </View>
+
+                <View
                     style={[
-                        styles.heroCardSubtitle,
-                        isDarkHud && styles.darkHeroCardSubtitle,
+                        styles.heroDivider,
+                        isDarkHud && styles.darkHeroDivider,
                     ]}
-                >
-                    Assigned vehicle hero card
-                </Text>
-                <Text
-                    style={[
-                        styles.heroUnitCode,
-                        isDarkHud && styles.darkHeroUnitCode,
-                    ]}
-                    testID="vehicle-card-code"
-                >
-                    {assetCode}
-                </Text>
-                <Text
-                    style={[
-                        styles.heroModelText,
-                        isDarkHud && styles.darkHeroModelText,
-                    ]}
-                >
-                    {assetName}
-                </Text>
+                />
 
                 <View style={styles.heroFooterRow}>
                     <View style={styles.heroTelematicsGroup}>
                         <View style={styles.heroTeleItem}>
                             <Icon
-                                name="fuel"
-                                size={18}
                                 color={
-                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                    isDarkHud
+                                        ? colors.hudAmber
+                                        : colors.amberDark
                                 }
+                                name="clock"
+                                size={15}
                             />
                             <View style={styles.heroTeleTextCol}>
                                 <Text
@@ -206,71 +249,11 @@ export const AssetVehicleCard: React.FC<AssetVehicleCardProps> = ({
                                         isDarkHud && styles.darkHeroTeleValue,
                                     ]}
                                 >
-                                    {fuelPercent !== undefined
-                                        ? `${fuelPercent.toFixed(1)}%`
-                                        : '32.0%'}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.heroTeleLabel,
-                                        !isDarkHud && styles.lightHeroTeleLabel,
-                                    ]}
-                                >
-                                    Fuel level
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.heroTeleItem}>
-                            <Icon
-                                name="engine"
-                                size={18}
-                                color={
-                                    isDarkHud ? colors.hudTextDim : colors.muted
-                                }
-                            />
-                            <View style={styles.heroTeleTextCol}>
-                                <Text
-                                    style={[
-                                        styles.heroTeleValue,
-                                        isDarkHud && styles.darkHeroTeleValue,
-                                    ]}
-                                >
-                                    Engine
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.heroTeleLabel,
-                                        !isDarkHud && styles.lightHeroTeleLabel,
-                                    ]}
-                                >
-                                    Hours
+                                    Meter: {displayEngineHours}
                                 </Text>
                             </View>
                         </View>
                     </View>
-
-                    {onChangeUnit ? (
-                        <Pressable
-                            accessibilityLabel="Change assigned unit"
-                            accessibilityRole="button"
-                            onPress={onChangeUnit}
-                            style={[
-                                styles.heroChangeUnitBtn,
-                                isDarkHud && styles.darkHeroChangeUnitBtn,
-                            ]}
-                            testID="vehicle-card-change-unit-btn"
-                        >
-                            <Text
-                                style={[
-                                    styles.heroChangeUnitText,
-                                    isDarkHud && styles.darkHeroChangeUnitText,
-                                ]}
-                            >
-                                Change Unit
-                            </Text>
-                        </Pressable>
-                    ) : null}
                 </View>
             </CardContainer>
         );
@@ -862,42 +845,64 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
         shadowColor: 'transparent',
     },
+    heroHeaderRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
     heroCardSubtitle: {
         color: colors.muted,
         fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.5,
+        fontWeight: '800',
+        letterSpacing: 0.6,
         textTransform: 'uppercase',
     },
     darkHeroCardSubtitle: {
         color: colors.hudTextDim,
     },
+    heroIdentityRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+    },
+    heroIdentityTextCol: {
+        flex: 1,
+    },
+    heroCodeLine: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+    },
     heroUnitCode: {
         color: colors.amber,
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '900',
-        marginTop: 2,
+        letterSpacing: 0.2,
     },
     darkHeroUnitCode: {
         color: colors.hudAmber,
     },
     heroModelText: {
         color: colors.text,
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
         marginTop: 2,
     },
     darkHeroModelText: {
         color: colors.hudText,
     },
+    heroDivider: {
+        backgroundColor: colors.borderSubtle,
+        height: StyleSheet.hairlineWidth,
+        marginVertical: 10,
+    },
+    darkHeroDivider: {
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
     heroFooterRow: {
         alignItems: 'center',
-        borderTopColor: colors.borderSubtle,
-        borderTopWidth: StyleSheet.hairlineWidth,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 12,
-        paddingTop: 10,
     },
     heroTelematicsGroup: {
         flexDirection: 'row',
@@ -923,24 +928,5 @@ const styles = StyleSheet.create({
     },
     lightHeroTeleLabel: {
         color: colors.muted,
-    },
-    heroChangeUnitBtn: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: 6,
-        justifyContent: 'center',
-        minHeight: 32,
-        paddingHorizontal: 10,
-    },
-    darkHeroChangeUnitBtn: {
-        backgroundColor: colors.surfaceDark,
-    },
-    heroChangeUnitText: {
-        color: colors.text,
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    darkHeroChangeUnitText: {
-        color: colors.hudText,
     },
 });

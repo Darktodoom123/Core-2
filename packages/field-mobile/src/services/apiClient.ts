@@ -1,7 +1,11 @@
 import type {
     ActivateSosIncidentPayload,
     ApiErrorResponse,
+    CurrentHosShiftResponse,
     DispatchJob,
+    EquipmentHandoverClaimResponse,
+    EquipmentHandoverInitiateResponse,
+    HosClocks,
     JobReportCommandPayload,
     LocationSharePayload,
     SosConfiguration,
@@ -233,14 +237,20 @@ export class FieldApiClient {
                 headers: this.getHeaders(),
                 signal: controller?.signal,
             });
-            if (timer) clearTimeout(timer);
+
+            if (timer) {
+                clearTimeout(timer);
+            }
 
             const result =
                 await this.handleResponse<WeatherTelemetry>(response);
 
             return result;
         } catch {
-            if (timer) clearTimeout(timer);
+            if (timer) {
+                clearTimeout(timer);
+            }
+
             // If local server is slow, unreachable (e.g. mobile on cellular), or down,
             // fetch directly from Open-Meteo public API with zero mock data.
             return await this.fetchDirectOpenMeteoWeather(latitude, longitude);
@@ -266,7 +276,10 @@ export class FieldApiClient {
                 headers: { Accept: 'application/json' },
                 signal: controller?.signal,
             });
-            if (timer) clearTimeout(timer);
+
+            if (timer) {
+                clearTimeout(timer);
+            }
 
             if (!response.ok) {
                 throw new Error(
@@ -286,6 +299,7 @@ export class FieldApiClient {
             };
 
             const current = json.current;
+
             if (!current) {
                 throw new Error('No weather telemetry found for coordinates.');
             }
@@ -322,7 +336,9 @@ export class FieldApiClient {
                 fetched_at: new Date().toISOString(),
             };
         } finally {
-            if (timer) clearTimeout(timer);
+            if (timer) {
+                clearTimeout(timer);
+            }
         }
     }
 
@@ -359,13 +375,34 @@ export class FieldApiClient {
     }
 
     private mapWmoWeatherCode(code: number): string {
-        if (code === 0) return 'Clear Sky';
-        if ([1, 2, 3].includes(code)) return 'Mainly Clear / Overcast';
-        if ([45, 48].includes(code)) return 'Fog';
-        if ([51, 53, 55].includes(code)) return 'Drizzle';
-        if ([61, 63, 65].includes(code)) return 'Rain';
-        if ([80, 81, 82].includes(code)) return 'Rain Showers';
-        if ([95, 96, 99].includes(code)) return 'Thunderstorm';
+        if (code === 0) {
+            return 'Clear Sky';
+        }
+
+        if ([1, 2, 3].includes(code)) {
+            return 'Mainly Clear / Overcast';
+        }
+
+        if ([45, 48].includes(code)) {
+            return 'Fog';
+        }
+
+        if ([51, 53, 55].includes(code)) {
+            return 'Drizzle';
+        }
+
+        if ([61, 63, 65].includes(code)) {
+            return 'Rain';
+        }
+
+        if ([80, 81, 82].includes(code)) {
+            return 'Rain Showers';
+        }
+
+        if ([95, 96, 99].includes(code)) {
+            return 'Thunderstorm';
+        }
+
         return 'Clear Sky';
     }
 
@@ -452,7 +489,7 @@ export class FieldApiClient {
         payload: JobReportCommandPayload,
         commandId: string,
     ): Promise<unknown> {
-        const url = `${this.baseUrl}/operations/job-reports`;
+        const url = `${this.baseUrl}/api/v1/job-reports`;
         const bodyPayload = {
             ...payload,
             command_id: commandId,
@@ -465,6 +502,110 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<unknown>(response);
+    }
+
+    public async initiateEquipmentHandover(
+        jobId: number,
+        reliefUserId?: number,
+    ): Promise<EquipmentHandoverInitiateResponse> {
+        const url = `${this.baseUrl}/api/v1/dispatch-jobs/${jobId}/handover/initiate`;
+        const body = reliefUserId ? { relief_user_id: reliefUserId } : {};
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<EquipmentHandoverInitiateResponse>(response);
+    }
+
+    public async claimEquipmentHandover(
+        jobId: number,
+        pin: string,
+        token?: string,
+    ): Promise<EquipmentHandoverClaimResponse> {
+        const url = `${this.baseUrl}/api/v1/dispatch-jobs/${jobId}/handover/claim`;
+        const body: Record<string, string> = { pin };
+
+        if (token) {
+            body.handover_token = token;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<EquipmentHandoverClaimResponse>(response);
+    }
+
+    public async fetchCurrentHosShift(): Promise<CurrentHosShiftResponse> {
+        const url = `${this.baseUrl}/api/v1/hos/current-shift`;
+        const response = await this.fetchFn(url, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        return this.handleResponse<CurrentHosShiftResponse>(response);
+    }
+
+    public async startHosShift(payload: {
+        operational_asset_id?: number | null;
+        dispatch_job_id?: number | null;
+        duty_status?: string;
+        latitude?: number | null;
+        longitude?: number | null;
+        location_name?: string | null;
+        remarks?: string | null;
+    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+        const url = `${this.baseUrl}/api/v1/hos/shifts/start`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
+            response,
+        );
+    }
+
+    public async updateHosDutyStatus(payload: {
+        duty_status: string;
+        standby_reason?: string | null;
+        remarks?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
+        location_name?: string | null;
+    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+        const url = `${this.baseUrl}/api/v1/hos/duty-status`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
+            response,
+        );
+    }
+
+    public async certifyHosShift(payload?: {
+        certification_statement?: string;
+        remarks?: string | null;
+    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+        const url = `${this.baseUrl}/api/v1/hos/shifts/certify`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify(payload || {}),
+        });
+
+        return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
+            response,
+        );
     }
 
     public async activateSosIncident(
@@ -799,93 +940,6 @@ export class FieldApiClient {
         return this.handleResponse<any>(response);
     }
 
-    public async fetchCurrentHosShift(): Promise<{
-        shift: any | null;
-        clocks: {
-            shift_active: boolean;
-            shift_status: string;
-            current_duty_status: string;
-            started_at: string | null;
-            hours_elapsed: number;
-            drive_remaining_minutes: number;
-            shift_window_remaining_minutes: number;
-            break_countdown_minutes: number;
-            cycle_remaining_minutes: number;
-            cycle_accumulated_minutes: number;
-            cycle_limit_minutes: number;
-            timeline_segments: any[];
-            recent_logs: any[];
-            active_demurrage: boolean;
-            is_certified: boolean;
-        };
-    }> {
-        const url = `${this.baseUrl}/api/v1/hos/current-shift`;
-
-        const response = await this.fetchFn(url, {
-            method: 'GET',
-            headers: this.getHeaders(),
-        });
-
-        return this.handleResponse<{
-            shift: any | null;
-            clocks: any;
-        }>(response);
-    }
-
-    public async startHosShift(payload: {
-        operational_asset_id?: number;
-        dispatch_job_id?: number;
-        duty_status?: string;
-        latitude?: number;
-        longitude?: number;
-        location_name?: string;
-        remarks?: string;
-    }): Promise<any> {
-        const url = `${this.baseUrl}/api/v1/hos/shifts/start`;
-
-        const response = await this.fetchFn(url, {
-            method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload),
-        });
-
-        return this.handleResponse<any>(response);
-    }
-
-    public async updateHosDutyStatus(payload: {
-        duty_status: string;
-        standby_reason?: string;
-        latitude?: number;
-        longitude?: number;
-        location_name?: string;
-        remarks?: string;
-    }): Promise<{ shift: any; clocks: any }> {
-        const url = `${this.baseUrl}/api/v1/hos/duty-status`;
-
-        const response = await this.fetchFn(url, {
-            method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload),
-        });
-
-        return this.handleResponse<{ shift: any; clocks: any }>(response);
-    }
-
-    public async certifyHosShift(payload: {
-        certification_statement: string;
-        remarks?: string;
-    }): Promise<{ shift: any; clocks: any }> {
-        const url = `${this.baseUrl}/api/v1/hos/shifts/certify`;
-
-        const response = await this.fetchFn(url, {
-            method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload),
-        });
-
-        return this.handleResponse<{ shift: any; clocks: any }>(response);
-    }
-
     public async fetchHosCycleHistory(
         days = 8,
     ): Promise<{ days: number; shifts: any[]; logs: any[] }> {
@@ -925,34 +979,44 @@ export class FieldApiClient {
         );
     }
 
-    public async createDvirInspection(payload: {
-        inspection_type: 'pre_trip' | 'post_trip';
-        operational_asset_id?: number;
-        dispatch_job_id?: number;
-        asset_code?: string;
-        asset_name?: string;
-        inspector_name?: string;
-        starting_odometer_km?: number | null;
-        ending_odometer_km?: number | null;
-        engine_hours?: number | null;
-        has_defects: boolean;
-        signature_captured: boolean;
-        remarks?: string | null;
-        completed_at?: string;
-        checks: Array<{
-            id?: string;
-            category: string;
-            label: string;
-            status: string;
-            status_label?: string | null;
-            notes?: string | null;
-        }>;
-    }): Promise<any> {
+    public async createDvirInspection(
+        payload: {
+            inspection_type: 'pre_trip' | 'post_trip';
+            operational_asset_id?: number;
+            dispatch_job_id?: number;
+            asset_code?: string;
+            asset_name?: string;
+            inspector_name?: string;
+            starting_odometer_km?: number | null;
+            ending_odometer_km?: number | null;
+            engine_hours?: number | null;
+            has_defects: boolean;
+            signature_captured: boolean;
+            remarks?: string | null;
+            completed_at?: string;
+            checks: Array<{
+                id?: string;
+                category: string;
+                label: string;
+                status: string;
+                status_label?: string | null;
+                notes?: string | null;
+            }>;
+            photos?: Array<{
+                angle: string;
+                file_name?: string;
+                file_size?: number;
+                base64?: string;
+                uri?: string;
+            }>;
+        },
+        commandId?: string,
+    ): Promise<any> {
         const url = `${this.baseUrl}/api/v1/dvir/inspections`;
 
         const response = await this.fetchFn(url, {
             method: 'POST',
-            headers: this.getHeaders(),
+            headers: this.getHeaders(commandId),
             body: JSON.stringify(payload),
         });
 

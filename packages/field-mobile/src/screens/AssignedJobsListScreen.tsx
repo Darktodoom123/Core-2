@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -21,13 +21,14 @@ import type { SyncTone } from '../components/layout/field-header';
 import { colors, shadows, sharedStyles } from '../components/nativeStyles';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
-import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
+import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
+import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
@@ -81,6 +82,8 @@ export interface AssignedJobsListScreenProps {
     onOpenDocuments?: () => void;
     onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
+    onOpenForms?: () => void;
+    onReleaseUnit?: (assetCode: string) => void;
     onOpenRental?: () => void;
     onOpenSales?: () => void;
     onToggleLocationSharing?: () => void;
@@ -94,6 +97,7 @@ export interface AssignedJobsListScreenProps {
     isLoadingWeather?: boolean;
     weatherError?: string | null;
     onRefreshWeather?: () => void;
+    apiClient?: FieldApiClient;
 }
 
 interface TileItem {
@@ -150,6 +154,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenDocuments,
     onOpenRoutes,
     onOpenVehicle,
+    onOpenForms,
+    onReleaseUnit,
     onOpenRental,
     onOpenSales,
     onToggleLocationSharing,
@@ -163,6 +169,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     isLoadingWeather = false,
     weatherError,
     onRefreshWeather,
+    apiClient,
 }) => {
     const { isDarkHud } = useTheme();
     const [dutyModalOpen, setDutyModalOpen] = useState(false);
@@ -170,13 +177,13 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
-    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
     const [endShiftSafeguardOpen, setEndShiftSafeguardOpen] = useState(false);
+    const [dispatchIntakeOpen, setDispatchIntakeOpen] = useState(false);
+    const [pendingOffDutyRemarks, setPendingOffDutyRemarks] = useState<
+        string | undefined
+    >(undefined);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
-    const [overriddenUnitCode, setOverriddenUnitCode] = useState<string | null>(
-        null,
-    );
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
 
     const queuedCount = outboxCommands.filter(
@@ -318,10 +325,37 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const activeJob = jobs[0] || null;
     const primaryAsset = activeJob?.asset_assignments?.[0] || null;
     const assetCode =
-        overriddenUnitCode || primaryAsset?.asset_code || 'CRN-101';
+        primaryAsset?.asset_code ||
+        (activeJob ? 'Assigned Unit' : 'UNASSIGNED');
     const hoursElapsed = shiftInfo.hoursElapsed ?? 4;
     const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
     const isDoleCapExceeded = hoursElapsed >= 10.0;
+
+    const [handoverPin, setHandoverPin] = useState<string>('');
+    const [handoverReliefName, setHandoverReliefName] = useState<string>(
+        'Standby / Incoming Relief',
+    );
+
+    useEffect(() => {
+        if (reliefHandoverOpen && activeJob && apiClient) {
+            apiClient
+                .initiateEquipmentHandover(activeJob.id)
+                .then((res) => {
+                    if (res?.pin) {
+                        setHandoverPin(res.pin);
+                    }
+
+                    if (res?.relief_operator?.name) {
+                        setHandoverReliefName(res.relief_operator.name);
+                    }
+                })
+                .catch(() => {
+                    if (!handoverPin) {
+                        setHandoverPin('8421');
+                    }
+                });
+        }
+    }, [reliefHandoverOpen, activeJob, apiClient, handoverPin]);
 
     // 6 Dashboard Tiles
     const DASHBOARD_TILES: TileItem[] = [
@@ -403,7 +437,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
         {
             id: 'forms',
             title: 'Dispatch',
-            sublabel: 'Shift Schedule',
+            sublabel: 'Intake & Orders',
             iconName: 'file-text',
             bgColor: '#334155',
             lightHaloBg: 'rgba(51, 65, 85, 0.12)',
@@ -414,7 +448,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             darkBorderColor: 'rgba(148, 163, 184, 0.35)',
             darkIconColor: '#94A3B8',
             darkHaloBg: 'rgba(148, 163, 184, 0.15)',
-            badgeCount: jobs.length > 0 ? jobs.length : undefined,
+            badgeCount:
+                pendingResponseCount > 0
+                    ? pendingResponseCount
+                    : jobs.length > 0
+                      ? jobs.length
+                      : undefined,
         },
         {
             id: 'rental',
@@ -449,15 +488,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     ];
 
     // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
-    // Col 1: HOS & DVIR | Col 2: Routes & Vehicle | Col 3: Documents & Dispatch | Col 4: Rental & Sales
+    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Routes & Dispatch | Col 4: Rental & Sales
     const TILE_COLUMNS: TileItem[][] = useMemo(() => {
         const byId = (id: TileItem['id']) =>
             DASHBOARD_TILES.find((t) => t.id === id)!;
 
         return [
-            [byId('hos'), byId('dvir')],
-            [byId('routes'), byId('vehicle')],
-            [byId('documents'), byId('forms')],
+            [byId('hos'), byId('documents')],
+            [byId('dvir'), byId('vehicle')],
+            [byId('routes'), byId('forms')],
             [byId('rental'), byId('sales')],
         ];
     }, [DASHBOARD_TILES]);
@@ -490,7 +529,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 onOpenVehicle?.();
                 break;
             case 'forms':
-                setActiveNavItem('today');
+                setDispatchIntakeOpen(true);
+                onOpenForms?.();
                 break;
             case 'rental':
                 onOpenRental?.();
@@ -703,16 +743,24 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     assetCode={assetCode}
                     assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
                     assetName={
-                        primaryAsset?.asset_name || 'Liebherr LTM 1050-3.1'
+                        primaryAsset?.asset_name ||
+                        (activeJob ? 'Assigned Unit' : 'No Vehicle Assigned')
                     }
-                    attachments={['20T Counterweight', 'Jib Extension']}
+                    attachments={
+                        primaryAsset?.attachments &&
+                        primaryAsset.attachments.length > 0
+                            ? primaryAsset.attachments
+                            : []
+                    }
                     dispatchPrefix="Ref: "
                     dvirStatus="cleared"
-                    engineHours="4,820 hrs"
-                    fuelPercent={32}
-                    onChangeUnit={() => setChangeUnitModalOpen(true)}
+                    engineHours={
+                        primaryAsset?.engine_hours
+                            ? `${primaryAsset.engine_hours.toLocaleString()} hrs`
+                            : '-- hrs'
+                    }
                     onPress={onOpenVehicle}
-                    ratedCapacity="50T All-Terrain"
+                    ratedCapacity={primaryAsset?.rated_capacity || '--'}
                     variant="hero"
                 />
 
@@ -1002,6 +1050,25 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 maxShiftHours={shiftInfo.maxShiftHours ?? 10}
                 onClose={() => setDutyModalOpen(false)}
                 onSelectDutyStatus={(status, reason, remarks) => {
+                    if (status === 'off_duty') {
+                        if (assetCode) {
+                            setDutyModalOpen(false);
+                            setPendingOffDutyRemarks(remarks);
+                            setEndShiftSafeguardOpen(true);
+
+                            return;
+                        }
+
+                        setOverriddenDutyStatus({
+                            propStatus: shiftInfo.dutyStatus,
+                            localStatus: 'off_duty',
+                        });
+                        onToggleShift?.('off_shift');
+                        onChangeDutyStatus?.(status, reason, remarks);
+
+                        return;
+                    }
+
                     setOverriddenDutyStatus({
                         propStatus: shiftInfo.dutyStatus,
                         localStatus: status,
@@ -1009,6 +1076,26 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     onChangeDutyStatus?.(status, reason, remarks);
                 }}
                 visible={dutyModalOpen}
+            />
+
+            {/* Dispatch Focused Assignment Intake Sheet */}
+            <DispatchIntakeSheet
+                conflictedCommands={outboxCommands.filter(
+                    (command) => command.state === 'conflict',
+                )}
+                jobs={jobs}
+                onAcceptAssignment={onAcceptAssignment}
+                onAcceptServerState={onAcceptServerState}
+                onClose={() => setDispatchIntakeOpen(false)}
+                onOpenRoutes={onOpenRoutes}
+                onRejectAssignment={onRejectAssignment}
+                onRetryNewVersion={onRetryNewVersion}
+                onSelectJob={(jobId) => {
+                    onSelectJob?.(jobId);
+                    setDispatchIntakeOpen(false);
+                }}
+                onTransitionStatus={onTransitionStatus}
+                visible={dispatchIntakeOpen}
             />
 
             <NotificationsSheet
@@ -1070,36 +1157,38 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             {/* End Shift Safeguard Intercept Modal */}
             <EndShiftSafeguardModal
                 assetCode={assetCode}
-                onCancel={() => setEndShiftSafeguardOpen(false)}
+                onCancel={() => {
+                    setEndShiftSafeguardOpen(false);
+                    setPendingOffDutyRemarks(undefined);
+                }}
                 onConfirmReleaseAndClockOut={() => {
                     setEndShiftSafeguardOpen(false);
+                    onReleaseUnit?.(assetCode);
+                    setOverriddenDutyStatus({
+                        propStatus: shiftInfo.dutyStatus,
+                        localStatus: 'off_duty',
+                    });
                     onToggleShift?.('off_shift');
-                    onChangeDutyStatus?.('off_duty');
+                    onChangeDutyStatus?.(
+                        'off_duty',
+                        undefined,
+                        pendingOffDutyRemarks,
+                    );
+                    setPendingOffDutyRemarks(undefined);
                 }}
                 visible={endShiftSafeguardOpen}
-            />
-
-            {/* Change Unit Override Modal */}
-            <ChangeUnitModal
-                currentAssetCode={assetCode}
-                onClose={() => setChangeUnitModalOpen(false)}
-                onConfirmUnitChange={(newUnitCode) => {
-                    setOverriddenUnitCode(newUnitCode);
-                    setChangeUnitModalOpen(false);
-                }}
-                visible={changeUnitModalOpen}
             />
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}
             <ReliefHandoverModal
                 assetCode={assetCode}
-                handoverPin="8421"
+                handoverPin={handoverPin || '8421'}
                 mode="outgoing_offer"
                 onClose={() => setReliefHandoverOpen(false)}
                 onInitiatePushHandover={() => {
                     // Push notification alert dispatched to scheduled incoming relief operator
                 }}
-                reliefOperatorName="Carlos Reyes (Night Shift)"
+                reliefOperatorName={handoverReliefName}
                 visible={reliefHandoverOpen}
             />
         </View>

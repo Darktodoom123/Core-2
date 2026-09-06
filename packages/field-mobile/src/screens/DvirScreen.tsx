@@ -22,6 +22,7 @@ import type {
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import type { FieldApiClient } from '../services/apiClient';
+import type { CommandOutboxManager } from '../services/commandOutbox';
 import { useTheme } from '../theme';
 import type {
     DvirInspectionRecord,
@@ -42,6 +43,7 @@ export interface DvirScreenProps {
     activeJobReference?: string;
     initialMode?: 'pre_trip' | 'post_trip' | 'history';
     apiClient?: FieldApiClient;
+    commandOutbox?: CommandOutboxManager;
     onBack?: () => void;
     onSaveInspectionRecord?: (record: DvirInspectionRecord) => void;
 }
@@ -115,6 +117,16 @@ const mapApiRecordToHistory = (record: any): DvirInspectionRecord => ({
               icon: '',
           }))
         : [],
+    photos: Array.isArray(record.photos)
+        ? record.photos.map((p: any) => ({
+              id: p.id,
+              angle: p.angle,
+              file_name: p.file_name,
+              url: p.url,
+              file_size_bytes: p.file_size_bytes,
+              created_at: p.created_at,
+          }))
+        : undefined,
     signatureCaptured: Boolean(record.signature_captured),
     remarks: record.remarks ?? null,
     completedAt: record.completed_at ?? new Date().toISOString(),
@@ -193,6 +205,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     activeJobReference = 'DISP-2026-0891',
     initialMode = 'pre_trip',
     apiClient,
+    commandOutbox,
     onBack,
     onSaveInspectionRecord,
 }) => {
@@ -398,6 +411,46 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                     icon: '',
                 };
             }),
+            ...(mode === 'post_trip'
+                ? [
+                      {
+                          id: 'post-trip-parking-brake',
+                          category: 'hydraulics' as const,
+                          label: 'Air brake & spring emergency brake fully engaged',
+                          status: parkingBrakeSet
+                              ? ('good' as const)
+                              : ('critical' as const),
+                          statusLabel: parkingBrakeSet
+                              ? 'Pass · Engaged'
+                              : 'Critical Defect · Brake not engaged',
+                          icon: '',
+                      },
+                      {
+                          id: 'post-trip-wheel-chocks',
+                          category: 'safety_devices' as const,
+                          label: 'Heavy wheel chocks firmly deployed on drive axles',
+                          status: chocksDeployed
+                              ? ('good' as const)
+                              : ('attention' as const),
+                          statusLabel: chocksDeployed
+                              ? 'Pass · Deployed'
+                              : 'Needs attention · Chocks not deployed',
+                          icon: '',
+                      },
+                      {
+                          id: 'post-trip-outriggers',
+                          category: 'hydraulics' as const,
+                          label: 'Outrigger beams & hydraulic jacks retracted & locked',
+                          status: outriggersStowed
+                              ? ('good' as const)
+                              : ('critical' as const),
+                          statusLabel: outriggersStowed
+                              ? 'Pass · Retracted & locked'
+                              : 'Critical Defect · Outriggers not stowed',
+                          icon: '',
+                      },
+                  ]
+                : []),
         ];
 
         const record: DvirInspectionRecord = {
@@ -424,41 +477,83 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             completedAt: new Date().toISOString(),
         };
 
+        const photosPayload = Object.entries(walkaroundPhotos)
+            .filter(([, photo]) => Boolean(photo))
+            .map(([angle, photo]) => ({
+                angle,
+                file_name: photo!.fileName,
+                file_size: photo!.fileSize,
+                base64: photo!.base64,
+                uri: photo!.uri,
+            }));
+
+        if (photosPayload.length > 0) {
+            record.photos = photosPayload.map((p) => ({
+                angle: p.angle,
+                file_name: p.file_name,
+                url: p.uri,
+                file_size_bytes: p.file_size,
+            }));
+        }
+
         setHistory((prev) => [record, ...prev]);
         setIsSaved(true);
         onSaveInspectionRecord?.(record);
 
-        if (apiClient) {
-            const checksPayload = record.checks.map((c) => ({
-                id: c.id || undefined,
-                category: c.category,
-                label: c.label,
-                status: c.status,
-                status_label: c.statusLabel || undefined,
-                notes: c.notes ?? undefined,
-            }));
+        const checksPayload = record.checks.map((c) => ({
+            id: c.id || undefined,
+            category: c.category,
+            label: c.label,
+            status: c.status,
+            status_label: c.statusLabel || undefined,
+            notes: c.notes ?? undefined,
+        }));
 
-            apiClient
-                .createDvirInspection({
-                    inspection_type:
-                        record.type === 'post_trip' ? 'post_trip' : 'pre_trip',
-                    asset_code: assetCode,
-                    asset_name: assetName,
-                    inspector_name: inspectorName,
-                    starting_odometer_km:
-                        record.type === 'pre_trip'
-                            ? (record.startingOdometerKm ?? null)
-                            : null,
-                    ending_odometer_km:
-                        record.type === 'post_trip'
-                            ? (record.endingOdometerKm ?? null)
-                            : null,
-                    engine_hours: record.engineHours ?? null,
-                    has_defects: record.hasDefects,
-                    signature_captured: true,
-                    remarks: record.remarks,
-                    checks: checksPayload,
+        const dvirPayload = {
+            inspection_type: (record.type === 'post_trip'
+                ? 'post_trip'
+                : 'pre_trip') as 'pre_trip' | 'post_trip',
+            asset_code: assetCode,
+            asset_name: assetName,
+            inspector_name: inspectorName,
+            starting_odometer_km:
+                record.type === 'pre_trip'
+                    ? (record.startingOdometerKm ?? null)
+                    : null,
+            ending_odometer_km:
+                record.type === 'post_trip'
+                    ? (record.endingOdometerKm ?? null)
+                    : null,
+            engine_hours: record.engineHours ?? null,
+            has_defects: record.hasDefects,
+            signature_captured: true,
+            remarks: record.remarks,
+            checks: checksPayload,
+            photos: photosPayload.length > 0 ? photosPayload : undefined,
+        };
+
+        if (commandOutbox) {
+            commandOutbox
+                .enqueueSubmitDvir(dvirPayload)
+                .then(async () => {
+                    setSyncError(null);
+
+                    if (apiClient) {
+                        try {
+                            await commandOutbox.processQueue(apiClient);
+                        } catch {
+                            // Safely retained in offline outbox
+                        }
+                    }
                 })
+                .catch(() => {
+                    setSyncError(
+                        'DVIR saved on device only — will not appear in server history.',
+                    );
+                });
+        } else if (apiClient) {
+            apiClient
+                .createDvirInspection(dvirPayload)
                 .then((responseRecord) => {
                     const mapped = mapApiRecordToHistory(responseRecord);
                     setHistory((prev) => [

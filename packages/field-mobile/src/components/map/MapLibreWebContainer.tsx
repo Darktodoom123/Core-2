@@ -268,7 +268,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
 
                 const destEl = document.createElement('div');
                 destEl.className = 'marker marker-dest';
-                destEl.innerHTML = '🏁';
+                destEl.innerHTML = '●';
                 new maplibregl.Marker({ element: destEl })
                     .setLngLat(dest.coords)
                     .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML('<strong>Destination:</strong> ' + dest.label))
@@ -425,7 +425,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
                     style={styles.pinNode}
                 >
                     <View style={[styles.nodeDot, styles.destDot]}>
-                        <Text style={styles.destIconText}>🏁</Text>
+                        <Text style={styles.destIconText}>⚑</Text>
                     </View>
                     <Text style={styles.nodeLabel} numberOfLines={1}>
                         {destinationLabel}
@@ -436,7 +436,7 @@ export const MapLibreWebContainer: React.FC<MapLibreWebContainerProps> = ({
             {selectedPin ? (
                 <View style={styles.selectedBanner}>
                     <Text style={styles.selectedBannerText} numberOfLines={1}>
-                        📍 {selectedPin}
+                        {selectedPin}
                     </Text>
                 </View>
             ) : null}

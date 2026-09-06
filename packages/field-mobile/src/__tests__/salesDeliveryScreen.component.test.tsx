@@ -119,9 +119,7 @@ describe('SalesDeliveryScreen', () => {
 
     it('applies standard amber brand styling to category header and confirm action in both light and dark mode', async () => {
         const lightView = await render(
-            <SalesDeliveryScreen
-                orderReference="SO-2026-0091"
-            />,
+            <SalesDeliveryScreen orderReference="SO-2026-0091" />,
         );
 
         const categoryText = lightView.getByText('Equipment Sales');
@@ -131,7 +129,9 @@ describe('SalesDeliveryScreen', () => {
             ]),
         );
 
-        const confirmBtn = lightView.getByTestId('confirm-sales-delivery-button');
+        const confirmBtn = lightView.getByTestId(
+            'confirm-sales-delivery-button',
+        );
         expect(confirmBtn.props.style).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ backgroundColor: '#D97706' }),
@@ -140,9 +140,7 @@ describe('SalesDeliveryScreen', () => {
 
         const darkView = await render(
             <ThemeProvider initialMode="dark_hud">
-                <SalesDeliveryScreen
-                    orderReference="SO-2026-0091"
-                />
+                <SalesDeliveryScreen orderReference="SO-2026-0091" />
             </ThemeProvider>,
         );
 

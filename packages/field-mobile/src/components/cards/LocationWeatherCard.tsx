@@ -276,15 +276,19 @@ export const LocationWeatherCard: React.FC<LocationWeatherCardProps> = ({
 
     const getWeatherIcon = (desc: string): IconName => {
         const lower = desc.toLowerCase();
+
         if (lower.includes('thunder') || lower.includes('lightning')) {
             return 'alert';
         }
+
         if (lower.includes('rain') || lower.includes('drizzle')) {
             return 'pin';
         }
+
         if (lower.includes('cloud') || lower.includes('overcast')) {
             return 'document';
         }
+
         return 'check-circle';
     };
 

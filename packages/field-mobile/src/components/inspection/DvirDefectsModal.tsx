@@ -15,6 +15,7 @@ import {
     resolveDesignatedEquipmentType,
 } from '../../utils/equipmentClassification';
 import { Icon } from '../common/Icon';
+import type { IconName } from '../common/Icon';
 import { colors } from '../nativeStyles';
 
 export type CraneEquipmentFilter =
@@ -963,9 +964,11 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                             ]}
                             testID="designated-asset-banner"
                         >
-                            <Text style={styles.assetContextIcon}>
-                                {presentation.icon}
-                            </Text>
+                            <Icon
+                                color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                name={presentation.icon as IconName}
+                                size={20}
+                            />
                             <View style={styles.assetContextDetails}>
                                 <View style={styles.assetContextRow}>
                                     <Text
@@ -1071,17 +1074,17 @@ export const DvirDefectsModal: React.FC<DvirDefectsModalProps> = ({
                                     },
                                     {
                                         key: 'mobile_crane',
-                                        label: `🏗️ Mobile Crane${effectiveEquipmentType === 'mobile_crane' ? ' (Designated)' : ''}`,
+                                        label: 'Mobile Crane',
                                         testID: 'filter-mobile-crane',
                                     },
                                     {
                                         key: 'tower_crane',
-                                        label: `🗼 Tower Crane${effectiveEquipmentType === 'tower_crane' ? ' (Designated)' : ''}`,
+                                        label: 'Tower Crane',
                                         testID: 'filter-tower-crane',
                                     },
                                     {
                                         key: 'carrier',
-                                        label: `🚛 Carrier & Road${effectiveEquipmentType === 'carrier' ? ' (Designated)' : ''}`,
+                                        label: 'Carrier & Road',
                                         testID: 'filter-carrier',
                                     },
                                 ] as const
@@ -1614,9 +1617,6 @@ const styles = StyleSheet.create({
     darkAssetContextBanner: {
         backgroundColor: '#131F35',
         borderColor: '#1E293B',
-    },
-    assetContextIcon: {
-        fontSize: 24,
     },
     assetContextDetails: {
         flex: 1,

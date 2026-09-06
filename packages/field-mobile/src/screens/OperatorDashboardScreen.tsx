@@ -14,15 +14,19 @@ import type { IconName } from '../components/common/Icon';
 import { FieldBottomNav } from '../components/layout/field-bottom-nav';
 import type { FieldNavItem } from '../components/layout/field-bottom-nav';
 import { colors, shadows } from '../components/nativeStyles';
+import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
+import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
+    DispatchStatus,
     DutyStatus,
     OutboxCommand,
     ShiftInfo,
+    ShiftStatus,
     StandbyReason,
 } from '../types/index';
 
@@ -48,6 +52,24 @@ export interface OperatorDashboardScreenProps {
     onOpenForms: () => void;
     onOpenRental?: () => void;
     onOpenSales?: () => void;
+    onAcceptAssignment?: (
+        jobId: number,
+        assignmentId: number,
+        version: number,
+    ) => void;
+    onRejectAssignment?: (
+        jobId: number,
+        assignmentId: number,
+        reason: string,
+        version: number,
+    ) => void;
+    onTransitionStatus?: (
+        jobId: number,
+        nextStatus: DispatchStatus,
+        version: number,
+    ) => void;
+    onToggleShift?: (nextStatus: ShiftStatus) => void;
+    onReleaseUnit?: (assetCode: string) => void;
     onChangeDutyStatus?: (
         dutyStatus: DutyStatus,
         standbyReason?: StandbyReason,
@@ -111,6 +133,11 @@ export const OperatorDashboardScreen: React.FC<
     onOpenForms,
     onOpenRental,
     onOpenSales,
+    onAcceptAssignment,
+    onRejectAssignment,
+    onTransitionStatus,
+    onToggleShift,
+    onReleaseUnit,
     onChangeDutyStatus,
     onLogout,
     onSyncNow,
@@ -124,6 +151,11 @@ export const OperatorDashboardScreen: React.FC<
     const [notificationsSheetOpen, setNotificationsSheetOpen] = useState(false);
     const [signOutConfirmationOpen, setSignOutConfirmationOpen] =
         useState(false);
+    const [endShiftSafeguardOpen, setEndShiftSafeguardOpen] = useState(false);
+    const [dispatchIntakeOpen, setDispatchIntakeOpen] = useState(false);
+    const [pendingOffDutyRemarks, setPendingOffDutyRemarks] = useState<
+        string | undefined
+    >(undefined);
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
 
     const [overriddenDutyStatus, setOverriddenDutyStatus] = useState<{
@@ -149,6 +181,9 @@ export const OperatorDashboardScreen: React.FC<
     ).length;
     const syncAttentionCount = failedCount + conflictCount;
     const failedCommands = outboxCommands.filter((c) => c.state === 'failed');
+    const pendingResponseCount = jobs.filter(
+        (j) => j.my_assignment?.response_status === 'pending',
+    ).length;
 
     // Primary Active Job & Machine
     const activeJob = jobs[0] || null;
@@ -282,7 +317,7 @@ export const OperatorDashboardScreen: React.FC<
         {
             id: 'forms',
             title: 'Dispatch',
-            sublabel: 'Shift Schedule',
+            sublabel: 'Intake & Orders',
             iconName: 'file-text',
             bgColor: '#334155',
             lightHaloBg: 'rgba(51, 65, 85, 0.12)',
@@ -291,7 +326,12 @@ export const OperatorDashboardScreen: React.FC<
             darkBorderColor: 'rgba(148, 163, 184, 0.35)',
             darkIconColor: '#94A3B8',
             darkHaloBg: 'rgba(148, 163, 184, 0.15)',
-            badgeCount: jobs.length > 0 ? jobs.length : undefined,
+            badgeCount:
+                pendingResponseCount > 0
+                    ? pendingResponseCount
+                    : jobs.length > 0
+                      ? jobs.length
+                      : undefined,
         },
         {
             id: 'rental',
@@ -322,15 +362,15 @@ export const OperatorDashboardScreen: React.FC<
     ];
 
     // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
-    // Col 1: HOS & DVIR | Col 2: Routes & Vehicle | Col 3: Documents & Dispatch | Col 4: Rental & Sales
+    // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Routes & Dispatch | Col 4: Rental & Sales
     const TILE_COLUMNS: DashboardTileConfig[][] = useMemo(() => {
         const byId = (id: DashboardTileConfig['id']) =>
             DASHBOARD_TILES.find((t) => t.id === id)!;
 
         return [
-            [byId('hos'), byId('dvir')],
-            [byId('routes'), byId('vehicle')],
-            [byId('documents'), byId('forms')],
+            [byId('hos'), byId('documents')],
+            [byId('dvir'), byId('vehicle')],
+            [byId('routes'), byId('forms')],
             [byId('rental'), byId('sales')],
         ];
     }, [DASHBOARD_TILES]);
@@ -358,6 +398,7 @@ export const OperatorDashboardScreen: React.FC<
                 onOpenVehicle();
                 break;
             case 'forms':
+                setDispatchIntakeOpen(true);
                 onOpenForms();
                 break;
             case 'rental':
@@ -695,6 +736,25 @@ export const OperatorDashboardScreen: React.FC<
                 maxShiftHours={shiftInfo.maxShiftHours ?? 10}
                 onClose={() => setDutyModalOpen(false)}
                 onSelectDutyStatus={(status, reason, remarks) => {
+                    if (status === 'off_duty') {
+                        if (assetCode) {
+                            setDutyModalOpen(false);
+                            setPendingOffDutyRemarks(remarks);
+                            setEndShiftSafeguardOpen(true);
+
+                            return;
+                        }
+
+                        setOverriddenDutyStatus({
+                            propStatus: shiftInfo.dutyStatus,
+                            localStatus: 'off_duty',
+                        });
+                        onToggleShift?.('off_shift');
+                        onChangeDutyStatus?.(status, reason, remarks);
+
+                        return;
+                    }
+
                     setOverriddenDutyStatus({
                         propStatus: shiftInfo.dutyStatus,
                         localStatus: status,
@@ -702,6 +762,49 @@ export const OperatorDashboardScreen: React.FC<
                     onChangeDutyStatus?.(status, reason, remarks);
                 }}
                 visible={dutyModalOpen}
+            />
+
+            {/* Dispatch Focused Assignment Intake Sheet */}
+            <DispatchIntakeSheet
+                conflictedCommands={outboxCommands?.filter(
+                    (command) => command.state === 'conflict',
+                )}
+                jobs={jobs}
+                onAcceptAssignment={onAcceptAssignment}
+                onClose={() => setDispatchIntakeOpen(false)}
+                onOpenRoutes={onOpenRoutes}
+                onRejectAssignment={onRejectAssignment}
+                onSelectJob={(jobId) => {
+                    onSelectJob(jobId);
+                    setDispatchIntakeOpen(false);
+                }}
+                onTransitionStatus={onTransitionStatus}
+                visible={dispatchIntakeOpen}
+            />
+
+            {/* End Shift Safeguard Intercept Modal */}
+            <EndShiftSafeguardModal
+                assetCode={assetCode}
+                onCancel={() => {
+                    setEndShiftSafeguardOpen(false);
+                    setPendingOffDutyRemarks(undefined);
+                }}
+                onConfirmReleaseAndClockOut={() => {
+                    setEndShiftSafeguardOpen(false);
+                    onReleaseUnit?.(assetCode);
+                    setOverriddenDutyStatus({
+                        propStatus: shiftInfo.dutyStatus,
+                        localStatus: 'off_duty',
+                    });
+                    onToggleShift?.('off_shift');
+                    onChangeDutyStatus?.(
+                        'off_duty',
+                        undefined,
+                        pendingOffDutyRemarks,
+                    );
+                    setPendingOffDutyRemarks(undefined);
+                }}
+                visible={endShiftSafeguardOpen}
             />
 
             {/* Notifications & Outbox Sheet */}

@@ -99,8 +99,12 @@ describe('RentalHandoverScreen', () => {
         await act(async () => {
             fireEvent.press(view.getByTestId('tab-return'));
         });
-        expect(view.getAllByText(/Return Check-in/).length).toBeGreaterThanOrEqual(1);
-        expect(view.getByText('RETURN CONDITION & DAMAGE INSPECTION')).toBeTruthy();
+        expect(
+            view.getAllByText(/Return Check-in/).length,
+        ).toBeGreaterThanOrEqual(1);
+        expect(
+            view.getByText('RETURN CONDITION & DAMAGE INSPECTION'),
+        ).toBeTruthy();
 
         // Switch back to checkout tab
         await act(async () => {

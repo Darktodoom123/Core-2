@@ -37,6 +37,8 @@ const commandTypes: OutboxCommandType[] = [
     'transition_status',
     'share_location',
     'activate_sos',
+    'submit_job_report',
+    'submit_dvir',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',

@@ -167,7 +167,7 @@ export function getEquipmentPresentation(
         case 'tower_crane':
             return {
                 type: 'tower_crane',
-                icon: '🗼',
+                icon: 'crane',
                 label: 'Tower Crane',
                 shortLabel: 'Tower Crane',
                 modalTitle: 'Add Tower Crane Defects',
@@ -176,13 +176,13 @@ export function getEquipmentPresentation(
                 safetySafeLabel: 'Safe to operate',
                 safetyDisclaimer:
                     'Any crane tower attributes not displayed are certified safe by the crane operator',
-                filterPillLabel: '🗼 Tower Crane',
+                filterPillLabel: 'Tower Crane',
                 designatedBadgeLabel: 'Tower Crane (Designated)',
             };
         case 'carrier':
             return {
                 type: 'carrier',
-                icon: '🚛',
+                icon: 'truck',
                 label: 'Vehicle / Carrier',
                 shortLabel: 'Vehicle',
                 modalTitle: 'Add Vehicle Defects',
@@ -191,14 +191,14 @@ export function getEquipmentPresentation(
                 safetySafeLabel: 'Safe to drive',
                 safetyDisclaimer:
                     'Any vehicle attributes not displayed are certified safe by the driver',
-                filterPillLabel: '🚛 Carrier & Road',
+                filterPillLabel: 'Carrier & Road',
                 designatedBadgeLabel: 'Carrier & Road (Designated)',
             };
         case 'mobile_crane':
         default:
             return {
                 type: 'mobile_crane',
-                icon: '🏗️',
+                icon: 'crane',
                 label: 'Mobile Crane',
                 shortLabel: 'Mobile Crane',
                 modalTitle: 'Add Mobile Crane Defects',
@@ -207,7 +207,7 @@ export function getEquipmentPresentation(
                 safetySafeLabel: 'Safe to drive',
                 safetyDisclaimer:
                     'Any mobile crane attributes not displayed are certified safe by the crane operator',
-                filterPillLabel: '🏗️ Mobile Crane',
+                filterPillLabel: 'Mobile Crane',
                 designatedBadgeLabel: 'Mobile Crane (Designated)',
             };
     }

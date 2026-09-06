@@ -9,6 +9,7 @@ import {
 } from '../components/index';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { HosScreen } from '../screens/HosScreen';
+import { OperatorDashboardScreen } from '../screens/OperatorDashboardScreen';
 import type { DispatchJob } from '../types/index';
 
 describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
@@ -233,7 +234,7 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(view.getByTestId('relief-handover-modal')).toBeTruthy();
         });
 
-        it('renders [ Change Unit ] button and opens ChangeUnitModal', async () => {
+        it('renders assigned vehicle card locked to dispatch assignment without self-serve unit change button', async () => {
             const view = await render(
                 <AssignedJobsListScreen
                     isLoading={false}
@@ -245,13 +246,12 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                 />,
             );
 
+            expect(view.getByTestId('hero-vehicle-card')).toBeTruthy();
+            expect(view.getByText('CRN-101')).toBeTruthy();
+            expect(view.getByText('ASSIGNED VEHICLE')).toBeTruthy();
             expect(
-                view.getByTestId('vehicle-card-change-unit-btn'),
-            ).toBeTruthy();
-            await fireEvent.press(
-                view.getByTestId('vehicle-card-change-unit-btn'),
-            );
-            expect(view.getByTestId('change-unit-modal')).toBeTruthy();
+                view.queryByTestId('vehicle-card-change-unit-btn'),
+            ).toBeNull();
         });
 
         it('renders I am On Site button on accepted jobs and triggers OnSiteConfirmationModal', async () => {
@@ -269,6 +269,139 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(view.getByTestId('start-unit-on-site-btn')).toBeTruthy();
             await fireEvent.press(view.getByTestId('start-unit-on-site-btn'));
             expect(view.getByTestId('on-site-confirmation-modal')).toBeTruthy();
+        });
+
+        it('intercepts off_duty selection from DutyStatusSelectorModal with EndShiftSafeguardModal when linked to an active unit', async () => {
+            const onChangeDutyStatus = jest.fn();
+            const onToggleShift = jest.fn();
+            const onReleaseUnit = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[mockAcceptedJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onRefresh={jest.fn()}
+                    onReleaseUnit={onReleaseUnit}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    onToggleShift={onToggleShift}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '08:00 AM',
+                        hoursElapsed: 5.0,
+                    }}
+                />,
+            );
+
+            // Open DutyStatusSelectorModal via persistent duty status bar
+            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
+            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
+
+            // Select off_duty
+            await fireEvent.press(
+                view.getByLabelText(/Off Duty — Shift Complete/i),
+            );
+
+            // Confirm selection
+            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
+
+            // EndShiftSafeguardModal should appear immediately because linked to asset
+            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
+            expect(view.getByText(/You are still linked to/i)).toBeTruthy();
+            expect(onChangeDutyStatus).not.toHaveBeenCalled();
+            expect(onToggleShift).not.toHaveBeenCalled();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+
+            // When cancelling, shift is not ended
+            await fireEvent.press(view.getByTestId('cancel-safeguard-btn'));
+            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+            expect(onChangeDutyStatus).not.toHaveBeenCalled();
+            expect(onToggleShift).not.toHaveBeenCalled();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+
+            // Reopen and confirm release
+            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
+            await fireEvent.press(
+                view.getByLabelText(/Off Duty — Shift Complete/i),
+            );
+            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
+            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
+
+            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
+            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
+            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
+            expect(onChangeDutyStatus).toHaveBeenCalledWith(
+                'off_duty',
+                undefined,
+                undefined,
+            );
+        });
+
+        it('intercepts off_duty selection in OperatorDashboardScreen with EndShiftSafeguardModal and releases unit on confirmation', async () => {
+            const onChangeDutyStatus = jest.fn();
+            const onToggleShift = jest.fn();
+            const onReleaseUnit = jest.fn();
+
+            const view = await render(
+                <OperatorDashboardScreen
+                    isLoading={false}
+                    jobs={[mockAcceptedJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onDiscardCommand={jest.fn()}
+                    onLogout={jest.fn()}
+                    onOpenDocuments={jest.fn()}
+                    onOpenDvir={jest.fn()}
+                    onOpenForms={jest.fn()}
+                    onOpenRental={jest.fn()}
+                    onOpenRoutes={jest.fn()}
+                    onOpenSales={jest.fn()}
+                    onOpenVehicle={jest.fn()}
+                    onRefresh={jest.fn()}
+                    onReleaseUnit={onReleaseUnit}
+                    onRetryCommand={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    onToggleShift={onToggleShift}
+                    outboxCommands={[]}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '08:00 AM',
+                        hoursElapsed: 4.5,
+                    }}
+                />,
+            );
+
+            // Open duty modal by tapping persistent duty bar
+            await fireEvent.press(view.getByTestId('hero-duty-status-bar'));
+            expect(view.getByTestId('duty-status-sheet')).toBeTruthy();
+
+            // Select Off Duty
+            await fireEvent.press(
+                view.getByLabelText(/Off Duty — Shift Complete/i),
+            );
+
+            // Confirm duty selection
+            await fireEvent.press(view.getByTestId('confirm-duty-status-btn'));
+
+            // Intercept modal prompts
+            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+            expect(onToggleShift).not.toHaveBeenCalled();
+            expect(onChangeDutyStatus).not.toHaveBeenCalled();
+
+            // Confirm release
+            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
+            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
+            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
+            expect(onChangeDutyStatus).toHaveBeenCalledWith(
+                'off_duty',
+                undefined,
+                undefined,
+            );
         });
     });
 
@@ -314,6 +447,137 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                 undefined,
                 undefined,
             );
+        });
+
+        it('provides a compliant End Shift / Clock Out flow guarded by EndShiftSafeguardModal', async () => {
+            const onUpdateDutyStatus = jest.fn();
+            const onReleaseUnit = jest.fn();
+            const onToggleShift = jest.fn();
+            const onEndShift = jest.fn();
+
+            const view = await render(
+                <HosScreen
+                    linkedAssetCode="CRN-101"
+                    onEndShift={onEndShift}
+                    onReleaseUnit={onReleaseUnit}
+                    onToggleShift={onToggleShift}
+                    onUpdateDutyStatus={onUpdateDutyStatus}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '08:00 AM',
+                        hoursElapsed: 4.5,
+                    }}
+                />,
+            );
+
+            // Dedicated End Shift / Clock Out section is visible
+            expect(view.getByTestId('hos-end-shift-card')).toBeTruthy();
+            expect(view.getByText('END SHIFT & CLOCK OUT')).toBeTruthy();
+            expect(view.getByText('Linked Equipment: CRN-101')).toBeTruthy();
+
+            // Tap End Shift & Clock Out button
+            const endShiftBtn = view.getByTestId('hos-end-shift-btn');
+            await fireEvent.press(endShiftBtn);
+
+            // Intercepted by EndShiftSafeguardModal
+            expect(view.getByTestId('end-shift-safeguard-modal')).toBeTruthy();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+            expect(onUpdateDutyStatus).not.toHaveBeenCalled();
+
+            // Cancel
+            await fireEvent.press(view.getByTestId('cancel-safeguard-btn'));
+            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+            expect(onReleaseUnit).not.toHaveBeenCalled();
+
+            // Tap again and confirm release
+            await fireEvent.press(view.getByTestId('hos-end-shift-btn'));
+            await fireEvent.press(view.getByTestId('confirm-safeguard-btn'));
+
+            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
+            expect(onUpdateDutyStatus).toHaveBeenCalledWith(
+                'off_duty',
+                undefined,
+                undefined,
+            );
+            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
+            expect(onEndShift).toHaveBeenCalled();
+            expect(view.getByTestId('shift-completed-notice')).toBeTruthy();
+        });
+
+        it('ends shift directly without safeguard modal in HosScreen when linkedAssetCode is null', async () => {
+            const onUpdateDutyStatus = jest.fn();
+            const onToggleShift = jest.fn();
+            const onEndShift = jest.fn();
+
+            const view = await render(
+                <HosScreen
+                    linkedAssetCode={null}
+                    onEndShift={onEndShift}
+                    onToggleShift={onToggleShift}
+                    onUpdateDutyStatus={onUpdateDutyStatus}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '08:00 AM',
+                        hoursElapsed: 4.5,
+                    }}
+                />,
+            );
+
+            // Linked asset pill is not rendered when null
+            expect(view.queryByText(/Linked Equipment:/i)).toBeNull();
+
+            // Press End Shift & Clock Out
+            await fireEvent.press(view.getByTestId('hos-end-shift-btn'));
+
+            // No modal appears; completes directly
+            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+            expect(onUpdateDutyStatus).toHaveBeenCalledWith(
+                'off_duty',
+                undefined,
+                undefined,
+            );
+            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
+            expect(onEndShift).toHaveBeenCalled();
+            expect(view.getByTestId('shift-completed-notice')).toBeTruthy();
+        });
+
+        it('ends shift directly without safeguard modal in HosScreen when confirming off_duty from duty options and linkedAssetCode is null', async () => {
+            const onUpdateDutyStatus = jest.fn();
+            const onToggleShift = jest.fn();
+            const onEndShift = jest.fn();
+
+            const view = await render(
+                <HosScreen
+                    linkedAssetCode={null}
+                    onEndShift={onEndShift}
+                    onToggleShift={onToggleShift}
+                    onUpdateDutyStatus={onUpdateDutyStatus}
+                    shiftInfo={{
+                        status: 'on_shift',
+                        dutyStatus: 'operating',
+                        startedAt: '08:00 AM',
+                        hoursElapsed: 4.5,
+                    }}
+                />,
+            );
+
+            // Select Off Duty
+            await fireEvent.press(view.getByTestId('duty-option-off_duty'));
+
+            // Click Update & Certify Duty Status
+            await fireEvent.press(view.getByTestId('confirm-hos-btn'));
+
+            // No modal appears; completes directly
+            expect(view.queryByTestId('end-shift-safeguard-modal')).toBeNull();
+            expect(onUpdateDutyStatus).toHaveBeenCalledWith(
+                'off_duty',
+                undefined,
+                undefined,
+            );
+            expect(onToggleShift).toHaveBeenCalledWith('off_shift');
+            expect(onEndShift).toHaveBeenCalled();
         });
     });
 });

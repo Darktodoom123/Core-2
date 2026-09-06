@@ -35,7 +35,9 @@ class CalculateHosClocksQuery
      *     timeline_segments: array<int, array<string, mixed>>,
      *     recent_logs: array<int, array<string, mixed>>,
      *     active_demurrage: bool,
-     *     is_certified: bool
+     *     is_certified: bool,
+     *     fatigue_status: string,
+     *     dole_warning: bool
      * }
      */
     public function execute(User $user): array
@@ -66,7 +68,7 @@ class CalculateHosClocksQuery
 
             $end = $log->ended_at ?? $now;
 
-            return (int) max(0, $end->diffInMinutes($log->started_at));
+            return (int) max(0, $log->started_at->diffInMinutes($end));
         });
 
         $cycleRemainingMinutes = max(0, self::MAX_CYCLE_MINUTES - $cycleMinutesLogged);
@@ -95,17 +97,19 @@ class CalculateHosClocksQuery
                 'recent_logs' => $this->buildRecentLogs($user, $todayStart),
                 'active_demurrage' => false,
                 'is_certified' => $lastShift !== null ? $lastShift->is_certified : false,
+                'fatigue_status' => 'normal',
+                'dole_warning' => false,
             ];
         }
 
-        $shiftElapsedMinutes = (int) max(0, $now->diffInMinutes($activeShift->started_at));
+        $shiftElapsedMinutes = (int) max(0, $activeShift->started_at->diffInMinutes($now));
         $hoursElapsed = round($shiftElapsedMinutes / 60, 2);
 
         // Active duty
         /** @var OperatorDutyLog|null $activeDutyLog */
         $activeDutyLog = $activeShift->activeDutyLog;
         $currentDuty = $activeDutyLog !== null ? $activeDutyLog->duty_status : DutyStatus::OPERATING;
-        $activeDutyDuration = $activeDutyLog !== null ? (int) max(0, $now->diffInMinutes($activeDutyLog->started_at)) : 0;
+        $activeDutyDuration = $activeDutyLog !== null ? (int) max(0, $activeDutyLog->started_at->diffInMinutes($now)) : 0;
 
         // Current drive/operating sum
         $operatingMinutes = $activeShift->operating_minutes + ($currentDuty === DutyStatus::OPERATING ? $activeDutyDuration : 0);
@@ -119,6 +123,15 @@ class CalculateHosClocksQuery
         $breakMinutesLogged = $activeShift->break_minutes;
         $continuousWork = $breakMinutesLogged > 0 ? max(0, $shiftElapsedMinutes - ($breakMinutesLogged * 2)) : $shiftElapsedMinutes;
         $breakCountdownMinutes = max(0, self::MAX_CONTINUOUS_WORK_BEFORE_BREAK_MINUTES - $continuousWork);
+
+        // Fatigue status & DOLE warning
+        $doleWarning = $hoursElapsed >= 9.0;
+        $fatigueStatus = match (true) {
+            $shiftWindowRemainingMinutes <= 0 || $driveRemainingMinutes <= 0 || $breakCountdownMinutes <= 0 || $cycleRemainingMinutes <= 0 => 'violation',
+            $shiftWindowRemainingMinutes <= 60 || $driveRemainingMinutes <= 60 || $breakCountdownMinutes <= 30 || $hoursElapsed >= 10.0 => 'critical',
+            $shiftWindowRemainingMinutes <= 120 || $driveRemainingMinutes <= 120 || $breakCountdownMinutes <= 60 || $hoursElapsed >= 8.0 => 'warning',
+            default => 'normal',
+        };
 
         return [
             'shift_active' => true,
@@ -136,6 +149,8 @@ class CalculateHosClocksQuery
             'recent_logs' => $this->buildRecentLogs($user, $todayStart),
             'active_demurrage' => $currentDuty === DutyStatus::STANDBY && ($activeDutyLog !== null && $activeDutyLog->is_demurrage_billable),
             'is_certified' => $activeShift->is_certified,
+            'fatigue_status' => $fatigueStatus,
+            'dole_warning' => $doleWarning,
         ];
     }
 
@@ -154,7 +169,7 @@ class CalculateHosClocksQuery
 
         foreach ($logs as $log) {
             $endTime = $log->ended_at ?? $now;
-            $duration = $log->duration_minutes ?? (int) max(0, $endTime->diffInMinutes($log->started_at));
+            $duration = $log->duration_minutes ?? (int) max(0, $log->started_at->diffInMinutes($endTime));
 
             $segments[] = [
                 'id' => $log->id,
@@ -181,28 +196,34 @@ class CalculateHosClocksQuery
      */
     private function buildRecentLogs(User $user, Carbon $startOfDay): array
     {
+        $now = Carbon::now();
+
         return OperatorDutyLog::query()
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $startOfDay)
             ->orderBy('started_at', 'desc')
             ->limit(10)
             ->get()
-            ->map(fn (OperatorDutyLog $log): array => [
-                'id' => $log->id,
-                'duty_status' => $log->duty_status->value,
-                'duty_label' => $log->duty_status->label(),
-                'standby_reason' => $log->standby_reason?->value,
-                'is_demurrage_billable' => $log->is_demurrage_billable,
-                'started_at' => $log->started_at->format('h:i A'),
-                'ended_at' => $log->ended_at ? $log->ended_at->format('h:i A') : 'Current',
-                'duration_formatted' => sprintf(
-                    '%dh %02dm',
-                    floor(($log->duration_minutes ?? 0) / 60),
-                    ($log->duration_minutes ?? 0) % 60,
-                ),
-                'location_name' => $log->location_name ?? 'Active Site',
-                'remarks' => $log->remarks,
-            ])
+            ->map(function (OperatorDutyLog $log) use ($now): array {
+                $durationMinutes = $log->duration_minutes ?? (int) max(0, $log->started_at->diffInMinutes($log->ended_at ?? $now));
+
+                return [
+                    'id' => $log->id,
+                    'duty_status' => $log->duty_status->value,
+                    'duty_label' => $log->duty_status->label(),
+                    'standby_reason' => $log->standby_reason?->value,
+                    'is_demurrage_billable' => $log->is_demurrage_billable,
+                    'started_at' => $log->started_at->format('h:i A'),
+                    'ended_at' => $log->ended_at ? $log->ended_at->format('h:i A') : 'Current',
+                    'duration_formatted' => sprintf(
+                        '%dh %02dm',
+                        floor($durationMinutes / 60),
+                        $durationMinutes % 60,
+                    ),
+                    'location_name' => $log->location_name ?? 'Active Site',
+                    'remarks' => $log->remarks,
+                ];
+            })
             ->all();
     }
 }

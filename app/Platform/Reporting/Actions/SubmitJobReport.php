@@ -21,7 +21,7 @@ class SubmitJobReport
     ) {}
 
     /**
-     * @param  array{dispatch_job_id: int, started_at?: string|null, ended_at?: string|null, ending_meter_value?: float|int|null, meter_type?: string|null, latitude?: float|null, longitude?: float|null, work_summary: string, remarks?: string|null, attachments?: array<int, mixed>}  $data
+     * @param  array{dispatch_job_id: int, started_at?: string|null, ended_at?: string|null, ending_meter_value?: float|int|null, meter_type?: string|null, latitude?: float|null, longitude?: float|null, work_summary: string, remarks?: string|null, signer_name?: string|null, signer_role?: string|null, signed_at?: string|null, attachments?: array<int, mixed>}  $data
      */
     public function execute(User $author, array $data): JobReport
     {
@@ -39,6 +39,9 @@ class SubmitJobReport
                 'longitude' => $data['longitude'] ?? null,
                 'work_summary' => $data['work_summary'],
                 'remarks' => $data['remarks'] ?? null,
+                'signer_name' => $data['signer_name'] ?? null,
+                'signer_role' => $data['signer_role'] ?? null,
+                'signed_at' => $data['signed_at'] ?? null,
                 'status' => JobReportStatus::Submitted,
                 'submitted_at' => now(),
             ]);

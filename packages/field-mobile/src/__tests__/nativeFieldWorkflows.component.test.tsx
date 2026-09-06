@@ -321,6 +321,61 @@ describe('Native Field Workflows Component Tests', () => {
             );
         });
 
+        it('supports selecting safety critical severity and renders active work orders with status pills', async () => {
+            const onLog = jest.fn();
+            const view = await render(
+                <MaintenanceWorkOrderTab
+                    assetCode="CRN-07"
+                    assetName="50t Crane"
+                    onLogWorkOrder={onLog}
+                    technicianName="Alex Rivera"
+                    workOrders={[
+                        {
+                            id: 'WO-9901',
+                            assetCode: 'CRN-07',
+                            assetName: '50t Crane',
+                            defectTitle: 'Hoist wire rope kink',
+                            description: 'Found kink on main hoist wire rope.',
+                            severity: 'safety_critical',
+                            status: 'in_progress',
+                            reportedBy: 'Alex Rivera',
+                            createdAt: '2026-09-06T08:00:00.000Z',
+                        },
+                    ]}
+                />,
+            );
+
+            // Verify active work order card displays formatted status and severity badge
+            expect(view.getByTestId('wo-card-WO-9901')).toBeTruthy();
+            expect(view.getByText('WO-9901')).toBeTruthy();
+            expect(view.getByText('IN PROGRESS')).toBeTruthy();
+            expect(
+                view.getAllByText('SAFETY CRITICAL').length,
+            ).toBeGreaterThanOrEqual(2);
+            expect(view.getByText('Reported by Alex Rivera')).toBeTruthy();
+
+            // Select Safety Critical option in the form
+            await fireEvent.press(
+                view.getByLabelText('Severity safety critical'),
+            );
+            await fireEvent.changeText(
+                view.getByTestId('wo-title-input'),
+                'Hydraulic line rupture',
+            );
+            await fireEvent.changeText(
+                view.getByTestId('wo-desc-input'),
+                'High pressure burst near outrigger #3',
+            );
+            await fireEvent.press(view.getByTestId('submit-work-order-btn'));
+
+            expect(onLog).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    defectTitle: 'Hydraulic line rupture',
+                    severity: 'safety_critical',
+                }),
+            );
+        });
+
         it('certifies safe release post-repair', async () => {
             const onRelease = jest.fn();
             const view = await render(

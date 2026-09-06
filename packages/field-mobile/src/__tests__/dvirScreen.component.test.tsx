@@ -1,5 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
+import { Alert } from 'react-native';
 import { DvirScreen } from '../screens/DvirScreen';
 import { FieldApiClient } from '../services/apiClient';
 import { ThemeProvider } from '../theme';
@@ -472,6 +474,102 @@ describe('DvirScreen Component & Workflows', () => {
         // Server-derived / forbidden-on-create fields should NOT be sent
         expect(capturedBody.critical_defects_count).toBeUndefined();
         expect(capturedBody.completed_at).toBeUndefined();
+    });
+
+    it('submits completed DVIR with walkaround photos when photos are captured', async () => {
+        let capturedBody: any = null;
+        const mockFetch = jest
+            .fn()
+            .mockImplementation(async (url: string, init: any) => {
+                if (
+                    url.includes('/api/v1/dvir/inspections') &&
+                    init?.method === 'POST'
+                ) {
+                    capturedBody = JSON.parse(init.body);
+
+                    return {
+                        ok: true,
+                        status: 201,
+                        json: async () => ({
+                            message: 'DVIR recorded successfully',
+                            data: {
+                                id: 'DVIR-000099',
+                                internal_id: 99,
+                                type: capturedBody.inspection_type,
+                                asset_code: capturedBody.asset_code,
+                                asset_name: capturedBody.asset_name,
+                                checks: [],
+                                photos: capturedBody.photos || [],
+                                completed_at: new Date().toISOString(),
+                            },
+                        }),
+                    };
+                }
+
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ data: { days: 30, inspections: [] } }),
+                };
+            });
+
+        const apiClient = new FieldApiClient({
+            baseUrl: 'https://api.example.com',
+            getToken: () => 'test-token',
+            fetchFn: mockFetch as any,
+        });
+
+        jest.spyOn(Alert, 'alert').mockImplementation((title, msg, buttons) => {
+            buttons?.[0]?.onPress?.();
+        });
+
+        jest.spyOn(
+            ImagePicker,
+            'requestCameraPermissionsAsync',
+        ).mockResolvedValue({
+            status: 'granted',
+            canAskAgain: true,
+            expires: 'never',
+            granted: true,
+        } as any);
+
+        jest.spyOn(ImagePicker, 'launchCameraAsync').mockResolvedValue({
+            canceled: false,
+            assets: [
+                {
+                    uri: 'file:///photo_driver_side.jpg',
+                    fileName: 'driver_side_photo.jpg',
+                    fileSize: 1024,
+                    base64: 'fake_base64_photo_data',
+                    width: 800,
+                    height: 600,
+                },
+            ],
+        } as any);
+
+        const view = await render(
+            <DvirScreen
+                apiClient={apiClient}
+                assetCode="ALB-CRN-050"
+                assetName="50T Tadano All-Terrain Crane"
+            />,
+        );
+
+        // Click driver side photo slot
+        await fireEvent.press(view.getByTestId('slot-driver-side'));
+
+        // Complete DVIR
+        await fireEvent.press(view.getByTestId('complete-dvir-button'));
+
+        await waitFor(() => {
+            expect(capturedBody).not.toBeNull();
+            expect(capturedBody.photos).toBeDefined();
+            expect(capturedBody.photos.length).toBe(1);
+            expect(capturedBody.photos[0].angle).toBe('driver_side');
+            expect(capturedBody.photos[0].base64).toBe(
+                'fake_base64_photo_data',
+            );
+        });
     });
 
     it('falls back to local history and shows warning when server history fetch fails', async () => {

@@ -194,7 +194,7 @@ describe('equipmentClassification utility', () => {
         it('returns proper presentation for tower crane', () => {
             const pres = getEquipmentPresentation('tower_crane');
             assert.equal(pres.type, 'tower_crane');
-            assert.equal(pres.icon, '🗼');
+            assert.equal(pres.icon, 'crane');
             assert.equal(pres.modalTitle, 'Add Tower Crane Defects');
             assert.equal(pres.defectsSectionTitle, 'Add crane tower defects');
             assert.equal(pres.safetySafeLabel, 'Safe to operate');
@@ -205,7 +205,7 @@ describe('equipmentClassification utility', () => {
         it('returns proper presentation for mobile crane', () => {
             const pres = getEquipmentPresentation('mobile_crane');
             assert.equal(pres.type, 'mobile_crane');
-            assert.equal(pres.icon, '🏗️');
+            assert.equal(pres.icon, 'crane');
             assert.equal(pres.modalTitle, 'Add Mobile Crane Defects');
             assert.equal(pres.defectsSectionTitle, 'Add mobile crane defects');
             assert.equal(pres.safetySafeLabel, 'Safe to drive');
@@ -216,7 +216,7 @@ describe('equipmentClassification utility', () => {
         it('returns proper presentation for carrier / vehicle', () => {
             const pres = getEquipmentPresentation('carrier');
             assert.equal(pres.type, 'carrier');
-            assert.equal(pres.icon, '🚛');
+            assert.equal(pres.icon, 'truck');
             assert.equal(pres.modalTitle, 'Add Vehicle Defects');
             assert.equal(pres.defectsSectionTitle, 'Add vehicle defects');
             assert.equal(pres.safetySafeLabel, 'Safe to drive');

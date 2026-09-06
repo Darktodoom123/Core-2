@@ -180,7 +180,7 @@ describe('HeavyCraneDriveModeScreen Component & Workflows', () => {
             ),
         ).toBeTruthy();
         expect(view.getByTestId('lane-guidance-bar')).toBeTruthy();
-        expect(view.getByText('🚛 WIDE ESCORT')).toBeTruthy();
+        expect(view.getByText('WIDE ESCORT')).toBeTruthy();
 
         // Advance to Turn 2
         const nextBtn = view.getByTestId('turn-next-btn');

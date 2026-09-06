@@ -350,7 +350,7 @@ final class FieldDispatchJobController extends Controller
             },
             'assetAssignments' => fn ($query) => $query
                 ->open()
-                ->with('asset:id,code,name,kind'),
+                ->with('asset'),
         ];
     }
 

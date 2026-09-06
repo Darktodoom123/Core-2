@@ -335,19 +335,22 @@ describe('FieldApiClient', () => {
             humidity_percent: 75,
             weather_description: 'Clear Sky',
             safety_level: 'safe_normal',
-            safety_message: 'Normal Wind: Standard hoisting permitted (< 36 km/h).',
+            safety_message:
+                'Normal Wind: Standard hoisting permitted (< 36 km/h).',
             source: 'open_meteo',
             fetched_at: '2026-09-05T19:00:00Z',
         };
 
         const mockFetch = async (input: RequestInfo | URL) => {
             const url = String(input);
+
             if (url.includes('/api/v1/telemetry/weather')) {
                 return new Response(
                     JSON.stringify({ data: mockBackendTelemetry }),
                     { status: 200 },
                 );
             }
+
             throw new Error('Not found');
         };
 
@@ -377,12 +380,13 @@ describe('FieldApiClient', () => {
 
         const mockFetch = async (input: RequestInfo | URL) => {
             const url = String(input);
+
             if (url.includes('api.open-meteo.com')) {
-                return new Response(
-                    JSON.stringify(mockOpenMeteoResponse),
-                    { status: 200 },
-                );
+                return new Response(JSON.stringify(mockOpenMeteoResponse), {
+                    status: 200,
+                });
             }
+
             // Backend server fails/times out
             throw new Error('Network request failed: Connection refused');
         };

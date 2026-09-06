@@ -24,6 +24,7 @@ export class NativeLocationAdapter {
         }
 
         let bgGranted = false;
+
         try {
             const bg = await Location.getBackgroundPermissionsAsync();
             bgGranted = bg.granted;
@@ -79,7 +80,7 @@ export class NativeLocationAdapter {
                             }),
                         (err) => reject(new Error(err.message)),
                         {
-                            enableHighAccuracy: true,
+                            enableHighAccuracy: !isStationary,
                             timeout: 5000,
                             maximumAge: 60000,
                         },
@@ -115,7 +116,9 @@ export class NativeLocationAdapter {
         // 2. Fast live fix with 3.5s timeout; falls back to any last known fix if indoors/slow
         try {
             const livePromise = Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.Balanced,
+                accuracy: isStationary
+                    ? Location.Accuracy.Low
+                    : Location.Accuracy.Balanced,
                 mayShowUserSettingsDialog: true,
             });
 

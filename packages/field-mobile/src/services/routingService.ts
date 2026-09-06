@@ -66,28 +66,28 @@ export interface LocationPreset {
 export const FLEET_ORIGIN_PRESETS: LocationPreset[] = [
     {
         id: 'current_gps',
-        label: '📍 Current Location (GPS)',
+        label: 'Current Location (GPS)',
         description: 'Live device satellite position',
         coords: [120.9842, 14.5995],
         type: 'origin',
     },
     {
         id: 'manila_yard',
-        label: '🏗️ Alibaton Main Equipment Yard (Manila)',
+        label: 'Alibaton Main Equipment Yard (Manila)',
         description: 'Heavy Fleet Depot & Dispatch base',
         coords: [120.9842, 14.5995],
         type: 'origin',
     },
     {
         id: 'batangas_port',
-        label: '⚓ South Staging Facility (Batangas Port)',
+        label: 'South Staging Facility (Batangas Port)',
         description: 'Heavy coastal rig marshaling staging point',
         coords: [121.085, 13.805],
         type: 'origin',
     },
     {
         id: 'calamba_staging',
-        label: '🚛 SLEX Calamba Interchange Staging Base',
+        label: 'SLEX Calamba Interchange Staging Base',
         description: 'South Luzon heavy vehicle escort meetup area',
         coords: [121.135, 14.205],
         type: 'origin',
@@ -222,7 +222,7 @@ function mapManeuverToInstruction(
         return {
             instruction: `Arrive at designated site entrance on ${road}. Proceed to staging bay.`,
             icon: 'flag',
-            arrow: '🏁',
+            arrow: '⚑',
             laneIndex: 1,
         };
     }

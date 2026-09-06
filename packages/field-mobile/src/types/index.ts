@@ -52,6 +52,10 @@ export interface AssetAssignment {
     asset_kind: string;
     assigned_at?: string | null;
     active_until?: string | null;
+    model?: string | null;
+    rated_capacity?: string | null;
+    engine_hours?: number | null;
+    attachments?: string[] | null;
 }
 
 export interface ProgressionStep {
@@ -214,7 +218,8 @@ export type OutboxCommandType =
     | 'transition_status'
     | 'share_location'
     | 'activate_sos'
-    | 'submit_job_report';
+    | 'submit_job_report'
+    | 'submit_dvir';
 
 export interface JobReportCommandPayload {
     dispatch_job_id: number;
@@ -437,6 +442,14 @@ export interface DvirInspectionRecord {
     signatureCaptured: boolean;
     remarks?: string | null;
     completedAt: string;
+    photos?: Array<{
+        id?: number;
+        angle: string;
+        file_name?: string;
+        url?: string;
+        file_size_bytes?: number;
+        created_at?: string;
+    }>;
 }
 
 export type LocationSharingTone = 'active' | 'queued' | 'paused' | 'offline';
@@ -643,4 +656,59 @@ export interface WeatherTelemetry {
     safety_message: string;
     source: string;
     fetched_at: string;
+}
+
+export interface EquipmentHandoverInitiateData {
+    handover_token: string;
+    pin: string;
+    expires_at: string;
+    asset_code: string;
+    relief_operator?: {
+        id: number;
+        name: string;
+    } | null;
+}
+
+export interface EquipmentHandoverInitiateResponse extends EquipmentHandoverInitiateData {
+    message?: string;
+    data?: EquipmentHandoverInitiateData;
+}
+
+export interface EquipmentHandoverClaimResponse {
+    dispatch_job_id: number;
+    asset_code: string;
+    claimed_by_user_id: number;
+    claimed_at: string;
+    message?: string;
+    data?: {
+        dispatch_job_id: number;
+        asset_code: string;
+        claimed_by_user_id: number;
+        claimed_at: string;
+    };
+}
+
+export interface HosClocks {
+    shift_active: boolean;
+    shift_status: string;
+    current_duty_status: string;
+    started_at: string | null;
+    hours_elapsed: number;
+    drive_remaining_minutes: number;
+    shift_window_remaining_minutes: number;
+    break_countdown_minutes: number;
+    cycle_remaining_minutes: number;
+    cycle_accumulated_minutes: number;
+    cycle_limit_minutes: number;
+    timeline_segments?: Array<Record<string, unknown>>;
+    recent_logs?: Array<Record<string, unknown>>;
+    active_demurrage?: boolean;
+    is_certified?: boolean;
+    fatigue_status?: string;
+    dole_warning?: boolean;
+}
+
+export interface CurrentHosShiftResponse {
+    shift: Record<string, unknown> | null;
+    clocks: HosClocks;
 }

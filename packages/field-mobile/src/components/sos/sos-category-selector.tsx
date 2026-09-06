@@ -70,32 +70,29 @@ export const EMERGENCY_CATEGORIES: EmergencyCategoryConfig[] = [
 export interface SituationChipItem {
     id: string;
     label: string;
-    emoji: string;
     icon: IconName;
+    emoji?: string;
 }
 
 export const SITUATION_CHIPS: SituationChipItem[] = [
     {
         id: 'worker_injured',
         label: 'Worker Injured',
-        emoji: '🤕',
         icon: 'alert-circle',
     },
     {
         id: 'power_line',
         label: 'Power Line Contact',
-        emoji: '⚡',
         icon: 'flash',
     },
-    { id: 'tipping_risk', label: 'Tipping Risk', emoji: '🏗️', icon: 'crane' },
+    { id: 'tipping_risk', label: 'Tipping Risk', icon: 'crane' },
     {
         id: 'hydraulic_spill',
         label: 'Hydraulic Spill',
-        emoji: '🛢️',
         icon: 'fuel',
     },
-    { id: 'asset_immobile', label: 'Asset Stuck', emoji: '🚛', icon: 'truck' },
-    { id: 'ambulance_needed', label: 'Ambulance', emoji: '🚑', icon: 'alert' },
+    { id: 'asset_immobile', label: 'Asset Stuck', icon: 'truck' },
+    { id: 'ambulance_needed', label: 'Ambulance', icon: 'alert' },
 ];
 
 export interface SosCategorySelectorProps {
@@ -347,12 +344,19 @@ export const SosCategorySelector: React.FC<SosCategorySelectorProps> = ({
                                 ]}
                                 testID={`sos-chip-${chip.id}`}
                             >
-                                <Text
-                                    pointerEvents="none"
-                                    style={styles.chipEmoji}
-                                >
-                                    {chip.emoji}
-                                </Text>
+                                <Icon
+                                    color={
+                                        isChipActive
+                                            ? isDarkHud
+                                                ? '#FBBF24'
+                                                : colors.amberDark
+                                            : isDarkHud
+                                              ? colors.hudTextDim
+                                              : colors.muted
+                                    }
+                                    name={chip.icon}
+                                    size={14}
+                                />
                                 <Text
                                     pointerEvents="none"
                                     style={[

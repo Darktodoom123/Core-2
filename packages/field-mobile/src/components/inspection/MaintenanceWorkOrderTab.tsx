@@ -167,6 +167,8 @@ export const MaintenanceWorkOrderTab: React.FC<
                             ] as MaintenanceSeverity[]
                         ).map((sev) => {
                             const isSelected = severity === sev;
+                            const isCritical = sev === 'safety_critical';
+                            const isMajor = sev === 'major';
 
                             return (
                                 <Pressable
@@ -177,36 +179,87 @@ export const MaintenanceWorkOrderTab: React.FC<
                                     style={({ pressed }) => [
                                         styles.severityOption,
                                         isDarkHud && styles.darkSeverityOption,
+                                        isCritical &&
+                                            (isDarkHud
+                                                ? styles.darkCriticalUnselected
+                                                : styles.criticalUnselected),
                                         isSelected &&
-                                            styles.severityOptionSelected,
+                                            (isCritical
+                                                ? styles.criticalSelected
+                                                : isMajor
+                                                  ? styles.majorSelected
+                                                  : styles.minorSelected),
                                         isSelected &&
                                             isDarkHud &&
-                                            (sev === 'safety_critical'
+                                            (isCritical
                                                 ? styles.darkCriticalSelected
-                                                : sev === 'major'
+                                                : isMajor
                                                   ? styles.darkMajorSelected
                                                   : styles.darkMinorSelected),
                                         pressed && styles.pressed,
                                     ]}
                                 >
-                                    <Text
-                                        style={[
-                                            styles.severityText,
-                                            isDarkHud &&
-                                                styles.darkSeverityText,
-                                            isSelected &&
-                                                styles.severityTextSelected,
-                                            isSelected &&
+                                    <View style={styles.severityInner}>
+                                        <Icon
+                                            color={
+                                                isSelected
+                                                    ? isDarkHud
+                                                        ? isCritical
+                                                            ? '#F87171'
+                                                            : isMajor
+                                                              ? '#FBBF24'
+                                                              : '#38BDF8'
+                                                        : isCritical
+                                                          ? colors.redDark
+                                                          : isMajor
+                                                            ? colors.amberDark
+                                                            : colors.blueDark
+                                                    : isDarkHud
+                                                      ? isCritical
+                                                          ? '#EF4444'
+                                                          : colors.hudTextDim
+                                                      : isCritical
+                                                        ? colors.red
+                                                        : colors.muted
+                                            }
+                                            name={
+                                                isCritical
+                                                    ? 'alert'
+                                                    : isMajor
+                                                      ? 'alert-circle'
+                                                      : 'tools'
+                                            }
+                                            size={13}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.severityText,
                                                 isDarkHud &&
-                                                (sev === 'safety_critical'
-                                                    ? styles.darkCriticalText
-                                                    : sev === 'major'
-                                                      ? styles.darkMajorText
-                                                      : styles.darkMinorText),
-                                        ]}
-                                    >
-                                        {sev.replace('_', ' ').toUpperCase()}
-                                    </Text>
+                                                    styles.darkSeverityText,
+                                                isCritical &&
+                                                    (isDarkHud
+                                                        ? styles.darkCriticalUnselectedText
+                                                        : styles.criticalUnselectedText),
+                                                isSelected &&
+                                                    (isCritical
+                                                        ? styles.criticalText
+                                                        : isMajor
+                                                          ? styles.majorText
+                                                          : styles.minorText),
+                                                isSelected &&
+                                                    isDarkHud &&
+                                                    (isCritical
+                                                        ? styles.darkCriticalText
+                                                        : isMajor
+                                                          ? styles.darkMajorText
+                                                          : styles.darkMinorText),
+                                            ]}
+                                        >
+                                            {sev === 'safety_critical'
+                                                ? 'SAFETY CRITICAL'
+                                                : sev.toUpperCase()}
+                                        </Text>
+                                    </View>
                                 </Pressable>
                             );
                         })}
@@ -352,7 +405,8 @@ export const MaintenanceWorkOrderTab: React.FC<
                 ) : (
                     <View style={styles.woList}>
                         {workOrders.map((wo) => {
-                            const isResolved = wo.status === 'repaired';
+                            const isRepaired = wo.status === 'repaired';
+                            const isInProgress = wo.status === 'in_progress';
 
                             return (
                                 <View
@@ -376,31 +430,41 @@ export const MaintenanceWorkOrderTab: React.FC<
                                             <View
                                                 style={[
                                                     styles.statusPill,
-                                                    isResolved
+                                                    isRepaired
                                                         ? styles.statusResolvedPill
-                                                        : styles.statusOpenPill,
+                                                        : isInProgress
+                                                          ? styles.statusProgressPill
+                                                          : styles.statusOpenPill,
                                                     isDarkHud &&
-                                                        (isResolved
+                                                        (isRepaired
                                                             ? styles.darkStatusResolvedPill
-                                                            : styles.darkStatusOpenPill),
+                                                            : isInProgress
+                                                              ? styles.darkStatusProgressPill
+                                                              : styles.darkStatusOpenPill),
                                                 ]}
                                             >
                                                 <Text
                                                     style={[
                                                         styles.statusPillText,
-                                                        isResolved
+                                                        isRepaired
                                                             ? styles.statusResolvedPillText
-                                                            : styles.statusOpenPillText,
+                                                            : isInProgress
+                                                              ? styles.statusProgressPillText
+                                                              : styles.statusOpenPillText,
                                                         isDarkHud &&
-                                                            (isResolved
+                                                            (isRepaired
                                                                 ? styles.darkStatusResolvedPillText
-                                                                : styles.darkStatusOpenPillText),
+                                                                : isInProgress
+                                                                  ? styles.darkStatusProgressPillText
+                                                                  : styles.darkStatusOpenPillText),
                                                     ]}
                                                 >
-                                                    {wo.status.toUpperCase()}
+                                                    {wo.status
+                                                        .replace('_', ' ')
+                                                        .toUpperCase()}
                                                 </Text>
                                             </View>
-                                            <Text
+                                            <View
                                                 style={[
                                                     styles.woSeverityBadge,
                                                     wo.severity ===
@@ -418,10 +482,43 @@ export const MaintenanceWorkOrderTab: React.FC<
                                                             : styles.woMinor),
                                                 ]}
                                             >
-                                                {wo.severity
-                                                    .replace('_', ' ')
-                                                    .toUpperCase()}
-                                            </Text>
+                                                {wo.severity ===
+                                                    'safety_critical' && (
+                                                    <Icon
+                                                        color={
+                                                            isDarkHud
+                                                                ? '#F87171'
+                                                                : colors.redDark
+                                                        }
+                                                        name="alert"
+                                                        size={10}
+                                                    />
+                                                )}
+                                                <Text
+                                                    style={[
+                                                        styles.woSeverityText,
+                                                        wo.severity ===
+                                                            'safety_critical' &&
+                                                            (isDarkHud
+                                                                ? styles.darkWoCriticalText
+                                                                : styles.woCriticalText),
+                                                        wo.severity ===
+                                                            'major' &&
+                                                            (isDarkHud
+                                                                ? styles.darkWoMajorText
+                                                                : styles.woMajorText),
+                                                        wo.severity ===
+                                                            'minor' &&
+                                                            (isDarkHud
+                                                                ? styles.darkWoMinorText
+                                                                : styles.woMinorText),
+                                                    ]}
+                                                >
+                                                    {wo.severity
+                                                        .replace('_', ' ')
+                                                        .toUpperCase()}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
 
@@ -462,14 +559,20 @@ export const MaintenanceWorkOrderTab: React.FC<
                                         </View>
                                     ) : null}
 
-                                    <View style={styles.woFooterRow}>
+                                    <View
+                                        style={[
+                                            styles.woFooterRow,
+                                            isDarkHud && styles.darkWoFooterRow,
+                                        ]}
+                                    >
                                         <Text
+                                            ellipsizeMode="tail"
+                                            numberOfLines={1}
                                             style={[
                                                 styles.woMeta,
                                                 isDarkHud && styles.darkWoMeta,
                                             ]}
                                         >
-                                            Status: {wo.status.toUpperCase()} ·
                                             Reported by {wo.reportedBy}
                                         </Text>
                                         <Text
@@ -621,49 +724,97 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flex: 1,
         justifyContent: 'center',
-        minHeight: 38,
-        paddingVertical: 8,
+        minHeight: 50,
+        paddingHorizontal: 4,
+        paddingVertical: 6,
     },
     darkSeverityOption: {
         backgroundColor: colors.surfaceDark,
         borderColor: colors.hudBorder,
     },
-    severityOptionSelected: {
+    criticalUnselected: {
+        backgroundColor: '#FEF2F2',
+        borderColor: colors.redBorder,
+    },
+    darkCriticalUnselected: {
+        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+        borderColor: 'rgba(239, 68, 68, 0.35)',
+    },
+    minorSelected: {
+        backgroundColor: colors.blueLight,
+        borderColor: colors.blue,
+        borderWidth: 1.5,
+    },
+    majorSelected: {
         backgroundColor: colors.amberLight,
-        borderColor: colors.amberBorder,
+        borderColor: colors.amber,
+        borderWidth: 1.5,
     },
-    darkCriticalSelected: {
-        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-        borderColor: '#DC2626',
-    },
-    darkMajorSelected: {
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        borderColor: '#F59E0B',
+    criticalSelected: {
+        backgroundColor: colors.redLight,
+        borderColor: colors.red,
+        borderWidth: 1.5,
     },
     darkMinorSelected: {
         backgroundColor: 'rgba(56, 189, 248, 0.2)',
         borderColor: '#38BDF8',
+        borderWidth: 1.5,
+    },
+    darkMajorSelected: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: '#F59E0B',
+        borderWidth: 1.5,
+    },
+    darkCriticalSelected: {
+        backgroundColor: 'rgba(239, 68, 68, 0.25)',
+        borderColor: '#EF4444',
+        borderWidth: 1.5,
+    },
+    severityInner: {
+        alignItems: 'center',
+        gap: 3,
+        justifyContent: 'center',
     },
     severityText: {
         color: colors.muted,
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '700',
+        letterSpacing: 0.2,
+        lineHeight: 12,
+        textAlign: 'center',
     },
     darkSeverityText: {
         color: colors.hudTextDim,
     },
-    severityTextSelected: {
+    criticalUnselectedText: {
+        color: colors.redDark,
+    },
+    darkCriticalUnselectedText: {
+        color: '#F87171',
+    },
+    minorText: {
+        color: colors.blueDark,
+        fontWeight: '800',
+    },
+    majorText: {
         color: colors.amberDark,
+        fontWeight: '800',
+    },
+    criticalText: {
+        color: colors.redDark,
+        fontWeight: '800',
+    },
+    darkMinorText: {
+        color: '#38BDF8',
+        fontWeight: '800',
+    },
+    darkMajorText: {
+        color: '#FBBF24',
         fontWeight: '800',
     },
     darkCriticalText: {
         color: '#F87171',
-    },
-    darkMajorText: {
-        color: '#FBBF24',
-    },
-    darkMinorText: {
-        color: '#38BDF8',
+        fontWeight: '800',
     },
     actionButton: {
         alignItems: 'center',
@@ -721,6 +872,7 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
         borderRadius: 10,
         borderWidth: 1,
+        overflow: 'hidden',
         padding: 14,
     },
     darkWoCard: {
@@ -728,13 +880,15 @@ const styles = StyleSheet.create({
         borderColor: colors.hudBorder,
     },
     woHeader: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexDirection: 'row',
+        gap: 8,
         justifyContent: 'space-between',
         marginBottom: 8,
     },
     woId: {
         color: colors.text,
+        flexShrink: 0,
         fontSize: 13,
         fontWeight: '800',
         letterSpacing: 0.3,
@@ -743,25 +897,43 @@ const styles = StyleSheet.create({
         color: colors.hudText,
     },
     badgeCluster: {
+        alignItems: 'center',
+        flex: 1,
         flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: 6,
+        justifyContent: 'flex-end',
     },
     statusPill: {
+        alignItems: 'center',
         borderRadius: 4,
+        borderWidth: 1,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
     statusOpenPill: {
         backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
     },
     darkStatusOpenPill: {
         backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    statusProgressPill: {
+        backgroundColor: colors.blueLight,
+        borderColor: colors.blueBorder,
+    },
+    darkStatusProgressPill: {
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        borderColor: 'rgba(59, 130, 246, 0.4)',
     },
     statusResolvedPill: {
         backgroundColor: colors.greenLight,
+        borderColor: colors.greenBorder,
     },
     darkStatusResolvedPill: {
         backgroundColor: 'rgba(5, 150, 105, 0.2)',
+        borderColor: 'rgba(5, 150, 105, 0.4)',
     },
     statusPillText: {
         fontSize: 10,
@@ -773,6 +945,12 @@ const styles = StyleSheet.create({
     darkStatusOpenPillText: {
         color: '#FBBF24',
     },
+    statusProgressPillText: {
+        color: colors.blueDark,
+    },
+    darkStatusProgressPillText: {
+        color: '#60A5FA',
+    },
     statusResolvedPillText: {
         color: colors.greenDark,
     },
@@ -780,34 +958,58 @@ const styles = StyleSheet.create({
         color: '#34D399',
     },
     woSeverityBadge: {
+        alignItems: 'center',
         borderRadius: 4,
-        fontSize: 10,
-        fontWeight: '800',
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 3,
         paddingHorizontal: 6,
         paddingVertical: 2,
     },
+    woSeverityText: {
+        fontSize: 10,
+        fontWeight: '800',
+    },
     woMinor: {
         backgroundColor: colors.surface,
-        color: colors.secondary,
+        borderColor: colors.border,
     },
     darkWoMinor: {
-        backgroundColor: 'rgba(148, 163, 184, 0.2)',
+        backgroundColor: 'rgba(148, 163, 184, 0.15)',
+        borderColor: 'rgba(148, 163, 184, 0.25)',
+    },
+    woMinorText: {
+        color: colors.secondary,
+    },
+    darkWoMinorText: {
         color: '#94A3B8',
     },
     woMajor: {
         backgroundColor: colors.amberLight,
-        color: colors.amberDark,
+        borderColor: colors.amberBorder,
     },
     darkWoMajor: {
         backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
+    woMajorText: {
+        color: colors.amberDark,
+    },
+    darkWoMajorText: {
         color: '#FBBF24',
     },
     woCritical: {
         backgroundColor: colors.redLight,
-        color: colors.redDark,
+        borderColor: colors.redBorder,
     },
     darkWoCritical: {
         backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderColor: 'rgba(239, 68, 68, 0.4)',
+    },
+    woCriticalText: {
+        color: colors.redDark,
+    },
+    darkWoCriticalText: {
         color: '#F87171',
     },
     woTitle: {
@@ -837,16 +1039,23 @@ const styles = StyleSheet.create({
         borderTopColor: colors.border,
         borderTopWidth: StyleSheet.hairlineWidth,
         flexDirection: 'row',
+        gap: 8,
         justifyContent: 'space-between',
         paddingTop: 8,
     },
+    darkWoFooterRow: {
+        borderTopColor: colors.hudBorder,
+    },
     woMeta: {
         color: colors.secondary,
+        flex: 1,
+        flexShrink: 1,
         fontSize: 11,
         fontWeight: '600',
     },
     woMetaDate: {
         color: colors.muted,
+        flexShrink: 0,
         fontSize: 11,
     },
     darkWoMeta: {
