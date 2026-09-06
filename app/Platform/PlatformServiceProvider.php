@@ -26,17 +26,36 @@ use App\Platform\Notifications\Policies\NotificationPolicy;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Policies\JobReportPolicy;
 use App\Platform\Safety\Models\SosIncident;
+use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
+use App\Platform\Storage\Services\StorageFallbackService;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Workspace\Observers\WorkspaceResourceObserver;
 use App\Shared\Assets\Models\Inspection;
 use App\Shared\Assets\Models\MaintenanceWorkOrder;
 use App\Shared\Assets\Models\OperationalAsset;
+use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Filesystem\Factory;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Psr\Log\LoggerInterface;
 
 final class PlatformServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->app->bind(StorageFallbackServiceInterface::class, function ($app): StorageFallbackServiceInterface {
+            return new StorageFallbackService(
+                $app->make(Repository::class),
+                $app->make(LoggerInterface::class),
+                $app->make(Factory::class),
+            );
+        });
+
+        $this->app->alias(StorageFallbackServiceInterface::class, StorageFallbackService::class);
+        $this->app->alias(StorageFallbackServiceInterface::class, 'storage.fallback');
+    }
+
     public function boot(): void
     {
         Gate::policy(Attachment::class, AttachmentPolicy::class);

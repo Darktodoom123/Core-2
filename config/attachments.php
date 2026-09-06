@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'disk' => 'private',
+    'disk' => env('ATTACHMENTS_DISK', 'private'),
     'max_bytes' => 15 * 1024 * 1024,
     'max_count_per_owner' => 10,
     // Attachment retention follows the owning operational record (seven years).

@@ -44,6 +44,12 @@ class CreateDvirInspectionRequest extends FormRequest
             ],
             'checks.*.status_label' => ['nullable', 'string', 'max:255'],
             'checks.*.notes' => ['nullable', 'string', 'max:2000'],
+            'photos' => ['nullable', 'array', 'max:8'],
+            'photos.*.angle' => ['required', 'string', 'in:front,back,driver_side,passenger_side,defect'],
+            'photos.*.file_name' => ['nullable', 'string', 'max:255'],
+            'photos.*.file_size' => ['nullable', 'integer', 'max:15728640'],
+            'photos.*.base64' => ['nullable', 'string'],
+            'photos.*.uri' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -60,5 +66,15 @@ class CreateDvirInspectionRequest extends FormRequest
         $checks = $this->input('checks');
 
         return is_array($checks) ? array_values($checks) : [];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function photosPayload(): array
+    {
+        $photos = $this->input('photos');
+
+        return is_array($photos) ? array_values($photos) : [];
     }
 }

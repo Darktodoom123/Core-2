@@ -36,6 +36,7 @@ class DvirInspectionResource extends JsonResource
             'remarks' => $this->remarks,
             'completed_at' => $this->completed_at->toIso8601String(),
             'checks' => DvirInspectionCheckResource::collection($this->whenLoaded('checks')),
+            'photos' => DvirInspectionPhotoResource::collection($this->whenLoaded('photos')),
         ];
     }
 }

@@ -24,7 +24,7 @@ class DvirInspectionController extends Controller
         $days = max(1, min((int) $request->query('days', '30'), 365));
 
         $inspections = DvirInspection::query()
-            ->with('checks')
+            ->with(['checks', 'photos'])
             ->forUser($user->id)
             ->completedWithinDays($days)
             ->when($request->filled('operational_asset_id'), function ($query) use ($request): void {
@@ -60,7 +60,7 @@ class DvirInspectionController extends Controller
         $user = $request->user();
 
         $record = DvirInspection::query()
-            ->with('checks')
+            ->with(['checks', 'photos'])
             ->forUser($user->id)
             ->find($inspection);
 

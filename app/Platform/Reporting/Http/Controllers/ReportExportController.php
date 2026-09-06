@@ -9,11 +9,13 @@ use App\Platform\Reporting\Actions\RetryReportExportAction;
 use App\Platform\Reporting\Enums\ReportExportType;
 use App\Platform\Reporting\Http\Requests\StoreReportExportRequest;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class ReportExportController extends Controller
 {
@@ -42,7 +44,13 @@ class ReportExportController extends Controller
     {
         Gate::authorize('download', $export);
 
-        if (! $export->file_path || ! Storage::disk('private')->exists($export->file_path)) {
+        $targetDisk = (string) config('filesystems.protected_disk', 'r2-private');
+        $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveDisk($targetDisk, 'private');
+        $activeDisk = Storage::disk($resolvedDisk)->exists((string) $export->file_path)
+            ? $resolvedDisk
+            : (Storage::disk('private')->exists((string) $export->file_path) ? 'private' : null);
+
+        if (! $export->file_path || $activeDisk === null) {
             return back()->with('flash', [
                 'type' => 'error',
                 'message' => 'The requested export file is no longer available or has expired.',
@@ -59,9 +67,19 @@ class ReportExportController extends Controller
             ]
         );
 
+        if ($request->boolean('temporary_url')) {
+            try {
+                $url = Storage::disk($activeDisk)->temporaryUrl($export->file_path, now()->addMinutes(15));
+
+                return redirect()->away($url);
+            } catch (Throwable) {
+                // Fallback to standard streamed download
+            }
+        }
+
         $filename = basename($export->file_path);
 
-        return Storage::disk('private')->download($export->file_path, $filename, [
+        return Storage::disk($activeDisk)->download($export->file_path, $filename, [
             'Content-Type' => $export->format === 'pdf' ? 'application/pdf' : 'text/csv; charset=UTF-8',
         ]);
     }

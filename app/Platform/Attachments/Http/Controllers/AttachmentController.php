@@ -52,7 +52,7 @@ class AttachmentController extends Controller
         ]);
     }
 
-    public function download(Attachment $attachment, Request $request): StreamedResponse
+    public function download(Attachment $attachment, Request $request): StreamedResponse|RedirectResponse
     {
         Gate::authorize('download', $attachment);
 
@@ -83,6 +83,16 @@ class AttachmentController extends Controller
             'ip_address' => $request->ip(),
             'occurred_at' => now(),
         ]);
+
+        if ($request->boolean('temporary_url')) {
+            try {
+                $url = Storage::disk($attachment->disk)->temporaryUrl($attachment->path, now()->addMinutes(15));
+
+                return redirect()->away($url);
+            } catch (\Throwable) {
+                // Fallback to streaming download
+            }
+        }
 
         return Storage::disk($attachment->disk)->download(
             $attachment->path,

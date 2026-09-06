@@ -67,7 +67,71 @@ return [
             'report' => false,
         ],
 
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => env('R2_DEFAULT_REGION', 'auto'),
+            'bucket' => env('R2_PUBLIC_BUCKET', env('R2_BUCKET')),
+            'url' => env('R2_PUBLIC_URL', env('R2_URL')),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => env('R2_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'r2-public' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => env('R2_DEFAULT_REGION', 'auto'),
+            'bucket' => env('R2_PUBLIC_BUCKET', env('R2_BUCKET')),
+            'url' => env('R2_PUBLIC_URL', env('R2_URL')),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => env('R2_USE_PATH_STYLE_ENDPOINT', true),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'r2-private' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => env('R2_DEFAULT_REGION', 'auto'),
+            'bucket' => env('R2_PRIVATE_BUCKET', env('R2_BUCKET')),
+            'url' => null,
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => env('R2_PRIVATE_USE_PATH_STYLE_ENDPOINT', env('R2_USE_PATH_STYLE_ENDPOINT', true)),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | DVIR Photo Disk
+    |--------------------------------------------------------------------------
+    |
+    | The filesystem disk where vehicle inspection walkaround photos are saved.
+    | Set to 'r2' in .env (DVIR_PHOTO_DISK=r2) to store photos in Cloudflare R2.
+    |
+    */
+    'dvir_disk' => env('DVIR_PHOTO_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Protected Documents Disk
+    |--------------------------------------------------------------------------
+    |
+    | The filesystem disk where compliance PDFs, signed job completion reports,
+    | and sensitive audit documents are stored.
+    |
+    */
+    'protected_disk' => env('PROTECTED_DOCUMENTS_DISK', 'r2-private'),
 
     /*
     |--------------------------------------------------------------------------

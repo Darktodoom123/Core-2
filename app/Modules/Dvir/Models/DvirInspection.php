@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read OperationalAsset|null $operationalAsset
  * @property-read DispatchJob|null $dispatchJob
  * @property-read Collection<int, DvirInspectionCheck> $checks
+ * @property-read Collection<int, DvirInspectionPhoto> $photos
  */
 class DvirInspection extends Model
 {
@@ -97,6 +98,15 @@ class DvirInspection extends Model
     {
         return $this->hasMany(DvirInspectionCheck::class, 'dvir_inspection_id')
             ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc');
+    }
+
+    /**
+     * @return HasMany<DvirInspectionPhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(DvirInspectionPhoto::class, 'dvir_inspection_id')
             ->orderBy('id', 'asc');
     }
 

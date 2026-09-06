@@ -1,8 +1,10 @@
 <?php
 
+use App\Platform\Attachments\Jobs\PruneExpiredAttachmentsJob;
 use App\Platform\Gpt\Jobs\SweepProactiveGptRecommendationsJob;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
+use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
 use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
 use App\Platform\Safety\Jobs\SweepSosEscalationsJob;
 use Illuminate\Foundation\Inspiring;
@@ -31,6 +33,20 @@ Artisan::command('gpt:queue-status', function (): void {
     ], JSON_THROW_ON_ERROR));
 })->purpose('Report safe aggregate GPT queue status without exposing recommendation context');
 
+Artisan::command('reports:prune-expired', function (): void {
+    $this->info('Pruning expired report export files...');
+    PruneExpiredExportsJob::dispatchSync();
+    $this->info('Expired report exports pruned successfully.');
+})->purpose('Purge expired report export files from protected storage');
+
+Artisan::command('attachments:prune-expired', function (): void {
+    $this->info('Pruning expired attachments exceeding statutory retention...');
+    PruneExpiredAttachmentsJob::dispatchSync();
+    $this->info('Expired attachments pruned successfully.');
+})->purpose('Purge attachments that have reached end-of-retention (statutory 7 years)');
+
 Schedule::job(new SweepSosEscalationsJob)->everyMinute();
 Schedule::job(new SweepProactiveGptRecommendationsJob)->everyMinute();
 Schedule::job(new PruneSosIncidentCoordinatesJob)->daily();
+Schedule::job(new PruneExpiredExportsJob)->hourly();
+Schedule::job(new PruneExpiredAttachmentsJob)->daily();

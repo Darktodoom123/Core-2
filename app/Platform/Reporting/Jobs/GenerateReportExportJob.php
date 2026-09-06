@@ -7,6 +7,7 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Exports\ReportExportCatalog;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -80,7 +81,8 @@ class GenerateReportExportJob implements ShouldQueue
             $this->promote($temporaryPath, $relativePath);
             $temporaryPath = null;
 
-            $fileSize = Storage::disk('private')->size($relativePath);
+            $targetDisk = $this->targetDisk();
+            $fileSize = Storage::disk($targetDisk)->size($relativePath);
             $checksum = $this->checksum($relativePath);
             if ($checksum === false) {
                 throw new \RuntimeException('Unable to calculate export checksum.');
@@ -107,11 +109,12 @@ class GenerateReportExportJob implements ShouldQueue
                 ]
             );
         } catch (Throwable $e) {
-            if ($temporaryPath !== null && Storage::disk('private')->exists($temporaryPath)) {
-                Storage::disk('private')->delete($temporaryPath);
+            $targetDisk = $this->targetDisk();
+            if ($temporaryPath !== null && Storage::disk($targetDisk)->exists($temporaryPath)) {
+                Storage::disk($targetDisk)->delete($temporaryPath);
             }
-            if ($relativePath !== null && Storage::disk('private')->exists($relativePath)) {
-                Storage::disk('private')->delete($relativePath);
+            if ($relativePath !== null && Storage::disk($targetDisk)->exists($relativePath)) {
+                Storage::disk($targetDisk)->delete($relativePath);
             }
 
             $export->update([
@@ -153,7 +156,7 @@ class GenerateReportExportJob implements ShouldQueue
         }
 
         rewind($stream);
-        Storage::disk('private')->put($temporaryPath, $stream);
+        Storage::disk($this->targetDisk())->put($temporaryPath, $stream);
         fclose($stream);
 
         return $rowCount;
@@ -175,7 +178,7 @@ class GenerateReportExportJob implements ShouldQueue
         $rendererTempDir = $this->pdfTemporaryDirectory($export);
 
         try {
-            Storage::disk('private')->put($temporaryPath, $this->generatePdfContent($export, $headers, $boundedRows, $rendererTempDir));
+            Storage::disk($this->targetDisk())->put($temporaryPath, $this->generatePdfContent($export, $headers, $boundedRows, $rendererTempDir));
         } finally {
             File::deleteDirectory($rendererTempDir);
         }
@@ -186,11 +189,15 @@ class GenerateReportExportJob implements ShouldQueue
     /**
      * mPDF creates and mutates font-cache data under its temporary directory.
      * A per-export directory prevents concurrent workers from racing on that
-     * cache while keeping all renderer artifacts on the private disk.
+     * cache while keeping all renderer artifacts in local temporary storage.
      */
     protected function pdfTemporaryDirectory(ReportExport $export): string
     {
-        $directory = Storage::disk('private')->path('export-tmp/'.$export->id);
+        try {
+            $directory = Storage::disk('private')->path('export-tmp/'.$export->id);
+        } catch (Throwable) {
+            $directory = storage_path('app/temp/mpdf_cache/export-tmp/'.$export->id);
+        }
         File::ensureDirectoryExists($directory, 0700, true);
 
         return $directory;
@@ -278,11 +285,28 @@ class GenerateReportExportJob implements ShouldQueue
 
     protected function promote(string $temporaryPath, string $relativePath): void
     {
-        Storage::disk('private')->move($temporaryPath, $relativePath);
+        Storage::disk($this->targetDisk())->move($temporaryPath, $relativePath);
     }
 
     protected function checksum(string $relativePath): string|false
     {
-        return hash_file('sha256', Storage::disk('private')->path($relativePath));
+        $disk = $this->targetDisk();
+        $stream = Storage::disk($disk)->readStream($relativePath);
+        if ($stream === null || ! is_resource($stream)) {
+            return false;
+        }
+
+        $ctx = hash_init('sha256');
+        hash_update_stream($ctx, $stream);
+        fclose($stream);
+
+        return hash_final($ctx);
+    }
+
+    protected function targetDisk(): string
+    {
+        $desiredDisk = (string) config('filesystems.protected_disk', 'r2-private');
+
+        return app(StorageFallbackServiceInterface::class)->resolveDisk($desiredDisk, 'private');
     }
 }

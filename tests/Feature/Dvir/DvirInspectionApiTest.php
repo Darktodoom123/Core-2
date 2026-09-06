@@ -1,10 +1,12 @@
 <?php
 
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Dvir\Models\DvirInspectionPhoto;
 use App\Platform\Identity\Models\User;
 use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -298,4 +300,131 @@ it('hides another operator inspection from the show endpoint', function (): void
     $this->withToken($intruderToken)
         ->getJson("/api/v1/dvir/inspections/{$record->id}")
         ->assertNotFound();
+});
+
+it('stores a dvir inspection with walkaround photos and verifies database and storage', function (): void {
+    Storage::fake('public');
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $sampleBase64 = 'data:image/jpeg;base64,'.base64_encode('fake-image-binary-data');
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', dvirPayload([
+            'photos' => [
+                [
+                    'angle' => 'front',
+                    'file_name' => 'front_photo.jpg',
+                    'file_size' => 1024,
+                    'base64' => $sampleBase64,
+                ],
+                [
+                    'angle' => 'back',
+                    'file_name' => 'back_photo.jpg',
+                    'file_size' => 2048,
+                    'base64' => $sampleBase64,
+                ],
+                [
+                    'angle' => 'driver_side',
+                    'file_name' => 'driver_photo.jpg',
+                    'file_size' => 1500,
+                    'base64' => $sampleBase64,
+                ],
+                [
+                    'angle' => 'passenger_side',
+                    'file_name' => 'passenger_photo.jpg',
+                    'file_size' => 1600,
+                    'base64' => $sampleBase64,
+                ],
+            ],
+        ]));
+
+    $response->assertCreated()
+        ->assertJsonCount(4, 'data.photos')
+        ->assertJsonPath('data.photos.0.angle', 'front')
+        ->assertJsonPath('data.photos.1.angle', 'back');
+
+    $this->assertDatabaseCount('dvir_inspection_photos', 4);
+    $this->assertDatabaseHas('dvir_inspection_photos', [
+        'angle' => 'front',
+        'file_name' => 'front_photo.jpg',
+    ]);
+
+    $inspectionId = $response->json('data.internal_id');
+
+    $this->withToken($token)
+        ->getJson("/api/v1/dvir/inspections/{$inspectionId}")
+        ->assertOk()
+        ->assertJsonCount(4, 'data.photos')
+        ->assertJsonPath('data.photos.0.angle', 'front');
+});
+
+it('supports storing dvir inspection photos to configured cloud storage disk', function (): void {
+    config(['filesystems.dvir_disk' => 'r2']);
+    Storage::fake('r2');
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $sampleBase64 = 'data:image/jpeg;base64,'.base64_encode('cloud-r2-inspection-photo');
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', dvirPayload([
+            'photos' => [
+                [
+                    'angle' => 'front',
+                    'file_name' => 'cloud_front.jpg',
+                    'file_size' => 1024,
+                    'base64' => $sampleBase64,
+                ],
+            ],
+        ]));
+
+    $response->assertCreated()
+        ->assertJsonCount(1, 'data.photos')
+        ->assertJsonPath('data.photos.0.storage_disk', 'r2');
+
+    $photoRecord = DvirInspectionPhoto::query()->where('angle', 'front')->latest('id')->firstOrFail();
+    expect($photoRecord->storage_disk)->toBe('r2');
+    expect($photoRecord->sha256_checksum)->toBe(hash('sha256', 'cloud-r2-inspection-photo'));
+    Storage::disk('r2')->assertExists($photoRecord->file_path);
+});
+
+it('gracefully falls back to public disk when r2 disk is unconfigured', function (): void {
+    config([
+        'filesystems.dvir_disk' => 'r2',
+        'filesystems.disks.r2.key' => null,
+        'filesystems.disks.r2.secret' => null,
+        'filesystems.disks.r2.bucket' => null,
+    ]);
+    Storage::fake('public');
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $sampleBase64 = 'data:image/jpeg;base64,'.base64_encode('fallback-photo-content');
+
+    $response = $this->withToken($token)
+        ->postJson('/api/v1/dvir/inspections', dvirPayload([
+            'photos' => [
+                [
+                    'angle' => 'front',
+                    'file_name' => 'fallback_front.jpg',
+                    'file_size' => 1024,
+                    'base64' => $sampleBase64,
+                ],
+            ],
+        ]));
+
+    $response->assertCreated()
+        ->assertJsonCount(1, 'data.photos')
+        ->assertJsonPath('data.photos.0.storage_disk', 'public');
+
+    $photoRecord = DvirInspectionPhoto::query()->where('angle', 'front')->latest('id')->firstOrFail();
+    expect($photoRecord->storage_disk)->toBe('public');
+    Storage::disk('public')->assertExists($photoRecord->file_path);
 });

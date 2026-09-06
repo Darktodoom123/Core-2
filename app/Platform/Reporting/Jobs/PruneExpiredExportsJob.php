@@ -5,6 +5,7 @@ namespace App\Platform\Reporting\Jobs;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Reporting\Enums\ReportExportStatus;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Storage\Contracts\StorageFallbackServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -52,8 +53,12 @@ class PruneExpiredExportsJob implements ShouldQueue
                 return;
             }
 
-            if ($export->file_path !== null && Storage::disk('private')->exists($export->file_path)) {
-                Storage::disk('private')->delete($export->file_path);
+            $targetDisk = (string) config('filesystems.protected_disk', 'r2-private');
+            $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveDisk($targetDisk, 'private');
+            foreach (array_unique([$resolvedDisk, 'private']) as $disk) {
+                if ($export->file_path !== null && Storage::disk($disk)->exists($export->file_path)) {
+                    Storage::disk($disk)->delete($export->file_path);
+                }
             }
 
             $export->update([
