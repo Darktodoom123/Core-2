@@ -1402,4 +1402,60 @@ describe('native application component tree', () => {
         ).toBeNull();
         expect(screen.getByTestId('tile-routes')).toBeVisible();
     });
+
+    it('redirects to Rental Handover when clicking Rental tile and returns to main on back', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        const rentalTile = await screen.findByTestId('tile-rental');
+        expect(rentalTile).toBeTruthy();
+
+        await fireEvent.press(rentalTile);
+
+        expect(
+            await screen.findByTestId('rental-handover-screen'),
+        ).toBeVisible();
+        expect(screen.getByText('Rental Checkout')).toBeVisible();
+
+        const backBtn = screen.getByTestId('rental-back-button');
+        await fireEvent.press(backBtn);
+
+        expect(screen.queryByTestId('rental-handover-screen')).toBeNull();
+        expect(screen.getByTestId('tile-rental')).toBeVisible();
+    });
+
+    it('redirects to Sales Delivery when clicking Sales tile and returns to main on back', async () => {
+        const { fetchFn } = createApi({ assignedJobs: [driverJob] });
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={fetchFn}
+                tokenStorage={new TestTokenStorage(rawToken)}
+            />,
+        );
+
+        const salesTile = await screen.findByTestId('tile-sales');
+        expect(salesTile).toBeTruthy();
+
+        await fireEvent.press(salesTile);
+
+        expect(
+            await screen.findByTestId('sales-delivery-screen'),
+        ).toBeVisible();
+        expect(screen.getByText('Equipment Sales Delivery')).toBeVisible();
+
+        const backBtn = screen.getByTestId('sales-back-button');
+        await fireEvent.press(backBtn);
+
+        expect(screen.queryByTestId('sales-delivery-screen')).toBeNull();
+        expect(screen.getByTestId('tile-sales')).toBeVisible();
+    });
 });

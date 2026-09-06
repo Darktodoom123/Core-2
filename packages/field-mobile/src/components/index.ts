@@ -1,6 +1,7 @@
 export * from './nativeStyles';
 export * from './layout/field-header';
 export * from './layout/field-bottom-nav';
+export * from './layout/tile-screen-header';
 export * from './sheets/profile-sheet';
 export * from './sheets/notifications-sheet';
 export * from './panels/sync-status-panel';

@@ -19,6 +19,7 @@ import type {
     WalkaroundAngle,
     WalkaroundPhotosMap,
 } from '../components/inspection';
+import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
@@ -483,100 +484,66 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
             testID="dvir-screen"
         >
-            {/* Header matching screenshot */}
-            <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
-                {onBack ? (
+            {/* Header: Unified Minimalist Header matching other tiles */}
+            <TileScreenHeader
+                backAccessibilityLabel="Back to dashboard"
+                backTestID="dvir-back-button"
+                category="Vehicle Inspection"
+                onBack={onBack}
+                rightElement={
                     <Pressable
-                        accessibilityLabel="Back or dismiss"
+                        accessibilityLabel="Toggle history"
                         accessibilityRole="button"
                         onPress={() => {
-                            if (onBack) {
-                                onBack();
-                            }
+                            setMode(
+                                mode === 'history' ? 'pre_trip' : 'history',
+                            );
+                            setIsSaved(false);
                         }}
-                        style={styles.closeHeaderBtn}
-                        testID="dvir-back-button"
+                        style={({ pressed }) => [
+                            styles.historyToggleBadge,
+                            isDarkHud && styles.darkHistoryToggleBadge,
+                            mode === 'history' &&
+                                styles.historyToggleBadgeActive,
+                            isDarkHud &&
+                                mode === 'history' &&
+                                styles.darkHistoryToggleBadgeActive,
+                            pressed && styles.historyToggleBadgePressed,
+                        ]}
+                        testID="tab-history"
                     >
                         <Icon
-                            color={isDarkHud ? '#F8FAFC' : colors.text}
-                            name="back"
-                            size={22}
+                            color={
+                                mode === 'history'
+                                    ? '#FFFFFF'
+                                    : isDarkHud
+                                      ? '#F59E0B'
+                                      : colors.amber
+                            }
+                            name="file-text"
+                            size={14}
                         />
-                    </Pressable>
-                ) : null}
-
-                <View style={styles.headerCenter}>
-                    <Text
-                        style={[
-                            styles.screenTitle,
-                            isDarkHud && styles.darkScreenTitle,
-                        ]}
-                    >
-                        Create DVIR
-                    </Text>
-                    <Text
-                        style={[
-                            styles.headerSubtitle,
-                            isDarkHud && styles.darkHeaderSubtitle,
-                        ]}
-                    >
-                        DVIR Inspection Engine
-                    </Text>
-                    {activeJobReference ? (
                         <Text
                             style={[
-                                styles.jobRefSubtext,
-                                isDarkHud && styles.darkJobRefSubtext,
+                                styles.historyToggleText,
+                                isDarkHud && styles.darkHistoryToggleText,
+                                mode === 'history' &&
+                                    styles.historyToggleTextActive,
                             ]}
                         >
-                            Ref: {activeJobReference}
+                            {mode === 'history'
+                                ? 'Form'
+                                : `History (${history.length})`}
                         </Text>
-                    ) : null}
-                </View>
-
-                {/* History Switcher / Job Ref Pill */}
-                <Pressable
-                    accessibilityLabel="Toggle history"
-                    accessibilityRole="button"
-                    onPress={() => {
-                        setMode(mode === 'history' ? 'pre_trip' : 'history');
-                        setIsSaved(false);
-                    }}
-                    style={[
-                        styles.historyToggleBadge,
-                        isDarkHud && styles.darkHistoryToggleBadge,
-                        mode === 'history' && styles.historyToggleBadgeActive,
-                        isDarkHud &&
-                            mode === 'history' &&
-                            styles.darkHistoryToggleBadgeActive,
-                    ]}
-                    testID="tab-history"
-                >
-                    <Icon
-                        color={
-                            mode === 'history'
-                                ? '#FFFFFF'
-                                : isDarkHud
-                                  ? '#F59E0B'
-                                  : colors.amber
-                        }
-                        name="file-text"
-                        size={14}
-                    />
-                    <Text
-                        style={[
-                            styles.historyToggleText,
-                            isDarkHud && styles.darkHistoryToggleText,
-                            mode === 'history' &&
-                                styles.historyToggleTextActive,
-                        ]}
-                    >
-                        {mode === 'history'
-                            ? 'Form'
-                            : `History (${history.length})`}
-                    </Text>
-                </Pressable>
-            </View>
+                    </Pressable>
+                }
+                subtitle={
+                    activeJobReference
+                        ? `Inspection Checklist · Ref: ${activeJobReference}`
+                        : 'Inspection Checklist'
+                }
+                title="Create DVIR"
+            />
 
             {/* Main Content Area */}
             <ScrollView
@@ -1743,53 +1710,6 @@ const styles = StyleSheet.create({
     darkScreenRoot: {
         backgroundColor: '#090E1A',
     },
-    headerBar: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        gap: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    darkHeaderBar: {
-        backgroundColor: '#0F172A',
-        borderBottomColor: '#1E293B',
-    },
-    closeHeaderBtn: {
-        alignItems: 'center',
-        height: 38,
-        justifyContent: 'center',
-        width: 38,
-    },
-    headerCenter: {
-        flex: 1,
-    },
-    screenTitle: {
-        color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
-    },
-    darkScreenTitle: {
-        color: '#F8FAFC',
-    },
-    headerSubtitle: {
-        color: colors.textSecondary,
-        fontSize: 11,
-        marginTop: 1,
-    },
-    darkHeaderSubtitle: {
-        color: '#94A3B8',
-    },
-    jobRefSubtext: {
-        color: colors.muted,
-        fontSize: 10,
-        fontWeight: '500',
-    },
-    darkJobRefSubtext: {
-        color: '#64748B',
-    },
     historyToggleBadge: {
         alignItems: 'center',
         backgroundColor: '#F8FAFC',
@@ -2385,8 +2305,12 @@ const styles = StyleSheet.create({
     darkNextButtonText: {
         color: '#0F172A',
     },
-    pressed: {
+    historyToggleBadgePressed: {
         opacity: 0.8,
-        transform: [{ scale: 0.985 }],
+        transform: [{ scale: 0.94 }],
+    },
+    pressed: {
+        opacity: 0.82,
+        transform: [{ scale: 0.96 }],
     },
 });

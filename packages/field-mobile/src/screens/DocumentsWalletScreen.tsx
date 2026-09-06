@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 import { Icon } from '../components/common/Icon';
+import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
 import { useTheme } from '../theme';
 import type { ComplianceDocument, DocumentCategory } from '../types/index';
@@ -165,57 +166,15 @@ export const DocumentsWalletScreen: React.FC<DocumentsWalletScreenProps> = ({
             style={[styles.root, isDarkHud && styles.rootDark]}
             testID="documents-wallet-screen"
         >
-            {/* Header: Minimalist Industrial Cockpit */}
-            <View style={[styles.header, isDarkHud && styles.headerDark]}>
-                <View style={styles.headerLeft}>
-                    {onBack ? (
-                        <Pressable
-                            accessibilityLabel="Back to previous screen"
-                            accessibilityRole="button"
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            onPress={onBack}
-                            style={({ pressed }) => [
-                                styles.backBtn,
-                                pressed && styles.pressed,
-                            ]}
-                            testID="docs-back-button"
-                        >
-                            <Icon
-                                color={isDarkHud ? colors.hudText : colors.text}
-                                name="back"
-                                size={18}
-                            />
-                            <Text
-                                style={[
-                                    styles.backText,
-                                    isDarkHud && styles.backTextDark,
-                                ]}
-                            >
-                                Back
-                            </Text>
-                        </Pressable>
-                    ) : null}
-
-                    <View style={styles.headerTitleWrap}>
-                        <Text
-                            style={[
-                                styles.title,
-                                isDarkHud && styles.titleDark,
-                            ]}
-                        >
-                            Documents & Permits
-                        </Text>
-                        <Text
-                            style={[
-                                styles.subtitle,
-                                isDarkHud && styles.subtitleDark,
-                            ]}
-                        >
-                            {assetCode} · {operatorName}
-                        </Text>
-                    </View>
-                </View>
-            </View>
+            {/* Header: Unified Minimalist Header matching other tiles */}
+            <TileScreenHeader
+                backAccessibilityLabel="Back to dashboard"
+                backTestID="docs-back-button"
+                category="Permits & Certs"
+                onBack={onBack}
+                subtitle={`${assetCode} · ${operatorName}`}
+                title="Documents & Permits"
+            />
 
             {/* Integrated Search Input */}
             <View style={styles.searchSection}>
@@ -1499,63 +1458,6 @@ const styles = StyleSheet.create({
     rootDark: {
         backgroundColor: colors.hudBackground,
     },
-    header: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    headerDark: {
-        backgroundColor: colors.surfaceDark,
-        borderColor: colors.hudBorder,
-    },
-    headerLeft: {
-        alignItems: 'center',
-        flex: 1,
-        flexDirection: 'row',
-        gap: 10,
-    },
-    backBtn: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 4,
-        minHeight: 44,
-        paddingRight: 6,
-    },
-    backText: {
-        color: colors.text,
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    backTextDark: {
-        color: colors.hudText,
-    },
-    headerTitleWrap: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    title: {
-        color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
-        letterSpacing: -0.2,
-    },
-    titleDark: {
-        color: colors.hudText,
-    },
-    subtitle: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 1,
-    },
-    subtitleDark: {
-        color: colors.hudTextDim,
-    },
     searchSection: {
         paddingHorizontal: 16,
         paddingTop: 10,
@@ -2472,7 +2374,7 @@ const styles = StyleSheet.create({
         color: colors.surfaceDark,
     },
     pressed: {
-        opacity: 0.8,
-        transform: [{ scale: 0.985 }],
+        opacity: 0.82,
+        transform: [{ scale: 0.96 }],
     },
 });

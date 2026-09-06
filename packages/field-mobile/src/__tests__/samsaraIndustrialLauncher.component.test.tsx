@@ -128,6 +128,8 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             const onOpenRoutes = jest.fn();
             const onOpenVehicle = jest.fn();
             const onOpenForms = jest.fn();
+            const onOpenRental = jest.fn();
+            const onOpenSales = jest.fn();
             const onSelectJob = jest.fn();
 
             const view = await render(
@@ -141,7 +143,9 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                     onOpenDocuments={onOpenDocs}
                     onOpenDvir={onOpenDvir}
                     onOpenForms={onOpenForms}
+                    onOpenRental={onOpenRental}
                     onOpenRoutes={onOpenRoutes}
+                    onOpenSales={onOpenSales}
                     onOpenVehicle={onOpenVehicle}
                     onRefresh={jest.fn()}
                     onRetryCommand={jest.fn()}
@@ -162,13 +166,33 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('ALB-CRN-050')).toBeTruthy();
             expect(view.getByText('DISP-2026-0891')).toBeTruthy();
 
-            // 6-Tile Grid
+            // Launcher Grid
             expect(view.getByTestId('tile-hos')).toBeTruthy();
             expect(view.getByTestId('tile-dvir')).toBeTruthy();
             expect(view.getByTestId('tile-routes')).toBeTruthy();
             expect(view.getByTestId('tile-documents')).toBeTruthy();
             expect(view.getByTestId('tile-vehicle')).toBeTruthy();
             expect(view.getByTestId('tile-forms')).toBeTruthy();
+            const rentalTile = view.getByTestId('tile-rental');
+            const salesTile = view.getByTestId('tile-sales');
+            expect(rentalTile).toBeTruthy();
+            expect(salesTile).toBeTruthy();
+            expect(rentalTile.props.style).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ backgroundColor: '#4F46E5' }),
+                ]),
+            );
+            expect(salesTile.props.style).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ backgroundColor: '#E11D48' }),
+                ]),
+            );
+
+            // 2x4 Column Layout Verification (Column 4 dedicated to Rental & Sales)
+            expect(view.getByTestId('tile-column-1')).toBeTruthy();
+            expect(view.getByTestId('tile-column-2')).toBeTruthy();
+            expect(view.getByTestId('tile-column-3')).toBeTruthy();
+            expect(view.getByTestId('tile-column-4')).toBeTruthy();
 
             // UX User-Friendly Text Labels
             expect(view.getByText('Hours of\nService')).toBeTruthy();
@@ -177,6 +201,8 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Documents')).toBeTruthy();
             expect(view.getByText('Machine\nProfile')).toBeTruthy();
             expect(view.getByText('Dispatch')).toBeTruthy();
+            expect(view.getByText('Rental\nHandover')).toBeTruthy();
+            expect(view.getByText('Sales\nDelivery')).toBeTruthy();
 
             // Tapping DVIR tile
             await fireEvent.press(view.getByTestId('tile-dvir'));
@@ -193,6 +219,14 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Tapping Forms tile
             await fireEvent.press(view.getByTestId('tile-forms'));
             expect(onOpenForms).toHaveBeenCalled();
+
+            // Tapping Rental tile
+            await fireEvent.press(view.getByTestId('tile-rental'));
+            expect(onOpenRental).toHaveBeenCalled();
+
+            // Tapping Sales tile
+            await fireEvent.press(view.getByTestId('tile-sales'));
+            expect(onOpenSales).toHaveBeenCalled();
         });
 
         it('updates persistent duty status when confirmed via selector modal', async () => {
@@ -302,6 +336,8 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             const onOpenRoutes = jest.fn();
             const onOpenDocs = jest.fn();
             const onOpenVehicle = jest.fn();
+            const onOpenRental = jest.fn();
+            const onOpenSales = jest.fn();
 
             const view = await render(
                 <AssignedJobsListScreen
@@ -310,7 +346,9 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                     onOpenDocuments={onOpenDocs}
                     onOpenDvir={onOpenDvir}
                     onOpenHos={onOpenHos}
+                    onOpenRental={onOpenRental}
                     onOpenRoutes={onOpenRoutes}
+                    onOpenSales={onOpenSales}
                     onOpenVehicle={onOpenVehicle}
                     onRefresh={jest.fn()}
                     onSelectJob={jest.fn()}
@@ -331,6 +369,8 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByText('Documents')).toBeTruthy();
             expect(view.getByText('Machine\nProfile')).toBeTruthy();
             expect(view.getByText('Dispatch')).toBeTruthy();
+            expect(view.getByText('Rental\nHandover')).toBeTruthy();
+            expect(view.getByText('Sales\nDelivery')).toBeTruthy();
 
             // Verify testIDs
             expect(view.getByTestId('tile-hos')).toBeTruthy();
@@ -339,6 +379,26 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             expect(view.getByTestId('tile-documents')).toBeTruthy();
             expect(view.getByTestId('tile-vehicle')).toBeTruthy();
             expect(view.getByTestId('tile-forms')).toBeTruthy();
+            const assignedRentalTile = view.getByTestId('tile-rental');
+            const assignedSalesTile = view.getByTestId('tile-sales');
+            expect(assignedRentalTile).toBeTruthy();
+            expect(assignedSalesTile).toBeTruthy();
+            expect(assignedRentalTile.props.style).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ backgroundColor: '#4F46E5' }),
+                ]),
+            );
+            expect(assignedSalesTile.props.style).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({ backgroundColor: '#E11D48' }),
+                ]),
+            );
+
+            // 2x4 Column Layout Verification (Column 4 dedicated to Rental & Sales)
+            expect(view.getByTestId('tile-column-1')).toBeTruthy();
+            expect(view.getByTestId('tile-column-2')).toBeTruthy();
+            expect(view.getByTestId('tile-column-3')).toBeTruthy();
+            expect(view.getByTestId('tile-column-4')).toBeTruthy();
 
             // Tapping HOS opens HOS callback
             await fireEvent.press(view.getByTestId('tile-hos'));
@@ -359,6 +419,14 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
             // Tapping Vehicle opens Vehicle callback
             await fireEvent.press(view.getByTestId('tile-vehicle'));
             expect(onOpenVehicle).toHaveBeenCalled();
+
+            // Tapping Rental opens Rental callback
+            await fireEvent.press(view.getByTestId('tile-rental'));
+            expect(onOpenRental).toHaveBeenCalled();
+
+            // Tapping Sales opens Sales callback
+            await fireEvent.press(view.getByTestId('tile-sales'));
+            expect(onOpenSales).toHaveBeenCalled();
         });
     });
 
@@ -378,7 +446,8 @@ describe('Samsara-Style Heavy Equipment Launcher & Safety Gauntlets', () => {
                 />,
             );
 
-            expect(view.getByText('DVIR Inspection Engine')).toBeTruthy();
+            expect(view.getByText('Vehicle Inspection')).toBeTruthy();
+            expect(view.getByText('Create DVIR')).toBeTruthy();
             expect(view.getByText('1. Pre-Trip')).toBeTruthy();
             expect(view.getByText('2. Post-Trip')).toBeTruthy();
             expect(view.getByTestId('input-odometer')).toBeTruthy();

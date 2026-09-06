@@ -10,8 +10,10 @@ import {
 import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { PhotoAttachmentPicker } from '../components/attachments/PhotoAttachmentPicker';
 import { Icon } from '../components/common/Icon';
+import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import { useTheme } from '../theme';
 
 export interface RentalHandoverScreenProps {
     reservationId?: string;
@@ -54,6 +56,7 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
     onCompleteCheckout,
     onCompleteReturn,
 }) => {
+    const { isDarkHud } = useTheme();
     const [mode, setMode] = useState<'checkout' | 'return'>(initialMode);
     const [hourMeter, setHourMeter] = useState('1420.5');
     const [fuelLevel, setFuelLevel] = useState('100');
@@ -75,6 +78,9 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     conditionNotes ||
                     'Checkout inspection completed with zero safety defects.',
                 photos,
+                signatureBase64: signatureCaptured
+                    ? 'digital-signature-captured'
+                    : undefined,
                 signeeName,
             });
         } else {
@@ -84,148 +90,288 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 conditionNotes:
                     conditionNotes ||
                     (damageNoted
-                        ? 'Damage recorded during return diff.'
+                        ? 'Damage recorded during return inspection.'
                         : 'Returned in good operational condition.'),
                 damageNoted,
                 photos,
+                signatureBase64: signatureCaptured
+                    ? 'digital-signature-captured'
+                    : undefined,
                 signeeName,
             });
         }
     };
 
     return (
-        <View style={styles.screen} testID="rental-handover-screen">
+        <View
+            style={[styles.screen, isDarkHud && styles.darkScreen]}
+            testID="rental-handover-screen"
+        >
             {/* Top Navigation Bar */}
-            <View style={styles.topBar}>
-                <Pressable
-                    accessibilityLabel="Go back"
-                    accessibilityRole="button"
-                    onPress={onBack}
-                    style={({ pressed }) => [
-                        styles.backBtn,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="rental-back-button"
-                >
-                    <Icon name="back" size={20} color={colors.text} />
-                </Pressable>
-                <View style={styles.headerTitles}>
-                    <Text style={styles.screenTitle}>
-                        {isCheckout ? 'Rental Checkout' : 'Return Check-in'}
-                    </Text>
-                    <Text style={styles.headerSubtitle}>
-                        Alibaton Equipment Operations · PH
-                    </Text>
-                </View>
-                <View style={styles.reservationPill}>
-                    <Text style={styles.reservationPillText}>
-                        {reservationReference}
-                    </Text>
-                </View>
-            </View>
+            <TileScreenHeader
+                backAccessibilityLabel="Go back"
+                backTestID="rental-back-button"
+                category="Rental Handover"
+                onBack={onBack}
+                rightElement={
+                    <View
+                        style={[
+                            styles.reservationPill,
+                            isDarkHud && styles.reservationPillDark,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.reservationPillText,
+                                isDarkHud && styles.reservationPillTextDark,
+                            ]}
+                        >
+                            {reservationReference}
+                        </Text>
+                    </View>
+                }
+                subtitle="Alibaton Equipment Operations · PH"
+                title={isCheckout ? 'Rental Checkout' : 'Return Check-in'}
+            />
 
             {/* Mode Switcher Tabs */}
-            <View style={styles.modeTabs}>
+            <View
+                accessibilityRole="tablist"
+                style={[styles.modeTabs, isDarkHud && styles.modeTabsDark]}
+            >
                 <Pressable
-                    accessibilityRole="button"
+                    accessibilityLabel="Checkout Handover Tab"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isCheckout }}
                     onPress={() => setMode('checkout')}
-                    style={[styles.modeTab, isCheckout && styles.modeTabActive]}
+                    style={({ pressed }) => [
+                        styles.modeTab,
+                        isDarkHud && styles.modeTabDark,
+                        isCheckout &&
+                            (isDarkHud
+                                ? styles.modeTabActiveDark
+                                : styles.modeTabActive),
+                        pressed && styles.tabPressed,
+                    ]}
                     testID="tab-checkout"
                 >
                     <Icon
+                        color={
+                            isCheckout
+                                ? isDarkHud
+                                    ? '#F59E0B'
+                                    : '#B45309'
+                                : isDarkHud
+                                  ? colors.hudTextDim
+                                  : colors.muted
+                        }
                         name="truck"
                         size={16}
-                        color={isCheckout ? colors.blueDark : colors.muted}
                     />
                     <Text
                         style={[
                             styles.modeTabText,
-                            isCheckout && styles.modeTabTextActive,
+                            isDarkHud && styles.modeTabTextDark,
+                            isCheckout &&
+                                (isDarkHud
+                                    ? styles.modeTabTextActiveDark
+                                    : styles.modeTabTextActive),
                         ]}
                     >
-                        1. Outbound Handover
+                        Checkout Handover
                     </Text>
                 </Pressable>
 
                 <Pressable
-                    accessibilityRole="button"
+                    accessibilityLabel="Return Check-in Tab"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: !isCheckout }}
                     onPress={() => setMode('return')}
-                    style={[
+                    style={({ pressed }) => [
                         styles.modeTab,
-                        !isCheckout && styles.modeTabActive,
+                        isDarkHud && styles.modeTabDark,
+                        !isCheckout &&
+                            (isDarkHud
+                                ? styles.modeTabActiveDark
+                                : styles.modeTabActive),
+                        pressed && styles.tabPressed,
                     ]}
                     testID="tab-return"
                 >
                     <Icon
+                        color={
+                            !isCheckout
+                                ? isDarkHud
+                                    ? '#F59E0B'
+                                    : '#B45309'
+                                : isDarkHud
+                                  ? colors.hudTextDim
+                                  : colors.muted
+                        }
                         name="check-circle"
                         size={16}
-                        color={!isCheckout ? colors.blueDark : colors.muted}
                     />
                     <Text
                         style={[
                             styles.modeTabText,
-                            !isCheckout && styles.modeTabTextActive,
+                            isDarkHud && styles.modeTabTextDark,
+                            !isCheckout &&
+                                (isDarkHud
+                                    ? styles.modeTabTextActiveDark
+                                    : styles.modeTabTextActive),
                         ]}
                     >
-                        2. Return Check-in Diff
+                        Return Inspection
                     </Text>
                 </Pressable>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Equipment & Client Summary Card */}
-                <View style={styles.assetCard}>
+                <View
+                    style={[
+                        styles.assetCard,
+                        isDarkHud && styles.assetCardDark,
+                    ]}
+                >
                     <View style={styles.assetHeader}>
                         <View>
-                            <Text style={styles.assetCodeLabel}>
+                            <Text
+                                style={[
+                                    styles.assetCodeLabel,
+                                    isDarkHud && styles.assetCodeLabelDark,
+                                ]}
+                            >
                                 ASSET CODE
                             </Text>
-                            <Text style={styles.assetCode}>{assetCode}</Text>
+                            <Text
+                                style={[
+                                    styles.assetCode,
+                                    isDarkHud && styles.assetCodeDark,
+                                ]}
+                            >
+                                {assetCode}
+                            </Text>
                         </View>
-                        <View style={styles.doleBadge}>
-                            <Text style={styles.doleBadgeText}>
+                        <View
+                            style={[
+                                styles.doleBadge,
+                                isDarkHud && styles.doleBadgeDark,
+                            ]}
+                        >
+                            <Icon
+                                color={isDarkHud ? '#34D399' : colors.greenDark}
+                                name="shield-check"
+                                size={12}
+                            />
+                            <Text
+                                style={[
+                                    styles.doleBadgeText,
+                                    isDarkHud && styles.doleBadgeTextDark,
+                                ]}
+                            >
                                 DOLE-OSHC CERTIFIED
                             </Text>
                         </View>
                     </View>
 
-                    <Text style={styles.assetName}>{assetName}</Text>
+                    <Text
+                        style={[
+                            styles.assetName,
+                            isDarkHud && styles.assetNameDark,
+                        ]}
+                    >
+                        {assetName}
+                    </Text>
 
-                    <View style={styles.clientDivider} />
+                    <View
+                        style={[
+                            styles.clientDivider,
+                            isDarkHud && styles.clientDividerDark,
+                        ]}
+                    />
                     <View style={styles.clientRow}>
-                        <Icon name="profile" size={14} color={colors.muted} />
-                        <Text style={styles.clientName}>
+                        <Icon
+                            color={isDarkHud ? colors.hudTextDim : colors.muted}
+                            name="profile"
+                            size={14}
+                        />
+                        <Text
+                            style={[
+                                styles.clientName,
+                                isDarkHud && styles.clientNameDark,
+                            ]}
+                        >
                             Client: {clientName}
                         </Text>
                     </View>
                 </View>
 
-                {/* Telemetry & Operating Hours */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>
-                        MACHINE TELEMETRY & FLUIDS
+                {/* Operating Hours & Fluid Levels */}
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.sectionCardDark,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.sectionTitleDark,
+                        ]}
+                    >
+                        HOUR METER & FLUID LEVELS
                     </Text>
                     <View style={styles.inputsRow}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>
+                            <Text
+                                style={[
+                                    styles.inputLabel,
+                                    isDarkHud && styles.inputLabelDark,
+                                ]}
+                            >
                                 Hour Meter (hrs)
                             </Text>
                             <TextInput
+                                accessibilityLabel="Hour Meter in hours"
                                 keyboardType="numeric"
                                 onChangeText={setHourMeter}
-                                style={styles.textInput}
+                                placeholder="0.0"
+                                placeholderTextColor={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
+                                style={[
+                                    styles.textInput,
+                                    isDarkHud && styles.textInputDark,
+                                ]}
                                 testID="input-hour-meter"
                                 value={hourMeter}
                             />
                         </View>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>
+                            <Text
+                                style={[
+                                    styles.inputLabel,
+                                    isDarkHud && styles.inputLabelDark,
+                                ]}
+                            >
                                 Fuel Level (%)
                             </Text>
                             <TextInput
+                                accessibilityLabel="Fuel Level percentage"
                                 keyboardType="numeric"
                                 onChangeText={setFuelLevel}
-                                style={styles.textInput}
+                                placeholder="100"
+                                placeholderTextColor={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
+                                style={[
+                                    styles.textInput,
+                                    isDarkHud && styles.textInputDark,
+                                ]}
                                 testID="input-fuel-level"
                                 value={fuelLevel}
                             />
@@ -233,42 +379,77 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     </View>
                 </View>
 
-                {/* Return Damage Diff Toggle (Return Mode Only) */}
+                {/* Return Damage Inspection Toggle (Return Mode Only) */}
                 {!isCheckout ? (
-                    <View style={styles.sectionCard}>
-                        <Text style={styles.sectionTitle}>
-                            CONDITION DIFF & DAMAGE INSPECTION
+                    <View
+                        style={[
+                            styles.sectionCard,
+                            isDarkHud && styles.sectionCardDark,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.sectionTitle,
+                                isDarkHud && styles.sectionTitleDark,
+                            ]}
+                        >
+                            RETURN CONDITION & DAMAGE INSPECTION
                         </Text>
                         <Pressable
+                            accessibilityLabel={
+                                damageNoted
+                                    ? 'Damage or Wear Logged'
+                                    : 'No New Damage · Clean Return'
+                            }
                             accessibilityRole="button"
+                            accessibilityState={{ selected: damageNoted }}
                             onPress={() => setDamageNoted(!damageNoted)}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.damageToggle,
                                 damageNoted
-                                    ? styles.damageActive
-                                    : styles.damageClean,
+                                    ? isDarkHud
+                                        ? styles.damageActiveDark
+                                        : styles.damageActive
+                                    : isDarkHud
+                                      ? styles.damageCleanDark
+                                      : styles.damageClean,
+                                pressed && styles.pressed,
                             ]}
                             testID="toggle-damage-diff"
                         >
                             <Icon
-                                name="alert"
-                                size={18}
                                 color={
                                     damageNoted
-                                        ? colors.redDark
-                                        : colors.greenDark
+                                        ? isDarkHud
+                                            ? '#EF4444'
+                                            : colors.redDark
+                                        : isDarkHud
+                                          ? '#10B981'
+                                          : colors.greenDark
                                 }
+                                name={damageNoted ? 'alert' : 'check-circle'}
+                                size={18}
                             />
                             <View style={styles.damageCopy}>
-                                <Text style={styles.damageTitle}>
+                                <Text
+                                    style={[
+                                        styles.damageTitle,
+                                        isDarkHud && styles.damageTitleDark,
+                                    ]}
+                                >
                                     {damageNoted
                                         ? 'Damage or Wear Logged'
                                         : 'No New Damage · Clean Return'}
                                 </Text>
-                                <Text style={styles.damageSubtitle}>
+                                <Text
+                                    style={[
+                                        styles.damageSubtitle,
+                                        isDarkHud && styles.damageSubtitleDark,
+                                    ]}
+                                >
                                     {damageNoted
                                         ? 'Requires photo documentation & customer sign-off'
-                                        : 'Asset condition matches outbound baseline'}
+                                        : 'Equipment condition verified with zero safety defects'}
                                 </Text>
                             </View>
                         </Pressable>
@@ -276,14 +457,29 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 ) : null}
 
                 {/* Photo Evidence & Attachments */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.sectionCardDark,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.sectionTitleDark,
+                        ]}
+                    >
                         {isCheckout
-                            ? 'OUTBOUND BASELINE PHOTOS'
-                            : 'RETURN CONDITION EVIDENCE PHOTOS'}
+                            ? 'CHECKOUT INSPECTION PHOTOS'
+                            : 'RETURN INSPECTION PHOTOS'}
                     </Text>
                     <PhotoAttachmentPicker
                         attachments={photos}
+                        helperText={
+                            isCheckout
+                                ? 'Capture unit baseline condition, hour meter, and attachments.'
+                                : 'Capture return condition, hour meter, and any wear or damage.'
+                        }
                         onAddAttachment={(att) =>
                             setPhotos((prev) => [...prev, att])
                         }
@@ -292,6 +488,10 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                 prev.filter((_, i) => i !== idx),
                             )
                         }
+                        style={[
+                            styles.embeddedPhotoPicker,
+                            isDarkHud && styles.embeddedPhotoPickerDark,
+                        ]}
                         title={
                             isCheckout
                                 ? 'Baseline Inspection Photos'
@@ -300,12 +500,23 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     />
                 </View>
 
-                {/* Condition Notes */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>
-                        REMARKS & INSPECTION NOTES
+                {/* Remarks & Notes */}
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.sectionCardDark,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.sectionTitleDark,
+                        ]}
+                    >
+                        REMARKS & NOTES
                     </Text>
                     <TextInput
+                        accessibilityLabel="Inspection remarks and condition notes"
                         multiline
                         numberOfLines={3}
                         onChangeText={setConditionNotes}
@@ -314,26 +525,54 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                                 ? 'Verify tire pressure, outriggers, fluid leaks, and boom condition...'
                                 : 'Describe physical condition, paint scratches, hydraulic seals...'
                         }
-                        placeholderTextColor={colors.muted}
-                        style={styles.notesInput}
+                        placeholderTextColor={
+                            isDarkHud ? colors.hudTextDim : colors.muted
+                        }
+                        style={[
+                            styles.notesInput,
+                            isDarkHud && styles.notesInputDark,
+                        ]}
                         testID="input-condition-notes"
                         value={conditionNotes}
                     />
                 </View>
 
                 {/* Customer Sign-off Card */}
-                <View style={styles.sectionCard}>
-                    <Text style={styles.sectionTitle}>
-                        TWO-PARTY HANDOVER SIGN-OFF
+                <View
+                    style={[
+                        styles.sectionCard,
+                        isDarkHud && styles.sectionCardDark,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.sectionTitle,
+                            isDarkHud && styles.sectionTitleDark,
+                        ]}
+                    >
+                        CUSTOMER SIGN-OFF
                     </Text>
                     <View style={styles.signeeRow}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>
+                            <Text
+                                style={[
+                                    styles.inputLabel,
+                                    isDarkHud && styles.inputLabelDark,
+                                ]}
+                            >
                                 Client Representative Name
                             </Text>
                             <TextInput
+                                accessibilityLabel="Client Representative Name"
                                 onChangeText={setSigneeName}
-                                style={styles.textInput}
+                                placeholder="Representative Name"
+                                placeholderTextColor={
+                                    isDarkHud ? colors.hudTextDim : colors.muted
+                                }
+                                style={[
+                                    styles.textInput,
+                                    isDarkHud && styles.textInputDark,
+                                ]}
                                 testID="input-signee-name"
                                 value={signeeName}
                             />
@@ -344,26 +583,40 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                         accessibilityLabel="Capture Customer Signature"
                         accessibilityRole="button"
                         onPress={() => setSignatureModalVisible(true)}
-                        style={[
+                        style={({ pressed }) => [
                             styles.signatureBtn,
-                            signatureCaptured && styles.signatureBtnDone,
+                            isDarkHud && styles.signatureBtnDark,
+                            signatureCaptured &&
+                                (isDarkHud
+                                    ? styles.signatureBtnDoneDark
+                                    : styles.signatureBtnDone),
+                            pressed && styles.pressed,
                         ]}
                         testID="open-signature-button"
                     >
                         <Icon
-                            name="signature"
-                            size={18}
                             color={
                                 signatureCaptured
-                                    ? colors.greenDark
-                                    : colors.blueDark
+                                    ? isDarkHud
+                                        ? '#34D399'
+                                        : colors.greenDark
+                                    : isDarkHud
+                                      ? '#F59E0B'
+                                      : '#B45309'
                             }
+                            name={
+                                signatureCaptured ? 'check-circle' : 'signature'
+                            }
+                            size={18}
                         />
                         <Text
                             style={[
                                 styles.signatureBtnText,
+                                isDarkHud && styles.signatureBtnTextDark,
                                 signatureCaptured &&
-                                    styles.signatureBtnTextDone,
+                                    (isDarkHud
+                                        ? styles.signatureBtnTextDoneDark
+                                        : styles.signatureBtnTextDone),
                             ]}
                         >
                             {signatureCaptured
@@ -384,11 +637,12 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     onPress={handleConfirm}
                     style={({ pressed }) => [
                         styles.confirmBtn,
+                        isDarkHud && styles.confirmBtnDark,
                         pressed && styles.pressed,
                     ]}
                     testID="confirm-handover-button"
                 >
-                    <Icon name="check-circle" size={20} color="#FFFFFF" />
+                    <Icon color="#FFFFFF" name="check-circle" size={20} />
                     <Text style={styles.confirmBtnText}>
                         {isCheckout
                             ? 'CONFIRM RENTAL CHECKOUT & DISPATCH'
@@ -416,48 +670,28 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
         flex: 1,
     },
-    topBar: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        gap: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backBtn: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderRadius: 10,
-        height: 38,
-        justifyContent: 'center',
-        width: 38,
-    },
-    headerTitles: {
-        flex: 1,
-    },
-    screenTitle: {
-        color: colors.text,
-        fontSize: 16,
-        fontWeight: '800',
-    },
-    headerSubtitle: {
-        color: colors.muted,
-        fontSize: 11,
+    darkScreen: {
+        backgroundColor: colors.hudBackground,
     },
     reservationPill: {
-        backgroundColor: colors.blueLight,
-        borderColor: colors.blueBorder,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
         borderRadius: 8,
         borderWidth: 1,
         paddingHorizontal: 8,
         paddingVertical: 4,
     },
+    reservationPillDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.4)',
+    },
     reservationPillText: {
-        color: colors.blueDark,
+        color: colors.amberDark,
         fontSize: 11,
         fontWeight: '700',
+    },
+    reservationPillTextDark: {
+        color: '#FDE68A',
     },
     modeTabs: {
         backgroundColor: colors.surface,
@@ -467,6 +701,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 6,
     },
+    modeTabsDark: {
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorder,
+    },
     modeTab: {
         alignItems: 'center',
         borderRadius: 8,
@@ -474,22 +712,42 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         justifyContent: 'center',
-        paddingVertical: 10,
+        minHeight: 44,
+        paddingVertical: 8,
+    },
+    modeTabDark: {
+        backgroundColor: 'transparent',
     },
     modeTabActive: {
-        backgroundColor: colors.blueLight,
+        backgroundColor: colors.amberLight,
+    },
+    modeTabActiveDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.25)',
+        borderColor: 'rgba(245, 158, 11, 0.5)',
+        borderWidth: 1,
     },
     modeTabText: {
         color: colors.muted,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '600',
     },
+    modeTabTextDark: {
+        color: colors.hudTextDim,
+    },
     modeTabTextActive: {
-        color: colors.blueDark,
+        color: colors.amberDark,
+        fontWeight: '700',
+    },
+    modeTabTextActiveDark: {
+        color: '#FDE68A',
         fontWeight: '700',
     },
     scrollContent: {
+        alignSelf: 'center',
+        maxWidth: 720,
         padding: 16,
+        paddingBottom: 36,
+        width: '100%',
     },
     assetCard: {
         backgroundColor: colors.surface,
@@ -497,8 +755,14 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 1,
         marginBottom: 14,
-        padding: 14,
+        padding: 16,
         ...shadows.sm,
+    },
+    assetCardDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        elevation: 0,
+        shadowOpacity: 0,
     },
     assetHeader: {
         alignItems: 'center',
@@ -512,34 +776,56 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.5,
     },
+    assetCodeLabelDark: {
+        color: colors.hudTextDim,
+    },
     assetCode: {
-        color: colors.blueDark,
+        color: colors.amberDark,
         fontSize: 14,
         fontWeight: '800',
     },
+    assetCodeDark: {
+        color: '#FDE68A',
+    },
     doleBadge: {
+        alignItems: 'center',
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
         borderRadius: 6,
         borderWidth: 1,
+        flexDirection: 'row',
+        gap: 4,
         paddingHorizontal: 6,
         paddingVertical: 2,
+    },
+    doleBadgeDark: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderColor: 'rgba(16, 185, 129, 0.4)',
     },
     doleBadgeText: {
         color: colors.greenDark,
         fontSize: 10,
         fontWeight: '700',
     },
+    doleBadgeTextDark: {
+        color: '#34D399',
+    },
     assetName: {
         color: colors.text,
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '700',
         marginTop: 2,
+    },
+    assetNameDark: {
+        color: colors.hudText,
     },
     clientDivider: {
         backgroundColor: colors.border,
         height: 1,
         marginVertical: 10,
+    },
+    clientDividerDark: {
+        backgroundColor: colors.hudBorder,
     },
     clientRow: {
         alignItems: 'center',
@@ -547,8 +833,11 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     clientName: {
-        color: colors.muted,
+        color: colors.secondary,
         fontSize: 13,
+    },
+    clientNameDark: {
+        color: colors.hudTextDim,
     },
     sectionCard: {
         backgroundColor: colors.surface,
@@ -556,19 +845,28 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 1,
         marginBottom: 14,
-        padding: 14,
+        padding: 16,
         ...shadows.sm,
+    },
+    sectionCardDark: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+        elevation: 0,
+        shadowOpacity: 0,
     },
     sectionTitle: {
         color: colors.muted,
         fontSize: 11,
         fontWeight: '700',
-        letterSpacing: 0.5,
-        marginBottom: 10,
+        letterSpacing: 0.6,
+        marginBottom: 12,
+    },
+    sectionTitleDark: {
+        color: colors.hudTextDim,
     },
     inputsRow: {
         flexDirection: 'row',
-        gap: 10,
+        gap: 12,
     },
     inputGroup: {
         flex: 1,
@@ -577,7 +875,10 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 12,
         fontWeight: '600',
-        marginBottom: 4,
+        marginBottom: 6,
+    },
+    inputLabelDark: {
+        color: colors.hudText,
     },
     textInput: {
         backgroundColor: colors.surfaceMuted,
@@ -587,24 +888,37 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 14,
         fontWeight: '600',
-        minHeight: 44,
+        minHeight: 46,
         paddingHorizontal: 12,
+    },
+    textInputDark: {
+        backgroundColor: '#0F172A',
+        borderColor: colors.hudBorder,
+        color: colors.hudText,
     },
     damageToggle: {
         alignItems: 'center',
         borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
-        gap: 10,
-        padding: 12,
+        gap: 12,
+        padding: 14,
     },
     damageClean: {
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
     },
+    damageCleanDark: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: 'rgba(16, 185, 129, 0.4)',
+    },
     damageActive: {
         backgroundColor: colors.redLight,
         borderColor: colors.redBorder,
+    },
+    damageActiveDark: {
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderColor: 'rgba(239, 68, 68, 0.5)',
     },
     damageCopy: {
         flex: 1,
@@ -614,10 +928,16 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '700',
     },
+    damageTitleDark: {
+        color: colors.hudText,
+    },
     damageSubtitle: {
         color: colors.muted,
         fontSize: 11,
         marginTop: 2,
+    },
+    damageSubtitleDark: {
+        color: colors.hudTextDim,
     },
     notesInput: {
         backgroundColor: colors.surfaceMuted,
@@ -626,17 +946,22 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         color: colors.text,
         fontSize: 13,
-        minHeight: 70,
-        padding: 10,
+        minHeight: 72,
+        padding: 12,
         textAlignVertical: 'top',
     },
+    notesInputDark: {
+        backgroundColor: '#0F172A',
+        borderColor: colors.hudBorder,
+        color: colors.hudText,
+    },
     signeeRow: {
-        marginBottom: 10,
+        marginBottom: 12,
     },
     signatureBtn: {
         alignItems: 'center',
-        backgroundColor: colors.blueLight,
-        borderColor: colors.blueBorder,
+        backgroundColor: colors.amberLight,
+        borderColor: colors.amberBorder,
         borderRadius: 10,
         borderWidth: 1,
         flexDirection: 'row',
@@ -645,21 +970,35 @@ const styles = StyleSheet.create({
         minHeight: 48,
         padding: 12,
     },
+    signatureBtnDark: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.45)',
+    },
     signatureBtnDone: {
         backgroundColor: colors.greenLight,
         borderColor: colors.greenBorder,
     },
+    signatureBtnDoneDark: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderColor: 'rgba(16, 185, 129, 0.45)',
+    },
     signatureBtnText: {
-        color: colors.blueDark,
+        color: colors.amberDark,
         fontSize: 13,
         fontWeight: '700',
+    },
+    signatureBtnTextDark: {
+        color: '#FDE68A',
     },
     signatureBtnTextDone: {
         color: colors.greenDark,
     },
+    signatureBtnTextDoneDark: {
+        color: '#34D399',
+    },
     confirmBtn: {
         alignItems: 'center',
-        backgroundColor: colors.blueDark,
+        backgroundColor: colors.amber,
         borderRadius: 12,
         flexDirection: 'row',
         gap: 8,
@@ -669,13 +1008,36 @@ const styles = StyleSheet.create({
         padding: 14,
         ...shadows.md,
     },
+    confirmBtnDark: {
+        backgroundColor: colors.amber,
+        borderColor: 'rgba(245, 158, 11, 0.5)',
+        borderWidth: 1,
+        elevation: 0,
+        shadowOpacity: 0,
+    },
     confirmBtnText: {
         color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '800',
+        letterSpacing: 0.3,
+    },
+    embeddedPhotoPicker: {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        marginTop: 0,
+        padding: 0,
+    },
+    embeddedPhotoPickerDark: {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
     },
     pressed: {
-        opacity: 0.8,
-        transform: [{ scale: 0.985 }],
+        opacity: 0.82,
+        transform: [{ scale: 0.96 }],
+    },
+    tabPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.97 }],
     },
 });

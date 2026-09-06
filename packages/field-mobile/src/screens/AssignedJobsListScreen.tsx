@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -81,6 +81,8 @@ export interface AssignedJobsListScreenProps {
     onOpenDocuments?: () => void;
     onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
+    onOpenRental?: () => void;
+    onOpenSales?: () => void;
     onToggleLocationSharing?: () => void;
     onLogout?: () => void;
     onSyncNow?: () => void;
@@ -95,7 +97,15 @@ export interface AssignedJobsListScreenProps {
 }
 
 interface TileItem {
-    id: 'hos' | 'dvir' | 'routes' | 'documents' | 'vehicle' | 'forms';
+    id:
+        | 'hos'
+        | 'dvir'
+        | 'routes'
+        | 'documents'
+        | 'vehicle'
+        | 'forms'
+        | 'rental'
+        | 'sales';
     title: string;
     sublabel: string;
     iconName: IconName;
@@ -140,6 +150,8 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenDocuments,
     onOpenRoutes,
     onOpenVehicle,
+    onOpenRental,
+    onOpenSales,
     onToggleLocationSharing,
     onLogout,
     onSyncNow,
@@ -404,7 +416,51 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             darkHaloBg: 'rgba(148, 163, 184, 0.15)',
             badgeCount: jobs.length > 0 ? jobs.length : undefined,
         },
+        {
+            id: 'rental',
+            title: 'Rental\nHandover',
+            sublabel: 'Check-in / Out',
+            iconName: 'truck',
+            bgColor: '#4F46E5',
+            lightHaloBg: 'rgba(79, 70, 229, 0.12)',
+            lightIconColor: '#4F46E5',
+            borderColor: 'transparent',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(129, 140, 248, 0.45)',
+            darkIconColor: '#818CF8',
+            darkHaloBg: 'rgba(129, 140, 248, 0.15)',
+        },
+        {
+            id: 'sales',
+            title: 'Sales\nDelivery',
+            sublabel: 'Handover & VIN',
+            iconName: 'signature',
+            bgColor: '#E11D48',
+            lightHaloBg: 'rgba(225, 29, 72, 0.12)',
+            lightIconColor: '#E11D48',
+            borderColor: 'transparent',
+            iconColor: '#FFFFFF',
+            darkBgColor: '#1E293B',
+            darkBorderColor: 'rgba(251, 113, 133, 0.45)',
+            darkIconColor: '#FB7185',
+            darkHaloBg: 'rgba(251, 113, 133, 0.15)',
+        },
     ];
+
+    // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
+    // Col 1: HOS & DVIR | Col 2: Routes & Vehicle | Col 3: Documents & Dispatch | Col 4: Rental & Sales
+    const TILE_COLUMNS: TileItem[][] = useMemo(() => {
+        const byId = (id: TileItem['id']) =>
+            DASHBOARD_TILES.find((t) => t.id === id)!;
+
+        return [
+            [byId('hos'), byId('dvir')],
+            [byId('routes'), byId('vehicle')],
+            [byId('documents'), byId('forms')],
+            [byId('rental'), byId('sales')],
+        ];
+    }, [DASHBOARD_TILES]);
 
     const handleTilePress = (tileId: TileItem['id']) => {
         switch (tileId) {
@@ -435,6 +491,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 break;
             case 'forms':
                 setActiveNavItem('today');
+                break;
+            case 'rental':
+                onOpenRental?.();
+                break;
+            case 'sales':
+                onOpenSales?.();
                 break;
         }
     };
@@ -551,7 +613,10 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             accessibilityLabel="Initiate handover to relief crew"
                             accessibilityRole="button"
                             onPress={() => setReliefHandoverOpen(true)}
-                            style={styles.doleHandoverBtn}
+                            style={({ pressed }) => [
+                                styles.doleHandoverBtn,
+                                pressed && styles.pressed,
+                            ]}
                             testID="dole-handover-trigger-btn"
                         >
                             <Text style={styles.doleHandoverBtnText}>
@@ -673,90 +738,107 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     </Text>
                 </Pressable>
 
-                {/* 6-Tile Industrial Launcher Grid */}
-                <View
-                    style={styles.gridContainer}
+                {/* 2x4 Industrial Action Launcher Grid (Horizontal Swipeable) */}
+                <ScrollView
+                    contentContainerStyle={styles.horizontalScrollGrid}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.horizontalScrollWrapper}
                     testID="industrial-tile-grid"
                 >
-                    {DASHBOARD_TILES.map((tile) => (
-                        <Pressable
-                            accessibilityLabel={`${tile.title.replace('\n', ' ')} tile, ${tile.sublabel}`}
-                            accessibilityRole="button"
-                            key={tile.id}
-                            onPress={() => handleTilePress(tile.id)}
-                            style={({ pressed }) => [
-                                styles.tileCard,
-                                {
-                                    backgroundColor: isDarkHud
-                                        ? tile.darkBgColor || '#1E293B'
-                                        : tile.bgColor,
-                                    borderColor: isDarkHud
-                                        ? tile.darkBorderColor || '#334155'
-                                        : 'transparent',
-                                    borderWidth: isDarkHud ? 1.5 : 0,
-                                },
-                                isDarkHud && styles.darkTileCard,
-                                pressed && styles.pressedTile,
-                            ]}
-                            testID={`tile-${tile.id}`}
+                    {TILE_COLUMNS.map((column, colIdx) => (
+                        <View
+                            key={`tile-column-${colIdx + 1}`}
+                            style={styles.tileColumn}
+                            testID={`tile-column-${colIdx + 1}`}
                         >
-                            {tile.badgeCount ? (
-                                <View
-                                    style={[
-                                        styles.tileBadgePill,
-                                        isDarkHud && styles.darkTileBadgePill,
+                            {column.map((tile) => (
+                                <Pressable
+                                    accessibilityLabel={`${tile.title.replace('\n', ' ')} tile, ${tile.sublabel}`}
+                                    accessibilityRole="button"
+                                    key={tile.id}
+                                    onPress={() => handleTilePress(tile.id)}
+                                    style={({ pressed }) => [
+                                        styles.tileCard,
+                                        {
+                                            backgroundColor: isDarkHud
+                                                ? tile.darkBgColor || '#1E293B'
+                                                : tile.bgColor,
+                                            borderColor: isDarkHud
+                                                ? tile.darkBorderColor ||
+                                                  '#334155'
+                                                : 'transparent',
+                                            borderWidth: isDarkHud ? 1.5 : 0,
+                                        },
+                                        isDarkHud && styles.darkTileCard,
+                                        pressed && styles.pressedTile,
                                     ]}
+                                    testID={`tile-${tile.id}`}
                                 >
-                                    <Text
+                                    {tile.badgeCount ? (
+                                        <View
+                                            style={[
+                                                styles.tileBadgePill,
+                                                isDarkHud &&
+                                                    styles.darkTileBadgePill,
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.tileBadgePillText,
+                                                    isDarkHud &&
+                                                        styles.darkTileBadgePillText,
+                                                ]}
+                                            >
+                                                {tile.badgeCount}
+                                            </Text>
+                                        </View>
+                                    ) : null}
+                                    <View
                                         style={[
-                                            styles.tileBadgePillText,
+                                            styles.tileIconContainer,
                                             isDarkHud &&
-                                                styles.darkTileBadgePillText,
+                                                styles.darkTileIconContainer,
+                                            isDarkHud &&
+                                                Boolean(tile.darkHaloBg) && {
+                                                    backgroundColor:
+                                                        tile.darkHaloBg,
+                                                },
                                         ]}
                                     >
-                                        {tile.badgeCount}
+                                        <Icon
+                                            color={
+                                                isDarkHud
+                                                    ? tile.darkIconColor ||
+                                                      '#FFFFFF'
+                                                    : '#FFFFFF'
+                                            }
+                                            name={tile.iconName}
+                                            size={isDarkHud ? 22 : 28}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={[
+                                            styles.tileTitle,
+                                            isDarkHud && styles.darkTileTitle,
+                                        ]}
+                                    >
+                                        {tile.title}
                                     </Text>
-                                </View>
-                            ) : null}
-                            <View
-                                style={[
-                                    styles.tileIconContainer,
-                                    isDarkHud && styles.darkTileIconContainer,
-                                    isDarkHud &&
-                                        Boolean(tile.darkHaloBg) && {
-                                            backgroundColor: tile.darkHaloBg,
-                                        },
-                                ]}
-                            >
-                                <Icon
-                                    color={
-                                        isDarkHud
-                                            ? tile.darkIconColor || '#FFFFFF'
-                                            : '#FFFFFF'
-                                    }
-                                    name={tile.iconName}
-                                    size={isDarkHud ? 22 : 28}
-                                />
-                            </View>
-                            <Text
-                                style={[
-                                    styles.tileTitle,
-                                    isDarkHud && styles.darkTileTitle,
-                                ]}
-                            >
-                                {tile.title}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.tileSublabel,
-                                    isDarkHud && styles.darkTileSublabel,
-                                ]}
-                            >
-                                {tile.sublabel}
-                            </Text>
-                        </Pressable>
+                                    <Text
+                                        style={[
+                                            styles.tileSublabel,
+                                            isDarkHud &&
+                                                styles.darkTileSublabel,
+                                        ]}
+                                    >
+                                        {tile.sublabel}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
                     ))}
-                </View>
+                </ScrollView>
 
                 {activeNavItem === 'route' ? (
                     <PlannedRoutePanel
@@ -1119,17 +1201,31 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 14,
     },
+    horizontalScrollWrapper: {
+        marginHorizontal: -16,
+        marginBottom: 14,
+    },
+    horizontalScrollGrid: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 2,
+    },
+    tileColumn: {
+        flexDirection: 'column',
+        gap: 8,
+        width: 110,
+    },
     tileCard: {
         alignItems: 'center',
         borderColor: 'transparent',
         borderRadius: 18,
         borderWidth: 0,
-        flexBasis: '31%',
-        flexGrow: 1,
         justifyContent: 'center',
-        minHeight: 114,
+        minHeight: 112,
         padding: 10,
         position: 'relative',
+        width: '100%',
         ...shadows.md,
     },
     darkTileCard: {
@@ -1137,11 +1233,12 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         borderWidth: 1.5,
         justifyContent: 'center',
-        minHeight: 114,
+        minHeight: 112,
         padding: 10,
         position: 'relative',
         shadowColor: '#000000',
         shadowOpacity: 0.3,
+        width: '100%',
     },
     tileIconContainer: {
         alignItems: 'center',

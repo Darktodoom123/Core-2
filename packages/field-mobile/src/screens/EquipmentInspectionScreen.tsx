@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Icon } from '../components/common/Icon';
 import {
     FuelReceiptTab,
     HandoverTab,
     InspectionChecklistTab,
     MaintenanceWorkOrderTab,
 } from '../components/inspection';
+import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import { useTheme } from '../theme';
 import type {
@@ -72,10 +72,8 @@ export const EquipmentInspectionScreen: React.FC<
     assetName = '50-Ton Mobile All-Terrain Crane',
     technicianName = 'Alex Rivera (Certified Crane Technician)',
     onBack,
-    onOpenDvir,
     onSaveInspection,
     onLogWorkOrder,
-    onSafeRelease,
     onLogFuelReceipt,
     onCompleteHandover,
 }) => {
@@ -166,54 +164,15 @@ export const EquipmentInspectionScreen: React.FC<
             style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
             testID="equipment-inspection-screen"
         >
-            {/* Top Navigation Header Bar matching DVIR */}
-            <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
-                {onBack ? (
-                    <Pressable
-                        accessibilityLabel="Close and return"
-                        accessibilityRole="button"
-                        onPress={onBack}
-                        style={({ pressed }) => [
-                            styles.closeHeaderBtn,
-                            isDarkHud && styles.darkCloseHeaderBtn,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Icon
-                            color={isDarkHud ? colors.hudText : colors.text}
-                            name="back"
-                            size={18}
-                        />
-                    </Pressable>
-                ) : null}
-                <View style={styles.headerCenter}>
-                    <Text
-                        style={[
-                            styles.pageCategory,
-                            isDarkHud && styles.darkPageCategory,
-                        ]}
-                    >
-                        VEHICLE MAINTENANCE & FLEET HUB
-                    </Text>
-                    <Text
-                        accessibilityRole="header"
-                        style={[
-                            styles.screenTitle,
-                            isDarkHud && styles.darkScreenTitle,
-                        ]}
-                    >
-                        {assetCode} · {assetName}
-                    </Text>
-                    <Text
-                        style={[
-                            styles.headerSubtitle,
-                            isDarkHud && styles.darkHeaderSubtitle,
-                        ]}
-                    >
-                        Assigned Operator: {technicianName}
-                    </Text>
-                </View>
-            </View>
+            {/* Top Navigation Header Bar matching DVIR & other tiles */}
+            <TileScreenHeader
+                backAccessibilityLabel="Back to dashboard"
+                backTestID="equipment-back-button"
+                category="Vehicle Maintenance"
+                onBack={onBack}
+                subtitle={`Assigned Operator: ${technicianName}`}
+                title={`${assetCode} · ${assetName}`}
+            />
 
             {/* Navigation Tabs Bar matching DVIR Segment Filter */}
             <View
@@ -436,63 +395,6 @@ const styles = StyleSheet.create({
     darkScreenRoot: {
         backgroundColor: colors.hudBackground,
     },
-    headerBar: {
-        alignItems: 'center',
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        gap: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    darkHeaderBar: {
-        backgroundColor: colors.hudSurface,
-        borderBottomColor: colors.hudBorder,
-    },
-    closeHeaderBtn: {
-        alignItems: 'center',
-        backgroundColor: colors.surfaceMuted,
-        borderColor: colors.border,
-        borderRadius: 8,
-        borderWidth: 1,
-        height: 38,
-        justifyContent: 'center',
-        width: 38,
-    },
-    darkCloseHeaderBtn: {
-        backgroundColor: colors.surfaceDark,
-        borderColor: colors.hudBorder,
-    },
-    headerCenter: {
-        flex: 1,
-    },
-    pageCategory: {
-        color: colors.amber,
-        fontSize: 11,
-        fontWeight: '900',
-        letterSpacing: 0.8,
-    },
-    darkPageCategory: {
-        color: colors.hudAmber,
-    },
-    screenTitle: {
-        color: colors.text,
-        fontSize: 17,
-        fontWeight: '800',
-    },
-    darkScreenTitle: {
-        color: colors.hudText,
-    },
-    headerSubtitle: {
-        color: colors.muted,
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 1,
-    },
-    darkHeaderSubtitle: {
-        color: colors.hudTextDim,
-    },
     tabBarContainer: {
         backgroundColor: colors.surface,
         borderBottomColor: colors.border,
@@ -597,6 +499,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.hudBackground,
     },
     pressed: {
-        opacity: 0.85,
+        opacity: 0.82,
+        transform: [{ scale: 0.96 }],
     },
 });

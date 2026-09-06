@@ -414,7 +414,7 @@ describe('Native Field Workflows Component Tests', () => {
             );
         });
 
-        it('renders full EquipmentInspectionScreen as Vehicle Maintenance & Fleet Hub and switches tabs', async () => {
+        it('renders full EquipmentInspectionScreen as Vehicle Maintenance and switches tabs', async () => {
             const view = await render(
                 <EquipmentInspectionScreen
                     assetCode="CRN-07"
@@ -423,9 +423,7 @@ describe('Native Field Workflows Component Tests', () => {
                 />,
             );
 
-            expect(
-                view.getByText('VEHICLE MAINTENANCE & FLEET HUB'),
-            ).toBeTruthy();
+            expect(view.getByText('Vehicle Maintenance')).toBeTruthy();
             expect(
                 view.getByText('CRN-07 · 50-Ton Mobile All-Terrain Crane'),
             ).toBeTruthy();

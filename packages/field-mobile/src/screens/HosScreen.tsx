@@ -12,6 +12,7 @@ import {
 import type { DimensionValue } from 'react-native';
 import { Icon } from '../components/common/Icon';
 import type { IconName } from '../components/common/Icon';
+import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
 import { useTheme } from '../theme';
@@ -818,34 +819,13 @@ export const HosScreen: React.FC<HosScreenProps> = ({
             style={[styles.screenRoot, isDarkHud && styles.darkScreenRoot]}
             testID="hos-screen"
         >
-            {/* 1. Fixed Top Header Bar matching DVIR & Samsara Cockpit */}
-            <View style={[styles.headerBar, isDarkHud && styles.darkHeaderBar]}>
-                {/* Top Action Row: Tactile Back Button & Duty Status Capsule Badge */}
-                <View style={styles.headerTopRow}>
-                    <Pressable
-                        accessibilityHint="Returns to previous screen"
-                        accessibilityLabel="Close and return"
-                        accessibilityRole="button"
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => {
-                            if (onBack) {
-                                onBack();
-                            }
-                        }}
-                        style={({ pressed }) => [
-                            styles.closeHeaderBtn,
-                            isDarkHud && styles.darkCloseHeaderBtn,
-                            pressed && styles.closeHeaderBtnPressed,
-                        ]}
-                        testID="hos-back-btn"
-                    >
-                        <Icon
-                            color={isDarkHud ? '#F8FAFC' : '#0F172A'}
-                            name="back"
-                            size={20}
-                        />
-                    </Pressable>
-
+            {/* 1. Unified Minimalist Header Bar matching other tiles */}
+            <TileScreenHeader
+                backAccessibilityLabel="Back to dashboard"
+                backTestID="hos-back-btn"
+                category="Hours of Service"
+                onBack={onBack}
+                rightElement={
                     <View
                         style={[
                             styles.dutyPillBadge,
@@ -867,46 +847,10 @@ export const HosScreen: React.FC<HosScreenProps> = ({
                             {activeConfig.badge}
                         </Text>
                     </View>
-                </View>
-
-                {/* Main Header Titles & Telemetry Shelf */}
-                <View style={styles.headerTitleBlock}>
-                    <Text
-                        style={[
-                            styles.pageCategory,
-                            isDarkHud && styles.darkPageCategory,
-                        ]}
-                    >
-                        HOURS OF SERVICE (HoS) · ELD COCKPIT
-                    </Text>
-                    <Text
-                        accessibilityRole="header"
-                        style={[
-                            styles.screenTitle,
-                            isDarkHud && styles.darkScreenTitle,
-                        ]}
-                    >
-                        Duty Status &amp; Shift Management
-                    </Text>
-                    <View
-                        style={[
-                            styles.telemetryShelf,
-                            isDarkHud && styles.darkTelemetryShelf,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.headerSubtitle,
-                                isDarkHud && styles.darkHeaderSubtitle,
-                            ]}
-                        >
-                            Operator: {operatorName} · Shift Started:{' '}
-                            {shiftInfo?.startedAt ?? '08:00 AM'} (
-                            {hoursElapsed.toFixed(1)}h Elapsed)
-                        </Text>
-                    </View>
-                </View>
-            </View>
+                }
+                subtitle={`Operator: ${operatorName} · Shift Started: ${shiftInfo?.startedAt ?? '08:00 AM'} (${hoursElapsed.toFixed(1)}h Elapsed)`}
+                title="Duty Status & Shift Management"
+            />
 
             {/* 2. Scrollable Cockpit Content */}
             <ScrollView
@@ -2597,87 +2541,6 @@ const styles = StyleSheet.create({
     darkScreenRoot: {
         backgroundColor: '#090D16',
     },
-    headerBar: {
-        backgroundColor: '#FFFFFF',
-        borderBottomColor: '#E2E8F0',
-        borderBottomWidth: 1,
-        paddingBottom: 12,
-        paddingHorizontal: 16,
-        paddingTop: 12,
-    },
-    darkHeaderBar: {
-        backgroundColor: '#1E293B',
-        borderBottomColor: '#334155',
-    },
-    headerTopRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    closeHeaderBtn: {
-        alignItems: 'center',
-        backgroundColor: '#F8FAFC',
-        borderColor: '#E2E8F0',
-        borderRadius: 20,
-        borderWidth: 1,
-        elevation: 1,
-        height: 40,
-        justifyContent: 'center',
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 2,
-        width: 40,
-    },
-    darkCloseHeaderBtn: {
-        backgroundColor: '#0F172A',
-        borderColor: '#334155',
-        shadowColor: '#000000',
-        shadowOpacity: 0.3,
-    },
-    closeHeaderBtnPressed: {
-        opacity: 0.75,
-        transform: [{ scale: 0.94 }],
-    },
-    headerTitleBlock: {
-        width: '100%',
-    },
-    pageCategory: {
-        color: '#D97706',
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-        marginBottom: 3,
-    },
-    darkPageCategory: {
-        color: '#F59E0B',
-    },
-    screenTitle: {
-        color: '#0F172A',
-        fontSize: 20,
-        fontWeight: '800',
-        letterSpacing: -0.3,
-    },
-    darkScreenTitle: {
-        color: '#F8FAFC',
-    },
-    telemetryShelf: {
-        backgroundColor: 'transparent',
-        marginTop: 4,
-    },
-    darkTelemetryShelf: {
-        backgroundColor: 'transparent',
-    },
-    headerSubtitle: {
-        color: '#64748B',
-        fontSize: 12,
-        fontWeight: '500',
-        lineHeight: 17,
-    },
-    darkHeaderSubtitle: {
-        color: '#94A3B8',
-    },
     dutyPillBadge: {
         alignItems: 'center',
         backgroundColor: '#F8FAFC',
@@ -3890,7 +3753,8 @@ const styles = StyleSheet.create({
         color: '#A7F3D0',
     },
     pressed: {
-        opacity: 0.78,
+        opacity: 0.82,
+        transform: [{ scale: 0.96 }],
     },
     doleWarningBanner: {
         alignItems: 'center',

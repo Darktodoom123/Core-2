@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import {
     ActivityIndicator,
     Alert,
@@ -9,6 +10,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useTheme } from '../../theme';
 import { colors } from '../nativeStyles';
 
 export interface PhotoAttachment {
@@ -26,6 +28,7 @@ export interface PhotoAttachmentPickerProps {
     title?: string;
     helperText?: string;
     testID?: string;
+    style?: StyleProp<ViewStyle>;
 }
 
 export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
@@ -36,7 +39,9 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
     title = 'Attach Photo Evidence',
     helperText = 'Add photos of defects, serial tags, or site hazards.',
     testID = 'photo-attachment-picker',
+    style,
 }) => {
+    const { isDarkHud } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
     const canAddMore = attachments.length < maxCount;
 
@@ -131,15 +136,22 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
     };
 
     return (
-        <View style={styles.container} testID={testID}>
+        <View
+            style={[styles.container, isDarkHud && styles.darkContainer, style]}
+            testID={testID}
+        >
             <View style={styles.headerRow}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.counter}>
+                <Text style={[styles.title, isDarkHud && styles.darkTitle]}>
+                    {title}
+                </Text>
+                <Text style={[styles.counter, isDarkHud && styles.darkCounter]}>
                     {attachments.length} / {maxCount}
                 </Text>
             </View>
             {helperText ? (
-                <Text style={styles.helper}>{helperText}</Text>
+                <Text style={[styles.helper, isDarkHud && styles.darkHelper]}>
+                    {helperText}
+                </Text>
             ) : null}
 
             {/* Thumbnail Preview Grid */}
@@ -151,7 +163,10 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                     {attachments.map((item, index) => (
                         <View
                             key={`${item.uri}-${index}`}
-                            style={styles.thumbnailWrapper}
+                            style={[
+                                styles.thumbnailWrapper,
+                                isDarkHud && styles.darkThumbnailWrapper,
+                            ]}
                         >
                             <Image
                                 source={{ uri: item.uri }}
@@ -185,17 +200,25 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                         onPress={handleTakePhoto}
                         style={({ pressed }) => [
                             styles.actionButton,
+                            isDarkHud && styles.darkActionButton,
                             pressed && styles.pressed,
                         ]}
                         testID={`${testID}-take-photo`}
                     >
                         {isLoading ? (
                             <ActivityIndicator
-                                color={colors.amberDark}
+                                color={isDarkHud ? '#F59E0B' : colors.amberDark}
                                 size="small"
                             />
                         ) : (
-                            <Text style={styles.actionText}>Take Photo</Text>
+                            <Text
+                                style={[
+                                    styles.actionText,
+                                    isDarkHud && styles.darkActionText,
+                                ]}
+                            >
+                                Take Photo
+                            </Text>
                         )}
                     </Pressable>
 
@@ -207,23 +230,45 @@ export const PhotoAttachmentPicker: React.FC<PhotoAttachmentPickerProps> = ({
                         style={({ pressed }) => [
                             styles.actionButton,
                             styles.galleryButton,
+                            isDarkHud && styles.darkGalleryButton,
                             pressed && styles.pressed,
                         ]}
                         testID={`${testID}-choose-gallery`}
                     >
                         {isLoading ? (
                             <ActivityIndicator
-                                color={colors.secondary}
+                                color={
+                                    isDarkHud
+                                        ? colors.hudTextDim
+                                        : colors.secondary
+                                }
                                 size="small"
                             />
                         ) : (
-                            <Text style={styles.actionText}>Choose Photo</Text>
+                            <Text
+                                style={[
+                                    styles.actionText,
+                                    isDarkHud && styles.darkActionText,
+                                ]}
+                            >
+                                Choose Photo
+                            </Text>
                         )}
                     </Pressable>
                 </View>
             ) : (
-                <View style={styles.maxNotice}>
-                    <Text style={styles.maxNoticeText}>
+                <View
+                    style={[
+                        styles.maxNotice,
+                        isDarkHud && styles.darkMaxNotice,
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.maxNoticeText,
+                            isDarkHud && styles.darkMaxNoticeText,
+                        ]}
+                    >
                         Maximum {maxCount} photos attached.
                     </Text>
                 </View>
@@ -337,6 +382,39 @@ const styles = StyleSheet.create({
         color: colors.secondary,
         fontSize: 12,
         textAlign: 'center',
+    },
+    darkContainer: {
+        backgroundColor: colors.hudSurface,
+        borderColor: colors.hudBorder,
+    },
+    darkTitle: {
+        color: colors.hudText,
+    },
+    darkCounter: {
+        color: colors.hudTextDim,
+    },
+    darkHelper: {
+        color: colors.hudTextDim,
+    },
+    darkThumbnailWrapper: {
+        borderColor: colors.hudBorder,
+    },
+    darkActionButton: {
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderColor: 'rgba(245, 158, 11, 0.45)',
+    },
+    darkGalleryButton: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    darkActionText: {
+        color: colors.hudText,
+    },
+    darkMaxNotice: {
+        backgroundColor: colors.surfaceDark,
+    },
+    darkMaxNoticeText: {
+        color: colors.hudTextDim,
     },
     pressed: {
         opacity: 0.75,

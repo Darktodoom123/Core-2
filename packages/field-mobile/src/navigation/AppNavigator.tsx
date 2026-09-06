@@ -35,6 +35,8 @@ import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
+import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
+import { SalesDeliveryScreen } from '../screens/SalesDeliveryScreen';
 import {
     startBackgroundLocationUpdates,
     stopBackgroundLocationUpdates,
@@ -214,7 +216,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     });
     const [isSosActivating, setIsSosActivating] = useState(false);
     const [activeAppView, setActiveAppView] = useState<
-        'main' | 'dvir' | 'documents' | 'inspection' | 'hos' | 'routes'
+        | 'main'
+        | 'dvir'
+        | 'documents'
+        | 'inspection'
+        | 'hos'
+        | 'routes'
+        | 'rental'
+        | 'sales'
     >('main');
     const [shiftInfo, setShiftInfo] = useState<ShiftInfo>({
         status: 'on_shift',
@@ -1250,6 +1259,54 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onBack={() => setActiveAppView('main')}
                                 operatorName={user?.name || 'Alex Rivera'}
                             />
+                        ) : activeAppView === 'rental' ? (
+                            <RentalHandoverScreen
+                                assetCode={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_code ||
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_code ||
+                                    'ALB-CRN-050'
+                                }
+                                assetName={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    '50T Tadano All-Terrain Crane'
+                                }
+                                clientName={
+                                    activeJob?.client ||
+                                    jobs[0]?.client ||
+                                    'DMCI Construction & Power Inc.'
+                                }
+                                onBack={() => setActiveAppView('main')}
+                                onCompleteCheckout={() =>
+                                    setActiveAppView('main')
+                                }
+                                onCompleteReturn={() =>
+                                    setActiveAppView('main')
+                                }
+                            />
+                        ) : activeAppView === 'sales' ? (
+                            <SalesDeliveryScreen
+                                clientName={
+                                    activeJob?.client ||
+                                    jobs[0]?.client ||
+                                    'San Miguel Infrastructure Corp.'
+                                }
+                                equipmentName={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    jobs[0]?.asset_assignments?.[0]
+                                        ?.asset_name ||
+                                    'Caterpillar 320 GC Hydraulic Excavator'
+                                }
+                                onBack={() => setActiveAppView('main')}
+                                onCompleteDelivery={() =>
+                                    setActiveAppView('main')
+                                }
+                            />
                         ) : (
                             <AssignedJobsListScreen
                                 onSosHoldComplete={handleGlobalSosHold}
@@ -1267,7 +1324,9 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 }
                                 onOpenDvir={() => setActiveAppView('dvir')}
                                 onOpenHos={() => setActiveAppView('hos')}
+                                onOpenRental={() => setActiveAppView('rental')}
                                 onOpenRoutes={() => setActiveAppView('routes')}
+                                onOpenSales={() => setActiveAppView('sales')}
                                 onOpenVehicle={() =>
                                     setActiveAppView('inspection')
                                 }

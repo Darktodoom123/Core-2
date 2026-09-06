@@ -23,9 +23,7 @@ describe('HosScreen Component & Workflows', () => {
         );
 
         // Header & Titles
-        expect(
-            view.getByText('HOURS OF SERVICE (HoS) · ELD COCKPIT'),
-        ).toBeTruthy();
+        expect(view.getByText('Hours of Service')).toBeTruthy();
         expect(view.getByText('Duty Status & Shift Management')).toBeTruthy();
         expect(
             view.getByText(
