@@ -6,7 +6,6 @@ import {
     Clock,
     LoaderCircle,
     RefreshCw,
-    ShieldCheck,
     Truck,
     Users,
 } from 'lucide-react';
@@ -24,7 +23,7 @@ export interface DispatchAdvisoryCardProps {
     canRequest: boolean;
     canReview: boolean;
     canRetry: boolean;
-    canViewHistory: boolean;
+    canViewHistory?: boolean;
     error: string | null;
     assignmentUrl?: string;
     onRequest: () => void;
@@ -42,7 +41,6 @@ export function DispatchAdvisoryCard({
     canRequest,
     canReview,
     canRetry,
-    canViewHistory,
     error,
     assignmentUrl,
     onRequest,
@@ -352,24 +350,6 @@ export function DispatchAdvisoryCard({
                     </p>
                 )}
             </div>
-            <footer className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line px-4 py-3 text-[11px] text-ink-soft">
-                <span className="inline-flex items-center gap-1.5">
-                    <ShieldCheck
-                        className="h-3.5 w-3.5 shrink-0"
-                        aria-hidden="true"
-                    />
-                    You confirm every assignment
-                </span>
-                {canViewHistory && (
-                    <Link
-                        href="/?view=gpt-recommendations"
-                        className="inline-flex min-h-8 items-center gap-1 rounded font-medium text-ink underline decoration-brand underline-offset-2 hover:decoration-2"
-                    >
-                        Advisory history
-                        <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-                    </Link>
-                )}
-            </footer>
         </section>
     );
 }

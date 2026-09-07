@@ -916,7 +916,7 @@ export function DispatchDesk({
 
                             {(state.mode === 'list' ||
                                 !showScheduleControls) && (
-                                <div className="grid min-w-0 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(0,1.2fr)]">
+                                <div className="grid min-w-0 lg:grid-cols-[22rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]">
                                     <div
                                         className={cn(
                                             'min-w-0',
@@ -1531,326 +1531,346 @@ function DispatchReviewPanel({
             className="@container min-w-0 bg-canvas p-4 md:p-6"
             aria-labelledby="dispatch-review-heading"
         >
-            <Panel className="overflow-hidden">
-                <div className="border-b border-line px-4 py-4 md:px-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-bold tracking-wide text-ink-soft">
-                                    {job.reference}
-                                </span>
-                                <CanonicalStatusBadge status={job.status} />
-                                {job.priority.value !== 'routine' && (
-                                    <span
-                                        className={cn(
-                                            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                            priorityClasses(job.priority.value),
-                                        )}
-                                    >
-                                        {job.priority.label}
+            <div className="grid min-w-0 items-start gap-5 @2xl:grid-cols-[minmax(0,1fr)_20rem] @5xl:grid-cols-[minmax(0,1fr)_22rem]">
+                <Panel className="min-w-0 overflow-hidden">
+                    <div className="border-b border-line px-4 py-4 md:px-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-bold tracking-wide text-ink-soft">
+                                        {job.reference}
                                     </span>
-                                )}
+                                    <CanonicalStatusBadge status={job.status} />
+                                    {job.priority.value !== 'routine' && (
+                                        <span
+                                            className={cn(
+                                                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                                priorityClasses(
+                                                    job.priority.value,
+                                                ),
+                                            )}
+                                        >
+                                            {job.priority.label}
+                                        </span>
+                                    )}
+                                </div>
+                                <h2
+                                    id="dispatch-review-heading"
+                                    className="mt-2 text-xl font-semibold tracking-[-0.02em] text-ink"
+                                >
+                                    {job.title}
+                                </h2>
+                                <p className="mt-1 text-sm text-ink-soft">
+                                    {job.client}
+                                </p>
                             </div>
-                            <h2
-                                id="dispatch-review-heading"
-                                className="mt-2 text-xl font-semibold tracking-[-0.02em] text-ink"
-                            >
-                                {job.title}
-                            </h2>
-                            <p className="mt-1 text-sm text-ink-soft">
-                                {job.client}
-                            </p>
-                        </div>
-                        <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
-                            {nextAction.group === 'execution'
-                                ? 'Field execution'
-                                : nextAction.group === 'history'
-                                  ? 'History'
-                                  : 'Preparation'}
-                        </span>
-                    </div>
-                    {job.status.value === 'draft' && (
-                        <div className="mt-3 flex items-center gap-2 text-xs font-medium text-brand-strong">
-                            <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                            <span>
-                                Module 2 · Ready for driver/operator &amp;
-                                equipment assignment
+                            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
+                                {nextAction.group === 'execution'
+                                    ? 'Field execution'
+                                    : nextAction.group === 'history'
+                                      ? 'History'
+                                      : 'Preparation'}
                             </span>
                         </div>
-                    )}
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <Link
-                            href={href}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
-                        >
-                            {nextAction.label}
-                            <ChevronRight
-                                className="h-4 w-4"
-                                aria-hidden="true"
-                            />
-                        </Link>
-                        <a
-                            href="#dispatch-ai-assistance"
-                            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink underline decoration-brand underline-offset-2"
-                        >
-                            AI assistance
-                        </a>
-                        <span className="text-xs text-ink-soft">
-                            {nextAction.group === 'preparation'
-                                ? 'Review the remaining requirements before activation.'
-                                : nextAction.group === 'execution'
-                                  ? 'Review the latest field updates.'
-                                  : 'Review the outcome and dispatch history.'}
-                        </span>
+                        {job.status.value === 'draft' && (
+                            <div className="mt-3 flex items-center gap-2 text-xs font-medium text-brand-strong">
+                                <Users
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                />
+                                <span>
+                                    Module 2 · Ready for driver/operator &amp;
+                                    equipment assignment
+                                </span>
+                            </div>
+                        )}
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <Link
+                                href={href}
+                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                            >
+                                {nextAction.label}
+                                <ChevronRight
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                            <a
+                                href="#dispatch-ai-assistance"
+                                className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink underline decoration-brand underline-offset-2"
+                            >
+                                AI assistance
+                            </a>
+                            <span className="text-xs text-ink-soft">
+                                {nextAction.group === 'preparation'
+                                    ? 'Review the remaining requirements before activation.'
+                                    : nextAction.group === 'execution'
+                                      ? 'Review the latest field updates.'
+                                      : 'Review the outcome and dispatch history.'}
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                <div className="grid gap-x-8 px-4 py-4 md:px-5 @lg:grid-cols-2">
-                    <dl className="divide-y divide-line">
-                        <DataPair
-                            label="Site"
-                            value={
-                                <span className="inline-flex items-center gap-1.5">
-                                    <MapPin
-                                        className="h-3.5 w-3.5 text-ink-soft"
-                                        aria-hidden="true"
-                                    />
-                                    {job.site || 'Site not recorded'}
-                                </span>
-                            }
-                        />
-                        <DataPair
-                            label="Schedule"
-                            value={
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Clock3
-                                        className="h-3.5 w-3.5 text-ink-soft"
-                                        aria-hidden="true"
-                                    />
-                                    {formatSchedule(job)}
-                                </span>
-                            }
-                        />
-                        <DataPair
-                            label="Source"
-                            value={job.source?.label ?? 'Direct intake'}
-                        />
-                    </dl>
-                    <div className="border-t border-line pt-3 @lg:border-t-0 @lg:pt-0">
-                        <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                            Requirements
-                        </h3>
-                        {job.requirements.length > 0 ? (
-                            <ul className="mt-2 space-y-2 text-sm text-ink">
-                                {job.requirements.map((requirement) => (
-                                    <li
-                                        key={requirement}
-                                        className="flex items-start gap-2"
-                                    >
-                                        <span
-                                            className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                    <div className="grid gap-x-8 px-4 py-4 md:px-5 @lg:grid-cols-2">
+                        <dl className="divide-y divide-line">
+                            <DataPair
+                                label="Site"
+                                value={
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <MapPin
+                                            className="h-3.5 w-3.5 text-ink-soft"
                                             aria-hidden="true"
                                         />
-                                        {requirement}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="mt-2 text-sm text-ink-soft">
-                                No requirements recorded.
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                <div className="grid gap-5 border-t border-line px-4 py-4 md:px-5 @lg:grid-cols-2">
-                    <section aria-labelledby="assigned-personnel-heading">
-                        <div className="flex items-center justify-between">
-                            <h3
-                                id="assigned-personnel-heading"
-                                className="text-sm font-semibold text-ink"
-                            >
-                                Assigned personnel
-                            </h3>
-                            <Link
-                                href={assignmentHref}
-                                className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                            >
-                                {job.personnel_assignments.length === 0
-                                    ? '+ Assign crew'
-                                    : 'Manage crew'}
-                            </Link>
-                        </div>
-                        {job.personnel_assignments.length === 0 ? (
-                            <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
-                                <span>No personnel assigned.</span>
-                                <Link
-                                    href={assignmentHref}
-                                    className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                                >
-                                    + Assign crew
-                                </Link>
-                            </div>
-                        ) : (
-                            <ul className="mt-2 space-y-3">
-                                {job.personnel_assignments.map((assignment) => (
-                                    <li
-                                        key={assignment.id}
-                                        className="text-sm text-ink"
-                                    >
-                                        <p className="font-medium">
-                                            {assignment.name}
-                                        </p>
-                                        <p className="text-xs text-ink-soft">
-                                            {humanize(assignment.type)} ·{' '}
-                                            {assignment.response_status.label}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-                    <section aria-labelledby="assigned-equipment-heading">
-                        <div className="flex items-center justify-between">
-                            <h3
-                                id="assigned-equipment-heading"
-                                className="text-sm font-semibold text-ink"
-                            >
-                                Assigned equipment
-                            </h3>
-                            <Link
-                                href={assignmentHref}
-                                className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                            >
-                                {job.asset_assignments.length === 0
-                                    ? '+ Assign equipment'
-                                    : 'Change / Reassign'}
-                            </Link>
-                        </div>
-                        {job.asset_assignments.length === 0 ? (
-                            <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
-                                <span>No equipment assigned.</span>
-                                <Link
-                                    href={assignmentHref}
-                                    className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
-                                >
-                                    + Assign equipment
-                                </Link>
-                            </div>
-                        ) : (
-                            <ul className="mt-2 space-y-3">
-                                {job.asset_assignments.map((assignment) => (
-                                    <li
-                                        key={assignment.id}
-                                        className="text-sm text-ink"
-                                    >
-                                        <p className="font-medium">
-                                            {assignment.code} ·{' '}
-                                            {assignment.name}
-                                        </p>
-                                        <p className="text-xs text-ink-soft">
-                                            {humanize(
-                                                assignment.subtype ??
-                                                    assignment.kind ??
-                                                    assignment.type,
-                                            )}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-                </div>
-
-                {conflicts.length > 0 && (
-                    <div
-                        className="border-t border-line bg-warning-soft/40 px-4 py-4 md:px-5"
-                        aria-label="Dispatch blockers and approvals"
-                    >
-                        <div className="flex items-start gap-2">
-                            <AlertTriangle
-                                className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
-                                aria-hidden="true"
+                                        {job.site || 'Site not recorded'}
+                                    </span>
+                                }
                             />
-                            <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h3 className="text-sm font-semibold text-warning-strong">
-                                        Review before the next action
-                                    </h3>
-                                    <Link
-                                        href={assignmentHref}
-                                        className="text-xs font-semibold text-warning-strong underline underline-offset-2 hover:text-ink"
-                                    >
-                                        Resolve / Reassign in workspace →
-                                    </Link>
-                                </div>
+                            <DataPair
+                                label="Schedule"
+                                value={
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <Clock3
+                                            className="h-3.5 w-3.5 text-ink-soft"
+                                            aria-hidden="true"
+                                        />
+                                        {formatSchedule(job)}
+                                    </span>
+                                }
+                            />
+                            <DataPair
+                                label="Source"
+                                value={job.source?.label ?? 'Direct intake'}
+                            />
+                        </dl>
+                        <div className="border-t border-line pt-3 @lg:border-t-0 @lg:pt-0">
+                            <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                Requirements
+                            </h3>
+                            {job.requirements.length > 0 ? (
                                 <ul className="mt-2 space-y-2 text-sm text-ink">
-                                    {(expandedJobId === job.id
-                                        ? conflicts
-                                        : conflicts.slice(0, 4)
-                                    ).map((conflict) => (
-                                        <li key={conflict.id}>
-                                            <span className="font-semibold">
-                                                {conflict.title}.
-                                            </span>{' '}
-                                            {conflict.actionRequired}
-                                            {conflict.type === 'approval' &&
-                                                conflict.canDecide === false &&
-                                                conflict.decisionBlocker && (
-                                                    <span className="block text-xs text-ink-soft">
-                                                        {
-                                                            conflict.decisionBlocker
-                                                        }
-                                                    </span>
-                                                )}
+                                    {job.requirements.map((requirement) => (
+                                        <li
+                                            key={requirement}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <span
+                                                className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                                                aria-hidden="true"
+                                            />
+                                            {requirement}
                                         </li>
                                     ))}
                                 </ul>
-                                {conflicts.length > 4 && (
-                                    <button
-                                        type="button"
-                                        aria-expanded={expandedJobId === job.id}
-                                        onClick={() =>
-                                            setExpandedJobId(
-                                                expandedJobId === job.id
-                                                    ? null
-                                                    : job.id,
-                                            )
-                                        }
-                                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand"
-                                    >
-                                        {expandedJobId === job.id
-                                            ? 'Show fewer issues'
-                                            : `Show ${conflicts.length - 4} more issues`}
-                                    </button>
-                                )}
-                            </div>
+                            ) : (
+                                <p className="mt-2 text-sm text-ink-soft">
+                                    No requirements recorded.
+                                </p>
+                            )}
                         </div>
                     </div>
-                )}
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-xs text-ink-soft md:px-5">
-                    <span>
-                        Updated{' '}
-                        {job.updated_at
-                            ? formatDateTime(job.updated_at)
-                            : 'time not recorded'}
-                    </span>
-                    <Link
-                        href={contextHref}
-                        className="inline-flex min-h-11 items-center px-1 font-semibold text-ink underline decoration-brand underline-offset-2 hover:decoration-2"
-                    >
-                        View dispatch context
-                    </Link>
+                    <div className="grid gap-5 border-t border-line px-4 py-4 md:px-5 @lg:grid-cols-2">
+                        <section aria-labelledby="assigned-personnel-heading">
+                            <div className="flex items-center justify-between">
+                                <h3
+                                    id="assigned-personnel-heading"
+                                    className="text-sm font-semibold text-ink"
+                                >
+                                    Assigned personnel
+                                </h3>
+                                <Link
+                                    href={assignmentHref}
+                                    className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                >
+                                    {job.personnel_assignments.length === 0
+                                        ? '+ Assign crew'
+                                        : 'Manage crew'}
+                                </Link>
+                            </div>
+                            {job.personnel_assignments.length === 0 ? (
+                                <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                    <span>No personnel assigned.</span>
+                                    <Link
+                                        href={assignmentHref}
+                                        className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                    >
+                                        + Assign crew
+                                    </Link>
+                                </div>
+                            ) : (
+                                <ul className="mt-2 space-y-3">
+                                    {job.personnel_assignments.map(
+                                        (assignment) => (
+                                            <li
+                                                key={assignment.id}
+                                                className="text-sm text-ink"
+                                            >
+                                                <p className="font-medium">
+                                                    {assignment.name}
+                                                </p>
+                                                <p className="text-xs text-ink-soft">
+                                                    {humanize(assignment.type)}{' '}
+                                                    ·{' '}
+                                                    {
+                                                        assignment
+                                                            .response_status
+                                                            .label
+                                                    }
+                                                </p>
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            )}
+                        </section>
+                        <section aria-labelledby="assigned-equipment-heading">
+                            <div className="flex items-center justify-between">
+                                <h3
+                                    id="assigned-equipment-heading"
+                                    className="text-sm font-semibold text-ink"
+                                >
+                                    Assigned equipment
+                                </h3>
+                                <Link
+                                    href={assignmentHref}
+                                    className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                >
+                                    {job.asset_assignments.length === 0
+                                        ? '+ Assign equipment'
+                                        : 'Change / Reassign'}
+                                </Link>
+                            </div>
+                            {job.asset_assignments.length === 0 ? (
+                                <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                    <span>No equipment assigned.</span>
+                                    <Link
+                                        href={assignmentHref}
+                                        className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                    >
+                                        + Assign equipment
+                                    </Link>
+                                </div>
+                            ) : (
+                                <ul className="mt-2 space-y-3">
+                                    {job.asset_assignments.map((assignment) => (
+                                        <li
+                                            key={assignment.id}
+                                            className="text-sm text-ink"
+                                        >
+                                            <p className="font-medium">
+                                                {assignment.code} ·{' '}
+                                                {assignment.name}
+                                            </p>
+                                            <p className="text-xs text-ink-soft">
+                                                {humanize(
+                                                    assignment.subtype ??
+                                                        assignment.kind ??
+                                                        assignment.type,
+                                                )}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
+                    </div>
+
+                    {conflicts.length > 0 && (
+                        <div
+                            className="border-t border-line bg-warning-soft/40 px-4 py-4 md:px-5"
+                            aria-label="Dispatch blockers and approvals"
+                        >
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
+                                    aria-hidden="true"
+                                />
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-sm font-semibold text-warning-strong">
+                                            Review before the next action
+                                        </h3>
+                                        <Link
+                                            href={assignmentHref}
+                                            className="text-xs font-semibold text-warning-strong underline underline-offset-2 hover:text-ink"
+                                        >
+                                            Resolve / Reassign in workspace →
+                                        </Link>
+                                    </div>
+                                    <ul className="mt-2 space-y-2 text-sm text-ink">
+                                        {(expandedJobId === job.id
+                                            ? conflicts
+                                            : conflicts.slice(0, 4)
+                                        ).map((conflict) => (
+                                            <li key={conflict.id}>
+                                                <span className="font-semibold">
+                                                    {conflict.title}.
+                                                </span>{' '}
+                                                {conflict.actionRequired}
+                                                {conflict.type === 'approval' &&
+                                                    conflict.canDecide ===
+                                                        false &&
+                                                    conflict.decisionBlocker && (
+                                                        <span className="block text-xs text-ink-soft">
+                                                            {
+                                                                conflict.decisionBlocker
+                                                            }
+                                                        </span>
+                                                    )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {conflicts.length > 4 && (
+                                        <button
+                                            type="button"
+                                            aria-expanded={
+                                                expandedJobId === job.id
+                                            }
+                                            onClick={() =>
+                                                setExpandedJobId(
+                                                    expandedJobId === job.id
+                                                        ? null
+                                                        : job.id,
+                                                )
+                                            }
+                                            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand"
+                                        >
+                                            {expandedJobId === job.id
+                                                ? 'Show fewer issues'
+                                                : `Show ${conflicts.length - 4} more issues`}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-4 py-3 text-xs text-ink-soft md:px-5">
+                        <span>
+                            Updated{' '}
+                            {job.updated_at
+                                ? formatDateTime(job.updated_at)
+                                : 'time not recorded'}
+                        </span>
+                        <Link
+                            href={contextHref}
+                            className="inline-flex min-h-11 items-center px-1 font-semibold text-ink underline decoration-brand underline-offset-2 hover:decoration-2"
+                        >
+                            View dispatch context
+                        </Link>
+                    </div>
+                </Panel>
+                <div
+                    id="dispatch-ai-assistance"
+                    className="min-w-0 scroll-mt-4"
+                >
+                    <DispatchGptAdvisory
+                        key={job.id}
+                        job={job}
+                        recommendations={recommendations}
+                        capabilities={capabilities}
+                    />
                 </div>
-            </Panel>
-            <div id="dispatch-ai-assistance" className="mt-5 scroll-mt-4">
-                <DispatchGptAdvisory
-                    key={job.id}
-                    job={job}
-                    recommendations={recommendations}
-                    capabilities={capabilities}
-                />
             </div>
         </section>
     );

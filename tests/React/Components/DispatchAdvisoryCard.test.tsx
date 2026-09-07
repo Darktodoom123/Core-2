@@ -215,4 +215,12 @@ describe('dispatch advisory', () => {
             screen.queryByRole('button', { name: /Review & apply/ }),
         ).not.toBeInTheDocument();
     });
+
+    it('does not render the confirmation footer or advisory history link', () => {
+        show({ recommendation: proposal, canViewHistory: true });
+        expect(
+            screen.queryByText('You confirm every assignment'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('Advisory history')).not.toBeInTheDocument();
+    });
 });
