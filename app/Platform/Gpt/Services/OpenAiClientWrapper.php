@@ -21,10 +21,11 @@ final class OpenAiClientWrapper
     public function __construct(
         private string $apiKey = '',
         private string $model = 'gpt-5-mini',
-        private string $baseUrl = 'https://api.openai.com/v1'
+        private string $baseUrl = 'https://openrouter.ai/api/v1'
     ) {
         $this->apiKey = (string) config('services.openai.key', '');
-        $this->model = (string) config('services.openai.model', 'gpt-5-mini');
+        $this->model = (string) config('services.openai.provider_model', 'openai/gpt-5-mini');
+        $this->baseUrl = rtrim((string) config('services.openai.base_url', 'https://openrouter.ai/api/v1'), '/');
     }
 
     public static function fake(mixed $responseResolver = null): void
@@ -272,8 +273,8 @@ final class OpenAiClientWrapper
             $completionTokens = (int) ($responseData['usage']['completion_tokens'] ?? 0);
             $totalTokens = (int) ($responseData['usage']['total_tokens'] ?? ($promptTokens + $completionTokens));
 
-            // Estimate cost based on standard gpt-5-mini rates ($0.15/1M input, $0.60/1M output)
-            $costUsd = round(($promptTokens * 0.00000015) + ($completionTokens * 0.00000060), 4);
+            // Estimate cost based on OpenRouter's listed GPT-5 mini rates ($0.25/1M input, $2/1M output).
+            $costUsd = round(($promptTokens * 0.00000025) + ($completionTokens * 0.000002), 4);
 
             if ($costUsd > (float) config('services.openai.max_cost_usd', 0.05)) {
                 return [

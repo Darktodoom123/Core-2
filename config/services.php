@@ -36,8 +36,10 @@ return [
     ],
 
     'openai' => [
-        'key' => env('OPENAI_API_KEY'),
+        'key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-5-mini'),
+        'provider_model' => env('OPENROUTER_MODEL', 'openai/gpt-5-mini'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
         'fake' => (bool) env('OPENAI_FAKE', false),
         'max_input_tokens' => (int) env('OPENAI_MAX_INPUT_TOKENS', 32000),
         'max_cost_usd' => (float) env('OPENAI_MAX_COST_USD', 0.05),

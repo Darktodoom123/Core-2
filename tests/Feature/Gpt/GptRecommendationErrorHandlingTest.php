@@ -155,7 +155,7 @@ test('rejects provider responses with an invalid schema without persisting raw o
     OpenAiClientWrapper::resetFakes();
     config(['services.openai.key' => 'test-key', 'services.openai.fake' => false]);
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::response([
+        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
             'choices' => [[
                 'finish_reason' => 'stop',
                 'message' => ['content' => '{"secret":"provider output"}'],
@@ -184,7 +184,7 @@ test('enforces input-token and cost ceilings before accepting provider output', 
 
     config(['services.openai.max_input_tokens' => 32000, 'services.openai.max_cost_usd' => 0.0001]);
     Http::fake([
-        'https://api.openai.com/v1/chat/completions' => Http::response([
+        'https://openrouter.ai/api/v1/chat/completions' => Http::response([
             'choices' => [[
                 'finish_reason' => 'stop',
                 'message' => ['content' => json_encode([
