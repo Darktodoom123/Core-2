@@ -9,22 +9,34 @@ import {
 } from '@/services/reverse-geocoder';
 
 describe('Location Resolution Hierarchy', () => {
-    it('prioritizes assigned job site over asset location and coordinates', () => {
+    it('prioritizes live coordinates over assigned job site to show current physical location', () => {
+        setCachedLocationName(14.5547, 121.0244, 'Ayala Avenue, Makati');
+
         const result = resolveLocationName({
             job: { site: 'Pier 4 Expansion Project' },
             asset: { location: 'Central Yard Depot' },
             latitude: 14.5547,
             longitude: 121.0244,
         });
+        expect(result).toBe('Ayala Avenue, Makati');
+    });
+
+    it('falls back to assigned job site when coordinates are absent', () => {
+        const result = resolveLocationName({
+            job: { site: 'Pier 4 Expansion Project' },
+            asset: { location: 'Central Yard Depot' },
+            latitude: null,
+            longitude: null,
+        });
         expect(result).toBe('Pier 4 Expansion Project');
     });
 
-    it('falls back to asset base location when job site is absent', () => {
+    it('falls back to asset base location when job site and coordinates are absent', () => {
         const result = resolveLocationName({
             job: null,
             asset: { location: 'North Warehouse Berth 2' },
-            latitude: 14.5547,
-            longitude: 121.0244,
+            latitude: null,
+            longitude: null,
         });
         expect(result).toBe('North Warehouse Berth 2');
     });
@@ -51,14 +63,14 @@ describe('Location Resolution Hierarchy', () => {
         expect(result).toBe('Locating…');
     });
 
-    it('returns Site Location Unavailable when no job, asset, or coordinates are provided', () => {
+    it('returns Location Unavailable when no job, asset, or coordinates are provided', () => {
         const result = resolveLocationName({
             job: null,
             asset: null,
             latitude: null,
             longitude: null,
         });
-        expect(result).toBe('Site Location Unavailable');
+        expect(result).toBe('Location Unavailable');
     });
 });
 
@@ -110,6 +122,30 @@ describe('Reverse Geocoder Service', () => {
         const cachedName = await reverseGeocode(14.557, 121.023);
         expect(cachedName).toBe('Ayala Triangle Gardens, Bel-Air, Makati');
         expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+
+    it('formats POI name, street address, and house number with maximum precision', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                features: [
+                    {
+                        properties: {
+                            name: 'PBCom Tower',
+                            street: 'Ayala Avenue',
+                            housenumber: '6795',
+                            locality: 'San Antonio',
+                            city: 'Makati',
+                        },
+                    },
+                ],
+            }),
+        } as Response);
+
+        const name = await reverseGeocode(14.5588, 121.0189);
+        expect(name).toBe(
+            'PBCom Tower, 6795 Ayala Avenue, San Antonio, Makati',
+        );
     });
 
     it('notifies registered listeners when a location is resolved', async () => {

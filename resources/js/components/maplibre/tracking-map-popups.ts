@@ -107,12 +107,7 @@ export function createTrackingLocationPopup(
         onCopyCoordinates,
     });
 
-    if (
-        location.latitude !== null &&
-        location.longitude !== null &&
-        !location.job?.site?.trim() &&
-        !location.asset?.location?.trim()
-    ) {
+    if (location.latitude !== null && location.longitude !== null) {
         const lat = location.latitude;
         const lon = location.longitude;
         const key = getCoordinatesCacheKey(lat, lon);
@@ -136,8 +131,22 @@ export function createTrackingLocationPopup(
 
 export function createTrackingSosPopup(
     incident: SosIncidentViewModel,
+    onCopyCoordinates?: (button: HTMLButtonElement) => void,
 ): HTMLDivElement {
-    return createPopupCard({
+    const lat = incident.location?.latitude ?? null;
+    const lon = incident.location?.longitude ?? null;
+    const hasCoords = lat !== null && lon !== null;
+
+    const locationName = hasCoords
+        ? resolveLocationName({
+              latitude: lat,
+              longitude: lon,
+              job: incident.dispatch ? { site: incident.dispatch.site } : null,
+              asset: null,
+          })
+        : (incident.dispatch?.site ?? undefined);
+
+    const card = createPopupCard({
         title: incident.worker.name,
         subtitle: 'Emergency SOS alert',
         status: incident.status.label,
@@ -162,7 +171,31 @@ export function createTrackingSosPopup(
             },
             { label: 'Received', value: timestamp(incident.received_at) },
         ],
+        locationName,
+        coordinateText: hasCoords
+            ? `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+            : undefined,
+        onCopyCoordinates,
     });
+
+    if (hasCoords) {
+        const key = getCoordinatesCacheKey(lat, lon);
+        const unsubscribe = onLocationResolved((resolvedKey, name) => {
+            if (resolvedKey === key) {
+                const textEl = card.querySelector(
+                    '.maplibre-popup-card__location-text',
+                );
+
+                if (textEl) {
+                    textEl.textContent = name;
+                }
+
+                unsubscribe();
+            }
+        });
+    }
+
+    return card;
 }
 
 export interface TrackingGroupEntry {

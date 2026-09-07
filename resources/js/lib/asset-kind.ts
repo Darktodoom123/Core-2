@@ -126,23 +126,13 @@ export interface LocationResolutionInput {
 }
 
 /**
- * Resolves a human-readable location name for a tracking update,
- * prioritizing assigned job sites and asset locations, with dynamic
- * reverse-geocoded lookup for coordinates.
+ * Resolves a human-readable current location name for a tracking update.
+ * Prioritizes actual physical coordinates to reflect where the unit currently is,
+ * falling back to assigned job site or asset base location when GPS coordinates are unavailable.
  * No hardcoded coordinates.
  */
 export function resolveLocationName(location: LocationResolutionInput): string {
-    // 1. Explicit site name from active dispatch job
-    if (location.job?.site?.trim()) {
-        return location.job.site.trim();
-    }
-
-    // 2. Explicit base location from operational asset
-    if (location.asset?.location?.trim()) {
-        return location.asset.location.trim();
-    }
-
-    // 3. Dynamic reverse-geocoded location lookup by coordinates
+    // 1. Dynamic reverse-geocoded current location from live coordinates
     if (
         location.latitude !== null &&
         location.latitude !== undefined &&
@@ -165,5 +155,15 @@ export function resolveLocationName(location: LocationResolutionInput): string {
         return 'Locating…';
     }
 
-    return 'Site Location Unavailable';
+    // 2. Fallback to assigned site if coordinates are unavailable
+    if (location.job?.site?.trim()) {
+        return location.job.site.trim();
+    }
+
+    // 3. Fallback to asset base depot if coordinates are unavailable
+    if (location.asset?.location?.trim()) {
+        return location.asset.location.trim();
+    }
+
+    return 'Location Unavailable';
 }

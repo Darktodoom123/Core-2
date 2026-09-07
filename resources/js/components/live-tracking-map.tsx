@@ -30,7 +30,10 @@ import {
 import { Button, StatusBadge } from '@/components/ui';
 import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
-import { usePreciseLocation } from '@/services/reverse-geocoder';
+import {
+    reverseGeocode,
+    usePreciseLocation,
+} from '@/services/reverse-geocoder';
 import type {
     LocationUpdateViewModel,
     SosIncidentViewModel,
@@ -214,6 +217,14 @@ export function LiveTrackingMap({
         () => locations.filter(hasMapCoordinates),
         [locations],
     );
+
+    useEffect(() => {
+        for (const location of mappedLocations) {
+            if (location.latitude !== null && location.longitude !== null) {
+                void reverseGeocode(location.latitude, location.longitude);
+            }
+        }
+    }, [mappedLocations]);
     const filteredLocations = useMemo(() => {
         if (!searchQuery.trim()) {
             return locations;
@@ -872,7 +883,14 @@ function TrackingMapContent({
                 label: incident.worker.name,
                 description: `${incident.status.label} · ${incident.category.label}`,
                 sos,
-                content: () => createTrackingSosPopup(incident),
+                content: () =>
+                    createTrackingSosPopup(
+                        incident,
+                        location
+                            ? (button) =>
+                                  void onCopyCoordinates(location, button)
+                            : undefined,
+                    ),
                 element: () => createSosMarker(sos),
             });
         }

@@ -59,6 +59,7 @@ interface PhotonFeature {
     properties?: {
         name?: string;
         street?: string;
+        housenumber?: string;
         locality?: string;
         district?: string;
         city?: string;
@@ -78,16 +79,36 @@ function formatPhotonLocation(feature: PhotonFeature): string | null {
 
     const parts: string[] = [];
     const name = p.name?.trim();
+    const street = p.street?.trim();
+    const housenumber = p.housenumber?.trim();
     const locality = p.locality?.trim();
     const district = p.district?.trim();
     const city = p.city?.trim() || p.county?.trim();
 
-    // 1. Most precise: Street or POI name
-    if (name && name.toLowerCase() !== city?.toLowerCase()) {
+    // 1. Street address with house number
+    const streetAddress = [housenumber, street].filter(Boolean).join(' ');
+
+    // 2. Specific POI / building / facility name
+    if (
+        name &&
+        name.toLowerCase() !== city?.toLowerCase() &&
+        name.toLowerCase() !== street?.toLowerCase()
+    ) {
         parts.push(name);
     }
 
-    // 2. Neighborhood / Suburb / Quarter (exclude generic district numbers)
+    // 3. Street name if distinct from POI name
+    if (streetAddress && !parts.includes(streetAddress)) {
+        parts.push(streetAddress);
+    } else if (
+        street &&
+        !parts.includes(street) &&
+        street.toLowerCase() !== city?.toLowerCase()
+    ) {
+        parts.push(street);
+    }
+
+    // 4. Neighborhood / Suburb / Quarter (exclude generic district numbers)
     const subArea =
         locality ||
         (district && !/^district\s+[ivxlcdm0-9]+/i.test(district)
@@ -102,7 +123,7 @@ function formatPhotonLocation(feature: PhotonFeature): string | null {
         parts.push(subArea);
     }
 
-    // 3. City / Municipality
+    // 5. City / Municipality
     if (city && !parts.includes(city)) {
         parts.push(city);
     } else if (parts.length === 0 && p.state) {
@@ -260,6 +281,8 @@ export async function reverseGeocode(
 
 /**
  * React hook to resolve a location's most precise name dynamically without hardcoding.
+ * Prioritizes actual physical coordinates to reflect the current real-time location,
+ * falling back to assigned job site or asset base location when GPS is absent.
  */
 export function usePreciseLocation(
     location?: LocationResolutionInput | null,
@@ -293,11 +316,11 @@ export function usePreciseLocation(
     );
 
     useEffect(() => {
-        if (!hasCoords || jobSite || assetLoc) {
+        if (!hasCoords || !cacheKey) {
             return;
         }
 
-        if (cacheKey && !locationCache.has(cacheKey)) {
+        if (!locationCache.has(cacheKey)) {
             const controller = new AbortController();
             void reverseGeocode(lat, lon, controller.signal);
 
@@ -305,7 +328,11 @@ export function usePreciseLocation(
                 controller.abort();
             };
         }
-    }, [hasCoords, jobSite, assetLoc, cacheKey, lat, lon]);
+    }, [hasCoords, cacheKey, lat, lon]);
+
+    if (hasCoords) {
+        return resolvedGeoName ?? 'Locating…';
+    }
 
     if (jobSite) {
         return jobSite;
@@ -315,9 +342,5 @@ export function usePreciseLocation(
         return assetLoc;
     }
 
-    if (!hasCoords) {
-        return 'Location unavailable';
-    }
-
-    return resolvedGeoName ?? 'Locating…';
+    return 'Location unavailable';
 }

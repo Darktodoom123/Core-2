@@ -5,9 +5,14 @@ import { createMarkerGroup } from '@/components/maplibre/markers';
 import {
     createTrackingGroupPopup,
     createTrackingLocationPopup,
+    createTrackingSosPopup,
     formatReportAge,
 } from '@/components/maplibre/tracking-map-popups';
-import type { LocationUpdateViewModel } from '@/types/workspace';
+import { setCachedLocationName } from '@/services/reverse-geocoder';
+import type {
+    LocationUpdateViewModel,
+    SosIncidentViewModel,
+} from '@/types/workspace';
 
 const location: LocationUpdateViewModel = {
     id: 1,
@@ -164,5 +169,72 @@ describe('tracking map popup behavior', () => {
         expect(formatReportAge('2026-09-03T01:00:00Z', now)).toBe('2h 10m ago');
         expect(formatReportAge(null, now)).toBe('Time unavailable');
         expect(formatReportAge('invalid', now)).toBe('Time unavailable');
+    });
+
+    it('displays physical location in footer rather than assigned site when coordinates exist', () => {
+        setCachedLocationName(14.6, 121, 'Ayala Avenue, Makati');
+        const popup = createTrackingLocationPopup(location);
+
+        const locationText = popup.querySelector(
+            '.maplibre-popup-card__location-text',
+        );
+        expect(locationText).toHaveTextContent('Ayala Avenue, Makati');
+        // Assigned site remains distinct in the fields section
+        expect(popup).toHaveTextContent('Assigned siteAssigned project');
+    });
+
+    it('renders coordinates and physical location in SOS popup when coordinates exist', () => {
+        setCachedLocationName(14.5547, 121.0244, 'Buendia, Makati');
+        const onCopy = vi.fn();
+        const sosIncident: SosIncidentViewModel = {
+            id: 'sos-1',
+            category: { value: 'site_accident', label: 'Site Accident' },
+            status: { value: 'active', label: 'Active' },
+            note: null,
+            worker: {
+                id: 1,
+                name: 'Operator',
+                phone: null,
+            },
+            received_at: '2026-09-03T01:02:00Z',
+            device_activated_at: '2026-09-03T01:00:00Z',
+            escalation_due_at: null,
+            escalated_at: null,
+            acknowledged_at: null,
+            acknowledged_by: null,
+            resolved_at: null,
+            resolved_by: null,
+            resolution_code: null,
+            resolution_notes: null,
+            cancelled_at: null,
+            cancellation_reason: null,
+            dispatch: {
+                id: 1,
+                reference: 'JOB-1',
+                title: 'Lift',
+                site: 'North Staging Terminal',
+            },
+            asset: null,
+            location: {
+                latitude: 14.5547,
+                longitude: 121.0244,
+                accuracy_metres: 5,
+                captured_at: '2026-09-03T01:00:00Z',
+                freshness_status: 'fresh',
+                context: null,
+            },
+            delivery_attempts: [],
+            can_acknowledge: true,
+            can_resolve: true,
+            can_cancel: true,
+        };
+
+        const popup = createTrackingSosPopup(sosIncident, onCopy);
+        const locationText = popup.querySelector(
+            '.maplibre-popup-card__location-text',
+        );
+        expect(locationText).toHaveTextContent('Buendia, Makati');
+        expect(popup).toHaveTextContent('14.55470, 121.02440');
+        expect(popup).toHaveTextContent('Assigned siteNorth Staging Terminal');
     });
 });
