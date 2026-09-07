@@ -183,6 +183,7 @@ final class OperationalTestSeeder extends Seeder
         DB::table('location_updates')->updateOrInsert(
             ['user_id' => $operator->id, 'operational_asset_id' => $crane->id],
             [
+                'dispatch_job_id' => $job->id,
                 'latitude' => 14.5547000,
                 'longitude' => 121.0244000,
                 'accuracy_metres' => 2.5,

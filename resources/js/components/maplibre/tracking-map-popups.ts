@@ -1,4 +1,12 @@
-import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
+import {
+    getAssetKind,
+    getAssetKindLabel,
+    resolveLocationName,
+} from '@/lib/asset-kind';
+import {
+    getCoordinatesCacheKey,
+    onLocationResolved,
+} from '@/services/reverse-geocoder';
 import type {
     LocationUpdateViewModel,
     SosIncidentViewModel,
@@ -47,7 +55,7 @@ export function createTrackingLocationPopup(
 ): HTMLDivElement {
     const freshness = location.freshness_status;
 
-    return createPopupCard({
+    const card = createPopupCard({
         title: trackingUnitLabel(location),
         subtitle:
             location.asset?.name ?? getAssetKindLabel(getAssetKind(location)),
@@ -91,12 +99,39 @@ export function createTrackingLocationPopup(
             },
             { label: 'Note', value: location.remarks ?? '' },
         ],
+        locationName: resolveLocationName(location),
         coordinateText:
             location.latitude !== null && location.longitude !== null
                 ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
                 : undefined,
         onCopyCoordinates,
     });
+
+    if (
+        location.latitude !== null &&
+        location.longitude !== null &&
+        !location.job?.site?.trim() &&
+        !location.asset?.location?.trim()
+    ) {
+        const lat = location.latitude;
+        const lon = location.longitude;
+        const key = getCoordinatesCacheKey(lat, lon);
+        const unsubscribe = onLocationResolved((resolvedKey, name) => {
+            if (resolvedKey === key) {
+                const textEl = card.querySelector(
+                    '.maplibre-popup-card__location-text',
+                );
+
+                if (textEl) {
+                    textEl.textContent = name;
+                }
+
+                unsubscribe();
+            }
+        });
+    }
+
+    return card;
 }
 
 export function createTrackingSosPopup(

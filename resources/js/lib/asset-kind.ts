@@ -1,3 +1,7 @@
+import {
+    getCachedLocationName,
+    reverseGeocode,
+} from '@/services/reverse-geocoder';
 import type { LocationUpdateViewModel } from '@/types/workspace';
 
 export type AssetKind =
@@ -123,8 +127,9 @@ export interface LocationResolutionInput {
 
 /**
  * Resolves a human-readable location name for a tracking update,
- * prioritizing assigned job sites and asset locations, with a
- * fallback to geographic area and landmark lookups.
+ * prioritizing assigned job sites and asset locations, with dynamic
+ * reverse-geocoded lookup for coordinates.
+ * No hardcoded coordinates.
  */
 export function resolveLocationName(location: LocationResolutionInput): string {
     // 1. Explicit site name from active dispatch job
@@ -137,58 +142,27 @@ export function resolveLocationName(location: LocationResolutionInput): string {
         return location.asset.location.trim();
     }
 
-    // 3. Known landmark/site lookup by coordinates
+    // 3. Dynamic reverse-geocoded location lookup by coordinates
     if (
         location.latitude !== null &&
         location.latitude !== undefined &&
         location.longitude !== null &&
         location.longitude !== undefined
     ) {
-        const lat = location.latitude;
-        const lng = location.longitude;
+        const cached = getCachedLocationName(
+            location.latitude,
+            location.longitude,
+        );
 
-        // Santa Mesa / Pandacan / Manila (e.g. 14.5995, 121.0142)
-        if (lat >= 14.585 && lat <= 14.615 && lng >= 121.0 && lng <= 121.03) {
-            return 'Santa Mesa, Manila';
+        if (cached) {
+            return cached;
         }
 
-        // Bonifacio Global City (BGC) / Taguig
-        if (lat >= 14.53 && lat <= 14.565 && lng >= 121.035 && lng <= 121.065) {
-            return 'BGC, Taguig';
+        if (typeof window !== 'undefined' && typeof fetch === 'function') {
+            void reverseGeocode(location.latitude, location.longitude);
         }
 
-        // Makati CBD / Ayala
-        if (lat >= 14.545 && lat <= 14.57 && lng >= 121.01 && lng <= 121.035) {
-            return 'Makati CBD';
-        }
-
-        // Ortigas Center / Pasig / Mandaluyong
-        if (lat >= 14.575 && lat <= 14.6 && lng >= 121.05 && lng <= 121.08) {
-            return 'Ortigas Center, Pasig';
-        }
-
-        // North Triangle / Quezon City
-        if (lat >= 14.63 && lat <= 14.67 && lng >= 121.02 && lng <= 121.07) {
-            return 'North Triangle, Quezon City';
-        }
-
-        // Balintawak / Caloocan North
-        if (lat >= 14.65 && lat <= 14.675 && lng >= 120.98 && lng <= 121.01) {
-            return 'Balintawak, Caloocan';
-        }
-
-        // Marikina River Site
-        if (lat >= 14.625 && lat <= 14.655 && lng >= 121.09 && lng <= 121.12) {
-            return 'Marikina River Site';
-        }
-
-        // Manila Port Area / South Harbor
-        if (lat >= 14.57 && lat <= 14.6 && lng >= 120.95 && lng <= 120.98) {
-            return 'Manila Port Area';
-        }
-
-        // Default to formatted coordinates if outside predefined geofences
-        return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        return 'Locating…';
     }
 
     return 'Site Location Unavailable';

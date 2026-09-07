@@ -425,7 +425,7 @@ final class OperationsWorkspaceController extends Controller
         return LocationUpdate::query()
             ->visibleTo($user)
             ->whereIn('id', $latestLocationIds)
-            ->with(['user:id,name', 'asset:id,code,name,kind', 'job:id,reference,title'])
+            ->with(['user:id,name', 'asset:id,code,name,kind,location', 'job:id,reference,title,site'])
             ->latest('received_at')
             ->latest('id')
             ->limit(100)

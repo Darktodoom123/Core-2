@@ -3,6 +3,7 @@ import {
     Construction,
     Layers,
     LocateFixed,
+    MapPin,
     Maximize,
     Maximize2,
     Minimize,
@@ -29,6 +30,7 @@ import {
 import { Button, StatusBadge } from '@/components/ui';
 import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
+import { usePreciseLocation } from '@/services/reverse-geocoder';
 import type {
     LocationUpdateViewModel,
     SosIncidentViewModel,
@@ -68,6 +70,37 @@ export {
 const DEFAULT_CENTER: LngLat = [121.04, 14.64];
 const DEFAULT_ZOOM = 11;
 const HTML_MARKER_THRESHOLD = 250;
+function PreciseLocationDisplay({
+    location,
+    isMapped,
+}: {
+    location: LocationUpdateViewModel;
+    isMapped: boolean;
+}) {
+    const locationName = usePreciseLocation(location);
+
+    return (
+        <span
+            className="flex items-center gap-1.5 truncate"
+            title={
+                isMapped &&
+                location.latitude !== null &&
+                location.longitude !== null
+                    ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                    : undefined
+            }
+        >
+            <MapPin
+                className="h-3.5 w-3.5 shrink-0 text-brand-strong"
+                aria-hidden="true"
+            />
+            <span className="truncate font-medium text-ink">
+                {isMapped ? locationName : 'Location unavailable'}
+            </span>
+        </span>
+    );
+}
+
 const EMPTY_SOS_INCIDENTS: SosIncidentViewModel[] = [];
 
 export function LiveTrackingMap({
@@ -487,12 +520,11 @@ export function LiveTrackingMap({
                                                     }
                                                 />
                                             </div>
-                                            <div className="mt-2.5 flex items-center justify-between gap-3 font-mono text-xs text-ink-soft">
-                                                <span>
-                                                    {isMapped
-                                                        ? `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`
-                                                        : 'Coordinates unavailable'}
-                                                </span>
+                                            <div className="mt-2.5 flex items-center justify-between gap-3 text-xs text-ink-soft">
+                                                <PreciseLocationDisplay
+                                                    location={location}
+                                                    isMapped={isMapped}
+                                                />
                                             </div>
                                         </button>
 
@@ -763,6 +795,11 @@ function TrackingMapContent({
         const locationsByWorker = new Map(
             locations.map((location) => [location.user.id, location]),
         );
+        const locationsByAsset = new Map(
+            locations
+                .filter((location) => location.asset?.id !== undefined)
+                .map((location) => [location.asset!.id, location]),
+        );
         const sosOptions = (
             incident: SosIncidentViewModel,
         ): SosMarkerOptions => ({
@@ -809,12 +846,19 @@ function TrackingMapContent({
 
         for (const incident of activeSosIncidents) {
             const location = locationsByWorker.get(incident.worker.id);
+            const assetLocation = incident.asset?.id
+                ? locationsByAsset.get(incident.asset.id)
+                : undefined;
 
             if (representedSosIds.has(incident.id)) {
                 continue;
             }
 
-            const position = getSosMarkerPosition(incident, location);
+            const position = getSosMarkerPosition(
+                incident,
+                location,
+                assetLocation,
+            );
 
             if (!position) {
                 continue;
@@ -1368,6 +1412,12 @@ function LiveMapControls({
                     mappedLocations.find(
                         (location) => location.user.id === incident.worker.id,
                     ),
+                    incident.asset?.id
+                        ? mappedLocations.find(
+                              (location) =>
+                                  location.asset?.id === incident.asset?.id,
+                          )
+                        : undefined,
                 );
 
                 return position ? [position] : [];

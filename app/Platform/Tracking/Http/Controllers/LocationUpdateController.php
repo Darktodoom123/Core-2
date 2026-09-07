@@ -22,7 +22,7 @@ final class LocationUpdateController extends Controller
 
         return response()->json([
             'data' => LocationUpdate::query()
-                ->with(['user:id,name', 'asset:id,code,name', 'job:id,reference,title'])
+                ->with(['user:id,name', 'asset:id,code,name,location', 'job:id,reference,title,site'])
                 ->latest('captured_at')
                 ->paginate(100),
         ]);
