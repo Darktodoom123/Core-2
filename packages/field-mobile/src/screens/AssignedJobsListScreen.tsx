@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 import { AssetVehicleCard } from '../components/cards/AssetVehicleCard';
+import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
 import { FailedCommandsList } from '../components/cards/FailedCommandsList';
 import { JobListItemCard } from '../components/cards/JobListItemCard';
 import { LocationWeatherCard } from '../components/cards/LocationWeatherCard';
@@ -30,7 +31,7 @@ import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmation
 import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
-import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
+import { isFetchError } from '../connectivity/networkMonitor';
 import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
 import type {
@@ -1285,7 +1286,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             />
                         </View>
 
-                        {error ? (
+                        {error && isOnline !== false && !isFetchError(error) ? (
                             <View style={styles.errorBox}>
                                 <Icon
                                     name="alert"

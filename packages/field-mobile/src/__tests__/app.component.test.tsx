@@ -10,6 +10,7 @@ import '@testing-library/react-native/matchers';
 import React from 'react';
 import { App } from '../../App';
 import type { TokenStorageProvider } from '../auth/tokenStorage';
+import { isFetchError } from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
 import { MemoryOutboxRepository } from '../storage/outboxRepository';
@@ -847,6 +848,88 @@ describe('native application component tree', () => {
         expect(screen.getByTestId('sync-guidance')).toHaveTextContent(
             '1 saved action need conflict review.',
         );
+    });
+
+    it('suppresses fetch connection errors and offline errors on AssignedJobsListScreen', async () => {
+        // 1. Fetch failure / ConnectException is suppressed
+        const { rerender } = await renderScreen(
+            <AssignedJobsListScreen
+                onSosHoldComplete={jest.fn()}
+                error="fetch failed: java.net.ConnectException: Failed to connect to /192.168.254.110:8000"
+                isLoading={false}
+                isOnline={true}
+                jobs={[]}
+                onRefresh={jest.fn()}
+                onSelectJob={jest.fn()}
+                outboxCommands={[]}
+            />,
+        );
+
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByText(/ConnectException/)).toBeNull();
+        expect(screen.queryByText(/fetch failed/)).toBeNull();
+
+        // 2. Offline state suppresses errors
+        await rerender(
+            <AssignedJobsListScreen
+                onSosHoldComplete={jest.fn()}
+                error="Network request failed"
+                isLoading={false}
+                isOnline={false}
+                jobs={[]}
+                onRefresh={jest.fn()}
+                onSelectJob={jest.fn()}
+                outboxCommands={[]}
+            />,
+        );
+
+        expect(screen.queryByRole('alert')).toBeNull();
+
+        // 3. Helper correctly categorizes errors
+        expect(
+            isFetchError(
+                'fetch failed: java.net.ConnectException: Failed to connect to /192.168.254.110:8000',
+            ),
+        ).toBe(true);
+        expect(isFetchError(new TypeError('Network request failed'))).toBe(
+            true,
+        );
+        expect(isFetchError(new Error('Device is offline'))).toBe(true);
+        expect(
+            isFetchError(
+                new Error('Vehicle CRN-101 is locked by another operator.'),
+            ),
+        ).toBe(false);
+    });
+
+    it('does not display a fetch connection error banner when API is unreachable while authenticated', async () => {
+        const tokenStorage = new TestTokenStorage(rawToken);
+        const { fetchFn } = createApi();
+
+        const failingFetchFn = jest.fn(
+            async (input: RequestInfo | URL, init?: RequestInit) => {
+                if (input.toString().endsWith('/api/v1/dispatch-jobs')) {
+                    throw new TypeError(
+                        'fetch failed: java.net.ConnectException: Failed to connect to /192.168.254.110:8000',
+                    );
+                }
+
+                return fetchFn(input, init);
+            },
+        ) as typeof fetch;
+
+        await renderScreen(
+            <App
+                baseUrl={apiBaseUrl}
+                fetchFn={failingFetchFn}
+                tokenStorage={tokenStorage}
+            />,
+        );
+
+        // Dispatches screen renders without showing any fetch connection error alert
+        expect(screen.queryByText(/ConnectException/)).toBeNull();
+        expect(screen.queryByText(/fetch failed/)).toBeNull();
+        expect(screen.queryByRole('alert')).toBeNull();
     });
 
     it('restores an eight-hour-old command and replays it once after reconnect', async () => {

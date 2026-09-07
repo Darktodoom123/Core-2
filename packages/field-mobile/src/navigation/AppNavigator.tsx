@@ -26,7 +26,10 @@ import { LoginScreen } from '../auth/LoginScreen';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import { EmergencySosSheet } from '../components/sos';
-import { defaultNetworkMonitor } from '../connectivity/networkMonitor';
+import {
+    defaultNetworkMonitor,
+    isFetchError,
+} from '../connectivity/networkMonitor';
 import type { NetworkMonitor } from '../connectivity/networkMonitor';
 import {
     startBackgroundLocationUpdates,
@@ -390,9 +393,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                 return;
             }
 
+            // Suppress fetch and offline errors so field workers are not confused
+            if (isFetchError(err) || isOnline === false) {
+                return;
+            }
+
             setJobsError(err instanceof Error ? err.message : fallback);
         },
-        [logout],
+        [isOnline, logout],
     );
 
     const fetchJobs = useCallback(async () => {
@@ -406,6 +414,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         try {
             setJobs((await apiClient.fetchAssignedJobs()) || []);
         } catch (error: unknown) {
+            if (
+                error instanceof ApiClientError &&
+                (error.status === 401 || error.status === 403)
+            ) {
+                await logout();
+
+                return;
+            }
+
+            // Offline or network fetch failure: do not show error banner.
+            if (isFetchError(error)) {
+                return;
+            }
+
             await handleRequestFailure(
                 error,
                 'Failed to fetch assigned dispatches.',
@@ -413,7 +435,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         } finally {
             setIsLoadingJobs(false);
         }
-    }, [apiClient, handleRequestFailure, isOnline, status]);
+    }, [apiClient, handleRequestFailure, isOnline, logout, status]);
+
+    useEffect(() => {
+        if (isOnline === false) {
+            setJobsError(null);
+        }
+    }, [isOnline]);
 
     const refreshWeather = useCallback(async () => {
         setIsLoadingWeather(true);
@@ -1259,7 +1287,10 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             !isCompact && styles.mainContentExpanded,
                         ]}
                     >
-                        {selectedJobId !== null && jobsError ? (
+                        {selectedJobId !== null &&
+                        jobsError &&
+                        isOnline !== false &&
+                        !isFetchError(jobsError) ? (
                             <View
                                 accessible
                                 accessibilityLiveRegion="assertive"

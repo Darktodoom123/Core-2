@@ -19,6 +19,7 @@ import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelector
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
+import { isFetchError } from '../connectivity/networkMonitor';
 import { useTheme } from '../theme';
 import type {
     DispatchJob,
@@ -596,7 +597,7 @@ export const OperatorDashboardScreen: React.FC<
                     ratedCapacity="50T All-Terrain"
                 />
 
-                {error ? (
+                {error && isOnline !== false && !isFetchError(error) ? (
                     <View style={styles.errorBox}>
                         <Icon name="alert" size={16} color={colors.red} />
                         <Text style={styles.errorText}>{error}</Text>

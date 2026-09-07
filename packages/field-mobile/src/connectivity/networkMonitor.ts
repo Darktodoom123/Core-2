@@ -28,3 +28,55 @@ export class NetInfoNetworkMonitor implements NetworkMonitor {
 
 export const defaultNetworkMonitor: NetworkMonitor =
     new NetInfoNetworkMonitor();
+
+const FETCH_ERROR_PATTERNS = [
+    /fetch failed/i,
+    /connectexception/i,
+    /failed to connect/i,
+    /network request failed/i,
+    /network error/i,
+    /networkerror/i,
+    /failed to fetch/i,
+    /load failed/i,
+    /connection refused/i,
+    /connection reset/i,
+    /connection timed out/i,
+    /could not connect/i,
+    /unable to resolve host/i,
+    /unknownhostexception/i,
+    /sockettimeoutexception/i,
+    /socket hang up/i,
+    /is offline/i,
+    /device is offline/i,
+    /appears to be offline/i,
+    /server is offline/i,
+    /went offline/i,
+    /err_connection_/i,
+    /err_internet_/i,
+    /err_name_not_resolved/i,
+    /econnrefused/i,
+    /ehostunreach/i,
+    /etimedout/i,
+    /enotfound/i,
+];
+
+export function isFetchError(err: unknown): boolean {
+    if (!err) {
+        return false;
+    }
+
+    if (err instanceof TypeError) {
+        return true;
+    }
+
+    const message =
+        typeof err === 'string'
+            ? err
+            : err instanceof Error
+              ? err.message
+              : typeof err === 'object' && err !== null && 'message' in err
+                ? String((err as { message: unknown }).message)
+                : String(err);
+
+    return FETCH_ERROR_PATTERNS.some((pattern) => pattern.test(message));
+}
