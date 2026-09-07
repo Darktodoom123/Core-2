@@ -1,0 +1,257 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
+use Illuminate\Database\Seeder;
+
+final class AlibatonCraneFleetSeeder extends Seeder
+{
+    /**
+     * Seed crane assets (tower cranes & mobile cranes) for Alibaton Construction Incorporated.
+     */
+    public function run(): void
+    {
+        $assets = [
+            // ==========================================
+            // TOWER CRANES (Stationary High-Rise Fleet)
+            // ==========================================
+            [
+                'code' => 'TWR-301',
+                'name' => '16T Potain Topless Tower Crane',
+                'kind' => 'tower_crane',
+                'subtype' => 'Topless Tower Crane',
+                'status' => AssetStatus::Working->value,
+                'registration_number' => 'DOLE-TWR-3851-NCR',
+                'manufacturer' => 'Potain (Manitowoc)',
+                'model' => 'MCT 385 L16',
+                'rated_capacity' => 16.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 2840.50,
+                'baseline_burn_rate' => 45.00,
+                'burn_rate_unit' => 'kWh/hr',
+                'location' => 'BGC Tower 3 High-Rise Project (Taguig)',
+                'specifications' => [
+                    'jib_length_meters' => 75,
+                    'max_hook_height_meters' => 65.4,
+                    'tip_load_tonnes' => 3.2,
+                    'hoist_winch' => '75 LVF 40 Optima',
+                    'counterweight' => '21.5t',
+                    'power_supply' => '400V 3-Phase 60Hz',
+                    'dole_inspection_tag' => 'OSHC-NCR-2026-TWR-01',
+                ],
+            ],
+            [
+                'code' => 'TWR-302',
+                'name' => '16T Zoomlion Hammerhead Tower Crane',
+                'kind' => 'tower_crane',
+                'subtype' => 'Hammerhead Tower Crane',
+                'status' => AssetStatus::Assigned->value,
+                'registration_number' => 'DOLE-TWR-7035-CEB',
+                'manufacturer' => 'Zoomlion',
+                'model' => 'TC7035-16',
+                'rated_capacity' => 16.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 1955.00,
+                'baseline_burn_rate' => 40.00,
+                'burn_rate_unit' => 'kWh/hr',
+                'location' => 'Cebu South Coastal Reclamation Project',
+                'specifications' => [
+                    'jib_length_meters' => 70,
+                    'max_hook_height_meters' => 52.0,
+                    'tip_load_tonnes' => 3.5,
+                    'hoist_winch' => '75LFV40',
+                    'counterweight' => '19.8t',
+                    'power_supply' => '400V 3-Phase 60Hz',
+                    'dole_inspection_tag' => 'OSHC-R7-2026-TWR-14',
+                ],
+            ],
+            [
+                'code' => 'TWR-303',
+                'name' => '12T Liebherr EC-H Topless Tower Crane',
+                'kind' => 'tower_crane',
+                'subtype' => 'Topless Tower Crane',
+                'status' => AssetStatus::ReadyForService->value,
+                'registration_number' => 'DOLE-TWR-2800-BUL',
+                'manufacturer' => 'Liebherr',
+                'model' => '280 EC-H 12 Litronic',
+                'rated_capacity' => 12.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 1120.00,
+                'baseline_burn_rate' => 38.00,
+                'burn_rate_unit' => 'kWh/hr',
+                'location' => 'Alibaton Heavy Depot - Bulacan Yard',
+                'specifications' => [
+                    'jib_length_meters' => 70,
+                    'max_hook_height_meters' => 71.0,
+                    'tip_load_tonnes' => 2.8,
+                    'hoist_winch' => '65 kW FU',
+                    'counterweight' => '18.0t',
+                    'power_supply' => '400V 3-Phase 60Hz',
+                    'dole_inspection_tag' => 'OSHC-R3-2026-TWR-09',
+                ],
+            ],
+            [
+                'code' => 'TWR-304',
+                'name' => '18T Favelle Favco Luffing Jib Tower Crane',
+                'kind' => 'tower_crane',
+                'subtype' => 'Luffing Jib Tower Crane',
+                'status' => AssetStatus::UnderInspection->value,
+                'registration_number' => 'DOLE-TWR-4400-NCR',
+                'manufacturer' => 'Favelle Favco',
+                'model' => 'M440D',
+                'rated_capacity' => 18.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 3680.00,
+                'baseline_burn_rate' => 24.50,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'North Harbor Port Expansion Berth 7',
+                'specifications' => [
+                    'jib_length_meters' => 55,
+                    'max_hook_height_meters' => 80.0,
+                    'tip_load_tonnes' => 5.2,
+                    'diesel_engine' => 'Caterpillar C9 ACERT 280kW',
+                    'internal_climbing' => true,
+                    'dole_inspection_tag' => 'OSHC-NCR-2026-TWR-88',
+                ],
+            ],
+
+            // ==========================================
+            // MOBILE CRANES (All-Terrain & Rough-Terrain)
+            // ==========================================
+            [
+                'code' => 'CRN-103',
+                'name' => '100T Liebherr All-Terrain Mobile Crane',
+                'kind' => 'crane',
+                'subtype' => 'All-Terrain',
+                'status' => AssetStatus::Available->value,
+                'registration_number' => 'NCR-1100-CRN',
+                'manufacturer' => 'Liebherr',
+                'model' => 'LTM 1100-4.2',
+                'rated_capacity' => 100.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 2340.00,
+                'baseline_burn_rate' => 26.50,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'Alibaton Main Equipment Yard (Manila)',
+                'specifications' => [
+                    'telescopic_boom_length' => '60m',
+                    'lattice_jib_length' => '19m',
+                    'axles' => 4,
+                    'counterweight' => '28.2t',
+                    'outrigger_base' => '8.6m x 7.0m',
+                    'engine' => 'Liebherr 6-cylinder Turbo Diesel (350 kW)',
+                ],
+            ],
+            [
+                'code' => 'CRN-104',
+                'name' => '250T Liebherr Heavy All-Terrain Crane',
+                'kind' => 'crane',
+                'subtype' => 'All-Terrain',
+                'status' => AssetStatus::ReadyForService->value,
+                'registration_number' => 'NCR-1250-CRN',
+                'manufacturer' => 'Liebherr',
+                'model' => 'LTM 1250-5.1',
+                'rated_capacity' => 250.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 1890.00,
+                'baseline_burn_rate' => 38.00,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'Alibaton Staging Terminal - Taguig Yard',
+                'specifications' => [
+                    'telescopic_boom_length' => '60m',
+                    'folding_jib_length' => '36m',
+                    'axles' => 5,
+                    'counterweight' => '88.0t',
+                    'outrigger_base' => '9.3m x 8.3m',
+                    'heavy_duty_jib' => true,
+                ],
+            ],
+            [
+                'code' => 'CRN-105',
+                'name' => '25T Kato Compact City Mobile Crane',
+                'kind' => 'crane',
+                'subtype' => 'City Crane',
+                'status' => AssetStatus::Available->value,
+                'registration_number' => 'BTG-2501-CRN',
+                'manufacturer' => 'Kato',
+                'model' => 'CR-250Rv',
+                'rated_capacity' => 25.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 845.50,
+                'baseline_burn_rate' => 12.00,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'Batangas Fabrication Yard',
+                'specifications' => [
+                    'telescopic_boom_length' => '29m',
+                    'super_luffing_fly_jib' => '8.2m',
+                    'axles' => 2,
+                    'compact_turning_radius' => '4.9m',
+                    'tail_swing_radius' => '2.1m',
+                ],
+            ],
+            [
+                'code' => 'CRN-106',
+                'name' => '55T SANY Rough-Terrain Mobile Crane',
+                'kind' => 'crane',
+                'subtype' => 'Rough-Terrain',
+                'status' => AssetStatus::UnderMaintenance->value,
+                'registration_number' => 'NCR-5502-CRN',
+                'manufacturer' => 'SANY',
+                'model' => 'SRC550H',
+                'rated_capacity' => 55.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 3420.00,
+                'baseline_burn_rate' => 20.00,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'Central Equipment Maintenance Bay 2',
+                'specifications' => [
+                    'telescopic_boom_length' => '43.5m',
+                    'jib_length' => '16m',
+                    'drive_steer' => '4x4x4 All-Wheel Drive',
+                    'maintenance_reason' => 'Routine 500-hr hydraulic seal overhaul and wire rope non-destructive testing',
+                ],
+            ],
+            [
+                'code' => 'CRN-107',
+                'name' => '220T Tadano All-Terrain Mobile Crane',
+                'kind' => 'crane',
+                'subtype' => 'All-Terrain',
+                'status' => AssetStatus::Available->value,
+                'registration_number' => 'NCR-2200-CRN',
+                'manufacturer' => 'Tadano',
+                'model' => 'ATF 220G-5',
+                'rated_capacity' => 220.00,
+                'capacity_unit' => 'tonnes',
+                'meter_type' => 'hour_meter',
+                'meter_value' => 1650.00,
+                'baseline_burn_rate' => 34.00,
+                'burn_rate_unit' => 'L/hr',
+                'location' => 'Alibaton Main Equipment Yard (Manila)',
+                'specifications' => [
+                    'telescopic_boom_length' => '68m',
+                    'boom_extension' => '36m',
+                    'axles' => 5,
+                    'counterweight' => '71.0t',
+                    'engine_carrier' => 'Mercedes-Benz OM 471 LA (390 kW)',
+                ],
+            ],
+        ];
+
+        foreach ($assets as $assetData) {
+            OperationalAsset::query()->updateOrCreate(
+                ['code' => $assetData['code']],
+                $assetData
+            );
+        }
+    }
+}

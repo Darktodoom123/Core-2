@@ -172,6 +172,7 @@ final class LocalDevelopmentSeeder extends Seeder
 
         $this->call(PhilippineSafetyOperationsSeeder::class);
         $this->call(OperationalTestSeeder::class);
+        $this->call(AlibatonCraneFleetSeeder::class);
     }
 
     /**
