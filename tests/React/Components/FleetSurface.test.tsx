@@ -1258,30 +1258,35 @@ describe('FleetSurface & Modular Fleet Components', () => {
             fireEvent.click(trackBtn);
             expect(onViewFullTrackingMock).toHaveBeenCalledTimes(1);
 
-            // Quick action: Update Status switches tab to Readiness & Status
-            const statusActionBtn = screen.getByRole('button', {
-                name: /update status/i,
+            // Redundant quick action buttons are removed from toolbar (except safety lockdown)
+            expect(
+                screen.queryByRole('button', { name: /update status/i }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /record inspection/i }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('button', { name: /open work order/i }),
+            ).not.toBeInTheDocument();
+
+            // Tab switching occurs directly via standard tabs
+            const statusTab = screen.getByRole('tab', {
+                name: /readiness & status/i,
             });
-            fireEvent.click(statusActionBtn);
+            fireEvent.click(statusTab);
             expect(screen.getByText(/transitioning to/i)).toBeInTheDocument();
 
-            // Quick action: Record Inspection switches tab to Inspections
-            const inspectActionBtn = screen.getByRole('button', {
-                name: /record inspection/i,
+            const inspectTab = screen.getByRole('tab', {
+                name: /inspections/i,
             });
-            fireEvent.click(inspectActionBtn);
-            expect(
-                screen.getByRole('tab', { name: /inspections/i }),
-            ).toHaveAttribute('aria-selected', 'true');
+            fireEvent.click(inspectTab);
+            expect(inspectTab).toHaveAttribute('aria-selected', 'true');
 
-            // Quick action: Open Work Order switches tab to Work Orders
-            const maintainActionBtn = screen.getByRole('button', {
-                name: /open work order/i,
+            const maintainTab = screen.getByRole('tab', {
+                name: /work orders/i,
             });
-            fireEvent.click(maintainActionBtn);
-            expect(
-                screen.getByRole('tab', { name: /work orders/i }),
-            ).toHaveAttribute('aria-selected', 'true');
+            fireEvent.click(maintainTab);
+            expect(maintainTab).toHaveAttribute('aria-selected', 'true');
 
             // Quick action: Walkaround Photos opens DVIR modal
             const photosActionBtn = screen.getByRole('button', {
