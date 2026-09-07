@@ -61,6 +61,8 @@ export function DispatchResources({
     initialDate,
     returnTo,
     refreshing,
+    selectedJob,
+    onSelectJob,
 }: {
     users: DispatchResourceUserViewModel[];
     assets: AssetViewModel[];
@@ -68,6 +70,8 @@ export function DispatchResources({
     initialDate: string;
     returnTo: string;
     refreshing: boolean;
+    selectedJob?: DispatchJobViewModel | null;
+    onSelectJob?: (id: number) => void;
 }) {
     const [kind, setKind] = useState<'people' | 'assets'>('people');
     const [query, setQuery] = useState('');
@@ -170,6 +174,65 @@ export function DispatchResources({
                     />
                 </label>
             </div>
+            {selectedJob ? (
+                <div className="mt-3 rounded-lg border border-brand/40 bg-brand-soft/40 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                            <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                                Active Dispatch Context
+                            </span>
+                            <p className="truncate text-sm font-semibold text-ink">
+                                {selectedJob.reference} · {selectedJob.title}
+                            </p>
+                        </div>
+                        <Link
+                            href={`/operations/dispatch-jobs/${selectedJob.id}?${new URLSearchParams({ return_to: returnTo })}#assignment-summary`}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        >
+                            <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                            Assign resources to this job →
+                        </Link>
+                    </div>
+                </div>
+            ) : jobs.filter((j) => j.status.value === 'draft').length > 0 &&
+              onSelectJob ? (
+                <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="min-w-0">
+                            <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                                Assign to a dispatch
+                            </span>
+                            <p className="text-xs text-ink-soft">
+                                Pick a draft job to review qualification match
+                                and assign crew.
+                            </p>
+                        </div>
+                        <select
+                            aria-label="Select dispatch for resource assignment"
+                            defaultValue=""
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+
+                                if (id) {
+                                    onSelectJob(id);
+                                }
+                            }}
+                            className="min-h-9 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        >
+                            <option value="" disabled>
+                                Choose a draft dispatch…
+                            </option>
+                            {jobs
+                                .filter((j) => j.status.value === 'draft')
+                                .map((j) => (
+                                    <option key={j.id} value={j.id}>
+                                        {j.reference} · {j.title}
+                                    </option>
+                                ))}
+                        </select>
+                    </div>
+                </div>
+            ) : null}
             <div className="mt-4 flex flex-wrap items-center gap-3">
                 <div
                     role="group"

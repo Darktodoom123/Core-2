@@ -53,6 +53,7 @@ import {
     HISTORY_STATUSES,
     incomingWorkItems,
     jobGroup,
+    jobNeedsAssignment,
     jobOverlapsDate,
     jobOverlapsPeriod,
     nextActionForJob,
@@ -256,9 +257,14 @@ export function DispatchDesk({
     const search = useDispatchSearch(state, initialJobs, refreshing);
     const { jobs, contextJobs } = search;
     const [directIntakeDirty, setDirectIntakeDirty] = useState(false);
+    const [needsAssignmentOnly, setNeedsAssignmentOnly] = useState(false);
     const [showResources, setShowResources] = useState(false);
     const [mobileReview, setMobileReview] = useState(
         state.selectedJobId !== null,
+    );
+    const assignmentCount = useMemo(
+        () => jobs.filter((job) => jobNeedsAssignment(job)).length,
+        [jobs],
     );
     const listPosition = useRef(0);
     const selectedRow = useRef<HTMLElement | null>(null);
@@ -375,6 +381,10 @@ export function DispatchDesk({
                 return false;
             }
 
+            if (needsAssignmentOnly && !jobNeedsAssignment(job)) {
+                return false;
+            }
+
             return (
                 Boolean(search.page) ||
                 normalizedQuery === '' ||
@@ -383,7 +393,7 @@ export function DispatchDesk({
                     .includes(normalizedQuery)
             );
         });
-    }, [conflicts, jobs, state, search.page]);
+    }, [conflicts, jobs, state, search.page, needsAssignmentOnly]);
 
     const selectedJob = useMemo(
         () =>
@@ -795,6 +805,10 @@ export function DispatchDesk({
                                         query={state.query}
                                         source={state.source}
                                         attentionOnly={state.attentionOnly}
+                                        needsAssignmentOnly={
+                                            needsAssignmentOnly
+                                        }
+                                        assignmentCount={assignmentCount}
                                         onQuery={(value) =>
                                             changeDesk(() => setQuery(value))
                                         }
@@ -806,11 +820,15 @@ export function DispatchDesk({
                                                 setAttentionOnly(value),
                                             )
                                         }
+                                        onNeedsAssignment={(value) =>
+                                            setNeedsAssignmentOnly(value)
+                                        }
                                         onReset={() =>
                                             changeDesk(() => {
                                                 setQuery('');
                                                 setSource('all');
                                                 setAttentionOnly(false);
+                                                setNeedsAssignmentOnly(false);
                                             })
                                         }
                                     />
@@ -1000,6 +1018,8 @@ export function DispatchDesk({
                             initialDate={state.date}
                             returnTo={returnTo}
                             refreshing={refreshing}
+                            selectedJob={selectedJob}
+                            onSelectJob={selectJob}
                         />
                     </div>
                 )}
@@ -1012,20 +1032,30 @@ function DeskFilters({
     query,
     source,
     attentionOnly,
+    needsAssignmentOnly,
+    assignmentCount,
     onQuery,
     onSource,
     onAttention,
+    onNeedsAssignment,
     onReset,
 }: {
     query: string;
     source: DispatchSourceFilter;
     attentionOnly: boolean;
+    needsAssignmentOnly: boolean;
+    assignmentCount: number;
     onQuery: (value: string) => void;
     onSource: (value: DispatchSourceFilter) => void;
     onAttention: (value: boolean) => void;
+    onNeedsAssignment: (value: boolean) => void;
     onReset: () => void;
 }) {
-    const hasFilters = query !== '' || source !== 'all' || attentionOnly;
+    const hasFilters =
+        query !== '' ||
+        source !== 'all' ||
+        attentionOnly ||
+        needsAssignmentOnly;
 
     return (
         <section
@@ -1072,6 +1102,17 @@ function DeskFilters({
                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                 Needs attention on this page
             </Button>
+            {assignmentCount > 0 && (
+                <Button
+                    size="sm"
+                    variant={needsAssignmentOnly ? 'primary' : 'secondary'}
+                    aria-pressed={needsAssignmentOnly}
+                    onClick={() => onNeedsAssignment(!needsAssignmentOnly)}
+                >
+                    <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                    Needs assignment ({assignmentCount})
+                </Button>
+            )}
             {hasFilters && (
                 <Button size="sm" variant="quiet" onClick={onReset}>
                     Clear filters
@@ -1483,6 +1524,7 @@ function DispatchReviewPanel({
     const nextAction = nextActionForJob(job, conflicts);
     const href = dispatchDetailUrl(job, returnTo, conflicts);
     const contextHref = href.replace(/#.*$/, '#dispatch-context');
+    const assignmentHref = `/operations/dispatch-jobs/${job.id}?${new URLSearchParams({ return_to: returnTo }).toString()}#assignment-summary`;
 
     return (
         <section
@@ -1527,6 +1569,15 @@ function DispatchReviewPanel({
                                   : 'Preparation'}
                         </span>
                     </div>
+                    {job.status.value === 'draft' && (
+                        <div className="mt-3 flex items-center gap-2 text-xs font-medium text-brand-strong">
+                            <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span>
+                                Module 2 · Ready for driver/operator &amp;
+                                equipment assignment
+                            </span>
+                        </div>
+                    )}
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                         <Link
                             href={href}
@@ -1614,16 +1665,32 @@ function DispatchReviewPanel({
 
                 <div className="grid gap-5 border-t border-line px-4 py-4 md:px-5 @lg:grid-cols-2">
                     <section aria-labelledby="assigned-personnel-heading">
-                        <h3
-                            id="assigned-personnel-heading"
-                            className="text-sm font-semibold text-ink"
-                        >
-                            Assigned personnel
-                        </h3>
+                        <div className="flex items-center justify-between">
+                            <h3
+                                id="assigned-personnel-heading"
+                                className="text-sm font-semibold text-ink"
+                            >
+                                Assigned personnel
+                            </h3>
+                            <Link
+                                href={assignmentHref}
+                                className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                            >
+                                {job.personnel_assignments.length === 0
+                                    ? '+ Assign crew'
+                                    : 'Manage crew'}
+                            </Link>
+                        </div>
                         {job.personnel_assignments.length === 0 ? (
-                            <p className="mt-2 text-sm text-ink-soft">
-                                No personnel assigned.
-                            </p>
+                            <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                <span>No personnel assigned.</span>
+                                <Link
+                                    href={assignmentHref}
+                                    className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                >
+                                    + Assign crew
+                                </Link>
+                            </div>
                         ) : (
                             <ul className="mt-2 space-y-3">
                                 {job.personnel_assignments.map((assignment) => (
@@ -1644,16 +1711,32 @@ function DispatchReviewPanel({
                         )}
                     </section>
                     <section aria-labelledby="assigned-equipment-heading">
-                        <h3
-                            id="assigned-equipment-heading"
-                            className="text-sm font-semibold text-ink"
-                        >
-                            Assigned equipment
-                        </h3>
+                        <div className="flex items-center justify-between">
+                            <h3
+                                id="assigned-equipment-heading"
+                                className="text-sm font-semibold text-ink"
+                            >
+                                Assigned equipment
+                            </h3>
+                            <Link
+                                href={assignmentHref}
+                                className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                            >
+                                {job.asset_assignments.length === 0
+                                    ? '+ Assign equipment'
+                                    : 'Change / Reassign'}
+                            </Link>
+                        </div>
                         {job.asset_assignments.length === 0 ? (
-                            <p className="mt-2 text-sm text-ink-soft">
-                                No equipment assigned.
-                            </p>
+                            <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                <span>No equipment assigned.</span>
+                                <Link
+                                    href={assignmentHref}
+                                    className="font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                >
+                                    + Assign equipment
+                                </Link>
+                            </div>
                         ) : (
                             <ul className="mt-2 space-y-3">
                                 {job.asset_assignments.map((assignment) => (
@@ -1689,10 +1772,18 @@ function DispatchReviewPanel({
                                 className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
                                 aria-hidden="true"
                             />
-                            <div>
-                                <h3 className="text-sm font-semibold text-warning-strong">
-                                    Review before the next action
-                                </h3>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h3 className="text-sm font-semibold text-warning-strong">
+                                        Review before the next action
+                                    </h3>
+                                    <Link
+                                        href={assignmentHref}
+                                        className="text-xs font-semibold text-warning-strong underline underline-offset-2 hover:text-ink"
+                                    >
+                                        Resolve / Reassign in workspace →
+                                    </Link>
+                                </div>
                                 <ul className="mt-2 space-y-2 text-sm text-ink">
                                     {(expandedJobId === job.id
                                         ? conflicts

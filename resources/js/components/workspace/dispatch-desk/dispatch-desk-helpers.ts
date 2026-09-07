@@ -185,6 +185,17 @@ export function resourceLabel(job: DispatchJobViewModel): string {
     return `${resources.slice(0, 2).join(' · ')} +${resources.length - 2} shown`;
 }
 
+export function jobNeedsAssignment(job: DispatchJobViewModel): boolean {
+    return (
+        job.status.value === 'draft' ||
+        (PREPARATION_STATUSES.includes(
+            job.status.value as (typeof PREPARATION_STATUSES)[number],
+        ) &&
+            (job.personnel_assignments.length === 0 ||
+                job.asset_assignments.length === 0))
+    );
+}
+
 export function nextActionForJob(
     job: DispatchJobViewModel,
     conflicts: readonly DerivedConflict[],
@@ -210,7 +221,7 @@ export function nextActionForJob(
             detail:
                 jobConflicts.length > 0
                     ? `${jobConflicts.length} issue${jobConflicts.length === 1 ? '' : 's'} need review before activation.`
-                    : 'Confirm the schedule and select eligible resources.',
+                    : 'Assign driver, operator, and equipment, and verify HoS/DVIR compliance.',
             group: 'preparation',
         };
     }

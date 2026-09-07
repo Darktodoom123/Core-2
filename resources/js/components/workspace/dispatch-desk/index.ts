@@ -2,6 +2,7 @@ export { DispatchDesk } from './dispatch-desk';
 export {
     deriveDispatchDeskConflicts,
     incomingWorkItems,
+    jobNeedsAssignment,
     jobOverlapsDate,
     jobOverlapsPeriod,
     nextActionForJob,
