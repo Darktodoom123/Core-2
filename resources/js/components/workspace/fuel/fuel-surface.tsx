@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ArrowLeft,
     Droplets,
     Fuel,
@@ -350,7 +351,8 @@ export function FuelSurface({
                                               : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                                     )}
                                 >
-                                    <span>⚠️ Anomalies</span>{' '}
+                                    <AlertTriangle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
+                                    <span>Anomalies</span>{' '}
                                     <span className="ml-1 opacity-80">
                                         ({kpis.anomalies})
                                     </span>
@@ -409,8 +411,9 @@ export function FuelSurface({
 
                             <div className="flex items-center gap-2">
                                 {kpis.anomalies > 0 ? (
-                                    <span className="font-semibold text-danger">
-                                        ⚠️ {kpis.anomalies} burn-rate{' '}
+                                    <span className="inline-flex items-center gap-1.5 font-semibold text-danger">
+                                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                        {kpis.anomalies} burn-rate{' '}
                                         {kpis.anomalies === 1
                                             ? 'anomaly'
                                             : 'anomalies'}

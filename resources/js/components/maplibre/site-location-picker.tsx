@@ -339,7 +339,7 @@ function MultiSlotMapLayer({
                     el.innerHTML = `
                         <div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-50%);">
                             <div style="background:${isSelected ? '#1D4ED8' : '#2563EB'};color:#FFFFFF;padding:4px 8px;border-radius:12px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;gap:4px;margin-bottom:2px;white-space:nowrap;border:${isSelected ? '2px solid #FFFFFF' : 'none'};">
-                                <span>🏗️ ${slot.slotKey}</span>
+                                <span>${slot.slotKey}</span>
                                 <span style="opacity:0.85;font-size:9px;">(${slot.jibRadiusMeters}m Jib)</span>
                             </div>
                             <div style="width:14px;height:14px;background:${isSelected ? '#1D4ED8' : '#2563EB'};border:3px solid #FFFFFF;border-radius:50%;box-shadow:0 0 0 2px #2563EB;"></div>
@@ -401,7 +401,7 @@ function MultiSlotMapLayer({
                 el.innerHTML = `
                     <div style="display:flex;flex-direction:column;align-items:center;cursor:grab;transform:translateY(-50%);">
                         <div style="background:#2563EB;color:#FFFFFF;padding:4px 8px;border-radius:12px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;gap:4px;margin-bottom:2px;white-space:nowrap;">
-                            <span>🏗️ Tower Crane Anchor</span>
+                            <span>Tower Crane Anchor</span>
                         </div>
                         <div style="width:14px;height:14px;background:#2563EB;border:3px solid #FFFFFF;border-radius:50%;box-shadow:0 0 0 2px #2563EB;"></div>
                     </div>
@@ -1041,7 +1041,7 @@ export function SiteLocationPicker({
                                 onClick={() => setSelectedSlotId(slot.id)}
                                 className="flex items-center gap-1.5"
                             >
-                                <span>🏗️ {slot.slotKey}</span>
+                                <span>{slot.slotKey}</span>
                                 <span className="text-[10px] opacity-85">
                                     ({slot.jibRadiusMeters}m Jib)
                                 </span>
@@ -1310,7 +1310,7 @@ export function SiteLocationPicker({
 
                 <div className="flex items-center justify-between pt-1">
                     <p className="text-content-muted text-[11px]">
-                        💡 Tip: Click lot to drop pin, drag marker, or enter
+                        Tip: Click lot to drop pin, drag marker, or enter
                         foundation coordinates.
                     </p>
                     <div className="flex gap-2">

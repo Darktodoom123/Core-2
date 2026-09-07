@@ -197,7 +197,7 @@ test('createPopupCard renders title, subtitle, semantic status, structured field
         subtitle: 'Stationary / Tower Crane',
         status: 'Live (≤2m)',
         statusTone: 'success',
-        badge: '🚨 SOS: Active (Medical)',
+        badge: 'SOS: Active (Medical)',
         badgeTone: 'danger',
         fields: [
             { label: 'Personnel', value: 'Dev Crane Operator' },
@@ -237,7 +237,7 @@ test('createPopupCard renders title, subtitle, semantic status, structured field
         'maplibre-popup-card__alert-badge maplibre-popup-card__alert-badge--danger',
     );
     assert.ok(badgeEl, 'Should render emergency badge');
-    assert.equal(badgeEl?.textContent, '🚨 SOS: Active (Medical)');
+    assert.equal(badgeEl?.textContent, 'SOS: Active (Medical)');
 
     const fieldsContainer = findByClass(popup, 'maplibre-popup-card__fields');
     assert.ok(fieldsContainer, 'Should render fields container');

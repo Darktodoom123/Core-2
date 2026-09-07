@@ -199,10 +199,16 @@ export function DispatchContext({
                                 </Button>
                             </div>
                             {isPinned && !isPickerOpen && (
-                                <p className="font-mono text-[11px] text-ink-soft">
-                                    📍 {currentLat?.toFixed(5)}° N,{' '}
-                                    {currentLon?.toFixed(5)}° E (Hyper-local
-                                    Wind Active)
+                                <p className="flex items-center font-mono text-[11px] text-ink-soft">
+                                    <MapPin
+                                        className="mr-1 h-3 w-3 shrink-0 text-brand-strong"
+                                        aria-hidden="true"
+                                    />
+                                    <span>
+                                        {currentLat?.toFixed(5)}° N,{' '}
+                                        {currentLon?.toFixed(5)}° E (Hyper-local
+                                        Wind Active)
+                                    </span>
                                 </p>
                             )}
                         </div>

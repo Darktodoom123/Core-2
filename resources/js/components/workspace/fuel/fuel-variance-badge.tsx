@@ -32,7 +32,7 @@ export function FuelVarianceBadge({
                     title="Fuel consumption variance exceeds baseline threshold by >= 15%"
                 >
                     <AlertTriangle className="h-3 w-3 shrink-0" />
-                    <span>⚠️ Consumption Anomaly</span>
+                    <span>Consumption Anomaly</span>
                 </span>
             );
         }

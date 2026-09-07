@@ -34,6 +34,7 @@ export function useTrackingPreview(
     const [filters, setFilters] = useState(initialFilters);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const activeIncidents = useMemo(
         () =>
             incidents.filter((incident) =>
@@ -175,6 +176,9 @@ export function useTrackingPreview(
         selectLocation: setSelectedId,
         mobileView,
         setMobileView,
+        sidebarCollapsed,
+        setSidebarCollapsed,
+        toggleSidebar: () => setSidebarCollapsed((current) => !current),
     };
 }
 

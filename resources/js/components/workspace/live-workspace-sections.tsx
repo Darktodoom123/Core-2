@@ -1450,7 +1450,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                 <div className="mt-2 rounded-lg border border-line bg-surface-subtle px-2.5 py-1.5 text-[11px] text-ink-soft">
                                     {startDate || endDate ? (
                                         <span>
-                                            ⚡ Scope:{' '}
+                                            Scope:{' '}
                                             <strong className="text-ink">
                                                 Queries full database archive
                                             </strong>{' '}
@@ -1466,7 +1466,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
                                         </span>
                                     ) : (
                                         <span>
-                                            ⚡ Scope:{' '}
+                                            Scope:{' '}
                                             <strong className="text-ink">
                                                 Full historical database archive
                                             </strong>{' '}
@@ -1548,7 +1548,7 @@ function AuditSurface({ events }: { events: AuditEventViewModel[] }) {
 
                         <div className="mt-5 flex items-center justify-between border-t border-line pt-3 text-[11px] text-ink-soft">
                             <span>
-                                💡 Server exports are archived under the{' '}
+                                Server exports are archived under the{' '}
                                 <a
                                     href="/operations?section=reports"
                                     className="font-medium text-brand-strong underline hover:text-brand"

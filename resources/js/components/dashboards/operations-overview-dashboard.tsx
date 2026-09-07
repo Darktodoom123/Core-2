@@ -751,7 +751,7 @@ function OperationsManagerDashboardView({
                                         className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
                                     >
                                         <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            🏗️ Crane Service
+                                            Crane Service
                                         </span>
                                         <p className="mt-0.5 text-[11px] text-ink-soft">
                                             Direct crane &amp; crew job dispatch
@@ -765,7 +765,7 @@ function OperationsManagerDashboardView({
                                         className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
                                     >
                                         <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            🚜 Rental Mobilization
+                                            Rental Mobilization
                                         </span>
                                         <p className="mt-0.5 text-[11px] text-ink-soft">
                                             Bare &amp; manned rental handoffs
@@ -779,7 +779,7 @@ function OperationsManagerDashboardView({
                                         className="group rounded-lg border border-line bg-surface-subtle p-3 text-left transition-colors hover:border-brand-strong/40 hover:bg-brand-soft/20"
                                     >
                                         <span className="text-xs font-bold text-ink group-hover:text-brand-strong">
-                                            🚚 Transport &amp; Haul
+                                            Transport &amp; Haul
                                         </span>
                                         <p className="mt-0.5 text-[11px] text-ink-soft">
                                             Lowboy &amp; flatbed freight

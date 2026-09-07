@@ -385,7 +385,7 @@ export function GptRecommendationsSurface({
                                 <div className="mt-6 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
                                     <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
                                         <div className="flex items-center gap-2 text-xs font-bold text-ink">
-                                            <span>🏗️ Crane Load Matching</span>
+                                            <span>Crane Load Matching</span>
                                         </div>
                                         <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                                             Calculates required rated capacity,
@@ -397,7 +397,7 @@ export function GptRecommendationsSurface({
 
                                     <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
                                         <div className="flex items-center gap-2 text-xs font-bold text-ink">
-                                            <span>👷 Operator Licensing</span>
+                                            <span>Operator Licensing</span>
                                         </div>
                                         <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                                             Validates operator qualification,
@@ -408,7 +408,7 @@ export function GptRecommendationsSurface({
 
                                     <div className="rounded-xl border border-line bg-surface-subtle p-3.5">
                                         <div className="flex items-center gap-2 text-xs font-bold text-ink">
-                                            <span>⚡ Conflict Prevention</span>
+                                            <span>Conflict Prevention</span>
                                         </div>
                                         <p className="mt-1 text-[11px] leading-relaxed text-ink-soft">
                                             Guarantees zero overlapping
