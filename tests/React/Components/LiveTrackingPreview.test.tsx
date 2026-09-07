@@ -481,4 +481,47 @@ describe('field tracking preview', () => {
         );
         expect(onOpenTracking).toHaveBeenCalledOnce();
     });
+
+    it('supports collapsing and expanding the unit list sidebar so the map can be viewed full width', async () => {
+        await show();
+        const unitsRegion = screen.getByRole('region', { name: 'Field units' });
+        expect(unitsRegion).toHaveClass('lg:flex');
+
+        // Click collapse button in field units header
+        const collapseButton = screen.getByRole('button', {
+            name: 'Collapse unit list',
+        });
+        fireEvent.click(collapseButton);
+
+        // Sidebar is collapsed on desktop
+        expect(unitsRegion).toHaveClass('lg:hidden');
+
+        // Show list button is available in the map subheader
+        const showListButton = screen.getByRole('button', {
+            name: 'Show unit list',
+        });
+        expect(showListButton).toBeInTheDocument();
+
+        // Expanding restores the sidebar
+        fireEvent.click(showListButton);
+        expect(unitsRegion).toHaveClass('lg:flex');
+
+        // Clicking Hide list in the map subheader also collapses it
+        const hideListButton = screen.getByRole('button', {
+            name: 'Hide unit list',
+        });
+        fireEvent.click(hideListButton);
+        expect(unitsRegion).toHaveClass('lg:hidden');
+    });
+
+    it('displays human-readable location in details instead of raw coordinate numbers', async () => {
+        await show();
+        fireEvent.click(inspect('CRN-1'));
+        const details = screen.getByRole('region', {
+            name: 'Selected unit details',
+        });
+        expect(details).toHaveTextContent('Last reported location');
+        expect(details).not.toHaveTextContent('14.59950, 121.01420');
+        expect(details).toHaveTextContent('Accuracy ±5 m');
+    });
 });

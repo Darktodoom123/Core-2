@@ -3,6 +3,7 @@ import {
     CircleAlert,
     Clock3,
     Construction,
+    MapPin,
     Siren,
     Truck,
     UserRoundCog,
@@ -14,6 +15,7 @@ import { useId } from 'react';
 import { Button } from '@/components/ui';
 import { getAssetKind } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
+import { usePreciseLocation } from '@/services/reverse-geocoder';
 import type { LocationUpdateViewModel } from '@/types/workspace';
 import {
     assignedJobsite,
@@ -140,6 +142,7 @@ export function TrackingUnitDetails({
     onClose: () => void;
 }) {
     const site = assignedJobsite(location);
+    const locationName = usePreciseLocation(location);
 
     return (
         <section
@@ -189,11 +192,29 @@ export function TrackingUnitDetails({
                     </dd>
                 </div>
                 <div>
-                    <dt className="text-ink-soft">Last reported position</dt>
-                    <dd className="mt-1 font-medium text-ink tabular-nums">
-                        {hasCoordinates(location)
-                            ? `${location.latitude?.toFixed(5)}, ${location.longitude?.toFixed(5)}`
-                            : 'Coordinates unavailable'}
+                    <dt className="text-ink-soft">Last reported location</dt>
+                    <dd className="mt-1 font-medium text-ink">
+                        {hasCoordinates(location) ? (
+                            <span
+                                className="flex items-center gap-1.5"
+                                title={
+                                    location.latitude !== null &&
+                                    location.longitude !== null
+                                        ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                                        : undefined
+                                }
+                            >
+                                <MapPin
+                                    className="size-3.5 shrink-0 text-brand-strong"
+                                    aria-hidden="true"
+                                />
+                                <span className="break-words">
+                                    {locationName}
+                                </span>
+                            </span>
+                        ) : (
+                            'Coordinates unavailable'
+                        )}
                         {location.accuracy_metres !== null &&
                             hasCoordinates(location) && (
                                 <span className="mt-1 block font-normal text-ink-soft">
@@ -212,7 +233,7 @@ export function TrackingUnitDetails({
                         className="mt-px size-3.5 shrink-0"
                         aria-hidden="true"
                     />
-                    This is the last reported position. The unit's current
+                    This is the last reported location. The unit's current
                     position is unconfirmed.
                 </p>
             )}

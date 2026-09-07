@@ -260,6 +260,7 @@ export function LiveTrackingPreview({
                 )}
             >
                 <div
+                    role="region"
                     aria-label="Field units"
                     className={cn(
                         'h-[420px] min-w-0 flex-col lg:h-[480px] lg:border-r lg:border-line',
