@@ -5,6 +5,7 @@ namespace App\Platform\Safety\Actions;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Enums\SosIncidentCategory;
+use App\Platform\Safety\Events\SosIncidentChanged;
 use App\Platform\Safety\Models\SosIncident;
 use App\Platform\Safety\Services\SosIncidentContextResolver;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ final class ClassifySosIncident
 
     public function handle(User $actor, SosIncident $incident, SosIncidentCategory $category, ?int $assetId = null, ?string $workerNote = null): SosIncident
     {
-        return DB::transaction(function () use ($actor, $incident, $category, $assetId, $workerNote): SosIncident {
+        $updated = DB::transaction(function () use ($actor, $incident, $category, $assetId, $workerNote): SosIncident {
             $incident = SosIncident::query()->whereKey($incident->id)->lockForUpdate()->firstOrFail();
             if ($incident->status->isTerminal()) {
                 throw ValidationException::withMessages(['status' => 'A terminal SOS incident cannot be reclassified.']);
@@ -47,5 +48,9 @@ final class ClassifySosIncident
 
             return $incident->fresh();
         });
+
+        DB::afterCommit(fn () => SosIncidentChanged::dispatch($updated, 'classified'));
+
+        return $updated;
     }
 }

@@ -16,6 +16,7 @@ export interface SosMarkerOptions {
 export function getSosMarkerPosition(
     incident: SosIncidentViewModel,
     liveLocation?: LocationUpdateViewModel,
+    assetLocation?: LocationUpdateViewModel,
 ): [number, number] | null {
     if (
         liveLocation?.latitude !== null &&
@@ -29,15 +30,24 @@ export function getSosMarkerPosition(
     const snapshot = incident.location;
 
     if (
-        snapshot?.latitude === null ||
-        snapshot?.latitude === undefined ||
-        snapshot.longitude === null ||
-        snapshot.longitude === undefined
+        snapshot?.latitude !== null &&
+        snapshot?.latitude !== undefined &&
+        snapshot.longitude !== null &&
+        snapshot.longitude !== undefined
     ) {
-        return null;
+        return [snapshot.longitude, snapshot.latitude];
     }
 
-    return [snapshot.longitude, snapshot.latitude];
+    if (
+        assetLocation?.latitude !== null &&
+        assetLocation?.latitude !== undefined &&
+        assetLocation?.longitude !== null &&
+        assetLocation?.longitude !== undefined
+    ) {
+        return [assetLocation.longitude, assetLocation.latitude];
+    }
+
+    return null;
 }
 
 const ASSET_SVG_ICONS: Record<AssetKind, string> = {

@@ -4,6 +4,7 @@ namespace App\Platform\Safety\Actions;
 
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Models\User;
+use App\Platform\Safety\Events\SosIncidentChanged;
 use App\Platform\Safety\Models\SosIncident;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +15,7 @@ final class UpdateSosIncidentLocation
 
     public function handle(User $actor, SosIncident $incident, float $latitude, float $longitude, ?float $accuracy = null): SosIncident
     {
-        return DB::transaction(function () use ($actor, $incident, $latitude, $longitude, $accuracy): SosIncident {
+        $updated = DB::transaction(function () use ($actor, $incident, $latitude, $longitude, $accuracy): SosIncident {
             $incident = SosIncident::query()->whereKey($incident->id)->lockForUpdate()->firstOrFail();
             if ($incident->location_captured_at !== null || $incident->location_pruned_at !== null) {
                 throw ValidationException::withMessages(['location' => 'This SOS incident already has a location snapshot.']);
@@ -31,5 +32,9 @@ final class UpdateSosIncidentLocation
 
             return $incident->fresh();
         });
+
+        DB::afterCommit(fn () => SosIncidentChanged::dispatch($updated, 'location_updated'));
+
+        return $updated;
     }
 }

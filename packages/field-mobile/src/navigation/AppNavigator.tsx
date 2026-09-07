@@ -72,7 +72,7 @@ import type {
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
 
-const SOS_LOCATION_TIMEOUT_MS = 750;
+const SOS_LOCATION_TIMEOUT_MS = 4000;
 
 async function captureBoundedEmergencyLocation(
     getLocation: () => Promise<{
@@ -592,20 +592,22 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     const incident = await apiClient.fetchActiveSosIncident();
                     setActiveSosIncident(incident);
 
-                    const location = await locationPromise;
+                    if (incident && !incident.location) {
+                        const location = await locationPromise;
 
-                    if (incident && location) {
-                        try {
-                            setActiveSosIncident(
-                                await apiClient.updateSosLocation(
-                                    incident.id,
-                                    location,
-                                    command.id,
-                                ),
-                            );
-                        } catch {
-                            // Delivery remains truthful; an optional location
-                            // enrichment failure does not undo the alert.
+                        if (location) {
+                            try {
+                                setActiveSosIncident(
+                                    await apiClient.updateSosLocation(
+                                        incident.id,
+                                        location,
+                                        command.id,
+                                    ),
+                                );
+                            } catch {
+                                // Delivery remains truthful; an optional location
+                                // enrichment failure does not undo the alert.
+                            }
                         }
                     }
                 }
@@ -1425,6 +1427,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                     onActivate={handleActivateSos}
                     onClassify={handleClassifySos}
                     onClose={() => setSosSheetOpen(false)}
+                    onGetLocation={getCurrentLocation}
                     visible={sosSheetOpen}
                 />
             </SafeAreaView>

@@ -25,6 +25,7 @@ import type {
     SosEmergencyAction,
     SosIncident,
     SosIncidentCategory,
+    SosLocationSnapshot,
 } from '../../types/index';
 import { Icon } from '../common/Icon';
 import { colors } from '../nativeStyles';
@@ -48,6 +49,11 @@ export interface EmergencySosSheetProps {
     onClose: () => void;
     onActivate: (payload: ActivateSosIncidentPayload) => Promise<void>;
     onClassify: (category: SosIncidentCategory, note?: string) => Promise<void>;
+    onGetLocation?: () => Promise<{
+        latitude: number;
+        longitude: number;
+        accuracyMetres?: number | null;
+    } | null>;
 }
 
 export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
@@ -59,8 +65,11 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
     onClose,
     onActivate,
     onClassify,
+    onGetLocation,
 }) => {
     const { isDarkHud } = useTheme();
+    const [cachedLocation, setCachedLocation] =
+        useState<SosLocationSnapshot | null>(null);
     const [selectedJobId, setSelectedJobId] = useState<number | null>(
         jobs[0]?.id ?? null,
     );
@@ -118,6 +127,32 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
         activeIncident?.note,
         activeIncident?.worker_note,
     ]);
+
+    useEffect(() => {
+        if (!visible || !onGetLocation || activeIncident) {
+            return;
+        }
+
+        let isMounted = true;
+        void onGetLocation()
+            .then((loc) => {
+                if (isMounted && loc) {
+                    setCachedLocation({
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        accuracy_metres: loc.accuracyMetres ?? null,
+                        captured_at: new Date().toISOString(),
+                    });
+                }
+            })
+            .catch(() => {
+                // Pre-warming is opportunistic; errors will not block emergency broadcast
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [activeIncident, onGetLocation, visible]);
 
     const handleToggleChip = useCallback(
         (chipId: string) => {
@@ -250,7 +285,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
             device_activated_at: new Date().toISOString(),
             dispatch_job_id: selectedJobId,
             operational_asset_id: selectedAssetId,
-            location: null,
+            location: cachedLocation ?? null,
             note: situationNote.trim() || null,
         }).finally(() => {
             setIsActivating(false);
@@ -258,6 +293,7 @@ export const EmergencySosSheet: React.FC<EmergencySosSheetProps> = ({
             holdCompletedRef.current = false;
         });
     }, [
+        cachedLocation,
         onActivate,
         selectedAssetId,
         selectedCategory,

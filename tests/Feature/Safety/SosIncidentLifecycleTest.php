@@ -243,3 +243,41 @@ it('returns deliberate call and SMS actions only for a validated configured numb
         ->assertJsonPath('data.actions.1.kind', 'sms')
         ->assertJsonPath('data.actions.1.uri', 'sms:+15550000002');
 });
+
+it('broadcasts SosIncidentChanged when incident location is updated', function (): void {
+    \Illuminate\Support\Facades\Event::fake([\App\Platform\Safety\Events\SosIncidentChanged::class]);
+    $worker = safetyUser(RoleName::CraneOperator);
+    $token = $worker->createToken('Synthetic SOS device')->plainTextToken;
+    triggerSafety($worker, [], $token)->assertCreated();
+    $incident = SosIncident::query()->sole();
+
+    test()->withToken($token)->patchJson("/api/v1/sos-incidents/{$incident->id}/location", [
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 10,
+    ])->assertOk();
+
+    expect((float) $incident->fresh()->latitude)->toBe(14.5995);
+
+    \Illuminate\Support\Facades\Event::assertDispatched(\App\Platform\Safety\Events\SosIncidentChanged::class, function ($event) use ($incident) {
+        return $event->incident->id === $incident->id && $event->action === 'location_updated';
+    });
+});
+
+it('broadcasts SosIncidentChanged when incident is classified', function (): void {
+    \Illuminate\Support\Facades\Event::fake([\App\Platform\Safety\Events\SosIncidentChanged::class]);
+    $worker = safetyUser(RoleName::CraneOperator);
+    $token = $worker->createToken('Synthetic SOS device')->plainTextToken;
+    triggerSafety($worker, [], $token)->assertCreated();
+    $incident = SosIncident::query()->sole();
+
+    test()->withToken($token)->patchJson("/api/v1/sos-incidents/{$incident->id}/classification", [
+        'category' => 'site_accident',
+        'worker_note' => 'Scaffold collapse at sector 4',
+    ])->assertOk()->assertJsonPath('data.category', 'site_accident');
+
+    \Illuminate\Support\Facades\Event::assertDispatched(\App\Platform\Safety\Events\SosIncidentChanged::class, function ($event) use ($incident) {
+        return $event->incident->id === $incident->id && $event->action === 'classified';
+    });
+});
+

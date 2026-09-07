@@ -172,6 +172,18 @@ test('follows the affected worker when a newer live location replaces the SOS sn
         [121.04, 14.63],
     );
     assert.deepEqual(getSosMarkerPosition(incident), [121.02, 14.61]);
+
+    const incidentWithoutLocation = {
+        location: null,
+    } as never;
+    const assetLocation = {
+        latitude: 14.65,
+        longitude: 121.06,
+    } as never;
+    assert.deepEqual(
+        getSosMarkerPosition(incidentWithoutLocation, undefined, assetLocation),
+        [121.06, 14.65],
+    );
 });
 
 test('createPopupCard renders title, subtitle, semantic status, structured fields, and actions', () => {
