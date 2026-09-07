@@ -5,6 +5,7 @@ import {
     FleetDetailPane,
     FleetQueue,
     FleetSurface,
+    FleetTelemetrySection,
     MapErrorBoundary,
     SafetyLockoutBanner,
 } from '@/components/workspace/fleet';
@@ -97,10 +98,15 @@ vi.mock('@inertiajs/react', () => {
 vi.mock('@/components/live-tracking-map', () => ({
     LiveTrackingMap: ({
         locations,
+        selectedLocationId,
     }: {
         locations: LocationUpdateViewModel[];
+        selectedLocationId?: number | null;
     }) => (
-        <div data-testid="live-tracking-map">
+        <div
+            data-testid="live-tracking-map"
+            data-selected-location-id={selectedLocationId ?? ''}
+        >
             LiveTrackingMap Mock ({locations?.length ?? 0} markers)
         </div>
     ),
@@ -283,9 +289,15 @@ describe('FleetSurface & Modular Fleet Components', () => {
             ).toBeInTheDocument();
         });
 
-        it('switches to fleet map view and back to registry', () => {
-            const assets = [createAsset(1, 'CRN-001', 'crane')];
-            const locations = [createLocation(1, 'fresh')];
+        it('renders live fleet map on top and keeps asset registry and detail pane synchronized', () => {
+            const assets = [
+                createAsset(1, 'CRN-001', 'crane'),
+                createAsset(2, 'TRK-002', 'truck'),
+            ];
+            const locations = [
+                createLocation(1, 'fresh'),
+                createLocation(2, 'fresh'),
+            ];
 
             render(
                 <FleetSurface
@@ -295,25 +307,54 @@ describe('FleetSurface & Modular Fleet Components', () => {
                 />,
             );
 
-            // Click Fleet map view button
-            const mapToggleBtn = screen.getByRole('button', {
-                name: /fleet map view/i,
-            });
-            fireEvent.click(mapToggleBtn);
-
+            // Live map is prominently rendered on top by default
             expect(
                 screen.getByText('Live Fleet Telematics & GIS Map'),
             ).toBeInTheDocument();
+            expect(screen.getByText('2 active GPS')).toBeInTheDocument();
 
-            // Click back to registry
-            const registryToggleBtn = screen.getByRole('button', {
-                name: /asset registry/i,
-            });
-            fireEvent.click(registryToggleBtn);
-
+            // Both map and registry are simultaneously present
             expect(
                 screen.getAllByText('CRN-001').length,
             ).toBeGreaterThanOrEqual(1);
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
+
+            // Initial selectedLocationId on map corresponds to first selected asset (asset 1 -> location id 501)
+            const mapMock = screen.getByTestId('live-tracking-map');
+            expect(mapMock).toHaveAttribute('data-selected-location-id', '501');
+
+            // Select second asset in queue
+            const secondAssetRow = screen.getByText('TRK-002');
+            fireEvent.click(secondAssetRow);
+
+            // Map selection immediately syncs to second asset (asset 2 -> location id 502)
+            expect(mapMock).toHaveAttribute('data-selected-location-id', '502');
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset TRK-002',
+                }),
+            ).toBeInTheDocument();
+
+            // Top map has collapsible toggle
+            const hideMapBtn = screen.getByRole('button', {
+                name: /hide map/i,
+            });
+            fireEvent.click(hideMapBtn);
+            expect(
+                screen.queryByTestId('live-tracking-map'),
+            ).not.toBeInTheDocument();
+
+            const showMapBtn = screen.getByRole('button', {
+                name: /show map/i,
+            });
+            fireEvent.click(showMapBtn);
+            expect(screen.getByTestId('live-tracking-map')).toBeInTheDocument();
         });
     });
 
@@ -475,13 +516,18 @@ describe('FleetSurface & Modular Fleet Components', () => {
             const capacityDd = capacityDt.nextElementSibling;
             expect(capacityDd?.textContent?.trim()).toBe('55');
 
-            // Switch to Live Telemetry tab
-            const telemetryTab = screen.getByRole('tab', {
-                name: /live telemetry/i,
-            });
-            fireEvent.click(telemetryTab);
+            // Detail pane eliminates the individual telemetry tab
+            expect(
+                screen.queryByRole('tab', { name: /live telemetry/i }),
+            ).not.toBeInTheDocument();
 
-            // Speed indicates not recorded
+            // Renders FleetTelemetrySection directly to verify speed display truth
+            render(
+                <FleetTelemetrySection
+                    asset={assetWithNullUnit}
+                    location={locationWithNullSpeed}
+                />,
+            );
             expect(screen.getByText('Speed not recorded')).toBeInTheDocument();
         });
     });

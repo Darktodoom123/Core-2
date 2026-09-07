@@ -347,7 +347,7 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
             />,
         );
 
-        // Tracking section starts in map mode
+        // Tracking section renders FleetSurface with live map on top and asset registry available
         expect(
             screen.getByRole('heading', {
                 level: 1,
@@ -358,7 +358,10 @@ describe('Phase 2 Lead Integration: LiveWorkspaceSection Screen Coordination', (
             await screen.findByTestId('live-tracking-map'),
         ).toBeInTheDocument();
         expect(
-            screen.getByRole('button', { name: /asset registry/i }),
+            screen.getByText('Live Fleet Telematics & GIS Map'),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', { level: 2, name: /CRN-701/ }),
         ).toBeInTheDocument();
     });
 

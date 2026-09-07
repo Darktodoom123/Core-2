@@ -1,4 +1,4 @@
-import { MapPin, Truck } from 'lucide-react';
+import { Truck } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { EmptyState, InlineNotice, PageHeading, Panel } from '@/components/ui';
 import { FleetDetailPane } from '@/components/workspace/fleet/fleet-detail-pane';
@@ -35,9 +35,7 @@ export function FleetSurface({
     activeSosIncidents = [],
     capabilities,
     onSectionChange,
-    initialViewMode = 'list',
 }: FleetSurfaceProps) {
-    const [viewMode, setViewMode] = useState<'list' | 'map'>(initialViewMode);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] =
         useState<FleetCategoryFilter>('all');
@@ -249,21 +247,26 @@ export function FleetSurface({
         [locations, selectedAsset],
     );
 
-    const activeLiveGpsCount = useMemo(
-        () =>
-            locations.filter(
-                (l) =>
-                    l.latitude !== null &&
-                    l.longitude !== null &&
-                    (l.freshness_status === 'fresh' ||
-                        l.freshness_status === 'delayed'),
-            ).length,
-        [locations],
-    );
-
     const handleSelectAsset = (assetId: number) => {
         setSelectedAssetId(assetId);
         setIsMobileDetailOpen(true);
+    };
+
+    const handleLocationSelect = (locationId: number) => {
+        const matchedLocation = locations.find((l) => l.id === locationId);
+
+        if (matchedLocation?.asset?.id) {
+            setSelectedAssetId(matchedLocation.asset.id);
+            setIsMobileDetailOpen(true);
+        }
+    };
+
+    const handleViewFullTracking = () => {
+        const mapElement = document.getElementById('fleet-live-map');
+
+        if (mapElement) {
+            mapElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const handleClearFilters = () => {
@@ -279,42 +282,17 @@ export function FleetSurface({
                 description="Core 3 assets, live GPS telematics, readiness status, specifications, safety inspections, and maintenance work orders."
             />
             <div className="space-y-6 p-4 md:p-6">
-                {/* Calm Operate-Mode View Switcher */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="inline-flex rounded-lg border border-line bg-surface-subtle p-1 shadow-xs">
-                        <button
-                            type="button"
-                            onClick={() => setViewMode('list')}
-                            className={cn(
-                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-                                viewMode === 'list'
-                                    ? 'bg-surface text-ink shadow-xs'
-                                    : 'text-ink-soft hover:text-ink',
-                            )}
-                        >
-                            <Truck className="h-3.5 w-3.5" />
-                            Asset registry ({assets.length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setViewMode('map')}
-                            className={cn(
-                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-                                viewMode === 'map'
-                                    ? 'bg-surface text-brand-strong shadow-xs'
-                                    : 'text-ink-soft hover:text-ink',
-                            )}
-                        >
-                            <MapPin className="h-3.5 w-3.5" />
-                            Fleet map view
-                            {activeLiveGpsCount > 0 && (
-                                <span className="py-0.2 inline-flex items-center rounded-full bg-brand-soft px-1.5 text-[10px] font-bold text-brand-strong">
-                                    {activeLiveGpsCount} live
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                </div>
+                {/* Live Fleet GIS Map prominently positioned on top */}
+                <FleetMapView
+                    locations={locations}
+                    activeSosIncidents={activeSosIncidents}
+                    onSectionChange={onSectionChange}
+                    selectedLocationId={selectedAssetLocation?.id ?? null}
+                    onSelectedLocationChange={handleLocationSelect}
+                    compact={true}
+                    showLocationList={false}
+                    collapsible={true}
+                />
 
                 {/* 1-Click Exception Triage Bar */}
                 <FleetTriageBar
@@ -339,12 +317,6 @@ export function FleetSurface({
                             message="Assets received from Core 3 or assigned to your role will appear here."
                         />
                     </Panel>
-                ) : viewMode === 'map' ? (
-                    <FleetMapView
-                        locations={locations}
-                        activeSosIncidents={activeSosIncidents}
-                        onSectionChange={onSectionChange}
-                    />
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-12">
                         {/* Queue Column */}
@@ -382,9 +354,7 @@ export function FleetSurface({
                                     assetLocation={selectedAssetLocation}
                                     activeSosIncidents={activeSosIncidents}
                                     capabilities={capabilities}
-                                    onViewFullTracking={() =>
-                                        setViewMode('map')
-                                    }
+                                    onViewFullTracking={handleViewFullTracking}
                                     onBackToList={() =>
                                         setIsMobileDetailOpen(false)
                                     }
@@ -394,7 +364,7 @@ export function FleetSurface({
                                     <EmptyState
                                         icon={Truck}
                                         title="Select an asset"
-                                        message="Choose a crane or transport unit to review its telematics, specifications, and maintenance records."
+                                        message="Choose a crane or transport unit to review its specifications, readiness, and maintenance records."
                                     />
                                 </Panel>
                             )}

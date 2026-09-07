@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import React, { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FleetSurface } from '@/components/workspace/fleet';
+import {
+    FleetSurface,
+    FleetTelemetrySection,
+} from '@/components/workspace/fleet';
 import { FuelSurface } from '@/components/workspace/fuel/fuel-surface';
 import { ReportsSurface } from '@/components/workspace/reports-workspace-section';
 import type {
@@ -99,9 +102,15 @@ vi.mock('@inertiajs/react', () => {
 // Mock lazy LiveTrackingMap with a flag to simulate crashing on demand
 let mapShouldThrow = false;
 vi.mock('@/components/live-tracking-map', () => ({
-    LiveTrackingMap: ({ locations }: { locations: LocationUpdateViewModel[] }) => {
+    LiveTrackingMap: ({
+        locations,
+    }: {
+        locations: LocationUpdateViewModel[];
+    }) => {
         if (mapShouldThrow) {
-            throw new Error('Adversarial WebGL context lost & Leaflet tile crash');
+            throw new Error(
+                'Adversarial WebGL context lost & Leaflet tile crash',
+            );
         }
 
         return (
@@ -318,30 +327,60 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Initially CRN-001 is selected
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
             // Search query with 0 matches
-            const searchInput = screen.getByPlaceholderText(/search code, name, model/i);
-            fireEvent.change(searchInput, { target: { value: 'ZERO_MATCH_QUERY_xyz' } });
+            const searchInput = screen.getByPlaceholderText(
+                /search code, name, model/i,
+            );
+            fireEvent.change(searchInput, {
+                target: { value: 'ZERO_MATCH_QUERY_xyz' },
+            });
 
             // Invariant: ZERO zombie detail pane
-            expect(screen.queryByRole('heading', { level: 2, name: 'Asset CRN-001' })).not.toBeInTheDocument();
-            expect(screen.queryByRole('heading', { level: 2, name: 'Asset TRK-002' })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('heading', {
+                    level: 2,
+                    name: 'Asset TRK-002',
+                }),
+            ).not.toBeInTheDocument();
 
             // Queue and detail both show empty state
             expect(screen.getByText('No matching assets')).toBeInTheDocument();
             expect(screen.getByText('Select an asset')).toBeInTheDocument();
-            expect(screen.getByText(/Choose a crane or transport unit to review/i)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Choose a crane or transport unit to review/i),
+            ).toBeInTheDocument();
 
             // Category filter with 0 matches (e.g. holds filter when 0 hold assets)
             fireEvent.change(searchInput, { target: { value: '' } });
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
-            const holdsFilter = screen.getByRole('button', { name: /holds \(0\)/i });
+            const holdsFilter = screen.getByRole('button', {
+                name: /holds \(0\)/i,
+            });
             fireEvent.click(holdsFilter);
 
             // Invariant: ZERO zombie detail pane on category 0-match
-            expect(screen.queryByRole('heading', { level: 2, name: /Asset CRN/i })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('heading', { level: 2, name: /Asset CRN/i }),
+            ).not.toBeInTheDocument();
             expect(screen.getByText('Select an asset')).toBeInTheDocument();
         });
 
@@ -363,22 +402,34 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             expect(screen.getByText(/Ref: FUEL-1/i)).toBeInTheDocument();
 
             // Filter to "Logged (0)"
-            const loggedBtn = screen.getByRole('button', { name: /logged \(0\)/i });
+            const loggedBtn = screen.getByRole('button', {
+                name: /logged \(0\)/i,
+            });
             fireEvent.click(loggedBtn);
 
             // Invariant: FUEL-1 must NOT persist as a zombie!
             expect(screen.queryByText(/Ref: FUEL-1/i)).not.toBeInTheDocument();
-            expect(screen.getByText('No matching fuel requests')).toBeInTheDocument();
+            expect(
+                screen.getByText('No matching fuel requests'),
+            ).toBeInTheDocument();
 
             // Clear search/filter restores selection
-            fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /clear filters/i }),
+            );
             expect(screen.getByText(/Ref: FUEL-1/i)).toBeInTheDocument();
 
             // Adversarial query that matches nothing
-            const searchInput = screen.getByPlaceholderText(/search reference, asset/i);
-            fireEvent.change(searchInput, { target: { value: 'DOES_NOT_EXIST_9999' } });
+            const searchInput = screen.getByPlaceholderText(
+                /search reference, asset/i,
+            );
+            fireEvent.change(searchInput, {
+                target: { value: 'DOES_NOT_EXIST_9999' },
+            });
             expect(screen.queryByText(/Ref: FUEL-1/i)).not.toBeInTheDocument();
-            expect(screen.getByText('No matching fuel requests')).toBeInTheDocument();
+            expect(
+                screen.getByText('No matching fuel requests'),
+            ).toBeInTheDocument();
         });
 
         it('ReportsSurface: completely clears detail pane to EmptyState on zero filter matches', () => {
@@ -397,14 +448,20 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Initially Report 1 is active
-            expect(screen.getByRole('link', { name: 'JOB-1001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1001' }),
+            ).toBeInTheDocument();
 
             // Filter to Approved (0)
-            const approvedBtn = screen.getByRole('button', { name: /approved reports \(0\)/i });
+            const approvedBtn = screen.getByRole('button', {
+                name: /approved reports \(0\)/i,
+            });
             fireEvent.click(approvedBtn);
 
             // Invariant: ZERO zombie detail view for Report 1
-            expect(screen.queryByRole('link', { name: 'JOB-1001' })).not.toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: 'JOB-1001' }),
+            ).not.toBeInTheDocument();
             expect(screen.getByText('No matching reports')).toBeInTheDocument();
         });
     });
@@ -412,8 +469,16 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
     describe('Edge Case 2: Switching selected records in Job Reports resets draft notes, rejection reasons, and form validation errors', () => {
         it('clears draft rejection note and validation errors when alternating between reports', () => {
             const reports = [
-                createReport(10, 'submitted', 'Erection of mobile tower at Sector 7'),
-                createReport(20, 'submitted', 'Excavation trench backfill at Sector 8'),
+                createReport(
+                    10,
+                    'submitted',
+                    'Erection of mobile tower at Sector 7',
+                ),
+                createReport(
+                    20,
+                    'submitted',
+                    'Excavation trench backfill at Sector 8',
+                ),
             ];
 
             render(
@@ -426,31 +491,51 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Active is Report 10
-            expect(screen.getByRole('link', { name: 'JOB-1010' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1010' }),
+            ).toBeInTheDocument();
 
             const getReasonInput = () =>
-                screen.getByPlaceholderText(/review decision notes, quality checks, or rejection reason/i) as HTMLInputElement;
+                screen.getByPlaceholderText(
+                    /review decision notes, quality checks, or rejection reason/i,
+                ) as HTMLInputElement;
 
             // Attempt to reject without reason -> triggers validation error
-            const rejectBtn = screen.getByRole('button', { name: /reject report/i });
+            const rejectBtn = screen.getByRole('button', {
+                name: /reject report/i,
+            });
             fireEvent.click(rejectBtn);
 
-            expect(screen.getByText('A reason is required when rejecting a report.')).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).toBeInTheDocument();
 
             // Type a draft note in Report 10
             fireEvent.change(getReasonInput(), {
                 target: { value: 'Report 10: Missing operator signoff.' },
             });
-            expect(getReasonInput().value).toBe('Report 10: Missing operator signoff.');
+            expect(getReasonInput().value).toBe(
+                'Report 10: Missing operator signoff.',
+            );
 
             // Now switch to Report 20
-            const report20Btn = screen.getByRole('button', { name: /Excavation trench backfill at Sector 8/i });
+            const report20Btn = screen.getByRole('button', {
+                name: /Excavation trench backfill at Sector 8/i,
+            });
             fireEvent.click(report20Btn);
 
             // Invariant: Report 20 is active, reason input is PRISTINE EMPTY, and error is GONE
-            expect(screen.getByRole('link', { name: 'JOB-1020' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1020' }),
+            ).toBeInTheDocument();
             expect(getReasonInput().value).toBe('');
-            expect(screen.queryByText('A reason is required when rejecting a report.')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).not.toBeInTheDocument();
 
             // Type note for Report 20
             fireEvent.change(getReasonInput(), {
@@ -459,11 +544,19 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             expect(getReasonInput().value).toBe('Report 20: Incomplete log.');
 
             // Switch back to Report 10 -> fresh mount, input is PRISTINE EMPTY
-            const report10Btn = screen.getByRole('button', { name: /Erection of mobile tower at Sector 7/i });
+            const report10Btn = screen.getByRole('button', {
+                name: /Erection of mobile tower at Sector 7/i,
+            });
             fireEvent.click(report10Btn);
-            expect(screen.getByRole('link', { name: 'JOB-1010' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('link', { name: 'JOB-1010' }),
+            ).toBeInTheDocument();
             expect(getReasonInput().value).toBe('');
-            expect(screen.queryByText('A reason is required when rejecting a report.')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText(
+                    'A reason is required when rejecting a report.',
+                ),
+            ).not.toBeInTheDocument();
         });
 
         it('does not leak server validation errors or open global submit drawer when switching reports', () => {
@@ -486,17 +579,23 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Invariant: Global submit modal MUST NOT be opened by review errors
-            expect(screen.queryByText('Submit Job Completion Report')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Submit Job Completion Report'),
+            ).not.toBeInTheDocument();
 
             // Switching reports keeps submit modal closed
             fireEvent.click(screen.getByRole('button', { name: /Task 2/i }));
-            expect(screen.queryByText('Submit Job Completion Report')).not.toBeInTheDocument();
+            expect(
+                screen.queryByText('Submit Job Completion Report'),
+            ).not.toBeInTheDocument();
         });
     });
 
     describe('Edge Case 3: Map failure caught by MapErrorBoundary allows asset queue and detail pane to remain fully interactive', () => {
-        it('isolates WebGL / Leaflet runtime crash in FleetTelemetrySection without crashing detail pane or queue', async () => {
-            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('isolates WebGL / Leaflet runtime crash in FleetTelemetrySection without crashing', async () => {
+            const consoleErrorSpy = vi
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
 
             const asset = createAsset(1, 'CRN-555', 'crane');
             const loc = createLocation(1, 'fresh');
@@ -504,48 +603,33 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             // Force map crash
             mapShouldThrow = true;
 
-            render(
-                <FleetSurface
-                    assets={[asset]}
-                    locations={[loc]}
-                    capabilities={createCapabilities()}
-                />,
-            );
-
-            // Queue is mounted and interactive
-            expect(screen.getByRole('heading', { level: 1, name: 'Fleet Management' })).toBeInTheDocument();
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-555' })).toBeInTheDocument();
-
-            // Switch to Live Telemetry tab (which mounts the crashing map)
-            const telemetryTab = screen.getByRole('tab', { name: /live telemetry/i });
-            fireEvent.click(telemetryTab);
+            render(<FleetTelemetrySection asset={asset} location={loc} />);
 
             // Invariant: MapErrorBoundary caught the error! (await Suspense resolution)
             expect(await screen.findByRole('alert')).toBeInTheDocument();
-            expect(screen.getByText('Asset Map Preview Unavailable')).toBeInTheDocument();
-            expect(screen.getByText(/Unable to render map preview for this unit/i)).toBeInTheDocument();
+            expect(
+                screen.getByText('Asset Map Preview Unavailable'),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText(/Unable to render map preview for this unit/i),
+            ).toBeInTheDocument();
 
-            // CRITICAL INVARIANT: The rest of the interface is 100% interactive and intact!
-            // 1. Telemetry coordinates and speed DL are intact
-            expect(screen.getByText('Coordinates (Lat, Lng)')).toBeInTheDocument();
+            // CRITICAL INVARIANT: Telemetry coordinates and speed DL are intact
+            expect(
+                screen.getByText('Coordinates (Lat, Lng)'),
+            ).toBeInTheDocument();
             expect(screen.getByText('Current Speed')).toBeInTheDocument();
-            expect(screen.getAllByText(/45 km\/h/i).length).toBeGreaterThanOrEqual(1);
-
-            // 2. Tab switching still works
-            const specsTab = screen.getByRole('tab', { name: /overview & specs/i });
-            fireEvent.click(specsTab);
-            expect(screen.getByText('Rated Capacity')).toBeInTheDocument();
-
-            // 3. Inspections form works
-            const inspectionsTab = screen.getByRole('tab', { name: /inspections/i });
-            fireEvent.click(inspectionsTab);
-            expect(screen.getByRole('button', { name: /record new inspection/i })).toBeInTheDocument();
+            expect(
+                screen.getAllByText(/45 km\/h/i).length,
+            ).toBeGreaterThanOrEqual(1);
 
             consoleErrorSpy.mockRestore();
         });
 
-        it('isolates map crash in full-screen FleetMapView and allows recovery and toggle back to registry', async () => {
-            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('isolates map crash in top FleetMapView and allows queue, detail pane, and tabs to remain fully interactive', async () => {
+            const consoleErrorSpy = vi
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
 
             const asset = createAsset(1, 'CRN-001', 'crane');
             const loc = createLocation(1, 'fresh');
@@ -560,19 +644,44 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
                 />,
             );
 
-            // Toggle to Fleet map view
-            const mapToggleBtn = screen.getByRole('button', { name: /fleet map view/i });
-            fireEvent.click(mapToggleBtn);
-
-            // MapErrorBoundary in FleetMapView caught the error (await Suspense resolution)
+            // MapErrorBoundary in top FleetMapView caught the error (await Suspense resolution)
             expect(await screen.findByRole('alert')).toBeInTheDocument();
-            expect(screen.getByText('Fleet Map Currently Unavailable')).toBeInTheDocument();
+            expect(
+                screen.getByText('Fleet Map Currently Unavailable'),
+            ).toBeInTheDocument();
 
-            // Invariant: Can cleanly toggle back to Asset registry without crash
-            const registryToggleBtn = screen.getByRole('button', { name: /asset registry/i });
-            fireEvent.click(registryToggleBtn);
+            // Invariant: Asset registry and detail pane are fully interactive
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
 
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            // Tab switching works
+            const specsTab = screen.getByRole('tab', {
+                name: /overview & specs/i,
+            });
+            fireEvent.click(specsTab);
+            expect(screen.getByText('Rated Capacity')).toBeInTheDocument();
+
+            // Inspections tab works
+            const inspectionsTab = screen.getByRole('tab', {
+                name: /inspections/i,
+            });
+            fireEvent.click(inspectionsTab);
+            expect(
+                screen.getByRole('button', { name: /record new inspection/i }),
+            ).toBeInTheDocument();
+
+            // User can collapse the broken map using the toggle
+            const hideMapBtn = screen.getByRole('button', {
+                name: /hide map/i,
+            });
+            fireEvent.click(hideMapBtn);
+            expect(
+                screen.queryByText('Fleet Map Currently Unavailable'),
+            ).not.toBeInTheDocument();
 
             consoleErrorSpy.mockRestore();
         });
@@ -594,20 +703,31 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Click second asset to open detail on mobile
-            const asset2RowBtn = screen.getByRole('button', { name: /Asset TRK-002/i });
+            const asset2RowBtn = screen.getByRole('button', {
+                name: /Asset TRK-002/i,
+            });
             fireEvent.click(asset2RowBtn);
 
             // Detail pane is open and contains "Back to fleet list" button
-            const backBtn = screen.getByRole('button', { name: /back to fleet list/i });
+            const backBtn = screen.getByRole('button', {
+                name: /back to fleet list/i,
+            });
             expect(backBtn).toBeInTheDocument();
 
             // Click back button -> returns to list
             fireEvent.click(backBtn);
 
             // Detail can be re-opened by clicking CRN-001
-            const asset1RowBtn = screen.getByRole('button', { name: /Asset CRN-001/i });
+            const asset1RowBtn = screen.getByRole('button', {
+                name: /Asset CRN-001/i,
+            });
             fireEvent.click(asset1RowBtn);
-            expect(screen.getByRole('heading', { level: 2, name: 'Asset CRN-001' })).toBeInTheDocument();
+            expect(
+                screen.getByRole('heading', {
+                    level: 2,
+                    name: 'Asset CRN-001',
+                }),
+            ).toBeInTheDocument();
         });
 
         it('FuelSurface: mobile detail toggle cleanly switches between queue and detail pane', () => {
@@ -628,7 +748,9 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             fireEvent.click(screen.getByText('FUEL-2'));
 
             // Mobile back button is visible
-            const backBtn = screen.getByRole('button', { name: /back to fuel queue/i });
+            const backBtn = screen.getByRole('button', {
+                name: /back to fuel queue/i,
+            });
             expect(backBtn).toBeInTheDocument();
 
             // Click back
@@ -651,10 +773,14 @@ describe('Empirical Adversarial Stress Harness: Selection Invariants & State Iso
             );
 
             // Select Report 2
-            fireEvent.click(screen.getByRole('button', { name: /Task 2 summary/i }));
+            fireEvent.click(
+                screen.getByRole('button', { name: /Task 2 summary/i }),
+            );
 
             // "Back to reports queue" is present
-            const backBtn = screen.getByRole('button', { name: /back to reports queue/i });
+            const backBtn = screen.getByRole('button', {
+                name: /back to reports queue/i,
+            });
             expect(backBtn).toBeInTheDocument();
 
             fireEvent.click(backBtn);

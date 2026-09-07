@@ -20,8 +20,7 @@ export interface FleetQuickActionToolbarProps {
     assetLocation?: LocationUpdateViewModel | null;
     capabilities: WorkspaceCapabilities;
     onSelectTab: (
-        tab:
-            'overview' | 'telemetry' | 'status' | 'inspections' | 'maintenance',
+        tab: 'overview' | 'status' | 'inspections' | 'maintenance',
     ) => void;
     onOpenLockdown?: () => void;
     onViewFullTracking?: () => void;

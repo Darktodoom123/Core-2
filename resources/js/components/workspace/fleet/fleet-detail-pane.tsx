@@ -4,7 +4,6 @@ import {
     Camera,
     ClipboardCheck,
     Gauge,
-    MapPin,
     Radio,
     ShieldAlert,
     ShieldCheck,
@@ -20,7 +19,6 @@ import { FleetInspectionsSection } from '@/components/workspace/fleet/fleet-insp
 import { FleetMaintenanceSection } from '@/components/workspace/fleet/fleet-maintenance-section';
 import { FleetQuickActionToolbar } from '@/components/workspace/fleet/fleet-quick-action-toolbar';
 import { FleetStatusForm } from '@/components/workspace/fleet/fleet-status-form';
-import { FleetTelemetrySection } from '@/components/workspace/fleet/fleet-telemetry-section';
 import { HosDutyBadge } from '@/components/workspace/fleet/hos-duty-badge';
 import { OperatorBindingChip } from '@/components/workspace/fleet/operator-binding-chip';
 import { SafetyLockoutBanner } from '@/components/workspace/fleet/safety-lockout-banner';
@@ -46,13 +44,12 @@ export interface FleetDetailPaneProps {
 export function FleetDetailPane({
     asset,
     assetLocation,
-    activeSosIncidents = [],
     capabilities,
     onViewFullTracking,
     onBackToList,
 }: FleetDetailPaneProps) {
     const [activeTab, setActiveTab] = useState<
-        'overview' | 'telemetry' | 'status' | 'inspections' | 'maintenance'
+        'overview' | 'status' | 'inspections' | 'maintenance'
     >('overview');
 
     const [showDvirModal, setShowDvirModal] = useState(false);
@@ -382,27 +379,6 @@ export function FleetDetailPane({
                 <button
                     type="button"
                     role="tab"
-                    id={`asset-tab-telemetry-${asset.id}`}
-                    aria-controls={`asset-tabpanel-telemetry-${asset.id}`}
-                    aria-selected={activeTab === 'telemetry'}
-                    tabIndex={activeTab === 'telemetry' ? 0 : -1}
-                    onClick={() => setActiveTab('telemetry')}
-                    className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
-                        activeTab === 'telemetry'
-                            ? 'border-brand-strong font-semibold text-brand-strong'
-                            : 'border-transparent text-ink-soft hover:text-ink',
-                    )}
-                >
-                    <MapPin className="h-4 w-4" />
-                    Live Telemetry
-                    {hasLiveGps && (
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-success-strong" />
-                    )}
-                </button>
-                <button
-                    type="button"
-                    role="tab"
                     id={`asset-tab-status-${asset.id}`}
                     aria-controls={`asset-tabpanel-status-${asset.id}`}
                     aria-selected={activeTab === 'status'}
@@ -624,21 +600,6 @@ export function FleetDetailPane({
                             </div>
                         </div>
                     )}
-                </div>
-            )}
-
-            {activeTab === 'telemetry' && (
-                <div
-                    role="tabpanel"
-                    id={`asset-tabpanel-telemetry-${asset.id}`}
-                    aria-labelledby={`asset-tab-telemetry-${asset.id}`}
-                >
-                    <FleetTelemetrySection
-                        asset={asset}
-                        location={assetLocation}
-                        activeSosIncidents={activeSosIncidents}
-                        onViewFullTracking={onViewFullTracking}
-                    />
                 </div>
             )}
 
