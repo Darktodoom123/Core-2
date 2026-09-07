@@ -62,6 +62,8 @@ final class FuelWorkspaceViewModel
                 'label' => $request->status->label(),
             ],
             'decision_reason' => $request->decision_reason,
+            'created_at' => $request->created_at?->toIso8601String(),
+            'submitted_at' => $request->created_at?->toIso8601String(),
             'reviewed_at' => $request->reviewed_at?->toIso8601String(),
             'approved_at' => $request->approved_at?->toIso8601String(),
             'verified_at' => $request->verified_at?->toIso8601String(),

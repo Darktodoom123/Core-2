@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Button, EmptyState, PageHeading, Panel, Stat } from '@/components/ui';
+import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { ExportsSurface } from '@/components/workspace/exports-workspace-section';
@@ -41,7 +41,9 @@ import { cn } from '@/lib/utils';
 import type {
     AttachmentViewModel,
     DispatchJobViewModel,
+    JobReportStatsViewModel,
     JobReportViewModel,
+    PaginationMeta,
     ReportExportViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
@@ -54,11 +56,16 @@ export function ReportsSurface({
     exports = [],
     jobs = [],
     capabilities,
+    total,
+    serverStats,
 }: {
     reports?: JobReportViewModel[];
     exports?: ReportExportViewModel[];
     jobs?: DispatchJobViewModel[];
     capabilities: WorkspaceCapabilities;
+    total?: number;
+    serverStats?: JobReportStatsViewModel;
+    pagination?: PaginationMeta;
 }) {
     const initialJobIdFromUrl = useMemo(() => {
         if (typeof window === 'undefined') {
@@ -70,10 +77,6 @@ export function ReportsSurface({
         return params.get('job_id') || params.get('dispatch_id') || null;
     }, []);
 
-    const { errors: pageErrors = {} } = usePage<{
-        errors?: Record<string, string>;
-    }>().props;
-
     const [modalDismissed, setModalDismissed] = useState(false);
     const [userOpenedModal, setUserOpenedModal] = useState(
         () => initialJobIdFromUrl !== null,
@@ -81,10 +84,7 @@ export function ReportsSurface({
     const [showExportModal, setShowExportModal] = useState(false);
 
     const showSubmitModal =
-        (userOpenedModal ||
-            initialJobIdFromUrl !== null ||
-            Object.keys(pageErrors).length > 0) &&
-        !modalDismissed;
+        (userOpenedModal || initialJobIdFromUrl !== null) && !modalDismissed;
 
     const [prefilledJobId] = useState<string | number | null>(
         initialJobIdFromUrl,
@@ -94,34 +94,37 @@ export function ReportsSurface({
     const [selectedReportId, setSelectedReportId] = useState<number | null>(
         reports.length > 0 ? reports[0].id : null,
     );
+    const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
     // Summary statistics
     const stats = useMemo(() => {
-        const total = reports.length;
-        const drafts = reports.filter((r) => r.status.value === 'draft').length;
-        const submitted = reports.filter(
-            (r) => r.status.value === 'submitted',
-        ).length;
-        const approved = reports.filter(
-            (r) => r.status.value === 'approved',
-        ).length;
-        const rejected = reports.filter(
-            (r) => r.status.value === 'rejected',
-        ).length;
+        const totalCount = serverStats?.total ?? total ?? reports.length;
+        const drafts =
+            serverStats?.draft ??
+            reports.filter((r) => r.status.value === 'draft').length;
+        const submitted =
+            serverStats?.submitted ??
+            reports.filter((r) => r.status.value === 'submitted').length;
+        const approved =
+            serverStats?.approved ??
+            reports.filter((r) => r.status.value === 'approved').length;
+        const rejected =
+            serverStats?.rejected ??
+            reports.filter((r) => r.status.value === 'rejected').length;
         const totalAttachments = reports.reduce(
             (acc, r) => acc + (r.attachments?.length ?? 0),
             0,
         );
 
         return {
-            total,
+            total: totalCount,
             drafts,
             submitted,
             approved,
             rejected,
             totalAttachments,
         };
-    }, [reports]);
+    }, [reports, serverStats, total]);
 
     const completedExportsCount = useMemo(
         () =>
@@ -165,22 +168,22 @@ export function ReportsSurface({
     }, [reports, statusFilter, searchQuery]);
 
     const selectedReport = useMemo(() => {
-        if (selectedReportId === null) {
-            return filteredReports.length > 0 ? filteredReports[0] : null;
+        if (filteredReports.length === 0) {
+            return null;
         }
 
         return (
-            reports.find((r) => r.id === selectedReportId) ??
-            (filteredReports.length > 0 ? filteredReports[0] : null)
+            filteredReports.find((r) => r.id === selectedReportId) ??
+            filteredReports[0]
         );
-    }, [reports, filteredReports, selectedReportId]);
+    }, [filteredReports, selectedReportId]);
 
     return (
         <div className="workspace-width-contained">
             {/* Header with Title and Primary Actions */}
             <PageHeading
-                title="Job reports & field verification"
-                description="Review operator telemetry readings, engine meter hours, digital customer sign-offs, and field evidence attachments."
+                title="Job reports"
+                description="Review operator telemetry readings, engine meter hours, customer sign-offs, and field evidence attachments."
                 actions={
                     <>
                         {capabilities.export_reports && (
@@ -226,55 +229,52 @@ export function ReportsSurface({
             />
 
             <div className="space-y-6 p-4 md:p-6">
-                {/* Commercial & Verification KPI Cards */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Stat
-                        title="Pending Sign-Off"
-                        value={stats.submitted}
-                        description={
-                            stats.submitted === 0
-                                ? 'All submissions up to date'
-                                : 'Awaiting manager verification'
-                        }
-                        icon={Clock}
-                        tone="warning"
-                        selected={statusFilter === 'submitted'}
-                        onClick={() => setStatusFilter('submitted')}
-                    />
-
-                    <Stat
-                        title="Total Reports"
-                        value={stats.total}
-                        description={
-                            stats.totalAttachments > 0
-                                ? `${stats.totalAttachments} verified attachments`
-                                : 'Logged across active fleet'
-                        }
-                        icon={FileText}
-                        tone="brand"
-                        selected={statusFilter === 'all'}
-                        onClick={() => setStatusFilter('all')}
-                    />
-
-                    <Stat
-                        title="Approved & Closed"
-                        value={stats.approved}
-                        description="Verified & ready for billing"
-                        icon={FileCheck}
-                        tone="success"
-                        selected={statusFilter === 'approved'}
-                        onClick={() => setStatusFilter('approved')}
-                    />
-
-                    <Stat
-                        title="Needs Rework"
-                        value={stats.rejected}
-                        description="Returned to operator for revision"
-                        icon={FileX}
-                        tone="danger"
-                        selected={statusFilter === 'rejected'}
-                        onClick={() => setStatusFilter('rejected')}
-                    />
+                {/* Operate-Mode Loaded Scope Status Strip */}
+                <div
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-xs text-ink-soft"
+                    aria-label="Loaded reports scope summary"
+                >
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="flex items-center gap-1.5 font-medium text-ink">
+                            <FileText className="h-3.5 w-3.5 text-brand-strong" />
+                            <span>
+                                {stats.totalAttachments > 0
+                                    ? `${stats.totalAttachments} attachments`
+                                    : 'Loaded in current scope'}
+                            </span>
+                        </span>
+                        <span className="hidden text-line sm:inline">•</span>
+                        <span className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-warning-strong" />
+                            <span>
+                                {stats.submitted === 0
+                                    ? 'No pending submissions in loaded scope'
+                                    : `${stats.submitted} awaiting manager review`}
+                            </span>
+                        </span>
+                        <span className="hidden text-line md:inline">•</span>
+                        <span className="flex items-center gap-1.5">
+                            <FileCheck className="h-3.5 w-3.5 text-success-strong" />
+                            <span>Approved by operations review</span>
+                        </span>
+                        {stats.rejected > 0 && (
+                            <>
+                                <span className="hidden text-line lg:inline">
+                                    •
+                                </span>
+                                <span className="flex items-center gap-1.5 text-danger-strong">
+                                    <FileX className="h-3.5 w-3.5" />
+                                    <span>
+                                        Returned to operator for revision (
+                                        {stats.rejected})
+                                    </span>
+                                </span>
+                            </>
+                        )}
+                    </div>
+                    <span className="text-[11px] text-ink-soft">
+                        Showing {filteredReports.length} of {stats.total} loaded
+                    </span>
                 </div>
 
                 {/* Submit Job Report Drawer / Inline Form */}
@@ -304,29 +304,38 @@ export function ReportsSurface({
                         </span>
                         {(
                             [
-                                { id: 'all', label: 'All', count: stats.total },
+                                {
+                                    id: 'all' as const,
+                                    label: 'All',
+                                    ariaLabel: `All reports (${stats.total})`,
+                                    count: stats.total,
+                                },
                                 ...(stats.drafts > 0
                                     ? [
                                           {
                                               id: 'draft' as const,
                                               label: 'Drafts',
+                                              ariaLabel: `Draft reports (${stats.drafts})`,
                                               count: stats.drafts,
                                           },
                                       ]
                                     : []),
                                 {
-                                    id: 'submitted',
+                                    id: 'submitted' as const,
                                     label: 'Pending Review',
+                                    ariaLabel: `Pending Sign-Off reports Pending Review (${stats.submitted})`,
                                     count: stats.submitted,
                                 },
                                 {
-                                    id: 'approved',
+                                    id: 'approved' as const,
                                     label: 'Approved',
+                                    ariaLabel: `Approved reports (${stats.approved})`,
                                     count: stats.approved,
                                 },
                                 {
-                                    id: 'rejected',
+                                    id: 'rejected' as const,
                                     label: 'Needs Rework',
+                                    ariaLabel: `Needs rework reports (${stats.rejected})`,
                                     count: stats.rejected,
                                 },
                             ] as const
@@ -334,6 +343,7 @@ export function ReportsSurface({
                             <button
                                 key={tab.id}
                                 type="button"
+                                aria-label={tab.ariaLabel}
                                 onClick={() => setStatusFilter(tab.id)}
                                 className={cn(
                                     'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
@@ -345,7 +355,7 @@ export function ReportsSurface({
                                 <span>{tab.label}</span>
                                 <span
                                     className={cn(
-                                        'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
                                         statusFilter === tab.id
                                             ? 'bg-white/20 text-white'
                                             : 'bg-surface text-ink-soft',
@@ -363,7 +373,7 @@ export function ReportsSurface({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by job, client, or crew…"
+                            placeholder="Search by job reference, title, author, or report text…"
                             className="h-11 w-full rounded-lg border border-line bg-surface pr-14 pl-8 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
                         />
                         {searchQuery && (
@@ -386,7 +396,7 @@ export function ReportsSurface({
                             <FileCheck className="h-7 w-7" aria-hidden="true" />
                         </div>
                         <h3 className="mt-4 text-base font-bold text-ink">
-                            All field reports verified & signed off
+                            No job reports in loaded scope
                         </h3>
                         <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
                             When crane operators and drivers complete dispatches
@@ -420,7 +430,12 @@ export function ReportsSurface({
                 ) : (
                     <div className="grid gap-6 lg:grid-cols-12">
                         {/* Reports Queue Column */}
-                        <div className="lg:col-span-5 xl:col-span-4">
+                        <div
+                            className={cn(
+                                'lg:col-span-5 xl:col-span-4',
+                                mobileDetailOpen && 'hidden lg:block',
+                            )}
+                        >
                             <Panel className="overflow-hidden">
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 font-semibold text-ink">
                                     <span>
@@ -441,11 +456,14 @@ export function ReportsSurface({
                                             <li key={report.id}>
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
+                                                    onClick={() => {
                                                         setSelectedReportId(
                                                             report.id,
-                                                        )
-                                                    }
+                                                        );
+                                                        setMobileDetailOpen(
+                                                            true,
+                                                        );
+                                                    }}
                                                     className={cn(
                                                         'w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-subtle',
                                                         isSelected &&
@@ -458,11 +476,17 @@ export function ReportsSurface({
                                                                 ?.reference ??
                                                                 `Job #${report.dispatch_job_id}`}
                                                         </span>
-                                                        <CanonicalStatusBadge
-                                                            status={
-                                                                report.status
-                                                            }
-                                                        />
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="rounded bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
+                                                                Report #
+                                                                {report.id}
+                                                            </span>
+                                                            <CanonicalStatusBadge
+                                                                status={
+                                                                    report.status
+                                                                }
+                                                            />
+                                                        </div>
                                                     </div>
                                                     {report.job?.title && (
                                                         <p className="mt-0.5 truncate text-xs font-medium text-ink-soft">
@@ -472,7 +496,7 @@ export function ReportsSurface({
                                                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink">
                                                         {report.work_summary}
                                                     </p>
-                                                    <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
+                                                    <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-xs text-ink-soft">
                                                         <span>
                                                             By{' '}
                                                             <strong className="font-medium text-ink">
@@ -481,15 +505,24 @@ export function ReportsSurface({
                                                                     'Unknown'}
                                                             </strong>
                                                         </span>
-                                                        <span className="inline-flex items-center gap-1">
-                                                            <Paperclip className="h-3 w-3" />
-                                                            {
-                                                                report
-                                                                    .attachments
-                                                                    .length
-                                                            }{' '}
-                                                            files
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>
+                                                                {report.submitted_at
+                                                                    ? formatDateTime(
+                                                                          report.submitted_at,
+                                                                      )
+                                                                    : 'Unsubmitted Draft'}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-1">
+                                                                <Paperclip className="h-3 w-3" />
+                                                                {
+                                                                    report
+                                                                        .attachments
+                                                                        .length
+                                                                }{' '}
+                                                                files
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </button>
                                             </li>
@@ -500,12 +533,39 @@ export function ReportsSurface({
                         </div>
 
                         {/* Report Detail & Verification Pane */}
-                        <div className="lg:col-span-7 xl:col-span-8">
-                            {selectedReport && (
+                        <div
+                            className={cn(
+                                'lg:col-span-7 xl:col-span-8',
+                                !mobileDetailOpen && 'hidden lg:block',
+                            )}
+                        >
+                            {selectedReport ? (
                                 <ReportDetailPane
+                                    key={selectedReport.id}
                                     report={selectedReport}
                                     capabilities={capabilities}
+                                    onBackToQueue={() =>
+                                        setMobileDetailOpen(false)
+                                    }
                                 />
+                            ) : (
+                                <Panel>
+                                    <EmptyState
+                                        icon={FileText}
+                                        title={
+                                            filteredReports.length === 0 &&
+                                            reports.length > 0
+                                                ? 'No report matches active filter'
+                                                : 'Select a job report'
+                                        }
+                                        message={
+                                            filteredReports.length === 0 &&
+                                            reports.length > 0
+                                                ? 'Adjust or clear your search or filter to review a job report.'
+                                                : 'Choose a report from the queue to review operator telemetry, hours, and customer sign-off.'
+                                        }
+                                    />
+                                </Panel>
                             )}
                         </div>
                     </div>
@@ -583,9 +643,6 @@ function SubmitJobReportForm({
         string | null
     >(null);
     const [gpsCapturing, setGpsCapturing] = useState(false);
-    const { errors: pageErrors = {} } = usePage<{
-        errors?: Record<string, string>;
-    }>().props;
 
     const form = useForm({
         dispatch_job_id: initialJobId ? String(initialJobId) : '',
@@ -601,9 +658,7 @@ function SubmitJobReportForm({
         attachments: [] as File[],
     });
 
-    const hasErrors =
-        Object.keys(form.errors).length > 0 ||
-        Object.keys(pageErrors).length > 0;
+    const hasErrors = Object.keys(form.errors).length > 0;
 
     const captureLocation = () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -712,7 +767,7 @@ function SubmitJobReportForm({
                     </h3>
                     <p className="text-xs text-ink-soft">
                         Record field progress, telemetry readings, and attach
-                        verified proof documents.
+                        field documentation files.
                     </p>
                 </div>
                 <button
@@ -1158,7 +1213,7 @@ function ResubmitJobReportModal({
                     </h3>
                     <p className="text-xs text-ink-soft">
                         Amend report details per reviewer feedback and resubmit
-                        for verification.
+                        for review.
                     </p>
                 </div>
                 <button
@@ -1289,7 +1344,7 @@ function ResubmitJobReportModal({
                 {capabilities.attachment_upload && (
                     <div className="rounded-lg border border-line bg-surface-subtle p-3.5">
                         <label className="block text-xs font-semibold text-ink uppercase">
-                            Add Additional Proof Attachments
+                            Add Additional Attachments
                         </label>
                         <input
                             type="file"
@@ -1361,9 +1416,11 @@ function ResubmitJobReportModal({
 function ReportDetailPane({
     report,
     capabilities,
+    onBackToQueue,
 }: {
     report: JobReportViewModel;
     capabilities: WorkspaceCapabilities;
+    onBackToQueue?: () => void;
 }) {
     const { auth } = usePage<{ auth?: { user?: { id: number } } }>().props;
     const isAuthor =
@@ -1382,7 +1439,17 @@ function ReportDetailPane({
     });
 
     const handleReview = (status: 'approved' | 'rejected') => {
+        if (status === 'rejected' && reviewForm.data.reason.trim() === '') {
+            reviewForm.setError(
+                'reason',
+                'A reason is required when rejecting a report.',
+            );
+
+            return;
+        }
+
         setReviewStatus(status);
+        reviewForm.clearErrors();
         reviewForm.setData('status', status);
         router.post(
             `/operations/job-reports/${report.id}/review`,
@@ -1392,6 +1459,17 @@ function ReportDetailPane({
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    reviewForm.reset();
+                    setReviewStatus(null);
+                },
+                onError: (errors) => {
+                    setReviewStatus(null);
+
+                    if (errors.reason) {
+                        reviewForm.setError('reason', errors.reason);
+                    }
+                },
                 onFinish: () => setReviewStatus(null),
             },
         );
@@ -1402,6 +1480,38 @@ function ReportDetailPane({
         setCopiedChecksumId(attachment.id);
         setTimeout(() => setCopiedChecksumId(null), 2000);
     };
+
+    const elapsedTime = useMemo(() => {
+        if (!report.started_at) {
+            return 'Not recorded';
+        }
+
+        const start = new Date(report.started_at).getTime();
+
+        if (Number.isNaN(start)) {
+            return 'Not recorded';
+        }
+
+        if (!report.ended_at) {
+            return 'In progress';
+        }
+
+        const end = new Date(report.ended_at).getTime();
+
+        if (Number.isNaN(end) || end < start) {
+            return 'Not recorded';
+        }
+
+        const diffMinutes = Math.round((end - start) / 60000);
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+
+        if (hours === 0) {
+            return `${mins}m`;
+        }
+
+        return `${hours}h ${mins}m`;
+    }, [report.started_at, report.ended_at]);
 
     if (showResubmitModal) {
         return (
@@ -1415,6 +1525,18 @@ function ReportDetailPane({
 
     return (
         <Panel className="space-y-6 p-4 md:p-6">
+            {onBackToQueue && (
+                <div className="lg:hidden">
+                    <button
+                        type="button"
+                        onClick={onBackToQueue}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle"
+                    >
+                        ← Back to reports queue
+                    </button>
+                </div>
+            )}
+
             {/* Header / Meta */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
                 <div>
@@ -1476,7 +1598,7 @@ function ReportDetailPane({
                             type="button"
                             variant="secondary"
                             onClick={() => setShowResubmitModal(true)}
-                            className="border-brand/40 text-xs text-brand-strong hover:bg-brand-soft"
+                            className="text-xs"
                         >
                             <Edit3 className="mr-1.5 h-3.5 w-3.5" />
                             {report.status.value === 'draft'
@@ -1513,7 +1635,7 @@ function ReportDetailPane({
             />
 
             {/* Execution Timing & Telemetry Readings */}
-            <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 rounded-lg bg-surface-subtle p-3 text-xs sm:grid-cols-5">
                 <div>
                     <span className="font-semibold text-ink">
                         Started Work:
@@ -1530,6 +1652,15 @@ function ReportDetailPane({
                         {report.ended_at
                             ? formatDateTime(report.ended_at)
                             : 'Not recorded'}
+                    </span>
+                </div>
+                <div>
+                    <span className="flex items-center gap-1 font-semibold text-ink">
+                        <Clock className="h-3.5 w-3.5 text-brand-strong" />
+                        Elapsed Time:
+                    </span>
+                    <span className="block font-mono text-ink-soft">
+                        {elapsedTime}
                     </span>
                 </div>
                 <div>
@@ -1555,7 +1686,7 @@ function ReportDetailPane({
                         report.longitude !== null &&
                         report.longitude !== undefined
                             ? `${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}`
-                            : 'Not stamped'}
+                            : 'Location not recorded'}
                     </span>
                 </div>
             </div>
@@ -1585,7 +1716,7 @@ function ReportDetailPane({
             {/* Standby & Demurrage Breakdown Logs */}
             <JobReportDelayLogsTable delayLogs={report.delay_logs} />
 
-            {/* Verified Attachments Section */}
+            {/* Evidence Attachments Section */}
             <div className="border-t border-line pt-4">
                 <div className="flex items-center justify-between">
                     <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-ink-soft uppercase">
@@ -1593,7 +1724,7 @@ function ReportDetailPane({
                         Private Attachments ({report.attachments.length})
                     </h3>
                     <span className="text-[11px] text-ink-soft">
-                        SHA-256 Checksums Validated
+                        SHA-256 Checksums Recorded
                     </span>
                 </div>
 
@@ -1709,20 +1840,39 @@ function ReportDetailPane({
                         </div>
                         <p className="mt-1 text-xs text-ink-soft">
                             Record an authoritative decision on this report.
-                            Approved reports complete the operational validation
+                            Approved reports complete the operational review
                             cycle.
                         </p>
 
                         <div className="mt-3 space-y-3">
-                            <input
-                                type="text"
-                                value={reviewForm.data.reason}
-                                onChange={(e) =>
-                                    reviewForm.setData('reason', e.target.value)
-                                }
-                                placeholder="Optional decision notes, quality checks, or rejection reason"
-                                className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm focus:border-brand focus:outline-none"
-                            />
+                            <div>
+                                <input
+                                    type="text"
+                                    value={reviewForm.data.reason}
+                                    onChange={(e) => {
+                                        reviewForm.setData(
+                                            'reason',
+                                            e.target.value,
+                                        );
+
+                                        if (reviewForm.errors.reason) {
+                                            reviewForm.clearErrors('reason');
+                                        }
+                                    }}
+                                    placeholder="Review decision notes, quality checks, or rejection reason"
+                                    className={cn(
+                                        'h-11 w-full rounded-lg border bg-surface px-3 text-sm focus:outline-none',
+                                        reviewForm.errors.reason
+                                            ? 'border-danger focus:border-danger'
+                                            : 'border-line-strong focus:border-brand',
+                                    )}
+                                />
+                                {reviewForm.errors.reason && (
+                                    <p className="mt-1 text-xs font-medium text-danger-strong">
+                                        {reviewForm.errors.reason}
+                                    </p>
+                                )}
+                            </div>
                             <div className="flex flex-wrap gap-3">
                                 <Button
                                     variant="primary"

@@ -38,6 +38,7 @@ import { DispatchOrdersScreen } from '../screens/DispatchOrdersScreen';
 import { DocumentsWalletScreen } from '../screens/DocumentsWalletScreen';
 import { DvirScreen } from '../screens/DvirScreen';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
+import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
@@ -221,6 +222,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         | 'dvir'
         | 'documents'
         | 'inspection'
+        | 'fuel'
         | 'hos'
         | 'routes'
         | 'rental'
@@ -1284,12 +1286,21 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onBack={() => setActiveAppView('main')}
                                 operatorName={resolvedOperatorName}
                             />
+                        ) : activeAppView === 'fuel' && user ? (
+                            <FuelScreen
+                                key={user.id}
+                                actorId={user.id}
+                                apiClient={apiClient}
+                                isOnline={isOnline}
+                                onBack={() => setActiveAppView('main')}
+                            />
                         ) : activeAppView === 'inspection' ? (
                             <EquipmentInspectionScreen
                                 assetCode={resolvedAssetCode}
                                 assetName={resolvedAssetName}
                                 onBack={() => setActiveAppView('main')}
                                 onOpenDvir={() => setActiveAppView('dvir')}
+                                onOpenFuel={() => setActiveAppView('fuel')}
                                 technicianName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'routes' ? (
@@ -1372,6 +1383,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 onOpenVehicle={() =>
                                     setActiveAppView('inspection')
                                 }
+                                onOpenFuel={() => setActiveAppView('fuel')}
                                 onRefresh={() => {
                                     void fetchJobs();
                                     void refreshWeather();

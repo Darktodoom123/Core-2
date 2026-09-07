@@ -1,86 +1,64 @@
-import { router, useForm } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import {
-    CheckCircle2,
-    Clock,
+    ArrowLeft,
     Droplets,
     Fuel,
+    Plus,
     Search,
     SearchX,
     Truck,
+    User,
 } from 'lucide-react';
-import type { FormEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, PageHeading, Panel } from '@/components/ui';
+import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type {
     AssetViewModel,
+    FuelRequestStatsViewModel,
     FuelRequestViewModel,
+    PaginationMeta,
     WorkspaceCapabilities,
 } from '@/types/workspace';
+import { CreateFuelRequestModal } from './create-fuel-request-modal';
 import { FuelLogModal } from './fuel-log-modal';
+import { FuelRecordsPanel } from './fuel-records-panel';
 import { FuelRequestCard } from './fuel-request-card';
+import { FuelVarianceBadge } from './fuel-variance-badge';
 
 interface FuelSurfaceProps {
     requests: FuelRequestViewModel[];
     capabilities: WorkspaceCapabilities;
     assets?: AssetViewModel[];
+    currentUserId?: number | null;
+    total?: number;
+    stats?: FuelRequestStatsViewModel;
+    pagination?: PaginationMeta;
 }
 
 export function FuelSurface({
     requests,
     capabilities,
     assets = [],
+    currentUserId,
+    pagination,
 }: FuelSurfaceProps) {
+    const [section, setSection] = useState<'requests' | 'logs' | 'consumption'>(
+        'requests',
+    );
     const [pendingActionId, setPendingActionId] = useState<string | null>(null);
     const [logModalRequest, setLogModalRequest] =
         useState<FuelRequestViewModel | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [filterStatus, setFilterStatus] = useState<
-        'all' | 'pending' | 'approved' | 'logged' | 'anomalies'
+        'all' | 'pending' | 'approved' | 'verified' | 'logged' | 'anomalies'
     >('all');
     const [searchQuery, setSearchQuery] = useState('');
-
-    const form = useForm({
-        operational_asset_id: '',
-        dispatch_job_id: '',
-        quantity_litres: '',
-        fuel_type: 'diesel',
-        purpose: '',
-    });
-
-    const formComplete =
-        form.data.quantity_litres.trim() !== '' &&
-        (form.data.operational_asset_id !== '' ||
-            form.data.purpose.trim() !== '');
-
-    const selectedAsset = useMemo(() => {
-        if (!form.data.operational_asset_id) {
-            return null;
-        }
-
-        return (
-            assets.find(
-                (a) => String(a.id) === String(form.data.operational_asset_id),
-            ) ?? null
-        );
-    }, [assets, form.data.operational_asset_id]);
-
-    const submitNewRequest = (event: FormEvent) => {
-        event.preventDefault();
-        form.transform((data) => ({
-            ...data,
-            purpose:
-                data.purpose.trim() !== ''
-                    ? data.purpose
-                    : selectedAsset
-                      ? `Refuel for ${selectedAsset.name || selectedAsset.code} (${humanize(selectedAsset.kind)})`
-                      : 'Equipment refueling',
-        }));
-        form.post('/operations/fuel-requests', {
-            preserveScroll: true,
-            onSuccess: () => form.reset(),
-        });
-    };
+    const [selectedRequestId, setSelectedRequestId] = useState<number | null>(
+        null,
+    );
+    const [mobileDetailView, setMobileDetailView] = useState(false);
 
     const handleTransition = (
         requestId: number,
@@ -102,25 +80,43 @@ export function FuelSurface({
     const kpis = useMemo(() => {
         let pending = 0;
         let approved = 0;
+        let verified = 0;
         let logged = 0;
-        let totalLitres = 0;
+        let totalRequestedLitres = 0;
+        let totalDispensedLitres = 0;
         let anomalies = 0;
+        let evaluatedLogsCount = 0;
 
         for (const req of requests) {
             const v = req.status.value;
-            const litres = Number(req.quantity_litres) || 0;
-            totalLitres += litres;
+            const requestedLitres = Number(req.quantity_litres) || 0;
+            totalRequestedLitres += requestedLitres;
 
             if (v === 'submitted' || v === 'forwarded') {
                 pending += 1;
             } else if (v === 'approved') {
                 approved += 1;
-            } else if (v === 'logged' || v === 'verified') {
+            } else if (v === 'verified') {
+                verified += 1;
+            } else if (v === 'logged') {
                 logged += 1;
             }
 
-            if (req.logs?.some((l) => l.is_anomaly)) {
-                anomalies += 1;
+            if (req.logs && req.logs.length > 0) {
+                for (const log of req.logs) {
+                    totalDispensedLitres += Number(log.quantity_litres) || 0;
+
+                    if (log.is_anomaly) {
+                        anomalies += 1;
+                    }
+
+                    if (
+                        log.effective_burn_rate !== null &&
+                        log.effective_burn_rate !== undefined
+                    ) {
+                        evaluatedLogsCount += 1;
+                    }
+                }
             }
         }
 
@@ -128,9 +124,12 @@ export function FuelSurface({
             total: requests.length,
             pending,
             approved,
+            verified,
             logged,
             anomalies,
-            totalLitres,
+            evaluatedLogsCount,
+            totalRequestedLitres,
+            totalDispensedLitres,
         };
     }, [requests]);
 
@@ -148,11 +147,13 @@ export function FuelSurface({
                       ? v === 'submitted' || v === 'forwarded'
                       : filterStatus === 'approved'
                         ? v === 'approved'
-                        : filterStatus === 'logged'
-                          ? v === 'logged' || v === 'verified'
-                          : filterStatus === 'anomalies'
-                            ? hasAnomaly
-                            : true;
+                        : filterStatus === 'verified'
+                          ? v === 'verified'
+                          : filterStatus === 'logged'
+                            ? v === 'logged'
+                            : filterStatus === 'anomalies'
+                              ? hasAnomaly
+                              : true;
 
             const matchesQuery =
                 q === '' ||
@@ -164,432 +165,595 @@ export function FuelSurface({
         });
     }, [requests, filterStatus, searchQuery]);
 
+    // Strict Filtered Selection Invariant:
+    // Active request is strictly bound to visible filtered results.
+    // When filters or search exclude the selected request, it falls back to filteredRequests[0] or null.
+    const selectedRequest = useMemo(() => {
+        if (filteredRequests.length === 0) {
+            return null;
+        }
+
+        return (
+            filteredRequests.find((r) => r.id === selectedRequestId) ??
+            filteredRequests[0]
+        );
+    }, [filteredRequests, selectedRequestId]);
+
+    const handleSelectRequest = (id: number) => {
+        setSelectedRequestId(id);
+        setMobileDetailView(true);
+    };
+
     return (
         <div>
             <PageHeading
-                title="Fuel Operations"
-                description="Heavy equipment diesel telematics, consumption variance tracking, and role-gated refueling authorizations."
+                title="Fuel Management"
+                description="Review fuel requests, record refueling, and inspect equipment consumption."
+                actions={
+                    capabilities.request_fuel ? (
+                        <Button
+                            variant="primary"
+                            onClick={() => setIsCreateModalOpen(true)}
+                        >
+                            <Plus className="mr-1.5 h-4 w-4" />
+                            New request
+                        </Button>
+                    ) : undefined
+                }
             />
-            <div className="space-y-6 p-4 md:p-6">
-                {/* Fuel Operations KPI Strip */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:gap-4">
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-warning-strong uppercase">
-                                Pending Review
-                            </span>
-                            <Clock className="h-4 w-4 text-warning" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.pending}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Awaiting manager decision
-                        </p>
-                    </div>
 
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-brand-strong uppercase">
-                                Approved / Dispensing
-                            </span>
-                            <Fuel className="h-4 w-4 text-brand" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.approved}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Ready for station refueling
-                        </p>
-                    </div>
-
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-success-strong uppercase">
-                                Verified &amp; Logged
-                            </span>
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.logged}
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            Meters &amp; receipts audited
-                        </p>
-                    </div>
-
-                    <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                                Total Volume
-                            </span>
-                            <Droplets className="h-4 w-4 text-ink-soft" />
-                        </div>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
-                            {kpis.totalLitres.toLocaleString()}{' '}
-                            <span className="text-xs font-normal text-ink-soft">
-                                Litres
-                            </span>
-                        </p>
-                        <p className="mt-1 text-[11px] text-ink-soft">
-                            {kpis.anomalies > 0 ? (
-                                <span className="font-semibold text-danger">
-                                    ⚠️ {kpis.anomalies} burn-rate{' '}
-                                    {kpis.anomalies === 1
-                                        ? 'anomaly'
-                                        : 'anomalies'}
-                                </span>
-                            ) : (
-                                'All within baseline burn rate'
-                            )}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Submit Fuel Request Panel */}
-                {capabilities.request_fuel && (
-                    <Panel className="p-4 md:p-5">
-                        <h2 className="text-sm font-bold text-ink">
-                            Submit Refueling Request
-                        </h2>
-                        <p className="mt-0.5 text-xs text-ink-soft">
-                            Submit equipment refueling requests scoped to your
-                            fleet baseline and assignments.
-                        </p>
-                        <form
-                            onSubmit={submitNewRequest}
-                            className="mt-4 space-y-3"
-                            noValidate
-                        >
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                <label className="text-xs font-medium text-ink">
-                                    Equipment / Asset
-                                    <select
-                                        value={form.data.operational_asset_id}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'operational_asset_id',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
-                                    >
-                                        <option value="">
-                                            -- Select Equipment / Vehicle --
-                                        </option>
-                                        {assets.map((asset) => (
-                                            <option
-                                                key={asset.id}
-                                                value={asset.id}
-                                            >
-                                                {asset.code} - {asset.name} (
-                                                {humanize(asset.kind)}
-                                                {asset.registration_number
-                                                    ? ` · Reg: ${asset.registration_number}`
-                                                    : ''}
-                                                )
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {form.errors.operational_asset_id && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {form.errors.operational_asset_id}
-                                        </p>
-                                    )}
-                                </label>
-
-                                <label className="text-xs font-medium text-ink">
-                                    Fuel Type
-                                    <select
-                                        value={form.data.fuel_type}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'fuel_type',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs"
-                                    >
-                                        <option value="diesel">Diesel</option>
-                                        <option value="gasoline">
-                                            Gasoline
-                                        </option>
-                                    </select>
-                                </label>
-
-                                <div>
-                                    <label className="text-xs font-medium text-ink">
-                                        Volume (Litres)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0.01"
-                                        value={form.data.quantity_litres}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'quantity_litres',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. 200"
-                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
-                                    />
-                                    {form.errors.quantity_litres && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {form.errors.quantity_litres}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-medium text-ink">
-                                        Purpose / Shift Notes
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.data.purpose}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'purpose',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="e.g. Concrete pour lift, shift refill"
-                                        className="mt-1 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
-                                    />
-                                    {form.errors.purpose && (
-                                        <p className="mt-1 text-xs text-danger">
-                                            {form.errors.purpose}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {selectedAsset && (
-                                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
-                                    <div className="flex items-center gap-1.5 font-semibold text-ink">
-                                        <Truck className="h-4 w-4 text-brand" />
-                                        <span>{selectedAsset.name}</span>
-                                    </div>
-                                    <span className="text-ink-soft">·</span>
-                                    <div>
-                                        <span className="text-ink-soft">
-                                            Type:{' '}
-                                        </span>
-                                        <span className="font-medium text-ink">
-                                            {humanize(selectedAsset.kind)}
-                                            {selectedAsset.subtype
-                                                ? ` (${selectedAsset.subtype})`
-                                                : ''}
-                                        </span>
-                                    </div>
-                                    <span className="text-ink-soft">·</span>
-                                    <div>
-                                        <span className="text-ink-soft">
-                                            Code:{' '}
-                                        </span>
-                                        <span className="font-mono text-ink">
-                                            {selectedAsset.code}
-                                        </span>
-                                    </div>
-                                    {selectedAsset.meter_value && (
-                                        <>
-                                            <span className="text-ink-soft">
-                                                ·
-                                            </span>
-                                            <div>
-                                                <span className="text-ink-soft">
-                                                    Current Meter:{' '}
-                                                </span>
-                                                <span className="font-medium text-ink">
-                                                    {selectedAsset.meter_value}{' '}
-                                                    {selectedAsset.meter_type ===
-                                                    'hour_meter'
-                                                        ? 'hrs'
-                                                        : 'km'}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                    {selectedAsset.baseline_burn_rate && (
-                                        <>
-                                            <span className="text-ink-soft">
-                                                ·
-                                            </span>
-                                            <div>
-                                                <span className="text-ink-soft">
-                                                    Baseline:{' '}
-                                                </span>
-                                                <span className="font-medium text-ink">
-                                                    {
-                                                        selectedAsset.baseline_burn_rate
-                                                    }{' '}
-                                                    {selectedAsset.burn_rate_unit ??
-                                                        'L/hr'}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex justify-end pt-2">
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    disabled={form.processing || !formComplete}
-                                >
-                                    {form.processing
-                                        ? 'Submitting…'
-                                        : 'Submit Refuel Request'}
-                                </Button>
-                            </div>
-                        </form>
-                    </Panel>
-                )}
-
-                {/* Filter and Search Bar */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div
-                        className="flex flex-wrap gap-1"
-                        role="group"
-                        aria-label="Filter fuel requests"
-                    >
-                        <button
-                            type="button"
-                            aria-pressed={filterStatus === 'all'}
-                            onClick={() => setFilterStatus('all')}
-                            className={cn(
-                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                filterStatus === 'all'
-                                    ? 'bg-ink font-semibold text-canvas'
-                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                            )}
-                        >
-                            All ({kpis.total})
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={filterStatus === 'pending'}
-                            onClick={() => setFilterStatus('pending')}
-                            className={cn(
-                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                filterStatus === 'pending'
-                                    ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
-                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                            )}
-                        >
-                            Pending Review ({kpis.pending})
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={filterStatus === 'approved'}
-                            onClick={() => setFilterStatus('approved')}
-                            className={cn(
-                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                filterStatus === 'approved'
-                                    ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
-                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                            )}
-                        >
-                            Approved ({kpis.approved})
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={filterStatus === 'logged'}
-                            onClick={() => setFilterStatus('logged')}
-                            className={cn(
-                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                filterStatus === 'logged'
-                                    ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
-                                    : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                            )}
-                        >
-                            Logged ({kpis.logged})
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={filterStatus === 'anomalies'}
-                            onClick={() => setFilterStatus('anomalies')}
-                            className={cn(
-                                'inline-flex min-h-8 items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                                filterStatus === 'anomalies'
-                                    ? 'border border-danger/40 bg-danger-soft font-semibold text-danger-strong'
-                                    : kpis.anomalies > 0
-                                      ? 'border border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/80'
-                                      : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
-                            )}
-                        >
-                            ⚠️ Anomalies ({kpis.anomalies})
-                        </button>
-                    </div>
-
-                    <label className="relative block sm:w-64">
-                        <span className="sr-only">Search fuel requests</span>
-                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
-                        <input
-                            type="search"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search reference, asset, purpose…"
-                            className="h-8 w-full rounded-lg border border-line bg-surface-subtle pr-3 pl-9 text-xs placeholder:text-ink-soft"
-                        />
-                    </label>
-                </div>
-
-                {/* Request Cards List */}
-                {requests.length === 0 ? (
-                    <Panel className="p-8 text-center sm:p-12">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-strong shadow-xs">
-                            <Fuel className="h-7 w-7" />
-                        </div>
-                        <h3 className="mt-4 text-base font-bold text-ink">
-                            Fleet Fuel Telematics &amp; Authorizations
-                        </h3>
-                        <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
-                            All mobile equipment refuel requests are governed by
-                            asset baseline burn-rate limits. Field requests move
-                            through canonical authorization steps before station
-                            disbursement.
-                        </p>
-                    </Panel>
-                ) : filteredRequests.length === 0 ? (
-                    <Panel className="p-8 text-center">
-                        <EmptyState
-                            compact
-                            icon={SearchX}
-                            title="No matching fuel requests"
-                            message="Try adjusting your search query or status filter."
-                            primaryAction={
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => {
-                                        setSearchQuery('');
-                                        setFilterStatus('all');
-                                    }}
-                                >
-                                    Clear filters
-                                </Button>
+            <div className="space-y-4 p-4 md:p-6">
+                <div
+                    role="group"
+                    aria-label="Fuel Management sections"
+                    className="flex flex-wrap gap-2 border-b border-line pb-3"
+                >
+                    {(
+                        [
+                            {
+                                value: 'requests',
+                                label: 'Requests & Approvals',
+                            },
+                            { value: 'logs', label: 'Fuel Logs' },
+                            { value: 'consumption', label: 'Consumption' },
+                        ] as const
+                    ).map((item) => (
+                        <Button
+                            key={item.value}
+                            variant={
+                                section === item.value ? 'primary' : 'quiet'
                             }
-                        />
-                    </Panel>
-                ) : (
-                    <ul className="space-y-3">
-                        {filteredRequests.map((req) => (
-                            <FuelRequestCard
-                                key={req.id}
-                                request={req}
-                                capabilities={capabilities}
-                                onRecordLog={(r) => setLogModalRequest(r)}
-                                onTransition={handleTransition}
-                                pendingActionId={pendingActionId}
-                            />
-                        ))}
-                    </ul>
+                            aria-pressed={section === item.value}
+                            onClick={() => setSection(item.value)}
+                        >
+                            {item.label}
+                        </Button>
+                    ))}
+                </div>
+                <p className="text-xs text-ink-soft">
+                    Showing {requests.length} requests
+                    {pagination
+                        ? ` of ${pagination.total} · Page ${pagination.current_page} of ${pagination.last_page}`
+                        : ''}
+                    . Filters, log records, and consumption summaries cover this
+                    page only.
+                </p>
+                {section !== 'requests' && (
+                    <FuelRecordsPanel
+                        requests={requests}
+                        consumption={section === 'consumption'}
+                        onOpenRequest={(id) => {
+                            setFilterStatus('all');
+                            setSearchQuery('');
+                            handleSelectRequest(id);
+                            setSection('requests');
+                        }}
+                    />
+                )}
+                {section === 'requests' && (
+                    <>
+                        {/* Compact Toolbar: Counted Stage Filters & Search */}
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            {/* Counted Filter Pills */}
+                            <div
+                                className="flex flex-wrap items-center gap-1.5"
+                                role="group"
+                                aria-label="Filter fuel requests by stage"
+                            >
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'all'}
+                                    onClick={() => setFilterStatus('all')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'all'
+                                            ? 'bg-ink font-semibold text-canvas'
+                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    All ({kpis.total})
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'pending'}
+                                    onClick={() => setFilterStatus('pending')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'pending'
+                                            ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
+                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    <span>Pending Review</span>{' '}
+                                    <span className="ml-1 opacity-80">
+                                        ({kpis.pending})
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'approved'}
+                                    onClick={() => setFilterStatus('approved')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'approved'
+                                            ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    <span>Approved</span>{' '}
+                                    <span className="ml-1 opacity-80">
+                                        ({kpis.approved})
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'verified'}
+                                    onClick={() => setFilterStatus('verified')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'verified'
+                                            ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
+                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    <span>Verified</span>{' '}
+                                    <span className="ml-1 opacity-80">
+                                        ({kpis.verified})
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'logged'}
+                                    onClick={() => setFilterStatus('logged')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'logged'
+                                            ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
+                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    <span>Logged</span>{' '}
+                                    <span className="ml-1 opacity-80">
+                                        ({kpis.logged})
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={filterStatus === 'anomalies'}
+                                    onClick={() => setFilterStatus('anomalies')}
+                                    className={cn(
+                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        filterStatus === 'anomalies'
+                                            ? 'border border-danger/40 bg-danger-soft font-semibold text-danger-strong'
+                                            : kpis.anomalies > 0
+                                              ? 'border border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/80'
+                                              : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                    )}
+                                >
+                                    <span>⚠️ Anomalies</span>{' '}
+                                    <span className="ml-1 opacity-80">
+                                        ({kpis.anomalies})
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* Search Field */}
+                            <label className="relative block sm:w-72">
+                                <span className="sr-only">
+                                    Search fuel requests
+                                </span>
+                                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+                                <input
+                                    type="search"
+                                    value={searchQuery}
+                                    onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                    }
+                                    placeholder="Search reference, asset, requester, purpose…"
+                                    className="h-8.5 w-full rounded-lg border border-line bg-surface-subtle pr-3 pl-9 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                />
+                            </label>
+                        </div>
+
+                        {/* Truthful Accounting & Burn-Rate Anomaly Summary Strip */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface-subtle px-4 py-2.5 text-xs">
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <Droplets className="h-3.5 w-3.5 text-brand" />
+                                    <span className="text-ink-soft">
+                                        <span>Requested Litres</span>:
+                                    </span>
+                                    <span className="font-semibold text-ink">
+                                        {kpis.totalRequestedLitres.toLocaleString()}
+                                    </span>
+                                    <span className="text-ink-soft">
+                                        Litres
+                                    </span>
+                                </div>
+                                <span className="hidden text-line sm:inline">
+                                    ·
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                    <Fuel className="h-3.5 w-3.5 text-success" />
+                                    <span className="text-ink-soft">
+                                        Dispensed Logs:
+                                    </span>
+                                    <span className="font-semibold text-ink">
+                                        {kpis.totalDispensedLitres.toLocaleString()}
+                                    </span>
+                                    <span className="text-ink-soft">
+                                        Litres
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {kpis.anomalies > 0 ? (
+                                    <span className="font-semibold text-danger">
+                                        ⚠️ {kpis.anomalies} burn-rate{' '}
+                                        {kpis.anomalies === 1
+                                            ? 'anomaly'
+                                            : 'anomalies'}
+                                    </span>
+                                ) : kpis.evaluatedLogsCount > 0 ? (
+                                    <span className="font-medium text-success-strong">
+                                        All evaluated logs within baseline burn
+                                        rate
+                                    </span>
+                                ) : (
+                                    <span className="text-ink-soft">
+                                        Not enough data to assess consumption
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Main Operate-Mode Content Area */}
+                        {requests.length === 0 ? (
+                            <Panel className="p-8 text-center sm:p-12">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-strong shadow-xs">
+                                    <Fuel className="h-7 w-7" />
+                                </div>
+                                <h3 className="mt-4 text-base font-bold text-ink">
+                                    No fuel requests yet
+                                </h3>
+                                <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+                                    Submit a fuel request to begin approval.
+                                    Once verified, record the actual fuel
+                                    received and its supporting receipt.
+                                </p>
+                                {capabilities.request_fuel && (
+                                    <div className="mt-5">
+                                        <Button
+                                            variant="primary"
+                                            onClick={() =>
+                                                setIsCreateModalOpen(true)
+                                            }
+                                        >
+                                            <Plus className="mr-1.5 h-4 w-4" />
+                                            Submit First Fuel Request
+                                        </Button>
+                                    </div>
+                                )}
+                            </Panel>
+                        ) : filteredRequests.length === 0 ? (
+                            <Panel className="p-8 text-center">
+                                <EmptyState
+                                    compact
+                                    icon={SearchX}
+                                    title="No matching fuel requests"
+                                    message="Try adjusting your search query or status filter."
+                                    primaryAction={
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setFilterStatus('all');
+                                            }}
+                                        >
+                                            Clear filters
+                                        </Button>
+                                    }
+                                />
+                            </Panel>
+                        ) : (
+                            /* 2-Column Responsive Operate-Mode Queue & Detail Hierarchy */
+                            <div className="grid gap-6 lg:grid-cols-12">
+                                {/* Queue Panel (Left Column: 5 Cols on Desktop) */}
+                                <div
+                                    className={cn(
+                                        'lg:col-span-5',
+                                        mobileDetailView
+                                            ? 'hidden lg:block'
+                                            : 'block',
+                                    )}
+                                >
+                                    <div className="mb-2 flex items-center justify-between px-1">
+                                        <span className="text-xs font-bold tracking-wider text-ink-soft uppercase">
+                                            Fuel Queue (
+                                            {filteredRequests.length})
+                                        </span>
+                                        {filterStatus !== 'all' && (
+                                            <span className="text-xs font-medium text-brand capitalize">
+                                                {filterStatus}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <ul
+                                        className="space-y-2.5"
+                                        role="list"
+                                        aria-label="Fuel request queue"
+                                    >
+                                        {filteredRequests.map((req) => {
+                                            const isSelected =
+                                                selectedRequest?.id === req.id;
+                                            const primaryLog =
+                                                req.logs && req.logs.length > 0
+                                                    ? req.logs[0]
+                                                    : null;
+                                            const hasAnomaly = req.logs?.some(
+                                                (l) => l.is_anomaly,
+                                            );
+
+                                            return (
+                                                <li key={req.id}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleSelectRequest(
+                                                                req.id,
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            'w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-none',
+                                                            isSelected
+                                                                ? 'border-brand-strong bg-brand-soft/30 shadow-xs ring-2 ring-brand/40'
+                                                                : hasAnomaly
+                                                                  ? 'border-danger/30 bg-danger-soft/10 hover:border-danger/60'
+                                                                  : 'border-line bg-surface hover:border-line-strong hover:bg-surface-subtle',
+                                                        )}
+                                                    >
+                                                        {/* Top Row: Reference, Badges */}
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-mono text-xs font-bold text-ink">
+                                                                    {
+                                                                        req.reference
+                                                                    }
+                                                                </span>
+                                                                <CanonicalStatusBadge
+                                                                    status={
+                                                                        req.status
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            {primaryLog && (
+                                                                <FuelVarianceBadge
+                                                                    variancePercentage={
+                                                                        primaryLog.variance_percentage
+                                                                    }
+                                                                    varianceLitres={
+                                                                        primaryLog.variance_litres
+                                                                    }
+                                                                    isAnomaly={
+                                                                        primaryLog.is_anomaly
+                                                                    }
+                                                                    compact
+                                                                />
+                                                            )}
+                                                        </div>
+
+                                                        {/* Middle: Asset & Requester */}
+                                                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                                                            <div className="flex items-center gap-1 font-medium text-ink">
+                                                                <Truck className="h-3 w-3 text-brand" />
+                                                                <span>
+                                                                    {req.asset
+                                                                        ? req
+                                                                              .asset
+                                                                              .name ||
+                                                                          req
+                                                                              .asset
+                                                                              .code
+                                                                        : 'No asset linked'}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-ink-soft">
+                                                                ·
+                                                            </span>
+                                                            <div className="flex items-center gap-1 text-ink-soft">
+                                                                <User className="h-3 w-3 text-ink-soft" />
+                                                                <span>
+                                                                    {
+                                                                        req
+                                                                            .requester
+                                                                            .name
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Bottom Row: Quantities Truth */}
+                                                        <div className="mt-2.5 flex items-center justify-between border-t border-line/50 pt-2 text-[11px]">
+                                                            <span className="text-ink-soft">
+                                                                Req:{' '}
+                                                                <strong className="font-mono font-semibold text-ink">
+                                                                    {
+                                                                        req.quantity_litres
+                                                                    }{' '}
+                                                                    L
+                                                                </strong>{' '}
+                                                                (
+                                                                {humanize(
+                                                                    req.fuel_type,
+                                                                )}
+                                                                )
+                                                            </span>
+
+                                                            {primaryLog ? (
+                                                                <span className="font-medium text-success-strong">
+                                                                    Dispensed:{' '}
+                                                                    {
+                                                                        primaryLog.quantity_litres
+                                                                    }{' '}
+                                                                    L
+                                                                </span>
+                                                            ) : req.status
+                                                                  .value ===
+                                                              'rejected' ? (
+                                                                <span className="font-medium text-danger">
+                                                                    Request
+                                                                    rejected
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-ink-soft">
+                                                                    Awaiting
+                                                                    pump log
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+
+                                {/* Detail Panel (Right Column: 7 Cols on Desktop) */}
+                                <div
+                                    className={cn(
+                                        'lg:col-span-7',
+                                        !mobileDetailView
+                                            ? 'hidden lg:block'
+                                            : 'block',
+                                    )}
+                                >
+                                    {/* Mobile "Back to queue" button */}
+                                    <div className="mb-3 lg:hidden">
+                                        <Button
+                                            variant="quiet"
+                                            size="sm"
+                                            onClick={() =>
+                                                setMobileDetailView(false)
+                                            }
+                                            className="min-h-[44px]"
+                                        >
+                                            <ArrowLeft className="mr-1.5 h-4 w-4" />
+                                            Back to fuel queue
+                                        </Button>
+                                    </div>
+
+                                    {selectedRequest ? (
+                                        <ul className="list-none p-0">
+                                            <FuelRequestCard
+                                                key={selectedRequest.id}
+                                                request={selectedRequest}
+                                                capabilities={capabilities}
+                                                onRecordLog={(r) =>
+                                                    setLogModalRequest(r)
+                                                }
+                                                onTransition={handleTransition}
+                                                pendingActionId={
+                                                    pendingActionId
+                                                }
+                                                currentUserId={currentUserId}
+                                                isDetail={true}
+                                                isSelected={true}
+                                            />
+                                        </ul>
+                                    ) : (
+                                        <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-line bg-surface-subtle p-8 text-center text-xs text-ink-soft">
+                                            Select a fuel request from the queue
+                                            to view audit facts and take action.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+                {pagination && pagination.last_page > 1 && (
+                    <nav
+                        aria-label="Fuel request pages"
+                        className="flex items-center justify-between gap-3"
+                    >
+                        <Button
+                            variant="secondary"
+                            disabled={pagination.current_page <= 1}
+                            onClick={() =>
+                                router.get(
+                                    '/operations',
+                                    {
+                                        section: 'fuel',
+                                        fuel_page: pagination.current_page - 1,
+                                    },
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
+                                )
+                            }
+                        >
+                            Previous page
+                        </Button>
+                        <span className="text-xs text-ink-soft">
+                            Page {pagination.current_page} of{' '}
+                            {pagination.last_page}
+                        </span>
+                        <Button
+                            variant="secondary"
+                            disabled={
+                                pagination.current_page >= pagination.last_page
+                            }
+                            onClick={() =>
+                                router.get(
+                                    '/operations',
+                                    {
+                                        section: 'fuel',
+                                        fuel_page: pagination.current_page + 1,
+                                    },
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
+                                )
+                            }
+                        >
+                            Next page
+                        </Button>
+                    </nav>
                 )}
             </div>
+
+            {/* Focused On-Demand Refuel Request Modal */}
+            <CreateFuelRequestModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                assets={assets}
+            />
 
             {/* Modal for recording fuel log with monotonic validation and receipt upload */}
             <FuelLogModal

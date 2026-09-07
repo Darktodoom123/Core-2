@@ -198,12 +198,14 @@ export function DvirWalkaroundModal({
                                 <>
                                     <img
                                         src={currentPhoto.url}
-                                        alt={`${ANGLE_LABELS[currentPhoto.angle] ?? currentPhoto.angle} for asset ${assetCode}`}
+                                        alt={`${(currentPhoto.angle && ANGLE_LABELS[currentPhoto.angle]) ?? currentPhoto.angle ?? 'Photo'} for asset ${assetCode}`}
                                         className="h-full w-full object-contain"
                                     />
                                     <div className="absolute top-3 left-3 rounded-lg bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-xs">
                                         {ANGLE_LABELS[currentPhoto.angle] ??
-                                            humanize(currentPhoto.angle)}
+                                            (currentPhoto.angle
+                                                ? humanize(currentPhoto.angle)
+                                                : 'Photo')}
                                     </div>
                                     <a
                                         href={currentPhoto.url}

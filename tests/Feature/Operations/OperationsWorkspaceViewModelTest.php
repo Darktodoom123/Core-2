@@ -3,11 +3,14 @@
 use App\Modules\Dispatch\Enums\DispatchPriority;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Dvir\Enums\DvirCheckStatus;
 use App\Modules\Dvir\Enums\DvirInspectionType;
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Modules\Dvir\Models\DvirInspectionCheck;
 use App\Modules\Dvir\Models\DvirInspectionPhoto;
 use App\Modules\Fuel\Enums\FuelRequestStatus;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Fuel\ViewModels\FuelWorkspaceViewModel;
 use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
@@ -294,4 +297,180 @@ it('maps job report delay logs with standby demurrage details and fallback cross
         ->and($item['cross_references']['associated_dvirs'][0]['id'])->toBe($dvir->id)
         ->and($item['cross_references']['associated_fuel_requests'])->toHaveCount(1)
         ->and($item['cross_references']['associated_fuel_requests'][0]['reference'])->toBe('FUEL-888-01');
+});
+
+it('serializes fuel request created_at and submitted_at timestamps accurately', function (): void {
+    $requester = User::factory()->create();
+    $fuelRequest = FuelRequest::query()->create([
+        'requester_id' => $requester->id,
+        'reference' => 'FUEL-TEST-001',
+        'quantity_litres' => 50.0,
+        'fuel_type' => 'diesel',
+        'purpose' => 'Refueling test',
+        'status' => FuelRequestStatus::Submitted,
+    ]);
+
+    $serialized = FuelWorkspaceViewModel::single($fuelRequest);
+
+    expect($serialized['created_at'])->not()->toBeNull()
+        ->and($serialized['created_at'])->toBe($fuelRequest->created_at->toIso8601String())
+        ->and($serialized['submitted_at'])->not()->toBeNull()
+        ->and($serialized['submitted_at'])->toBe($fuelRequest->created_at->toIso8601String());
+});
+
+it('faithfully preserves null location, meter, and capacity unit in operational assets', function (): void {
+    $asset = OperationalAsset::query()->create([
+        'code' => 'CRN-NULL-01',
+        'name' => 'Bare Crane',
+        'kind' => 'mobile_crane',
+        'status' => AssetStatus::Available,
+        'capacity_unit' => null,
+    ]);
+
+    $loaded = OperationalAsset::query()
+        ->with([
+            'activeOperatorShift.user:id,name',
+            'activeOperatorShift.activeDutyLog',
+        ])
+        ->whereKey($asset->id)
+        ->get();
+
+    $serialized = OperationsWorkspaceViewModel::assets($loaded);
+    $item = $serialized[0];
+
+    expect($item['capacity_unit'])->toBeNull()
+        ->and($item['location'])->toBeNull()
+        ->and($item['meter_value'])->toBeNull()
+        ->and($item['meter_type'])->toBeNull();
+});
+
+it('faithfully preserves null coordinates in job reports for honest UI fallback', function (): void {
+    $author = User::factory()->create();
+    $job = DispatchJob::query()->create([
+        'reference' => 'DSP-JOB-NULL-COORDS',
+        'client' => 'Client Inc',
+        'title' => 'Coord Test Job',
+        'site' => 'Site A',
+        'status' => DispatchStatus::Working,
+        'priority' => DispatchPriority::Routine,
+        'scheduled_start' => now()->subHour(),
+        'scheduled_end' => now()->addHour(),
+        'created_by' => $author->id,
+        'version' => 1,
+    ]);
+
+    $report = JobReport::query()->create([
+        'dispatch_job_id' => $job->id,
+        'author_id' => $author->id,
+        'work_summary' => 'Report with unrecorded location coordinates',
+        'status' => JobReportStatus::Submitted,
+        'latitude' => null,
+        'longitude' => null,
+        'started_at' => null,
+        'ended_at' => null,
+    ]);
+
+    $reports = JobReport::query()
+        ->with(['job:id,reference,title', 'author:id,name'])
+        ->whereKey($report->id)
+        ->get();
+
+    $serialized = OperationsWorkspaceViewModel::jobReports($reports);
+    $item = $serialized[0];
+
+    expect($item['latitude'])->toBeNull()
+        ->and($item['longitude'])->toBeNull()
+        ->and($item['started_at'])->toBeNull()
+        ->and($item['ended_at'])->toBeNull();
+});
+
+it('serializes pre-trip and post-trip dvir_inspections log with meters, checks, and photos', function (): void {
+    Storage::fake('public');
+
+    $operator = User::factory()->create(['name' => 'Carlos Operator']);
+
+    $asset = OperationalAsset::query()->create([
+        'code' => 'TRK-DVIR-01',
+        'name' => 'Prime Mover 01',
+        'kind' => 'prime_mover',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $preTrip = DvirInspection::query()->create([
+        'user_id' => $operator->id,
+        'operational_asset_id' => $asset->id,
+        'inspection_type' => DvirInspectionType::PRE_TRIP,
+        'starting_odometer_km' => 45100.5,
+        'engine_hours' => 1200.0,
+        'completed_at' => now()->subHours(8),
+        'has_defects' => false,
+        'critical_defects_count' => 0,
+        'signature_captured' => true,
+        'inspector_name' => 'Carlos Operator',
+        'remarks' => 'Pre-trip all green',
+    ]);
+
+    $postTrip = DvirInspection::query()->create([
+        'user_id' => $operator->id,
+        'operational_asset_id' => $asset->id,
+        'inspection_type' => DvirInspectionType::POST_TRIP,
+        'starting_odometer_km' => 45100.5,
+        'ending_odometer_km' => 45350.0,
+        'engine_hours' => 1208.5,
+        'completed_at' => now()->subMinutes(30),
+        'has_defects' => true,
+        'critical_defects_count' => 1,
+        'signature_captured' => true,
+        'inspector_name' => 'Carlos Operator',
+        'remarks' => 'Air brake line hiss noticed upon parking',
+    ]);
+
+    DvirInspectionPhoto::query()->create([
+        'dvir_inspection_id' => $postTrip->id,
+        'angle' => 'defect_brake_line',
+        'storage_disk' => 'public',
+        'file_path' => 'dvir_photos/2/brake.jpg',
+        'file_name' => 'brake.jpg',
+        'file_size_bytes' => 84000,
+        'mime_type' => 'image/jpeg',
+    ]);
+
+    DvirInspectionCheck::query()->create([
+        'dvir_inspection_id' => $postTrip->id,
+        'category' => 'Brakes',
+        'label' => 'Service Brakes & Air Lines',
+        'status' => DvirCheckStatus::CRITICAL,
+        'notes' => 'Audible air leak near rear axle reservoir',
+        'sort_order' => 1,
+    ]);
+
+    $loaded = OperationalAsset::query()
+        ->with([
+            'inspections',
+            'latestDvirInspection.photos',
+            'latestDvirInspection.checks',
+            'dvirInspections' => fn ($q) => $q->latest('completed_at'),
+            'dvirInspections.photos',
+            'dvirInspections.checks',
+        ])
+        ->whereKey($asset->id)
+        ->get();
+
+    $serialized = OperationsWorkspaceViewModel::assets($loaded);
+    $item = $serialized[0];
+
+    expect($item['dvir_inspections'])->toHaveCount(2)
+        ->and($item['dvir_inspections'][0]['type'])->toBe('post_trip')
+        ->and($item['dvir_inspections'][0]['status'])->toBe('critical_defect')
+        ->and($item['dvir_inspections'][0]['starting_odometer_km'])->toBe(45100.5)
+        ->and($item['dvir_inspections'][0]['ending_odometer_km'])->toBe(45350.0)
+        ->and($item['dvir_inspections'][0]['engine_hours'])->toBe(1208.5)
+        ->and($item['dvir_inspections'][0]['remarks'])->toBe('Air brake line hiss noticed upon parking')
+        ->and($item['dvir_inspections'][0]['photos'])->toHaveCount(1)
+        ->and($item['dvir_inspections'][0]['defects'])->toHaveCount(1)
+        ->and($item['dvir_inspections'][0]['defects'][0]['category'])->toBe('Brakes')
+        ->and($item['dvir_inspections'][0]['defects'][0]['status'])->toBe('critical')
+        ->and($item['dvir_inspections'][1]['type'])->toBe('pre_trip')
+        ->and($item['dvir_inspections'][1]['status'])->toBe('passed')
+        ->and($item['dvir_inspections'][1]['has_defects'])->toBeFalse();
 });

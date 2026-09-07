@@ -24,10 +24,12 @@ export function SafetyLockoutBanner({
 }: SafetyLockoutBannerProps) {
     const [showClearModal, setShowClearModal] = useState(false);
 
-    // Find the active blocking work order if present
+    // Find the active blocking work order if present, or fallback to lockout payload
     const activeBlockingOrder = maintenanceWorkOrders.find(
         (o) => o.dispatch_blocking && !o.released_at,
     );
+    const workOrderId =
+        activeBlockingOrder?.id ?? lockout?.blocking_work_order_id ?? null;
 
     const form = useForm({
         work_performed: ['Defect inspected and safety clearance verified'],
@@ -44,8 +46,6 @@ export function SafetyLockoutBanner({
     const handleSubmitRelease = (e: FormEvent) => {
         e.preventDefault();
 
-        const workOrderId = activeBlockingOrder?.id;
-
         if (!workOrderId) {
             // If no explicit work order id, close modal
             setShowClearModal(false);
@@ -53,7 +53,28 @@ export function SafetyLockoutBanner({
             return;
         }
 
-        form.post(`/maintenance/${workOrderId}/release`, {
+        if (
+            form.data.managerial_override &&
+            !form.data.override_reason.trim()
+        ) {
+            form.setError(
+                'override_reason',
+                'Managerial justification is required when overriding safety clearance.',
+            );
+
+            return;
+        }
+
+        if (form.data.work_performed.length === 0) {
+            form.setError(
+                'work_performed',
+                'At least one remediation action or inspection detail is required.',
+            );
+
+            return;
+        }
+
+        form.post(`/operations/maintenance/${workOrderId}/release`, {
             preserveScroll: true,
             onSuccess: () => {
                 setShowClearModal(false);
@@ -99,7 +120,7 @@ export function SafetyLockoutBanner({
                         </div>
                     </div>
 
-                    {lockout.can_override && activeBlockingOrder && (
+                    {lockout.can_override && workOrderId && (
                         <Button
                             variant="danger"
                             size="sm"
@@ -114,7 +135,7 @@ export function SafetyLockoutBanner({
             </div>
 
             {/* Resolve Lockout Modal */}
-            {showClearModal && activeBlockingOrder && (
+            {showClearModal && workOrderId && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
                     role="dialog"
@@ -139,7 +160,7 @@ export function SafetyLockoutBanner({
                                         <strong className="text-ink">
                                             {assetCode}
                                         </strong>{' '}
-                                        · Work Order #{activeBlockingOrder.id}
+                                        · Work Order #{workOrderId}
                                     </p>
                                 </div>
                             </div>
@@ -155,13 +176,41 @@ export function SafetyLockoutBanner({
                         <form
                             onSubmit={handleSubmitRelease}
                             className="mt-4 space-y-4"
+                            noValidate
                         >
+                            {(form.errors as Record<string, string>)
+                                .inspection && (
+                                <div
+                                    className="rounded-lg border border-danger/30 bg-danger-soft p-2.5 text-xs font-semibold text-danger-strong"
+                                    role="alert"
+                                >
+                                    {
+                                        (form.errors as Record<string, string>)
+                                            .inspection
+                                    }
+                                </div>
+                            )}
+
+                            {(form.errors as Record<string, string>).error && (
+                                <div
+                                    className="rounded-lg border border-danger/30 bg-danger-soft p-2.5 text-xs font-semibold text-danger-strong"
+                                    role="alert"
+                                >
+                                    {
+                                        (form.errors as Record<string, string>)
+                                            .error
+                                    }
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-xs font-semibold text-ink">
                                     Defect Description
                                 </label>
                                 <div className="mt-1 max-h-24 overflow-y-auto rounded-lg border border-line bg-surface-subtle p-2.5 font-mono text-[11px] whitespace-pre-wrap text-ink-soft">
-                                    {activeBlockingOrder.defect}
+                                    {activeBlockingOrder?.defect ||
+                                        lockout.lockout_reason ||
+                                        'Safety defect clearance required'}
                                 </div>
                             </div>
 

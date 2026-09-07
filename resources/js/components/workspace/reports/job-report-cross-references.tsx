@@ -96,12 +96,12 @@ export function JobReportCrossReferences({
                 <div className="space-y-2">
                     <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
                         <Fuel className="h-3.5 w-3.5 text-ink-soft" />
-                        <span>Fuel Disbursements ({fuels.length})</span>
+                        <span>Fuel Requests ({fuels.length})</span>
                     </span>
 
                     {fuels.length === 0 ? (
                         <p className="text-xs text-ink-soft italic">
-                            No fuel request tickets logged under this job.
+                            No fuel request tickets linked to this job.
                         </p>
                     ) : (
                         <ul className="space-y-1.5">

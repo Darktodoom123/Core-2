@@ -89,48 +89,33 @@ const coreModuleNavigation: NavItem[] = [
     },
     {
         section: 'fleet',
-        label: 'Fleet & Equipment',
+        label: 'Fleet Management',
         icon: Truck,
         module: 3,
+        detail: 'Trucks & service vehicles',
         anyPermission: ['fleet.view_all', 'fleet.view_assigned'],
-        children: [
-            {
-                section: 'fleet',
-                label: 'Fleet Vehicles',
-                anyPermission: ['fleet.view_all', 'fleet.view_assigned'],
-            },
-            {
-                section: 'equipment',
-                label: 'Cranes & Heavy Gear',
-                anyPermission: [
-                    'equipment.view_all',
-                    'equipment.view_assigned',
-                ],
-            },
-        ],
+    },
+    {
+        section: 'equipment',
+        label: 'Crane & Equipment',
+        icon: Wrench,
+        module: 4,
+        detail: 'Cranes & heavy gear',
+        anyPermission: ['equipment.view_all', 'equipment.view_assigned'],
     },
     {
         section: 'fuel',
-        label: 'Fuel & Resources',
+        label: 'Fuel Management',
         icon: Fuel,
-        module: 4,
+        module: 5,
+        detail: 'Requests & consumption',
         anyPermission: ['fuel.view_all', 'fuel.view_own', 'fuel.request'],
-        children: [
-            {
-                section: 'fuel',
-                label: 'Fuel Logs & Dispensing',
-                anyPermission: [
-                    'fuel.view_all',
-                    'fuel.view_own',
-                    'fuel.request',
-                ],
-            },
-            {
-                section: 'reports',
-                label: 'Operational Reports',
-                anyPermission: ['reports.view_all', 'reports.view_assigned'],
-            },
-        ],
+    },
+    {
+        section: 'reports',
+        label: 'Operational Reports',
+        icon: ClipboardList,
+        anyPermission: ['reports.view_all', 'reports.view_assigned'],
     },
 ];
 

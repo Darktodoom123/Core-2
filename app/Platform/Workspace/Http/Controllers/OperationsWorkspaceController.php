@@ -21,6 +21,9 @@ use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
 use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
+use App\Platform\Workspace\Queries\WorkspaceFuelRequestsQuery;
+use App\Platform\Workspace\Queries\WorkspaceJobReportsQuery;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
 use App\Shared\Assets\Models\OperationalAsset;
 use Carbon\CarbonImmutable;
@@ -40,11 +43,11 @@ final class OperationsWorkspaceController extends Controller
     private const SECTION_PROPS = [
         'overview' => ['jobs', 'clients', 'serviceRequests', 'assets', 'assets_total', 'fuelRequests', 'locations', 'approvals', 'users', 'auditEvents', 'gptRecommendations'],
         'dispatch' => ['jobs', 'clients', 'serviceRequests', 'rentalHandoffs', 'salesHandoffs', 'assets', 'assets_total', 'approvals', 'dispatchResourceUsers', 'gptRecommendations', 'projectPlanning'],
-        'assets' => ['assets', 'assets_total', 'locations'],
+        'assets' => ['assets', 'assets_total', 'assets_pagination', 'locations'],
         'tracking' => ['assets', 'assets_total', 'locations'],
-        'fuel' => ['fuelRequests', 'assets', 'assets_total'],
+        'fuel' => ['fuelRequests', 'fuelRequests_total', 'fuelRequests_stats', 'fuelRequests_pagination', 'assets', 'assets_total'],
         'approvals' => ['approvals'],
-        'reports' => ['jobReports', 'reportExports', 'jobs'],
+        'reports' => ['jobReports', 'jobReports_total', 'jobReports_stats', 'jobReports_pagination', 'reportExports', 'jobs'],
         'notifications' => ['notifications'],
         'archive' => ['archivedJobs'],
         'gpt-recommendations' => ['gptRecommendations', 'jobs'],
@@ -65,8 +68,34 @@ final class OperationsWorkspaceController extends Controller
         $navigation = OperationsWorkspaceViewModel::navigation($user);
         $activeSos = $this->fetchActiveSosIncidents($user);
         $initialSection = $this->initialSection($request, $navigation, $user, $activeSos);
+
+        /** @var array{search?: string|null, category?: string|null, page?: int|null, per_page?: int|null} $assetFilters */
+        $assetFilters = [
+            'search' => $request->query('asset_search') ?? ($initialSection === 'assets' ? ($request->query('search') ?? $request->query('q')) : null),
+            'category' => $request->query('asset_category') ?? ($initialSection === 'assets' ? $request->query('category') : null),
+            'page' => $request->integer('asset_page') ?: ($initialSection === 'assets' ? $request->integer('page', 1) : 1),
+            'per_page' => $request->integer('asset_per_page') ?: 50,
+        ];
+
+        /** @var array{search?: string|null, status?: string|null, page?: int|null, per_page?: int|null} $fuelFilters */
+        $fuelFilters = [
+            'search' => $request->query('fuel_search') ?? ($initialSection === 'fuel' ? ($request->query('search') ?? $request->query('q')) : null),
+            'status' => $request->query('fuel_status') ?? ($initialSection === 'fuel' ? $request->query('status') : null),
+            'page' => $request->integer('fuel_page') ?: ($initialSection === 'fuel' ? $request->integer('page', 1) : 1),
+            'per_page' => $request->integer('fuel_per_page') ?: 25,
+        ];
+
+        /** @var array{search?: string|null, status?: string|null, job_id?: int|null, page?: int|null, per_page?: int|null} $reportFilters */
+        $reportFilters = [
+            'search' => $request->query('report_search') ?? ($initialSection === 'reports' ? ($request->query('search') ?? $request->query('q')) : null),
+            'status' => $request->query('report_status') ?? ($initialSection === 'reports' ? $request->query('status') : null),
+            'job_id' => $request->integer('job_id') ?: ($request->integer('dispatch_id') ?: null),
+            'page' => $request->integer('report_page') ?: ($initialSection === 'reports' ? $request->integer('page', 1) : 1),
+            'per_page' => $request->integer('report_per_page') ?: 25,
+        ];
+
         $sectionCache = null;
-        $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments): array {
+        $loadSection = function () use (&$sectionCache, $initialSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters): array {
             request()->attributes->set('workspace_inertia_mode', 'deferred');
 
             return $sectionCache ??= $this->loadSection(
@@ -76,6 +105,9 @@ final class OperationsWorkspaceController extends Controller
                 $canViewRentalHandoffs,
                 $canViewSalesHandoffs,
                 $canViewAllAssignments,
+                $assetFilters,
+                $fuelFilters,
+                $reportFilters,
             );
         };
 
@@ -95,7 +127,7 @@ final class OperationsWorkspaceController extends Controller
         ];
 
         foreach ($this->allSectionProps() as $prop) {
-            $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments);
+            $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
             $props[$prop] = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true)
                 ? Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none'))
                 : Inertia::optional($resolver);
@@ -114,7 +146,12 @@ final class OperationsWorkspaceController extends Controller
         return array_values(array_unique(array_merge(...array_values(self::SECTION_PROPS))));
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @param  array{search?: string|null, category?: string|null, page?: int|null, per_page?: int|null}  $assetFilters
+     * @param  array{search?: string|null, status?: string|null, page?: int|null, per_page?: int|null}  $fuelFilters
+     * @param  array{search?: string|null, status?: string|null, job_id?: int|null, page?: int|null, per_page?: int|null}  $reportFilters
+     * @return array<string, mixed>
+     */
     private function loadSection(
         ?string $section,
         User $user,
@@ -122,6 +159,9 @@ final class OperationsWorkspaceController extends Controller
         bool $canViewRentalHandoffs,
         bool $canViewSalesHandoffs,
         bool $canViewAllAssignments,
+        array $assetFilters = [],
+        array $fuelFilters = [],
+        array $reportFilters = [],
     ): array {
         [$overviewAssets, $overviewAssetsTotal] = $this->fetchAssetsWithTotal($user, 50);
         [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
@@ -152,22 +192,61 @@ final class OperationsWorkspaceController extends Controller
                 'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
                 'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             ],
-            'assets', 'tracking' => [
+            'assets' => (function () use ($user, $assetFilters): array {
+                $assetPaginator = app(WorkspaceAssetsQuery::class)->paginate($user, $assetFilters);
+
+                return [
+                    'assets' => OperationsWorkspaceViewModel::assets($assetPaginator->getCollection()),
+                    'assets_total' => $assetPaginator->total(),
+                    'assets_pagination' => [
+                        'current_page' => $assetPaginator->currentPage(),
+                        'last_page' => $assetPaginator->lastPage(),
+                        'per_page' => $assetPaginator->perPage(),
+                        'total' => $assetPaginator->total(),
+                    ],
+                    'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+                ];
+            })(),
+            'tracking' => [
                 'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
                 'assets_total' => $defaultAssetsTotal,
                 'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             ],
-            'fuel' => [
-                'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
-                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
-                'assets_total' => $defaultAssetsTotal,
-            ],
+            'fuel' => (function () use ($user, $fuelFilters, $defaultAssets, $defaultAssetsTotal): array {
+                $fuelPaginator = app(WorkspaceFuelRequestsQuery::class)->paginate($user, $fuelFilters);
+
+                return [
+                    'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelPaginator->getCollection()),
+                    'fuelRequests_total' => $fuelPaginator->total(),
+                    'fuelRequests_stats' => app(WorkspaceFuelRequestsQuery::class)->counts($user),
+                    'fuelRequests_pagination' => [
+                        'current_page' => $fuelPaginator->currentPage(),
+                        'last_page' => $fuelPaginator->lastPage(),
+                        'per_page' => $fuelPaginator->perPage(),
+                        'total' => $fuelPaginator->total(),
+                    ],
+                    'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                    'assets_total' => $defaultAssetsTotal,
+                ];
+            })(),
             'approvals' => ['approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user)],
-            'reports' => [
-                'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
-                'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
-                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
-            ],
+            'reports' => (function () use ($user, $reportFilters, $canViewAllAssignments): array {
+                $reportPaginator = app(WorkspaceJobReportsQuery::class)->paginate($user, $reportFilters);
+
+                return [
+                    'jobReports' => OperationsWorkspaceViewModel::jobReports($reportPaginator->getCollection()),
+                    'jobReports_total' => $reportPaginator->total(),
+                    'jobReports_stats' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters),
+                    'jobReports_pagination' => [
+                        'current_page' => $reportPaginator->currentPage(),
+                        'last_page' => $reportPaginator->lastPage(),
+                        'per_page' => $reportPaginator->perPage(),
+                        'total' => $reportPaginator->total(),
+                    ],
+                    'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
+                    'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+                ];
+            })(),
             'notifications' => ['notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user))],
             'archive' => ['archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user))],
             'gpt-recommendations' => [
@@ -184,18 +263,47 @@ final class OperationsWorkspaceController extends Controller
         };
     }
 
-    private function resolveSectionProp(string $prop, callable $loadSection, User $user, bool $canCreateDispatch, bool $canViewRentalHandoffs, bool $canViewSalesHandoffs, bool $canViewAllAssignments): mixed
-    {
+    /**
+     * @param  array{search?: string|null, category?: string|null, page?: int|null, per_page?: int|null}  $assetFilters
+     * @param  array{search?: string|null, status?: string|null, page?: int|null, per_page?: int|null}  $fuelFilters
+     * @param  array{search?: string|null, status?: string|null, job_id?: int|null, page?: int|null, per_page?: int|null}  $reportFilters
+     */
+    private function resolveSectionProp(
+        string $prop,
+        callable $loadSection,
+        User $user,
+        bool $canCreateDispatch,
+        bool $canViewRentalHandoffs,
+        bool $canViewSalesHandoffs,
+        bool $canViewAllAssignments,
+        array $assetFilters = [],
+        array $fuelFilters = [],
+        array $reportFilters = [],
+    ): mixed {
         $data = $loadSection();
         if (array_key_exists($prop, $data)) {
             return $data[$prop];
         }
 
-        return $this->standaloneProp($prop, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments);
+        return $this->standaloneProp($prop, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
     }
 
-    private function standaloneProp(string $prop, User $user, bool $canCreateDispatch, bool $canViewRentalHandoffs, bool $canViewSalesHandoffs, bool $canViewAllAssignments): mixed
-    {
+    /**
+     * @param  array{search?: string|null, category?: string|null, page?: int|null, per_page?: int|null}  $assetFilters
+     * @param  array{search?: string|null, status?: string|null, page?: int|null, per_page?: int|null}  $fuelFilters
+     * @param  array{search?: string|null, status?: string|null, job_id?: int|null, page?: int|null, per_page?: int|null}  $reportFilters
+     */
+    private function standaloneProp(
+        string $prop,
+        User $user,
+        bool $canCreateDispatch,
+        bool $canViewRentalHandoffs,
+        bool $canViewSalesHandoffs,
+        bool $canViewAllAssignments,
+        array $assetFilters = [],
+        array $fuelFilters = [],
+        array $reportFilters = [],
+    ): mixed {
         return match ($prop) {
             'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
             'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
@@ -204,7 +312,21 @@ final class OperationsWorkspaceController extends Controller
             'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
             'assets' => OperationsWorkspaceViewModel::assets($this->fetchAssets($user)),
             'assets_total' => $this->fetchAssetsTotal($user),
+            'assets_pagination' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => 50,
+                'total' => $this->fetchAssetsTotal($user),
+            ],
             'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+            'fuelRequests_total' => app(WorkspaceFuelRequestsQuery::class)->counts($user)['total'],
+            'fuelRequests_stats' => app(WorkspaceFuelRequestsQuery::class)->counts($user),
+            'fuelRequests_pagination' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => 25,
+                'total' => app(WorkspaceFuelRequestsQuery::class)->counts($user)['total'],
+            ],
             'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
             'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
             'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
@@ -212,6 +334,14 @@ final class OperationsWorkspaceController extends Controller
             'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
             'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
             'jobReports' => OperationsWorkspaceViewModel::jobReports($this->fetchJobReports($user)),
+            'jobReports_total' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters)['total'],
+            'jobReports_stats' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters),
+            'jobReports_pagination' => [
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => 25,
+                'total' => app(WorkspaceJobReportsQuery::class)->stats($user, $reportFilters)['total'],
+            ],
             'reportExports' => OperationsWorkspaceViewModel::reportExports($this->fetchReportExports($user)),
             'notifications' => OperationsWorkspaceViewModel::notifications($this->fetchNotifications($user)),
             'archivedJobs' => OperationsWorkspaceViewModel::archivedJobs($this->fetchArchivedJobs($user)),
@@ -356,6 +486,9 @@ final class OperationsWorkspaceController extends Controller
                 'activeOperatorShift.activeDutyLog',
                 'latestDvirInspection.photos',
                 'latestDvirInspection.checks',
+                'dvirInspections' => fn ($query) => $query->latest('completed_at')->limit(15),
+                'dvirInspections.photos',
+                'dvirInspections.checks',
                 'activeBlockingWorkOrder',
             ])
             ->orderBy('code')

@@ -82,6 +82,7 @@ export interface AssignedJobsListScreenProps {
     onOpenDocuments?: () => void;
     onOpenRoutes?: () => void;
     onOpenVehicle?: () => void;
+    onOpenFuel?: () => void;
     onOpenForms?: () => void;
     onReleaseUnit?: (assetCode: string) => void;
     onOpenRental?: () => void;
@@ -107,6 +108,7 @@ interface TileItem {
         | 'routes'
         | 'documents'
         | 'vehicle'
+        | 'fuel'
         | 'forms'
         | 'rental'
         | 'sales';
@@ -154,6 +156,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenDocuments,
     onOpenRoutes,
     onOpenVehicle,
+    onOpenFuel,
     onOpenForms,
     onReleaseUnit,
     onOpenRental,
@@ -360,6 +363,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     // 6 Dashboard Tiles
     const DASHBOARD_TILES: TileItem[] = [
         {
+            id: 'fuel',
+            title: 'Fuel',
+            sublabel: 'Requests & Logs',
+            iconName: 'fuel',
+            bgColor: colors.amberDark,
+            lightIconColor: colors.amberDark,
+            darkBgColor: colors.hudSurface,
+            darkIconColor: colors.hudAmber,
+        },
+        {
             id: 'hos',
             title: 'Hours of\nService',
             sublabel: 'Shift & Hours',
@@ -498,11 +511,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
             [byId('dvir'), byId('vehicle')],
             [byId('routes'), byId('forms')],
             [byId('rental'), byId('sales')],
+            [byId('fuel')],
         ];
     }, [DASHBOARD_TILES]);
 
     const handleTilePress = (tileId: TileItem['id']) => {
         switch (tileId) {
+            case 'fuel':
+                onOpenFuel?.();
+                break;
             case 'hos':
                 if (onOpenHos) {
                     onOpenHos();

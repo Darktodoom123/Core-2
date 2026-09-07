@@ -336,6 +336,33 @@ export interface DvirPhotoViewModel {
     uploaded_at?: string | null;
 }
 
+export interface DvirInspectionDefectViewModel {
+    id: number;
+    category: string;
+    label: string;
+    status: string;
+    notes?: string | null;
+}
+
+export interface DvirInspectionViewModel {
+    id: number;
+    reference: string;
+    inspection_type?: 'pre_trip' | 'post_trip' | string;
+    type: 'pre_trip' | 'post_trip' | string;
+    status: DvirOverallStatusValue;
+    has_defects: boolean;
+    critical_defects_count: number;
+    completed_at: string | null;
+    inspector_name?: string | null;
+    starting_odometer_km?: number | null;
+    ending_odometer_km?: number | null;
+    engine_hours?: number | null;
+    remarks?: string | null;
+    signature_captured?: boolean;
+    photos: DvirPhotoViewModel[];
+    defects?: DvirInspectionDefectViewModel[];
+}
+
 export interface DvirInspectionSummaryViewModel {
     id: number;
     inspection_type?: 'pre_trip' | 'post_trip' | string;
@@ -381,6 +408,7 @@ export interface AssetViewModel {
     active_operator?: OperatorBindingViewModel | null;
     hos?: EquipmentHosViewModel | null;
     latest_dvir?: DvirInspectionSummaryViewModel | null;
+    dvir_inspections?: DvirInspectionViewModel[];
     lockout?: AssetLockoutViewModel | null;
     inspections: InspectionViewModel[];
     maintenance_work_orders: MaintenanceWorkOrderViewModel[];
@@ -445,6 +473,8 @@ export interface FuelRequestViewModel {
     purpose: string;
     status: StatusViewModel<FuelRequestStatusValue>;
     decision_reason?: string | null;
+    created_at?: string | null;
+    submitted_at?: string | null;
     reviewed_at?: string | null;
     approved_at?: string | null;
     verified_at?: string | null;
@@ -598,7 +628,7 @@ export interface LocationUpdateViewModel {
     sharing_enabled: boolean;
     captured_at: string | null;
     received_at: string | null;
-    freshness_status: 'fresh' | 'delayed' | 'stale' | 'offline';
+    freshness_status: TelemetryFreshnessStatus;
 }
 
 export interface AttachmentViewModel {
@@ -931,8 +961,33 @@ export interface GptRecommendationViewModel {
     is_advisory: boolean;
 }
 
+export interface PaginationMeta {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from?: number | null;
+    to?: number | null;
+}
+
+export interface FuelRequestStatsViewModel {
+    total: number;
+    pending: number;
+    approved: number;
+    verified: number;
+    logged: number;
+    anomalies: number;
+}
+
+export interface JobReportStatsViewModel {
+    total: number;
+    draft: number;
+    submitted: number;
+    approved: number;
+    rejected: number;
+}
+
 export interface WorkspacePageProps {
-    projectPlanning?: ProjectPlanningViewModel | null;
     jobs?: DispatchJobViewModel[];
     clients?: ClientViewModel[];
     serviceRequests?: ServiceRequestViewModel[];
@@ -940,7 +995,11 @@ export interface WorkspacePageProps {
     salesHandoffs?: SalesDispatchHandoffViewModel[];
     assets?: AssetViewModel[];
     assets_total?: number;
+    assets_pagination?: PaginationMeta;
     fuelRequests?: FuelRequestViewModel[];
+    fuelRequests_total?: number;
+    fuelRequests_stats?: FuelRequestStatsViewModel;
+    fuelRequests_pagination?: PaginationMeta;
     locations?: LocationUpdateViewModel[];
     approvals?: ApprovalViewModel[];
     users?: WorkspaceUserViewModel[];
@@ -948,11 +1007,15 @@ export interface WorkspacePageProps {
     auditEvents?: AuditEventViewModel[];
     gptRecommendations?: GptRecommendationViewModel[];
     jobReports?: JobReportViewModel[];
+    jobReports_total?: number;
+    jobReports_stats?: JobReportStatsViewModel;
+    jobReports_pagination?: PaginationMeta;
     reportExports?: ReportExportViewModel[];
     notifications?: NotificationViewModel[];
     archivedJobs?: ArchivedJobViewModel[];
     navigation: WorkspaceNavigationItem[];
     initial_section: WorkspaceSection | null;
+    projectPlanning?: ProjectPlanningViewModel | null;
     capabilities: WorkspaceCapabilities;
     workspace: WorkspaceFreshness;
     badges?: {

@@ -31,14 +31,12 @@ export function JobReportSignatureCard({
             >
                 <div className="flex items-center gap-2 font-semibold text-warning-strong">
                     <Clock className="h-4 w-4" />
-                    <span>
-                        Client Sign-Off Status: Pending Digital Signature
-                    </span>
+                    <span>Client Sign-Off: Not recorded</span>
                 </div>
                 <p className="mt-1 text-ink-soft">
-                    This job report was submitted from the field without a
-                    digital client signature. Verify physical paper ticket or
-                    on-site delivery slip before final approval.
+                    This job report was submitted from the field without
+                    recorded client sign-off metadata. Verify physical paper
+                    ticket or on-site delivery slip before final approval.
                 </p>
             </div>
         );
@@ -58,17 +56,22 @@ export function JobReportSignatureCard({
                     </span>
                     <div>
                         <span className="text-[10px] font-bold tracking-wider text-success-strong uppercase">
-                            Verified Client Sign-Off
+                            Recorded Client Sign-Off
                         </span>
                         <h4 className="text-sm font-bold text-ink">
                             {signerName}
                         </h4>
                     </div>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2.5 py-0.5 text-[11px] font-semibold text-success-strong">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Digitally Authorized
-                </span>
+                <div className="flex flex-col items-end gap-0.5">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2.5 py-0.5 text-[11px] font-semibold text-success-strong">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Sign-Off Recorded
+                    </span>
+                    <span className="text-[10px] text-ink-soft">
+                        Field receipt; distinct from office review
+                    </span>
+                </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -94,7 +97,7 @@ export function JobReportSignatureCard({
 
                 <div>
                     <span className="text-[10px] font-bold text-ink-soft uppercase">
-                        Geofence Verification
+                        Location Stamp
                     </span>
                     <p className="flex items-center gap-1 font-mono text-ink">
                         <MapPin className="h-3 w-3 text-brand-strong" />
@@ -103,7 +106,7 @@ export function JobReportSignatureCard({
                         latitude !== undefined &&
                         longitude !== undefined
                             ? `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-                            : 'GPS coordinates verified'}
+                            : 'Location not recorded'}
                     </p>
                 </div>
             </div>

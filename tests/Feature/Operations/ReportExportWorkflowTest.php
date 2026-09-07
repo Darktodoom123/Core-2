@@ -32,7 +32,9 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->seed(RolePermissionSeeder::class);
+    config(['filesystems.protected_disk' => 'private']);
     Storage::fake('private');
+    Storage::fake('r2-private');
 });
 
 function createExportUser(RoleName $role): User

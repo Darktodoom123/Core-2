@@ -1,4 +1,7 @@
+import { usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
+    Camera,
     Clock,
     ExternalLink,
     FileText,
@@ -6,23 +9,29 @@ import {
     Gauge,
     Truck,
     User,
+    X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-badge';
 import { humanize } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 import type {
     FuelRequestViewModel,
     WorkspaceCapabilities,
 } from '@/types/workspace';
 import { FuelVarianceBadge } from './fuel-variance-badge';
 
-interface FuelRequestCardProps {
+export interface FuelRequestCardProps {
     request: FuelRequestViewModel;
     capabilities: WorkspaceCapabilities;
     onRecordLog: (request: FuelRequestViewModel) => void;
     onTransition: (requestId: number, status: string, reason?: string) => void;
     pendingActionId?: string | null;
+    currentUserId?: number | null;
+    isDetail?: boolean;
+    isSelected?: boolean;
+    onSelect?: () => void;
 }
 
 export function FuelRequestCard({
@@ -31,9 +40,35 @@ export function FuelRequestCard({
     onRecordLog,
     onTransition,
     pendingActionId,
+    currentUserId,
+    isDetail = false,
+    isSelected = false,
+    onSelect,
 }: FuelRequestCardProps) {
     const [decisionReason, setDecisionReason] = useState('');
     const [showDecisionInput, setShowDecisionInput] = useState(false);
+    const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(
+        null,
+    );
+
+    let pageAuth: { user?: { id: number; name?: string } } | undefined;
+
+    try {
+        const page = usePage<{
+            auth?: { user?: { id: number; name?: string } };
+        }>();
+        pageAuth = page?.props?.auth;
+    } catch {
+        // Safe fallback if used outside Inertia context
+        pageAuth = undefined;
+    }
+
+    const effectiveUserId = currentUserId ?? pageAuth?.user?.id;
+    const isSelfReview = Boolean(
+        effectiveUserId &&
+        request.requester?.id &&
+        effectiveUserId === request.requester.id,
+    );
 
     const asset = request.asset;
     const statusVal = request.status.value;
@@ -52,10 +87,13 @@ export function FuelRequestCard({
 
     return (
         <li
+            onClick={onSelect}
             className={`flex flex-col gap-4 rounded-xl border p-4 transition-colors ${
-                hasAnomaly
-                    ? 'border-danger/40 bg-danger-soft/10'
-                    : 'border-line bg-surface hover:border-line-strong'
+                isSelected
+                    ? 'border-brand-strong bg-surface ring-2 ring-brand/30'
+                    : hasAnomaly
+                      ? 'border-danger/40 bg-danger-soft/10'
+                      : 'border-line bg-surface hover:border-line-strong'
             }`}
         >
             {/* Top Bar: Reference, Badges, Actions */}
@@ -63,7 +101,9 @@ export function FuelRequestCard({
                 <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-sm font-bold text-ink">
-                            {request.reference}
+                            {isDetail
+                                ? `Ref: ${request.reference}`
+                                : request.reference}
                         </span>
                         <CanonicalStatusBadge status={request.status} />
 
@@ -92,7 +132,7 @@ export function FuelRequestCard({
                     </div>
 
                     <p className="text-sm font-semibold text-ink">
-                        <span>{request.quantity_litres} Litres</span>
+                        <span>Requested: {request.quantity_litres} Litres</span>
                         <span className="font-normal text-ink-soft"> · </span>
                         <span className="font-medium text-ink capitalize">
                             {humanize(request.fuel_type)}
@@ -118,10 +158,11 @@ export function FuelRequestCard({
                         <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() =>
-                                onTransition(request.id, 'forwarded')
-                            }
-                            disabled={pendingActionId !== null}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onTransition(request.id, 'forwarded');
+                            }}
+                            disabled={Boolean(pendingActionId)}
                         >
                             {isPendingThisAction('forwarded')
                                 ? 'Forwarding…'
@@ -129,35 +170,22 @@ export function FuelRequestCard({
                         </Button>
                     )}
 
-                    {/* Approve / Reject (Forwarded -> Approved / Rejected) */}
+                    {/* Review Decision (Forwarded -> Approved / Rejected) */}
                     {statusVal === 'forwarded' && capabilities.approve_fuel && (
                         <>
-                            {!showDecisionInput ? (
-                                <>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => {
-                                            setShowDecisionInput(true);
-                                        }}
-                                        disabled={pendingActionId !== null}
-                                    >
-                                        Review Decision
-                                    </Button>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        onClick={() =>
-                                            onTransition(request.id, 'approved')
-                                        }
-                                        disabled={pendingActionId !== null}
-                                    >
-                                        {isPendingThisAction('approved')
-                                            ? 'Approving…'
-                                            : 'Quick Approve'}
-                                    </Button>
-                                </>
-                            ) : null}
+                            {!showDecisionInput && (
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowDecisionInput(true);
+                                    }}
+                                    disabled={Boolean(pendingActionId)}
+                                >
+                                    Review Decision
+                                </Button>
+                            )}
                         </>
                     )}
 
@@ -166,8 +194,11 @@ export function FuelRequestCard({
                         <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => onTransition(request.id, 'verified')}
-                            disabled={pendingActionId !== null}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onTransition(request.id, 'verified');
+                            }}
+                            disabled={Boolean(pendingActionId)}
                         >
                             {isPendingThisAction('verified')
                                 ? 'Verifying…'
@@ -175,15 +206,18 @@ export function FuelRequestCard({
                         </Button>
                     )}
 
-                    {/* Record Fuel Log (Verified / Approved -> Logged) */}
-                    {(statusVal === 'verified' || statusVal === 'approved') &&
+                    {/* Record Fuel Log (STRICTLY Verified -> Logged ONLY: approved shortcut eliminated!) */}
+                    {statusVal === 'verified' &&
                         capabilities.record_fuel &&
                         !primaryLog && (
                             <Button
                                 variant="primary"
                                 size="sm"
-                                onClick={() => onRecordLog(request)}
-                                disabled={pendingActionId !== null}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRecordLog(request);
+                                }}
+                                disabled={Boolean(pendingActionId)}
                             >
                                 <Fuel className="mr-1.5 h-3.5 w-3.5" />
                                 Record Fuel Log
@@ -192,67 +226,352 @@ export function FuelRequestCard({
                 </div>
             </div>
 
-            {/* Decision Reason Input Box for Managers */}
+            {/* Decision Reason Input Box / Self-Review Guard for Forwarded Requests */}
             {statusVal === 'forwarded' &&
                 capabilities.approve_fuel &&
                 showDecisionInput && (
-                    <div className="space-y-2 rounded-lg border border-brand/40 bg-brand-soft/20 p-3 text-xs">
-                        <label className="font-semibold text-ink">
-                            Reviewer Justification / Feedback Note:
-                        </label>
-                        <input
-                            type="text"
-                            value={decisionReason}
-                            onChange={(e) => setDecisionReason(e.target.value)}
-                            placeholder="Add reason or guidance (recommended for rejections, optional for approvals)..."
-                            className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
-                        />
-                        <div className="flex items-center justify-end gap-2 pt-1">
-                            <Button
-                                type="button"
-                                variant="quiet"
-                                size="sm"
-                                onClick={() => setShowDecisionInput(false)}
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="space-y-3 rounded-lg border border-brand/40 bg-brand-soft/20 p-3 text-xs"
+                    >
+                        {isSelfReview ? (
+                            <div
+                                className="space-y-2 rounded-md border border-warning/40 bg-warning-soft/30 p-3"
+                                data-testid="self-review-guard"
                             >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="danger"
-                                size="sm"
-                                onClick={() =>
-                                    onTransition(
-                                        request.id,
-                                        'rejected',
-                                        decisionReason,
-                                    )
-                                }
-                                disabled={pendingActionId !== null}
-                            >
-                                {isPendingThisAction('rejected')
-                                    ? 'Rejecting…'
-                                    : 'Reject Request'}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="primary"
-                                size="sm"
-                                onClick={() =>
-                                    onTransition(
-                                        request.id,
-                                        'approved',
-                                        decisionReason,
-                                    )
-                                }
-                                disabled={pendingActionId !== null}
-                            >
-                                {isPendingThisAction('approved')
-                                    ? 'Approving…'
-                                    : 'Approve Request'}
-                            </Button>
-                        </div>
+                                <div className="flex items-center gap-1.5 font-semibold text-warning-strong">
+                                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                                    <span>Self-Review Forbidden</span>
+                                </div>
+                                <p className="text-xs text-ink-soft">
+                                    Self-review forbidden: requester cannot
+                                    approve or reject their own request
+                                    (independent review required).
+                                </p>
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                    <Button
+                                        type="button"
+                                        variant="quiet"
+                                        size="sm"
+                                        onClick={() =>
+                                            setShowDecisionInput(false)
+                                        }
+                                    >
+                                        Close
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="danger"
+                                        size="sm"
+                                        disabled={true}
+                                        title="Requester cannot self-review"
+                                    >
+                                        Reject Request
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        size="sm"
+                                        disabled={true}
+                                        title="Requester cannot self-review"
+                                    >
+                                        Approve Request
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <label className="font-semibold text-ink">
+                                    Reviewer Justification / Feedback Note:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={decisionReason}
+                                    onChange={(e) =>
+                                        setDecisionReason(e.target.value)
+                                    }
+                                    placeholder="Add reason or guidance (recommended for rejections, optional for approvals)..."
+                                    className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                                />
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                    <Button
+                                        type="button"
+                                        variant="quiet"
+                                        size="sm"
+                                        onClick={() =>
+                                            setShowDecisionInput(false)
+                                        }
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() =>
+                                            onTransition(
+                                                request.id,
+                                                'rejected',
+                                                decisionReason,
+                                            )
+                                        }
+                                        disabled={Boolean(pendingActionId)}
+                                    >
+                                        {isPendingThisAction('rejected')
+                                            ? 'Rejecting…'
+                                            : 'Reject Request'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() =>
+                                            onTransition(
+                                                request.id,
+                                                'approved',
+                                                decisionReason,
+                                            )
+                                        }
+                                        disabled={Boolean(pendingActionId)}
+                                    >
+                                        {isPendingThisAction('approved')
+                                            ? 'Approving…'
+                                            : 'Approve Request'}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
+
+            {/* Rejection Callout Banner */}
+            {statusVal === 'rejected' && (
+                <div
+                    className="rounded-xl border border-danger/40 bg-danger-soft/25 p-4 text-xs shadow-xs"
+                    role="alert"
+                    data-testid="rejection-callout"
+                >
+                    <div className="flex items-center gap-2 font-bold text-danger-strong">
+                        <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
+                        <span className="text-sm">
+                            Fuel Request Rejected by Operations
+                        </span>
+                    </div>
+                    <p className="mt-2 text-ink">
+                        <span className="font-semibold text-ink-soft">
+                            Reviewer Decision Note:{' '}
+                        </span>
+                        {request.decision_reason ? (
+                            <span className="font-semibold text-ink italic">
+                                "{request.decision_reason}"
+                            </span>
+                        ) : (
+                            <span className="text-ink-soft italic">
+                                No specific feedback note recorded by reviewer.
+                            </span>
+                        )}
+                    </p>
+                    {request.approved_at && (
+                        <p className="mt-1 text-[11px] text-ink-soft">
+                            Decision finalized on{' '}
+                            {new Date(request.approved_at).toLocaleString()}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {/* Lifecycle Audit Milestones (4 Stages) in Detail View */}
+            {isDetail && (
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-surface-subtle p-3 text-xs sm:grid-cols-4">
+                    <div>
+                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            1. Submitted
+                        </span>
+                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                            {request.created_at
+                                ? new Date(
+                                      request.created_at,
+                                  ).toLocaleDateString(undefined, {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                  })
+                                : 'Recorded'}
+                        </p>
+                        <p className="truncate text-[11px] text-ink-soft">
+                            {request.requester.name}
+                        </p>
+                    </div>
+                    <div>
+                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            2. Forwarded
+                        </span>
+                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                            {request.reviewed_at
+                                ? new Date(
+                                      request.reviewed_at,
+                                  ).toLocaleDateString(undefined, {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                  })
+                                : statusVal === 'submitted'
+                                  ? 'In Queue'
+                                  : '—'}
+                        </p>
+                        <p className="text-[11px] text-ink-soft">
+                            {request.reviewed_at
+                                ? 'Reviewed'
+                                : statusVal === 'submitted'
+                                  ? 'Awaiting review'
+                                  : 'Bypassed'}
+                        </p>
+                    </div>
+                    <div>
+                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            3.{' '}
+                            {statusVal === 'rejected' ? 'Rejected' : 'Approval'}
+                        </span>
+                        <p
+                            className={cn(
+                                'mt-0.5 text-xs font-semibold',
+                                statusVal === 'rejected'
+                                    ? 'text-danger'
+                                    : 'text-ink',
+                            )}
+                        >
+                            {request.approved_at
+                                ? new Date(
+                                      request.approved_at,
+                                  ).toLocaleDateString(undefined, {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                  })
+                                : ['approved', 'verified', 'logged'].includes(
+                                        statusVal,
+                                    )
+                                  ? 'Approved'
+                                  : statusVal === 'rejected'
+                                    ? 'Declined'
+                                    : 'Pending'}
+                        </p>
+                        <p className="text-[11px] text-ink-soft">
+                            {statusVal === 'rejected'
+                                ? 'Declined'
+                                : ['approved', 'verified', 'logged'].includes(
+                                        statusVal,
+                                    )
+                                  ? 'Authorized'
+                                  : 'Awaiting Review'}
+                        </p>
+                    </div>
+                    <div>
+                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            4. Pump Verification
+                        </span>
+                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                            {primaryLog?.recorded_at
+                                ? new Date(
+                                      primaryLog.recorded_at,
+                                  ).toLocaleDateString(undefined, {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                  })
+                                : statusVal === 'verified'
+                                  ? 'Ready to Dispense'
+                                  : statusVal === 'rejected'
+                                    ? 'Closed'
+                                    : 'Awaiting'}
+                        </p>
+                        <p className="text-[11px] text-ink-soft">
+                            {primaryLog
+                                ? `${primaryLog.quantity_litres} L Dispensed`
+                                : statusVal === 'verified'
+                                  ? 'Authorized'
+                                  : statusVal === 'rejected'
+                                    ? 'No Pump Log'
+                                    : 'Pending'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Operational Context Card in Detail View */}
+            {isDetail && (
+                <div className="space-y-2 rounded-xl border border-line bg-surface p-3.5 text-xs">
+                    <div className="flex items-center justify-between border-b border-line/60 pb-2">
+                        <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            Operational Scope & Project Allocation
+                        </span>
+                        <span className="font-mono text-xs font-bold text-brand-strong">
+                            {request.quantity_litres} L ·{' '}
+                            {humanize(request.fuel_type)}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                        <div>
+                            <span className="block text-[11px] text-ink-soft">
+                                Field Requester / Operator:
+                            </span>
+                            <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-ink">
+                                <User className="h-3.5 w-3.5 text-ink-soft" />
+                                <span>{request.requester.name}</span>
+                            </p>
+                        </div>
+                        <div>
+                            <span className="block text-[11px] text-ink-soft">
+                                Contract / Project Allocation:
+                            </span>
+                            <p className="mt-0.5 font-semibold text-ink">
+                                {request.job ? (
+                                    <span>
+                                        {request.job.reference} (
+                                        {request.job.title})
+                                    </span>
+                                ) : (
+                                    <span className="font-normal text-ink-soft italic">
+                                        General Yard / Unassigned Project
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                    {request.purpose && (
+                        <div className="border-t border-line/40 pt-2">
+                            <span className="block text-[11px] text-ink-soft">
+                                Stated Field Purpose:
+                            </span>
+                            <p className="mt-0.5 rounded-md bg-surface-subtle p-2 font-medium text-ink">
+                                {request.purpose}
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Unlinked Asset Informational Warning */}
+            {isDetail && !asset && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-soft/30 p-3.5 text-xs text-warning-strong">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                        <p className="font-bold">
+                            Unlinked General Request (No Equipment Assigned)
+                        </p>
+                        <p className="mt-0.5 text-ink-soft">
+                            This request is not tied to a specific crane or
+                            vehicle. Baseline burn-rate telematics, engine hour
+                            validation, and consumption anomaly detection
+                            ("paihi" theft guard) are inactive.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Equipment & Job Details Card */}
             {asset && (
@@ -382,7 +701,7 @@ export function FuelRequestCard({
                                     <p className="font-mono text-sm font-bold text-ink">
                                         {log.total_cost
                                             ? `₱${parseFloat(log.total_cost).toLocaleString()}`
-                                            : 'N/A'}
+                                            : 'Not recorded'}
                                         {log.price_per_litre && (
                                             <span className="block text-[10px] font-normal text-ink-soft">
                                                 (₱{log.price_per_litre}/L)
@@ -399,7 +718,7 @@ export function FuelRequestCard({
                                             ? `${log.hour_meter} hrs`
                                             : log.odometer_km !== null
                                               ? `${log.odometer_km.toLocaleString()} km`
-                                              : 'N/A'}
+                                              : 'Not recorded'}
                                     </p>
                                 </div>
                                 <div>
@@ -413,8 +732,8 @@ export function FuelRequestCard({
                             </div>
 
                             {/* Consumption Variance Analysis Banner */}
-                            {(log.variance_percentage !== null ||
-                                log.is_anomaly) && (
+                            {log.variance_percentage !== null ||
+                            log.is_anomaly ? (
                                 <div className="mt-2">
                                     <FuelVarianceBadge
                                         variancePercentage={
@@ -428,6 +747,13 @@ export function FuelRequestCard({
                                             {log.anomaly_reason}
                                         </p>
                                     )}
+                                </div>
+                            ) : (
+                                <div className="mt-1">
+                                    <p className="text-xs text-ink-soft">
+                                        Not enough data to assess consumption
+                                        (missing baseline or prior meter)
+                                    </p>
                                 </div>
                             )}
 
@@ -453,20 +779,104 @@ export function FuelRequestCard({
                                 </div>
 
                                 {log.receipt_url && (
-                                    <a
-                                        href={log.receipt_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 font-medium text-brand-strong transition-colors hover:bg-brand-soft/50"
-                                    >
-                                        <FileText className="h-3.5 w-3.5" />
-                                        <span>View Station Receipt</span>
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setViewingReceiptUrl(
+                                                    log.receipt_url ?? null,
+                                                )
+                                            }
+                                            className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand-soft/50 px-2.5 py-1 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft"
+                                            aria-label="Inspect station receipt photo in lightbox"
+                                        >
+                                            <Camera className="h-3.5 w-3.5" />
+                                            <span>Inspect Receipt</span>
+                                        </button>
+                                        <a
+                                            href={log.receipt_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                        >
+                                            <FileText className="h-3 w-3" />
+                                            <span>Direct link</span>
+                                            <ExternalLink className="h-2.5 w-2.5" />
+                                        </a>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Accessible Receipt Photo Lightbox Modal */}
+            {viewingReceiptUrl && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+                    onClick={() => setViewingReceiptUrl(null)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Station receipt inspection lightbox"
+                >
+                    <div
+                        className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-surface p-4 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="mb-3 flex items-center justify-between border-b border-line pb-2.5">
+                            <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-brand" />
+                                <span className="font-mono text-xs font-bold text-ink">
+                                    Station Receipt Audit · {request.reference}
+                                </span>
+                            </div>
+                            <Button
+                                variant="quiet"
+                                size="sm"
+                                onClick={() => setViewingReceiptUrl(null)}
+                                aria-label="Close receipt inspection"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="flex max-h-[65vh] items-center justify-center overflow-auto rounded-lg bg-surface-subtle p-2">
+                            <img
+                                src={viewingReceiptUrl}
+                                alt={`Receipt for ${request.reference}`}
+                                className="max-h-[60vh] w-auto rounded object-contain shadow-sm"
+                            />
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2.5 text-xs text-ink-soft">
+                            <span>
+                                Dispensed:{' '}
+                                <strong className="text-ink">
+                                    {primaryLog?.quantity_litres} L
+                                </strong>
+                                {primaryLog?.total_cost && (
+                                    <>
+                                        {' '}
+                                        · Total:{' '}
+                                        <strong className="text-ink">
+                                            ₱
+                                            {parseFloat(
+                                                primaryLog.total_cost,
+                                            ).toLocaleString()}
+                                        </strong>
+                                    </>
+                                )}
+                            </span>
+                            <a
+                                href={viewingReceiptUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline"
+                            >
+                                <span>Open full resolution</span>
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
+                        </div>
+                    </div>
                 </div>
             )}
         </li>

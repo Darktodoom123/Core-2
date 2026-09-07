@@ -23,6 +23,7 @@ export interface EquipmentInspectionScreenProps {
     technicianName?: string;
     onBack?: () => void;
     onOpenDvir?: () => void;
+    onOpenFuel?: () => void;
     onSaveInspection?: (checks: TechnicianInspectionCheck[]) => void;
     onLogWorkOrder?: (workOrder: MaintenanceWorkOrder) => void;
     onSafeRelease?: (verification: SafeReleaseVerification) => void;
@@ -75,6 +76,7 @@ export const EquipmentInspectionScreen: React.FC<
     onSaveInspection,
     onLogWorkOrder,
     onLogFuelReceipt,
+    onOpenFuel,
     onCompleteHandover,
 }) => {
     const { isDarkHud } = useTheme();
@@ -357,11 +359,45 @@ export const EquipmentInspectionScreen: React.FC<
 
                 {/* TAB 2: Fuel Receipts */}
                 {activeTab === 'fuel' ? (
-                    <FuelReceiptTab
-                        assetCode={assetCode}
-                        fuelLogs={fuelLogs}
-                        onLogFuelReceipt={handleLogFuel}
-                    />
+                    <View style={{ gap: 12 }}>
+                        {onOpenFuel ? (
+                            <View
+                                style={{
+                                    paddingHorizontal: 16,
+                                    paddingTop: 12,
+                                }}
+                            >
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Open Fuel Management"
+                                    onPress={onOpenFuel}
+                                    style={{
+                                        minHeight: 44,
+                                        paddingHorizontal: 14,
+                                        paddingVertical: 10,
+                                        borderRadius: 8,
+                                        backgroundColor: colors.amberDark,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: colors.white,
+                                            fontWeight: '700',
+                                        }}
+                                    >
+                                        Open Full Fuel Management Module
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        ) : null}
+                        <FuelReceiptTab
+                            assetCode={assetCode}
+                            fuelLogs={fuelLogs}
+                            onLogFuelReceipt={handleLogFuel}
+                        />
+                    </View>
                 ) : null}
 
                 {/* TAB 4: Handover */}

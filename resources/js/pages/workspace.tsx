@@ -57,11 +57,25 @@ const SECTION_PROPS: Record<WorkspaceSection, string[]> = {
         'dispatchResourceUsers',
         'gptRecommendations',
     ],
-    assets: ['assets', 'assets_total', 'locations'],
+    assets: ['assets', 'assets_total', 'assets_pagination', 'locations'],
     tracking: ['assets', 'assets_total', 'locations'],
-    fuel: ['fuelRequests', 'assets', 'assets_total'],
+    fuel: [
+        'fuelRequests',
+        'fuelRequests_total',
+        'fuelRequests_stats',
+        'fuelRequests_pagination',
+        'assets',
+        'assets_total',
+    ],
     approvals: ['approvals'],
-    reports: ['jobReports', 'reportExports', 'jobs'],
+    reports: [
+        'jobReports',
+        'jobReports_total',
+        'jobReports_stats',
+        'jobReports_pagination',
+        'reportExports',
+        'jobs',
+    ],
     notifications: ['notifications'],
     archive: ['archivedJobs'],
     'gpt-recommendations': ['gptRecommendations', 'jobs'],
@@ -758,12 +772,19 @@ export default function Workspace(props: WorkspacePageProps) {
                         section={availableSection}
                         assets={props.assets ?? []}
                         assetsTotal={props.assets_total}
+                        assetsPagination={props.assets_pagination}
                         fuelRequests={props.fuelRequests ?? []}
+                        fuelRequestsTotal={props.fuelRequests_total}
+                        fuelRequestsStats={props.fuelRequests_stats}
+                        fuelRequestsPagination={props.fuelRequests_pagination}
                         locations={props.locations ?? []}
                         approvals={props.approvals ?? []}
                         auditEvents={props.auditEvents ?? []}
                         capabilities={props.capabilities}
                         jobReports={props.jobReports}
+                        jobReportsTotal={props.jobReports_total}
+                        jobReportsStats={props.jobReports_stats}
+                        jobReportsPagination={props.jobReports_pagination}
                         reportExports={props.reportExports}
                         notifications={props.notifications}
                         archivedJobs={props.archivedJobs}

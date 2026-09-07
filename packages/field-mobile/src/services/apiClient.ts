@@ -1,4 +1,12 @@
 import type {
+    CreateFuelPayload,
+    FuelOptions,
+    FuelReceiptUpload,
+    FuelRequestPage,
+    MobileFuelRequest,
+    RecordFuelPayload,
+} from '../types/fuel';
+import type {
     ActivateSosIncidentPayload,
     ApiErrorResponse,
     CurrentHosShiftResponse,
@@ -186,6 +194,100 @@ export class FieldApiClient {
         });
 
         return this.handleResponse<{ token: string; user: User }>(response);
+    }
+
+    public async fetchFuelOptions(): Promise<FuelOptions> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-options`,
+            {
+                headers: this.getHeaders(),
+            },
+        );
+
+        return this.handleResponse<FuelOptions>(response);
+    }
+
+    public async fetchFuelRequests(page = 1): Promise<FuelRequestPage> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-requests?page=${page}`,
+            {
+                headers: this.getHeaders(),
+            },
+        );
+
+        if (!response.ok) {
+            return this.handleResponse<FuelRequestPage>(response);
+        }
+
+        const body = (await response.json()) as {
+            data: MobileFuelRequest[];
+            meta: { current_page: number; last_page: number };
+        };
+
+        return {
+            items: body.data,
+            nextPage:
+                body.meta.current_page < body.meta.last_page
+                    ? body.meta.current_page + 1
+                    : null,
+        };
+    }
+
+    public async fetchFuelRequest(id: number): Promise<MobileFuelRequest> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-requests/${id}`,
+            {
+                headers: this.getHeaders(),
+            },
+        );
+
+        return this.handleResponse<MobileFuelRequest>(response);
+    }
+
+    public async createFuelRequest(
+        payload: CreateFuelPayload,
+    ): Promise<MobileFuelRequest> {
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-requests`,
+            {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(payload),
+            },
+        );
+
+        return this.handleResponse<MobileFuelRequest>(response);
+    }
+
+    public async recordFuel(
+        id: number,
+        payload: RecordFuelPayload,
+        receipt?: FuelReceiptUpload,
+    ): Promise<MobileFuelRequest> {
+        const body = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            if (value !== undefined) {
+                body.append(key, String(value));
+            }
+        });
+
+        // React Native's FormData accepts a local file descriptor; the DOM type does not.
+        if (receipt) {
+            body.append('receipt', receipt as unknown as Blob);
+        }
+
+        const headers = this.getHeaders();
+        delete headers['Content-Type'];
+        const response = await this.fetchFn(
+            `${this.baseUrl}/api/v1/fuel-requests/${id}/logs`,
+            {
+                method: 'POST',
+                headers,
+                body,
+            },
+        );
+
+        return this.handleResponse<MobileFuelRequest>(response);
     }
 
     public async fetchMe(): Promise<User> {

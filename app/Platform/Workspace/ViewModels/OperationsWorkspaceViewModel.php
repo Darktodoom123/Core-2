@@ -339,6 +339,59 @@ final class OperationsWorkspaceViewModel
                 ];
             }
 
+            $rawDvirInspections = $asset->relationLoaded('dvirInspections')
+                ? $asset->dvirInspections
+                : ($latestDvir !== null ? collect([$latestDvir]) : collect());
+
+            $dvirInspections = $rawDvirInspections->map(static function (DvirInspection $dvir): array {
+                $critCount = (int) $dvir->critical_defects_count;
+                $status = match (true) {
+                    $critCount > 0 => 'critical_defect',
+                    (bool) $dvir->has_defects => 'defect_flagged',
+                    default => 'passed',
+                };
+                $dvirPhotos = $dvir->relationLoaded('photos')
+                    ? $dvir->photos->map(static fn ($p): array => [
+                        'id' => (int) $p->id,
+                        'angle' => $p->angle,
+                        'url' => $p->url,
+                        'file_name' => $p->file_name ?? "{$p->angle}.jpg",
+                        'is_defect_photo' => str_starts_with($p->angle, 'defect') || (bool) ($p->is_defect_photo ?? false),
+                    ])->values()->all()
+                    : [];
+
+                $defects = $dvir->relationLoaded('checks')
+                    ? $dvir->checks
+                        ->filter(static fn ($c): bool => $c->status->isDefect())
+                        ->map(static fn ($c): array => [
+                            'id' => (int) $c->id,
+                            'category' => $c->category,
+                            'label' => $c->label,
+                            'status' => $c->status->value,
+                            'notes' => $c->notes,
+                        ])->values()->all()
+                    : [];
+
+                return [
+                    'id' => (int) $dvir->id,
+                    'reference' => $dvir->reference,
+                    'inspection_type' => $dvir->inspection_type->value,
+                    'type' => $dvir->inspection_type->value,
+                    'status' => $status,
+                    'has_defects' => (bool) $dvir->has_defects,
+                    'critical_defects_count' => $critCount,
+                    'completed_at' => $dvir->completed_at->toIso8601String(),
+                    'inspector_name' => $dvir->inspector_name,
+                    'starting_odometer_km' => $dvir->starting_odometer_km !== null ? (float) $dvir->starting_odometer_km : null,
+                    'ending_odometer_km' => $dvir->ending_odometer_km !== null ? (float) $dvir->ending_odometer_km : null,
+                    'engine_hours' => $dvir->engine_hours !== null ? (float) $dvir->engine_hours : null,
+                    'remarks' => $dvir->remarks,
+                    'signature_captured' => (bool) $dvir->signature_captured,
+                    'photos' => $dvirPhotos,
+                    'defects' => $defects,
+                ];
+            })->values()->all();
+
             $blockingOrder = $asset->relationLoaded('activeBlockingWorkOrder')
                 ? $asset->activeBlockingWorkOrder
                 : ($asset->relationLoaded('maintenanceWorkOrders')
@@ -383,6 +436,7 @@ final class OperationsWorkspaceViewModel
                 'active_operator' => $activeOperator,
                 'hos' => $hosData,
                 'latest_dvir' => $dvirData,
+                'dvir_inspections' => $dvirInspections,
                 'lockout' => $lockoutData,
                 'inspections' => $inspections->map(static fn ($inspection): array => [
                     'id' => (int) $inspection->getKey(),
@@ -675,7 +729,7 @@ final class OperationsWorkspaceViewModel
             ],
             [
                 'id' => 'fuel',
-                'label' => 'Fuel requests',
+                'label' => 'Fuel Management',
                 'permissions' => [
                     PermissionName::FuelViewAll,
                     PermissionName::FuelViewOwn,

@@ -90,7 +90,10 @@ export function DvirStatusBadge({
         return (
             <button
                 type="button"
-                onClick={() => onViewInspection(dvir.id)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onViewInspection(dvir.id);
+                }}
                 className="inline-flex rounded-full focus:ring-2 focus:ring-brand/40 focus:ring-offset-1 focus:outline-none"
                 title="Click to view DVIR walkaround photos and inspection checklist"
             >
