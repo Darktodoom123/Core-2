@@ -4,6 +4,8 @@ import {
     Clock3,
     List,
     Map,
+    PanelLeftClose,
+    PanelLeftOpen,
     Radio,
     Search,
     WifiOff,
@@ -249,18 +251,41 @@ export function LiveTrackingPreview({
                 </Button>
             </div>
 
-            <div className="grid min-w-0 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <div
+                className={cn(
+                    'grid min-w-0',
+                    tracking.sidebarCollapsed
+                        ? 'grid-cols-1'
+                        : 'lg:grid-cols-[20rem_minmax(0,1fr)]',
+                )}
+            >
                 <div
                     aria-label="Field units"
                     className={cn(
-                        'h-[420px] min-w-0 flex-col lg:flex lg:h-[480px] lg:border-r lg:border-line',
+                        'h-[420px] min-w-0 flex-col lg:h-[480px] lg:border-r lg:border-line',
+                        tracking.sidebarCollapsed ? 'lg:hidden' : 'lg:flex',
                         tracking.mobileView === 'list' ? 'flex' : 'hidden',
                     )}
                 >
-                    <p className="flex min-h-11 shrink-0 items-center border-b border-line px-4 py-2.5 text-xs text-ink-soft">
-                        {tracking.mappedCount} of{' '}
-                        {tracking.visibleLocations.length} with coordinates
-                    </p>
+                    <div className="flex min-h-11 shrink-0 items-center justify-between border-b border-line px-4 py-2 text-xs text-ink-soft">
+                        <span>
+                            {tracking.mappedCount} of{' '}
+                            {tracking.visibleLocations.length} with coordinates
+                        </span>
+                        <Button
+                            variant="quiet"
+                            size="icon"
+                            className="hidden size-8 text-ink-soft hover:text-ink lg:inline-flex"
+                            onClick={() => tracking.setSidebarCollapsed(true)}
+                            aria-label="Collapse unit list"
+                            title="Collapse unit list"
+                        >
+                            <PanelLeftClose
+                                className="size-4"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                    </div>
                     {tracking.visibleLocations.length === 0 ? (
                         <div className="flex flex-1 items-center justify-center p-5">
                             <EmptyState
@@ -304,23 +329,76 @@ export function LiveTrackingPreview({
 
                 <div
                     className={cn(
-                        'h-[420px] min-w-0 flex-col overflow-hidden rounded-b-2xl lg:flex lg:h-[480px] lg:rounded-bl-none',
+                        'h-[420px] min-w-0 flex-col overflow-hidden rounded-b-2xl lg:flex lg:h-[480px]',
+                        tracking.sidebarCollapsed
+                            ? 'lg:rounded-bl-2xl'
+                            : 'lg:rounded-bl-none',
                         tracking.mobileView === 'map' ? 'flex' : 'hidden',
                         tracking.selected && 'rounded-b-none',
                     )}
                 >
-                    <div className="flex min-h-11 shrink-0 items-center gap-2 border-b border-line bg-surface-subtle/50 px-4 py-2 text-xs text-ink-soft">
-                        <Clock3
-                            className="size-3.5 shrink-0"
-                            aria-hidden="true"
-                        />
-                        <span>
-                            {tracking.hasOldLocations
-                                ? 'Showing last reported locations'
-                                : tracking.mappedCount
-                                  ? 'Select a unit to inspect its latest report'
-                                  : 'No reported coordinates to show'}
-                        </span>
+                    <div className="flex min-h-11 shrink-0 items-center justify-between gap-2 border-b border-line bg-surface-subtle/50 px-3 py-1.5 text-xs text-ink-soft sm:px-4">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <Button
+                                variant={
+                                    tracking.sidebarCollapsed
+                                        ? 'secondary'
+                                        : 'quiet'
+                                }
+                                size="sm"
+                                onClick={tracking.toggleSidebar}
+                                aria-label={
+                                    tracking.sidebarCollapsed
+                                        ? 'Show unit list'
+                                        : 'Hide unit list'
+                                }
+                                aria-pressed={!tracking.sidebarCollapsed}
+                                title={
+                                    tracking.sidebarCollapsed
+                                        ? 'Show unit list'
+                                        : 'Hide unit list'
+                                }
+                                className="hidden h-8 gap-1.5 px-2.5 text-xs lg:inline-flex"
+                            >
+                                {tracking.sidebarCollapsed ? (
+                                    <>
+                                        <PanelLeftOpen
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        <span>Show list</span>
+                                        <span className="rounded bg-surface-subtle px-1 py-0.5 text-[10px] font-semibold tabular-nums">
+                                            {tracking.visibleLocations.length}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <PanelLeftClose
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                        <span>Hide list</span>
+                                    </>
+                                )}
+                            </Button>
+                            <Clock3
+                                className="hidden size-3.5 shrink-0 sm:inline"
+                                aria-hidden="true"
+                            />
+                            <span className="truncate">
+                                {tracking.hasOldLocations
+                                    ? 'Showing last reported locations'
+                                    : tracking.mappedCount
+                                      ? 'Select a unit to inspect its latest report'
+                                      : 'No reported coordinates to show'}
+                            </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                            <span className="tabular-nums">
+                                {tracking.mappedCount} of{' '}
+                                {tracking.visibleLocations.length} mapped
+                            </span>
+                        </div>
                     </div>
                     <Suspense fallback={<MapLoadingFallback />}>
                         <LiveTrackingMap
