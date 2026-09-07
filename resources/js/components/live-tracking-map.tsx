@@ -364,19 +364,6 @@ export function LiveTrackingMap({
                 </MapLibreMap>
 
                 {!compact && <MapLegend />}
-                <div
-                    className={cn(
-                        'pointer-events-none absolute z-[2] max-w-[calc(100%-1.5rem)] rounded-md bg-surface px-2 py-1 text-[11px] text-ink-soft',
-                        compact ? 'bottom-10 left-3' : 'top-3 right-3',
-                    )}
-                >
-                    <span>
-                        {provider.isDevelopmentOnly
-                            ? 'Stadia Maps · development/evaluation'
-                            : `${provider.provider} basemap`}{' '}
-                        · {mappedLocations.length} mapped units
-                    </span>
-                </div>
 
                 {mappedLocations.length === 0 &&
                     activeSosIncidents.every(
@@ -1656,17 +1643,26 @@ function CompactMapControls({
                     <Maximize2 className="h-4 w-4" aria-hidden="true" />
                     Fit all units
                 </Button>
-                {isFullscreen && (
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-11 w-11 bg-surface"
-                        aria-label="Exit fullscreen"
-                        onClick={onToggleFullscreen}
-                    >
+                <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-11 w-11 bg-surface"
+                    aria-label={
+                        isFullscreen
+                            ? 'Exit fullscreen'
+                            : 'Expand map fullscreen'
+                    }
+                    title={
+                        isFullscreen ? 'Exit fullscreen' : 'Expand fullscreen'
+                    }
+                    onClick={onToggleFullscreen}
+                >
+                    {isFullscreen ? (
                         <Minimize className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                )}
+                    ) : (
+                        <Maximize className="h-4 w-4" aria-hidden="true" />
+                    )}
+                </Button>
                 <Button
                     ref={triggerRef}
                     variant="secondary"
@@ -1732,7 +1728,11 @@ function CompactMapControls({
                             onToggleFullscreen();
                         }}
                     >
-                        <Maximize className="h-4 w-4" aria-hidden="true" />
+                        {isFullscreen ? (
+                            <Minimize className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                            <Maximize className="h-4 w-4" aria-hidden="true" />
+                        )}
                         {isFullscreen ? 'Exit fullscreen' : 'Expand fullscreen'}
                     </button>
                 </div>
