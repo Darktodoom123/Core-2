@@ -235,6 +235,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         startedAt: '08:00 AM',
         hoursElapsed: 4,
     });
+    const [isUnitLinked, setIsUnitLinked] = useState<boolean>(false);
+    const [dvirStatus, setDvirStatus] = useState<
+        'pending' | 'cleared' | 'passed' | 'defect'
+    >('pending');
+    const [overriddenAssetCode, setOverriddenAssetCode] = useState<
+        string | null
+    >(null);
     const [weather, setWeather] = useState<WeatherTelemetry | null>(null);
     const [isLoadingWeather, setIsLoadingWeather] = useState(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -834,9 +841,22 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [apiClient, refreshHosClocks],
     );
 
+    const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
+    const activeTrackingJob = activeJob || jobs[0] || null;
+
     const handleToggleLocationSharing = useCallback(() => {
-        setLocationSharingActive((prev) => !prev);
-    }, []);
+        setLocationSharingActive((prev) => {
+            const next = !prev;
+            if (!next) {
+                locationService.stopAutoTracking();
+                void stopBackgroundLocationUpdates().catch(() => undefined);
+                if (user && activeTrackingJob) {
+                    void locationService.pauseSharing(user, activeTrackingJob);
+                }
+            }
+            return next;
+        });
+    }, [activeTrackingJob, locationService, user]);
 
     const handleAcceptAssignment = useCallback(
         async (jobId: number, assignmentId: number, version: number) => {
@@ -998,13 +1018,12 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, handleRequestFailure],
     );
 
-    const activeJob = jobs.find((job) => job.id === selectedJobId) || null;
-    const activeTrackingJob = activeJob || jobs[0] || null;
     const currentAsset =
         activeJob?.asset_assignments?.[0] ||
         jobs[0]?.asset_assignments?.[0] ||
         null;
     const resolvedAssetCode =
+        overriddenAssetCode ||
         currentAsset?.asset_code ||
         (jobs.length > 0 ? 'Assigned Unit' : 'UNASSIGNED');
     const resolvedAssetName =
@@ -1021,8 +1040,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             !activeTrackingJob ||
             !user ||
             !getCurrentLocation ||
+            !locationSharingActive ||
             !locationService.canShareLocation(user, activeTrackingJob)
         ) {
+            locationService.stopAutoTracking();
+            void stopBackgroundLocationUpdates().catch(() => undefined);
             return;
         }
 
@@ -1070,7 +1092,13 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             locationService.stopAutoTracking();
             void stopBackgroundLocationUpdates().catch(() => undefined);
         };
-    }, [activeTrackingJob, getCurrentLocation, locationService, user]);
+    }, [
+        activeTrackingJob,
+        getCurrentLocation,
+        locationService,
+        locationSharingActive,
+        user,
+    ]);
 
     const handleGlobalSosHold = useCallback(() => {
         setSosSheetOpen(true);
@@ -1281,6 +1309,43 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 commandOutbox={commandOutbox}
                                 inspectorName={resolvedOperatorName}
                                 onBack={() => setActiveAppView('main')}
+                                onDefectLockout={(_defectiveCode) => {
+                                    setLocationSharingActive(false);
+                                    locationService.stopAutoTracking();
+                                    void stopBackgroundLocationUpdates().catch(
+                                        () => undefined,
+                                    );
+                                    if (user && activeTrackingJob) {
+                                        void locationService.pauseSharing(
+                                            user,
+                                            activeTrackingJob,
+                                        );
+                                    }
+                                    handleChangeDutyStatus(
+                                        'standby',
+                                        'mechanical_inspection',
+                                        'Pre-trip DVIR defect lockout',
+                                    );
+                                    setDvirStatus('defect');
+                                    setIsUnitLinked(false);
+                                }}
+                                onPreTripPassed={() => {
+                                    setDvirStatus('cleared');
+                                }}
+                                onSwapUnit={(newUnitCode) => {
+                                    setOverriddenAssetCode(newUnitCode);
+                                    setIsUnitLinked(true);
+                                    setDvirStatus('pending');
+                                    setLocationSharingActive(true);
+                                }}
+                                onSwitchToStandby={() => {
+                                    handleChangeDutyStatus(
+                                        'standby',
+                                        'mechanical_inspection',
+                                        'Pre-trip DVIR defect lockout',
+                                    );
+                                    setActiveAppView('main');
+                                }}
                             />
                         ) : activeAppView === 'documents' ? (
                             <DocumentsWalletScreen
@@ -1369,6 +1434,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 isLoading={isLoadingJobs}
                                 isOnline={isOnline}
                                 jobs={jobs}
+                                isUnitLinked={isUnitLinked}
+                                onLinkUnit={(_code) => {
+                                    setIsUnitLinked(true);
+                                    setLocationSharingActive(true);
+                                }}
+                                dvirStatus={dvirStatus}
+                                preTripDefectLockout={dvirStatus === 'defect'}
+                                onSwapUnit={(newUnitCode) => {
+                                    setOverriddenAssetCode(newUnitCode);
+                                    setIsUnitLinked(true);
+                                    setDvirStatus('pending');
+                                    setLocationSharingActive(true);
+                                }}
                                 locationSharingActive={locationSharingActive}
                                 onChangeDutyStatus={handleChangeDutyStatus}
                                 onDiscardCommand={handleDiscardCommand}
@@ -1403,7 +1481,18 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     handleToggleLocationSharing
                                 }
                                 onReleaseUnit={() => {
+                                    setIsUnitLinked(false);
                                     setLocationSharingActive(false);
+                                    locationService.stopAutoTracking();
+                                    void stopBackgroundLocationUpdates().catch(
+                                        () => undefined,
+                                    );
+                                    if (user && activeTrackingJob) {
+                                        void locationService.pauseSharing(
+                                            user,
+                                            activeTrackingJob,
+                                        );
+                                    }
                                 }}
                                 onToggleShift={handleToggleShift}
                                 outboxCommands={outboxCommands}

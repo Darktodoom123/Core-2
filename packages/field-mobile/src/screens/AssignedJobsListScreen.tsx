@@ -21,13 +21,16 @@ import type { SyncTone } from '../components/layout/field-header';
 import { colors, shadows, sharedStyles } from '../components/nativeStyles';
 import { PlannedRoutePanel } from '../components/panels/planned-route-panel';
 import { SyncStatusPanel } from '../components/panels/sync-status-panel';
+import { ChangeUnitModal } from '../components/sheets/ChangeUnitModal';
 import { DispatchIntakeSheet } from '../components/sheets/DispatchIntakeSheet';
 import { DutyStatusSelectorModal } from '../components/sheets/DutyStatusSelectorModal';
 import { EndShiftSafeguardModal } from '../components/sheets/EndShiftSafeguardModal';
 import { NotificationsSheet } from '../components/sheets/notifications-sheet';
 import { OnSiteConfirmationModal } from '../components/sheets/OnSiteConfirmationModal';
+import { PreTripDefectFallbackModal } from '../components/sheets/PreTripDefectFallbackModal';
 import { ProfileSheet } from '../components/sheets/profile-sheet';
 import { ReliefHandoverModal } from '../components/sheets/ReliefHandoverModal';
+import type { DvirReadinessStatus } from '../components/cards/AssetVehicleCard';
 import type { FieldApiClient } from '../services/apiClient';
 import { useTheme } from '../theme';
 import type {
@@ -85,6 +88,11 @@ export interface AssignedJobsListScreenProps {
     onOpenFuel?: () => void;
     onOpenForms?: () => void;
     onReleaseUnit?: (assetCode: string) => void;
+    isUnitLinked?: boolean;
+    onLinkUnit?: (assetCode: string) => void;
+    dvirStatus?: DvirReadinessStatus | 'passed';
+    onSwapUnit?: (newUnitCode: string, reason: string) => void;
+    preTripDefectLockout?: boolean;
     onOpenRental?: () => void;
     onOpenSales?: () => void;
     onToggleLocationSharing?: () => void;
@@ -159,6 +167,11 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     onOpenFuel,
     onOpenForms,
     onReleaseUnit,
+    isUnitLinked,
+    onLinkUnit,
+    dvirStatus,
+    onSwapUnit,
+    preTripDefectLockout = false,
     onOpenRental,
     onOpenSales,
     onToggleLocationSharing,
@@ -187,7 +200,40 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     >(undefined);
     const [onSiteConfirmationOpen, setOnSiteConfirmationOpen] = useState(false);
     const [reliefHandoverOpen, setReliefHandoverOpen] = useState(false);
+    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
+    const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
+        useState(false);
+    const [isLinkedLocal, setIsLinkedLocal] = useState<boolean>(
+        isUnitLinked ?? false,
+    );
+    const [localDvirStatus, setLocalDvirStatus] = useState<
+        DvirReadinessStatus | 'passed' | undefined
+    >(dvirStatus);
+    const [overriddenAssetCode, setOverriddenAssetCode] = useState<
+        string | null
+    >(null);
+    const [localDefectLockout, setLocalDefectLockout] = useState<
+        boolean | null
+    >(null);
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
+
+    useEffect(() => {
+        if (isUnitLinked !== undefined) {
+            setIsLinkedLocal(isUnitLinked);
+        }
+    }, [isUnitLinked]);
+
+    useEffect(() => {
+        if (dvirStatus !== undefined) {
+            setLocalDvirStatus(dvirStatus);
+        }
+    }, [dvirStatus]);
+
+    useEffect(() => {
+        if (preTripDefectLockout !== undefined) {
+            setLocalDefectLockout(preTripDefectLockout);
+        }
+    }, [preTripDefectLockout]);
 
     const queuedCount = outboxCommands.filter(
         (command) => command.state === 'queued',
@@ -330,6 +376,14 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     const assetCode =
         primaryAsset?.asset_code ||
         (activeJob ? 'Assigned Unit' : 'UNASSIGNED');
+    const effectiveAssetCode = overriddenAssetCode || assetCode;
+    const isLinked = isUnitLinked !== undefined ? isUnitLinked : isLinkedLocal;
+    const currentDvirStatus =
+        dvirStatus !== undefined ? dvirStatus : localDvirStatus;
+    const isDefectLockout =
+        localDefectLockout !== null
+            ? localDefectLockout
+            : preTripDefectLockout || currentDvirStatus === 'defect';
     const hoursElapsed = shiftInfo.hoursElapsed ?? 4;
     const isDoleWarning = hoursElapsed >= 9.0 && hoursElapsed < 10.0;
     const isDoleCapExceeded = hoursElapsed >= 10.0;
@@ -757,7 +811,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 {/* Assigned Vehicle & Rigging Hero Card */}
                 <AssetVehicleCard
                     activeJob={activeJob}
-                    assetCode={assetCode}
+                    assetCode={effectiveAssetCode}
                     assetKind={primaryAsset?.asset_kind || 'mobile_crane'}
                     assetName={
                         primaryAsset?.asset_name ||
@@ -770,7 +824,16 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                             : []
                     }
                     dispatchPrefix="Ref: "
-                    dvirStatus="cleared"
+                    dvirStatus={
+                        isDefectLockout
+                            ? 'defect'
+                            : currentDvirStatus === 'cleared' ||
+                                currentDvirStatus === 'passed'
+                              ? 'cleared'
+                              : isLinked
+                                ? 'pending'
+                                : 'cleared'
+                    }
                     engineHours={
                         primaryAsset?.engine_hours
                             ? `${primaryAsset.engine_hours.toLocaleString()} hrs`
@@ -781,27 +844,310 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                     variant="hero"
                 />
 
-                {/* On-Site Unit Start Safeguard Button */}
-                <Pressable
-                    accessibilityLabel={`I'm On Site — Start Unit for ${assetCode}`}
-                    accessibilityRole="button"
-                    onPress={() => setOnSiteConfirmationOpen(true)}
-                    style={({ pressed }) => [
-                        styles.startUnitBtn,
-                        isDarkHud && styles.darkStartUnitBtn,
-                        pressed && styles.pressed,
-                    ]}
-                    testID="start-unit-on-site-btn"
-                >
-                    <Text
+                {/* Dynamic Button Transition on Link / DVIR Lifecycle */}
+                {isDefectLockout ? (
+                    /* State 4: Defect Malfunction Fallback */
+                    <View
                         style={[
-                            styles.startUnitBtnText,
-                            isDarkHud && styles.darkStartUnitBtnText,
+                            styles.defectLockoutBanner,
+                            isDarkHud && styles.darkDefectLockoutBanner,
                         ]}
+                        testID="pre-trip-defect-lockout-banner"
                     >
-                        I'm On Site — Start Unit ({assetCode})
-                    </Text>
-                </Pressable>
+                        <Pressable
+                            accessibilityLabel="View safety lockout fallback details"
+                            accessibilityRole="button"
+                            onPress={() => setDefectFallbackModalOpen(true)}
+                            style={styles.defectLockoutHeaderRow}
+                            testID="view-defect-lockout-details-btn"
+                        >
+                            <View style={styles.defectLockoutBadge}>
+                                <Icon color="#FFFFFF" name="alert" size={14} />
+                                <Text style={styles.defectLockoutBadgeText}>
+                                    SAFETY LOCKOUT · UnderMaintenance
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.defectUnitCode,
+                                    isDarkHud && styles.darkDefectUnitCode,
+                                ]}
+                            >
+                                {effectiveAssetCode}
+                            </Text>
+                        </Pressable>
+                        <Text
+                            style={[
+                                styles.defectLockoutNotice,
+                                isDarkHud && styles.darkDefectLockoutNotice,
+                            ]}
+                        >
+                            Critical defect detected during pre-trip inspection.
+                            Telemetry unbound. Operator remains On Duty.
+                        </Text>
+                        <View style={styles.fallbackActionsRow}>
+                            <Pressable
+                                accessibilityLabel="Swap or link replacement unit"
+                                accessibilityRole="button"
+                                onPress={() => setChangeUnitModalOpen(true)}
+                                style={({ pressed }) => [
+                                    styles.fallbackSwapBtn,
+                                    isDarkHud && styles.darkFallbackSwapBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="fallback-swap-unit-btn"
+                            >
+                                <Icon color="#FFFFFF" name="sync" size={14} />
+                                <Text style={styles.fallbackSwapBtnText}>
+                                    Swap Replacement Unit
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                accessibilityLabel="Switch to standby and await dispatch"
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    setOverriddenDutyStatus({
+                                        propStatus: shiftInfo.dutyStatus,
+                                        localStatus: 'standby',
+                                    });
+                                    onChangeDutyStatus?.(
+                                        'standby',
+                                        'mechanical_inspection',
+                                        'Pre-trip DVIR defect lockout',
+                                    );
+                                }}
+                                style={({ pressed }) => [
+                                    styles.fallbackStandbyBtn,
+                                    isDarkHud && styles.darkFallbackStandbyBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="fallback-standby-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    name="clock"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.fallbackStandbyBtnText,
+                                        isDarkHud &&
+                                            styles.darkFallbackStandbyBtnText,
+                                    ]}
+                                >
+                                    Standby / Await Dispatch
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                ) : !isLinked ? (
+                    /* State 1: When Unlinked */
+                    <Pressable
+                        accessibilityLabel={`I'm On Site — Start Unit for ${effectiveAssetCode}`}
+                        accessibilityRole="button"
+                        onPress={() => setOnSiteConfirmationOpen(true)}
+                        style={({ pressed }) => [
+                            styles.startUnitBtn,
+                            isDarkHud && styles.darkStartUnitBtn,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="start-unit-on-site-btn"
+                    >
+                        <Text
+                            style={[
+                                styles.startUnitBtnText,
+                                isDarkHud && styles.darkStartUnitBtnText,
+                            ]}
+                        >
+                            I'm On Site — Start Unit ({effectiveAssetCode})
+                        </Text>
+                    </Pressable>
+                ) : currentDvirStatus === 'cleared' ||
+                  currentDvirStatus === 'passed' ? (
+                    /* State 3: When Linked & Pre-Trip DVIR is Passed */
+                    <View
+                        style={[
+                            styles.operatingModeContainer,
+                            isDarkHud && styles.darkOperatingModeContainer,
+                        ]}
+                        testID="operating-mode-container"
+                    >
+                        <View style={styles.operatingStatusRow}>
+                            <View style={styles.operatingBadge}>
+                                <View style={styles.pulseDot} />
+                                <Text style={styles.operatingBadgeText}>
+                                    UNIT IN SERVICE · ACTIVE
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.operatingUnitCode,
+                                    isDarkHud && styles.darkOperatingUnitCode,
+                                ]}
+                            >
+                                {effectiveAssetCode}
+                            </Text>
+                        </View>
+                        <Pressable
+                            accessibilityLabel={`Operating / Drive Mode for ${effectiveAssetCode}`}
+                            accessibilityRole="button"
+                            onPress={onOpenRoutes}
+                            style={({ pressed }) => [
+                                styles.driveModeBtn,
+                                isDarkHud && styles.darkDriveModeBtn,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="operating-drive-mode-btn"
+                        >
+                            <Icon color="#FFFFFF" name="route" size={16} />
+                            <Text style={styles.driveModeBtnText}>
+                                Operating / Drive Mode
+                            </Text>
+                        </Pressable>
+                        <View style={styles.quickActionsRow}>
+                            <Pressable
+                                accessibilityLabel={
+                                    locationSharingActive
+                                        ? 'Pause Telemetry'
+                                        : 'Resume Telemetry'
+                                }
+                                accessibilityRole="button"
+                                onPress={onToggleLocationSharing}
+                                style={({ pressed }) => [
+                                    styles.quickActionBtn,
+                                    isDarkHud && styles.darkQuickActionBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="quick-action-pause-telemetry-btn"
+                            >
+                                <Icon
+                                    color={
+                                        locationSharingActive
+                                            ? isDarkHud
+                                                ? '#F59E0B'
+                                                : '#D97706'
+                                            : isDarkHud
+                                              ? '#10B981'
+                                              : '#059669'
+                                    }
+                                    name="location"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.quickActionBtnText,
+                                        isDarkHud &&
+                                            styles.darkQuickActionBtnText,
+                                    ]}
+                                >
+                                    {locationSharingActive
+                                        ? 'Pause Telemetry'
+                                        : 'Resume Telemetry'}
+                                </Text>
+                            </Pressable>
+                            <Pressable
+                                accessibilityLabel={`Release Unit ${effectiveAssetCode}`}
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    setIsLinkedLocal(false);
+                                    onReleaseUnit?.(effectiveAssetCode);
+                                }}
+                                style={({ pressed }) => [
+                                    styles.quickActionBtn,
+                                    isDarkHud && styles.darkQuickActionBtn,
+                                    pressed && styles.pressed,
+                                ]}
+                                testID="quick-action-release-unit-btn"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#EF4444' : '#DC2626'}
+                                    name="shield-check"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.quickActionBtnText,
+                                        isDarkHud &&
+                                            styles.darkQuickActionBtnText,
+                                        {
+                                            color: isDarkHud
+                                                ? '#EF4444'
+                                                : '#DC2626',
+                                        },
+                                    ]}
+                                >
+                                    Release Unit
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                ) : (
+                    /* State 2: When Linked & Pre-Trip DVIR is Pending */
+                    <View
+                        style={[
+                            styles.dvirPendingBanner,
+                            isDarkHud && styles.darkDvirPendingBanner,
+                        ]}
+                        testID="dvir-pending-banner"
+                    >
+                        <View style={styles.dvirPendingHeaderRow}>
+                            <View
+                                style={[
+                                    styles.dvirPendingBadge,
+                                    isDarkHud && styles.darkDvirPendingBadge,
+                                ]}
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#F59E0B' : '#D97706'}
+                                    name="alert-circle"
+                                    size={14}
+                                />
+                                <Text
+                                    style={[
+                                        styles.dvirPendingBadgeText,
+                                        isDarkHud &&
+                                            styles.darkDvirPendingBadgeText,
+                                    ]}
+                                >
+                                    PRE-TRIP PENDING
+                                </Text>
+                            </View>
+                            <Text
+                                style={[
+                                    styles.dvirPendingUnitCode,
+                                    isDarkHud && styles.darkDvirPendingUnitCode,
+                                ]}
+                            >
+                                {effectiveAssetCode}
+                            </Text>
+                        </View>
+                        <Text
+                            style={[
+                                styles.dvirPendingNotice,
+                                isDarkHud && styles.darkDvirPendingNotice,
+                            ]}
+                        >
+                            Pre-trip walkaround inspection is required before
+                            operation.
+                        </Text>
+                        <Pressable
+                            accessibilityLabel={`Start Pre-Trip DVIR Inspection for ${effectiveAssetCode}`}
+                            accessibilityRole="button"
+                            onPress={onOpenDvir}
+                            style={({ pressed }) => [
+                                styles.startPreTripBtn,
+                                isDarkHud && styles.darkStartPreTripBtn,
+                                pressed && styles.pressed,
+                            ]}
+                            testID="start-pre-trip-dvir-btn"
+                        >
+                            <Icon color="#FFFFFF" name="file-text" size={16} />
+                            <Text style={styles.startPreTripBtnText}>
+                                Start Pre-Trip DVIR Inspection
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
 
                 {/* 2x4 Industrial Action Launcher Grid (Horizontal Swipeable) */}
                 <ScrollView
@@ -1159,10 +1505,12 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* On-Site Confirmation Modal */}
             <OnSiteConfirmationModal
-                assetCode={assetCode}
+                assetCode={effectiveAssetCode}
                 onCancel={() => setOnSiteConfirmationOpen(false)}
                 onConfirm={() => {
                     setOnSiteConfirmationOpen(false);
+                    setIsLinkedLocal(true);
+                    onLinkUnit?.(effectiveAssetCode);
 
                     if (onToggleLocationSharing && !locationSharingActive) {
                         onToggleLocationSharing();
@@ -1173,14 +1521,15 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* End Shift Safeguard Intercept Modal */}
             <EndShiftSafeguardModal
-                assetCode={assetCode}
+                assetCode={effectiveAssetCode}
                 onCancel={() => {
                     setEndShiftSafeguardOpen(false);
                     setPendingOffDutyRemarks(undefined);
                 }}
                 onConfirmReleaseAndClockOut={() => {
                     setEndShiftSafeguardOpen(false);
-                    onReleaseUnit?.(assetCode);
+                    setIsLinkedLocal(false);
+                    onReleaseUnit?.(effectiveAssetCode);
                     setOverriddenDutyStatus({
                         propStatus: shiftInfo.dutyStatus,
                         localStatus: 'off_duty',
@@ -1198,7 +1547,7 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
 
             {/* Smart Dual Hot-Seating Relief Handover Modal */}
             <ReliefHandoverModal
-                assetCode={assetCode}
+                assetCode={effectiveAssetCode}
                 handoverPin={handoverPin || '8421'}
                 mode="outgoing_offer"
                 onClose={() => setReliefHandoverOpen(false)}
@@ -1207,6 +1556,45 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
                 }}
                 reliefOperatorName={handoverReliefName}
                 visible={reliefHandoverOpen}
+            />
+
+            {/* Change / Swap Unit Modal */}
+            <ChangeUnitModal
+                currentAssetCode={effectiveAssetCode}
+                onClose={() => setChangeUnitModalOpen(false)}
+                onConfirmUnitChange={(newUnitCode, reason) => {
+                    setChangeUnitModalOpen(false);
+                    setDefectFallbackModalOpen(false);
+                    setOverriddenAssetCode(newUnitCode);
+                    setIsLinkedLocal(true);
+                    setLocalDvirStatus('pending');
+                    setLocalDefectLockout(false);
+                    onSwapUnit?.(newUnitCode, reason);
+                }}
+                visible={changeUnitModalOpen}
+            />
+
+            {/* Pre-Trip Defect Fallback Modal */}
+            <PreTripDefectFallbackModal
+                assetCode={effectiveAssetCode}
+                onClose={() => setDefectFallbackModalOpen(false)}
+                onStandby={() => {
+                    setDefectFallbackModalOpen(false);
+                    setOverriddenDutyStatus({
+                        propStatus: shiftInfo.dutyStatus,
+                        localStatus: 'standby',
+                    });
+                    onChangeDutyStatus?.(
+                        'standby',
+                        'mechanical_inspection',
+                        'Pre-trip DVIR defect lockout',
+                    );
+                }}
+                onSwapUnit={() => {
+                    setDefectFallbackModalOpen(false);
+                    setChangeUnitModalOpen(true);
+                }}
+                visible={defectFallbackModalOpen}
             />
         </View>
     );
@@ -1588,6 +1976,285 @@ const styles = StyleSheet.create({
     darkStartUnitBtnText: {
         color: '#0F172A',
         fontWeight: '900',
+    },
+    // State 2: DVIR Pending Banner
+    dvirPendingBanner: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#F59E0B',
+        borderWidth: 1.5,
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 14,
+        marginTop: 6,
+        ...shadows.sm,
+    },
+    darkDvirPendingBanner: {
+        backgroundColor: '#78350F25',
+        borderColor: '#D97706',
+    },
+    dvirPendingHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    dvirPendingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#FEF3C7',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    darkDvirPendingBadge: {
+        backgroundColor: '#451A03',
+    },
+    dvirPendingBadgeText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#B45309',
+        letterSpacing: 0.5,
+    },
+    darkDvirPendingBadgeText: {
+        color: '#FBBF24',
+    },
+    dvirPendingUnitCode: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#78350F',
+    },
+    darkDvirPendingUnitCode: {
+        color: '#FDE68A',
+    },
+    dvirPendingNotice: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#92400E',
+        marginBottom: 12,
+    },
+    darkDvirPendingNotice: {
+        color: '#FDE68A',
+    },
+    startPreTripBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#D97706',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        ...shadows.sm,
+    },
+    darkStartPreTripBtn: {
+        backgroundColor: '#F59E0B',
+    },
+    startPreTripBtnText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    // State 3: Operating Mode Container
+    operatingModeContainer: {
+        backgroundColor: '#F0FDF4',
+        borderColor: '#10B981',
+        borderWidth: 1.5,
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 14,
+        marginTop: 6,
+        ...shadows.sm,
+    },
+    darkOperatingModeContainer: {
+        backgroundColor: '#064E3B25',
+        borderColor: '#059669',
+    },
+    operatingStatusRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    operatingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#DCFCE7',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    pulseDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#10B981',
+    },
+    operatingBadgeText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#065F46',
+        letterSpacing: 0.5,
+    },
+    operatingUnitCode: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#065F46',
+    },
+    darkOperatingUnitCode: {
+        color: '#6EE7B7',
+    },
+    driveModeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: '#059669',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        marginBottom: 10,
+        ...shadows.sm,
+    },
+    darkDriveModeBtn: {
+        backgroundColor: '#10B981',
+    },
+    driveModeBtnText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '800',
+    },
+    quickActionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    quickActionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E2E8F0',
+        borderWidth: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    darkQuickActionBtn: {
+        backgroundColor: '#1E293B',
+        borderColor: '#334155',
+    },
+    quickActionBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#334155',
+    },
+    darkQuickActionBtnText: {
+        color: '#94A3B8',
+    },
+    // State 4: Defect Lockout Banner
+    defectLockoutBanner: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#EF4444',
+        borderWidth: 1.5,
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 14,
+        marginTop: 6,
+        ...shadows.sm,
+    },
+    darkDefectLockoutBanner: {
+        backgroundColor: '#451A1A30',
+        borderColor: '#DC2626',
+    },
+    defectLockoutHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    defectLockoutBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#DC2626',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    defectLockoutBadgeText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+    },
+    defectUnitCode: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#991B1B',
+    },
+    darkDefectUnitCode: {
+        color: '#F87171',
+    },
+    defectLockoutNotice: {
+        fontSize: 13,
+        lineHeight: 18,
+        color: '#7F1D1D',
+        marginBottom: 12,
+    },
+    darkDefectLockoutNotice: {
+        color: '#FECACA',
+    },
+    fallbackActionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    fallbackSwapBtn: {
+        flex: 1.2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#2563EB',
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        ...shadows.sm,
+    },
+    darkFallbackSwapBtn: {
+        backgroundColor: '#3B82F6',
+    },
+    fallbackSwapBtnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    fallbackStandbyBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderWidth: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+    },
+    darkFallbackStandbyBtn: {
+        backgroundColor: '#78350F25',
+        borderColor: '#D97706',
+    },
+    fallbackStandbyBtnText: {
+        color: '#B45309',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    darkFallbackStandbyBtnText: {
+        color: '#FBBF24',
     },
     accessibleHeader: {
         height: 1,

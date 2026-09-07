@@ -19,6 +19,10 @@ import type {
     WalkaroundAngle,
     WalkaroundPhotosMap,
 } from '../components/inspection';
+import {
+    ChangeUnitModal,
+    PreTripDefectFallbackModal,
+} from '../components/index';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import type { FieldApiClient } from '../services/apiClient';
@@ -46,6 +50,10 @@ export interface DvirScreenProps {
     commandOutbox?: CommandOutboxManager;
     onBack?: () => void;
     onSaveInspectionRecord?: (record: DvirInspectionRecord) => void;
+    onDefectLockout?: (assetCode: string, record: DvirInspectionRecord) => void;
+    onSwapUnit?: (newUnitCode: string, reason: string) => void;
+    onSwitchToStandby?: () => void;
+    onPreTripPassed?: (assetCode: string, record: DvirInspectionRecord) => void;
 }
 
 const DEFAULT_CHECKS: TechnicianInspectionCheck[] = [
@@ -208,8 +216,26 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     commandOutbox,
     onBack,
     onSaveInspectionRecord,
+    onDefectLockout,
+    onSwapUnit,
+    onSwitchToStandby,
+    onPreTripPassed,
 }) => {
     const { isDarkHud } = useTheme();
+    const [localAssetCode, setLocalAssetCode] = useState(assetCode);
+    const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
+        useState(false);
+    const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
+    const [freshInspectionNotice, setFreshInspectionNotice] = useState<
+        string | null
+    >(null);
+
+    useEffect(() => {
+        if (assetCode) {
+            setLocalAssetCode(assetCode);
+        }
+    }, [assetCode]);
+
     const [mode, setMode] = useState<'pre_trip' | 'post_trip' | 'history'>(
         initialMode,
     );
@@ -315,12 +341,12 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const designatedEquipment = useMemo(
         () =>
             resolveDesignatedEquipmentType({
-                assetCode,
+                assetCode: localAssetCode,
                 assetName,
                 assetKind,
                 equipmentType,
             }),
-        [assetCode, assetName, assetKind, equipmentType],
+        [localAssetCode, assetName, assetKind, equipmentType],
     );
 
     const presentation = useMemo(
@@ -456,7 +482,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         const record: DvirInspectionRecord = {
             id: `DVIR-${Date.now().toString(36).toUpperCase()}`,
             type: mode === 'post_trip' ? 'post_trip' : 'pre_trip',
-            assetCode,
+            assetCode: localAssetCode,
             assetName,
             inspectorName,
             startingOdometerKm:
@@ -500,6 +526,17 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
         setIsSaved(true);
         onSaveInspectionRecord?.(record);
 
+        const isPreTripLockout =
+            (mode === 'pre_trip' || initialMode === 'pre_trip') &&
+            (hasCriticalDefects || isUnsafe);
+
+        if (isPreTripLockout) {
+            onDefectLockout?.(localAssetCode, record);
+            setDefectFallbackModalOpen(true);
+        } else if (mode === 'pre_trip') {
+            onPreTripPassed?.(localAssetCode, record);
+        }
+
         const checksPayload = record.checks.map((c) => ({
             id: c.id || undefined,
             category: c.category,
@@ -513,7 +550,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
             inspection_type: (record.type === 'post_trip'
                 ? 'post_trip'
                 : 'pre_trip') as 'pre_trip' | 'post_trip',
-            asset_code: assetCode,
+            asset_code: localAssetCode,
             asset_name: assetName,
             inspector_name: inspectorName,
             starting_odometer_km:
@@ -571,6 +608,11 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     };
 
     const handleNextOrSubmit = () => {
+        if (isSaved) {
+            onBack?.();
+            return;
+        }
+
         handleCompleteDvir();
     };
 
@@ -1165,6 +1207,32 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 ) : (
                     /* Create DVIR (Exact Match to Uploaded Screenshots 1, 2 & 3) */
                     <View style={styles.formContainer}>
+                        {freshInspectionNotice ? (
+                            <View
+                                style={[
+                                    styles.freshInspectionBanner,
+                                    isDarkHud &&
+                                        styles.darkFreshInspectionBanner,
+                                ]}
+                                testID="fresh-inspection-notice"
+                            >
+                                <Icon
+                                    color={isDarkHud ? '#34D399' : '#059669'}
+                                    name="check-circle"
+                                    size={16}
+                                />
+                                <Text
+                                    style={[
+                                        styles.freshInspectionText,
+                                        isDarkHud &&
+                                            styles.darkFreshInspectionText,
+                                    ]}
+                                >
+                                    {freshInspectionNotice}
+                                </Text>
+                            </View>
+                        ) : null}
+
                         {/* Section 1: Choose inspection type (Required) */}
                         <View style={styles.formSection}>
                             <Text
@@ -1499,6 +1567,55 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                                         dispatch until verified by a certified
                                         mechanic.
                                     </Text>
+                                    {mode === 'pre_trip' ? (
+                                        <View style={styles.bannerActionsRow}>
+                                            <Pressable
+                                                accessibilityLabel="Swap or link replacement unit"
+                                                accessibilityRole="button"
+                                                onPress={() =>
+                                                    setChangeUnitModalOpen(true)
+                                                }
+                                                style={styles.bannerSwapBtn}
+                                                testID="dvir-lockout-swap-unit-btn"
+                                            >
+                                                <Icon
+                                                    color="#FFFFFF"
+                                                    name="sync"
+                                                    size={12}
+                                                />
+                                                <Text
+                                                    style={
+                                                        styles.bannerSwapBtnText
+                                                    }
+                                                >
+                                                    Swap Replacement Unit
+                                                </Text>
+                                            </Pressable>
+                                            <Pressable
+                                                accessibilityLabel="Switch to standby and await dispatch"
+                                                accessibilityRole="button"
+                                                onPress={() => {
+                                                    onSwitchToStandby?.();
+                                                    onBack?.();
+                                                }}
+                                                style={styles.bannerStandbyBtn}
+                                                testID="dvir-lockout-standby-btn"
+                                            >
+                                                <Icon
+                                                    color="#B45309"
+                                                    name="clock"
+                                                    size={12}
+                                                />
+                                                <Text
+                                                    style={
+                                                        styles.bannerStandbyBtnText
+                                                    }
+                                                >
+                                                    Standby
+                                                </Text>
+                                            </Pressable>
+                                        </View>
+                                    ) : null}
                                 </View>
                             </View>
                         ) : null}
@@ -1783,7 +1900,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
 
             {/* Defects Modal (Screenshot 3) */}
             <DvirDefectsModal
-                assetCode={assetCode}
+                assetCode={localAssetCode}
                 assetKind={assetKind}
                 assetName={assetName}
                 designatedEquipment={designatedEquipment}
@@ -1792,6 +1909,44 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 onClose={() => setIsDefectsModalOpen(false)}
                 selectedDefectIds={selectedDefectIds}
                 visible={isDefectsModalOpen}
+            />
+
+            {/* Pre-Trip Safety Lockout Fallback Modal */}
+            <PreTripDefectFallbackModal
+                assetCode={localAssetCode}
+                onClose={() => setDefectFallbackModalOpen(false)}
+                onStandby={() => {
+                    setDefectFallbackModalOpen(false);
+                    onSwitchToStandby?.();
+                    onBack?.();
+                }}
+                onSwapUnit={() => {
+                    setDefectFallbackModalOpen(false);
+                    setChangeUnitModalOpen(true);
+                }}
+                visible={defectFallbackModalOpen}
+            />
+
+            {/* Change / Swap Unit Modal */}
+            <ChangeUnitModal
+                currentAssetCode={localAssetCode}
+                onClose={() => setChangeUnitModalOpen(false)}
+                onConfirmUnitChange={(newUnitCode, reason) => {
+                    setChangeUnitModalOpen(false);
+                    setDefectFallbackModalOpen(false);
+                    setLocalAssetCode(newUnitCode);
+                    setSelectedDefectIds([]);
+                    setWalkaroundPhotos({});
+                    setSafetyStatus('safe');
+                    setRemarks('');
+                    setIsSaved(false);
+                    setMode('pre_trip');
+                    setFreshInspectionNotice(
+                        `Replacement Unit ${newUnitCode} Linked. Fresh Pre-Trip Inspection Initiated.`,
+                    );
+                    onSwapUnit?.(newUnitCode, reason);
+                }}
+                visible={changeUnitModalOpen}
             />
         </View>
     );
@@ -2057,6 +2212,66 @@ const styles = StyleSheet.create({
     },
     darkLockoutText: {
         color: '#FECACA',
+    },
+    bannerActionsRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 10,
+    },
+    bannerSwapBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#2563EB',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    bannerSwapBtnText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    bannerStandbyBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderWidth: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    bannerStandbyBtnText: {
+        color: '#B45309',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    freshInspectionBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        marginBottom: 14,
+    },
+    darkFreshInspectionBanner: {
+        backgroundColor: '#064E3B25',
+        borderColor: '#065F46',
+    },
+    freshInspectionText: {
+        color: '#065F46',
+        fontSize: 12,
+        fontWeight: '700',
+        flex: 1,
+    },
+    darkFreshInspectionText: {
+        color: '#34D399',
     },
     telemetryCard: {
         backgroundColor: colors.surface,

@@ -5,6 +5,7 @@ import {
     ChangeUnitModal,
     EndShiftSafeguardModal,
     OnSiteConfirmationModal,
+    PreTripDefectFallbackModal,
     ReliefHandoverModal,
 } from '../components/index';
 import { AssignedJobsListScreen } from '../screens/AssignedJobsListScreen';
@@ -145,6 +146,69 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
                 expect.stringContaining('Site supervisor reallocated unit'),
             );
         });
+
+        it('allows typing a replacement machinery code directly into manual input', async () => {
+            const onConfirm = jest.fn();
+            const onClose = jest.fn();
+
+            const view = await render(
+                <ChangeUnitModal
+                    currentAssetCode="CRN-101"
+                    onClose={onClose}
+                    onConfirmUnitChange={onConfirm}
+                    visible={true}
+                />,
+            );
+
+            expect(view.getByTestId('change-unit-code-input')).toBeTruthy();
+            await fireEvent.changeText(
+                view.getByTestId('change-unit-code-input'),
+                'CRN-102',
+            );
+            await fireEvent.press(view.getByTestId('confirm-change-unit-btn'));
+
+            expect(onConfirm).toHaveBeenCalledWith(
+                'CRN-102',
+                expect.any(String),
+            );
+        });
+    });
+
+    describe('PreTripDefectFallbackModal', () => {
+        it('renders safety lockout alert, HoS On Duty preservation, and provides swap/standby actions', async () => {
+            const onSwapUnit = jest.fn();
+            const onStandby = jest.fn();
+            const onClose = jest.fn();
+
+            const view = await render(
+                <PreTripDefectFallbackModal
+                    assetCode="CRN-101"
+                    onClose={onClose}
+                    onStandby={onStandby}
+                    onSwapUnit={onSwapUnit}
+                    visible={true}
+                />,
+            );
+
+            expect(
+                view.getByTestId('pre-trip-defect-fallback-modal'),
+            ).toBeTruthy();
+            expect(
+                view.getByText('SAFETY LOCKOUT · UnderMaintenance'),
+            ).toBeTruthy();
+            expect(view.getByText('Pre-Trip Safety Lockout')).toBeTruthy();
+            expect(view.getByText(/CRN-101/)).toBeTruthy();
+            expect(view.getByText(/You remain clocked in/)).toBeTruthy();
+            expect(view.getByText('On Duty')).toBeTruthy();
+
+            // Tap Swap / Link Replacement Unit
+            await fireEvent.press(view.getByTestId('fallback-swap-unit-btn'));
+            expect(onSwapUnit).toHaveBeenCalledTimes(1);
+
+            // Tap Standby / Await Dispatch
+            await fireEvent.press(view.getByTestId('fallback-standby-btn'));
+            expect(onStandby).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('ReliefHandoverModal (Smart Dual: 1-Tap Scheduled Push + 4-Digit PIN)', () => {
@@ -269,6 +333,250 @@ describe('Mobile Lifecycle Modals & Operational Safeguards', () => {
             expect(view.getByTestId('start-unit-on-site-btn')).toBeTruthy();
             await fireEvent.press(view.getByTestId('start-unit-on-site-btn'));
             expect(view.getByTestId('on-site-confirmation-modal')).toBeTruthy();
+        });
+
+        it('transitions from "I\'m On Site" button to "Start Pre-Trip DVIR Inspection" CTA after confirming link', async () => {
+            const onLinkUnit = jest.fn();
+            const onOpenDvir = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    jobs={[mockAcceptedJob]}
+                    onLinkUnit={onLinkUnit}
+                    onOpenDvir={onOpenDvir}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                />,
+            );
+
+            // Step 1: Unlinked state shows "I'm On Site" button, and pre-trip CTA does not exist yet
+            expect(view.getByTestId('start-unit-on-site-btn')).toBeTruthy();
+            expect(
+                view.getByText("I'm On Site — Start Unit (CRN-101)"),
+            ).toBeTruthy();
+            expect(view.queryByTestId('dvir-pending-banner')).toBeNull();
+            expect(view.queryByTestId('start-pre-trip-dvir-btn')).toBeNull();
+
+            // Step 2: Tap "I'm On Site" to open confirmation modal
+            await fireEvent.press(view.getByTestId('start-unit-on-site-btn'));
+            expect(view.getByTestId('on-site-confirmation-modal')).toBeTruthy();
+
+            // Step 3: Confirm physical arrival
+            await fireEvent.press(view.getByTestId('confirm-on-site-btn'));
+            expect(onLinkUnit).toHaveBeenCalledWith('CRN-101');
+
+            // Step 4: Verify "I'm On Site" button is GONE and replaced by Pre-Trip banner + CTA
+            expect(view.queryByTestId('start-unit-on-site-btn')).toBeNull();
+            expect(view.getByTestId('dvir-pending-banner')).toBeTruthy();
+            expect(view.getByText('PRE-TRIP PENDING')).toBeTruthy();
+            expect(
+                view.getByText(
+                    'Pre-trip walkaround inspection is required before operation.',
+                ),
+            ).toBeTruthy();
+            expect(view.getByTestId('start-pre-trip-dvir-btn')).toBeTruthy();
+
+            // Step 5: Tapping "Start Pre-Trip DVIR Inspection" CTA calls onOpenDvir
+            await fireEvent.press(view.getByTestId('start-pre-trip-dvir-btn'));
+            expect(onOpenDvir).toHaveBeenCalledTimes(1);
+        });
+
+        it('transitions to Operating / Drive Mode and telemetry controls when pre-trip DVIR has passed', async () => {
+            const onOpenRoutes = jest.fn();
+            const onToggleLocationSharing = jest.fn();
+            const onReleaseUnit = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    dvirStatus="cleared"
+                    isLoading={false}
+                    isUnitLinked={true}
+                    jobs={[mockAcceptedJob]}
+                    locationSharingActive={true}
+                    onOpenRoutes={onOpenRoutes}
+                    onRefresh={jest.fn()}
+                    onReleaseUnit={onReleaseUnit}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    onToggleLocationSharing={onToggleLocationSharing}
+                    outboxCommands={[]}
+                />,
+            );
+
+            // Unlinked and pre-trip pending buttons are not rendered
+            expect(view.queryByTestId('start-unit-on-site-btn')).toBeNull();
+            expect(view.queryByTestId('dvir-pending-banner')).toBeNull();
+            expect(view.queryByTestId('start-pre-trip-dvir-btn')).toBeNull();
+
+            // Operating container and active badge are rendered
+            expect(view.getByTestId('operating-mode-container')).toBeTruthy();
+            expect(view.getByText('UNIT IN SERVICE · ACTIVE')).toBeTruthy();
+            expect(view.getByTestId('operating-drive-mode-btn')).toBeTruthy();
+
+            // Tap Drive Mode
+            await fireEvent.press(view.getByTestId('operating-drive-mode-btn'));
+            expect(onOpenRoutes).toHaveBeenCalledTimes(1);
+
+            // Tap Pause Telemetry
+            const pauseBtn = view.getByTestId(
+                'quick-action-pause-telemetry-btn',
+            );
+            expect(view.getByText('Pause Telemetry')).toBeTruthy();
+            await fireEvent.press(pauseBtn);
+            expect(onToggleLocationSharing).toHaveBeenCalledTimes(1);
+
+            // Tap Release Unit
+            await fireEvent.press(
+                view.getByTestId('quick-action-release-unit-btn'),
+            );
+            expect(onReleaseUnit).toHaveBeenCalledWith('CRN-101');
+        });
+
+        it('renders pre-trip defect lockout fallback banner, allows unit swap to CRN-102 and standby transition', async () => {
+            const onSwapUnit = jest.fn();
+            const onChangeDutyStatus = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    isUnitLinked={true}
+                    jobs={[mockAcceptedJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    onSwapUnit={onSwapUnit}
+                    outboxCommands={[]}
+                    preTripDefectLockout={true}
+                />,
+            );
+
+            // Lockout banner renders with UnderMaintenance alert and unbind notice
+            expect(
+                view.getByTestId('pre-trip-defect-lockout-banner'),
+            ).toBeTruthy();
+            expect(
+                view.getByText('SAFETY LOCKOUT · UnderMaintenance'),
+            ).toBeTruthy();
+            expect(
+                view.getByText(
+                    'Critical defect detected during pre-trip inspection. Telemetry unbound. Operator remains On Duty.',
+                ),
+            ).toBeTruthy();
+            expect(view.queryByTestId('start-unit-on-site-btn')).toBeNull();
+            expect(view.queryByTestId('operating-drive-mode-btn')).toBeNull();
+
+            // Test Option A: Swap replacement unit to CRN-102
+            await fireEvent.press(view.getByTestId('fallback-swap-unit-btn'));
+            expect(view.getByTestId('change-unit-modal')).toBeTruthy();
+
+            // Select CRN-102 in ChangeUnitModal and confirm
+            await fireEvent.press(view.getByTestId('unit-option-CRN-102'));
+            await fireEvent.press(view.getByTestId('confirm-change-unit-btn'));
+
+            expect(onSwapUnit).toHaveBeenCalledWith(
+                'CRN-102',
+                expect.any(String),
+            );
+
+            // UI transitions to fresh pre-trip pending state for CRN-102
+            expect(
+                view.queryByTestId('pre-trip-defect-lockout-banner'),
+            ).toBeNull();
+            expect(view.getByTestId('dvir-pending-banner')).toBeTruthy();
+            expect(view.getAllByText('CRN-102').length).toBeGreaterThanOrEqual(
+                1,
+            );
+            expect(view.getByTestId('start-pre-trip-dvir-btn')).toBeTruthy();
+        });
+
+        it('switches to standby from pre-trip defect lockout banner preserving operator On Duty status', async () => {
+            const onChangeDutyStatus = jest.fn();
+
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    isUnitLinked={true}
+                    jobs={[mockAcceptedJob]}
+                    onChangeDutyStatus={onChangeDutyStatus}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    preTripDefectLockout={true}
+                />,
+            );
+
+            expect(
+                view.getByTestId('pre-trip-defect-lockout-banner'),
+            ).toBeTruthy();
+
+            // Press Standby / Await Dispatch
+            await fireEvent.press(view.getByTestId('fallback-standby-btn'));
+            expect(onChangeDutyStatus).toHaveBeenCalledWith(
+                'standby',
+                'mechanical_inspection',
+                'Pre-trip DVIR defect lockout',
+            );
+            // Duty status bar immediately reflects standby
+            expect(view.getByText('SBY')).toBeTruthy();
+            expect(view.getByText('On Duty — Standby / Delay')).toBeTruthy();
+        });
+
+        it('allows tapping the defect lockout banner header to open PreTripDefectFallbackModal and dismissing it', async () => {
+            const view = await render(
+                <AssignedJobsListScreen
+                    isLoading={false}
+                    isUnitLinked={true}
+                    jobs={[mockAcceptedJob]}
+                    onRefresh={jest.fn()}
+                    onSelectJob={jest.fn()}
+                    onSosHoldComplete={jest.fn()}
+                    outboxCommands={[]}
+                    preTripDefectLockout={true}
+                />,
+            );
+
+            expect(
+                view.getByTestId('pre-trip-defect-lockout-banner'),
+            ).toBeTruthy();
+            expect(
+                view.queryByTestId('pre-trip-defect-fallback-modal'),
+            ).toBeNull();
+
+            // Tap banner header to inspect lockout details modal
+            await fireEvent.press(
+                view.getByTestId('view-defect-lockout-details-btn'),
+            );
+            expect(
+                view.getByTestId('pre-trip-defect-fallback-modal'),
+            ).toBeTruthy();
+            expect(view.getByText('Pre-Trip Safety Lockout')).toBeTruthy();
+
+            // Dismiss modal
+            await fireEvent.press(view.getByTestId('close-fallback-modal-btn'));
+            expect(
+                view.queryByTestId('pre-trip-defect-fallback-modal'),
+            ).toBeNull();
+        });
+
+        it('filters currentAssetCode out from replacement options in ChangeUnitModal', async () => {
+            const view = await render(
+                <ChangeUnitModal
+                    currentAssetCode="CRN-102"
+                    onClose={jest.fn()}
+                    onConfirmUnitChange={jest.fn()}
+                    visible={true}
+                />,
+            );
+
+            // CRN-102 should be filtered out from replacement list because it is the currently defective unit
+            expect(view.queryByTestId('unit-option-CRN-102')).toBeNull();
+            expect(view.getByTestId('unit-option-CRN-103')).toBeTruthy();
+            expect(view.getByTestId('unit-option-CRN-201')).toBeTruthy();
         });
 
         it('intercepts off_duty selection from DutyStatusSelectorModal with EndShiftSafeguardModal when linked to an active unit', async () => {

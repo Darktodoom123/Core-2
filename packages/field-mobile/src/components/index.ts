@@ -15,6 +15,7 @@ export * from './sheets/OnSiteConfirmationModal';
 export * from './sheets/EndShiftSafeguardModal';
 export * from './sheets/ReliefHandoverModal';
 export * from './sheets/ChangeUnitModal';
+export * from './sheets/PreTripDefectFallbackModal';
 export * from './sheets/DispatchIntakeSheet';
 export * from './common/Icon';
 export * from './sos';

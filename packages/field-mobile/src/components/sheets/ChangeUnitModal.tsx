@@ -52,12 +52,19 @@ export const ChangeUnitModal: React.FC<ChangeUnitModalProps> = ({
         'Site supervisor reallocated unit due to mechanical readiness',
     );
 
+    const selectableUnits = availableUnits.filter(
+        (unit) => unit.code !== currentAssetCode,
+    );
+    const displayUnits =
+        selectableUnits.length > 0 ? selectableUnits : availableUnits;
+
     const handleConfirm = () => {
-        if (!selectedUnit) {
+        const trimmed = selectedUnit.trim().toUpperCase();
+        if (!trimmed) {
             return;
         }
 
-        onConfirmUnitChange(selectedUnit, reason);
+        onConfirmUnitChange(trimmed, reason);
         onClose();
     };
 
@@ -104,11 +111,27 @@ export const ChangeUnitModal: React.FC<ChangeUnitModalProps> = ({
                     </View>
 
                     <Text style={[styles.prompt, isDarkHud && styles.darkText]}>
-                        Select the physical machinery present on site:
+                        Select or enter the physical machinery present on site:
                     </Text>
 
+                    <TextInput
+                        accessibilityLabel="Enter or scan replacement unit code"
+                        autoCapitalize="characters"
+                        onChangeText={(text) =>
+                            setSelectedUnit(text.trim().toUpperCase())
+                        }
+                        placeholder="Enter unit code (e.g. CRN-102)"
+                        placeholderTextColor={isDarkHud ? '#64748B' : '#94A3B8'}
+                        style={[
+                            styles.unitCodeInput,
+                            isDarkHud && styles.darkUnitCodeInput,
+                        ]}
+                        testID="change-unit-code-input"
+                        value={selectedUnit}
+                    />
+
                     <ScrollView style={styles.unitList}>
-                        {availableUnits.map((unit) => {
+                        {displayUnits.map((unit) => {
                             const isSelected = selectedUnit === unit.code;
 
                             return (
@@ -324,6 +347,24 @@ const styles = StyleSheet.create({
     unitName: {
         fontSize: 13,
         color: '#64748B',
+    },
+    unitCodeInput: {
+        borderWidth: 1.5,
+        borderColor: '#CBD5E1',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#0F172A',
+        backgroundColor: '#F8FAFC',
+        marginBottom: 12,
+        letterSpacing: 0.5,
+    },
+    darkUnitCodeInput: {
+        borderColor: '#334155',
+        backgroundColor: '#0F172A',
+        color: '#F8FAFC',
     },
     inputLabel: {
         fontSize: 12,
