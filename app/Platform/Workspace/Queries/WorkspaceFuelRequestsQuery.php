@@ -91,15 +91,31 @@ final class WorkspaceFuelRequestsQuery
             ];
         }
 
-        $base = FuelRequest::query()->visibleTo($user);
+        /** @var object{total?: int|string|null, pending?: int|string|null, approved?: int|string|null, verified?: int|string|null, logged?: int|string|null, anomalies?: int|string|null}|null $stats */
+        $stats = FuelRequest::query()
+            ->visibleTo($user)
+            ->toBase()
+            ->selectRaw("
+                COUNT(*) AS total,
+                COUNT(CASE WHEN status IN ('submitted', 'forwarded') THEN 1 END) AS pending,
+                COUNT(CASE WHEN status = 'approved' THEN 1 END) AS approved,
+                COUNT(CASE WHEN status = 'verified' THEN 1 END) AS verified,
+                COUNT(CASE WHEN status = 'logged' THEN 1 END) AS logged,
+                COUNT(CASE WHEN EXISTS (
+                    SELECT 1 FROM fuel_logs
+                    WHERE fuel_logs.fuel_request_id = fuel_requests.id
+                      AND fuel_logs.is_anomaly = ?
+                ) THEN 1 END) AS anomalies
+            ", [true])
+            ->first();
 
         return [
-            'total' => (clone $base)->count(),
-            'pending' => (clone $base)->whereIn('status', ['submitted', 'forwarded'])->count(),
-            'approved' => (clone $base)->where('status', 'approved')->count(),
-            'verified' => (clone $base)->where('status', 'verified')->count(),
-            'logged' => (clone $base)->where('status', 'logged')->count(),
-            'anomalies' => (clone $base)->whereHas('logs', fn ($q) => $q->where('is_anomaly', true))->count(),
+            'total' => (int) ($stats->total ?? 0),
+            'pending' => (int) ($stats->pending ?? 0),
+            'approved' => (int) ($stats->approved ?? 0),
+            'verified' => (int) ($stats->verified ?? 0),
+            'logged' => (int) ($stats->logged ?? 0),
+            'anomalies' => (int) ($stats->anomalies ?? 0),
         ];
     }
 }

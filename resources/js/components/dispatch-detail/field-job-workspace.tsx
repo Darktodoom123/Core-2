@@ -17,6 +17,7 @@ import { CanonicalStatusBadge } from '@/components/workspace/canonical-status-ba
 import { cn } from '@/lib/utils';
 import type {
     AssetCandidateViewModel,
+    CandidatePageViewModel,
     DispatchDetailPageProps,
     PersonnelCandidateViewModel,
 } from '@/types/workspace';
@@ -29,12 +30,16 @@ export function FieldJobWorkspace({
     capabilities,
     personnelCandidates,
     assetCandidates,
+    personnelPage,
+    assetPage,
 }: {
     job: DispatchDetailPageProps['job'];
     progression: NonNullable<DispatchDetailPageProps['progression']>;
     capabilities: DispatchDetailPageProps['capabilities'];
     personnelCandidates: PersonnelCandidateViewModel[];
     assetCandidates: AssetCandidateViewModel[];
+    personnelPage?: CandidatePageViewModel<PersonnelCandidateViewModel>;
+    assetPage?: CandidatePageViewModel<AssetCandidateViewModel>;
 }) {
     return (
         <div className="mx-auto grid max-w-6xl gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)]">
@@ -49,6 +54,8 @@ export function FieldJobWorkspace({
                     capabilities={capabilities}
                     personnelCandidates={personnelCandidates}
                     assetCandidates={assetCandidates}
+                    personnelPage={personnelPage}
+                    assetPage={assetPage}
                 />
             </div>
         </div>

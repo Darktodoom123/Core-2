@@ -14,6 +14,7 @@ export interface ModalProps {
     footer?: ReactNode;
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
     className?: string;
+    contentClassName?: string;
     closeOnEscape?: boolean;
     closeOnBackdrop?: boolean;
     returnFocusTo?: HTMLElement | null;
@@ -36,6 +37,7 @@ export function Modal({
     footer,
     size = 'md',
     className,
+    contentClassName,
     closeOnEscape = true,
     closeOnBackdrop = true,
     returnFocusTo,
@@ -217,7 +219,12 @@ export function Modal({
                         )}
 
                         {/* Content */}
-                        <div className="max-h-[calc(85vh-10rem)] overflow-y-auto p-6">
+                        <div
+                            className={cn(
+                                'max-h-[calc(85vh-10rem)] overflow-y-auto p-6',
+                                contentClassName,
+                            )}
+                        >
                             {children}
                         </div>
 

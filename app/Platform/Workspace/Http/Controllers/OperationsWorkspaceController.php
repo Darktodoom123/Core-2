@@ -163,35 +163,40 @@ final class OperationsWorkspaceController extends Controller
         array $fuelFilters = [],
         array $reportFilters = [],
     ): array {
-        [$overviewAssets, $overviewAssetsTotal] = $this->fetchAssetsWithTotal($user, 50);
-        [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
-
         return match ($section) {
-            'overview' => [
-                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments, 6)),
-                'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
-                'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
-                'assets' => OperationsWorkspaceViewModel::assets($overviewAssets),
-                'assets_total' => $overviewAssetsTotal,
-                'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
-                'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
-                'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
-                'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user, 50)),
-                'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
-                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
-            ],
-            'dispatch' => [
-                'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
-                'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
-                'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
-                'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
-                'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
-                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
-                'assets_total' => $defaultAssetsTotal,
-                'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
-                'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
-                'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
-            ],
+            'overview' => (function () use ($user, $canViewAllAssignments, $canCreateDispatch): array {
+                [$overviewAssets, $overviewAssetsTotal] = $this->fetchAssetsWithTotal($user, 50);
+
+                return [
+                    'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments, 6)),
+                    'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
+                    'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+                    'assets' => OperationsWorkspaceViewModel::assets($overviewAssets),
+                    'assets_total' => $overviewAssetsTotal,
+                    'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($this->fetchFuelRequests($user)),
+                    'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+                    'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+                    'users' => OperationsWorkspaceViewModel::users($this->fetchUsers($user, 50)),
+                    'auditEvents' => OperationsWorkspaceViewModel::auditEvents($this->fetchAuditEvents($user)),
+                    'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+                ];
+            })(),
+            'dispatch' => (function () use ($user, $canViewAllAssignments, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs): array {
+                [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
+
+                return [
+                    'jobs' => OperationsWorkspaceViewModel::jobs($this->fetchJobs($user, $canViewAllAssignments)),
+                    'clients' => OperationsWorkspaceViewModel::clients($this->fetchClients($canCreateDispatch)),
+                    'serviceRequests' => OperationsWorkspaceViewModel::serviceRequests($this->fetchServiceRequests($canCreateDispatch)),
+                    'rentalHandoffs' => OperationsWorkspaceViewModel::rentalHandoffs($this->fetchRentalHandoffs($canViewRentalHandoffs)),
+                    'salesHandoffs' => OperationsWorkspaceViewModel::salesHandoffs($this->fetchSalesHandoffs($canViewSalesHandoffs)),
+                    'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                    'assets_total' => $defaultAssetsTotal,
+                    'approvals' => OperationsWorkspaceViewModel::approvals($this->fetchApprovals($user), $user),
+                    'dispatchResourceUsers' => OperationsWorkspaceViewModel::dispatchResourceUsers($this->fetchDispatchResourceUsers($user)),
+                    'gptRecommendations' => OperationsWorkspaceViewModel::gptRecommendations($this->fetchGptRecommendations($user)),
+                ];
+            })(),
             'assets' => (function () use ($user, $assetFilters): array {
                 $assetPaginator = app(WorkspaceAssetsQuery::class)->paginate($user, $assetFilters);
 
@@ -207,13 +212,18 @@ final class OperationsWorkspaceController extends Controller
                     'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
                 ];
             })(),
-            'tracking' => [
-                'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
-                'assets_total' => $defaultAssetsTotal,
-                'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
-            ],
-            'fuel' => (function () use ($user, $fuelFilters, $defaultAssets, $defaultAssetsTotal): array {
+            'tracking' => (function () use ($user): array {
+                [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
+
+                return [
+                    'assets' => OperationsWorkspaceViewModel::assets($defaultAssets),
+                    'assets_total' => $defaultAssetsTotal,
+                    'locations' => OperationsWorkspaceViewModel::locations($this->fetchLocations($user)),
+                ];
+            })(),
+            'fuel' => (function () use ($user, $fuelFilters): array {
                 $fuelPaginator = app(WorkspaceFuelRequestsQuery::class)->paginate($user, $fuelFilters);
+                [$defaultAssets, $defaultAssetsTotal] = $this->fetchAssetsWithTotal($user);
 
                 return [
                     'fuelRequests' => OperationsWorkspaceViewModel::fuelRequests($fuelPaginator->getCollection()),

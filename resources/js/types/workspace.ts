@@ -70,6 +70,11 @@ export interface DispatchAssignmentViewModel {
     response_status: StatusViewModel<'pending' | 'accepted' | 'rejected'>;
     responded_at: string | null;
     response_reason: string | null;
+    credential?: {
+        label: string;
+        status: string;
+        expires_at: string | null;
+    } | null;
 }
 
 export interface DispatchAssetAssignmentViewModel {
@@ -1167,6 +1172,56 @@ export interface CandidatePageViewModel<T> {
     error: string | null;
 }
 
+export interface DispatchExecutionMilestoneViewModel {
+    id: number;
+    status: StatusViewModel<DispatchStatusValue>;
+    recorded_at: string | null;
+}
+
+export interface DispatchExecutionLocationViewModel {
+    id: number;
+    latitude: number;
+    longitude: number;
+    accuracy_metres: number | null;
+    source: string;
+    user: { id: number; name: string } | null;
+    asset: { id: number; code: string; name: string } | null;
+    captured_at: string | null;
+    received_at: string | null;
+}
+
+export interface DispatchExecutionReportViewModel {
+    id: number;
+    status: StatusViewModel<'submitted' | 'approved' | 'rejected'>;
+    started_at: string | null;
+    ended_at: string | null;
+    submitted_at: string | null;
+    work_summary: string;
+    remarks: string | null;
+    coordinates: { latitude: number; longitude: number } | null;
+}
+
+export interface DispatchExecutionViewModel {
+    status: StatusViewModel<DispatchStatusValue>;
+    updated_at: string | null;
+    milestones: DispatchExecutionMilestoneViewModel[];
+    issues: Array<{ kind: string; title: string; detail: string }>;
+    site: {
+        name: string;
+        notes: string | null;
+        planned_coordinates: { latitude: number; longitude: number } | null;
+        latest_location: DispatchExecutionLocationViewModel | null;
+    };
+    reports: DispatchExecutionReportViewModel[];
+    activity: Array<{
+        id: string;
+        kind: 'status' | 'report' | 'location';
+        title: string;
+        detail: string;
+        recorded_at: string | null;
+    }>;
+}
+
 export interface DispatchDetailPageProps {
     project_context?: {
         name: string;
@@ -1206,6 +1261,7 @@ export interface DispatchDetailPageProps {
         } | null;
         message: string;
     } | null;
+    execution?: DispatchExecutionViewModel | null;
     capabilities: {
         assign_resources: boolean;
         reassign_resources: boolean;

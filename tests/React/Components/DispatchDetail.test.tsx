@@ -41,4 +41,13 @@ describe('getSafeReturnTo', () => {
             expect(getSafeReturnTo()).toBe('/');
         }
     });
+
+    it('reads the server page URL so return navigation matches before hydration', () => {
+        expect(
+            getSafeReturnTo(
+                null,
+                '/operations/dispatch-jobs/1?return_to=%2F%3Fview%3Ddispatch%26dispatch_tab%3Din-progress',
+            ),
+        ).toBe('/?view=dispatch&dispatch_tab=in-progress');
+    });
 });

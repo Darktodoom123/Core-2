@@ -25,6 +25,7 @@ use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
@@ -141,18 +142,21 @@ final class OperationsWorkspaceViewModel
             'version' => $job->version,
             'updated_at' => $job->updated_at?->toIso8601String(),
             'personnel_assignments' => $job->personnelAssignments
-                ->map(static fn (DispatchPersonnelAssignment $assignment): array => [
-                    'id' => (int) $assignment->getKey(),
-                    'user_id' => (int) $assignment->user_id,
-                    'name' => $assignment->user->name,
-                    'type' => $assignment->assignment_type,
-                    'response_status' => [
-                        'value' => $assignment->response_status->value,
-                        'label' => $assignment->response_status->label(),
-                    ],
-                    'responded_at' => $assignment->responded_at?->toIso8601String(),
-                    'response_reason' => $assignment->response_reason,
-                ])->values()->all(),
+                ->map(static function (DispatchPersonnelAssignment $assignment) use ($job): array {
+                    return [
+                        'id' => (int) $assignment->getKey(),
+                        'user_id' => (int) $assignment->user_id,
+                        'name' => $assignment->user->name,
+                        'type' => $assignment->assignment_type,
+                        'response_status' => [
+                            'value' => $assignment->response_status->value,
+                            'label' => $assignment->response_status->label(),
+                        ],
+                        'responded_at' => $assignment->responded_at?->toIso8601String(),
+                        'response_reason' => $assignment->response_reason,
+                        'credential' => self::dispatchAssignmentCredential($assignment, $job),
+                    ];
+                })->values()->all(),
             'asset_assignments' => $job->assetAssignments
                 ->map(static fn (DispatchAssetAssignment $assignment): array => [
                     'id' => (int) $assignment->getKey(),
@@ -168,6 +172,56 @@ final class OperationsWorkspaceViewModel
                         ? (int) $assignment->asset->specifications['jib_length_meters']
                         : 60,
                 ])->values()->all(),
+        ];
+    }
+
+    /** @return array{label: string, status: string, expires_at: string|null}|null */
+    private static function dispatchAssignmentCredential(DispatchPersonnelAssignment $assignment, DispatchJob $job): ?array
+    {
+        if (! $assignment->user->relationLoaded('personnelCredentials')) {
+            return null;
+        }
+
+        $kind = match ($assignment->assignment_type) {
+            'driver' => 'driver_license',
+            'crane_operator', 'field_foreman', 'foreman', 'lead' => 'operator_certification',
+            'rigger', 'signalperson' => 'rigger_certification',
+            default => null,
+        };
+        $label = match ($kind) {
+            'driver_license' => 'Driver license',
+            'rigger_certification' => 'Rigger certification',
+            'operator_certification' => 'Operator certification',
+            default => 'Credential',
+        };
+
+        if ($kind === null) {
+            return ['label' => 'Credential', 'status' => 'Not required', 'expires_at' => null];
+        }
+
+        $credentials = $assignment->user->personnelCredentials->where('kind', $kind);
+        $scheduledDate = $job->scheduled_start?->toDateString() ?? now()->toDateString();
+        $valid = $credentials->first(static fn (PersonnelCredential $credential): bool => $credential->status === 'active'
+            && ($credential->issued_at === null || $credential->issued_at->toDateString() <= $scheduledDate)
+            && ($credential->expires_at === null || $credential->expires_at->toDateString() >= $scheduledDate));
+
+        if ($valid instanceof PersonnelCredential) {
+            return ['label' => $label, 'status' => 'Valid', 'expires_at' => $valid->expires_at?->toDateString()];
+        }
+
+        $latest = $credentials->sortByDesc(static fn (PersonnelCredential $credential): string => $credential->expires_at?->toDateString() ?? '9999-12-31')->first();
+        if (! $latest instanceof PersonnelCredential) {
+            return ['label' => $label, 'status' => 'Missing', 'expires_at' => null];
+        }
+
+        return [
+            'label' => $label,
+            'status' => $latest->status !== 'active'
+                ? 'Inactive'
+                : ($latest->issued_at !== null && $latest->issued_at->toDateString() > $scheduledDate
+                    ? 'Not yet valid'
+                    : 'Expired'),
+            'expires_at' => $latest->expires_at?->toDateString(),
         ];
     }
 

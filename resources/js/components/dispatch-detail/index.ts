@@ -14,5 +14,7 @@ export * from './assignment-selection-summary';
 export * from './assignment-action-bars';
 export * from './current-assignments';
 export * from './reassignment-modal';
+export * from './resource-picker';
 export * from './lifecycle-controls-panel';
 export * from './field-job-workspace';
+export * from './field-execution-workspace';

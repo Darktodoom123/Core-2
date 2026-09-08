@@ -58,12 +58,19 @@ export function isAssignmentSuccessFlash(flash: WorkspaceFlash | null) {
     );
 }
 
-export function getSafeReturnTo(fallback?: string | null) {
-    if (typeof window === 'undefined') {
-        return '/';
-    }
-
-    const params = new URLSearchParams(window.location.search);
+export function getSafeReturnTo(
+    fallback?: string | null,
+    currentUrl?: string | null,
+) {
+    const search =
+        currentUrl ??
+        (typeof window !== 'undefined' ? window.location.search : '');
+    const query = search.includes('?')
+        ? search.slice(search.indexOf('?') + 1).split('#')[0]
+        : search.startsWith('?')
+          ? search.slice(1)
+          : search;
+    const params = new URLSearchParams(query);
     const candidates = [params.get('return_to'), fallback];
 
     for (const returnTo of candidates) {

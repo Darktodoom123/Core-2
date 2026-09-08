@@ -17,6 +17,7 @@ use App\Modules\Dispatch\Http\Requests\StoreDispatchJobRequest;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Modules\Dispatch\Planning\Models\ProjectShift;
 use App\Modules\Dispatch\Planning\Services\PlanningAccess;
+use App\Modules\Dispatch\ViewModels\DispatchExecutionViewModel;
 use App\Modules\Dispatch\ViewModels\DispatchFieldProgressionViewModel;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Workspace\ViewModels\OperationsWorkspaceViewModel;
@@ -136,6 +137,7 @@ final class DispatchJobController extends Controller
                 DispatchStatus::Scheduled,
             ], true);
         $canUpdateOwnStatus = Gate::forUser($user)->allows('updateOwnStatus', $job);
+        $isOfficeExecution = ! $canUpdateOwnStatus && DispatchExecutionViewModel::appliesTo($job);
 
         $canRespondAssignment = $job->personnelAssignments->contains(
             fn (DispatchPersonnelAssignment $assignment): bool => Gate::forUser($user)->allows('respond', $assignment),
@@ -149,22 +151,37 @@ final class DispatchJobController extends Controller
             ] : null,
             'job' => OperationsWorkspaceViewModel::job($job),
             'personnel_candidates' => $canViewCandidates
-                ? Inertia::defer(fn (): array => $this->rescueCandidatePage(
-                    fn (): CandidatePage => $personnelCandidates->page($job, $filters),
-                    $job,
-                    'personnel',
-                ), 'dispatch-candidates')
+                ? ($isOfficeExecution
+                    ? $this->rescueCandidatePage(
+                        fn (): CandidatePage => $personnelCandidates->page($job, $filters),
+                        $job,
+                        'personnel',
+                    )
+                    : Inertia::defer(fn (): array => $this->rescueCandidatePage(
+                        fn (): CandidatePage => $personnelCandidates->page($job, $filters),
+                        $job,
+                        'personnel',
+                    ), 'dispatch-candidates'))
                 : [],
             'asset_candidates' => $canViewCandidates
-                ? Inertia::defer(fn (): array => $this->rescueCandidatePage(
-                    fn (): CandidatePage => $assetCandidates->page($job, $filters),
-                    $job,
-                    'assets',
-                ), 'dispatch-candidates')
+                ? ($isOfficeExecution
+                    ? $this->rescueCandidatePage(
+                        fn (): CandidatePage => $assetCandidates->page($job, $filters),
+                        $job,
+                        'assets',
+                    )
+                    : Inertia::defer(fn (): array => $this->rescueCandidatePage(
+                        fn (): CandidatePage => $assetCandidates->page($job, $filters),
+                        $job,
+                        'assets',
+                    ), 'dispatch-candidates'))
                 : [],
             'activation' => $readiness->make($job),
             'progression' => $canUpdateOwnStatus
                 ? DispatchFieldProgressionViewModel::make($job)
+                : null,
+            'execution' => $isOfficeExecution
+                ? DispatchExecutionViewModel::make($job, $user)
                 : null,
             'capabilities' => [
                 'assign_resources' => $canAssignResources,

@@ -142,7 +142,11 @@ function detailHash(
         return '#assignment-summary';
     }
 
-    return '#dispatch-context';
+    return EXECUTION_STATUSES.includes(
+        job.status.value as (typeof EXECUTION_STATUSES)[number],
+    )
+        ? '#field-execution'
+        : '#dispatch-context';
 }
 
 function dispatchDetailUrl(
@@ -1523,7 +1527,11 @@ function DispatchReviewPanel({
 
     const nextAction = nextActionForJob(job, conflicts);
     const href = dispatchDetailUrl(job, returnTo, conflicts);
-    const contextHref = href.replace(/#.*$/, '#dispatch-context');
+    const contextHref = EXECUTION_STATUSES.includes(
+        job.status.value as (typeof EXECUTION_STATUSES)[number],
+    )
+        ? href
+        : href.replace(/#.*$/, '#dispatch-context');
     const assignmentHref = `/operations/dispatch-jobs/${job.id}?${new URLSearchParams({ return_to: returnTo }).toString()}#assignment-summary`;
 
     return (

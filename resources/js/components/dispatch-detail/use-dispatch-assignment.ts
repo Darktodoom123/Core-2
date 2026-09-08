@@ -17,6 +17,18 @@ type CandidateSnapshots = {
     assets: Record<number, AssetCandidateViewModel>;
 };
 
+export function isCandidateEvaluationVisit(visit: {
+    method: string;
+    only: string[];
+}): boolean {
+    return (
+        visit.method === 'get' &&
+        visit.only.some((prop) =>
+            ['personnel_candidates', 'asset_candidates'].includes(prop),
+        )
+    );
+}
+
 function mergeCandidateDetails<T extends { id: number }>(
     current: T[],
     selected: T[],
@@ -274,6 +286,10 @@ export function useDispatchAssignment(
 
         window.addEventListener('beforeunload', handleBeforeUnload);
         const removeInertiaGuard = router.on('before', (event) => {
+            if (isCandidateEvaluationVisit(event.detail.visit)) {
+                return;
+            }
+
             if (bypassNavigationGuard.current) {
                 bypassNavigationGuard.current = false;
 
