@@ -81,7 +81,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
-        "globals": "^15.14.0",
+        "globals": "^17.12.0",
         "image-size": "file:third_party/image-size",
         "laravel-echo": "^2.4.0",
         "laravel-vite-plugin": "^3.1",
