@@ -4,12 +4,14 @@
 
 This repository uses one production-style application image. Supervisor keeps
 Nginx, PHP-FPM, the Laravel queue worker, the Laravel scheduler, and Reverb in
-that image; Compose supplies PostgreSQL 16 and Redis 7. This topology is used
-both for local/staging verification and containerized production deployment on
+that image; Compose supplies PostgreSQL 16 and Redis 7. This topology supports
+local verification and is a starting point for a proposed first deployment on
 **HostForge Platform** ([https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform))
 under domain **`alibaton-ph.com`** and subdomain **`core-2.alibaton-ph.com`**
 (`https://core-2.alibaton-ph.com`). For production deployment details, see the
-[Deployment & Hosting Guide](./deployment.md).
+[Deployment & Hosting Guide](./deployment.md). The user confirmed the project is
+undeployed. The [microservice restructuring handoff](../microservice/README.md)
+defines the planned runtime separation; it has not yet been implemented.
 
 ## Prerequisites and setup
 

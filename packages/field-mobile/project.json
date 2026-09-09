@@ -1,0 +1,43 @@
+{
+    "name": "field-mobile",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "projectType": "application",
+    "sourceRoot": "packages/field-mobile/src",
+    "implicitDependencies": ["operations"],
+    "targets": {
+        "web-lint": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": { "command": "npm run lint:check", "cwd": "." }
+        },
+        "web-format": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": { "command": "npm run format:check", "cwd": "." }
+        },
+        "typecheck": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run types:check",
+                "cwd": "packages/field-mobile"
+            }
+        },
+        "test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run test",
+                "cwd": "packages/field-mobile"
+            }
+        },
+        "build": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run export:android",
+                "cwd": "packages/field-mobile"
+            }
+        }
+    }
+}

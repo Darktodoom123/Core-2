@@ -1,16 +1,26 @@
 # Deployment & Hosting Architecture
 
-**Last updated:** 2026-08-28  
+**Last updated:** 2026-09-08
 **Target Environment:** HostForge Platform  
 **Platform URL:** [https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform)  
 **Apex Domain:** `alibaton-ph.com`  
 **Core-2 Subdomain:** `core-2.alibaton-ph.com`  
 
+**Verification status:** The user confirmed that Core-2 is not deployed. HostForge
+is the intended first-deployment platform. The topology below describes the
+existing application's proposed deployment, not verified hosting capabilities.
+The [pre-deployment restructuring handoff](../microservice/README.md) supersedes
+earlier live-production migration assumptions. Platform, capacity, backup/restore
+and independent-release evidence is required before deployment; local preparation
+may proceed. No hosting account or production data was accessed. `/up` is the
+configured Laravel health route; it does not establish database, broker, or
+optional-service readiness.
+
 ---
 
 ## 1. Overview & Domain Topology
 
-Core Transaction 2 (Core-2) is the operational dispatch, fleet, crane/equipment, and workforce assignment engine for Alibaton. The production infrastructure is hosted on **HostForge Platform** with unified domain routing under the `alibaton-ph.com` corporate hierarchy.
+Core Transaction 2 (Core-2) is the operational dispatch, fleet, crane/equipment, and workforce assignment engine for Alibaton. First deployment is intended for **HostForge Platform** with domain routing under the `alibaton-ph.com` corporate hierarchy. The endpoint table below is proposed, not evidence of a live deployment.
 
 ```
 alibaton-ph.com (Apex Domain)
@@ -26,16 +36,16 @@ alibaton-ph.com (Apex Domain)
 | **Core-2 Web Workspace** | `https://core-2.alibaton-ph.com` | Authenticated Inertia 3 / React 19 operational workspace. |
 | **Core-2 Mobile API** | `https://core-2.alibaton-ph.com/api/v1` | Sanctum bearer-token REST API for React Native / Expo field workers. |
 | **Laravel Reverb (WebSockets)** | `wss://core-2.alibaton-ph.com/app` | Real-time workspace telemetry, GPS vehicle tracking, and notifications (reverse-proxied over TLS port 443). |
-| **Health Check Endpoint** | `https://core-2.alibaton-ph.com/up` | Zero-downtime health probe returning HTTP `200` upon system readiness. |
+| **Health Check Endpoint** | `https://core-2.alibaton-ph.com/up` | Configured Laravel health route; dependency readiness and zero-downtime behavior require separate verification. |
 
 ---
 
 ## 2. Platform & Hosting Architecture (HostForge)
 
-The application runs as a production containerized service on the **HostForge Platform** (`https://hostforgeplatform.cloud/platform`).
+The existing application can be packaged as a containerized service. Deployment on **HostForge Platform** (`https://hostforgeplatform.cloud/platform`) is planned and requires capability verification. The following topology is the pre-restructuring proposal; the microservice handoff defines the future four-service topology.
 
 ### Compute & Service Topology
-- **Application Container (`app`)**: Single production container running Alpine Linux, Nginx, PHP 8.3+ FPM, Laravel queue workers, scheduler daemon, and Laravel Reverb WebSocket server supervised via `supervisord`.
+- **Application Container (`app`)**: Single production container running Alpine Linux, Nginx, PHP 8.4 FPM, Laravel queue workers, scheduler daemon, and Laravel Reverb WebSocket server supervised via `supervisord`.
 - **Database Service (`db`)**: Managed PostgreSQL 16 database (or Supabase PostgreSQL with Supavisor connection pooler).
 - **In-Memory Cache / Key-Value Store (`redis`)**: Redis 7 instance for distributed sessions, atomic rate limiting, and real-time pub/sub brokering.
 - **Edge Reverse Proxy & SSL/TLS**: HostForge ingress edge terminates TLS with automated Let's Encrypt certificates for `core-2.alibaton-ph.com` and proxies HTTP/HTTPS to port 80/443 and WebSocket upgrades (`Upgrade: websocket`) to the internal Reverb service on port 8080.

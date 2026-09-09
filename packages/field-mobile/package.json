@@ -2,6 +2,9 @@
     "name": "@core-2/field-mobile",
     "version": "1.0.0",
     "private": true,
+    "nx": {
+        "includedScripts": []
+    },
     "type": "module",
     "main": "index.js",
     "scripts": {

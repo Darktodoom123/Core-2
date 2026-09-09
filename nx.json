@@ -1,0 +1,19 @@
+{
+    "$schema": "./node_modules/nx/schemas/nx-schema.json",
+    "defaultBase": "main",
+    "parallel": 1,
+    "neverConnectToCloud": true,
+    "namedInputs": {
+        "default": [
+            "{projectRoot}/**/*",
+            "{workspaceRoot}/packages/field-mobile/**/*",
+            "{workspaceRoot}/package.json",
+            "{workspaceRoot}/package-lock.json"
+        ]
+    },
+    "targetDefaults": {
+        "nx:run-commands": {
+            "cache": false
+        }
+    }
+}

@@ -1,6 +1,7 @@
 /.phpunit.cache
 /bootstrap/ssr
 node_modules/
+/.nx/
 /.npm-cache
 /.expo
 /dist
@@ -85,6 +86,9 @@ storage/framework/testing/*
 /Docs
 !/Docs/
 /Docs/*
+!/Docs/README.md
+!/Docs/microservice/
+!/Docs/microservice/**
 !/Docs/architecture/
 /Docs/architecture/*
 !/Docs/architecture/docker.md
