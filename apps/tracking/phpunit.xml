@@ -19,5 +19,6 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="APP_KEY" value="base64:c3RhdGljdHJhY2tpbmdrZXlmaXh0dXJlMDAwMDAwMDAwMDA="/>
+        <env name="TRACKING_SERVICE_SECRET" value="test-tracking-service-secret"/>
     </php>
 </phpunit>

@@ -48,4 +48,12 @@ return [
         'proactive_cooldown_minutes' => 5,
     ],
 
+    'tracking' => [
+        'driver' => env('TRACKING_SERVICE_DRIVER', 'database'),
+        'url' => env('TRACKING_SERVICE_URL', 'http://localhost:8001'),
+        'secret' => env('TRACKING_SERVICE_SECRET', 'test-tracking-service-secret'),
+        'timeout' => (float) env('TRACKING_SERVICE_TIMEOUT', 5.0),
+        'connect_timeout' => (float) env('TRACKING_SERVICE_CONNECT_TIMEOUT', 3.0),
+    ],
+
 ];

@@ -7,11 +7,14 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Tracking\Actions\BroadcastTrackingWorkspaceUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Platform\Tracking\Data\LocationSampleDto;
+use App\Platform\Tracking\Exceptions\TrackingConflictException;
 use App\Platform\Tracking\Http\Requests\StoreLocationUpdateRequest;
 use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Testing\FakeTrackingClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 final class LocationUpdateController extends Controller
@@ -33,29 +36,61 @@ final class LocationUpdateController extends Controller
         IdempotentCommandService $idempotency,
         RecordAuditEvent $audit,
         BroadcastTrackingWorkspaceUpdate $broadcast,
+        TrackingClientInterface $trackingClient,
     ): RedirectResponse|JsonResponse {
         $commandId = $request->header('Idempotency-Key') ?: $request->input('command_id');
 
-        $execute = function () use ($request, $audit, $broadcast) {
+        $execute = function () use ($request, $audit, $broadcast, $trackingClient, $commandId) {
             $data = $request->validated();
             unset($data['command_id']);
 
-            $location = LocationUpdate::query()->create([
-                ...$data,
+            $sample = LocationSampleDto::fromArray([
+                'command_id' => is_string($commandId) ? $commandId : null,
                 'user_id' => $request->user()->id,
+                'operational_asset_id' => $data['operational_asset_id'] ?? null,
+                'dispatch_job_id' => $data['dispatch_job_id'] ?? null,
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+                'accuracy_metres' => $data['accuracy_metres'] ?? null,
+                'speed' => $data['speed'] ?? null,
+                'remarks' => $data['remarks'] ?? null,
                 'source' => 'browser',
+                'sharing_enabled' => (bool) ($data['sharing_enabled'] ?? true),
+                'captured_at' => $data['captured_at'] ?? now(),
                 'received_at' => now(),
             ]);
+
+            try {
+                $latest = $trackingClient->ingestLocation($sample);
+            } catch (TrackingConflictException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => $e->getMessage(),
+                        'error' => 'conflict',
+                    ], 409);
+                }
+
+                return back()->withErrors(['command_id' => $e->getMessage()])->withInput();
+            }
+
+            if ($trackingClient instanceof FakeTrackingClient) {
+                LocationUpdate::query()->create([
+                    ...$data,
+                    'user_id' => $request->user()->id,
+                    'source' => 'browser',
+                    'received_at' => now(),
+                ]);
+            }
 
             $sharingEnabled = (bool) $data['sharing_enabled'];
             $audit->handle(
                 $request->user(),
-                $location,
+                $request->user(),
                 $sharingEnabled ? 'tracking.location_shared' : 'tracking.location_sharing_paused',
                 null,
                 [
                     'sharing_enabled' => $sharingEnabled,
-                    'captured_at' => $location->captured_at?->toIso8601String(),
+                    'captured_at' => $latest->capturedAt?->toIso8601String(),
                 ],
             );
             $broadcast->afterCommit();
@@ -74,10 +109,11 @@ final class LocationUpdateController extends Controller
                 'location.store',
                 null,
                 $execute,
-                collect($request->validated())->except('command_id')->all()
+                collect($request->validated())->except('command_id')->all(),
+                wrapInTransaction: false,
             );
         }
 
-        return DB::transaction($execute);
+        return $execute();
     }
 }
