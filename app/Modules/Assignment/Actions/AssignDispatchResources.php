@@ -29,16 +29,26 @@ final class AssignDispatchResources
      * @param  list<array{user_id: int, assignment_type: string}>  $personnel
      * @param  list<array{operational_asset_id: int, assignment_type: string}>  $assets
      */
-    public function handle(User $actor, DispatchJob $job, array $personnel, array $assets): DispatchJob
-    {
+    public function handle(
+        User $actor,
+        DispatchJob $job,
+        array $personnel,
+        array $assets,
+        ?int $version = null,
+    ): DispatchJob {
         Gate::forUser($actor)->authorize('assignResources', $job);
         if (ProjectShift::query()->where('dispatch_job_id', $job->id)->exists()) {
             throw ValidationException::withMessages(['resources' => 'Use Fill coverage in the project plan to change this shift.']);
         }
 
-        return DB::transaction(function () use ($actor, $job, $personnel, $assets): DispatchJob {
+        return DB::transaction(function () use ($actor, $job, $personnel, $assets, $version): DispatchJob {
             $job = DispatchJob::query()->lockForUpdate()->findOrFail($job->id);
             Gate::forUser($actor)->authorize('assignResources', $job);
+
+            if ($version !== null) {
+                $this->assertVersion($job, $version);
+            }
+
             $this->assertJobAcceptsAssignments($job, $personnel, $assets);
 
             $personnelIds = array_column($personnel, 'user_id');
@@ -63,10 +73,19 @@ final class AssignDispatchResources
             $this->createAssignments($actor, $job, $personnel, $assets);
             $this->requestExceptionalApproval($actor, $job, $personnel, $assets);
             $this->audit->handle($actor, $job, 'dispatch.resources_assigned', null, ['personnel' => $personnel, 'assets' => $assets]);
-            $job->touch();
+            $job->update(['version' => $job->version + 1]);
 
             return $job->load(['personnelAssignments.user', 'assetAssignments.asset']);
         });
+    }
+
+    private function assertVersion(DispatchJob $job, int $version): void
+    {
+        if ($job->version !== $version) {
+            throw ValidationException::withMessages([
+                'version' => 'Dispatch job version is stale. Refresh and review before assigning resources.',
+            ]);
+        }
     }
 
     /**

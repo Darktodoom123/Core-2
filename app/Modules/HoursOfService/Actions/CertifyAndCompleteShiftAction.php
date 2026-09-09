@@ -20,11 +20,15 @@ class CertifyAndCompleteShiftAction
         return DB::transaction(function () use ($user, $certificationStatement, $remarks): OperatorShift {
             $now = Carbon::now();
 
+            // Pessimistic lock on user record to serialize concurrent shift operations per operator
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
+
             /** @var OperatorShift|null $shift */
             $shift = OperatorShift::query()
                 ->where('user_id', $user->id)
                 ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
                 ->latest('started_at')
+                ->lockForUpdate()
                 ->first();
 
             if ($shift === null) {
@@ -32,6 +36,7 @@ class CertifyAndCompleteShiftAction
                 $lastShift = OperatorShift::query()
                     ->where('user_id', $user->id)
                     ->latest('started_at')
+                    ->lockForUpdate()
                     ->firstOrFail();
 
                 $lastShift->update([
@@ -50,6 +55,7 @@ class CertifyAndCompleteShiftAction
                 ->where('operator_shift_id', $shift->id)
                 ->whereNull('ended_at')
                 ->latest('started_at')
+                ->lockForUpdate()
                 ->first();
 
             if ($activeLog !== null) {

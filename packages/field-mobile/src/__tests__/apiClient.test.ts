@@ -403,4 +403,111 @@ describe('FieldApiClient', () => {
         assert.equal(weather.source, 'open_meteo_direct');
         assert.equal(weather.safety_level, 'safe_normal');
     });
+
+    test('HOS methods accept and transmit commandId, Idempotency-Key, and X-Command-Id', async () => {
+        const capturedCalls: Array<{
+            url: string;
+            headers: Record<string, string>;
+            body: any;
+        }> = [];
+
+        const mockFetch = async (
+            input: RequestInfo | URL,
+            init?: RequestInit,
+        ) => {
+            const headers = Object.fromEntries(
+                new Headers(init?.headers).entries(),
+            );
+            const body = init?.body ? JSON.parse(String(init.body)) : null;
+
+            capturedCalls.push({
+                url: String(input),
+                headers,
+                body,
+            });
+
+            return new Response(
+                JSON.stringify({
+                    data: {
+                        shift: { id: 10, status: 'active' },
+                        clocks: {
+                            shift_remaining_minutes: 600,
+                            driving_remaining_minutes: 480,
+                            cycle_remaining_minutes: 4200,
+                            is_grounded: false,
+                        },
+                    },
+                }),
+                { status: 200 },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'hos-token-xyz',
+            fetchFn: mockFetch as any,
+        });
+
+        const commandId1 = 'a1111111-1111-4111-8111-111111111111';
+        await client.startHosShift(
+            { duty_status: 'operating', remarks: 'Starting shift' },
+            commandId1,
+        );
+
+        assert.equal(
+            capturedCalls[0].url,
+            'http://localhost:8000/api/v1/hos/shifts/start',
+        );
+        assert.equal(capturedCalls[0].headers['idempotency-key'], commandId1);
+        assert.equal(capturedCalls[0].headers['x-command-id'], commandId1);
+        assert.equal(capturedCalls[0].body.command_id, commandId1);
+
+        const commandId2 = 'b2222222-2222-4222-8222-222222222222';
+        await client.updateHosDutyStatus(
+            { duty_status: 'on_break' },
+            commandId2,
+        );
+
+        assert.equal(
+            capturedCalls[1].url,
+            'http://localhost:8000/api/v1/hos/duty-status',
+        );
+        assert.equal(capturedCalls[1].headers['idempotency-key'], commandId2);
+        assert.equal(capturedCalls[1].headers['x-command-id'], commandId2);
+        assert.equal(capturedCalls[1].body.command_id, commandId2);
+
+        const commandId3 = 'c3333333-3333-4333-8333-333333333333';
+        await client.certifyHosShift(
+            { certification_statement: 'I certify these hours are accurate.' },
+            commandId3,
+        );
+
+        assert.equal(
+            capturedCalls[2].url,
+            'http://localhost:8000/api/v1/hos/shifts/certify',
+        );
+        assert.equal(capturedCalls[2].headers['idempotency-key'], commandId3);
+        assert.equal(capturedCalls[2].headers['x-command-id'], commandId3);
+        assert.equal(capturedCalls[2].body.command_id, commandId3);
+
+        const commandId4 = 'd4444444-4444-4444-8444-444444444444';
+        await client.createDvirInspection(
+            {
+                inspection_type: 'pre_trip',
+                asset_code: 'CRN-101',
+                has_defects: false,
+                signature_captured: true,
+                checks: [],
+            },
+            commandId4,
+        );
+
+        assert.equal(
+            capturedCalls[3].url,
+            'http://localhost:8000/api/v1/dvir/inspections',
+        );
+        assert.equal(capturedCalls[3].headers['idempotency-key'], commandId4);
+        assert.equal(capturedCalls[3].headers['x-command-id'], commandId4);
+        assert.equal(capturedCalls[3].body.command_id, commandId4);
+    });
 });

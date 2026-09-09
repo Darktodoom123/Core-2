@@ -48,10 +48,12 @@ export function useDispatchAssignment(
     jobId: number,
     candidates: CandidateSnapshotInputs,
     initialStep: 1 | 2 | 3 = 2,
+    jobVersion?: number,
 ) {
     const form = useForm<AssignmentRequestPayload>({
         personnel: [],
         assets: [],
+        version: jobVersion,
     });
     const [activeStep, setActiveStep] = useState<1 | 2 | 3>(initialStep);
     const selectedCount = form.data.personnel.length + form.data.assets.length;
@@ -238,6 +240,11 @@ export function useDispatchAssignment(
     const submit = (event: FormEvent) => {
         event.preventDefault();
         bypassNavigationGuard.current = true;
+
+        if (jobVersion !== undefined) {
+            form.transform((data) => ({ ...data, version: jobVersion }));
+        }
+
         form.post(`/operations/dispatch-jobs/${jobId}/assignments`, {
             preserveScroll: true,
             onSuccess: () => {

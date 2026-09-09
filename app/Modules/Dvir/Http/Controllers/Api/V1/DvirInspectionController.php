@@ -7,6 +7,7 @@ use App\Modules\Dvir\Actions\CreateDvirInspectionAction;
 use App\Modules\Dvir\Http\Requests\Api\V1\CreateDvirInspectionRequest;
 use App\Modules\Dvir\Http\Resources\V1\DvirInspectionResource;
 use App\Modules\Dvir\Models\DvirInspection;
+use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -41,17 +42,39 @@ class DvirInspectionController extends Controller
         ]);
     }
 
-    public function store(CreateDvirInspectionRequest $request, CreateDvirInspectionAction $action): JsonResponse
-    {
+    public function store(
+        CreateDvirInspectionRequest $request,
+        CreateDvirInspectionAction $action,
+        IdempotentCommandService $idempotency,
+    ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
 
-        $result = $action->execute($request, $user);
+        $commandId = $idempotency->resolveCommandId($request, required: false);
 
-        return response()->json([
-            'message' => 'DVIR inspection recorded successfully.',
-            'data' => new DvirInspectionResource($result['inspection']),
-        ], 201);
+        $execute = function () use ($request, $user, $action): JsonResponse {
+            $result = $action->execute($request, $user);
+
+            return response()->json([
+                'message' => 'DVIR inspection recorded successfully.',
+                'data' => new DvirInspectionResource($result['inspection']),
+            ], 201);
+        };
+
+        if ($commandId !== null) {
+            /** @var JsonResponse */
+            return $idempotency->process(
+                $user,
+                $commandId,
+                'dvir.store',
+                null,
+                $execute,
+                collect($request->validated())->except('command_id')->all(),
+                wrapInTransaction: false,
+            );
+        }
+
+        return $execute();
     }
 
     public function show(Request $request, int $inspection): JsonResponse

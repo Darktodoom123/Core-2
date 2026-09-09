@@ -2,6 +2,7 @@
 
 use App\Platform\Attachments\Jobs\PruneExpiredAttachmentsJob;
 use App\Platform\Gpt\Jobs\PruneGptRecommendationsJob;
+use App\Platform\Gpt\Jobs\SweepProactiveGptRecommendationsJob;
 use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
 use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('location:prune')->dailyAt('02:15');
         $schedule->job(new PruneExpiredExportsJob)->dailyAt('02:30')->withoutOverlapping()->name('reports:prune-expired');
         $schedule->job(new PruneGptRecommendationsJob)->dailyAt('02:45')->withoutOverlapping()->name('gpt:prune-retention');
+        $schedule->job(new SweepProactiveGptRecommendationsJob)->everyMinute()->withoutOverlapping()->name('gpt:proactive-sweep');
         $schedule->job(new PruneExpiredAttachmentsJob)->dailyAt('03:00')->withoutOverlapping()->name('attachments:prune-expired');
         $schedule->job(new SweepSosEscalationsJob)->everyMinute()->withoutOverlapping()->name('sos:escalation-sweep');
         $schedule->job(new PruneSosIncidentCoordinatesJob)->dailyAt('03:15')->withoutOverlapping()->name('sos:prune-coordinates');

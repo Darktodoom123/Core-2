@@ -34,11 +34,15 @@ class StartOperatorShiftAction
         ): OperatorShift {
             $now = Carbon::now();
 
+            // Pessimistic lock on user record to serialize concurrent shift operations per operator
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
+
             // End any existing active shift for this user to avoid dangling open shifts
             $existingShift = OperatorShift::query()
                 ->where('user_id', $user->id)
                 ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
                 ->latest('started_at')
+                ->lockForUpdate()
                 ->first();
 
             if ($existingShift !== null) {

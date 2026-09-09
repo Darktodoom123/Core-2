@@ -109,6 +109,7 @@ export default function DispatchDetail({
             assets: assetCandidates,
         },
         initialStep,
+        job.version,
     );
     const [assignmentPickerOpen, setAssignmentPickerOpen] = useState(false);
 

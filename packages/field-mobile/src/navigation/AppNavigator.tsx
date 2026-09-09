@@ -294,18 +294,29 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
 
     useEffect(() => {
         let active = true;
-        const unsubscribe = connectivity.subscribe(setIsOnline);
+        const unsubscribe = connectivity.subscribe((online) => {
+            setIsOnline(online);
+
+            if (online === false) {
+                setJobsError(null);
+            }
+        });
 
         void connectivity
             .fetchIsOnline()
             .then((online) => {
                 if (active) {
                     setIsOnline(online);
+
+                    if (online === false) {
+                        setJobsError(null);
+                    }
                 }
             })
             .catch(() => {
                 if (active) {
                     setIsOnline(false);
+                    setJobsError(null);
                 }
             });
 
@@ -436,12 +447,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             setIsLoadingJobs(false);
         }
     }, [apiClient, handleRequestFailure, isOnline, logout, status]);
-
-    useEffect(() => {
-        if (isOnline === false) {
-            setJobsError(null);
-        }
-    }, [isOnline]);
 
     const refreshWeather = useCallback(async () => {
         setIsLoadingWeather(true);
@@ -875,13 +880,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     const handleToggleLocationSharing = useCallback(() => {
         setLocationSharingActive((prev) => {
             const next = !prev;
+
             if (!next) {
                 locationService.stopAutoTracking();
                 void stopBackgroundLocationUpdates().catch(() => undefined);
+
                 if (user && activeTrackingJob) {
                     void locationService.pauseSharing(user, activeTrackingJob);
                 }
             }
+
             return next;
         });
     }, [activeTrackingJob, locationService, user]);
@@ -1073,6 +1081,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         ) {
             locationService.stopAutoTracking();
             void stopBackgroundLocationUpdates().catch(() => undefined);
+
             return;
         }
 
@@ -1340,18 +1349,20 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 commandOutbox={commandOutbox}
                                 inspectorName={resolvedOperatorName}
                                 onBack={() => setActiveAppView('main')}
-                                onDefectLockout={(_defectiveCode) => {
+                                onDefectLockout={() => {
                                     setLocationSharingActive(false);
                                     locationService.stopAutoTracking();
                                     void stopBackgroundLocationUpdates().catch(
                                         () => undefined,
                                     );
+
                                     if (user && activeTrackingJob) {
                                         void locationService.pauseSharing(
                                             user,
                                             activeTrackingJob,
                                         );
                                     }
+
                                     handleChangeDutyStatus(
                                         'standby',
                                         'mechanical_inspection',
@@ -1466,7 +1477,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                 isOnline={isOnline}
                                 jobs={jobs}
                                 isUnitLinked={isUnitLinked}
-                                onLinkUnit={(_code) => {
+                                onLinkUnit={() => {
                                     setIsUnitLinked(true);
                                     setLocationSharingActive(true);
                                 }}
@@ -1518,6 +1529,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                                     void stopBackgroundLocationUpdates().catch(
                                         () => undefined,
                                     );
+
                                     if (user && activeTrackingJob) {
                                         void locationService.pauseSharing(
                                             user,

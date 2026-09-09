@@ -10,11 +10,13 @@ use App\Modules\HoursOfService\Enums\DutyStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Http\Requests\Api\V1\CertifyShiftRequest;
 use App\Modules\HoursOfService\Http\Requests\Api\V1\ChangeDutyStatusRequest;
+use App\Modules\HoursOfService\Http\Requests\Api\V1\StartShiftRequest;
 use App\Modules\HoursOfService\Http\Resources\V1\DutyLogResource;
 use App\Modules\HoursOfService\Http\Resources\V1\HosShiftResource;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Modules\HoursOfService\Queries\CalculateHosClocksQuery;
+use App\Platform\Idempotency\Services\IdempotentCommandService;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -44,98 +46,149 @@ class HosShiftController extends Controller
         ]);
     }
 
-    public function startShift(Request $request, StartOperatorShiftAction $action): JsonResponse
-    {
+    public function startShift(
+        StartShiftRequest $request,
+        StartOperatorShiftAction $action,
+        IdempotentCommandService $idempotency,
+    ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
 
-        $validated = $request->validate([
-            'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
-            'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
-            'duty_status' => ['nullable', 'string'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'location_name' => ['nullable', 'string', 'max:255'],
-            'remarks' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $commandId = $idempotency->resolveCommandId($request, required: false);
 
-        $initialDuty = isset($validated['duty_status'])
-            ? DutyStatus::from($validated['duty_status'])
-            : DutyStatus::OPERATING;
+        $execute = function () use ($request, $user, $action): JsonResponse {
+            $validated = $request->validated();
 
-        $shift = $action->execute(
-            user: $user,
-            operationalAssetId: $validated['operational_asset_id'] ?? null,
-            dispatchJobId: $validated['dispatch_job_id'] ?? null,
-            initialDutyStatus: $initialDuty,
-            latitude: isset($validated['latitude']) ? (float) $validated['latitude'] : null,
-            longitude: isset($validated['longitude']) ? (float) $validated['longitude'] : null,
-            locationName: $validated['location_name'] ?? null,
-            remarks: $validated['remarks'] ?? null,
-        );
+            $initialDuty = isset($validated['duty_status'])
+                ? DutyStatus::from($validated['duty_status'])
+                : DutyStatus::OPERATING;
 
-        return response()->json([
-            'message' => 'Shift started successfully.',
-            'data' => new HosShiftResource($shift),
-        ], 201);
+            $shift = $action->execute(
+                user: $user,
+                operationalAssetId: $validated['operational_asset_id'] ?? null,
+                dispatchJobId: $validated['dispatch_job_id'] ?? null,
+                initialDutyStatus: $initialDuty,
+                latitude: isset($validated['latitude']) ? (float) $validated['latitude'] : null,
+                longitude: isset($validated['longitude']) ? (float) $validated['longitude'] : null,
+                locationName: $validated['location_name'] ?? null,
+                remarks: $validated['remarks'] ?? null,
+            );
+
+            return response()->json([
+                'message' => 'Shift started successfully.',
+                'data' => new HosShiftResource($shift),
+            ], 201);
+        };
+
+        if ($commandId !== null) {
+            /** @var JsonResponse */
+            return $idempotency->process(
+                $user,
+                $commandId,
+                'hos.start_shift',
+                null,
+                $execute,
+                collect($request->validated())->except('command_id')->all(),
+            );
+        }
+
+        return $execute();
     }
 
     public function changeDutyStatus(
         ChangeDutyStatusRequest $request,
         RecordDutyStatusTransitionAction $action,
         CalculateHosClocksQuery $clocksQuery,
+        IdempotentCommandService $idempotency,
     ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
 
-        $dutyStatus = DutyStatus::from((string) $request->input('duty_status'));
-        $standbyReasonInput = $request->input('standby_reason');
-        $standbyReason = $standbyReasonInput ? StandbyReason::from((string) $standbyReasonInput) : null;
+        $commandId = $idempotency->resolveCommandId($request, required: false);
 
-        $shift = $action->execute(
-            user: $user,
-            nextStatus: $dutyStatus,
-            standbyReason: $standbyReason,
-            latitude: $request->filled('latitude') ? (float) $request->input('latitude') : null,
-            longitude: $request->filled('longitude') ? (float) $request->input('longitude') : null,
-            locationName: $request->input('location_name'),
-            remarks: $request->input('remarks'),
-        );
+        $execute = function () use ($request, $user, $action, $clocksQuery): JsonResponse {
+            $dutyStatus = DutyStatus::from((string) $request->input('duty_status'));
+            $standbyReasonInput = $request->input('standby_reason');
+            $standbyReason = $standbyReasonInput ? StandbyReason::from((string) $standbyReasonInput) : null;
 
-        $clocks = $clocksQuery->execute($user);
+            $shift = $action->execute(
+                user: $user,
+                nextStatus: $dutyStatus,
+                standbyReason: $standbyReason,
+                latitude: $request->filled('latitude') ? (float) $request->input('latitude') : null,
+                longitude: $request->filled('longitude') ? (float) $request->input('longitude') : null,
+                locationName: $request->input('location_name'),
+                remarks: $request->input('remarks'),
+            );
 
-        return response()->json([
-            'message' => 'Duty status updated successfully.',
-            'data' => [
-                'shift' => new HosShiftResource($shift),
-                'clocks' => $clocks,
-            ],
-        ]);
+            $clocks = $clocksQuery->execute($user);
+
+            return response()->json([
+                'message' => 'Duty status updated successfully.',
+                'data' => [
+                    'shift' => new HosShiftResource($shift),
+                    'clocks' => $clocks,
+                ],
+            ]);
+        };
+
+        if ($commandId !== null) {
+            /** @var JsonResponse */
+            return $idempotency->process(
+                $user,
+                $commandId,
+                'hos.change_duty_status',
+                null,
+                $execute,
+                collect($request->validated())->except('command_id')->all(),
+            );
+        }
+
+        return $execute();
     }
 
     public function certifyShift(
         CertifyShiftRequest $request,
         CertifyAndCompleteShiftAction $action,
         CalculateHosClocksQuery $clocksQuery,
+        IdempotentCommandService $idempotency,
     ): JsonResponse {
         /** @var User $user */
         $user = $request->user();
 
-        $shift = $action->execute(
-            user: $user,
-            certificationStatement: (string) $request->input('certification_statement'),
-            remarks: $request->input('remarks'),
-        );
+        $commandId = $idempotency->resolveCommandId($request, required: false);
 
-        $clocks = $clocksQuery->execute($user);
+        $execute = function () use ($request, $user, $action, $clocksQuery): JsonResponse {
+            $shift = $action->execute(
+                user: $user,
+                certificationStatement: (string) $request->input('certification_statement'),
+                remarks: $request->input('remarks'),
+            );
 
-        return response()->json([
-            'message' => 'Shift certified and completed successfully.',
-            'data' => [
-                'shift' => new HosShiftResource($shift),
-                'clocks' => $clocks,
-            ],
-        ]);
+            $clocks = $clocksQuery->execute($user);
+
+            return response()->json([
+                'message' => 'Shift certified and completed successfully.',
+                'data' => [
+                    'shift' => new HosShiftResource($shift),
+                    'clocks' => $clocks,
+                ],
+            ]);
+        };
+
+        if ($commandId !== null) {
+            /** @var JsonResponse */
+            return $idempotency->process(
+                $user,
+                $commandId,
+                'hos.certify_shift',
+                null,
+                $execute,
+                collect($request->validated())->except('command_id')->all(),
+            );
+        }
+
+        return $execute();
     }
 
     public function cycleHistory(Request $request): JsonResponse

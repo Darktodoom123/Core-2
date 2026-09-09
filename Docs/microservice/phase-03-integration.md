@@ -1,22 +1,40 @@
-# Phase 3 — Contracts and reliable integration
+# Phase 3 — Contracts and reliable integration (Plan A: Operations + Tracking)
 
-Prerequisite: Phase 2 accepted; isolated Linux/PostgreSQL/RabbitMQ available. Follow shared envelope/authentication rules in architecture.md.
+Prerequisite: Phase 2 accepted; isolated Linux/PostgreSQL/Redis available. Follow shared envelope, authentication, and idempotency rules in architecture.md. RabbitMQ is eliminated.
 
 ## Batches
 
-1. Add packages/contracts with JSON schemas/OpenAPI and synthetic examples. Schemas are transport-only; generated TypeScript types cannot replace runtime validation. Resolve and pin maintained PHP messaging/JWT dependencies compatible with the locked runtime using current documentation; record exact versions before implementing adapters.
-2. Create service-local outbox and inbox migrations plus canonical command receipt persistence. Outbox: event UUID, aggregate/version, payload, created_at, lease/attempts/next_attempt_at, published_at. Inbox unique producer/event_id plus processed_at. Receipts unique actor/action/command_id with payload hash and persisted response. Database constraints arbitrate concurrent duplicates.
-3. Publish persistent integration events through durable exchange/consumer queues, with confirmations AND unroutable-return handling. Mark sent only after success; recover expired publisher leases. Each subscriber gets its own queue. Process inbox and local effects in one transaction, acknowledge afterward.
-4. Add bounded exponential retry with jitter, dead-letter/quarantine ownership and operator replay. Define payload retention per topic; do not retain GPS/prompt bodies indefinitely. Consumer version checks reject unknown schema and prevent stale projection overwrite; gaps trigger reconciliation instead of inventing state.
-5. Implement signed request authentication and scoped service authorization from architecture.md. Prove token expiry/audience/body/action/resource enforcement and key rotation. Asynchronous sensitive work checks current access through Operations. Keep broker and DB credentials restricted per caller.
-6. Add trace/correlation propagation, lag/error/quarantine metrics and failure-injection harness. No credentials or sensitive bodies in logs.
+1. **Packages/Contracts Definition**: Add `packages/contracts` containing OpenAPI 3.1 specifications, JSON schemas, and synthetic payload examples for Tracking endpoints:
+   - Telemetry ingestion (`POST /internal/v1/locations` and mobile `POST /v1/locations`).
+   - Latest positions projection query (`GET /internal/v1/locations/latest`).
+   - Historical location range query for compliance audit (`GET /internal/v1/locations`).
+   - Generated transport DTOs for `packages/field-mobile`. Schemas are transport-only; runtime validation must be enforced on receivers.
+2. **Idempotency & Command Receipts**: Create `command_receipts` migrations in Operations and Tracking:
+   - Columns: `command_id` (UUID), `actor_id`, `action`, `payload_hash` (SHA-256), `response_body` (JSON), `status_code`, `created_at`.
+   - Unique index on `(command_id, action)` enforces duplicate suppression. Replaying a matching command returns the stored response; mismatched payload returns HTTP 409 Conflict.
+3. **Internal HTTP Client & Signed Authentication**: Implement secure inter-service communication between Operations BFF and Tracking:
+   - Scoped signed assertions (HMAC-SHA256 with shared secret or short-lived asymmetric JWT over TLS): issuer `core2-operations`, audience `core2-tracking`, maximum 60-second validity (`iat`, `exp`, `jti`), HTTP method/path, and canonical payload SHA-256 digest.
+   - Tracking middleware verifies assertions, rejects expired tokens, and enforces caller/action scope.
+   - Operations BFF implements `TrackingClientInterface` with bounded exponential retry and jitter for transient network failures.
+4. **Operations Internal Queue Worker Isolation**: Configure dedicated Laravel queue connections and worker pools backed by Redis:
+   - Dedicated queues: `default` (operational workflows), `ai` (OpenRouter LLM calls), `reports` (compliance report exports).
+   - Set `retry_after` strictly longer than job timeouts (`ai`: 120s timeout, 150s `retry_after`; `reports`: 300s timeout, 360s `retry_after`).
+   - Standard dead-letter handling via Laravel's `failed_jobs` table with manual replay CLI.
+5. **Observability & Health Checks**:
+   - Add correlation ID (`X-Correlation-Id`) propagation across web, mobile, Operations BFF, internal queue workers, and Tracking.
+   - Expose detailed readiness probes (`/up` and `/health`) checking PostgreSQL and Redis connectivity independently.
+   - Guarantee that application logs redact raw GPS coordinates, authentication tokens, prompt bodies, and personal data.
 
-## Contract verification before extraction
+## Contract Verification Before Extraction
 
-For each later phase, implement its declared schemas and synthetic examples before moving the business code. A missing field mapping is a contract-review blocker, not permission to forward entire models. Changes must include provider and consumer tests.
+Before extracting Tracking in Phase 5, all schemas, DTOs, and synthetic examples in `packages/contracts` must be validated against current Operations data shapes. A missing field mapping is a blocker, not permission to pass unvalidated Eloquent models. Provider and consumer contract tests must pass.
 
-## Acceptance tests
+## Acceptance Tests
 
-Concurrent command duplicates; mismatched payload same command; crash after domain commit/before publish; broker confirmation lost; unroutable destination; crash after consumer commit/before ack; duplicate/out-of-order/gapped events; expired/wrong-scope assertions; malformed payload; key rotation; broker outage/recovery; quarantine/replay; privacy expiry during replay.
-
-No exactly-once guarantee. Provider effects require their own idempotency strategy or bounded uncertainty. Stop before extraction if any failure can lose an acknowledged domain write, duplicate an operational effect, or bypass authorization.
+- Concurrent duplicate commands with identical payload return stored result (HTTP 200/201).
+- Concurrent duplicate commands with altered payload return HTTP 409 Conflict.
+- Signed assertion validation: expired assertion rejected (401), invalid audience rejected (403), tampered payload digest rejected (401), valid assertion accepted.
+- Tracking outage resilience: Operations BFF gracefully handles Tracking 503/timeout without crashing or blocking dispatch/SOS transactions.
+- Queue worker isolation: heavy tasks on `reports` or stalled requests on `ai` do not delay or block `default` queue job execution.
+- Worker crash and recovery: killed worker reclaims locked jobs after `retry_after` without duplicate processing of completed work.
+- Privacy compliance: coordinates older than 30 days are purged and never surfaced in contract test responses.

@@ -81,7 +81,7 @@ final class AcceptGptRecommendation
 
             // Execute operational mutation via the normal domain action under human authority if resources are proposed
             if ($personnel !== [] || $assets !== []) {
-                $this->assignAction->handle($lockedActor, $job, $personnel, $assets);
+                $this->assignAction->handle($lockedActor, $job, $personnel, $assets, $job->version);
             }
 
             $this->transitions->transitionLocked($lockedRecommendation, GptRecommendationStatus::Accepted, [

@@ -4,6 +4,7 @@ namespace App\Platform\Idempotency\Services;
 
 use App\Platform\Idempotency\Models\CommandLog;
 use App\Platform\Identity\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,8 +18,17 @@ class IdempotentCommandService
 {
     public function resolveCommandId(Request $request, bool $required = false): ?string
     {
-        $headerId = $request->header('Idempotency-Key');
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $xCommandId = $request->header('X-Command-Id');
         $bodyId = $request->input('command_id');
+
+        if ($idempotencyKey !== null && $xCommandId !== null && ! hash_equals($idempotencyKey, $xCommandId)) {
+            throw ValidationException::withMessages([
+                'command_id' => ['The Idempotency-Key and X-Command-Id headers must match.'],
+            ]);
+        }
+
+        $headerId = $idempotencyKey ?: $xCommandId;
 
         if ($bodyId !== null && ! is_string($bodyId)) {
             throw ValidationException::withMessages([
@@ -27,8 +37,9 @@ class IdempotentCommandService
         }
 
         if ($headerId !== null && $bodyId !== null && ! hash_equals($headerId, $bodyId)) {
+            $headerName = $idempotencyKey !== null ? 'Idempotency-Key' : 'X-Command-Id';
             throw ValidationException::withMessages([
-                'command_id' => ['The Idempotency-Key header and command_id body field must match.'],
+                'command_id' => ["The {$headerName} header and command_id body field must match."],
             ]);
         }
 
@@ -60,7 +71,8 @@ class IdempotentCommandService
         string $actionName,
         ?int $expectedVersion,
         callable $execution,
-        array $requestPayload = []
+        array $requestPayload = [],
+        bool $wrapInTransaction = true,
     ): Response {
         if (! Str::isUuid($commandId)) {
             throw ValidationException::withMessages([
@@ -68,54 +80,23 @@ class IdempotentCommandService
             ]);
         }
 
-        return Cache::lock("idempotent_command:{$user->id}:{$commandId}", 10)->block(5, function () use ($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload): Response {
-            return $this->processLocked($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload);
+        return Cache::lock("idempotent_command:{$user->id}:{$commandId}", 10)->block(5, function () use ($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload, $wrapInTransaction): Response {
+            return $this->processLocked($user, $commandId, $actionName, $expectedVersion, $execution, $requestPayload, $wrapInTransaction);
         });
     }
 
     /** @param array<string|int, mixed> $requestPayload */
-    private function processLocked(User $user, string $commandId, string $actionName, ?int $expectedVersion, callable $execution, array $requestPayload): Response
+    private function processLocked(User $user, string $commandId, string $actionName, ?int $expectedVersion, callable $execution, array $requestPayload, bool $wrapInTransaction = true): Response
     {
         $payloadHash = hash('sha256', json_encode($this->sortKeys($requestPayload), JSON_THROW_ON_ERROR));
         $existing = CommandLog::query()->where('user_id', $user->id)->where('command_id', $commandId)->first();
 
         if ($existing) {
-            if ($existing->payload_hash === null) {
-                throw ValidationException::withMessages([
-                    'command_id' => ['This idempotency key cannot be safely replayed. Submit a new UUID.'],
-                ]);
-            }
-
-            if (
-                $existing->action_name !== $actionName
-                || $existing->expected_version !== $expectedVersion
-                || ! hash_equals($existing->payload_hash, $payloadHash)
-            ) {
-                throw ValidationException::withMessages(['command_id' => 'This idempotency key was already used for a different command payload.']);
-            }
-
-            $decodedPayload = $existing->response_payload;
-            if ($decodedPayload === null && is_string($rawPayload = $existing->getRawOriginal('response_payload'))) {
-                $decodedPayload = json_decode($rawPayload, true);
-            }
-            /** @var array<string, mixed> $payload */
-            $payload = is_array($decodedPayload) ? $decodedPayload : [];
-
-            if (($payload['type'] ?? null) === 'redirect') {
-                if (array_key_exists('flash', $payload) && request()->hasSession()) {
-                    request()->session()->flash('flash', $payload['flash']);
-                }
-
-                return new RedirectResponse((string) $payload['url'], $existing->response_code);
-            }
-
-            return new JsonResponse($payload, $existing->response_code);
+            return $this->buildReplayResponse($existing, $payloadHash, $actionName, $expectedVersion);
         }
 
-        $response = DB::transaction(function () use ($user, $commandId, $actionName, $expectedVersion, $execution, $payloadHash): Response {
-            $response = $execution();
-
-            $responseCode = $response instanceof Response ? $response->getStatusCode() : 200;
+        $recordCommandLog = function (Response $response) use ($user, $commandId, $actionName, $expectedVersion, $payloadHash): void {
+            $responseCode = $response->getStatusCode();
             $responseContent = null;
 
             if ($response instanceof JsonResponse) {
@@ -138,11 +119,64 @@ class IdempotentCommandService
                 'response_code' => $responseCode,
                 'response_payload' => $responseContent,
             ]);
+        };
 
-            return $response;
-        });
+        if ($wrapInTransaction) {
+            return DB::transaction(function () use ($execution, $recordCommandLog): Response {
+                $response = $execution();
+                $recordCommandLog($response);
+
+                return $response;
+            });
+        }
+
+        $response = $execution();
+        try {
+            $recordCommandLog($response);
+        } catch (QueryException $e) {
+            $existing = CommandLog::query()->where('user_id', $user->id)->where('command_id', $commandId)->first();
+            if ($existing) {
+                return $this->buildReplayResponse($existing, $payloadHash, $actionName, $expectedVersion);
+            }
+
+            throw $e;
+        }
 
         return $response;
+    }
+
+    private function buildReplayResponse(CommandLog $existing, string $payloadHash, string $actionName, ?int $expectedVersion): Response
+    {
+        if ($existing->payload_hash === null) {
+            throw ValidationException::withMessages([
+                'command_id' => ['This idempotency key cannot be safely replayed. Submit a new UUID.'],
+            ]);
+        }
+
+        if (
+            $existing->action_name !== $actionName
+            || $existing->expected_version !== $expectedVersion
+            || ! hash_equals($existing->payload_hash, $payloadHash)
+        ) {
+            throw ValidationException::withMessages(['command_id' => 'This idempotency key was already used for a different command payload.']);
+        }
+
+        $decodedPayload = $existing->response_payload;
+        if ($decodedPayload === null && is_string($rawPayload = $existing->getRawOriginal('response_payload'))) {
+            $decodedPayload = json_decode($rawPayload, true);
+        }
+        /** @var array<string, mixed> $payload */
+        $payload = is_array($decodedPayload) ? $decodedPayload : [];
+
+        if (($payload['type'] ?? null) === 'redirect') {
+            if (array_key_exists('flash', $payload) && request()->hasSession()) {
+                request()->session()->flash('flash', $payload['flash']);
+            }
+
+            return new RedirectResponse((string) $payload['url'], $existing->response_code);
+        }
+
+        return new JsonResponse($payload, $existing->response_code);
     }
 
     /**

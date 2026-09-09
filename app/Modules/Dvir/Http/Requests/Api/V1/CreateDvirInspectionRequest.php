@@ -50,6 +50,7 @@ class CreateDvirInspectionRequest extends FormRequest
             'photos.*.file_size' => ['nullable', 'integer', 'max:15728640'],
             'photos.*.base64' => ['nullable', 'string'],
             'photos.*.uri' => ['nullable', 'string', 'max:1000'],
+            'command_id' => ['nullable', 'uuid'],
         ];
     }
 

@@ -218,23 +218,31 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     >(null);
     const [activeNavItem, setActiveNavItem] = useState<FieldNavItem>('today');
 
-    useEffect(() => {
+    const [prevProps, setPrevProps] = useState({
+        isUnitLinked,
+        dvirStatus,
+        preTripDefectLockout,
+    });
+
+    if (
+        isUnitLinked !== prevProps.isUnitLinked ||
+        dvirStatus !== prevProps.dvirStatus ||
+        preTripDefectLockout !== prevProps.preTripDefectLockout
+    ) {
+        setPrevProps({ isUnitLinked, dvirStatus, preTripDefectLockout });
+
         if (isUnitLinked !== undefined) {
             setIsLinkedLocal(isUnitLinked);
         }
-    }, [isUnitLinked]);
 
-    useEffect(() => {
         if (dvirStatus !== undefined) {
             setLocalDvirStatus(dvirStatus);
         }
-    }, [dvirStatus]);
 
-    useEffect(() => {
         if (preTripDefectLockout !== undefined) {
             setLocalDefectLockout(preTripDefectLockout);
         }
-    }, [preTripDefectLockout]);
+    }
 
     const queuedCount = outboxCommands.filter(
         (command) => command.state === 'queued',
@@ -416,144 +424,147 @@ export const AssignedJobsListScreen: React.FC<AssignedJobsListScreenProps> = ({
     }, [reliefHandoverOpen, activeJob, apiClient, handoverPin]);
 
     // 6 Dashboard Tiles
-    const DASHBOARD_TILES: TileItem[] = [
-        {
-            id: 'fuel',
-            title: 'Fuel',
-            sublabel: 'Requests & Logs',
-            iconName: 'fuel',
-            bgColor: colors.amberDark,
-            lightIconColor: colors.amberDark,
-            darkBgColor: colors.hudSurface,
-            darkIconColor: colors.hudAmber,
-        },
-        {
-            id: 'hos',
-            title: 'Hours of\nService',
-            sublabel: 'Shift & Hours',
-            iconName: 'clock',
-            bgColor: '#D97706',
-            lightHaloBg: 'rgba(217, 119, 6, 0.12)',
-            lightIconColor: '#D97706',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(245, 158, 11, 0.45)',
-            darkIconColor: '#F59E0B',
-            darkHaloBg: 'rgba(245, 158, 11, 0.15)',
-        },
-        {
-            id: 'dvir',
-            title: 'Vehicle\nInspection',
-            sublabel: 'Pre & Post Trip',
-            iconName: 'clipboard',
-            bgColor: '#059669',
-            lightHaloBg: 'rgba(5, 150, 105, 0.12)',
-            lightIconColor: '#059669',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(16, 185, 129, 0.45)',
-            darkIconColor: '#34D399',
-            darkHaloBg: 'rgba(16, 185, 129, 0.15)',
-        },
-        {
-            id: 'routes',
-            title: 'Drive\nRoutes',
-            sublabel: 'Heavy Transit',
-            iconName: 'route',
-            bgColor: '#0284C7',
-            lightHaloBg: 'rgba(2, 132, 199, 0.12)',
-            lightIconColor: '#0284C7',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(56, 189, 248, 0.45)',
-            darkIconColor: '#38BDF8',
-            darkHaloBg: 'rgba(56, 189, 248, 0.15)',
-        },
-        {
-            id: 'documents',
-            title: 'Documents',
-            sublabel: 'Permits & Certs',
-            iconName: 'document',
-            bgColor: '#7C3AED',
-            lightHaloBg: 'rgba(124, 58, 237, 0.12)',
-            lightIconColor: '#7C3AED',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(192, 132, 252, 0.45)',
-            darkIconColor: '#C084FC',
-            darkHaloBg: 'rgba(192, 132, 252, 0.15)',
-        },
-        {
-            id: 'vehicle',
-            title: 'Machine\nProfile',
-            sublabel: 'Setup & Fleet',
-            iconName: 'crane',
-            bgColor: '#4D7C0F',
-            lightHaloBg: 'rgba(77, 124, 15, 0.12)',
-            lightIconColor: '#4D7C0F',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(163, 230, 53, 0.45)',
-            darkIconColor: '#A3E635',
-            darkHaloBg: 'rgba(163, 230, 53, 0.15)',
-        },
-        {
-            id: 'forms',
-            title: 'Dispatch',
-            sublabel: 'Intake & Orders',
-            iconName: 'file-text',
-            bgColor: '#2563EB',
-            lightHaloBg: 'rgba(37, 99, 235, 0.12)',
-            lightIconColor: '#2563EB',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(96, 165, 250, 0.45)',
-            darkIconColor: '#60A5FA',
-            darkHaloBg: 'rgba(96, 165, 250, 0.15)',
-            badgeCount:
-                pendingResponseCount > 0
-                    ? pendingResponseCount
-                    : jobs.length > 0
-                      ? jobs.length
-                      : undefined,
-        },
-        {
-            id: 'rental',
-            title: 'Rental\nHandover',
-            sublabel: 'Check-in / Out',
-            iconName: 'truck',
-            bgColor: '#4F46E5',
-            lightHaloBg: 'rgba(79, 70, 229, 0.12)',
-            lightIconColor: '#4F46E5',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(129, 140, 248, 0.45)',
-            darkIconColor: '#818CF8',
-            darkHaloBg: 'rgba(129, 140, 248, 0.15)',
-        },
-        {
-            id: 'sales',
-            title: 'Sales\nDelivery',
-            sublabel: 'Handover & VIN',
-            iconName: 'signature',
-            bgColor: '#E11D48',
-            lightHaloBg: 'rgba(225, 29, 72, 0.12)',
-            lightIconColor: '#E11D48',
-            borderColor: 'transparent',
-            iconColor: '#FFFFFF',
-            darkBgColor: '#1E293B',
-            darkBorderColor: 'rgba(251, 113, 133, 0.45)',
-            darkIconColor: '#FB7185',
-            darkHaloBg: 'rgba(251, 113, 133, 0.15)',
-        },
-    ];
+    const DASHBOARD_TILES: TileItem[] = useMemo(
+        () => [
+            {
+                id: 'fuel',
+                title: 'Fuel',
+                sublabel: 'Requests & Logs',
+                iconName: 'fuel',
+                bgColor: colors.amberDark,
+                lightIconColor: colors.amberDark,
+                darkBgColor: colors.hudSurface,
+                darkIconColor: colors.hudAmber,
+            },
+            {
+                id: 'hos',
+                title: 'Hours of\nService',
+                sublabel: 'Shift & Hours',
+                iconName: 'clock',
+                bgColor: '#D97706',
+                lightHaloBg: 'rgba(217, 119, 6, 0.12)',
+                lightIconColor: '#D97706',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(245, 158, 11, 0.45)',
+                darkIconColor: '#F59E0B',
+                darkHaloBg: 'rgba(245, 158, 11, 0.15)',
+            },
+            {
+                id: 'dvir',
+                title: 'Vehicle\nInspection',
+                sublabel: 'Pre & Post Trip',
+                iconName: 'clipboard',
+                bgColor: '#059669',
+                lightHaloBg: 'rgba(5, 150, 105, 0.12)',
+                lightIconColor: '#059669',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(16, 185, 129, 0.45)',
+                darkIconColor: '#34D399',
+                darkHaloBg: 'rgba(16, 185, 129, 0.15)',
+            },
+            {
+                id: 'routes',
+                title: 'Drive\nRoutes',
+                sublabel: 'Heavy Transit',
+                iconName: 'route',
+                bgColor: '#0284C7',
+                lightHaloBg: 'rgba(2, 132, 199, 0.12)',
+                lightIconColor: '#0284C7',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(56, 189, 248, 0.45)',
+                darkIconColor: '#38BDF8',
+                darkHaloBg: 'rgba(56, 189, 248, 0.15)',
+            },
+            {
+                id: 'documents',
+                title: 'Documents',
+                sublabel: 'Permits & Certs',
+                iconName: 'document',
+                bgColor: '#7C3AED',
+                lightHaloBg: 'rgba(124, 58, 237, 0.12)',
+                lightIconColor: '#7C3AED',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(192, 132, 252, 0.45)',
+                darkIconColor: '#C084FC',
+                darkHaloBg: 'rgba(192, 132, 252, 0.15)',
+            },
+            {
+                id: 'vehicle',
+                title: 'Machine\nProfile',
+                sublabel: 'Setup & Fleet',
+                iconName: 'crane',
+                bgColor: '#4D7C0F',
+                lightHaloBg: 'rgba(77, 124, 15, 0.12)',
+                lightIconColor: '#4D7C0F',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(163, 230, 53, 0.45)',
+                darkIconColor: '#A3E635',
+                darkHaloBg: 'rgba(163, 230, 53, 0.15)',
+            },
+            {
+                id: 'forms',
+                title: 'Dispatch',
+                sublabel: 'Intake & Orders',
+                iconName: 'file-text',
+                bgColor: '#2563EB',
+                lightHaloBg: 'rgba(37, 99, 235, 0.12)',
+                lightIconColor: '#2563EB',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(96, 165, 250, 0.45)',
+                darkIconColor: '#60A5FA',
+                darkHaloBg: 'rgba(96, 165, 250, 0.15)',
+                badgeCount:
+                    pendingResponseCount > 0
+                        ? pendingResponseCount
+                        : jobs.length > 0
+                          ? jobs.length
+                          : undefined,
+            },
+            {
+                id: 'rental',
+                title: 'Rental\nHandover',
+                sublabel: 'Check-in / Out',
+                iconName: 'truck',
+                bgColor: '#4F46E5',
+                lightHaloBg: 'rgba(79, 70, 229, 0.12)',
+                lightIconColor: '#4F46E5',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(129, 140, 248, 0.45)',
+                darkIconColor: '#818CF8',
+                darkHaloBg: 'rgba(129, 140, 248, 0.15)',
+            },
+            {
+                id: 'sales',
+                title: 'Sales\nDelivery',
+                sublabel: 'Handover & VIN',
+                iconName: 'signature',
+                bgColor: '#E11D48',
+                lightHaloBg: 'rgba(225, 29, 72, 0.12)',
+                lightIconColor: '#E11D48',
+                borderColor: 'transparent',
+                iconColor: '#FFFFFF',
+                darkBgColor: '#1E293B',
+                darkBorderColor: 'rgba(251, 113, 133, 0.45)',
+                darkIconColor: '#FB7185',
+                darkHaloBg: 'rgba(251, 113, 133, 0.15)',
+            },
+        ],
+        [jobs.length, pendingResponseCount],
+    );
 
     // 2x4 Layout: 4 columns of 2 tiles each, horizontally swipeable
     // Col 1: HOS & Documents | Col 2: DVIR & Vehicle | Col 3: Routes & Dispatch | Col 4: Rental & Sales

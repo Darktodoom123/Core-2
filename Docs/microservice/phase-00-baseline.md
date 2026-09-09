@@ -6,7 +6,7 @@ Prerequisite: read README, architecture and progress. Work only in the assigned 
 
 1. Inspect git status/revision, applicable instructions, manifests and locks. Preserve the pre-existing deployment-document edit. Record existing public route/resource shapes, source table ownership, and available test evidence. Do not repeat verified passing tests without a relevant change.
 2. Record undeployed status and remove claims of an already running production system from current deployment guidance. Keep HostForge as proposed hosting with unverified capabilities. Local preparatory phases do not require production account access.
-3. Specify isolated database names/Compose project from architecture.md and test environment values. Before any database command, verify APP_ENV, DB_CONNECTION, DB_DATABASE, DB_URL and host explicitly; no implicit inherited values. Current SQLite anchors use :memory:, array cache/session/mail and sync queues.
+3. Specify isolated database names (`core2_ms_operations` and `core2_ms_tracking`) / Compose project (`core2-ms`) from architecture.md and test environment values. Before any database command, verify APP_ENV, DB_CONNECTION, DB_DATABASE, DB_URL and host explicitly; no implicit inherited values. Current SQLite anchors use :memory:, array cache/session/mail and sync queues.
 4. Record pending Linux/PostgreSQL concurrency, dependency advisories, capacity and recovery evidence. Configure isolated PostgreSQL resources in Phase 2, not by connecting to an existing local database.
 
 ## Evidence to preserve

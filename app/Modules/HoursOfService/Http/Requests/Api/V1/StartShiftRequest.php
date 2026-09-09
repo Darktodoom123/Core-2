@@ -3,11 +3,10 @@
 namespace App\Modules\HoursOfService\Http\Requests\Api\V1;
 
 use App\Modules\HoursOfService\Enums\DutyStatus;
-use App\Modules\HoursOfService\Enums\StandbyReason;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
-class ChangeDutyStatusRequest extends FormRequest
+class StartShiftRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,8 +19,9 @@ class ChangeDutyStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'duty_status' => ['required', new Enum(DutyStatus::class)],
-            'standby_reason' => ['nullable', new Enum(StandbyReason::class)],
+            'operational_asset_id' => ['nullable', 'integer', 'exists:operational_assets,id'],
+            'dispatch_job_id' => ['nullable', 'integer', 'exists:dispatch_jobs,id'],
+            'duty_status' => ['nullable', new Enum(DutyStatus::class)],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'location_name' => ['nullable', 'string', 'max:255'],

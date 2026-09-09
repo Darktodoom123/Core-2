@@ -18,11 +18,14 @@ final class AssignmentController extends Controller
 {
     public function assign(AssignDispatchResourcesRequest $request, DispatchJob $dispatchJob, AssignDispatchResources $action): RedirectResponse
     {
+        $version = $request->validated('version') !== null ? (int) $request->validated('version') : null;
+
         $action->handle(
             $request->user(),
             $dispatchJob,
             $request->validated('personnel', []),
             $request->validated('assets', []),
+            $version,
         );
 
         return to_route('dispatch-jobs.show', $dispatchJob)->with('flash', [

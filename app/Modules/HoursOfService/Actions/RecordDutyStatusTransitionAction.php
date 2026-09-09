@@ -37,11 +37,15 @@ class RecordDutyStatusTransitionAction
         ): OperatorShift {
             $now = Carbon::now();
 
+            // Pessimistic lock on user record to serialize concurrent shift operations per operator
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
+
             /** @var OperatorShift|null $shift */
             $shift = OperatorShift::query()
                 ->where('user_id', $user->id)
                 ->whereIn('status', [ShiftStatus::ACTIVE, ShiftStatus::ON_BREAK])
                 ->latest('started_at')
+                ->lockForUpdate()
                 ->first();
 
             // If no active shift exists and nextStatus is not off_duty, start a shift
@@ -52,6 +56,7 @@ class RecordDutyStatusTransitionAction
                     $lastShift = OperatorShift::query()
                         ->where('user_id', $user->id)
                         ->latest('started_at')
+                        ->lockForUpdate()
                         ->firstOr(function () use ($user, $now): OperatorShift {
                             return OperatorShift::create([
                                 'user_id' => $user->id,
@@ -80,6 +85,7 @@ class RecordDutyStatusTransitionAction
                 ->where('operator_shift_id', $shift->id)
                 ->whereNull('ended_at')
                 ->latest('started_at')
+                ->lockForUpdate()
                 ->first();
 
             if ($activeLog !== null) {

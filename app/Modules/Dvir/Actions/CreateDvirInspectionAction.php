@@ -19,6 +19,7 @@ use App\Shared\Assets\Services\OperationalAssetStatusGuard;
 use finfo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 class CreateDvirInspectionAction
@@ -47,29 +48,24 @@ class CreateDvirInspectionAction
 
         $inspectionData = $this->buildInspectionAttributes($validated, $user, $checksPayload);
 
-        [$inspection, $checks, $photos] = DB::transaction(function () use ($inspectionData, $checksPayload, $photosPayload, $user): array {
-            $inspection = DvirInspection::query()->create($inspectionData);
+        $batchFolder = (string) Str::uuid();
+        $uploadedPhotos = [];
+        $preparedPhotos = [];
 
-            $checks = [];
-            foreach ($checksPayload as $index => $check) {
-                $checks[] = $inspection->checks()->create([
-                    'external_id' => $check['id'] ?? null,
-                    'category' => $check['category'],
-                    'label' => $check['label'],
-                    'status' => DvirCheckStatus::from($check['status']),
-                    'status_label' => $check['status_label'] ?? null,
-                    'notes' => $check['notes'] ?? null,
-                    'sort_order' => $check['sort_order'] ?? $index,
-                ]);
-            }
-
-            $photos = [];
+        try {
             foreach ($photosPayload as $photoItem) {
                 $angle = $photoItem['angle'];
                 $fileName = $photoItem['file_name'] ?? "{$angle}_".time().'.jpg';
-                $stored = $this->storePhotoFile((int) $inspection->id, $angle, $photoItem);
+                $stored = $this->storePhotoFile($batchFolder, $angle, $photoItem);
 
-                $photos[] = $inspection->photos()->create([
+                if ($stored['uploaded_to_disk']) {
+                    $uploadedPhotos[] = [
+                        'storage_disk' => $stored['storage_disk'],
+                        'file_path' => $stored['file_path'],
+                    ];
+                }
+
+                $preparedPhotos[] = [
                     'angle' => $angle,
                     'storage_disk' => $stored['storage_disk'],
                     'file_path' => $stored['file_path'],
@@ -77,21 +73,53 @@ class CreateDvirInspectionAction
                     'file_size_bytes' => $stored['file_size_bytes'],
                     'mime_type' => $stored['mime_type'],
                     'sha256_checksum' => $stored['sha256_checksum'],
-                ]);
+                ];
             }
 
-            $defectChecks = array_values(array_filter(
-                $checksPayload,
-                fn (array $c): bool => in_array($c['status'] ?? '', [DvirCheckStatus::CRITICAL->value, DvirCheckStatus::ATTENTION->value, 'critical', 'attention'], true),
-            ));
-            $isLockoutRequired = ($inspection->critical_defects_count > 0) || ! empty($defectChecks);
+            [$inspection, $checks, $photos] = DB::transaction(function () use ($inspectionData, $checksPayload, $preparedPhotos, $user): array {
+                $inspection = DvirInspection::query()->create($inspectionData);
 
-            if ($isLockoutRequired && $inspection->operational_asset_id !== null) {
-                $this->applySafetyLockout((int) $inspection->operational_asset_id, $inspection, $defectChecks, $user);
+                $checks = [];
+                foreach ($checksPayload as $index => $check) {
+                    $checks[] = $inspection->checks()->create([
+                        'external_id' => $check['id'] ?? null,
+                        'category' => $check['category'],
+                        'label' => $check['label'],
+                        'status' => DvirCheckStatus::from($check['status']),
+                        'status_label' => $check['status_label'] ?? null,
+                        'notes' => $check['notes'] ?? null,
+                        'sort_order' => $check['sort_order'] ?? $index,
+                    ]);
+                }
+
+                $photos = [];
+                foreach ($preparedPhotos as $photoData) {
+                    $photos[] = $inspection->photos()->create($photoData);
+                }
+
+                $defectChecks = array_values(array_filter(
+                    $checksPayload,
+                    fn (array $c): bool => in_array($c['status'] ?? '', [DvirCheckStatus::CRITICAL->value, DvirCheckStatus::ATTENTION->value, 'critical', 'attention'], true),
+                ));
+                $isLockoutRequired = ($inspection->critical_defects_count > 0) || ! empty($defectChecks);
+
+                if ($isLockoutRequired && $inspection->operational_asset_id !== null) {
+                    $this->applySafetyLockout((int) $inspection->operational_asset_id, $inspection, $defectChecks, $user);
+                }
+
+                return [$inspection, $checks, $photos];
+            });
+        } catch (Throwable $e) {
+            foreach ($uploadedPhotos as $uploaded) {
+                try {
+                    Storage::disk($uploaded['storage_disk'])->delete($uploaded['file_path']);
+                } catch (Throwable) {
+                    // Suppress compensation deletion errors to preserve original exception
+                }
             }
 
-            return [$inspection, $checks, $photos];
-        });
+            throw $e;
+        }
 
         return [
             'inspection' => $inspection->load(['checks', 'photos']),
@@ -148,9 +176,9 @@ class CreateDvirInspectionAction
 
     /**
      * @param  array<string, mixed>  $photoItem
-     * @return array{file_path: string, storage_disk: string, file_size_bytes: int, mime_type: string, sha256_checksum: string|null}
+     * @return array{file_path: string, storage_disk: string, file_size_bytes: int, mime_type: string, sha256_checksum: string|null, uploaded_to_disk: bool}
      */
-    private function storePhotoFile(int $inspectionId, string $angle, array $photoItem): array
+    private function storePhotoFile(string $folder, string $angle, array $photoItem): array
     {
         $storageService = $this->storageFallback ?? app(StorageFallbackServiceInterface::class);
         $desiredDisk = (string) config('filesystems.dvir_disk', 'r2');
@@ -178,7 +206,7 @@ class CreateDvirInspectionAction
 
                 $checksum = hash('sha256', $binary);
                 $randomSuffix = bin2hex(random_bytes(4));
-                $path = "dvir_photos/{$inspectionId}/{$angle}_{$randomSuffix}.{$extension}";
+                $path = "dvir_photos/{$folder}/{$angle}_{$randomSuffix}.{$extension}";
 
                 $actualDisk = $storageService->resolveDisk($desiredDisk, $fallbackDisk);
 
@@ -199,13 +227,14 @@ class CreateDvirInspectionAction
                     'file_size_bytes' => strlen($binary),
                     'mime_type' => $mimeType,
                     'sha256_checksum' => $checksum,
+                    'uploaded_to_disk' => true,
                 ];
             }
         }
 
         $fallbackPath = ! empty($photoItem['uri']) && is_string($photoItem['uri'])
             ? $photoItem['uri']
-            : "dvir_photos/{$inspectionId}/{$angle}.jpg";
+            : "dvir_photos/{$folder}/{$angle}.jpg";
 
         $actualDisk = $storageService->resolveDisk($desiredDisk, $fallbackDisk);
 
@@ -215,6 +244,7 @@ class CreateDvirInspectionAction
             'file_size_bytes' => isset($photoItem['file_size']) ? (int) $photoItem['file_size'] : 0,
             'mime_type' => 'image/jpeg',
             'sha256_checksum' => null,
+            'uploaded_to_disk' => false,
         ];
     }
 

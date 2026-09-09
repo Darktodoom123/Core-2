@@ -92,6 +92,7 @@ export class FieldApiClient {
 
         if (commandId) {
             headers['Idempotency-Key'] = commandId;
+            headers['X-Command-Id'] = commandId;
         }
 
         return headers;
@@ -653,20 +654,27 @@ export class FieldApiClient {
         return this.handleResponse<CurrentHosShiftResponse>(response);
     }
 
-    public async startHosShift(payload: {
-        operational_asset_id?: number | null;
-        dispatch_job_id?: number | null;
-        duty_status?: string;
-        latitude?: number | null;
-        longitude?: number | null;
-        location_name?: string | null;
-        remarks?: string | null;
-    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+    public async startHosShift(
+        payload: {
+            operational_asset_id?: number | null;
+            dispatch_job_id?: number | null;
+            duty_status?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            location_name?: string | null;
+            remarks?: string | null;
+        },
+        commandId?: string,
+    ): Promise<{ shift: unknown; clocks: HosClocks }> {
         const url = `${this.baseUrl}/api/v1/hos/shifts/start`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
         const response = await this.fetchFn(url, {
             method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload),
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
         });
 
         return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
@@ -674,19 +682,26 @@ export class FieldApiClient {
         );
     }
 
-    public async updateHosDutyStatus(payload: {
-        duty_status: string;
-        standby_reason?: string | null;
-        remarks?: string | null;
-        latitude?: number | null;
-        longitude?: number | null;
-        location_name?: string | null;
-    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+    public async updateHosDutyStatus(
+        payload: {
+            duty_status: string;
+            standby_reason?: string | null;
+            remarks?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            location_name?: string | null;
+        },
+        commandId?: string,
+    ): Promise<{ shift: unknown; clocks: HosClocks }> {
         const url = `${this.baseUrl}/api/v1/hos/duty-status`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
         const response = await this.fetchFn(url, {
             method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload),
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
         });
 
         return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
@@ -694,15 +709,23 @@ export class FieldApiClient {
         );
     }
 
-    public async certifyHosShift(payload?: {
-        certification_statement?: string;
-        remarks?: string | null;
-    }): Promise<{ shift: unknown; clocks: HosClocks }> {
+    public async certifyHosShift(
+        payload?: {
+            certification_statement?: string;
+            remarks?: string | null;
+        },
+        commandId?: string,
+    ): Promise<{ shift: unknown; clocks: HosClocks }> {
         const url = `${this.baseUrl}/api/v1/hos/shifts/certify`;
+        const body = {
+            ...(payload || {}),
+            ...(commandId ? { command_id: commandId } : {}),
+        };
+
         const response = await this.fetchFn(url, {
             method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(payload || {}),
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
         });
 
         return this.handleResponse<{ shift: unknown; clocks: HosClocks }>(
@@ -1115,11 +1138,14 @@ export class FieldApiClient {
         commandId?: string,
     ): Promise<any> {
         const url = `${this.baseUrl}/api/v1/dvir/inspections`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
 
         const response = await this.fetchFn(url, {
             method: 'POST',
             headers: this.getHeaders(commandId),
-            body: JSON.stringify(payload),
+            body: JSON.stringify(body),
         });
 
         return this.handleResponse<any>(response);

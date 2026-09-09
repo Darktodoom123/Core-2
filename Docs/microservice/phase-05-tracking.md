@@ -1,26 +1,62 @@
-# Phase 5 — Extract Tracking
+# Phase 5 — Extract Tracking & Telemetry microservice (Plan A: apps/tracking)
 
-Prerequisite: Phase 4 reviewed and integration tests stable. Existing development location data is not imported or deleted.
+Prerequisite: Phase 4 reviewed and integration contracts stable. Existing development location data is not imported or deleted.
 
-## Source and proposed contract
+## Source and Domain Ownership
 
-Move LocationUpdate persistence, location pruning and current-location/sharing projections from Operations Platform/Tracking into apps/tracking. Keep active dispatch/personnel/asset authorization in Operations. Remove Eloquent user/job/asset relationships from Tracking; scalar IDs reference Operations.
+- **Target Service**: `apps/tracking` (standalone high-throughput service).
+- **Target Storage**: `core2_ms_tracking` (isolated storage using Redis for live position cache and partitioned PostgreSQL or TimescaleDB for telemetry history).
+- **Source Relocation**: Move location ingestion, `location_samples` persistence, latest-location projections, and 30-day coordinate pruning from `app/Platform/Tracking` into `apps/tracking`.
+- **Weather Decoupling**: `LocationWeatherController` and `LocationWeatherService` remain within Operations (`app/Platform/Workspace/` or `app/Platform/Weather/`) as external weather API adapters, decoupling weather lookups from telemetry ingestion.
+- **Relational Decoupling**: Remove cross-database Eloquent relationships (`belongsTo` User, DispatchJob, OperationalAsset) from Tracking. Operational entities travel as scalar integer IDs (`user_id`, `dispatch_job_id`, `operational_asset_id`) with b-tree indexes.
 
-Internal POST /internal/v1/locations requires scoped signed assertion and stable command_id. Body: command_id, user_id, dispatch_job_id (nullable integer), operational_asset_id (nullable integer), latitude/longitude/accuracy_metres (nullable numeric), sharing_enabled (boolean), captured_at (UTC), remarks (nullable bounded string), source (field-mobile or browser). Reuse current validation bounds. Operations supplies actor/source from trusted context, never trusts a different client user_id.
+## Endpoints and Contracts
 
-Success returns 201 with data containing id, user_id, dispatch_job_id, operational_asset_id, latitude, longitude, accuracy_metres, sharing_enabled, captured_at, received_at, remarks. Matching retry returns the stored response; different payload with same scoped ID returns 409. Invalid input returns 422, invalid identity/scope 401/403, unavailable service 503 through the public adapter. Never return success for an uncommitted sample.
-
-GET /internal/v1/locations and /internal/v1/locations/latest accept only authorized scoped filters and bounded pagination. Preserve current public /api/v1/locations shape through Operations unless a coordinated client change is reviewed.
+1. **Direct Mobile Telemetry Ingestion (`POST /v1/locations`)**:
+   - High-throughput endpoint consumed directly by `packages/field-mobile`.
+   - Authenticated via scoped mobile telemetry token issued by Operations upon shift start.
+   - Body: `command_id` (UUID), `dispatch_job_id` (nullable integer), `operational_asset_id` (nullable integer), `latitude`, `longitude`, `accuracy_metres`, `sharing_enabled` (boolean), `captured_at` (UTC RFC3339), `remarks` (optional bounded string).
+   - Writes directly to Redis (latest position) and appends to partitioned PostgreSQL (`location_samples`), bypassing Operations database write load.
+2. **Operations Internal Ingestion (`POST /internal/v1/locations`)**:
+   - Fallback ingestion from Operations BFF for browser workspace updates or synchronized offline batches.
+   - Authenticated via signed assertion (HMAC-SHA256 or short-lived JWT).
+3. **Latest Locations Query (`GET /internal/v1/locations/latest`)**:
+   - Consumed by Operations BFF to hydrate the dispatch workspace live map.
+   - Fetches cached current positions directly from Redis / latest projections. Operations hydrates entity names (asset code, operator name) in memory.
+4. **Historical Range Query (`GET /internal/v1/locations`)**:
+   - Consumed by Operations Compliance Reporting (`LocationAuditExportDataset`) with bounded pagination and time filters.
 
 ## Batches
 
-1. Create fresh location_samples, sharing_states, latest_locations, command receipts, audit/outbox/inbox tables. Preserve both timestamps and existing freshness thresholds; order current state deterministically so older captures cannot overwrite newer state.
-2. Implement transactional persistence, response receipts and location.recorded/sharing.changed events. Sharing state has a server-issued monotonic version; replayed location samples cannot enable sharing. Explicit user sharing changes, not delayed sample arrival, control the sharing state.
-3. Replace Operations storage calls with authenticated adapters; keep current assignment/resource checks before forwarding. Update workspace/realtime consumers to authorized projections/query results and remove raw-history reads from Operations.
-4. Implement 30-day coordinate pruning across data/projections/replay; reject or scrub expired coordinates when replayed. Preserve allowed audit metadata. Use synthetic mobile offline batches and update transport types together.
+1. **Service Scaffolding & Database Partitioning**:
+   - Scaffold standalone Laravel service in `apps/tracking` with dedicated `composer.json`, `artisan`, and environment config.
+   - Create migrations in `core2_ms_tracking` for `location_samples`, `latest_locations`, and `command_receipts`.
+   - Implement PostgreSQL table partitioning by month on `location_samples(captured_at)` to optimize high-throughput write performance and enable efficient 30-day retention pruning.
+2. **High-Throughput Ingestion & Redis Caching**:
+   - Implement `POST /v1/locations` and `POST /internal/v1/locations` with `command_receipts` duplicate suppression.
+   - Store latest position in Redis with key `tracking:latest:{user_id}` and `tracking:asset:{operational_asset_id}`.
+   - Replay protection: enforce monotonic timestamp validation so an older replayed GPS sample cannot overwrite a newer position.
+   - Sharing state control: explicit sharing-off (`sharing_enabled = false`) instantly deletes the Redis latest-position key; delayed or replayed samples cannot turn sharing back on.
+3. **Operations BFF Integration & Decoupling**:
+   - Implement `HttpTrackingClient` in Operations implementing `TrackingClientInterface`.
+   - Update `OperationsWorkspaceController` and `OperationsWorkspaceViewModel` to fetch live map markers from `HttpTrackingClient::getLatestLocations()` instead of querying the primary database.
+   - Operations broadcasts `WorkspaceUpdated` on Reverb upon receiving confirmed telemetry from Tracking.
+   - In test environments, bind `FakeTrackingClient` in Operations service container to keep existing Operations test suites passing without requiring an active Tracking daemon.
+4. **Mobile Client Dual-Target Routing**:
+   - Update `packages/field-mobile/src/services/apiClient.ts` to route dispatch, shifts, DVIR, and HoS calls to Operations, and GPS telemetry updates (`sendLocationUpdate`) to the Tracking service URL.
+   - Maintain offline queuing in mobile SQLite: buffered samples are sent in batches to Tracking when network connectivity is restored.
+5. **Automated 30-Day Coordinate Privacy Pruning**:
+   - Implement `location:prune` console command in `apps/tracking`.
+   - Schedule daily execution at 02:15 UTC. Nulls or truncates coordinates older than 30 days (`captured_at < NOW() - INTERVAL '30 days'`) while preserving anonymized audit timestamps.
 
-## Failure/acceptance
+## Failure Boundaries & Acceptance
 
-An uncertain HTTP result is retried with the same command ID; no fallback local write. Tracking outage shows unavailable/stale map state without blocking dispatch/SOS. Keep pending client commands until definitive response according to the existing outbox lifecycle.
-
-Test current location API/privacy/retention/workspace and mobile lifecycle suites plus concurrent duplicates, old captures, sharing-off/reconnect, asset/job mismatch, stale permissions, deletion replay and burst load. Review stale-state rules explicitly; stop if sharing-off can be reversed by delayed events or if coordinates leak into logs/expired exports.
+- **Tracking Outage**:
+  - Outage of Tracking does not block dispatch creation, asset scheduling, crew assignments, HoS shift changes, DVIR safety walkarounds, or SOS alerts in Operations.
+  - Operations live map shows an explicit "Live telemetry currently unavailable — displaying last known positions" banner.
+- **Acceptance Tests**:
+  - High-frequency burst test: simulate 1,000 GPS points/sec into `POST /v1/locations`; verify Redis latest positions update instantly and PostgreSQL partitions absorb writes without lock contention.
+  - Deduplication test: re-sending the same `command_id` returns HTTP 200/201 with identical payload without inserting duplicate rows.
+  - Sharing-off test: toggling sharing off clears the active position immediately; replaying old samples with `sharing_enabled = true` is rejected.
+  - 30-day retention test: verify coordinates with `captured_at` > 30 days are purged by `location:prune`.
+  - Operations workspace test suite passes using mocked `TrackingClientInterface`.

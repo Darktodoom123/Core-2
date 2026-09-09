@@ -1,27 +1,49 @@
-# Phase 4 — Extract AI generation
+# Phase 4 — OpenRouter AI queue worker & isolation (Plan A: Operations Internal)
 
-Prerequisite: integration foundation accepted. Operations recommendation acceptance stays transactional and authoritative.
+Prerequisite: Phase 3 contracts and integration accepted. Recommendation acceptance stays strictly transactional, authoritative, and local to Operations.
 
-## Source and ownership
+## Source and Ownership
 
-Current source: app/Platform/Gpt (under apps/operations after relocation). BoundedContextBuilder and AcceptGptRecommendation remain Operations. OpenAiClientWrapper and generation execution move to apps/recommendations. Existing gpt_recommendations review state remains Operations; AI gets generation_requests, generation_runs and generation_results. Metrics are split by ownership, not dual-written as shared models.
+- **Code Location**: `app/Platform/Gpt/` remains strictly within Core Operations (`apps/operations`). Separate microservice extraction is rejected under Plan A.
+- **Components**: `BoundedContextBuilder`, `GenerateGptRecommendation`, `GenerateGptRecommendationJob`, `AcceptGptRecommendation`, `OpenAiClientWrapper`, `GptRecommendation`, and `GptRecommendationMetric`.
+- **Architectural Rationale**: `OpenAiClientWrapper.php` is an external API wrapper around third-party OpenRouter LLM endpoints. Isolating an external API wrapper into a distinct microservice introduces unnecessary RPC network hops, inter-service serialization, and distributed failure states. The correct architectural solution is process and queue isolation within Operations.
+- **Transactional Boundary**: AI generates inert proposals (`gpt_recommendations`). AI never mutates dispatch state directly. Human dispatchers review and accept proposals. `AcceptGptRecommendation` atomically acquires pessimistic row locks (`lockForUpdate()`) on `OperationalAsset` and `DispatchJob`, revalidates equipment availability and operator HoS duty status, and commits assignments in a single database transaction.
 
-## Contracts
+## Dedicated Queue Worker Isolation
 
-Operations emits recommendation.generation.requested.v1 with request_id, recommendation_id, actor_id, dispatch_job_id, context_hash, automation_hash (nullable), bounded_context, input_references, requested_at and expires_at. Freeze bounded_context's explicit structure from BoundedContextBuilder into schema/examples; reject extra model/private fields rather than serializing Eloquent. Review that schema before provider code moves.
+- **Queue Channel**: All generation jobs (`GenerateGptRecommendationJob`) are explicitly routed to the dedicated `ai` queue (`onQueue('ai')`).
+- **Worker Process**: Dedicated supervisor worker process (`php artisan queue:work --queue=ai --tries=3 --timeout=120`).
+- **Workload Isolation**: Third-party LLM latency (often 5–30 seconds), OpenRouter 429 rate limits, and network retries are isolated to the `ai` queue worker. The primary operational queue (`default`) processing critical dispatch state changes, notifications, and webhooks is never blocked or starved by LLM calls.
 
-AI emits recommendation.generation.completed.v1 with request_id, recommendation_id, context_hash, generated_at, proposal, conflicts, response_summary and usage (input/output tokens, estimated cost, latency). proposal permits only the assignment fields accepted by the existing acceptance action; formalize their current enums and validation in the schema.
-Failure emits recommendation.generation.failed.v1 with request_id, recommendation_id, stable error_code and retryable; no raw provider response/secrets.
+## Bounded Context & Invariants
+
+- `BoundedContextBuilder` constructs an explicit, sanitized payload from the dispatch job, candidate cranes/equipment, and operator qualifications.
+- Sensitive credentials, billing details, and unrelated client information are strictly scrubbed before prompt assembly.
+- A deterministic `context_hash` (SHA-256 of the normalized bounded context) prevents redundant generation calls for identical dispatch parameters.
+- Token usage, estimated cost, latency, and status are recorded in `gpt_recommendation_metrics` without logging raw prompt bodies or API keys.
 
 ## Batches
 
-1. Define and test contracts against synthetic current builder/results. Create fresh AI schema/image and scoped queues. Unique request_id prevents duplicate generation execution where locally possible.
-2. Replace Operations generation job with transactional request/outbox creation. AI consumes bounded input, runs the provider wrapper with existing guards, stores result/outbox atomically, and exposes health/metrics.
-3. Operations consumes results into its own proposal/review record. Human acceptance rechecks current permissions, expiry, dispatch context and row locks, using the normal assignment action. A late result cannot reopen decided/expired work.
-4. Remove provider credentials/network calls from Operations and update fixture generation/tests. Keep provider calls mocked in normal verification. Explicitly authorize any billable live-provider exercise separately.
+1. **Queue Routing & Supervisor Configuration**:
+   - Configure the `ai` queue connection in `apps/operations/config/queue.php`.
+   - Update `GenerateGptRecommendationJob` to enforce `public $queue = 'ai'`.
+   - Add supervisor configuration for the `operations-worker-ai` worker daemon with explicit timeout (120s) and memory limit (256MB).
+2. **OpenRouter Client Hardening & Resiliency**:
+   - Harden `OpenAiClientWrapper` with explicit HTTP client timeouts (30s connect/read), exponential backoff with jitter on 429/503 responses, and capped retries (maximum 3 attempts).
+   - Capture structured failure reasons in `gpt_recommendation_metrics` (e.g., `rate_limited`, `timeout`, `provider_error`, `schema_mismatch`) without exposing provider secrets.
+3. **Transactional Acceptance & Concurrency Hardening**:
+   - Audit `AcceptGptRecommendation` to guarantee pessimistic row locks on candidate `OperationalAsset` records and target `DispatchJob`.
+   - Revalidate operator Hours of Service (10h fatigue limits) and asset maintenance lockout status prior to assignment creation.
+   - Verify that an expired or stale recommendation cannot overwrite a human dispatcher's manual assignment.
+4. **Testing & Mock Isolation**:
+   - Mock all external OpenRouter calls in unit and feature tests using `Http::fake()` or service mocks.
+   - Live external LLM calls are disabled in CI and local test suites to prevent test flakiness and unintended API costs.
 
-## Failure/acceptance
+## Failure Boundaries & Acceptance
 
-AI outage leaves dispatch usable and proposals pending/failed. Timeout may have incurred provider cost: cap retries, record uncertain attempts, and do not claim exactly-once billing. Test duplicate request/result, delayed/stale/expired proposal, permission revoked during work, provider timeout, crash around result publication, and concurrent acceptance.
-
-Run existing generation/error-handling/acceptance and Linux row-lock suites plus contract/integration checks. Stop if AI can assign resources or accesses Operations tables. Reviewer checks both services' credentials and the acceptance transaction boundary.
+- **External Provider Outage**: OpenRouter unavailability or rate limiting marks the recommendation as `failed` with a user-friendly retry button on the dispatch UI. Dispatch job creation, editing, and manual assignments proceed completely unhindered.
+- **Acceptance Tests**:
+  - `GenerateGptRecommendationJob` executes on the `ai` queue without impacting `default` queue throughput.
+  - Concurrency test: simultaneous acceptance of overlapping recommendations fails cleanly on the second attempt via row lock conflict detection.
+  - Provider timeout test: 30s timeout is caught, recorded in metrics, and leaves the dispatch job unaffected.
+  - Test suites: run `tests/Feature/Gpt/` and concurrency suites in isolated PostgreSQL.

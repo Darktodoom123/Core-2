@@ -60,6 +60,7 @@ export const ChangeUnitModal: React.FC<ChangeUnitModalProps> = ({
 
     const handleConfirm = () => {
         const trimmed = selectedUnit.trim().toUpperCase();
+
         if (!trimmed) {
             return;
         }

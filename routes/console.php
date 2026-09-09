@@ -1,15 +1,11 @@
 <?php
 
 use App\Platform\Attachments\Jobs\PruneExpiredAttachmentsJob;
-use App\Platform\Gpt\Jobs\SweepProactiveGptRecommendationsJob;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
-use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
-use App\Platform\Safety\Jobs\SweepSosEscalationsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -44,9 +40,3 @@ Artisan::command('attachments:prune-expired', function (): void {
     PruneExpiredAttachmentsJob::dispatchSync();
     $this->info('Expired attachments pruned successfully.');
 })->purpose('Purge attachments that have reached end-of-retention (statutory 7 years)');
-
-Schedule::job(new SweepSosEscalationsJob)->everyMinute();
-Schedule::job(new SweepProactiveGptRecommendationsJob)->everyMinute();
-Schedule::job(new PruneSosIncidentCoordinatesJob)->daily();
-Schedule::job(new PruneExpiredExportsJob)->hourly();
-Schedule::job(new PruneExpiredAttachmentsJob)->daily();

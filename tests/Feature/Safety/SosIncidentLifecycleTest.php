@@ -11,12 +11,14 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Safety\Actions\EscalateUnacknowledgedSosIncident;
 use App\Platform\Safety\Actions\PruneSosIncidentCoordinates;
 use App\Platform\Safety\Enums\SosIncidentStatus;
+use App\Platform\Safety\Events\SosIncidentChanged;
 use App\Platform\Safety\Models\SosEmergencyContact;
 use App\Platform\Safety\Models\SosIncident;
 use App\Platform\Safety\Models\SosIncidentRecipient;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -245,7 +247,7 @@ it('returns deliberate call and SMS actions only for a validated configured numb
 });
 
 it('broadcasts SosIncidentChanged when incident location is updated', function (): void {
-    \Illuminate\Support\Facades\Event::fake([\App\Platform\Safety\Events\SosIncidentChanged::class]);
+    Event::fake([SosIncidentChanged::class]);
     $worker = safetyUser(RoleName::CraneOperator);
     $token = $worker->createToken('Synthetic SOS device')->plainTextToken;
     triggerSafety($worker, [], $token)->assertCreated();
@@ -259,13 +261,13 @@ it('broadcasts SosIncidentChanged when incident location is updated', function (
 
     expect((float) $incident->fresh()->latitude)->toBe(14.5995);
 
-    \Illuminate\Support\Facades\Event::assertDispatched(\App\Platform\Safety\Events\SosIncidentChanged::class, function ($event) use ($incident) {
+    Event::assertDispatched(SosIncidentChanged::class, function ($event) use ($incident) {
         return $event->incident->id === $incident->id && $event->action === 'location_updated';
     });
 });
 
 it('broadcasts SosIncidentChanged when incident is classified', function (): void {
-    \Illuminate\Support\Facades\Event::fake([\App\Platform\Safety\Events\SosIncidentChanged::class]);
+    Event::fake([SosIncidentChanged::class]);
     $worker = safetyUser(RoleName::CraneOperator);
     $token = $worker->createToken('Synthetic SOS device')->plainTextToken;
     triggerSafety($worker, [], $token)->assertCreated();
@@ -276,8 +278,7 @@ it('broadcasts SosIncidentChanged when incident is classified', function (): voi
         'worker_note' => 'Scaffold collapse at sector 4',
     ])->assertOk()->assertJsonPath('data.category', 'site_accident');
 
-    \Illuminate\Support\Facades\Event::assertDispatched(\App\Platform\Safety\Events\SosIncidentChanged::class, function ($event) use ($incident) {
+    Event::assertDispatched(SosIncidentChanged::class, function ($event) use ($incident) {
         return $event->incident->id === $incident->id && $event->action === 'classified';
     });
 });
-

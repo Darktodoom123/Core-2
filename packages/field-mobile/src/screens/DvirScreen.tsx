@@ -10,6 +10,10 @@ import {
 import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { Icon } from '../components/common/Icon';
 import {
+    ChangeUnitModal,
+    PreTripDefectFallbackModal,
+} from '../components/index';
+import {
     DVIR_DEFECT_CATEGORIES,
     DvirDefectsModal,
     DvirWalkaroundPhotos,
@@ -19,10 +23,6 @@ import type {
     WalkaroundAngle,
     WalkaroundPhotosMap,
 } from '../components/inspection';
-import {
-    ChangeUnitModal,
-    PreTripDefectFallbackModal,
-} from '../components/index';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import type { FieldApiClient } from '../services/apiClient';
@@ -222,19 +222,20 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     onPreTripPassed,
 }) => {
     const { isDarkHud } = useTheme();
-    const [localAssetCode, setLocalAssetCode] = useState(assetCode);
+    const [overriddenAssetCode, setOverriddenAssetCode] = useState<{
+        propCode: string;
+        localCode: string;
+    } | null>(null);
+    const localAssetCode =
+        overriddenAssetCode && overriddenAssetCode.propCode === assetCode
+            ? overriddenAssetCode.localCode
+            : assetCode;
     const [defectFallbackModalOpen, setDefectFallbackModalOpen] =
         useState(false);
     const [changeUnitModalOpen, setChangeUnitModalOpen] = useState(false);
     const [freshInspectionNotice, setFreshInspectionNotice] = useState<
         string | null
     >(null);
-
-    useEffect(() => {
-        if (assetCode) {
-            setLocalAssetCode(assetCode);
-        }
-    }, [assetCode]);
 
     const [mode, setMode] = useState<'pre_trip' | 'post_trip' | 'history'>(
         initialMode,
@@ -610,6 +611,7 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
     const handleNextOrSubmit = () => {
         if (isSaved) {
             onBack?.();
+
             return;
         }
 
@@ -1934,7 +1936,10 @@ export const DvirScreen: React.FC<DvirScreenProps> = ({
                 onConfirmUnitChange={(newUnitCode, reason) => {
                     setChangeUnitModalOpen(false);
                     setDefectFallbackModalOpen(false);
-                    setLocalAssetCode(newUnitCode);
+                    setOverriddenAssetCode({
+                        propCode: assetCode,
+                        localCode: newUnitCode,
+                    });
                     setSelectedDefectIds([]);
                     setWalkaroundPhotos({});
                     setSafetyStatus('safe');

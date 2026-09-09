@@ -19,6 +19,7 @@ class CertifyShiftRequest extends FormRequest
         return [
             'certification_statement' => ['required', 'string', 'min:5', 'max:1000'],
             'remarks' => ['nullable', 'string', 'max:1000'],
+            'command_id' => ['nullable', 'uuid'],
         ];
     }
 }

@@ -42,7 +42,7 @@ alibaton-ph.com (Apex Domain)
 
 ## 2. Platform & Hosting Architecture (HostForge)
 
-The existing application can be packaged as a containerized service. Deployment on **HostForge Platform** (`https://hostforgeplatform.cloud/platform`) is planned and requires capability verification. The following topology is the pre-restructuring proposal; the microservice handoff defines the future four-service topology.
+The existing application can be packaged as a containerized service. Deployment on **HostForge Platform** (`https://hostforgeplatform.cloud/platform`) is planned and requires capability verification. The following topology is the pre-restructuring proposal; the microservice handoff defines the target two-service topology (Operations + Tracking).
 
 ### Compute & Service Topology
 - **Application Container (`app`)**: Single production container running Alpine Linux, Nginx, PHP 8.4 FPM, Laravel queue workers, scheduler daemon, and Laravel Reverb WebSocket server supervised via `supervisord`.
