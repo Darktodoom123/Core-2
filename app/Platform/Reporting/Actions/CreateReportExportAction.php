@@ -73,7 +73,7 @@ class CreateReportExportAction
                     ]
                 );
 
-                GenerateReportExportJob::dispatch($export->id);
+                GenerateReportExportJob::dispatch($export->id)->onQueue('reports');
 
                 return $export;
             });

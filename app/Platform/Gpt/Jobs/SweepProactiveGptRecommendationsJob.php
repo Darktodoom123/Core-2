@@ -29,6 +29,12 @@ final class SweepProactiveGptRecommendationsJob implements ShouldBeUnique, Shoul
 
     public int $uniqueFor = 300;
 
+    public function __construct()
+    {
+        $this->queue = 'ai';
+        $this->onQueue('ai');
+    }
+
     public function handle(DispatchAdvisoryNeed $need, GenerateGptRecommendation $generate, OpenAiClientWrapper $openAi): void
     {
         if (! config('services.openai.proactive_enabled', true)

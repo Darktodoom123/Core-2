@@ -35,7 +35,10 @@ class GenerateReportExportJob implements ShouldQueue
 
     public function __construct(
         public readonly string $exportId
-    ) {}
+    ) {
+        $this->queue = 'reports';
+        $this->onQueue('reports');
+    }
 
     public function handle(RecordAuditEvent $recordAudit, ReportExportCatalog $catalog): void
     {

@@ -133,9 +133,19 @@ creates an empty named volume with root ownership. It is then owned by
 `www-data` with `0770` directories and `0660` files. No `chmod 777` is used.
 Supervisor remains root only to prepare that volume and bind Nginx to port 80.
 Nginx workers use `www-data`; the official PHP-FPM pool uses `www-data` for
-workers; queue, scheduler, and Reverb are explicitly configured as
-`www-data`. Supervisor program groups receive termination signals so
-`docker compose down` can stop the long-running workers cleanly.
+workers; scheduler, Reverb, and the dedicated queue worker pools are
+explicitly configured as `www-data`. Supervisor (`docker/supervisord.conf`)
+isolates background workloads into three dedicated worker pools to prevent
+starvation:
+
+- `queue-worker-operational`: Core operational dispatch transitions, resource
+  assignments, and notifications (`php artisan queue:work --queue=default,high --sleep=3 --tries=3 --max-time=3600`, `stopwaitsecs=30`).
+- `queue-worker-ai`: Internal GPT recommendations and proactive advisory sweeps
+  (`php artisan queue:work --queue=ai --timeout=120 --tries=3 --sleep=3 --max-time=3600`, `stopwaitsecs=120`).
+- `queue-worker-reports`: Long-running CSV and mPDF compliance exports
+  (`php artisan queue:work --queue=reports --timeout=360 --tries=2 --sleep=3 --max-time=3600`, `stopwaitsecs=360`).
+
+Supervisor program groups receive termination signals so `docker compose down` can stop the long-running workers cleanly.
 
 After startup, check readiness and recent application output with:
 

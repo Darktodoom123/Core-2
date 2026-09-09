@@ -491,3 +491,144 @@ Execute **Task 3: Scaffold Tracking Service (`apps/tracking`)** (standalone Lara
 ### Next step
 
 Execute **Task 4: Wire Operations BFF to Tracking Service** (`HttpTrackingClient` implementing `TrackingClientInterface`, routing mobile and web telemetry to Tracking, and Reverb broadcasting).
+
+## Task 4: Wire Operations BFF to Tracking Service (2026-09-09)
+
+- Scope: Service-to-service authentication with HMAC-SHA256 request signing and 5-minute replay tolerance window, `ValidateServiceSignature` middleware on Tracking `/internal/v1/*` routes, `HttpTrackingClient` implementing `TrackingClientInterface` with timeout and fallback resilience, Operations BFF controllers updated to forward verified scalar IDs to Tracking and broadcast via Reverb upon HTTP 201 acknowledgment, driver switching in `TrackingServiceProvider`, and comprehensive integration/end-to-end Pest test suites.
+- Status: Completed and verified across Operations, Tracking microservice, signing middleware, HTTP client, Reverb broadcasting, and Pest test suites.
+
+### Files changed and created
+
+1. `apps/tracking/app/Http/Middleware/ValidateServiceSignature.php`:
+   - Enforces HMAC-SHA256 request signature verification on all `/internal/v1/*` and `/api/internal/v1/*` microservice endpoints.
+   - Validates `X-Service-Name` against allowed callers (`operations`), `X-Timestamp` against a strict 300-second (5-minute) tolerance window, `X-Payload-Digest` against SHA-256 raw request body hash (with canonical empty digest for GET/HEAD), and `X-Signature` HMAC over `METHOD + "\n" + PATH + "\n" + TIMESTAMP + "\n" + DIGEST`.
+2. `apps/tracking/routes/api.php`:
+   - Applied `ValidateServiceSignature` middleware to `/internal/v1/*` and `/api/internal/v1/*` route groups.
+3. `apps/tracking/config/services.php`:
+   - Configuration file declaring `services.tracking.secret` and allowed services for HMAC authentication.
+4. `apps/tracking/tests/TestCase.php`:
+   - Added `generateSignatureHeaders()` helper, `withoutServiceSignature()` opt-out, and transparent auto-signing hook on internal endpoints for zero regression across existing test suites.
+5. `apps/tracking/tests/Tracking/ServiceAuthenticationTest.php`:
+   - Integration tests covering valid signatures, expired/future timestamp rejection (HTTP 401), missing header rejection (HTTP 401), invalid/tampered signature rejection (HTTP 401), tampered payload rejection (HTTP 401), unauthorized service rejection (HTTP 403), completely unsigned request rejection (HTTP 401), signed requests with trailing slash normalization, api prefix routing, and signed GET queries (HTTP 200).
+6. `app/Platform/Tracking/Exceptions/TrackingConflictException.php`:
+   - Dedicated HTTP 409 conflict exception safely propagating duplicate command conflicts with differing payloads.
+7. `app/Platform/Tracking/Services/HttpTrackingClient.php`:
+   - Implements `TrackingClientInterface` using Laravel HTTP client with configured connect timeout (3s) and read timeout (5s).
+   - Generates canonical HMAC-SHA256 headers (`X-Service-Name: operations`, `X-Timestamp`, `X-Payload-Digest`, `X-Signature`, `X-Command-Id`, and propagated `X-Correlation-Id`).
+   - Canonical path normalization trims leading and trailing slashes for robust signature agreement with reverse proxies.
+   - Handles `ingestLocation`, `getLatestLocations`, `getLatestLocationForJob`, `getLatestLocationForUser`, `getLatestLocationForAsset`, and `queryLocationHistory`.
+   - Propagates HTTP 409 Conflict via `TrackingConflictException`, and gracefully falls back to `DatabaseTrackingClient` on 5xx/connection timeout without crashing core dispatch workflows.
+8. `app/Platform/Tracking/Http/Controllers/Api/V1/LocationController.php` & `LocationUpdateController.php`:
+   - Validates active operator/asset assignments and user permissions in Operations.
+   - Forwards verified scalar IDs (`user_id`, `operational_asset_id`, `dispatch_job_id`) to Tracking via `TrackingClientInterface`.
+   - Returns `new LocationUpdateResource($latest)` directly from the microservice response, eliminating cross-database ID collisions and removing redundant duplicate writes on `location_updates` in Operations DB.
+   - Audits location actions using `$request->user()` as the subject model.
+   - Executes idempotency processing without wrapping external network calls in database transactions (`wrapInTransaction: false`).
+   - Triggers Reverb `BroadcastTrackingWorkspaceUpdate` (`WorkspaceUpdated('tracking', 'updated')`) upon HTTP 201 acknowledgment from Tracking.
+   - Safely propagates HTTP 409 Conflict back to client on mismatched command replays without persisting duplicate records or triggering broadcasts.
+9. `app/Platform/Tracking/Http/Resources/V1/LocationUpdateResource.php`:
+   - Enhanced to format both `LatestLocationDto` and `LocationUpdate` model instances identically.
+10. `app/Platform/Tracking/TrackingServiceProvider.php`:
+    - Resolves `HttpTrackingClient` when `TRACKING_SERVICE_DRIVER=http` or `TRACKING_SERVICE_URL` is set, while retaining `FakeTrackingClient` in test environments and `DatabaseTrackingClient` as local fallback.
+11. `config/services.php`:
+    - Declared `tracking` service configuration (`driver`, `url`, `secret`, `timeout`, `connect_timeout`).
+12. `phpunit.xml` & `apps/tracking/phpunit.xml`:
+    - Added testing environment configurations for `TRACKING_SERVICE_URL` and `TRACKING_SERVICE_SECRET`.
+13. `tests/Feature/Operations/HttpTrackingClientTest.php`:
+    - Pest integration tests verifying HMAC header computation, HTTP request signing, query responses, 409 conflict throwing, timeout resilience, full end-to-end telemetry flow (Mobile -> BFF -> Tracking HTTP 201 -> Reverb broadcast), zero duplicate writes to Operations DB (`location_updates`), primary key collision immunity, conflict propagation, and service provider driver switching.
+
+### Commands and actual results
+
+- `php apps/tracking/artisan test`: exit 0; 40 tests, 188 assertions passed in 1134ms.
+- `npx nx run tracking:lint`: exit 0; Pint passed with 0 errors.
+- `npx nx run tracking:types`: exit 0; PHPStan level 7 passed with 0 errors.
+- `php artisan test tests/Feature/Operations/HttpTrackingClientTest.php`: exit 0; 9 tests, 61 assertions passed in 4389ms.
+- `php artisan test tests/Feature/Api/V1/LocationTest.php tests/Feature/Operations/TrackingDecouplingTest.php tests/Feature/Operations/IdempotentCommandTest.php tests/Feature/Operations/FuelAndTrackingWorkflowTest.php tests/Feature/Operations/LocationRetentionTest.php tests/Feature/Operations/LocationTrackingPrivacyTest.php tests/Feature/MobileLifecycle/MobileLifecycleEndToEndTest.php`: exit 0; 44 tests, 399 assertions passed in 29544ms.
+- `composer lint:check`: exit 0; Pint passed across entire repository with 0 errors.
+- `composer types:check`: exit 0; PHPStan level 7 passed with 0 errors.
+- `npm run lint:check`: exit 0; ESLint passed with 0 errors.
+- `npm run types:check`: exit 0; TypeScript passed with 0 errors.
+- `git diff --check`: exit 0; 0 whitespace or conflict marker errors.
+
+### Next step
+
+Execute **Task 5: Configure Dedicated Workers for Internal AI and Reporting** (dedicated queue channels in Operations for `ai` and `reports`, routing `GenerateGptRecommendationJob` and `GenerateReportExportJob`, worker supervision configuration).
+
+## Task 5: Configure Dedicated Workers for Internal AI and Reporting (2026-09-09)
+
+- Scope: Dedicated queue channels configuration in `config/queue.php` for isolated worker pools (`default`, `ai`, `reports`), job queue routing across all internal AI and reporting jobs (`GenerateGptRecommendationJob`, `SweepProactiveGptRecommendationsJob`, `PruneGptRecommendationsJob`, `GenerateReportExportJob`, `PruneExpiredExportsJob`), explicit queue assignments at job dispatch sites (`CreateReportExportAction`, `RetryReportExportAction`, `GenerateGptRecommendation`, `bootstrap/app.php`), supervisor worker pool definitions in `docker/supervisord.conf`, cross-platform local worker runner scripts (`scripts/run-workers.sh`, `scripts/run-workers.bat`), architecture and Docker documentation updates (`Docs/microservice/architecture.md`, `Docs/architecture/docker.md`), and comprehensive Pest test suite (`tests/Feature/Operations/DedicatedWorkerQueueIsolationTest.php`) verifying strict queue routing and starvation immunity under heavy backlog conditions.
+- Status: Completed and verified. The Core-2 two-service architecture implementation (Tasks 1 through 5) is complete and ready for final review.
+
+### Files changed and created
+
+1. `config/queue.php`:
+   - Defined `'queues'` configuration array declaring dedicated channel metadata, timeouts, tries, and descriptions for `default` (60s, 3 tries), `ai` (120s, 3 tries), and `reports` (300s, 2 tries).
+   - Configured dedicated connection options in `'connections'` for `database-ai`, `database-reports`, `redis-ai`, `redis-reports`, `ai`, and `reports`.
+   - Increased default `retry_after` on `database` and `redis` connections to 420s to safely accommodate long-running exports without premature worker re-releases.
+2. `app/Platform/Gpt/Jobs/GenerateGptRecommendationJob.php`:
+   - Configured `$this->queue = 'ai'` and `$this->onQueue('ai')` in constructor.
+   - Updated timeout to 120s to match dedicated AI worker execution limits.
+3. `app/Platform/Gpt/Jobs/SweepProactiveGptRecommendationsJob.php` & `PruneGptRecommendationsJob.php`:
+   - Configured `$this->queue = 'ai'` and `$this->onQueue('ai')` in constructor.
+4. `app/Platform/Reporting/Jobs/GenerateReportExportJob.php`:
+   - Configured `$this->queue = 'reports'` and `$this->onQueue('reports')` in constructor.
+5. `app/Platform/Reporting/Jobs/PruneExpiredExportsJob.php`:
+   - Configured `$this->queue = 'reports'` and `$this->onQueue('reports')` in constructor.
+6. `app/Platform/Notifications/Jobs/SendQueuedNotificationJob.php`:
+   - Explicitly configured `$this->queue = 'default'` and `$this->onQueue('default')` in constructor, ensuring operational notifications remain strictly on the primary dispatch channel.
+7. `app/Platform/Gpt/Actions/GenerateGptRecommendation.php`:
+   - Explicitly dispatched `GenerateGptRecommendationJob` with `->onQueue('ai')`.
+8. `app/Platform/Reporting/Actions/CreateReportExportAction.php`:
+   - Explicitly dispatched `GenerateReportExportJob` with `->onQueue('reports')`.
+9. `app/Platform/Reporting/Actions/RetryReportExportAction.php`:
+   - Explicitly dispatched `GenerateReportExportJob` with `->onQueue('reports')->afterCommit()`.
+10. `bootstrap/app.php`:
+    - Scheduled `PruneExpiredExportsJob` on `'reports'` queue with `withoutOverlapping()`.
+    - Scheduled `PruneGptRecommendationsJob` and `SweepProactiveGptRecommendationsJob` on `'ai'` queue with `withoutOverlapping()`.
+11. `docker/supervisord.conf`:
+    - Replaced generic single queue worker with three isolated worker programs:
+      - `queue-worker-operational`: `php artisan queue:work --queue=default,high --sleep=3 --tries=3 --max-time=3600` (`stopwaitsecs=30`).
+      - `queue-worker-ai`: `php artisan queue:work --queue=ai --timeout=120 --tries=3 --sleep=3 --max-time=3600` (`stopwaitsecs=120`).
+      - `queue-worker-reports`: `php artisan queue:work --queue=reports --timeout=360 --tries=2 --sleep=3 --max-time=3600` (`stopwaitsecs=360`).
+12. `scripts/run-workers.sh` & `scripts/run-workers.bat`:
+    - Added local development runner scripts supporting individual pool execution (`operational`, `ai`, `reports`) or concurrently launching all three isolated worker processes.
+13. `Docs/microservice/architecture.md`:
+    - Documented dedicated worker channel configuration, worker execution commands, timeouts, retry policies, and starvation immunity architecture.
+14. `Docs/architecture/docker.md`:
+    - Documented container worker supervision topology, three dedicated supervisor worker pools, stopwaitsecs values, and HostForge deployment topology.
+15. `tests/Feature/Operations/DedicatedWorkerQueueIsolationTest.php`:
+    - Added comprehensive regression test suite (9 tests, 52 assertions) covering:
+      - Config queue channel definitions for default, ai, and reports.
+      - `GenerateGptRecommendationJob` strictly routing to `ai` queue with 120s timeout.
+      - `SweepProactiveGptRecommendationsJob` and `PruneGptRecommendationsJob` strictly routing to `ai` queue.
+      - `GenerateReportExportJob` strictly routing to `reports` queue with 300s timeout.
+      - `PruneExpiredExportsJob` strictly routing to `reports` queue.
+      - `GenerateGptRecommendation` service action dispatching to `ai` queue.
+      - `CreateReportExportAction` and `RetryReportExportAction` dispatching to `reports` queue.
+      - Operational and notification jobs remaining on `default` queue.
+      - Starvation immunity proof: verified under `database` queue driver that a backlog of 5 heavy reports jobs and 5 heavy AI jobs does not delay or block an operational dispatch job on `default`, and that dedicated reporting and AI workers pop only their respective queue workloads.
+
+### Commands and actual results
+
+- `composer lint:check`: exit 0; Pint passed across entire repository with 0 errors.
+- `composer types:check`: exit 0; PHPStan level 7 passed with 0 errors.
+- `npm run lint:check`: exit 0; ESLint passed with 0 errors and 0 warnings.
+- `npm run types:check`: exit 0; TypeScript passed with 0 errors.
+- `npm run types:check:mobile`: exit 0; Mobile TypeScript passed with 0 errors.
+- `php artisan test tests/Feature/Operations/DedicatedWorkerQueueIsolationTest.php`: exit 0; 9 tests, 52 assertions passed in 4255ms.
+- `php artisan test tests/Feature/Gpt/`: exit 0; 54 tests, 160 assertions passed in 22609ms.
+- `php artisan test tests/Feature/Operations/ReportExportWorkflowTest.php`: exit 0; 79 tests, 395 assertions passed in 43641ms.
+- `php artisan test tests/Feature/Operations/OperationsConcurrencyAndSafetyHardeningTest.php`: exit 0; 13 tests, 85 assertions passed in 10191ms.
+- `php artisan test tests/Feature/Operations/TrackingDecouplingTest.php tests/Feature/Operations/HttpTrackingClientTest.php`: exit 0; 21 tests, 170 assertions passed in 12851ms.
+- `git diff --check`: exit 0; 0 whitespace or conflict marker errors.
+
+### Implementation Status: Complete
+
+The Core-2 two-service architecture implementation is complete across all five planned tasks:
+- **Task 1**: Operations Concurrency & Safety Hardening (DVIR transaction extraction, HOS pessimistic locks, idempotency, versioning).
+- **Task 2**: Decouple Tracking Queries, Weather, and Test Doubles in Operations (`TrackingClientInterface`, DTOs, in-memory hydration, weather extraction).
+- **Task 3**: Scaffold Tracking Service (`apps/tracking` standalone Laravel app, Nx targets, isolated migrations, REST telemetry API, daily retention).
+- **Task 4**: Wire Operations BFF to Tracking Service (HMAC-SHA256 request signing, `HttpTrackingClient`, Reverb broadcasting, 409 conflict propagation).
+- **Task 5**: Configure Dedicated Workers for Internal AI and Reporting (isolated channels `default`, `ai`, `reports`, job routing, supervisor worker pools, starvation immunity test suite).
+
+Ready for final review.

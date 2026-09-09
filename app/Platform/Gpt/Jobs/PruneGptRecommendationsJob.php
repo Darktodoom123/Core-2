@@ -19,6 +19,12 @@ final class PruneGptRecommendationsJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [60, 300];
 
+    public function __construct()
+    {
+        $this->queue = 'ai';
+        $this->onQueue('ai');
+    }
+
     public function handle(RecordAuditEvent $audit): void
     {
         GptRecommendation::query()

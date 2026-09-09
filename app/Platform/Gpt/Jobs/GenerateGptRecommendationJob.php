@@ -32,14 +32,17 @@ final class GenerateGptRecommendationJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [10, 30];
 
-    public int $timeout = 60;
+    public int $timeout = 120;
 
     /** @param array<string, mixed> $boundedContext */
     public function __construct(
         public int $recommendationId,
         public array $boundedContext,
         public bool $automatic = false,
-    ) {}
+    ) {
+        $this->queue = 'ai';
+        $this->onQueue('ai');
+    }
 
     public function handle(
         OpenAiClientWrapper $openAi,

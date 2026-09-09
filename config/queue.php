@@ -17,6 +17,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dedicated Worker Queue Channels
+    |--------------------------------------------------------------------------
+    |
+    | Explicit queue channel mappings and worker pool configurations for
+    | isolated workload execution:
+    | - default: Core operational dispatch, assignment, notifications, and telemetry
+    | - ai: Asynchronous GPT recommendations, candidate ranking, and sweeps
+    | - reports: Long-running CSV/Excel dataset exports and report generation (up to 300s)
+    |
+    */
+
+    'queues' => [
+        'default' => [
+            'name' => env('QUEUE_DEFAULT_CHANNEL', 'default'),
+            'connection' => env('QUEUE_CONNECTION', 'database'),
+            'description' => 'Core operational dispatch, assignment, notifications, and telemetry broadcasting.',
+            'timeout' => 60,
+            'retry_after' => 90,
+            'tries' => 3,
+        ],
+
+        'ai' => [
+            'name' => env('QUEUE_AI_CHANNEL', 'ai'),
+            'connection' => env('QUEUE_CONNECTION', 'database'),
+            'description' => 'Asynchronous GPT recommendations, candidate ranking, and sweeps.',
+            'timeout' => 120,
+            'retry_after' => 150,
+            'tries' => 3,
+        ],
+
+        'reports' => [
+            'name' => env('QUEUE_REPORTS_CHANNEL', 'reports'),
+            'connection' => env('QUEUE_CONNECTION', 'database'),
+            'description' => 'Long-running CSV/Excel dataset exports and report generation (with up to 300s timeout).',
+            'timeout' => 300,
+            'retry_after' => 360,
+            'tries' => 2,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
     |
@@ -40,7 +82,25 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 420),
+            'after_commit' => false,
+        ],
+
+        'database-ai' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'ai',
+            'retry_after' => (int) env('QUEUE_AI_RETRY_AFTER', 150),
+            'after_commit' => false,
+        ],
+
+        'database-reports' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'reports',
+            'retry_after' => (int) env('QUEUE_REPORTS_RETRY_AFTER', 420),
             'after_commit' => false,
         ],
 
@@ -68,8 +128,44 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 420),
             'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'redis-ai' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'ai',
+            'retry_after' => (int) env('QUEUE_AI_RETRY_AFTER', 150),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'redis-reports' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'reports',
+            'retry_after' => (int) env('QUEUE_REPORTS_RETRY_AFTER', 420),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        'ai' => [
+            'driver' => env('QUEUE_AI_DRIVER', env('QUEUE_CONNECTION', 'database')),
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'ai',
+            'retry_after' => (int) env('QUEUE_AI_RETRY_AFTER', 150),
+            'after_commit' => false,
+        ],
+
+        'reports' => [
+            'driver' => env('QUEUE_REPORTS_DRIVER', env('QUEUE_CONNECTION', 'database')),
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'reports',
+            'retry_after' => (int) env('QUEUE_REPORTS_RETRY_AFTER', 420),
             'after_commit' => false,
         ],
 

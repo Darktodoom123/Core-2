@@ -113,11 +113,16 @@ Core-2/
      - `POST /internal/v1/locations`: Fallback ingestion or browser location ingestion.
      - `GET /internal/v1/locations/latest`: Bulk fetch latest positions for map rendering.
      - `GET /internal/v1/locations`: Range query for compliance audit export generation.
-4. **Operations Internal Queues**:
-   - Internal asynchronous tasks run on Laravel's queue system backed by Redis:
-     - `default`: Dispatch lifecycle events, notifications, transactional webhooks.
-     - `ai`: OpenRouter LLM generation jobs (`GenerateGptRecommendationJob`).
-     - `reports`: Compliance report generation (`GenerateReportExportJob`).
+4. **Operations Internal Queues & Dedicated Worker Topology**:
+   - Internal asynchronous tasks run on Laravel's queue system backed by PostgreSQL (`jobs` table) or Redis, split across isolated worker pools to guarantee starvation immunity:
+     - `default` (`default,high`): Core operational dispatch transitions, resource assignments, transactional notifications (`SendQueuedNotificationJob`), and telemetry broadcasting.
+       - Worker command: `php artisan queue:work --queue=default,high --sleep=3 --tries=3 --max-time=3600` (timeout: 60s, retry_after: 90s).
+     - `ai`: Asynchronous GPT recommendations (`GenerateGptRecommendationJob`), proactive recommendation sweeps (`SweepProactiveGptRecommendationsJob`), and recommendation retention pruning (`PruneGptRecommendationsJob`).
+       - Worker command: `php artisan queue:work --queue=ai --timeout=120 --tries=3 --sleep=3 --max-time=3600` (retry_after: 150s).
+     - `reports`: Long-running CSV and mPDF dataset exports (`GenerateReportExportJob`, up to 300s runtime) and export retention pruning (`PruneExpiredExportsJob`).
+       - Worker command: `php artisan queue:work --queue=reports --timeout=360 --tries=2 --sleep=3 --max-time=3600` (retry_after: 420s).
+   - **Starvation Immunity Guarantee**:
+     - Operational dispatchers, safety alerts, and telemetry updates are never delayed or blocked behind long-running mPDF PDF renders or external OpenRouter LLM timeouts. Each worker pool operates with dedicated timeouts and process boundaries.
    - RabbitMQ is eliminated. No external broker infrastructure is required.
 
 ### Idempotency & Command Receipts

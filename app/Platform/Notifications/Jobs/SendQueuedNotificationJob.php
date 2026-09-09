@@ -25,7 +25,10 @@ class SendQueuedNotificationJob implements ShouldQueue
         public readonly User $recipient,
         public readonly Notification $notification,
         public readonly ?string $customDeduplicationKey = null
-    ) {}
+    ) {
+        $this->queue = 'default';
+        $this->onQueue('default');
+    }
 
     public function handle(): void
     {

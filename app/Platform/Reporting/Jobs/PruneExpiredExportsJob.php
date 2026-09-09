@@ -25,6 +25,12 @@ class PruneExpiredExportsJob implements ShouldQueue
     /** @var list<int> */
     public array $backoff = [60, 300];
 
+    public function __construct()
+    {
+        $this->queue = 'reports';
+        $this->onQueue('reports');
+    }
+
     public function handle(RecordAuditEvent $recordAudit): void
     {
         ReportExport::query()

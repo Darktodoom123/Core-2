@@ -99,7 +99,7 @@ final class GenerateGptRecommendation
 
         DB::afterCommit(function () use ($recommendation, $contextData, $automatic, $actor): void {
             try {
-                GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context'], $automatic);
+                GenerateGptRecommendationJob::dispatch($recommendation->id, $contextData['context'], $automatic)->onQueue('ai');
             } catch (\Throwable $exception) {
                 // This callback runs after commit; a surrounding transaction can
                 // no longer roll back the persisted draft or its quota slot.

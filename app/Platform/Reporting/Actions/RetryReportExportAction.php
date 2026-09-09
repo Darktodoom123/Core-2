@@ -61,7 +61,7 @@ final class RetryReportExportAction
         });
 
         if ($queued) {
-            GenerateReportExportJob::dispatch($export->getKey())->afterCommit();
+            GenerateReportExportJob::dispatch($export->getKey())->onQueue('reports')->afterCommit();
         }
 
         return ['export' => $export, 'queued' => $queued];
