@@ -1,6 +1,6 @@
 # Microservice restructuring progress
 
-Updated: 2026-09-09. Status: Plan A (2-Service Architecture) Tasks 1 through 5 fully implemented and verified; Full Quality Gate & Final Release Verification complete.
+Updated: 2026-09-09. Status: Plan A (2-Service Architecture) Tasks 1 through 5 fully implemented and verified; Full Quality Gate complete; Phase 7 Distributed Resilience & Failure-Injection Harness verified.
 
 ## Workspace and execution
 
@@ -668,3 +668,51 @@ The Core-2 two-service architecture implementation is complete across all five p
 ### Final Verification Sign-Off
 
 The Plan A Two-Service Architecture & Worker Isolation implementation is verified clean and ready for merge/release review. Original development databases, uploaded files, and HostForge configurations remain preserved. No unauthorized commits, pushes, or deployments were performed.
+
+## Phase 7: Distributed Resilience & Failure-Injection Harness (2026-09-09)
+
+- Scope: Automated failure-injection test suite in `tests/Feature/Operations/Phase7DistributedResilienceTest.php` covering Tracking microservice outage and network partitions (HTTP 500/503 and connection/read timeouts with fallback to `DatabaseTrackingClient` and graceful live map loading), External AI (OpenRouter) outage (connection timeouts, HTTP 429 rate limits, clean failure handling with `gpt_recommendation_metrics` logging, starvation immunity on `default` queue, and unblocked subsequent AI jobs), Inter-Service tampering and replay defense (HTTP 409 Conflict / `TrackingConflictException` on command replay with modified payload, strict HTTP 401 on forged HMAC signatures, timestamps outside 300s window, and tampered payload digests), and Export worker graceful failure (clean failure transition in `ReportExport`, zero dangling database locks or uncommitted transactions, and automatic `.part` temporary file cleanup).
+- Status: Completed and verified across all four resilience domains.
+
+### Files changed and created
+
+1. `app/Platform/Tracking/Services/HttpTrackingClient.php`:
+   - Added structured warning logging (`Log::warning('Tracking microservice returned error on ...', ...)`) when the Tracking microservice returns non-successful HTTP status codes on `getLatestLocationForUser`, `getLatestLocationForAsset`, `getLatestLocationForJob`, and `queryLocationHistory`, ensuring consistent telemetry observability across all fallback paths.
+
+2. `tests/Feature/Operations/Phase7DistributedResilienceTest.php`:
+   - Comprehensive automated resilience test suite containing 17 tests and 222 assertions across 4 failure injection domains:
+     - **Tracking Outage / Partition**:
+       - Verified `HttpTrackingClient` handles HTTP 500 by logging structured warning and falling back to `DatabaseTrackingClient` without crashing.
+       - Verified `HttpTrackingClient` handles HTTP 503 Service Unavailable by logging structured warning and falling back to local database.
+       - Verified `HttpTrackingClient` handles HTTP 500/503 errors on `getLatestLocationForUser`, `getLatestLocationForAsset`, and `queryLocationHistory` with structured warning logs and database fallback.
+       - Verified network partition and timeout (> 3.0s connect / 5.0s read) logs structured warning and falls back to local database for both queries and ingestion.
+       - Verified Operations live map (`OperationsWorkspaceController` / `fetchLocations`) continues loading gracefully without throwing unhandled 500 exceptions across `/`, `/operations`, and `/operations?view=assets` during complete Tracking microservice outage (HTTP 503) and network partition timeouts.
+     - **External AI (OpenRouter) Outage**:
+       - Verified `GenerateGptRecommendationJob` fails cleanly on OpenRouter connection timeout and records failure metrics in `gpt_recommendation_metrics`.
+       - Verified `GenerateGptRecommendationJob` fails cleanly on OpenRouter rate-limit (HTTP 429) and records failure metrics in `gpt_recommendation_metrics`.
+       - Verified `GenerateGptRecommendationJob` fails cleanly on OpenRouter external API server error (HTTP 502/503 Bad Gateway) and records failure metrics in `gpt_recommendation_metrics`.
+       - Verified starvation immunity under heavy mixed load: failed AI jobs never delay or starve operational jobs on `default` queue, and subsequent AI jobs process without being blocked by prior failures.
+     - **Inter-Service Tampering & Replay Defense**:
+       - Verified command replay with modified payload yields explicit HTTP 409 Conflict (`TrackingConflictException`) across `HttpTrackingClient`, Operations mobile API (`POST /api/v1/locations`), and web BFF controller (`POST /operations/locations`), with Reverb broadcast suppression.
+       - Verified `ValidateServiceSignature` middleware strictly rejects forged HMAC signatures with HTTP 401 Unauthorized (`Invalid HMAC-SHA256 request signature.`).
+       - Verified `ValidateServiceSignature` middleware strictly rejects expired timestamps (> 300s in past) and future timestamps (> 300s in future) with HTTP 401 Unauthorized (`Request timestamp expired or outside 5-minute tolerance window.`).
+       - Verified `ValidateServiceSignature` middleware strictly rejects tampered payload digests and altered body contents with HTTP 401 Unauthorized (`Payload digest mismatch.`).
+       - Verified completely unsigned requests are rejected with HTTP 401 (`Missing X-Service-Name header.`).
+     - **Export Worker Graceful Failure**:
+       - Verified `GenerateReportExportJob` records error status in `ReportExport` upon export failure, records audit event `report_export.failed`, and does not leave database locks or open transactions hanging (`DB::transactionLevel() === 1`).
+       - Verified temporary partially-written export files (`.part`) are purged from storage disk upon worker failure to prevent storage leaks.
+       - Verified unsupported export formats fail gracefully with error status.
+       - Verified reports queue resilience: failing export job releases locks and does not block subsequent report export jobs on the `reports` queue.
+
+### Commands and actual results
+
+- `composer lint:check` (Pint): exit 0; `{"tool":"pint","result":"passed"}` across all PHP files.
+- `composer types:check` (PHPStan Level 7): exit 0; `{"tool":"phpstan","result":"passed","errors":0}` across the entire codebase.
+- `php artisan test tests/Feature/Operations/Phase7DistributedResilienceTest.php`: exit 0; 17 tests, 222 assertions passed in 10112ms.
+- `php artisan test tests/Feature/Operations/DedicatedWorkerQueueIsolationTest.php tests/Feature/Operations/HttpTrackingClientTest.php`: exit 0; 18 tests, 113 assertions passed in 8472ms.
+- `php apps/tracking/artisan test`: exit 0; 40 tests, 188 assertions passed in 1329ms.
+- `git diff --check`: exit 0; 0 whitespace or conflict marker errors.
+
+### Phase 7 Verification Summary
+
+All failure injection scenarios passed with zero crashes, unhandled 500 exceptions, orphaned database locks, or queue starvation. Microservice boundaries, HMAC request signing, replay defense, and worker isolation behave deterministically under simulated network, provider, and worker outages.

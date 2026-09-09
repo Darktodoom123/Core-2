@@ -215,6 +215,11 @@ class HttpTrackingClient implements TrackingClientInterface
 
                 return is_array($first) ? LatestLocationDto::fromArray($first) : null;
             }
+
+            Log::warning('Tracking microservice returned error on getLatestLocationForUser', [
+                'status' => $response->status(),
+                'user_id' => $userId,
+            ]);
         } catch (Throwable $e) {
             Log::warning('Tracking microservice unavailable during getLatestLocationForUser, falling back', [
                 'user_id' => $userId,
@@ -245,6 +250,11 @@ class HttpTrackingClient implements TrackingClientInterface
 
                 return is_array($first) ? LatestLocationDto::fromArray($first) : null;
             }
+
+            Log::warning('Tracking microservice returned error on getLatestLocationForAsset', [
+                'status' => $response->status(),
+                'asset_id' => $assetId,
+            ]);
         } catch (Throwable $e) {
             Log::warning('Tracking microservice unavailable during getLatestLocationForAsset, falling back', [
                 'asset_id' => $assetId,
@@ -284,6 +294,11 @@ class HttpTrackingClient implements TrackingClientInterface
 
                 return $collection->first();
             }
+
+            Log::warning('Tracking microservice returned error on getLatestLocationForJob', [
+                'status' => $response->status(),
+                'job_id' => $jobId,
+            ]);
         } catch (Throwable $e) {
             Log::warning('Tracking microservice unavailable during getLatestLocationForJob, falling back', [
                 'job_id' => $jobId,
@@ -318,6 +333,10 @@ class HttpTrackingClient implements TrackingClientInterface
 
                 return $samples->values();
             }
+
+            Log::warning('Tracking microservice returned error on queryLocationHistory', [
+                'status' => $response->status(),
+            ]);
         } catch (Throwable $e) {
             Log::warning('Tracking microservice unavailable during queryLocationHistory, falling back', [
                 'error' => $e->getMessage(),
