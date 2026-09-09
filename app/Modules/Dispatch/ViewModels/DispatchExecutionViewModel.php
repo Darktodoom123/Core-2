@@ -8,6 +8,8 @@ use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 
@@ -163,37 +165,36 @@ final class DispatchExecutionViewModel
     /** @return array<string, mixed>|null */
     private static function latestLocation(DispatchJob $job, User $user): ?array
     {
-        $location = $job->locationUpdates()
-            ->visibleTo($user)
-            ->where('sharing_enabled', true)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->latest('received_at')
-            ->latest('captured_at')
-            ->with(['user:id,name', 'asset:id,code,name'])
-            ->first(['id', 'user_id', 'operational_asset_id', 'latitude', 'longitude', 'accuracy_metres', 'source', 'captured_at', 'received_at']);
+        /** @var TrackingClientInterface $trackingClient */
+        $trackingClient = app(TrackingClientInterface::class);
+        $latest = $trackingClient->getLatestLocationForJob($job->id, $user);
 
-        if ($location === null) {
+        if ($latest === null || ! $latest->sharingEnabled || $latest->latitude === null || $latest->longitude === null) {
             return null;
         }
 
+        $assignedUser = User::query()->find($latest->userId, ['id', 'name']);
+        $asset = $latest->operationalAssetId !== null
+            ? OperationalAsset::withTrashed()->find($latest->operationalAssetId, ['id', 'code', 'name'])
+            : null;
+
         return [
-            'id' => (int) $location->getKey(),
-            'latitude' => (float) $location->latitude,
-            'longitude' => (float) $location->longitude,
-            'accuracy_metres' => $location->accuracy_metres === null ? null : (float) $location->accuracy_metres,
-            'source' => $location->source,
-            'user' => $location->user === null ? null : [
-                'id' => (int) $location->user->getKey(),
-                'name' => $location->user->name,
+            'id' => $latest->id,
+            'latitude' => $latest->latitude,
+            'longitude' => $latest->longitude,
+            'accuracy_metres' => $latest->accuracyMetres,
+            'source' => $latest->source,
+            'user' => $assignedUser === null ? null : [
+                'id' => (int) $assignedUser->id,
+                'name' => $assignedUser->name,
             ],
-            'asset' => $location->asset === null ? null : [
-                'id' => (int) $location->asset->getKey(),
-                'code' => $location->asset->code,
-                'name' => $location->asset->name,
+            'asset' => $asset === null ? null : [
+                'id' => (int) $asset->id,
+                'code' => $asset->code,
+                'name' => $asset->name,
             ],
-            'captured_at' => $location->captured_at?->toIso8601String(),
-            'received_at' => $location->received_at?->toIso8601String(),
+            'captured_at' => $latest->capturedAt?->toIso8601String(),
+            'received_at' => $latest->receivedAt?->toIso8601String(),
         ];
     }
 

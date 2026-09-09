@@ -1,6 +1,6 @@
 # Microservice restructuring progress
 
-Updated: 2026-09-09. Status: handoff documentation updated for Plan A (2-Service Architecture); Phase 1 wiring and Task 1 concurrency & safety hardening implemented.
+Updated: 2026-09-09. Status: handoff documentation updated for Plan A (2-Service Architecture); Phase 1 wiring, Task 1 concurrency & safety hardening, and Task 2 tracking query decoupling implemented.
 
 ## Workspace and execution
 
@@ -337,3 +337,157 @@ Execute **Task 2: Decouple Tracking Queries and Weather in Operations**.
 - `php artisan test tests/Feature/HoursOfService tests/Feature/Dvir tests/Feature/Operations/DvirSafetyLockoutTest.php tests/Feature/Operations/IdempotentCommandTest.php tests/Feature/Operations/DispatchWorkflowTest.php tests/Feature/Operations/DispatchReassignmentTest.php`: exit 0; 53 tests, 338 assertions passed.
 - `npm run test:mobile`: exit 0; 83 Node unit tests and 24 Jest component test suites (206 tests) passed.
 - `npm run test:unit`: exit 0; Vitest passed with 24 test files and 251 tests passed.
+
+## Task 2: Decouple Tracking Queries, Weather, and Test Doubles in Operations (2026-09-09)
+
+- Scope: Extract weather telemetry adapter to Operations domain (`Platform/Weather`), define `TrackingClientInterface` with contract DTOs (`LocationSampleDto`, `LatestLocationDto`), implement `DatabaseTrackingClient` and in-memory `FakeTrackingClient` bound dynamically via `TrackingServiceProvider`, decouple Operations live map and workspace queries from Eloquent cross-table joins with in-memory hydration, decouple report export datasets and dispatch view models, and decouple existing Operations test suites using the tracking client test double.
+- Status: Completed and verified across backend, web, and mobile.
+
+### Files changed
+
+1. `app/Platform/Weather/Services/LocationWeatherService.php` & `app/Platform/Weather/Http/Controllers/Api/V1/LocationWeatherController.php`:
+   - Moved weather service and controller out of `Platform/Tracking` into Operations weather adapter namespace `App\Platform\Weather`.
+2. `app/Platform/Weather/Routes/api.php`:
+   - Registered `/v1/telemetry/weather` route under `App\Platform\Weather\Http\Controllers\Api\V1\LocationWeatherController`.
+3. `routes/api.php`:
+   - Mounted `app/Platform/Weather/Routes/api.php`.
+4. `app/Platform/Tracking/Routes/api.php`:
+   - Removed `/telemetry/weather` from tracking route definitions.
+5. `app/Platform/Tracking/Services/LocationWeatherService.php` & `app/Platform/Tracking/Http/Controllers/Api/V1/LocationWeatherController.php`:
+   - Created backward-compatibility adapter classes extending the new `Platform/Weather` classes.
+6. `app/Platform/Tracking/Data/LocationSampleDto.php` & `app/Platform/Tracking/Data/LatestLocationDto.php`:
+   - Defined structured DTOs representing ingestible location samples and latest position projections, including typed JSON serialization, freshness status calculation, and conversion helpers from Eloquent models.
+7. `app/Platform/Tracking/Contracts/TrackingClientInterface.php`:
+   - Defined service contract exposing `ingestLocation`, `getLatestLocations(?User $user = null)`, `getLatestLocationForJob(int $jobId, ?User $user = null)`, `getLatestLocationForUser(int $userId)`, `getLatestLocationForAsset(int $assetId)`, `queryLocationHistory(array $filters = [])`, and `getTrackingFreshness(User $user, CarbonImmutable $refreshedAt, int $staleAfterSeconds = 120)`.
+8. `app/Platform/Tracking/Services/DatabaseTrackingClient.php`:
+   - Implemented database-backed client executing queries against local `location_updates` records with role-based scoping (`visibleTo`), subquery `MAX(id)` aggregations grouped by `user_id` and `operational_asset_id` (eliminating arbitrary `limit(500)` truncation), `received_at` descending ordering, date filtering (`from`/`date_from`, `to`/`date_to`), and DTO hydration without cross-table joins.
+9. `app/Platform/Tracking/Testing/FakeTrackingClient.php`:
+   - Implemented high-fidelity in-memory test double supporting location recording, multiple latest-position lookups, user-scoped job positions, history filtering (`from`/`date_from`, `to`/`date_to`), sort order selection, freshness summaries, test assertion helpers (`assertIngestedCount`, `assertIngested`, `assertNothingIngested`), and bidirectional synchronization with legacy `LocationUpdate` model instances.
+10. `app/Platform/Tracking/Facades/TrackingClient.php`:
+    - Created facade resolving `TrackingClientInterface` from container, with `fake()` helper swapping a fresh in-memory instance into the container.
+11. `app/Platform/Tracking/TrackingServiceProvider.php`:
+    - Bound `TrackingClientInterface` as a singleton resolving to `FakeTrackingClient` in testing environments and `DatabaseTrackingClient` in production/local environments.
+12. `app/Platform/Tracking/Models/LocationUpdate.php`:
+    - Added `saved` model lifecycle hook synchronizing created/updated Eloquent models into `FakeTrackingClient` when running in test environments, maintaining seamless test backward-compatibility.
+13. `app/Platform/Workspace/Http/Controllers/OperationsWorkspaceController.php`:
+    - Injected `TrackingClientInterface` into constructor.
+    - Refactored `fetchLocations` to query `trackingClient->getLatestLocations($user)` and hydrate associated `User`, `OperationalAsset` (including `withTrashed`), and `DispatchJob` models in memory using keyed bulk lookups (`whereIn('id', ...)`), eliminating cross-table joins on `location_updates`.
+    - Refactored `trackingFreshness` to query `trackingClient->getTrackingFreshness($user)`.
+14. `app/Platform/Workspace/ViewModels/OperationsWorkspaceViewModel.php`:
+    - Updated `locations()` to accept `Collection<int, LatestLocationDto>` and format live map coordinates and popup payloads directly from DTO properties.
+15. `app/Modules/Dispatch/ViewModels/DispatchExecutionViewModel.php`:
+    - Updated `latestLocation()` to query `trackingClient->getLatestLocationForJob($job->id, $user)` supporting multi-worker role scoping, and hydrate associated user and soft-deleted-safe asset models in memory.
+16. `app/Platform/Reporting/Exports/LocationAuditExportDataset.php`:
+    - Updated `rows()` to query `trackingClient->queryLocationHistory($queryFilters)` with date range filtering and ascending ID order, mapping DTO records directly into CSV export rows.
+17. `tests/Feature/Api/V1/LocationWeatherTest.php`:
+    - Updated test imports to reference `App\Platform\Weather\Services\LocationWeatherService`.
+18. `tests/Feature/OperationsPageTest.php`:
+    - Updated tracking fixtures to record locations through `TrackingClientInterface` with `LocationSampleDto`.
+19. `tests/Feature/Operations/FieldExecutionViewTest.php`:
+    - Updated tracking assertions to record locations through `TrackingClientInterface` with `LocationSampleDto`.
+20. `tests/Feature/Operations/TrackingWorkspaceContractTest.php`:
+    - Updated tracking assertions to record locations through `TrackingClientInterface` with `LocationSampleDto`.
+21. `tests/Feature/MobileLifecycle/MobileLifecycleEndToEndTest.php`:
+    - Added `flushHeaders()` before subsequent lifecycle phases to prevent persistent test client headers from reusing idempotency keys across disparate endpoints.
+22. `tests/Feature/Operations/TrackingDecouplingTest.php`:
+    - Added dedicated test suite (12 tests, 109 assertions) verifying:
+      - Operations workspace live map queries consume `TrackingClientInterface` and hydrate user/asset/job relations in memory.
+      - Workspace live map respects viewer permission scoping.
+      - Workspace tracking freshness delegates to `TrackingClientInterface`.
+      - Dispatch execution view model queries latest position via `TrackingClientInterface` with multi-worker visibility scoping.
+      - Location audit export dataset queries location history via `TrackingClientInterface` preserving date filters and ascending ID order.
+      - DatabaseTrackingClient persists samples to `location_updates`, executes subquery MAX aggregations without joins, enforces visibility, and filters history.
+      - FakeTrackingClient records and queries latest positions in memory, respects visibility, and provides test assertion helpers (`assertIngestedCount`, `assertIngested`, `assertNothingIngested`).
+      - Operations workspace ViewModel seamlessly formats both LatestLocationDto and legacy LocationUpdate model instances identically.
+
+### Commands and actual results
+
+- `composer lint:check`: exit 0; Pint passed with 0 errors across all modified PHP files.
+- `composer types:check`: exit 0; PHPStan passed with 0 errors.
+- `npm run lint:check`: exit 0; ESLint passed with 0 errors and 0 warnings.
+- `npm run format:check`: exit 0; Prettier passed with 0 formatting issues.
+- `npm run types:check`: exit 0; TypeScript passed with 0 errors.
+- `npm run types:check:mobile`: exit 0; Mobile TypeScript passed with 0 errors.
+- `php artisan test tests/Feature/Operations/TrackingDecouplingTest.php tests/Feature/Api/V1/LocationWeatherTest.php tests/Feature/OperationsPageTest.php tests/Feature/Operations/FieldExecutionViewTest.php tests/Feature/Operations/TrackingWorkspaceContractTest.php tests/Feature/MobileLifecycle/MobileLifecycleEndToEndTest.php tests/Feature/Operations/IdempotentCommandTest.php tests/Feature/Operations/LocationTrackingPrivacyTest.php tests/Feature/Operations/LocationRetentionTest.php`: exit 0; 48 tests, 812 assertions passed.
+- `php artisan test tests/Feature/Operations/OperationsConcurrencyAndSafetyHardeningTest.php`: exit 0; 13 tests, 85 assertions passed.
+- `npm run test:mobile`: exit 0; 83 Node unit tests and 24 Jest component test suites (206 tests) passed.
+- `npm run test:unit`: exit 0; Vitest passed with 24 test files and 251 tests passed.
+
+### Next step
+
+Execute **Task 3: Scaffold Tracking Service (`apps/tracking`)** (standalone Laravel application, Nx project configuration, isolated migrations targeting `core2_ms_tracking`, and internal REST ingestion/query endpoints).
+
+## Task 3: Scaffold Tracking Service (apps/tracking) (2026-09-09)
+
+- Scope: Standalone Tracking Laravel microservice scaffolding in `apps/tracking/`, configuration targeting dedicated database `core2_ms_tracking`, schema-isolated database migrations for `location_samples`, `latest_locations`, and `tracking_command_receipts`, internal telemetry REST API endpoints (`POST /internal/v1/locations`, `GET /internal/v1/locations/latest`, `GET /internal/v1/locations`), retention command `location:prune`, Nx monorepo tooling configuration, and Pest test suite.
+- Status: Completed and verified across standalone service, database migrations, REST endpoints, retention commands, Nx tooling, and Pest tests.
+
+### Files changed and created
+
+1. `apps/tracking/composer.json`:
+   - Standalone service definition for `core2/tracking` with PHP 8.4, Laravel 13, and dev dependencies (Pest, Larastan, Pint, Mockery, Collision).
+2. `apps/tracking/artisan`:
+   - Standalone console entrypoint loading `bootstrap/autoload.php` and handling console commands.
+3. `apps/tracking/bootstrap/autoload.php`:
+   - Robust autoload fallback registering `Tracking\` and `Tracking\Tests\` PSR-4 namespaces via monorepo ClassLoader or standalone vendor autoloader.
+4. `apps/tracking/bootstrap/app.php`:
+   - Lightweight microservice application configuration registering API routes, console commands, `/up` health check, daily `location:prune` retention schedule at 02:15 UTC, and JSON exception handling.
+5. `apps/tracking/config/database.php`, `apps/tracking/config/app.php` & `apps/tracking/config/cache.php`:
+   - Dedicated database configuration targeting `core2_ms_tracking` (with SQLite in-memory testing profile), standalone application configuration, and dedicated cache configuration defaulting to `array` store to ensure artisan CLI and scheduling run reliably without external DB/Redis dependencies.
+6. `apps/tracking/.env.example`:
+   - Environment configuration targeting `core2_ms_tracking` on PostgreSQL port 5432.
+7. `apps/tracking/database/migrations/`:
+   - `2026_09_09_000001_create_location_samples_table.php`: High-volume GPS coordinate history with unconstrained scalar integer IDs (`user_id`, `operational_asset_id`, `dispatch_job_id`) and b-tree indexes (no foreign keys to Operations tables).
+   - `2026_09_09_000002_create_latest_locations_table.php`: O(1) read-projection table per user and asset with unique `user_id` constraint, status, and coordinate columns.
+   - `2026_09_09_000003_create_tracking_command_receipts_table.php`: Local idempotency receipts table with unique `command_id` index, `payload_hash`, `action`, and `user_id`.
+8. `apps/tracking/app/Models/`:
+   - `LocationSample.php`: Model representing telemetry samples with typed casts.
+   - `LatestLocation.php`: Model representing current position projections with `computeFreshness()` helper ('fresh' <= 180s, 'delayed' < 900s, 'stale' <= 1800s, 'offline') and privacy-guarded `toDtoArray()` formatting (coordinates always null when sharing is disabled).
+   - `TrackingCommandReceipt.php`: Model storing idempotency command receipts, action, payload hash, and response payloads.
+9. `apps/tracking/app/Http/Requests/IngestLocationRequest.php`:
+   - Form request validating scalar IDs, coordinate ranges (`latitude` -90..90, `longitude` -180..180), nullable coordinates when `sharing_enabled` is false, header/body command ID consistency, accuracy, speed, and ISO8601 timestamps.
+10. `apps/tracking/app/Http/Controllers/Api/Internal/LocationController.php`:
+    - `ingest()`: Idempotent atomic ingestion updating `location_samples` and `latest_locations` with canonical payload hashing, HTTP 409 Conflict rejection on mismatched command payloads, privacy coordinate nullification on sharing-off, out-of-order delayed replay protection, asset reassignment isolation, and receipt logging.
+    - `latest()`: O(1) latest position lookups with optional `user_id`, `operational_asset_id` (or `asset_id`), and `dispatch_job_id` (or `job_id`) filters.
+    - `index()`: Coordinate history query with `user_id`, `operational_asset_id`, `dispatch_job_id`, safe `date_from`/`date_to` range filtering, sorting (`captured_at`, `received_at`, `id`), and configurable limits.
+11. `apps/tracking/routes/api.php` & `apps/tracking/routes/console.php`:
+    - REST routes registered under `/internal/v1/*` and `/api/internal/v1/*`, with schedule deduplication resolved in `bootstrap/app.php`.
+12. `apps/tracking/app/Console/Commands/PruneLocationUpdatesCommand.php`:
+    - `location:prune` console command nullifying `latitude` and `longitude` older than 30 days across both `location_samples` and `latest_locations` while preserving non-coordinate audit metadata.
+13. `apps/tracking/project.json`:
+    - Nx project configuration for `tracking` with explicit targets for `lint`, `types`, and `test` (explicitly referencing `-c apps/tracking/phpunit.xml`).
+14. `apps/tracking/phpstan.neon`:
+    - Service-scoped PHPStan level 7 analysis configuration.
+15. `apps/tracking/phpunit.xml`:
+    - Isolated PHPUnit/Pest testing configuration using SQLite in-memory database.
+16. `apps/tracking/tests/Tracking/`:
+    - `LocationIngestionTest.php`: Tests valid ingestion, scalar ID persistence, projection updates, idempotency via body/header, 409 conflict detection on differing payload replay, header consistency validation, out-of-order replay protection, privacy coordinate nullification on sharing-off, delayed replay immunity, and asset reassignment.
+    - `LatestLocationsTest.php`: Tests retrieving all latest positions, filtering by user/asset/job, and freshness calculations.
+    - `LocationHistoryTest.php`: Tests history retrieval, user/asset/job filtering, date range filtering, safe handling of invalid dates, and custom sort order.
+    - `LocationRetentionTest.php`: Tests 30-day coordinate nullification on both samples and projections, and audit metadata preservation.
+17. `composer.json`:
+    - Registered `Tracking\` and `Tracking\Tests\` PSR-4 namespaces.
+18. `tests/Pest.php` & `tests/Unit/NxTaskConfigurationTest.php`:
+    - Scoped root Pest test cases to `tests/Feature/` and `tests/Concurrency/` with tracking test configuration inclusion, and verified `tracking` logical project discovery in Nx.
+
+### Commands and actual results
+
+- `npx nx show projects`: exit 0; discovered `operations`, `field-mobile`, and `tracking`.
+- `npx nx run tracking:lint`: exit 0; Pint passed with 0 errors across `apps/tracking`.
+- `npx nx run tracking:types`: exit 0; PHPStan level 7 analysis passed with 0 errors across `apps/tracking`.
+- `npx nx run tracking:test`: exit 0; 24 tests, 153 assertions passed.
+- `php apps/tracking/artisan test`: exit 0; 24 tests, 153 assertions passed in 818ms.
+- `php apps/tracking/artisan schedule:list`: exit 0; verified 1 deduplicated `location:prune` job scheduled daily at 02:15.
+- `php artisan test tests/Unit/NxTaskConfigurationTest.php`: exit 0; 3 tests, 12 assertions passed.
+- `php artisan test tests/Feature/Operations/TrackingDecouplingTest.php tests/Feature/Operations/LocationRetentionTest.php tests/Feature/Operations/LocationTrackingPrivacyTest.php`: exit 0; 22 tests, 158 assertions passed.
+- `composer lint:check`: exit 0; Pint passed across entire repository with 0 errors.
+- `composer types:check`: exit 0; PHPStan level 7 passed with 0 errors.
+- `npm run lint:check`: exit 0; ESLint passed with 0 errors.
+- `npm run format:check`: exit 0; Prettier passed with 0 errors.
+- `npm run types:check`: exit 0; TypeScript passed with 0 errors.
+- `npm run types:check:mobile`: exit 0; Mobile TypeScript passed with 0 errors.
+- `git diff --check`: exit 0; 0 whitespace or conflict marker errors.
+
+### Next step
+
+Execute **Task 4: Wire Operations BFF to Tracking Service** (`HttpTrackingClient` implementing `TrackingClientInterface`, routing mobile and web telemetry to Tracking, and Reverb broadcasting).

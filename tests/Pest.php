@@ -15,7 +15,11 @@ use Tests\TestCase;
 |
 */
 
-pest()->extend(TestCase::class)->in('Feature', 'Concurrency');
+pest()->extend(TestCase::class)->in(__DIR__.'/Feature/', __DIR__.'/Concurrency/');
+
+if (file_exists(__DIR__.'/../apps/tracking/tests/Pest.php')) {
+    require_once __DIR__.'/../apps/tracking/tests/Pest.php';
+}
 
 /*
 |--------------------------------------------------------------------------

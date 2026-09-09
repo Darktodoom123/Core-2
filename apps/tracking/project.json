@@ -1,0 +1,56 @@
+{
+    "name": "tracking",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "projectType": "application",
+    "sourceRoot": "apps/tracking/app",
+    "targets": {
+        "lint": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pint --test apps/tracking",
+                "cwd": "."
+            }
+        },
+        "types": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/phpstan analyse -c apps/tracking/phpstan.neon --memory-limit=512M",
+                "cwd": "."
+            }
+        },
+        "test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pest -c apps/tracking/phpunit.xml",
+                "cwd": "."
+            }
+        },
+        "php-lint": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pint --test apps/tracking",
+                "cwd": "."
+            }
+        },
+        "php-types": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/phpstan analyse -c apps/tracking/phpstan.neon --memory-limit=512M",
+                "cwd": "."
+            }
+        },
+        "php-test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pest -c apps/tracking/phpunit.xml",
+                "cwd": "."
+            }
+        }
+    }
+}

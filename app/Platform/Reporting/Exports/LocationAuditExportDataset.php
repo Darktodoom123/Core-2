@@ -5,7 +5,7 @@ namespace App\Platform\Reporting\Exports;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\ReportExportType;
-use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use Generator;
 
 final class LocationAuditExportDataset extends AbstractReportExportDataset
@@ -27,9 +27,28 @@ final class LocationAuditExportDataset extends AbstractReportExportDataset
 
     public function rows(User $actor, array $filters): Generator
     {
-        $query = $this->applyDateFilters(LocationUpdate::visibleTo($actor), $filters, 'captured_at');
-        foreach ($query->orderBy('id')->lazyById(500) as $update) {
-            yield [$update->id, $update->user_id, $update->operational_asset_id, $update->dispatch_job_id, $update->sharing_enabled ? 'yes' : 'no', $update->captured_at?->toIso8601String(), $update->received_at?->toIso8601String()];
+        /** @var TrackingClientInterface $trackingClient */
+        $trackingClient = app(TrackingClientInterface::class);
+
+        $queryFilters = $filters;
+        if (! $actor->can(PermissionName::TrackingViewAll->value)) {
+            $queryFilters['user_id'] = $actor->id;
+        }
+        $queryFilters['order_by'] = $filters['order_by'] ?? 'id';
+        $queryFilters['order_direction'] = $filters['order_direction'] ?? 'asc';
+
+        $samples = $trackingClient->queryLocationHistory($queryFilters);
+
+        foreach ($samples as $update) {
+            yield [
+                $update->id,
+                $update->userId,
+                $update->operationalAssetId,
+                $update->dispatchJobId,
+                $update->sharingEnabled ? 'yes' : 'no',
+                $update->capturedAt?->toIso8601String(),
+                $update->receivedAt?->toIso8601String(),
+            ];
         }
     }
 }

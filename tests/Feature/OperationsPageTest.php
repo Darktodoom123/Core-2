@@ -9,7 +9,8 @@ use App\Modules\Dispatch\Models\ServiceRequest;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Platform\Tracking\Data\LocationSampleDto;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -222,30 +223,33 @@ it('serves only the latest visible location per worker in the workspace feed', f
     $secondDriver = User::factory()->create();
     $secondDriver->syncRoles([RoleName::CraneOperator->value]);
 
-    LocationUpdate::query()->create([
+    /** @var TrackingClientInterface $trackingClient */
+    $trackingClient = app(TrackingClientInterface::class);
+
+    $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $driver->id,
         'latitude' => 14.5995,
         'longitude' => 120.9842,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinutes(10),
         'received_at' => now()->subMinutes(10),
-    ]);
-    $latestDriverLocation = LocationUpdate::query()->create([
+    ]));
+    $latestDriverLocation = $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $driver->id,
         'latitude' => 14.6010,
         'longitude' => 120.9850,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinute(),
         'received_at' => now()->subMinute(),
-    ]);
-    $secondDriverLocation = LocationUpdate::query()->create([
+    ]));
+    $secondDriverLocation = $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $secondDriver->id,
         'latitude' => 14.6020,
         'longitude' => 120.9860,
         'sharing_enabled' => true,
         'captured_at' => now()->subMinutes(2),
         'received_at' => now()->subMinutes(2),
-    ]);
+    ]));
 
     $this->actingAs($dispatcher)->get('/')
         ->assertOk()

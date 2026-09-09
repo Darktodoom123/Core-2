@@ -1,7 +1,6 @@
 <?php
 
 use App\Platform\Tracking\Http\Controllers\Api\V1\LocationController;
-use App\Platform\Tracking\Http\Controllers\Api\V1\LocationWeatherController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
@@ -9,6 +8,5 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::middleware('throttle:location')->group(function () {
             Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
         });
-        Route::get('/telemetry/weather', [LocationWeatherController::class, 'show'])->name('telemetry.weather');
     });
 });

@@ -11,3 +11,4 @@ require app_path('Platform/Safety/Routes/api.php');
 require app_path('Modules/HoursOfService/Routes/api.php');
 require app_path('Modules/Dvir/Routes/api.php');
 require app_path('Platform/Reporting/Routes/api.php');
+require app_path('Platform/Weather/Routes/api.php');

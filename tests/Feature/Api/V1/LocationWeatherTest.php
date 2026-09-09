@@ -2,7 +2,7 @@
 
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Tracking\Services\LocationWeatherService;
+use App\Platform\Weather\Services\LocationWeatherService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

@@ -6,7 +6,8 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Platform\Tracking\Data\LocationSampleDto;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -81,7 +82,7 @@ it('routes active office users to recorded execution evidence without preparatio
         'after' => ['status' => DispatchStatus::Working->value, 'version' => 2],
         'occurred_at' => now()->subMinutes(5),
     ]);
-    LocationUpdate::query()->create([
+    app(TrackingClientInterface::class)->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $manager->id,
         'dispatch_job_id' => $job->id,
         'latitude' => 14.58,
@@ -91,7 +92,7 @@ it('routes active office users to recorded execution evidence without preparatio
         'sharing_enabled' => true,
         'captured_at' => $capturedAt,
         'received_at' => $receivedAt,
-    ]);
+    ]));
 
     $this->actingAs($manager)
         ->get("/operations/dispatch-jobs/{$job->id}#field-execution")
@@ -116,7 +117,7 @@ it('does not treat a non-shared location as current execution evidence', functio
     $manager = executionViewUser(RoleName::OperationsManager, 'Privacy Manager');
     $job = executionViewJob($manager, DispatchStatus::EnRoute);
 
-    LocationUpdate::query()->create([
+    app(TrackingClientInterface::class)->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $manager->id,
         'dispatch_job_id' => $job->id,
         'latitude' => 14.58,
@@ -125,7 +126,7 @@ it('does not treat a non-shared location as current execution evidence', functio
         'sharing_enabled' => false,
         'captured_at' => now()->subMinute(),
         'received_at' => now(),
-    ]);
+    ]));
 
     $this->actingAs($manager)
         ->get("/operations/dispatch-jobs/{$job->id}")

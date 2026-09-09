@@ -5,6 +5,7 @@ namespace App\Platform\Tracking\Models;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,18 @@ class LocationUpdate extends Model
     protected function casts(): array
     {
         return ['sharing_enabled' => 'boolean', 'speed' => 'decimal:2', 'captured_at' => 'datetime', 'received_at' => 'datetime'];
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (LocationUpdate $update): void {
+            if (app()->bound(TrackingClientInterface::class)) {
+                $client = app(TrackingClientInterface::class);
+                if (method_exists($client, 'recordExistingModel')) {
+                    $client->recordExistingModel($update);
+                }
+            }
+        });
     }
 
     /** @return BelongsTo<User, $this> */

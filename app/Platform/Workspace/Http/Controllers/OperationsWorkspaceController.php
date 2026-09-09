@@ -20,7 +20,8 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
-use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Workspace\Queries\WorkspaceAssetsQuery;
 use App\Platform\Workspace\Queries\WorkspaceFuelRequestsQuery;
 use App\Platform\Workspace\Queries\WorkspaceJobReportsQuery;
@@ -38,6 +39,10 @@ use Inertia\Response;
 final class OperationsWorkspaceController extends Controller
 {
     private const int WORKSPACE_STALE_AFTER_SECONDS = 120;
+
+    public function __construct(
+        private readonly TrackingClientInterface $trackingClient,
+    ) {}
 
     /** @var array<string, list<string>> */
     private const SECTION_PROPS = [
@@ -385,61 +390,73 @@ final class OperationsWorkspaceController extends Controller
     /** @return array<string, mixed> */
     private function trackingFreshness(User $user, CarbonImmutable $refreshedAt): array
     {
-        $canViewTracking = $user->can(PermissionName::TrackingViewAll->value)
-            || $user->can(PermissionName::TrackingShareOwn->value);
-
-        if (! $canViewTracking) {
-            return [
-                'refreshed_at' => $refreshedAt->toIso8601String(),
-                'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
-                'latest_received_at' => null,
-                'current_user' => null,
-            ];
-        }
-
-        $latestVisibleLocation = LocationUpdate::query()
-            ->visibleTo($user)
-            ->latest('received_at')
-            ->latest('id')
-            ->first(['received_at']);
-        $latestOwnLocation = LocationUpdate::query()
-            ->where('user_id', $user->id)
-            ->latest('received_at')
-            ->latest('id')
-            ->first(['sharing_enabled', 'captured_at', 'received_at']);
-
-        return [
-            'refreshed_at' => $refreshedAt->toIso8601String(),
-            'stale_after_seconds' => self::WORKSPACE_STALE_AFTER_SECONDS,
-            'latest_received_at' => $latestVisibleLocation?->received_at?->toIso8601String(),
-            'current_user' => [
-                'sharing_enabled' => $latestOwnLocation?->sharing_enabled,
-                'captured_at' => $latestOwnLocation?->captured_at?->toIso8601String(),
-                'received_at' => $latestOwnLocation?->received_at?->toIso8601String(),
-            ],
-        ];
+        return $this->trackingClient->getTrackingFreshness($user, $refreshedAt, self::WORKSPACE_STALE_AFTER_SECONDS);
     }
 
-    /** @return Collection<int, LocationUpdate> */
+    /** @return Collection<int, LatestLocationDto> */
     private function fetchLocations(User $user): Collection
     {
         if (! $user->can(PermissionName::TrackingViewAll->value) && ! $user->can(PermissionName::TrackingShareOwn->value)) {
             return collect();
         }
 
-        $latestLocationIds = LocationUpdate::query()
-            ->visibleTo($user)
-            ->selectRaw('MAX(id)')
-            ->groupBy('user_id', 'operational_asset_id');
+        /** @var Collection<int, LatestLocationDto> $locations */
+        $locations = $this->trackingClient->getLatestLocations($user);
 
-        return LocationUpdate::query()
-            ->visibleTo($user)
-            ->whereIn('id', $latestLocationIds)
-            ->with(['user:id,name', 'asset:id,code,name,kind,location', 'job:id,reference,title,site'])
-            ->latest('received_at')
-            ->latest('id')
-            ->limit(100)
-            ->get();
+        if ($locations->isEmpty()) {
+            return collect();
+        }
+
+        $userIds = $locations->pluck('userId')->unique()->values()->all();
+        $assetIds = $locations->pluck('operationalAssetId')->filter()->unique()->values()->all();
+        $jobIds = $locations->pluck('dispatchJobId')->filter()->unique()->values()->all();
+
+        $users = User::query()
+            ->whereIn('id', $userIds)
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $assets = ! empty($assetIds)
+            ? OperationalAsset::withTrashed()
+                ->whereIn('id', $assetIds)
+                ->get(['id', 'code', 'name', 'kind', 'location'])
+                ->keyBy('id')
+            : collect();
+
+        $jobs = ! empty($jobIds)
+            ? DispatchJob::query()
+                ->whereIn('id', $jobIds)
+                ->get(['id', 'reference', 'title', 'site'])
+                ->keyBy('id')
+            : collect();
+
+        return $locations->map(static function (LatestLocationDto $dto) use ($users, $assets, $jobs): LatestLocationDto {
+            $userModel = $users->get($dto->userId);
+            $assetModel = $dto->operationalAssetId !== null ? $assets->get($dto->operationalAssetId) : null;
+            $jobModel = $dto->dispatchJobId !== null ? $jobs->get($dto->dispatchJobId) : null;
+
+            $userPayload = [
+                'id' => $dto->userId,
+                'name' => $userModel !== null ? $userModel->name : 'Unknown User',
+            ];
+
+            $assetPayload = $assetModel === null ? null : [
+                'id' => (int) $assetModel->id,
+                'code' => $assetModel->code,
+                'name' => $assetModel->name,
+                'kind' => $assetModel->kind,
+                'location' => $assetModel->location,
+            ];
+
+            $jobPayload = $jobModel === null ? null : [
+                'id' => (int) $jobModel->id,
+                'reference' => $jobModel->reference,
+                'title' => $jobModel->title,
+                'site' => $jobModel->site,
+            ];
+
+            return $dto->withHydratedEntities($userPayload, $assetPayload, $jobPayload);
+        });
     }
 
     /** @return Collection<int, DispatchJob> */

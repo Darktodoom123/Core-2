@@ -13,7 +13,8 @@ test('nx discovers logical projects operations and field-mobile', function (): v
     $output = array_filter(array_map('trim', explode("\n", $result->output())));
 
     expect($output)->toContain('operations')
-        ->and($output)->toContain('field-mobile');
+        ->and($output)->toContain('field-mobile')
+        ->and($output)->toContain('tracking');
 });
 
 test('nx affected selection isolates mobile changes from operations but cascades root changes', function (): void {

@@ -116,7 +116,8 @@ it('orchestrates the complete 8-phase mobile lifecycle end-to-end', function ():
     // - Duty status switches to On Duty
     // - Machine telemetry remains strictly OFF
     // =========================================================================
-    $startShiftResponse = $this->withToken($operatorToken)
+    $startShiftResponse = $this->flushHeaders()
+        ->withToken($operatorToken)
         ->postJson('/api/v1/hos/shifts/start', [
             'duty_status' => 'operating',
             'latitude' => 14.5800,
@@ -174,7 +175,8 @@ it('orchestrates the complete 8-phase mobile lifecycle end-to-end', function ():
     // - Operator conducts walkaround inspection of CRN-101
     // - Checklist passed, digital signature captured
     // =========================================================================
-    $dvirResponse = $this->withToken($operatorToken)
+    $dvirResponse = $this->flushHeaders()
+        ->withToken($operatorToken)
         ->postJson('/api/v1/dvir/inspections', [
             'inspection_type' => 'pre_trip',
             'asset_code' => 'CRN-101',
@@ -215,7 +217,8 @@ it('orchestrates the complete 8-phase mobile lifecycle end-to-end', function ():
     // - Operator switches HoS to On Break
     // - Machine telemetry is paused while operator steps away for meal
     // =========================================================================
-    $breakResponse = $this->withToken($operatorToken)
+    $breakResponse = $this->flushHeaders()
+        ->withToken($operatorToken)
         ->postJson('/api/v1/hos/duty-status', [
             'duty_status' => 'on_break',
             'latitude' => 14.5862,
@@ -233,7 +236,8 @@ it('orchestrates the complete 8-phase mobile lifecycle end-to-end', function ():
     // - Ending engine hours and odometer logged
     // - Clean inspection without critical defect
     // =========================================================================
-    $postTripResponse = $this->withToken($operatorToken)
+    $postTripResponse = $this->flushHeaders()
+        ->withToken($operatorToken)
         ->postJson('/api/v1/dvir/inspections', [
             'inspection_type' => 'post_trip',
             'asset_code' => 'CRN-101',
@@ -261,7 +265,8 @@ it('orchestrates the complete 8-phase mobile lifecycle end-to-end', function ():
     // - Duty status reverts to Off Duty
     // - Shift certified and completed for payroll
     // =========================================================================
-    $completeShiftResponse = $this->withToken($operatorToken)
+    $completeShiftResponse = $this->flushHeaders()
+        ->withToken($operatorToken)
         ->postJson('/api/v1/hos/shifts/certify', [
             'certification_statement' => 'I certify that all my working and break hours recorded are true and correct.',
             'remarks' => 'Full shift completed safely on C-5 site.',
@@ -516,7 +521,8 @@ it('executes smart dual equipment handover from operator A to relief operator B 
         ->assertStatus(201);
 
     // Relief Operator B clocks in On Duty for Night Shift
-    $this->withToken($tokenB)
+    $this->flushHeaders()
+        ->withToken($tokenB)
         ->postJson('/api/v1/hos/shifts/start', [
             'duty_status' => 'operating',
             'latitude' => 14.5862,
@@ -527,7 +533,8 @@ it('executes smart dual equipment handover from operator A to relief operator B 
         ->assertCreated();
 
     // Operator A initiates Handover with relief operator pre-matched
-    $initiateResponse = $this->withToken($tokenA)
+    $initiateResponse = $this->flushHeaders()
+        ->withToken($tokenA)
         ->postJson("/api/v1/dispatch-jobs/{$job->id}/handover/initiate", [
             'relief_user_id' => $operatorB->id,
             'remarks' => 'Day shift lift complete, crane warmed and ready for night pour.',
@@ -545,7 +552,8 @@ it('executes smart dual equipment handover from operator A to relief operator B 
     $this->app['auth']->forgetGuards();
 
     // Operator B claims handover via 4-digit PIN fallback (or 1-tap push token)
-    $claimResponse = $this->withToken($tokenB)
+    $claimResponse = $this->flushHeaders()
+        ->withToken($tokenB)
         ->postJson("/api/v1/dispatch-jobs/{$job->id}/handover/claim", [
             'pin' => $pin,
         ]);

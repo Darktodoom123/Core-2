@@ -6,7 +6,8 @@ use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
-use App\Platform\Tracking\Models\LocationUpdate;
+use App\Platform\Tracking\Contracts\TrackingClientInterface;
+use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Workspace\Events\WorkspaceUpdated;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\Event;
@@ -97,14 +98,14 @@ it('exposes scope-aware tracking freshness and only the authenticated user shari
     $driver = trackingContractUser(RoleName::CraneOperator);
     $dispatcher = trackingContractUser(RoleName::OperationsManager);
 
-    $update = LocationUpdate::query()->create([
+    $update = app(TrackingClientInterface::class)->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $driver->id,
         'latitude' => null,
         'longitude' => null,
         'sharing_enabled' => false,
         'captured_at' => now()->subMinute(),
         'received_at' => now(),
-    ]);
+    ]));
 
     $this->actingAs($dispatcher)
         ->get('/')
@@ -112,7 +113,7 @@ it('exposes scope-aware tracking freshness and only the authenticated user shari
         ->assertInertia(fn (Assert $page) => $page
             ->has('workspace.tracking.refreshed_at')
             ->where('workspace.tracking.stale_after_seconds', 120)
-            ->where('workspace.tracking.latest_received_at', $update->received_at->toIso8601String())
+            ->where('workspace.tracking.latest_received_at', $update->receivedAt->toIso8601String())
             ->where('workspace.tracking.current_user.sharing_enabled', null)
             ->where('workspace.tracking.current_user.captured_at', null)
             ->where('workspace.tracking.current_user.received_at', null)
@@ -123,7 +124,7 @@ it('exposes scope-aware tracking freshness and only the authenticated user shari
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('workspace.tracking.current_user.sharing_enabled', false)
-            ->where('workspace.tracking.current_user.captured_at', $update->captured_at->toIso8601String())
-            ->where('workspace.tracking.current_user.received_at', $update->received_at->toIso8601String())
+            ->where('workspace.tracking.current_user.captured_at', $update->capturedAt->toIso8601String())
+            ->where('workspace.tracking.current_user.received_at', $update->receivedAt->toIso8601String())
         );
 });

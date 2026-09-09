@@ -30,6 +30,7 @@ use App\Platform\Identity\Models\User;
 use App\Platform\Notifications\Models\Notification;
 use App\Platform\Reporting\Models\JobReport;
 use App\Platform\Reporting\Models\ReportExport;
+use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Shared\Assets\Models\OperationalAsset;
 use BackedEnum;
@@ -697,41 +698,47 @@ final class OperationsWorkspaceViewModel
     }
 
     /**
-     * @param  Collection<int, LocationUpdate>  $locations
+     * @param  Collection<int, LatestLocationDto>|Collection<int, LocationUpdate>|Collection<int, mixed>  $locations
      * @return array<int, array<string, mixed>>
      */
     public static function locations(Collection $locations): array
     {
-        return $locations->map(static fn (LocationUpdate $location): array => [
-            'id' => (int) $location->getKey(),
-            'user' => [
-                'id' => (int) $location->user->getKey(),
-                'name' => $location->user->name,
-            ],
-            'asset' => $location->asset === null ? null : [
-                'id' => (int) $location->asset->getKey(),
-                'code' => $location->asset->code,
-                'name' => $location->asset->name,
-                'kind' => $location->asset->kind,
-                'location' => $location->asset->location,
-            ],
-            'job' => $location->job === null ? null : [
-                'id' => (int) $location->job->getKey(),
-                'reference' => $location->job->reference,
-                'title' => $location->job->title,
-                'site' => $location->job->site,
-            ],
-            'latitude' => $location->latitude !== null ? (float) $location->latitude : null,
-            'longitude' => $location->longitude !== null ? (float) $location->longitude : null,
-            'accuracy_metres' => $location->accuracy_metres !== null ? (float) $location->accuracy_metres : null,
-            'speed' => $location->speed !== null ? (float) $location->speed : null,
-            'remarks' => $location->remarks,
-            'source' => $location->source,
-            'sharing_enabled' => (bool) $location->sharing_enabled,
-            'captured_at' => $location->captured_at?->toIso8601String(),
-            'received_at' => $location->received_at?->toIso8601String(),
-            'freshness_status' => $location->freshness_status,
-        ])->values()->all();
+        return $locations->map(static function ($location): array {
+            if ($location instanceof LatestLocationDto) {
+                return $location->toViewModel();
+            }
+
+            return [
+                'id' => (int) $location->getKey(),
+                'user' => [
+                    'id' => (int) $location->user->getKey(),
+                    'name' => $location->user->name,
+                ],
+                'asset' => $location->asset === null ? null : [
+                    'id' => (int) $location->asset->getKey(),
+                    'code' => $location->asset->code,
+                    'name' => $location->asset->name,
+                    'kind' => $location->asset->kind,
+                    'location' => $location->asset->location,
+                ],
+                'job' => $location->job === null ? null : [
+                    'id' => (int) $location->job->getKey(),
+                    'reference' => $location->job->reference,
+                    'title' => $location->job->title,
+                    'site' => $location->job->site,
+                ],
+                'latitude' => $location->latitude !== null ? (float) $location->latitude : null,
+                'longitude' => $location->longitude !== null ? (float) $location->longitude : null,
+                'accuracy_metres' => $location->accuracy_metres !== null ? (float) $location->accuracy_metres : null,
+                'speed' => $location->speed !== null ? (float) $location->speed : null,
+                'remarks' => $location->remarks,
+                'source' => $location->source,
+                'sharing_enabled' => (bool) $location->sharing_enabled,
+                'captured_at' => $location->captured_at?->toIso8601String(),
+                'received_at' => $location->received_at?->toIso8601String(),
+                'freshness_status' => $location->freshness_status,
+            ];
+        })->values()->all();
     }
 
     /** @return array<int, array{id: string, label: string}> */
