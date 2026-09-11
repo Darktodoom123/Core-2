@@ -798,6 +798,20 @@ export function LiveWorkspaceShell({
                                 )}
                             </Button>
 
+                            {/* Sign out */}
+                            <Button
+                                size="icon"
+                                variant="quiet"
+                                onClick={() => router.post('/logout')}
+                                aria-label="Sign out"
+                                title="Sign out"
+                            >
+                                <LogOut
+                                    className="h-5 w-5 text-ink-soft hover:text-ink"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+
                             <div
                                 className="h-4 w-px bg-line"
                                 aria-hidden="true"

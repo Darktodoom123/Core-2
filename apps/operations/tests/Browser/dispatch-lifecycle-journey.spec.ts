@@ -35,7 +35,7 @@ test.describe('UI-2 Complete Dispatch Lifecycle & Scheduling Journeys', () => {
             page.getByRole('heading', { name: 'People' }),
         ).toBeVisible();
         await expect(
-            page.getByRole('heading', { name: 'Assets' }),
+            page.getByRole('heading', { name: 'Assets', exact: true }),
         ).toBeVisible();
 
         // Check for presence of eligibility badges
