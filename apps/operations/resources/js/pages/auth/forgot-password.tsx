@@ -54,7 +54,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
             </form>
             <Link
                 href="/login"
-                className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-brand-strong"
+                className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-ink-soft underline underline-offset-4 hover:text-ink"
             >
                 Return to sign in
             </Link>
