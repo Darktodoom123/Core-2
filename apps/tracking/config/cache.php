@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default' => env('CACHE_STORE', 'array'),
+    'default' => env('CACHE_STORE', 'file'),
 
     'stores' => [
         'array' => [

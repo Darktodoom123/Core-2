@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import prettier from 'eslint-config-prettier/flat';
@@ -6,6 +8,8 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import typescript from 'typescript-eslint';
+
+const workspaceRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const controlStatements = [
     'if',
@@ -56,7 +60,7 @@ export default [
             'import/resolver': {
                 typescript: {
                     alwaysTryTypes: true,
-                    project: './tsconfig.json',
+                    project: path.join(workspaceRoot, 'tsconfig.json'),
                 },
                 node: true,
             },
@@ -114,9 +118,20 @@ export default [
             'vendor',
             'third_party/**',
             'node_modules',
-            'public',
-            'storage/**',
-            'bootstrap/ssr',
+            'apps/operations/storage/**',
+            'apps/operations/bootstrap/**',
+            'apps/operations/public/**',
+            'apps/operations/vendor/**',
+            'apps/operations/vite.config.ts',
+            'apps/operations/resources/js/actions/**',
+            'apps/operations/resources/js/components/ui/*',
+            'apps/operations/resources/js/routes/**',
+            'apps/operations/resources/js/wayfinder/**',
+            'resources/js/actions/**',
+            'resources/js/components/ui/*',
+            'resources/js/routes/**',
+            'resources/js/wayfinder/**',
+            'apps/tracking/**',
             '.android-sdk/**',
             'android-sdk-runtime/**',
             'dist/**',
@@ -126,10 +141,6 @@ export default [
             'tailwind.config.js',
             'vite.config.ts',
             '.agents/**',
-            'resources/js/actions/**',
-            'resources/js/components/ui/*',
-            'resources/js/routes/**',
-            'resources/js/wayfinder/**',
         ],
     },
     {

@@ -12,7 +12,8 @@ Docs
 
 .android-sdk
 .expo-sprint2
-packages/field-mobile
+packages/field-mobile/*
+!packages/field-mobile/package.json
 
 node_modules
 vendor
@@ -24,17 +25,26 @@ nimbalyst-local
 .env.*
 !.env.example
 
-storage
-storage/*.key
-storage/framework/cache/*
-storage/framework/sessions/*
-storage/framework/views/*
-storage/logs/*
-storage/framework/testing/
-database/*.sqlite
-database/*.sqlite-journal
-bootstrap/cache/*.php
-!bootstrap/cache/.gitignore
+# Nested service contexts must never send runtime credentials, dependencies,
+# persistent storage, generated caches, or development SQLite files to Docker.
+apps/operations/.env
+apps/operations/.env.*
+!apps/operations/.env.example
+apps/operations/vendor/
+apps/operations/storage/
+apps/operations/database/*.sqlite
+apps/operations/database/*.sqlite-journal
+apps/operations/bootstrap/cache/*.php
+apps/operations/public/build/
+apps/tracking/.env
+apps/tracking/.env.*
+!apps/tracking/.env.example
+apps/tracking/vendor/
+apps/tracking/storage/
+apps/tracking/database/*.sqlite
+apps/tracking/database/*.sqlite-journal
+apps/tracking/bootstrap/cache/*.php
+apps/tracking/public/build/
 
 npm-debug.log
 yarn-error.log

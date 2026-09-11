@@ -70,9 +70,9 @@ export async function registerBackgroundLocationUpdates(
                     FIELD_BACKGROUND_LOCATION_TASK,
                     {
                         accuracy: Location.Accuracy.Balanced,
-                        timeInterval: 120_000,
+                        timeInterval: 15_000,
                         distanceInterval: 0,
-                        deferredUpdatesInterval: 120_000,
+                        deferredUpdatesInterval: 15_000,
                         pausesUpdatesAutomatically: false,
                         foregroundService: {
                             notificationTitle: 'Core 2 location sharing active',

@@ -31,7 +31,7 @@
     "scripts": {
         "lint": "pint",
         "lint:check": "pint --test",
-        "types:check": "phpstan analyse",
+        "types:check": "phpstan analyse --memory-limit=512M",
         "test": "pest"
     },
     "config": {

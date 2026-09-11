@@ -15,9 +15,16 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot '..\..\..')
 )
+$operationsRoot = Join-Path $repositoryRoot 'apps\operations'
+$operationsTarget = if (Test-Path -LiteralPath $operationsRoot -PathType Container) {
+    $operationsRoot
+} else {
+    $repositoryRoot
+}
 $mobileRoot = Join-Path $repositoryRoot 'packages\field-mobile'
-$runtimeRoot = Join-Path $repositoryRoot 'storage\framework\testing'
-$publicRoot = Join-Path $repositoryRoot 'public'
+$runtimeRoot = Join-Path $operationsTarget 'storage\framework\testing'
+$publicRoot = Join-Path $operationsTarget 'public'
+$operationsArtisan = Join-Path $operationsTarget 'artisan'
 $runId = (Get-Date).ToString('yyyyMMdd-HHmmss-fff')
 $database = Join-Path $runtimeRoot 'session1-native.sqlite'
 $evidenceTitle = if ($EvidenceScope -eq 'sprint2') {
@@ -55,9 +62,14 @@ $testApk = Join-Path $mobileRoot (
     'app-debug-androidTest.apk'
 )
 $expoCli = Join-Path $repositoryRoot 'node_modules\expo\bin\cli'
-$laravelServer = Join-Path $repositoryRoot (
+$laravelServer = Join-Path $operationsTarget (
     'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
 )
+if (-not (Test-Path -LiteralPath $laravelServer -PathType Leaf)) {
+    $laravelServer = Join-Path $repositoryRoot (
+        'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php'
+    )
+}
 $androidSdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
 $javaHome = 'C:\Program Files\Android\Android Studio\jbr'
 $sourceAvdHome = Join-Path $env:USERPROFILE '.android\avd'
@@ -77,11 +89,21 @@ function Invoke-Checked {
     param(
         [Parameter(Mandatory)][string] $FilePath,
         [Parameter(Mandatory)][string[]] $Arguments,
-        [Parameter(Mandatory)][string] $FailureMessage
+        [Parameter(Mandatory)][string] $FailureMessage,
+        [string] $WorkingDirectory = ''
     )
 
-    & $FilePath @Arguments
-    $exitCode = $LASTEXITCODE
+    if ($WorkingDirectory) {
+        Push-Location -LiteralPath $WorkingDirectory
+    }
+    try {
+        & $FilePath @Arguments
+        $exitCode = $LASTEXITCODE
+    } finally {
+        if ($WorkingDirectory) {
+            Pop-Location
+        }
+    }
 
     if ($exitCode -ne 0) {
         throw "$FailureMessage (exit code $exitCode)."
@@ -936,18 +958,18 @@ try {
 
     Set-NativeStage -Name 'isolated fixture preparation'
     Invoke-Checked -FilePath $php -Arguments @(
-        'artisan',
+        $operationsArtisan,
         'migrate:fresh',
         '--force',
         '--no-interaction'
-    ) -FailureMessage 'Isolated Session 1 database migration failed'
+    ) -WorkingDirectory $operationsTarget -FailureMessage 'Isolated Session 1 database migration failed'
     Invoke-Checked -FilePath $php -Arguments @(
-        'artisan',
+        $operationsArtisan,
         'db:seed',
         '--class=Database\Seeders\Session1NativeAcceptanceSeeder',
         '--force',
         '--no-interaction'
-    ) -FailureMessage 'Session 1 fixture seeding failed'
+    ) -WorkingDirectory $operationsTarget -FailureMessage 'Session 1 fixture seeding failed'
 
     Set-NativeStage -Name 'local API and Metro startup'
     $apiProcess = Start-Process -FilePath $php -ArgumentList @(

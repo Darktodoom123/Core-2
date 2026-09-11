@@ -1,9 +1,13 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 
+const workspaceRoot = path.dirname(fileURLToPath(import.meta.url));
+const operationsRoot = path.join(workspaceRoot, 'apps', 'operations');
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173';
 
 export default defineConfig({
-    testDir: './tests/Browser',
+    testDir: path.join(operationsRoot, 'tests', 'Browser'),
     timeout: 60_000,
     fullyParallel: false,
     workers: 1,
@@ -32,6 +36,7 @@ export default defineConfig({
         ? undefined
         : {
               command: 'php tests/Browser/web-server.php',
+              cwd: operationsRoot,
               url: baseURL,
               reuseExistingServer: false,
               timeout: 120_000,

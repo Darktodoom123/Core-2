@@ -39,6 +39,36 @@ const activeJob: DispatchJob = {
 };
 
 describe('LocationSharingService Unit Tests', () => {
+    test('captures immediately and every 15 seconds until stopped', async (t) => {
+        t.mock.timers.enable({ apis: ['setInterval'] });
+        const outbox = new CommandOutboxManager({
+            repository: new MemoryOutboxRepository(),
+            hasher: testHasher,
+        });
+        await outbox.activateActor(activeUser.id);
+        const service = new LocationSharingService(outbox);
+        let captures = 0;
+        const capture = async () => {
+            captures++;
+
+            return { latitude: 14.5995, longitude: 120.9842 };
+        };
+
+        try {
+            service.startAutoTracking(activeUser, activeJob, capture);
+            assert.equal(captures, 1);
+            t.mock.timers.tick(14_999);
+            assert.equal(captures, 1);
+            t.mock.timers.tick(1);
+            assert.equal(captures, 2);
+            service.stopAutoTracking();
+            t.mock.timers.tick(15_000);
+            assert.equal(captures, 2);
+        } finally {
+            service.stopAutoTracking();
+        }
+    });
+
     test('authorizes location sharing for active user with valid job capabilities', () => {
         const repo = new MemoryOutboxRepository();
         const outbox = new CommandOutboxManager({

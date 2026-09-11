@@ -1,71 +1,48 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/blank-react-starter-kit",
+    "name": "core2/workspace",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": [
-        "laravel",
-        "framework"
-    ],
+    "description": "Core-2 monorepo orchestration scripts.",
+    "keywords": ["core2", "monorepo"],
     "license": "MIT",
-    "require": {
-        "php": "^8.4",
-        "inertiajs/inertia-laravel": "^3.0",
-        "laravel/framework": "^13.17",
-        "laravel/reverb": "^1.11",
-        "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^3.0",
-        "laravel/wayfinder": "^0.1.14",
-        "league/flysystem-aws-s3-v3": "^3.35",
-        "mpdf/mpdf": "~8.3.0",
-        "spatie/laravel-permission": "^8.3"
-    },
-    "require-dev": {
-        "fakerphp/faker": "^1.24",
-        "larastan/larastan": "^3.9",
-        "laravel/pail": "^1.2.5",
-        "laravel/pao": "^1.0.6",
-        "laravel/pint": "^1.27",
-        "laravel/sail": "^1.53",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.9.3",
-        "pestphp/pest": "^4.7",
-        "pestphp/pest-plugin-laravel": "^4.1"
-    },
-    "autoload": {
-        "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/",
-            "Tracking\\": "apps/tracking/app/",
-            "Tracking\\Database\\Factories\\": "apps/tracking/database/factories/",
-            "Tracking\\Database\\Seeders\\": "apps/tracking/database/seeders/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/",
-            "Tracking\\Tests\\": "apps/tracking/tests/"
-        }
-    },
     "scripts": {
         "setup": [
-            "composer install",
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@composer --working-dir=apps/operations install",
+            "@composer --working-dir=apps/tracking install",
+            "@php -r \"file_exists('apps/operations/.env') || copy('apps/operations/.env.example', 'apps/operations/.env');\"",
+            "@php -r \"file_exists('apps/tracking/.env') || copy('apps/tracking/.env.example', 'apps/tracking/.env');\"",
+            "@php apps/operations/artisan key:generate",
+            "@php apps/operations/artisan migrate --force",
             "npm install",
             "npm run build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#f472b6\" \"php artisan serve --host=0.0.0.0 --port=8000\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start\" \"npm run dev\" --names='server,queue,reverb,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#f472b6\" \"php apps/operations/artisan serve --host=0.0.0.0 --port=8000\" \"php apps/operations/artisan queue:listen --tries=1\" \"php apps/operations/artisan reverb:start\" \"npm run dev\" --names='server,queue,reverb,vite'"
         ],
         "lint": [
-            "pint --parallel"
+            "@composer --working-dir=apps/operations lint",
+            "@composer --working-dir=apps/tracking lint"
         ],
         "lint:check": [
-            "pint --parallel --test"
+            "@composer --working-dir=apps/operations lint:check",
+            "@composer --working-dir=apps/tracking lint:check"
+        ],
+        "types:check": [
+            "@composer --working-dir=apps/operations types:check",
+            "@composer --working-dir=apps/tracking types:check"
+        ],
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "@composer test:operations",
+            "@composer test:tracking"
+        ],
+        "test:operations": [
+            "Composer\\Config::disableProcessTimeout",
+            "@composer --working-dir=apps/operations test"
+        ],
+        "test:tracking": [
+            "@composer --working-dir=apps/tracking test"
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
@@ -74,48 +51,9 @@
             "npm run types:check",
             "npm run test:unit",
             "@test"
-        ],
-        "types:check": [
-            "phpstan analyse --memory-limit=512M"
-        ],
-        "test": [
-            "@php artisan config:clear --ansi",
-            "@lint:check",
-            "@types:check",
-            "@php artisan test"
-        ],
-        "post-autoload-dump": [
-            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
-        ],
-        "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
-        ],
-        "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
-        ],
-        "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
-        ],
-        "pre-package-uninstall": [
-            "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
     },
-    "extra": {
-        "laravel": {
-            "dont-discover": []
-        }
-    },
     "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
-    },
-    "minimum-stability": "stable"
+        "sort-packages": true
+    }
 }

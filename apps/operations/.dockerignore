@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+vendor/
+storage/
+database/*.sqlite
+database/*.sqlite-journal
+bootstrap/cache/*.php
+public/build/
+node_modules/
+.npm-cache/

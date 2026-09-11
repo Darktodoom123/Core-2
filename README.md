@@ -71,13 +71,14 @@ Initialize dependencies, application key, database, and frontend build with a si
 composer run setup
 ```
 
-*(This command executes `composer install`, key generation, database migration, `npm install`, and `npm run build`.)*
+*(This command installs each service, generates the Operations key, migrates
+Operations, installs the workspace packages, and builds the frontend.)*
 
 ### 4. Seed Database with Default Data
 Seed the default roles, permissions, and initial admin account:
 
 ```bash
-php artisan db:seed
+php apps/operations/artisan db:seed
 ```
 
 ### 5. Start Development Stack
@@ -106,7 +107,7 @@ Copy `.env.example` to `.env` and configure the required values (`APP_KEY`,
 the application key without committing it:
 
 ```bash
-php artisan key:generate --show
+php apps/operations/artisan key:generate --show
 ```
 
 Paste the printed value into the untracked `.env`. For Docker's bundled local
@@ -226,7 +227,7 @@ npm run mobile:android
 | Action | Command |
 | :--- | :--- |
 | **Start Dev Servers** | `composer run dev` |
-| **Run All Tests** | `composer test` or `php artisan test` |
+| **Run All Tests** | `composer test` or `php apps/operations/artisan test --test-directory=apps/operations/tests` |
 | **PHP Lint & Format** | `composer run lint` |
 | **PHP Static Analysis** | `composer run types:check` |
 | **Frontend Lint Check** | `npm run lint:check` |

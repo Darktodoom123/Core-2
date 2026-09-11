@@ -12,7 +12,7 @@
         "cn",
         "cva"
     ],
-    "tailwindStylesheet": "resources/css/app.css",
+    "tailwindStylesheet": "apps/operations/resources/css/app.css",
     "tabWidth": 4,
     "overrides": [
         {

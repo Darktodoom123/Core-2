@@ -6,7 +6,6 @@
     "namedInputs": {
         "default": [
             "{projectRoot}/**/*",
-            "{workspaceRoot}/packages/field-mobile/**/*",
             "{workspaceRoot}/package.json",
             "{workspaceRoot}/package-lock.json"
         ]

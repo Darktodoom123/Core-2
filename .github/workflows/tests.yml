@@ -61,19 +61,26 @@ jobs:
         run: npm ci
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: |
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
+          composer --working-dir=apps/tracking install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Copy Environment File
-        run: cp .env.example .env
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
 
       - name: Generate Application Key
-        run: php artisan key:generate
+        run: php apps/operations/artisan key:generate
 
       - name: Build Assets
         run: npm run build
 
       - name: Tests
-        run: mkdir -p test-results && vendor/bin/pest --parallel --log-junit=test-results/junit-backend.xml
+        run: |
+          mkdir -p test-results
+          composer test:operations
+          composer test:tracking
 
       - name: Upload backend JUnit results
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
@@ -137,13 +144,16 @@ jobs:
         run: npm ci
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: |
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Copy Environment File
-        run: cp .env.example .env
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
 
       - name: Generate Application Key
-        run: php artisan key:generate
+        run: php apps/operations/artisan key:generate
 
       - name: Build Assets
         run: npm run build
@@ -226,13 +236,16 @@ jobs:
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: |
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Copy Environment File
-        run: cp .env.example .env
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
 
       - name: Generate Application Key
-        run: php artisan key:generate
+        run: php apps/operations/artisan key:generate
 
       - name: Prepare isolated PostgreSQL test roles and databases
         env:
@@ -273,8 +286,8 @@ jobs:
           BROADCAST_DRIVER: 'null'
         run: |
           mkdir -p test-results
-          php artisan migrate --force --database=pgsql
-          vendor/bin/pest --configuration=phpunit.concurrency.xml --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
+          php apps/operations/artisan migrate --force --database=pgsql
+          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.concurrency.xml --test-directory=apps/operations/tests --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
 
       - name: PostgreSQL Rental and Sales RLS/grant tests
         env:
@@ -286,7 +299,7 @@ jobs:
           DB_SSLMODE: disable
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
-        run: vendor/bin/pest --configuration=phpunit.postgresql.xml --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
+        run: apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.postgresql.xml --test-directory=apps/operations/tests --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
 
       - name: Upload PostgreSQL JUnit results
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3

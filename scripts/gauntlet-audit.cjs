@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
+const OPERATIONS_DIR = path.join(ROOT_DIR, 'apps', 'operations');
 const REPORT_DIR = path.join(ROOT_DIR, '.ai-reports');
 
 console.log('====================================================');
@@ -70,11 +71,11 @@ function scanFiles(
 function runSecurityAudit() {
     console.log('🔍 [Phase 1/5] Running Security & Compliance Audit...');
     const findings = [];
-    const phpFiles = scanFiles(path.join(ROOT_DIR, 'app'), ['.php'])
-        .concat(scanFiles(path.join(ROOT_DIR, 'routes'), ['.php']))
-        .concat(scanFiles(path.join(ROOT_DIR, 'bootstrap'), ['.php']))
-        .concat(scanFiles(path.join(ROOT_DIR, 'config'), ['.php']));
-    const jsFiles = scanFiles(path.join(ROOT_DIR, 'resources', 'js'), [
+    const phpFiles = scanFiles(path.join(OPERATIONS_DIR, 'app'), ['.php'])
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'routes'), ['.php']))
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'bootstrap'), ['.php']))
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'config'), ['.php']));
+    const jsFiles = scanFiles(path.join(OPERATIONS_DIR, 'resources', 'js'), [
         '.ts',
         '.tsx',
         '.js',
@@ -129,10 +130,10 @@ function runSecurityAudit() {
                 content.includes('middleware(') ||
                 content.includes('permission:');
             const controllerName = path.basename(file, '.php');
-            const routeFiles = scanFiles(path.join(ROOT_DIR, 'routes'), [
+            const routeFiles = scanFiles(path.join(OPERATIONS_DIR, 'routes'), [
                 '.php',
             ]).concat(
-                scanFiles(path.join(ROOT_DIR, 'app'), ['.php']).filter((f) =>
+                scanFiles(path.join(OPERATIONS_DIR, 'app'), ['.php']).filter((f) =>
                     f.includes('Routes'),
                 ),
             );
@@ -192,11 +193,11 @@ function runSecurityAudit() {
 function runDatabaseAudit() {
     console.log('🔍 [Phase 2/5] Running Database & Model Security Audit...');
     const databaseFindings = [];
-    const modelFiles = scanFiles(path.join(ROOT_DIR, 'app'), ['.php']).filter(
+    const modelFiles = scanFiles(path.join(OPERATIONS_DIR, 'app'), ['.php']).filter(
         (f) =>
-            f.includes(path.join('app', 'Modules')) ||
-            f.includes(path.join('app', 'Platform')) ||
-            f.includes(path.join('app', 'Shared')),
+            f.includes(path.join(OPERATIONS_DIR, 'app', 'Modules')) ||
+            f.includes(path.join(OPERATIONS_DIR, 'app', 'Platform')) ||
+            f.includes(path.join(OPERATIONS_DIR, 'app', 'Shared')),
     );
 
     let modelsAudited = 0;
@@ -261,7 +262,7 @@ function runDatabaseAudit() {
 
     // Check Supabase PostgreSQL RLS Hardening Coverage
     const migrationFiles = scanFiles(
-        path.join(ROOT_DIR, 'database', 'migrations'),
+        path.join(OPERATIONS_DIR, 'database', 'migrations'),
         ['.php'],
     );
     let rlsHardeningPresent = false;
@@ -282,7 +283,7 @@ function runDatabaseAudit() {
         databaseFindings.push({
             category: 'DATABASE_SECURITY',
             severity: 'CRITICAL',
-            file: 'database/migrations',
+            file: 'apps/operations/database/migrations',
             rule: 'Supabase Server-Only Hardening',
             details:
                 'Missing Row Level Security (RLS) hardening on server-owned tables.',
@@ -307,13 +308,16 @@ function runDeadCodeAudit() {
         '🔍 [Phase 3/5] Running Dead Code & Unreferenced Exports Audit...',
     );
     const candidates = [];
-    const allSourceFiles = scanFiles(path.join(ROOT_DIR, 'app'), ['.php'])
-        .concat(scanFiles(path.join(ROOT_DIR, 'bootstrap'), ['.php']))
-        .concat(scanFiles(path.join(ROOT_DIR, 'config'), ['.php']))
-        .concat(scanFiles(path.join(ROOT_DIR, 'routes'), ['.php']))
-        .concat(scanFiles(path.join(ROOT_DIR, 'tests'), ['.php']))
+    const allSourceFiles = scanFiles(path.join(OPERATIONS_DIR, 'app'), ['.php'])
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'bootstrap'), ['.php']))
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'config'), ['.php']))
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'routes'), ['.php']))
+        .concat(scanFiles(path.join(OPERATIONS_DIR, 'tests'), ['.php']))
         .concat(
-            scanFiles(path.join(ROOT_DIR, 'resources', 'js'), ['.ts', '.tsx']),
+            scanFiles(path.join(OPERATIONS_DIR, 'resources', 'js'), [
+                '.ts',
+                '.tsx',
+            ]),
         )
         .concat(
             scanFiles(path.join(ROOT_DIR, 'packages', 'field-mobile', 'src'), [
@@ -398,7 +402,7 @@ function runDuplicationAudit() {
         '🔍 [Phase 4/5] Running Code Duplication & Redundancy Scanner...',
     );
     const duplicateCandidates = [];
-    const tsFiles = scanFiles(path.join(ROOT_DIR, 'resources', 'js'), [
+    const tsFiles = scanFiles(path.join(OPERATIONS_DIR, 'resources', 'js'), [
         '.ts',
         '.tsx',
     ]).concat(

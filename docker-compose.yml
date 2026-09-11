@@ -1,11 +1,12 @@
-name: core2
+name: "${COMPOSE_PROJECT_NAME:-core2}"
 
 services:
   app:
     image: "${CORE2_APP_IMAGE:-core2/runtime:ci}"
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/docker/Dockerfile
+      target: runtime
       args:
         VITE_PUBLIC_REVERB_IDENTIFIER: "${REVERB_APP_KEY:?Set REVERB_APP_KEY in .env}"
         VITE_REVERB_HOST: "${VITE_REVERB_HOST:-localhost}"
@@ -55,6 +56,10 @@ services:
       REVERB_SCHEME: http
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
       CACHE_CONFIG: "${CACHE_CONFIG:-true}"
+      TRACKING_SERVICE_DRIVER: http
+      TRACKING_SERVICE_URL: http://tracking
+      TRACKING_SERVICE_SECRET: "${TRACKING_SERVICE_SECRET:?Set TRACKING_SERVICE_SECRET in .env}"
+      CORE2_SERVICE_NAME: operations
     volumes:
       - storage-data:/var/www/html/storage
     depends_on:
@@ -63,12 +68,82 @@ services:
         required: false
       redis:
         condition: service_healthy
+      tracking:
+        condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1/up"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 40s
+
+  tracking:
+    image: "${CORE2_TRACKING_IMAGE:-core2/tracking:ci}"
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile
+      target: tracking-runtime
+    restart: unless-stopped
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    environment:
+      APP_NAME: TrackingService
+      APP_ENV: "${APP_ENV:-production}"
+      APP_KEY: "${TRACKING_APP_KEY:?Set TRACKING_APP_KEY in .env}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_URL: "${TRACKING_APP_URL:-http://localhost:8001}"
+      DB_CONNECTION: "${TRACKING_DB_CONNECTION:-pgsql}"
+      DB_HOST: "${TRACKING_DB_HOST:-tracking-db}"
+      DB_PORT: "${TRACKING_DB_PORT:-5432}"
+      DB_DATABASE: "${TRACKING_DB_DATABASE:?Set TRACKING_DB_DATABASE in .env}"
+      DB_USERNAME: "${TRACKING_DB_USERNAME:?Set TRACKING_DB_USERNAME in .env}"
+      DB_PASSWORD: "${TRACKING_DB_PASSWORD:?Set TRACKING_DB_PASSWORD in .env}"
+      DB_SSLMODE: "${TRACKING_DB_SSLMODE:-prefer}"
+      TRACKING_SERVICE_SECRET: "${TRACKING_SERVICE_SECRET:?Set TRACKING_SERVICE_SECRET in .env}"
+      TRACKING_ALLOWED_SERVICES: "${TRACKING_ALLOWED_SERVICES:-operations}"
+      CACHE_STORE: file
+      CACHE_PREFIX: "${TRACKING_CACHE_PREFIX:-core2_tracking_cache_}"
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: file
+      RUN_MIGRATIONS: "${TRACKING_RUN_MIGRATIONS:-true}"
+      CACHE_CONFIG: "${TRACKING_CACHE_CONFIG:-true}"
+      DB_WAIT_TIMEOUT_SECONDS: "${TRACKING_DB_WAIT_TIMEOUT_SECONDS:-60}"
+      DB_WAIT_INTERVAL_SECONDS: "${TRACKING_DB_WAIT_INTERVAL_SECONDS:-2}"
+      DB_WAIT_PROBE_TIMEOUT_SECONDS: "${TRACKING_DB_WAIT_PROBE_TIMEOUT_SECONDS:-5}"
+      MIGRATION_TIMEOUT_SECONDS: "${TRACKING_MIGRATION_TIMEOUT_SECONDS:-120}"
+      CORE2_SERVICE_NAME: tracking
+      BROADCAST_CONNECTION: "null"
+    volumes:
+      - tracking-storage-data:/var/www/html/storage
+    depends_on:
+      tracking-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  tracking-db:
+    image: postgres:16.15-alpine3.24@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    environment:
+      POSTGRES_DB: "${TRACKING_DB_DATABASE:?Set TRACKING_DB_DATABASE in .env}"
+      POSTGRES_USER: "${TRACKING_DB_USERNAME:?Set TRACKING_DB_USERNAME in .env}"
+      POSTGRES_PASSWORD: "${TRACKING_DB_PASSWORD:?Set TRACKING_DB_PASSWORD in .env}"
+    volumes:
+      - tracking-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   db:
     image: postgres:16.15-alpine3.24@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
@@ -106,7 +181,7 @@ services:
     image: "${CORE2_TEST_IMAGE:-core2/test-runner:ci}"
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: infra/docker/Dockerfile
       target: test-runner
     profiles: ["test"]
     working_dir: /var/www/html
@@ -118,6 +193,7 @@ services:
       - --configuration=phpunit.concurrency.xml
       - tests/Concurrency/RentalSalesAssetUsageConcurrencyTest.php
       - tests/Concurrency/GptRecommendationRowLockConcurrencyTest.php
+      - tests/Concurrency/HosShiftConcurrencyTest.php
     init: true
     stop_signal: SIGTERM
     stop_grace_period: 30s
@@ -146,3 +222,5 @@ volumes:
   storage-data:
   postgres-data:
   redis-data:
+  tracking-storage-data:
+  tracking-postgres-data:

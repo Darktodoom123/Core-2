@@ -1,0 +1,10 @@
+<?php
+
+use App\Platform\Weather\Http\Controllers\Api\V1\LocationWeatherController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->name('api.v1.')->group(function () {
+    Route::middleware(['auth:sanctum', 'active', 'api-token', 'throttle:weather'])->group(function () {
+        Route::get('/telemetry/weather', [LocationWeatherController::class, 'show'])->name('telemetry.weather');
+    });
+});

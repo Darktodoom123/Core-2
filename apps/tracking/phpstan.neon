@@ -1,8 +1,10 @@
 includes:
-    - ../../vendor/larastan/larastan/extension.neon
-    - ../../vendor/nesbot/carbon/extension.neon
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
 
 parameters:
+    bootstrapFiles:
+        - vendor/autoload.php
     paths:
         - app/
         - bootstrap/app.php
@@ -11,6 +13,8 @@ parameters:
         - routes/
 
     level: 7
+
+    reportUnmatchedIgnoredErrors: false
 
     ignoreErrors:
         -

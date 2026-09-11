@@ -95,7 +95,7 @@ export class LocationSharingService {
         user: User,
         job: DispatchJob | null,
         getLocationCoords: () => Promise<LocationCoordinates>,
-        intervalMs: number = 30000, // Default 30s cadence for active work
+        intervalMs: number = 15_000, // Target 15s cadence for active work
     ): void {
         this.stopAutoTracking();
 

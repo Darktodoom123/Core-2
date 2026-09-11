@@ -18,7 +18,15 @@ const path = require('node:path');
 const ROOT_DIR = path.resolve(__dirname, '..');
 const REPORT_DIR = path.join(ROOT_DIR, '.ai-reports', 'lighthouse');
 const BASE_URL = process.env.LIGHTHOUSE_BASE_URL || 'http://127.0.0.1:4173';
-const FIXTURES_PATH = path.join(ROOT_DIR, 'storage', 'framework', 'testing', 'browser-fixtures.json');
+const FIXTURES_PATH = path.join(
+    ROOT_DIR,
+    'apps',
+    'operations',
+    'storage',
+    'framework',
+    'testing',
+    'browser-fixtures.json',
+);
 
 // Parse CLI flags
 const args = process.argv.slice(2);
@@ -52,7 +60,14 @@ if (!fs.existsSync(REPORT_DIR)) {
 
 // 1. Production build verification
 function ensureProductionBuild() {
-    const manifestPath = path.join(ROOT_DIR, 'public', 'build', 'manifest.json');
+    const manifestPath = path.join(
+        ROOT_DIR,
+        'apps',
+        'operations',
+        'public',
+        'build',
+        'manifest.json',
+    );
 
     if (shouldBuild || !fs.existsSync(manifestPath)) {
         console.log('📦 Building production frontend assets (npm run build)...');
@@ -85,8 +100,10 @@ async function ensureServerRunning() {
         return;
     }
 
-    console.log('🚀 Spawning test web server (php tests/Browser/web-server.php)...');
-    serverProcess = spawn('php', ['tests/Browser/web-server.php'], {
+    const webServerScript = 'apps/operations/tests/Browser/web-server.php';
+
+    console.log(`🚀 Spawning test web server (php ${webServerScript})...`);
+    serverProcess = spawn('php', [webServerScript], {
         cwd: ROOT_DIR,
         stdio: 'pipe',
         detached: false,

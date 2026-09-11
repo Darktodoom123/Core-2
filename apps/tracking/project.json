@@ -8,48 +8,56 @@
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/pint --test apps/tracking",
-                "cwd": "."
+                "command": "php vendor/bin/pint --test",
+                "cwd": "apps/tracking"
             }
         },
         "types": {
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/phpstan analyse -c apps/tracking/phpstan.neon --memory-limit=512M",
-                "cwd": "."
+                "command": "php vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=512M",
+                "cwd": "apps/tracking"
             }
         },
         "test": {
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/pest -c apps/tracking/phpunit.xml",
-                "cwd": "."
+                "command": "php vendor/bin/pest -c phpunit.xml",
+                "cwd": "apps/tracking",
+                "env": {
+                    "DB_CONNECTION": "sqlite",
+                    "DB_DATABASE": ":memory:"
+                }
             }
         },
         "php-lint": {
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/pint --test apps/tracking",
-                "cwd": "."
+                "command": "php vendor/bin/pint --test",
+                "cwd": "apps/tracking"
             }
         },
         "php-types": {
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/phpstan analyse -c apps/tracking/phpstan.neon --memory-limit=512M",
-                "cwd": "."
+                "command": "php vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=512M",
+                "cwd": "apps/tracking"
             }
         },
         "php-test": {
             "executor": "nx:run-commands",
             "cache": false,
             "options": {
-                "command": "php vendor/bin/pest -c apps/tracking/phpunit.xml",
-                "cwd": "."
+                "command": "php vendor/bin/pest -c phpunit.xml",
+                "cwd": "apps/tracking",
+                "env": {
+                    "DB_CONNECTION": "sqlite",
+                    "DB_DATABASE": ":memory:"
+                }
             }
         }
     }

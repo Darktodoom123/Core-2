@@ -324,7 +324,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                         /fetch failed|network request failed|network error|connectexception|failed to connect/i.test(
                             err.message,
                         )
-                        ? 'Unable to reach the field API. Check that the phone and computer are on the same Wi-Fi network, then start Laravel with: php artisan serve --host=0.0.0.0 --port=8000'
+                        ? 'Unable to reach the field API. Check that the phone and computer are on the same Wi-Fi network, then start Laravel with: php apps/operations/artisan serve --host=0.0.0.0 --port=8000'
                         : err instanceof Error
                           ? err.message
                           : 'An unexpected error occurred during sign in.',

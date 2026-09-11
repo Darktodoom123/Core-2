@@ -42,6 +42,38 @@ describe('FieldApiClient', () => {
         );
     });
 
+    test('sends location shares through the Operations API contract', async () => {
+        let captured: { body?: Record<string, unknown>; url?: string } = {};
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000/',
+            getToken: () => 'field-token',
+            fetchFn: async (input, init) => {
+                captured = {
+                    body: JSON.parse(String(init?.body)),
+                    url: String(input),
+                };
+
+                return new Response(JSON.stringify({ data: { id: 1 } }), {
+                    status: 201,
+                });
+            },
+        });
+        const commandId = '9c8f2f9e-cf7d-4f39-83a2-702fdf75baf2';
+
+        await client.shareLocation(
+            {
+                latitude: 14.5547,
+                longitude: 121.0244,
+                sharing_enabled: true,
+                captured_at: '2026-09-10T00:00:00.000Z',
+            },
+            commandId,
+        );
+
+        assert.equal(captured.url, 'http://localhost:8000/api/v1/locations');
+        assert.equal(captured.body?.command_id, commandId);
+    });
+
     test('parses 409 Conflict with stale_version error and server snapshot', async () => {
         const mockServerSnapshot: Partial<DispatchJob> = {
             id: 42,

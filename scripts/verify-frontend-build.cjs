@@ -3,7 +3,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const buildRoot = path.resolve(process.argv[2] ?? 'public/build');
+const defaultBuildRoot = 'apps/operations/public/build';
+const buildRoot = path.resolve(process.argv[2] ?? defaultBuildRoot);
 const requiredVariables = [
     'VITE_MAP_PROVIDER',
     'VITE_MAP_PLAN',

@@ -10,11 +10,11 @@
   - `CreateDvirInspectionAction` automatically triggers equipment lockout when critical defects exist: updates `OperationalAsset.status` to `AssetStatus::UnderMaintenance` and creates a dispatch-blocking `MaintenanceWorkOrder`.
   - Dispatch board prevents assignment of locked-out assets; authorized managers can clear lockout via audited safety override.
 - **Frontend Architecture & Modular Decomposition**:
-  - Authoritative entrypoint: `resources/js/pages/workspace.tsx` and `components/workspace/live-workspace-shell.tsx`.
+  - Authoritative entrypoint: `apps/operations/resources/js/pages/workspace.tsx` and `apps/operations/resources/js/components/workspace/live-workspace-shell.tsx`.
   - Decompose monolithic `live-workspace-sections.tsx` (4,816 lines) into modular SOLID domain directories:
-    * `resources/js/components/workspace/fleet/` (AssetsSurface, operator binding, HoS clocks, DOLE warnings, DVIR photo gallery, safety lockout)
-    * `resources/js/components/workspace/fuel/` (FuelSurface, 5-stage transition modal, meter validation, receipt photo upload, variance & anomaly alerts)
-    * `resources/js/components/workspace/reports/` (ReportsSurface, digital signatures, delay/demurrage logs, review dialog, cross-references)
+    * `apps/operations/resources/js/components/workspace/fleet/` (AssetsSurface, operator binding, HoS clocks, DOLE warnings, DVIR photo gallery, safety lockout)
+    * `apps/operations/resources/js/components/workspace/fuel/` (FuelSurface, 5-stage transition modal, meter validation, receipt photo upload, variance & anomaly alerts)
+    * `apps/operations/resources/js/components/workspace/reports/` (ReportsSurface, digital signatures, delay/demurrage logs, review dialog, cross-references)
   - Prototype Debt Elimination: Purge unrouted simulation wrappers (`operations.tsx`, `operations-reducer.ts`, `data/fixtures/`, `PrototypeSandboxBanner`).
 - **Design System & Industrial Tokens**:
   - Tailwind tokens, `Panel`, `CanonicalStatusBadge`, `Stat`, `EmptyState`, Instrument Sans typography, and high-density monospaced data tags.
@@ -137,12 +137,12 @@ export interface JobReportViewModel {
 ```
 
 ## Code Layout
-- `app/Shared/Assets/Models/OperationalAsset.php`: Relationships `dvirInspections()`, `latestDvirInspection()`, `activeOperatorShift()`.
-- `app/Modules/Dvir/Actions/CreateDvirInspectionAction.php`: Safety lockout logic on critical defects.
-- `app/Platform/Workspace/ViewModels/OperationsWorkspaceViewModel.php`: Asset HoS/DVIR serialization and JobReport signature/delay serialization.
-- `app/Modules/Fuel/ViewModels/FuelWorkspaceViewModel.php`: Download URL resolution for receipt photos.
-- `resources/js/components/workspace/fleet/`: Modular Fleet management UI.
-- `resources/js/components/workspace/fuel/`: Modular Fuel management UI.
-- `resources/js/components/workspace/reports/`: Modular Job Reports UI.
-- `resources/js/components/workspace/live-workspace-sections.tsx`: Refactored thin switchboard.
-- `tests/Feature/Operations/`: Feature and integration tests verifying HoS, DVIR, Fuel, and JobReport parity.
+- `apps/operations/app/Shared/Assets/Models/OperationalAsset.php`: Relationships `dvirInspections()`, `latestDvirInspection()`, `activeOperatorShift()`.
+- `apps/operations/app/Modules/Dvir/Actions/CreateDvirInspectionAction.php`: Safety lockout logic on critical defects.
+- `apps/operations/app/Platform/Workspace/ViewModels/OperationsWorkspaceViewModel.php`: Asset HoS/DVIR serialization and JobReport signature/delay serialization.
+- `apps/operations/app/Modules/Fuel/ViewModels/FuelWorkspaceViewModel.php`: Download URL resolution for receipt photos.
+- `apps/operations/resources/js/components/workspace/fleet/`: Modular Fleet management UI.
+- `apps/operations/resources/js/components/workspace/fuel/`: Modular Fuel management UI.
+- `apps/operations/resources/js/components/workspace/reports/`: Modular Job Reports UI.
+- `apps/operations/resources/js/components/workspace/live-workspace-sections.tsx`: Refactored thin switchboard.
+- `apps/operations/tests/Feature/Operations/`: Feature and integration tests verifying HoS, DVIR, Fuel, and JobReport parity.

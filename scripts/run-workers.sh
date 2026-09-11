@@ -4,28 +4,32 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ARTISAN="$REPO_ROOT/apps/operations/artisan"
+
 RUN_TARGET="${1:-all}"
 
 case "$RUN_TARGET" in
   operational)
     echo "[core2] Starting Operational Queue Worker (default,high)..."
-    exec php artisan queue:work --queue=default,high
+    exec php "$ARTISAN" queue:work --queue=default,high
     ;;
   ai)
     echo "[core2] Starting Internal AI Queue Worker (ai, timeout 120s, tries 3)..."
-    exec php artisan queue:work --queue=ai --timeout=120 --tries=3
+    exec php "$ARTISAN" queue:work --queue=ai --timeout=120 --tries=3
     ;;
   reports)
     echo "[core2] Starting Reporting Queue Worker (reports, timeout 360s, tries 2)..."
-    exec php artisan queue:work --queue=reports --timeout=360 --tries=2
+    exec php "$ARTISAN" queue:work --queue=reports --timeout=360 --tries=2
     ;;
   all)
     echo "[core2] Starting all 3 dedicated queue worker pools..."
-    php artisan queue:work --queue=default,high &
+    php "$ARTISAN" queue:work --queue=default,high &
     PID_OP=$!
-    php artisan queue:work --queue=ai --timeout=120 --tries=3 &
+    php "$ARTISAN" queue:work --queue=ai --timeout=120 --tries=3 &
     PID_AI=$!
-    php artisan queue:work --queue=reports --timeout=360 --tries=2 &
+    php "$ARTISAN" queue:work --queue=reports --timeout=360 --tries=2 &
     PID_REP=$!
 
     echo "[core2] Workers running: Operational (PID $PID_OP), AI (PID $PID_AI), Reporting (PID $PID_REP)."

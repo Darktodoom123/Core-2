@@ -55,8 +55,8 @@ describe('background location task registration', () => {
             FIELD_BACKGROUND_LOCATION_TASK,
             expect.objectContaining({
                 accuracy: 3,
-                timeInterval: 120_000,
-                deferredUpdatesInterval: 120_000,
+                timeInterval: 15_000,
+                deferredUpdatesInterval: 15_000,
                 foregroundService: expect.objectContaining({
                     killServiceOnDestroy: true,
                 }),

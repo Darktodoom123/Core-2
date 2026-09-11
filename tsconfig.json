@@ -14,15 +14,15 @@
         "baseUrl": ".",
         "typeRoots": ["./node_modules/@types"],
         "paths": {
-            "@/*": ["./resources/js/*"]
+            "@/*": ["./apps/operations/resources/js/*"]
         },
         "jsx": "react-jsx"
     },
     "include": [
-        "resources/js/**/*.ts",
-        "resources/js/**/*.d.ts",
-        "resources/js/**/*.tsx",
-        "tests/React/**/*.ts",
-        "tests/React/**/*.tsx"
+        "apps/operations/resources/js/**/*.ts",
+        "apps/operations/resources/js/**/*.d.ts",
+        "apps/operations/resources/js/**/*.tsx",
+        "apps/operations/tests/React/**/*.ts",
+        "apps/operations/tests/React/**/*.tsx"
     ]
 }

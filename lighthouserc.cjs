@@ -14,7 +14,7 @@ module.exports = {
                 'http://127.0.0.1:4173/login',
             ],
             numberOfRuns: 3,
-            startServerCommand: 'php tests/Browser/web-server.php',
+            startServerCommand: 'php apps/operations/tests/Browser/web-server.php',
             startServerReadyPattern: 'Development Server|Server running on',
             startServerReadyTimeout: 90000,
             settings: {

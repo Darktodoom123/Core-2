@@ -56,7 +56,7 @@
 ```
 
 ### 3.1 Primary Test Suite
-- **File Path**: `tests/Feature/Operations/WebOperationsWorkspaceParityTest.php`
+- **File Path**: `apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php`
 - **Framework**: Pest 4.x / PHPUnit on Laravel 13
 - **Database Strategy**: `Illuminate\Foundation\Testing\RefreshDatabase` (per-test transaction rollback)
 - **Role Permissions**: `Database\Seeders\RolePermissionSeeder` deterministically seeded in `beforeEach()`
@@ -64,19 +64,19 @@
 ### 3.2 Execution Commands
 ```bash
 # Run the complete Web Operations Workspace Parity suite
-php artisan test tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
+php apps/operations/artisan test --test-directory=apps/operations/tests apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
 
 # Run with filter by specific tier
-php artisan test --filter="Tier 1" tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
-php artisan test --filter="Tier 2" tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
-php artisan test --filter="Tier 3" tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
-php artisan test --filter="Tier 4" tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
+php apps/operations/artisan test --filter="Tier 1" --test-directory=apps/operations/tests apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
+php apps/operations/artisan test --filter="Tier 2" --test-directory=apps/operations/tests apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
+php apps/operations/artisan test --filter="Tier 3" --test-directory=apps/operations/tests apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
+php apps/operations/artisan test --filter="Tier 4" --test-directory=apps/operations/tests apps/operations/tests/Feature/Operations/WebOperationsWorkspaceParityTest.php
 
 # Run full operations domain regression checks
-php artisan test --filter=Hos
-php artisan test --filter=Dvir
-php artisan test --filter=Fuel
-php artisan test --filter=JobReport
+php apps/operations/artisan test --filter=Hos --test-directory=apps/operations/tests
+php apps/operations/artisan test --filter=Dvir --test-directory=apps/operations/tests
+php apps/operations/artisan test --filter=Fuel --test-directory=apps/operations/tests
+php apps/operations/artisan test --filter=JobReport --test-directory=apps/operations/tests
 ```
 
 ---

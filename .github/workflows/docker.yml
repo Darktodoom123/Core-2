@@ -50,6 +50,20 @@ env:
   REVERB_FORWARD_PORT: "18080"
   RUN_MIGRATIONS: "true"
   CACHE_CONFIG: "true"
+  TRACKING_APP_KEY: base64:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
+  TRACKING_DB_CONNECTION: pgsql
+  TRACKING_DB_HOST: tracking-db
+  TRACKING_DB_PORT: "5432"
+  TRACKING_DB_DATABASE: core2_tracking_ci
+  TRACKING_DB_USERNAME: core2_tracking_ci
+  TRACKING_DB_PASSWORD: core2-tracking-ci-database-password
+  TRACKING_DB_SSLMODE: disable
+  TRACKING_SERVICE_DRIVER: http
+  TRACKING_SERVICE_URL: http://tracking
+  TRACKING_SERVICE_SECRET: core2-ci-tracking-service-secret
+  TRACKING_ALLOWED_SERVICES: operations
+  TRACKING_RUN_MIGRATIONS: "true"
+  TRACKING_CACHE_CONFIG: "true"
 
 jobs:
   build:
@@ -61,11 +75,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install JavaScript dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Check Dockerfile
-        run: docker build --check .
+        run: docker build --check -f infra/docker/Dockerfile .
 
       - name: Validate Compose configuration
         run: docker compose config --quiet
@@ -74,7 +94,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
-          file: ./Dockerfile
+          file: ./infra/docker/Dockerfile
           target: runtime
           push: false
           load: true
@@ -92,6 +112,18 @@ jobs:
             VITE_STADIA_MAPS_API_KEY=${{ env.VITE_STADIA_MAPS_API_KEY }}
           cache-from: type=gha,scope=core2-runtime
           cache-to: type=gha,mode=max,scope=core2-runtime
+
+      - name: Build Tracking image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: ./infra/docker/Dockerfile
+          target: tracking-runtime
+          push: false
+          load: true
+          tags: core2/tracking:ci
+          cache-from: type=gha,scope=core2-tracking
+          cache-to: type=gha,mode=max,scope=core2-tracking
 
       - name: Verify production frontend map configuration
         shell: bash
@@ -116,7 +148,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
-          file: ./Dockerfile
+          file: ./infra/docker/Dockerfile
           target: test-runner
           push: false
           load: true
@@ -128,6 +160,13 @@ jobs:
             VITE_REVERB_SCHEME=${{ env.VITE_REVERB_SCHEME }}
           cache-from: type=gha,scope=core2-test
           cache-to: type=gha,mode=max,scope=core2-test
+
+      - name: Run isolated service integration contract
+        env:
+          CORE2_APP_IMAGE: core2/runtime:ci
+          CORE2_TRACKING_IMAGE: core2/tracking:ci
+          CORE2_INTEGRATION_NO_BUILD: "true"
+        run: npm run test:integration:services
 
       - name: Start stack and run bounded smoke/test checks
         shell: bash

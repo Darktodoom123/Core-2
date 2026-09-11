@@ -1,0 +1,100 @@
+{
+    "name": "operations",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "projectType": "application",
+    "sourceRoot": "apps/operations/app",
+    "implicitDependencies": ["core2"],
+    "namedInputs": {
+        "default": [
+            "{projectRoot}/**/*"
+        ]
+    },
+    "targets": {
+        "build": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run build",
+                "cwd": "apps/operations"
+            }
+        },
+        "php-lint": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pint --test",
+                "cwd": "apps/operations"
+            }
+        },
+        "php-types": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=512M",
+                "cwd": "apps/operations"
+            }
+        },
+        "php-test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "php vendor/bin/pest -c phpunit.xml",
+                "cwd": "apps/operations",
+                "env": {
+                    "APP_ENV": "testing",
+                    "BROADCAST_CONNECTION": "null",
+                    "DB_CONNECTION": "sqlite",
+                    "DB_DATABASE": ":memory:"
+                }
+            }
+        },
+        "web-lint": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run lint:check",
+                "cwd": "apps/operations"
+            }
+        },
+        "web-format": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run format:check",
+                "cwd": "apps/operations"
+            }
+        },
+        "web-types": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run types:check",
+                "cwd": "apps/operations"
+            }
+        },
+        "web-test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run test:unit",
+                "cwd": "apps/operations"
+            }
+        },
+        "browser-test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run test:e2e",
+                "cwd": "apps/operations"
+            }
+        },
+        "a11y-test": {
+            "executor": "nx:run-commands",
+            "cache": false,
+            "options": {
+                "command": "npm run test:a11y",
+                "cwd": "apps/operations"
+            }
+        }
+    }
+}

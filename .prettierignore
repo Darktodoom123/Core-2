@@ -1,2 +1,10 @@
+apps/operations/resources/js/components/ui/*
+apps/operations/resources/views/mail/*
+apps/operations/resources/js/actions/**
+apps/operations/resources/js/routes/**
+apps/operations/resources/js/wayfinder/**
 resources/js/components/ui/*
 resources/views/mail/*
+resources/js/actions/**
+resources/js/routes/**
+resources/js/wayfinder/**

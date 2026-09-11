@@ -1,0 +1,166 @@
+{
+  "resources/js/app.tsx": [],
+  "resources/js/components/app-shell.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/dashboards/operations-overview-dashboard.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/dev-user-switcher.tsx": [
+    "/build/assets/dev-user-switcher-CinfgeBK.js"
+  ],
+  "resources/js/components/local-operations-map.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/openstreetmap-tracking-map.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/surfaces/dispatch-surfaces.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/surfaces/management-surfaces.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/surfaces/mobile-surfaces.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/surfaces/resource-surfaces.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/surfaces/tracking-surfaces.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/ui.tsx": [
+    "/build/assets/ui-CuoqGbiO.js"
+  ],
+  "resources/js/components/workspace/canonical-status-badge.tsx": [
+    "/build/assets/canonical-status-badge-D9JpJjoH.js"
+  ],
+  "resources/js/components/workspace/live-dispatch-intake.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/workspace/live-dispatch-workspace.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/workspace/live-workspace-sections.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/components/workspace/live-workspace-shell.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/data/fixtures.ts": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/lib/outbox.ts": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/lib/utils.ts": [
+    "/build/assets/ui-CuoqGbiO.js"
+  ],
+  "resources/js/pages/auth/auth-shell.tsx": [
+    "/build/assets/auth-shell-Cu5-fe_S.js"
+  ],
+  "resources/js/pages/auth/forgot-password.tsx": [
+    "/build/assets/forgot-password-DPLe0dnN.js"
+  ],
+  "resources/js/pages/auth/login.tsx": [
+    "/build/assets/login-CfRAoWuv.js"
+  ],
+  "resources/js/pages/auth/reset-password.tsx": [
+    "/build/assets/reset-password-CK06Q_gA.js"
+  ],
+  "resources/js/pages/auth/verify-email.tsx": [
+    "/build/assets/verify-email-C6mOrVW3.js"
+  ],
+  "resources/js/pages/dispatch-detail.tsx": [
+    "/build/assets/dispatch-detail-r9Q5elFl.js"
+  ],
+  "resources/js/pages/operations.tsx": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/pages/workspace.tsx": [
+    "/build/assets/workspace-DzXi5CMo.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/state/operations-reducer.ts": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ],
+  "resources/js/types/operations.ts": [
+    "/build/assets/operations-CMSpiXtW.js",
+    "/build/assets/leaflet-1DTFk8zz.css",
+    "/build/assets/layers-BWBAp2CZ.png",
+    "/build/assets/layers-2x-Bpkbi35X.png",
+    "/build/assets/marker-icon-hN30_KVU.png"
+  ]
+}

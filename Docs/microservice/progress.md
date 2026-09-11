@@ -716,3 +716,176 @@ The Plan A Two-Service Architecture & Worker Isolation implementation is verifie
 ### Phase 7 Verification Summary
 
 All failure injection scenarios passed with zero crashes, unhandled 500 exceptions, orphaned database locks, or queue starvation. Microservice boundaries, HMAC request signing, replay defense, and worker isolation behave deterministically under simulated network, provider, and worker outages.
+
+## Two-Service Monorepo Restructuring (apps/operations, apps/tracking, infra/docker) (2026-09-10)
+
+- Scope: Restructure Core-2 into an isolated, independent two-service monorepo:
+  - Relocate Operations monolith, Inertia 3 + React 19 web frontend, migrations, and internal queue workers from root into `apps/operations/`.
+  - Relocate Docker infrastructure assets into `infra/docker/` (`Dockerfile`, `entrypoint.sh`, `nginx.conf`, `supervisord.conf`, `test-entrypoint.sh`).
+  - Establish independent package manifests and lockfiles: `apps/operations/composer.json`, `apps/operations/composer.lock`, `apps/operations/package.json`, `apps/tracking/composer.lock`.
+  - Configure root `package.json` workspaces (`["apps/operations", "packages/*"]`) and Nx project targets.
+  - Configure root `composer.json` multi-service proxy scripts (`lint`, `lint:check`, `types:check`, `test`).
+  - Configure `apps/operations/vite.config.ts` with local Vite root and Wayfinder command resolution.
+  - Preserve all existing development data (`.env`, SQLite databases with 100% SHA-256 match, uploads).
+
+### Verification Evidence & Results
+
+1. **Static Analysis & Code Quality**:
+   - `composer lint:check` (Pint): exit 0; `{"tool":"pint","result":"passed"}` across all PHP files.
+   - `composer types:check` (PHPStan Level 7): exit 0; `{"tool":"phpstan","result":"passed","errors":0}` across both `apps/operations` and `apps/tracking`.
+   - `npm run lint:check` (ESLint): exit 0; 0 errors, 0 warnings.
+   - `npm run types:check` (Web TypeScript): exit 0; 0 errors.
+   - `npm run types:check:mobile` (Mobile TypeScript): exit 0; 0 errors.
+
+2. **Frontend & Mobile Verification**:
+   - `npm run build`: exit 0; Vite production bundle built in 51.83s with 38 chunk assets generated in `apps/operations/public/build/`.
+   - `npm run test:unit` (Vitest): exit 0; 24 test files, 251 tests passed.
+   - `npm run test:mobile`: exit 0; 83 Node integration tests + 206 Jest component tests passed (289 total).
+
+3. **Core Domain & Backend Suites**:
+   - `composer test:tracking`: exit 0; 40 tests, 188 assertions passed in 4.41s.
+   - `Phase7DistributedResilienceTest.php`: exit 0; 17 tests, 222 assertions passed.
+   - `DedicatedWorkerQueueIsolationTest.php` & `HttpTrackingClientTest.php`: exit 0; 18 tests, 113 assertions passed.
+   - `OperationsConcurrencyAndSafetyHardeningTest.php` & `TrackingDecouplingTest.php`: exit 0; 25 tests, 194 assertions passed.
+
+4. **Monorepo Tooling & Git Hygiene**:
+   - `npx nx show projects`: exit 0; discovers `operations`, `tracking`, `field-mobile`, and `core2`.
+   - `git diff --check`: exit 0; 0 whitespace or conflict marker errors.
+   - Development SQLite databases in `apps/operations/storage/*.sqlite`: 100% SHA-256 integrity verified.
+
+## Batch 1 and Batch 2 service boundary checkpoint (2026-09-10)
+
+- Scope: Complete Batch 1 reviewer fixes and add a resumable, isolated real service integration runner. Existing staged monorepo moves and development data remain untouched; no commit, deployment, upgrade, or emulator work was performed.
+- Completed Batch 1 reviewer fixes:
+  - `infra/docker/entrypoint.sh` enforces the overall database wait deadline, caps each `db:show` probe to the remaining deadline with `DB_WAIT_PROBE_TIMEOUT_SECONDS`, and bounds migrations with `MIGRATION_TIMEOUT_SECONDS`.
+  - Tracking publishes no host port; Operations keeps conditional `view:cache`, while Tracking runs only config/route caching.
+  - `/up` and separately migrated `/ready` endpoints have focused Operations and Tracking regression tests.
+- Completed Batch 2 source harness:
+  - `scripts/test-integration-services.ts` generates unique Compose project/database credentials, runs a single bounded Docker engine probe, starts the isolated Operations/Tracking/PostgreSQL/Redis stack, authenticates through Operations using the real mobile `FieldApiClient`, asserts Tracking receipts and samples, replay idempotency, payload conflict, outage fallback, recovery forwarding, and 30-day retention pruning, and tears down only its generated project while preserving generated volumes.
+  - Root `npm run test:integration:services` invokes the runner; `docker-compose.yml` accepts `COMPOSE_PROJECT_NAME` for isolation.
+  - CI builds the Tracking image, installs JavaScript dependencies, and invokes the same runner against loaded images.
+  - Mobile client unit coverage now includes the location share request contract.
+- Checks completed: Tracking 42 tests/196 assertions; Operations Tracking client 9 tests/61 assertions; Operations decoupling 12 tests/109 assertions; Operations readiness 2 tests/7 assertions; Tracking Pint; Tracking PHPStan; targeted Operations Pint/PHP lint; both route cache/list checks; mobile client suite after the new share contract (84 unit tests plus component suite); runner/mobile ESLint; root TypeScript; `docker compose config --quiet`; `git diff --check`.
+- Runtime result: `npm run test:integration:services` stopped at its one `docker info` probe because the Windows Docker Linux engine pipe was unavailable. The runner wrote a redacted local log under `%LOCALAPPDATA%\\Temp` and did not start a stack or alter any data. WSL shell validation was unavailable because the host hypervisor is disabled. No task-owned processes remain.
+- Pending: Run `npm run test:integration:services` on a working Docker Linux engine; add direct Tracking invalid-auth/latest/history assertions, focused real Playwright coverage, and Linux PCNTL HOS concurrency evidence before final release review. A second Astra review is required for the completed harness scope. Do not mark service runtime acceptance complete from source checks alone.
+
+## Batch 3 integration contract and concurrency source checkpoint — 2026-09-11
+
+The pending source work is now present in the working tree. The isolated
+service runner (`scripts/test-integration-services.ts`) verifies the seeded
+fixture IDs and login contract, sends signed mobile `FieldApiClient` samples
+through the Operations BFF, asserts that successful requests persist only in
+Tracking, exercises replay idempotency, payload conflict, Tracking outage
+fallback, recovery forwarding, and 30-day coordinate pruning, and directly
+checks unsigned, expired, forged, latest, and history Tracking requests from
+inside the Tracking container. It runs the focused stack Playwright spec
+(`apps/operations/tests/Browser/service-stack.spec.ts`) once with Tracking
+healthy and once while Tracking is stopped. The generated browser environment
+uses `SESSION_DRIVER=file` so manager login sessions survive the real stack
+request cycle; the Compose Tracking service uses the same persistent session
+driver.
+
+The Linux runner now includes
+`apps/operations/tests/Concurrency/HosShiftConcurrencyTest.php` and its
+`pcntl_exec` worker. Synchronized workers race shift starts and duty-status
+transitions, then assert one active shift, one open duty log, and the complete
+transition history. The Compose test profile invokes this suite alongside the
+existing R3 and R6 concurrency suites; the GitHub concurrency job already
+discovers all files in the Concurrency suite.
+
+Source checks for this checkpoint are still pending after the interrupted
+handoff. Docker runtime, real stack Playwright, direct Tracking route, and
+Linux PCNTL evidence remain unverified on this Windows host because the Docker
+Linux engine and WSL are unavailable. Do not mark this service acceptance
+complete until the bounded integration runner and the Linux concurrency runner
+have passed on their supported hosts.
+
+### Final source review checkpoint (2026-09-11)
+
+- Supersedes the pending source-check statement above: Luna reported Operations Pint and PHPStan (zero errors), root TypeScript, targeted ESLint/Prettier, HOS PHP syntax/Pint, disposable-environment Compose validation, and final git diff --check passing. The final fixture/browser invocation changes received targeted ESLint/Prettier and diff checks; runtime tests were not run.
+- Astra low confirmed all four review findings resolved: coherent operator/CRN-101/DSP-2026-0891 fixture, CI Chromium installation, Node-based Playwright CLI invocation on Windows, and asset-scoped GPS assertions. This is source review, not runtime acceptance.
+- Implementer stopped safely; no docker/php/test CLI processes were found at checkpoint. Existing staged changes and development data were preserved. No commits, deployments, or dependency upgrades.
+- Next: once the Docker Linux engine is available, run the isolated service integration command and Linux concurrency suites, resolve actual failures, verify image startup/cache/scheduler/restart behavior, and record runtime evidence. Do not repeatedly retry the unchanged unavailable-engine blocker. Automatic usage resumption is configured on this task, but an allowance refresh alone does not fix the runtime environment.
+
+### Live runtime retry checkpoint — 2026-09-11
+
+- Docker Linux became available and the bounded runner was retried with isolated generated projects. The first cold-image run timed out during `docker compose up --build` at 300 seconds; its redacted log is `%LOCALAPPDATA%\\Temp\\core2-it-mtwj29x5cug.log`.
+- A cached-image retry reached healthy Operations, Tracking, PostgreSQL, and Redis containers, then exposed invalid UUID fixture values in `BrowserAcceptanceSeeder`. Those values were corrected from the runtime errors; redacted logs are `%LOCALAPPDATA%\\Temp\\core2-it-mtwj9jij6h0.log` (`audit_events.request_id`) and `%LOCALAPPDATA%\\Temp\\core2-it-mtwjdkgkgi4.log` (`sos_incidents.command_id`).
+- A fourth isolated project (`core2-it-mtwji5w5cic`) reached healthy containers after the fixture fixes. It was intentionally interrupted at the 93% usage safe-stop boundary before seeding and assertions, so it produced no runner log and no mobile, Tracking, browser, or HOS acceptance evidence. Its five generated containers were removed by project label while retaining named volumes; no generated containers remain.
+- Runtime acceptance and Linux PostgreSQL/PCNTL concurrency evidence remain pending. The next run should use the cached images and inspect the next application failure, if any, before running the Linux concurrency profile.
+
+### Integration Services & Browser Runtime Acceptance Checkpoint (2026-09-11)
+
+- Scope: Execute isolated real two-service integration runner (`npm run test:integration:services`), verify mobile boundary, HMAC signature verification and rejection, Tracking ingestion and retrieval, replay idempotency, Tracking outage resilience with database fallback, recovery replay, 30-day location sample retention pruning, and end-to-end Playwright browser execution across both active and outage states.
+- Browser & Harness fixes applied:
+  - `apps/operations/tests/Browser/service-stack.spec.ts`:
+    1. Replaced `page.getByRole('button', { name: /CRN-101/ }).first()` with `page.getByRole('listitem').filter({ hasText: 'CRN-101' })` to target the FleetQueue card rather than the MapLibre map marker pin.
+    2. Used regex `/GPS Live/` to tolerate trailing whitespace rendered in `fleet-asset-card.tsx` (`GPS Live{' '}`).
+    3. Targeted `page.getByRole('heading', { name: 'Fleet Management' }).first()` to satisfy Playwright strict mode given multiple headings.
+    4. Extended `getByRole('heading', { name: 'Live Fleet Telematics & GIS Map' })` timeout to 30s to allow Inertia deferred prop loading to resolve after Tracking outage timeout fallback.
+    5. Added conditional toggle check to expand map view if collapsed.
+  - `apps/operations/phpunit.xml`:
+    - Added `<env name="TRACKING_SERVICE_DRIVER" value="database"/>` to prevent test suites from inheriting `TRACKING_SERVICE_DRIVER="http"` from local `.env` and causing unexpected `HttpTrackingClient` resolutions during unit/feature testing.
+- Runtime Execution Evidence (`core2-it-mtwm12zbjhc`):
+  - Stack startup: Isolated Compose project `core2-it-mtwm12zbjhc` launched with dedicated PostgreSQL (`db`, `tracking-db`), `redis`, `app`, and `tracking` containers reaching healthy state within bounds.
+  - Seeding: `BrowserAcceptanceSeeder` executed cleanly with valid UUID v4 values for `audit_events.request_id` and `sos_incidents.command_id`.
+  - Mobile boundary: Real `FieldApiClient` authenticated against Operations, ingested signed location sample into Tracking, verified duplicate command replay idempotency, and confirmed 409 Conflict rejection on mismatched payload.
+  - Outage resilience: Tracking container stopped; location update successfully persisted to Operations fallback `location_updates` table.
+  - Browser test (Outage): Playwright spec executed with `CORE2_TRACKING_OUTAGE=true`, asserting manager login and operational telemetry display from fallback database (`24.2s`, passed).
+  - Recovery: Tracking container restarted and verified healthy; recovery location update ingested and verified in Tracking database. Direct Tracking contract assertions verified valid HMAC authentication and rejection of unsigned, expired, and forged requests, as well as latest and history queries.
+  - Browser test (Active): Playwright spec executed with `CORE2_TRACKING_OUTAGE=false`, asserting manager login and live telemetry from Tracking service (`2.6s`, passed).
+  - Retention: `php artisan location:prune` in Tracking container successfully nullified precise coordinates older than 30 days while preserving audit records.
+  - Teardown: `docker compose down --remove-orphans` cleaned up all isolated project containers with 0 lingering containers.
+- Verification Summary:
+  - `npm run test:integration:services`: Passed with exit code 0 (`Integration services passed (core2-it-mtwm12zbjhc)`).
+  - `composer test:tracking`: 42 passed (196 assertions).
+  - `php artisan test tests/Feature/Operations/TrackingDecouplingTest.php`: 12 passed (109 assertions).
+  - `php artisan test tests/Feature/Operations/HttpTrackingClientTest.php`: 9 passed (61 assertions).
+  - `php artisan test tests/Feature/Operations/Phase7DistributedResilienceTest.php`: 17 passed (222 assertions).
+  - `php artisan test tests/Feature/Operations/DedicatedWorkerQueueIsolationTest.php`: 9 passed (52 assertions).
+  - `php artisan test tests/Feature/Operations/OperationsConcurrencyAndSafetyHardeningTest.php`: 13 passed (85 assertions).
+  - `npm run test:unit`: 24 test files passed, 251 tests passed.
+  - `npm run test:mobile`: 85 unit tests + 206 component tests passed (291 total).
+  - `composer lint:check`: Passed with 0 errors across both services.
+  - `composer types:check`: Passed with 0 errors across both services (Level 7).
+  - `npm run lint:check`: Passed with 0 errors and 0 warnings.
+  - `npm run format:check`: Passed with 0 errors.
+  - `npm run types:check`: Passed with 0 errors.
+  - `npm run types:check:mobile`: Passed with 0 errors.
+  - Concurrency Note: Linux PCNTL concurrency (`HosShiftConcurrencyTest.php`) requires POSIX `pcntl_fork`/`pcntl_exec` and PostgreSQL row locking; Windows host unsupported as documented in project constraints.
+
+### Full Operations Suite & Regression Remediation Checkpoint (2026-09-11)
+
+- Scope: Execute full test suite across entire Operations monolith (`composer test:operations`), uncover and remediate all hidden regressions, resolve root monorepo test delegation, and achieve 100% test pass rate across the 1,056-test Operations suite.
+- Issues Uncovered & Root Cause Remediations:
+  1. `RateLimitingTest::it_decouples_weather_endpoint_rate_limiting_from_location_telemetry`:
+     - **Symptom**: HTTP 404 on obsolete route `/api/v1/dispatch/jobs/{job}/weather`.
+     - **Root cause**: Weather telemetry was migrated to canonical `/api/v1/telemetry/weather` in commit `2a5a9d28`, but `RateLimitingTest` was never updated and `throttle:weather` / `RateLimiter::for('weather')` was inadvertently dropped.
+     - **Fix**: Re-registered `RateLimiter::for('weather')` (60 req/min) in `AppServiceProvider`, applied `throttle:weather` in `apps/operations/app/Platform/Weather/Routes/api.php`, and updated `RateLimitingTest.php` to target `/api/v1/telemetry/weather`. (8 passed, 170 assertions).
+  2. `Milestone1AdversarialChallengeTest` (N+1 query benchmark scalability tests):
+     - **Symptom**: `SQLSTATE[23000]: Integrity constraint violation: 19 UNIQUE constraint failed: operator_shifts.user_id`.
+     - **Root cause**: Partial index migration `unique_active_operator_shift` prevents duplicate active shifts for a user (`WHERE status IN ('active', 'on_break')`). Test helpers `seedAssets` and `seedReports` inserted active shifts in a loop using the same manager ID.
+     - **Fix**: Created unique operator user factory instances per active shift iteration. (19 passed, 96 assertions).
+  3. `OperationsWorkspaceViewModelTest::it_maps_telemetry_status_accurately_based_on_last_activity_age`:
+     - **Symptom**: `UNIQUE constraint failed: operator_shifts.user_id`.
+     - **Root cause**: Looped through telemetry test cases (delayed, stale, offline) creating active shifts under the same operator user instance.
+     - **Fix**: Created distinct operator factory instances per test case iteration. (8 passed, 63 assertions).
+  4. `Phase2EndToEndDispatchLifecycleTest::it_executes_full_happy_path`:
+     - **Symptom**: `Call to a member function all() on array` at `TestResponseAssert.php:81` following activate redirect failure.
+     - **Root cause**: `AssignDispatchResources` increments job version from 1 to 2. Activating the job passed version 1, causing optimistic concurrency lock rejection with validation flash error.
+     - **Fix**: Aligned version progression throughout full lifecycle: Draft (1) -> Assign (2) -> Activate at v2 (result v3) -> Mobile accept at v3 (result v4) -> Step progression (v5 through v9). (5 passed, 102 assertions).
+  5. `composer.json` root test delegation:
+     - **Symptom**: Running `php apps/operations/artisan test` from root failed due to Pest searching for `./tests/` relative to root cwd.
+     - **Fix**: Updated root `composer.json` `"test:operations"` script to cleanly invoke `@composer --working-dir=apps/operations test`.
+- Verification Evidence:
+  - `composer test:operations`: 1,056 tests, 1,056 passed (13,623 assertions) in 772.35s (Pint, PHPStan Level 7, Pest).
+  - `composer test:tracking`: 42 passed (196 assertions).
+  - `npm run test:integration:services`: Passed with exit code 0 (`Integration services passed (core2-it-mtwnllh5404)`).
+  - `npm run test:unit`: 24 files passed, 251 tests passed.
+  - `npm run test:mobile`: 24 test suites passed, 206 tests passed.
+  - `composer lint:check`: Passed with 0 errors across operations and tracking.
+  - `composer types:check`: Passed with 0 errors across operations and tracking (Level 7).
+  - `npm run lint:check`: Passed with 0 errors and 0 warnings.
+  - `npm run format:check`: Passed with 0 errors.
+  - `npm run types:check`: Passed with 0 errors.
+  - `npm run types:check:mobile`: Passed with 0 errors.

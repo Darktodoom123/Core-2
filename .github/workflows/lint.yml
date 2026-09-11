@@ -54,11 +54,15 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+          composer --working-dir=apps/operations install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+          composer --working-dir=apps/tracking install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm ci
 
       - name: Validate Composer manifest
-        run: composer validate --strict
+        run: |
+          composer validate --strict
+          composer --working-dir=apps/operations validate --strict
+          composer --working-dir=apps/tracking validate --strict
 
       - name: Check PHP formatting
         run: composer lint:check
@@ -79,7 +83,9 @@ jobs:
         run: composer types:check
 
       - name: Audit Composer dependencies
-        run: composer audit --locked
+        run: |
+          composer --working-dir=apps/operations audit --locked
+          composer --working-dir=apps/tracking audit --locked
 
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=high

@@ -2,16 +2,19 @@
 
 ## Scope
 
-This repository uses one production-style application image. Supervisor keeps
-Nginx, PHP-FPM, the Laravel queue worker, the Laravel scheduler, and Reverb in
-that image; Compose supplies PostgreSQL 16 and Redis 7. This topology supports
-local verification and is a starting point for a proposed first deployment on
+This repository uses two production-style application images. The Operations
+image runs Nginx, PHP-FPM, its queue workers, scheduler, and Reverb. The
+Tracking image runs only Nginx, PHP-FPM, and its retention scheduler. Compose
+supplies separate PostgreSQL 16 services for Operations and Tracking plus the
+existing Redis 7 service. This topology supports local verification and is a
+starting point for a proposed first deployment on
 **HostForge Platform** ([https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform))
 under domain **`alibaton-ph.com`** and subdomain **`core-2.alibaton-ph.com`**
 (`https://core-2.alibaton-ph.com`). For production deployment details, see the
 [Deployment & Hosting Guide](./deployment.md). The user confirmed the project is
 undeployed. The [microservice restructuring handoff](../microservice/README.md)
-defines the planned runtime separation; it has not yet been implemented.
+defines the broader service contract; this Compose topology implements its
+Operations and Tracking runtime boundary for local verification.
 
 ## Prerequisites and setup
 
@@ -56,7 +59,14 @@ VITE_MAP_ATTRIBUTION=
 VITE_STADIA_MAPS_API_KEY=<public-browser-key>
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
-```
+TRACKING_SERVICE_DRIVER=http
+TRACKING_SERVICE_URL=http://tracking
+TRACKING_SERVICE_SECRET=<local-only-shared-secret>
+TRACKING_APP_KEY=base64:<second-generated-application-key>
+TRACKING_DB_DATABASE=core2_ms_tracking
+TRACKING_DB_USERNAME=tracking
+TRACKING_DB_PASSWORD=<tracking-local-only-password>
+  ```
 
 Generate `APP_KEY` with `php artisan key:generate --show` after the PHP
 dependencies are installed, or with an approved local key-generation process.
@@ -66,8 +76,10 @@ browser bundle; the Stadia key is a public browser credential and should be
 restricted by domain/referrer in the provider dashboard. `REVERB_APP_SECRET`,
 database credentials, and `APP_KEY` remain runtime-only.
 
-For the bundled services, keep `DB_HOST=db` and `REDIS_HOST=redis`. The
-server-side Reverb process runs inside `app`, so Compose sets its host to
+For the bundled Operations service, keep `DB_HOST=db` and `REDIS_HOST=redis`.
+Tracking uses `DB_HOST=tracking-db` and does not use Redis; its file cache lives
+in its own storage volume. Operations calls Tracking at `http://tracking` with
+the shared `TRACKING_SERVICE_SECRET`. The server-side Reverb process runs inside `app`, so Compose sets its host to
 `127.0.0.1` and its internal port to `8080`; do not replace those with a
 host-machine address. `APP_URL` and the public `VITE_REVERB_*` values must use
 the published host ports. If `PORT` or `REVERB_FORWARD_PORT` changes, update
@@ -91,7 +103,9 @@ and Redis major-line changes separately.
 | Service | Purpose | Host endpoint | Compose endpoint |
 | --- | --- | --- | --- |
 | `app` | Nginx, PHP-FPM, queue, scheduler, Reverb | `http://localhost:8000`, `ws://localhost:8080` | `app:80`, `app:8080` |
+| `tracking` | Nginx, PHP-FPM, retention scheduler | not published | `tracking:80` |
 | `db` | Local PostgreSQL 16 | not published | `db:5432` |
+| `tracking-db` | Isolated Tracking PostgreSQL 16 | not published | `tracking-db:5432` |
 | `redis` | Redis 7 | not published | `redis:6379` |
 
 Set `PORT` and `REVERB_FORWARD_PORT` to change the two host ports. The named
@@ -99,7 +113,9 @@ volumes are:
 
 - `storage-data` for Laravel storage and logs;
 - `postgres-data` for PostgreSQL data;
-- `redis-data` for Redis data.
+- `redis-data` for Redis data;
+- `tracking-storage-data` for Tracking storage and its file-cache locks;
+- `tracking-postgres-data` for Tracking PostgreSQL data.
 
 With the default Compose project name, these are named
 `core2_storage-data`, `core2_postgres-data`, and `core2_redis-data`; a custom
@@ -108,12 +124,14 @@ volumes. Do not use `docker compose down --volumes` for this workflow: it
 deletes the database, Redis, and Laravel storage data and is outside this
 change.
 
-For an external PostgreSQL service, set `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
-`DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE` in `.env`. The app uses those
-values; it does not assume the database host is `localhost`. The bundled `db`
-service remains available for local development and the test profile. The
-concurrency profile is intended for a local database user that can create the
-`core2_concurrency_test` database, or for an already-provisioned equivalent.
+For an external Operations PostgreSQL service, set `DB_HOST`, `DB_PORT`,
+`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE` in `.env`. For an
+external Tracking database, set the corresponding `TRACKING_DB_*` values. The
+services use those values; they do not assume the database host is `localhost`.
+The bundled database services remain available for local development and the
+test profile. The concurrency profile is intended for a local Operations user
+that can create the `core2_concurrency_test` database, or for an already
+provisioned equivalent.
 
 ## Startup, permissions, and shutdown
 
@@ -121,12 +139,17 @@ The entrypoint requires `APP_KEY` and a supported `DB_CONNECTION`. Networked
 database connections require the database host, database name, username, and
 password. Reverb credentials are required when
 `BROADCAST_CONNECTION=reverb`. Redis host/port are required when a Redis
-cache, queue, or session driver is selected.
+cache, queue, or session driver is selected. Tracking requires
+`TRACKING_SERVICE_SECRET` and `CACHE_STORE=file`; Operations requires the
+Tracking URL and shared secret when `TRACKING_SERVICE_DRIVER=http`.
 
 `RUN_MIGRATIONS` and `CACHE_CONFIG` accept only `true` or `false`. Migrations
-default to enabled for the existing Compose behavior. In production mode,
-configuration, route, and view caching defaults to enabled. Set either flag to
-`false` deliberately when an external deployment process owns that step.
+default to enabled for the existing Compose behavior. Startup waits for the
+configured database with `DB_WAIT_TIMEOUT_SECONDS`, then bounds the migration
+command with `MIGRATION_TIMEOUT_SECONDS`. In production mode, configuration and
+route caching defaults to enabled. Operations also caches compiled views;
+Tracking intentionally skips view caching. Set either flag to `false` deliberately
+when an external deployment process owns that step.
 
 The named storage volume is initialized by the root entrypoint because Docker
 creates an empty named volume with root ownership. It is then owned by
@@ -134,8 +157,9 @@ creates an empty named volume with root ownership. It is then owned by
 Supervisor remains root only to prepare that volume and bind Nginx to port 80.
 Nginx workers use `www-data`; the official PHP-FPM pool uses `www-data` for
 workers; scheduler, Reverb, and the dedicated queue worker pools are
-explicitly configured as `www-data`. Supervisor (`docker/supervisord.conf`)
-isolates background workloads into three dedicated worker pools to prevent
+explicitly configured as `www-data`. Supervisor
+(`infra/docker/supervisord.conf`) isolates Operations background workloads into
+three dedicated worker pools to prevent
 starvation:
 
 - `queue-worker-operational`: Core operational dispatch transitions, resource
@@ -147,18 +171,23 @@ starvation:
 
 Supervisor program groups receive termination signals so `docker compose down` can stop the long-running workers cleanly.
 
-After startup, check readiness and recent application output with:
+After startup, check liveness, migrated readiness, and recent application
+output with:
 
 ```bash
 docker compose ps
 docker compose logs --tail=100 app
 curl --fail http://127.0.0.1:8000/up
+curl --fail http://127.0.0.1:8000/ready
+docker compose exec tracking curl --fail http://127.0.0.1/up
+docker compose exec tracking curl --fail http://127.0.0.1/ready
 ```
 
 In PowerShell, the health request is:
 
 ```powershell
 Invoke-WebRequest http://localhost:8000/up
+Invoke-WebRequest http://localhost:8000/ready
 ```
 
 For local-only seed data, run the command as the application user and review
@@ -177,6 +206,7 @@ recreating the app container:
 ```bash
 docker compose up -d --build
 docker compose up -d --force-recreate app
+docker compose up -d --force-recreate tracking
 ```
 
 ## Concurrency test profile
@@ -229,6 +259,12 @@ Compose validation, documentation, and repository checks can still run. Image
 builds, container health, `/up`, the profile test, and image filesystem
 inspection remain daemon-dependent and must be reported as blocked rather than
 claimed as passed.
+
+The isolated service boundary check is `npm run test:integration:services`. It
+creates a unique project and generated env file with explicit Operations and
+Tracking database hosts, exercises the mobile-to-Operations-to-Tracking HTTP
+path, and runs `docker compose down` without `--volumes` so generated volumes
+remain available for inspection. Its runtime result is daemon-dependent.
 
 ## Troubleshooting
 
