@@ -5,12 +5,15 @@ import {
     ArrowRight,
     CheckCircle2,
     ShieldCheck,
+    Truck,
+    Users,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import {
     ActivationPanel,
     ActivationPrerequisiteChecklist,
     ApprovalDecisionBanner,
+    AssetCandidates,
     AssignmentFlowHeader,
     AssignmentNextAction,
     AssignmentSelectionSummary,
@@ -22,6 +25,7 @@ import {
     FieldExecutionWorkspace,
     LifecycleControlsPanel,
     MobileAssignmentActionBar,
+    PersonnelCandidates,
     ResourcePicker,
     getSafeReturnTo,
     isAssignmentSuccessFlash,
@@ -47,7 +51,7 @@ export default function DispatchDetail({
     capabilities,
     project_context,
 }: DispatchDetailPageProps) {
-    const { flash, errors } = usePage().props;
+    const { flash, errors, auth } = usePage().props;
     const pageUrl = usePage().url;
     const personnelCandidates = candidateData<PersonnelCandidateViewModel>(
         personnelCandidatePage,
@@ -98,6 +102,8 @@ export default function DispatchDetail({
         selectedAssetCandidates,
         personnelCandidatesForConsumers,
         assetCandidatesForConsumers,
+        rememberPersonnelCandidates,
+        rememberAssetCandidates,
         togglePersonnel,
         toggleAsset,
         submit,
@@ -149,6 +155,16 @@ export default function DispatchDetail({
             }
         }
     }, [capabilities.update_own_status, contextKey, contextualReturn]);
+    const canViewFleetAssets =
+        auth?.permissions?.some((permission) =>
+            ['fleet.view_all', 'fleet.view_assigned'].includes(permission),
+        ) ?? true;
+    const canViewEquipmentAssets =
+        auth?.permissions?.some((permission) =>
+            ['equipment.view_all', 'equipment.view_assigned'].includes(
+                permission,
+            ),
+        ) ?? true;
     const conflictMessage = firstErrorMessage(
         errors.resources,
         errors.reassignment,
@@ -505,88 +521,122 @@ export default function DispatchDetail({
                                                         </div>
 
                                                         <section
-                                                            aria-labelledby="resource-picker-heading"
-                                                            className="rounded-xl border border-line bg-surface p-5 shadow-2xs"
+                                                            aria-labelledby="personnel-heading"
+                                                            className="space-y-3"
                                                         >
-                                                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
                                                                 <div>
                                                                     <h3
-                                                                        id="resource-picker-heading"
+                                                                        id="personnel-heading"
                                                                         className="font-semibold text-ink"
                                                                     >
-                                                                        Choose
-                                                                        employees
-                                                                        and
-                                                                        assets
+                                                                        People
                                                                     </h3>
-                                                                    <p className="mt-1 max-w-2xl text-sm leading-5 text-ink-soft">
-                                                                        Browse
-                                                                        the full
-                                                                        candidate
-                                                                        pool,
-                                                                        review
-                                                                        eligibility
-                                                                        evidence,
+                                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                                        Field
+                                                                        workers
                                                                         and
-                                                                        stage
-                                                                        all
-                                                                        resources
-                                                                        together
-                                                                        before
-                                                                        saving.
+                                                                        certified
+                                                                        operators
+                                                                        who can
+                                                                        respond
+                                                                        to this
+                                                                        assignment.
                                                                     </p>
                                                                 </div>
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="primary"
-                                                                    onClick={() =>
-                                                                        setAssignmentPickerOpen(
-                                                                            true,
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        !capabilities.assign_resources ||
-                                                                        candidatesStale
-                                                                    }
-                                                                >
-                                                                    Assign
-                                                                    resources
-                                                                    <ArrowRight
-                                                                        className="h-4 w-4"
-                                                                        aria-hidden="true"
-                                                                    />
-                                                                </Button>
+                                                                <Users
+                                                                    className="h-5 w-5 shrink-0 text-ink-soft"
+                                                                    aria-hidden="true"
+                                                                />
                                                             </div>
-                                                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
-                                                                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                                                        Employees
-                                                                    </p>
-                                                                    <p className="mt-1 text-sm font-medium text-ink">
-                                                                        {form
-                                                                            .data
-                                                                            .personnel
-                                                                            .length >
-                                                                        0
-                                                                            ? `${form.data.personnel.length} staged`
-                                                                            : 'None staged yet'}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="rounded-lg border border-line bg-surface-subtle/50 p-3">
-                                                                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                                            <PersonnelCandidates
+                                                                candidates={
+                                                                    personnelCandidates
+                                                                }
+                                                                onCandidatesSeen={
+                                                                    rememberPersonnelCandidates
+                                                                }
+                                                                selectedIds={form.data.personnel.map(
+                                                                    (
+                                                                        assignment,
+                                                                    ) =>
+                                                                        assignment.user_id,
+                                                                )}
+                                                                canAssign={
+                                                                    capabilities.assign_resources
+                                                                }
+                                                                onToggle={
+                                                                    togglePersonnel
+                                                                }
+                                                                page={
+                                                                    isCandidatePage<PersonnelCandidateViewModel>(
+                                                                        personnelCandidatePage,
+                                                                    )
+                                                                        ? personnelCandidatePage
+                                                                        : undefined
+                                                                }
+                                                            />
+                                                        </section>
+
+                                                        <section
+                                                            aria-labelledby="asset-heading"
+                                                            className="space-y-3"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                                                                <div>
+                                                                    <h3
+                                                                        id="asset-heading"
+                                                                        className="font-semibold text-ink"
+                                                                    >
                                                                         Assets
-                                                                    </p>
-                                                                    <p className="mt-1 text-sm font-medium text-ink">
-                                                                        {form
-                                                                            .data
-                                                                            .assets
-                                                                            .length >
-                                                                        0
-                                                                            ? `${form.data.assets.length} staged`
-                                                                            : 'None staged yet'}
+                                                                    </h3>
+                                                                    <p className="mt-0.5 text-xs text-ink-soft">
+                                                                        Trucks,
+                                                                        cranes,
+                                                                        and
+                                                                        equipment
+                                                                        ready
+                                                                        for the
+                                                                        window.
                                                                     </p>
                                                                 </div>
+                                                                <Truck
+                                                                    className="h-5 w-5 shrink-0 text-ink-soft"
+                                                                    aria-hidden="true"
+                                                                />
                                                             </div>
+                                                            <AssetCandidates
+                                                                candidates={
+                                                                    assetCandidates
+                                                                }
+                                                                onCandidatesSeen={
+                                                                    rememberAssetCandidates
+                                                                }
+                                                                selectedIds={form.data.assets.map(
+                                                                    (
+                                                                        assignment,
+                                                                    ) =>
+                                                                        assignment.operational_asset_id,
+                                                                )}
+                                                                canAssign={
+                                                                    capabilities.assign_resources
+                                                                }
+                                                                onToggle={
+                                                                    toggleAsset
+                                                                }
+                                                                assetCatalogAccess={{
+                                                                    fleet: canViewFleetAssets,
+                                                                    equipment:
+                                                                        canViewEquipmentAssets,
+                                                                }}
+                                                                page={
+                                                                    isCandidatePage<AssetCandidateViewModel>(
+                                                                        assetCandidatePage,
+                                                                    )
+                                                                        ? assetCandidatePage
+                                                                        : undefined
+                                                                }
+                                                            />
                                                         </section>
 
                                                         <ResourcePicker
