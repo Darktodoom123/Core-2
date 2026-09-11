@@ -287,7 +287,7 @@ jobs:
         run: |
           mkdir -p test-results
           php apps/operations/artisan migrate --force --database=pgsql
-          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.concurrency.xml --test-directory=apps/operations/tests --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
+          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.concurrency.xml --test-directory=tests --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
 
       - name: PostgreSQL Rental and Sales RLS/grant tests
         env:
@@ -299,7 +299,7 @@ jobs:
           DB_SSLMODE: disable
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
-        run: apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.postgresql.xml --test-directory=apps/operations/tests --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
+        run: apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.postgresql.xml --test-directory=tests --testsuite=PostgreSQL --log-junit=test-results/junit-postgresql.xml
 
       - name: Upload PostgreSQL JUnit results
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3

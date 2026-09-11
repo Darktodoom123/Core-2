@@ -67,7 +67,9 @@ async function openTelemetryWorkspace(page: Page): Promise<void> {
     await expect(
         page.getByText(/^\d+ active GPS$/, { exact: true }),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText('CRN-101', { exact: true })).toBeVisible({
+    await expect(
+        page.getByText('CRN-101', { exact: true }).first(),
+    ).toBeVisible({
         timeout: 30_000,
     });
 }

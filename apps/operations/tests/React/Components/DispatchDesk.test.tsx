@@ -276,8 +276,8 @@ describe('dispatch desk derived behavior', () => {
         expect(
             jobOverlapsDate(
                 {
-                    scheduled_start: '2026-09-03T23:00:00+08:00',
-                    scheduled_end: '2026-09-04T02:00:00+08:00',
+                    scheduled_start: '2026-09-03T23:00:00',
+                    scheduled_end: '2026-09-04T02:00:00',
                 },
                 '2026-09-04',
             ),
