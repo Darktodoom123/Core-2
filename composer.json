@@ -41,6 +41,10 @@
             "Composer\\Config::disableProcessTimeout",
             "@composer --working-dir=apps/operations test"
         ],
+        "test:operations:unit": [
+            "Composer\\Config::disableProcessTimeout",
+            "@composer --working-dir=apps/operations test:unit"
+        ],
         "test:tracking": [
             "@composer --working-dir=apps/tracking test"
         ],

@@ -16,14 +16,143 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/workos' }}
 
 jobs:
+  changes:
+    name: Detect Test Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      database: ${{ steps.filter.outputs.database }}
+      browser: ${{ steps.filter.outputs.browser }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          predicate-quantifier: 'some-with-excludes'
+          filters: |
+            backend:
+              - 'apps/operations/**'
+              - '!apps/operations/resources/js/**'
+              - '!apps/operations/resources/css/**'
+              - '!apps/operations/vite.config.ts'
+              - '!apps/operations/.prettierignore'
+              - 'apps/tracking/**'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+              - 'pint.json'
+              - '.github/workflows/tests.yml'
+            database:
+              - 'apps/operations/**'
+              - '!apps/operations/resources/js/**'
+              - '!apps/operations/resources/css/**'
+              - '!apps/operations/vite.config.ts'
+              - '!apps/operations/.prettierignore'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+              - '.github/workflows/tests.yml'
+            browser:
+              - 'apps/operations/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+              - 'playwright.config.ts'
+              - 'composer.json'
+              - 'composer.lock'
+              - '.env.example'
+              - 'third_party/image-size/**'
+              - '.github/workflows/tests.yml'
+            mobile:
+              - 'packages/field-mobile/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+              - 'tsconfig.json'
+              - 'third_party/image-size/**'
+              - '.github/workflows/tests.yml'
+
   backend:
     name: Backend Tests & Static Analysis
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, xml, curl, zip, gd, intl, sqlite3, pdo_sqlite
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/operations/composer.lock', 'apps/tracking/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: |
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+          composer --working-dir=apps/tracking install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy Environment File
+        run: |
+          cp .env.example .env
+          cp apps/operations/.env.example apps/operations/.env
+
+      - name: Generate Application Key
+        run: php apps/operations/artisan key:generate
+
+      - name: Operations backend test suite
+        run: |
+          mkdir -p test-results
+          php apps/operations/artisan config:clear --ansi
+          apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.xml --log-junit=test-results/junit-backend.xml
+
+      - name: Tracking microservice test suite
+        if: success() || failure()
+        run: |
+          mkdir -p test-results
+          apps/tracking/vendor/bin/pest --configuration=apps/tracking/phpunit.xml --log-junit=test-results/junit-tracking.xml
+
+      - name: Upload backend JUnit results
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        if: ${{ !cancelled() }}
+        with:
+          name: junit-backend
+          path: |
+            test-results/junit-backend.xml
+            test-results/junit-tracking.xml
+          retention-days: 7
+          if-no-files-found: warn
+
+  browser-acceptance:
+    name: Browser Acceptance & Accessibility
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -48,7 +177,7 @@ jobs:
         uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/operations/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Setup Node
@@ -62,90 +191,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
-          composer --working-dir=apps/tracking install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Copy Environment File
-        run: |
-          cp .env.example .env
-          cp apps/operations/.env.example apps/operations/.env
-
-      - name: Generate Application Key
-        run: php apps/operations/artisan key:generate
-
-      - name: Build Assets
-        run: npm run build
-
-      - name: Tests
-        run: |
-          mkdir -p test-results
-          composer test:operations
-          composer test:tracking
-
-      - name: Upload backend JUnit results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        if: ${{ !cancelled() }}
-        with:
-          name: junit-backend
-          path: test-results/junit-backend.xml
-          retention-days: 7
-          if-no-files-found: warn
-
-  browser-acceptance:
-    name: Browser Acceptance & Accessibility
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: postgres
-          POSTGRES_USER: core2_bootstrap
-          POSTGRES_PASSWORD: core2_bootstrap
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U core2_bootstrap -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
-        with:
-          php-version: '8.4'
-          tools: composer:v2
-          coverage: none
-          extensions: mbstring, xml, curl, zip, pdo_pgsql, gd, intl, sqlite3, pdo_sqlite
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Setup Node
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: npm
-
-      - name: Install Node Dependencies
-        run: npm ci
-
-      - name: Install Dependencies
-        run: |
-          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       - name: Copy Environment File
         run: |
@@ -176,6 +222,7 @@ jobs:
         run: npm run test:a11y
 
       - name: Browser acceptance suite
+        if: success() || failure()
         env:
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
@@ -194,8 +241,10 @@ jobs:
 
   database-security:
     name: PostgreSQL Security & Concurrency
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -207,7 +256,7 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U core2_bootstrap -d postgres"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
           --health-retries 5
     steps:
@@ -232,12 +281,12 @@ jobs:
         uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/operations/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Dependencies
         run: |
-          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader
+          composer --working-dir=apps/operations install --no-interaction --prefer-dist --optimize-autoloader --no-progress
 
       - name: Copy Environment File
         run: |
@@ -290,6 +339,7 @@ jobs:
           apps/operations/vendor/bin/pest --configuration=apps/operations/phpunit.concurrency.xml --test-directory=tests --testsuite=Concurrency --log-junit=test-results/junit-concurrency.xml
 
       - name: PostgreSQL Rental and Sales RLS/grant tests
+        if: success() || failure()
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
@@ -314,8 +364,10 @@ jobs:
 
   mobile:
     name: Mobile Package & Bundling
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -335,15 +387,18 @@ jobs:
         run: npm run types:check:mobile
 
       - name: Mobile Package Tests
+        if: success() || failure()
         run: npm run test:mobile
 
       - name: Mobile Expo Doctor
+        if: success() || failure()
         working-directory: packages/field-mobile
         env:
           NPM_CONFIG_CACHE: ${{ runner.temp }}/npm-cache
         run: npm run doctor
 
       - name: Mobile Android Bundle Export
+        if: success() || failure()
         working-directory: packages/field-mobile
         env:
           EXPO_PUBLIC_API_BASE_URL: https://api.example.test

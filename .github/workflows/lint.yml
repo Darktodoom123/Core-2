@@ -16,15 +16,44 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/workos' }}
 
 jobs:
-  quality:
+  changes:
+    name: Detect Lint Changes
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should_run: ${{ steps.filter.outputs.should_run }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          predicate-quantifier: 'some-with-excludes'
+          filters: |
+            should_run:
+              - '**'
+              - '!Docs/**'
+              - '!.ai-reports/**'
+              - '!**.md'
+              - '!.vscode/**'
+              - '!.idea/**'
+              - '!.gitattributes'
+              - '!.gitignore'
+              - '!LICENSE*'
+
+  quality:
+    name: quality
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -34,6 +63,8 @@ jobs:
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: '8.4'
+          tools: composer:v2
+          coverage: none
 
       - name: Get Composer cache directory
         id: composer-cache
@@ -43,7 +74,7 @@ jobs:
         uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/operations/composer.lock', 'apps/tracking/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Setup Node
@@ -54,43 +85,53 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          composer --working-dir=apps/operations install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-          composer --working-dir=apps/tracking install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+          composer --working-dir=apps/operations install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --optimize-autoloader
+          composer --working-dir=apps/tracking install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist --optimize-autoloader
           npm ci
 
       - name: Validate Composer manifest
+        if: success() || failure()
         run: |
           composer validate --strict
           composer --working-dir=apps/operations validate --strict
           composer --working-dir=apps/tracking validate --strict
 
       - name: Check PHP formatting
+        if: success() || failure()
         run: composer lint:check
 
       - name: Check frontend formatting
+        if: success() || failure()
         run: npm run format:check
 
       - name: Check frontend linting
+        if: success() || failure()
         run: npm run lint:check
 
       - name: Check frontend types
+        if: success() || failure()
         run: npm run types:check
 
       - name: Run frontend unit tests
+        if: success() || failure()
         run: mkdir -p test-results && npm run test:unit -- --reporter=default --reporter=junit --outputFile.junit=test-results/junit-vitest.xml
 
       - name: Check PHP types
+        if: success() || failure()
         run: composer types:check
 
       - name: Audit Composer dependencies
+        if: success() || failure()
         run: |
           composer --working-dir=apps/operations audit --locked
           composer --working-dir=apps/tracking audit --locked
 
       - name: Audit production npm dependencies
+        if: success() || failure()
         run: npm audit --omit=dev --audit-level=high
 
       - name: Verify image-size parser hardening
+        if: success() || failure()
         run: npm run security:image-size
 
       - name: Upload Vitest JUnit results
