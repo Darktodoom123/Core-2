@@ -290,7 +290,7 @@ export function FleetSurface({
                     selectedLocationId={selectedAssetLocation?.id ?? null}
                     onSelectedLocationChange={handleLocationSelect}
                     compact={true}
-                    showLocationList={false}
+                    showLocationList={true}
                     collapsible={true}
                 />
 

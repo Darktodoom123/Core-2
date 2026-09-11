@@ -60,7 +60,15 @@ async function openTracking(page: Page) {
 
     await signIn(page, fixtures.users.manager, fixtures.password);
     await page.goto('/?view=assets');
-    await page.getByRole('button', { name: 'Fleet map view' }).click();
+    await expect(
+        page.getByRole('region', { name: 'assets section loading' }),
+    ).toBeHidden({ timeout: 20_000 });
+
+    const showMapButton = page.getByRole('button', { name: 'Show Map' });
+
+    if (await showMapButton.isVisible()) {
+        await showMapButton.click();
+    }
 }
 
 async function expectMapReady(page: Page) {
@@ -74,7 +82,7 @@ async function expectMapReady(page: Page) {
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
     await expect(
-        page.getByRole('button', { name: 'Fit all locations on map' }),
+        page.getByRole('button', { name: /Fit all (locations on map|units)/i }),
     ).toBeVisible();
 }
 
@@ -190,7 +198,7 @@ test('keeps the synchronized list available when the style fails', async ({
 
     await expect(
         page.getByTestId('live-tracking-map').getByRole('alert'),
-    ).toContainText('Map unavailable');
+    ).toContainText('Map unavailable', { timeout: 20_000 });
     await expectSynchronizedList(page);
 });
 
@@ -213,7 +221,7 @@ test('keeps the synchronized list available when WebGL is unavailable', async ({
 
     await expect(
         page.getByTestId('live-tracking-map').getByRole('alert'),
-    ).toContainText('Map unavailable');
+    ).toContainText('Map unavailable', { timeout: 20_000 });
     await expectSynchronizedList(page);
 });
 

@@ -57,7 +57,7 @@ export function FleetMapView({
     selectedLocationId,
     onSelectedLocationChange,
     compact = true,
-    showLocationList = false,
+    showLocationList = true,
     collapsible = false,
     defaultCollapsed = false,
     id = 'fleet-live-map',

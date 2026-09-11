@@ -19,6 +19,21 @@ test.describe('UI-6 WCAG 2.2 AA Accessibility & Responsive Hardening', () => {
         expect(results.violations).toEqual([]);
     });
 
+    test('forgot password page passes axe accessibility audit and WCAG 2.2 AA contrast', async ({
+        page,
+    }) => {
+        await page.goto('/forgot-password');
+        await expect(
+            page.getByRole('heading', { name: 'Reset your password' }),
+        ).toBeVisible();
+        await expect(page.getByLabel('Email')).toBeFocused();
+        await expect(
+            page.getByRole('button', { name: 'Send reset link' }),
+        ).toBeEnabled();
+        const results = await new AxeBuilder({ page }).analyze();
+        expect(results.violations).toEqual([]);
+    });
+
     test('mobile viewport 320px: sign-in form wraps cleanly with no horizontal overflow and zero axe violations', async ({
         page,
     }) => {

@@ -1639,6 +1639,7 @@ function CompactMapControls({
                     variant="secondary"
                     className="min-h-11 bg-surface px-3 text-xs"
                     onClick={onFitAll}
+                    aria-label="Fit all locations on map"
                 >
                     <Maximize2 className="h-4 w-4" aria-hidden="true" />
                     Fit all units
