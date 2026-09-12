@@ -35,6 +35,12 @@ jobs:
       browser: ${{ steps.filter.outputs.browser }}
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -85,7 +91,7 @@ jobs:
   backend:
     name: Backend Tests & Static Analysis
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -167,7 +173,7 @@ jobs:
   browser-acceptance:
     name: Browser Acceptance & Accessibility
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.browser == 'true'
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -257,7 +263,7 @@ jobs:
   database-security:
     name: PostgreSQL Security & Concurrency
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.database == 'true'
+    if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -380,7 +386,7 @@ jobs:
   mobile:
     name: Mobile Package & Bundling
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
