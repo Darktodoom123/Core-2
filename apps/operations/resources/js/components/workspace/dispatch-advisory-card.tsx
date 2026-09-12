@@ -153,7 +153,7 @@ export function DispatchAdvisoryCard({
                             </span>
                             <Link
                                 href={`/?view=gpt-recommendations&selected=${rec.id}`}
-                                className="font-medium text-brand-strong hover:underline"
+                                className="font-medium text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
                             >
                                 View full advisory
                             </Link>
