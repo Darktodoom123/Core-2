@@ -81,4 +81,4 @@ if ($migrationStatus !== 0) {
     exit($migrationStatus);
 }
 
-passthru($php.' artisan serve --host=127.0.0.1 --port=4173');
+passthru($php.' artisan serve --host=127.0.0.1 --port=4173 --no-reload');

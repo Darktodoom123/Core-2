@@ -137,9 +137,28 @@ export function DispatchAdvisoryCard({
                     >
                         AI assistance
                     </h3>
-                    <p className="mt-1 text-xs text-ink-soft">
+                    <h4 className="mt-0.5 text-xs font-semibold text-ink">
                         GPT dispatch advisory
-                    </p>
+                    </h4>
+                    {rec && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                            <span className="font-medium text-ink-soft">
+                                Recommendation #{rec.id}
+                            </span>
+                            <span
+                                className="text-ink-soft/40"
+                                aria-hidden="true"
+                            >
+                                ·
+                            </span>
+                            <Link
+                                href={`/?view=gpt-recommendations&selected=${rec.id}`}
+                                className="font-medium text-brand-strong hover:underline"
+                            >
+                                View full advisory
+                            </Link>
+                        </div>
+                    )}
                 </div>
                 <span
                     className={cn(

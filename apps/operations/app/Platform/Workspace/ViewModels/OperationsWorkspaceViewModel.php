@@ -1072,6 +1072,7 @@ final class OperationsWorkspaceViewModel
                     'operations.exports.download',
                     $export->download_expires_at ?? $export->expires_at ?? now()->addDay(),
                     ['export' => $export->getKey()],
+                    absolute: false,
                 )
                 : null,
             'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",

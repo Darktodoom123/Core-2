@@ -652,6 +652,7 @@ function SubmitJobReportForm({
     const [fileValidationError, setFileValidationError] = useState<
         string | null
     >(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [gpsCapturing, setGpsCapturing] = useState(false);
 
     const { errors: pageErrors = {} } = usePage().props as {
@@ -676,6 +677,7 @@ function SubmitJobReportForm({
         ...pageErrors,
         ...form.errors,
         ...(fileValidationError ? { file: fileValidationError } : {}),
+        ...(submitError ? { submit: submitError } : {}),
     };
     const hasErrors = Object.keys(combinedErrors).length > 0;
 
@@ -756,6 +758,10 @@ function SubmitJobReportForm({
             preserveScroll: true,
             forceFormData: true,
             onError: (errors) => {
+                setSubmitError(
+                    'Unable to submit job report. Please check the highlighted fields and try again.',
+                );
+
                 if (
                     errors.attachments ||
                     Object.keys(errors).some((k) =>
@@ -772,6 +778,8 @@ function SubmitJobReportForm({
                 }
             },
             onSuccess: () => {
+                setSubmitError(null);
+                setFileValidationError(null);
                 form.reset();
                 onDone();
             },
@@ -790,6 +798,10 @@ function SubmitJobReportForm({
             preserveScroll: true,
             forceFormData: true,
             onError: (errors) => {
+                setSubmitError(
+                    'Unable to submit job report. Please check the highlighted fields and try again.',
+                );
+
                 if (
                     errors.attachments ||
                     Object.keys(errors).some((k) =>
@@ -806,6 +818,8 @@ function SubmitJobReportForm({
                 }
             },
             onSuccess: () => {
+                setSubmitError(null);
+                setFileValidationError(null);
                 form.reset();
                 onDone();
             },
@@ -1119,14 +1133,14 @@ function SubmitJobReportForm({
                     </div>
                 )}
 
-                {hasErrors && (
+                {(hasErrors || Boolean(submitError)) && (
                     <div
                         className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-xs text-danger"
                         role="alert"
                     >
                         <p className="font-semibold">
-                            Unable to submit job report. Please check the
-                            highlighted fields and try again.
+                            {submitError ||
+                                'Unable to submit job report. Please check the highlighted fields and try again.'}
                         </p>
                     </div>
                 )}

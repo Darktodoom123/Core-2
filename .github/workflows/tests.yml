@@ -218,6 +218,7 @@ jobs:
         run: |
           cp .env.example .env
           cp apps/operations/.env.example apps/operations/.env
+          sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:4173|' apps/operations/.env
 
       - name: Generate Application Key
         run: php apps/operations/artisan key:generate
