@@ -5,6 +5,8 @@ $browserDatabase = $root.DIRECTORY_SEPARATOR.'storage'.DIRECTORY_SEPARATOR.'fram
 
 putenv('APP_ENV=testing');
 putenv('APP_DEBUG=true');
+putenv('APP_URL=http://127.0.0.1:4173');
+putenv('PHP_CLI_SERVER_WORKERS=4');
 putenv('DB_CONNECTION=sqlite');
 putenv('DB_DATABASE='.$browserDatabase);
 putenv('CACHE_STORE=array');
@@ -20,6 +22,8 @@ putenv('NIGHTWATCH_ENABLED=false');
 
 $_ENV['APP_ENV'] = 'testing';
 $_ENV['APP_DEBUG'] = 'true';
+$_ENV['APP_URL'] = 'http://127.0.0.1:4173';
+$_ENV['PHP_CLI_SERVER_WORKERS'] = '4';
 $_ENV['DB_CONNECTION'] = 'sqlite';
 $_ENV['DB_DATABASE'] = $browserDatabase;
 $_ENV['CACHE_STORE'] = 'array';
@@ -35,6 +39,8 @@ $_ENV['NIGHTWATCH_ENABLED'] = 'false';
 
 $_SERVER['APP_ENV'] = 'testing';
 $_SERVER['APP_DEBUG'] = 'true';
+$_SERVER['APP_URL'] = 'http://127.0.0.1:4173';
+$_SERVER['PHP_CLI_SERVER_WORKERS'] = '4';
 $_SERVER['DB_CONNECTION'] = 'sqlite';
 $_SERVER['DB_DATABASE'] = $browserDatabase;
 $_SERVER['CACHE_STORE'] = 'array';

@@ -710,9 +710,17 @@ function SubmitJobReportForm({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFileValidationError(null);
-        const incomingFiles = Array.from(e.target.files ?? []);
+        const files = e.target.files;
 
-        if (incomingFiles.length + form.data.attachments.length > maxCount) {
+        if (!files || files.length === 0) {
+            form.setData('attachments', []);
+
+            return;
+        }
+
+        const incomingFiles = Array.from(files);
+
+        if (incomingFiles.length > maxCount) {
             setFileValidationError(
                 `You cannot attach more than ${maxCount} files per job report.`,
             );
@@ -724,18 +732,9 @@ function SubmitJobReportForm({
                     `File "${file.name}" exceeds the maximum allowed size of ${(maxBytes / 1024 / 1024).toFixed(0)} MiB.`,
                 );
             }
-
-            if (file.type && !acceptedMimeTypes.includes(file.type)) {
-                setFileValidationError(
-                    `File "${file.name}" has an unsupported format. Only JPEG, PNG, HEIC/HEIF, and PDF are allowed.`,
-                );
-            }
         }
 
-        form.setData('attachments', [
-            ...form.data.attachments,
-            ...incomingFiles,
-        ]);
+        form.setData('attachments', incomingFiles);
     };
 
     const removeAttachment = (idx: number) => {
