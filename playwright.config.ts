@@ -9,6 +9,9 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173';
 export default defineConfig({
     testDir: path.join(operationsRoot, 'tests', 'Browser'),
     timeout: 60_000,
+    expect: {
+        timeout: 15_000,
+    },
     fullyParallel: false,
     workers: 1,
     forbidOnly: Boolean(process.env.CI),

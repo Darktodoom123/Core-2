@@ -71,9 +71,16 @@ export function Modal({
                     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
                 ) ?? [],
             );
+        const focusable = focusableElements();
         const initialFocus =
-            dialog?.querySelector<HTMLElement>('[autofocus]') ??
-            focusableElements()[0] ??
+            focusable.find(
+                (el) =>
+                    (el as HTMLButtonElement | HTMLInputElement).autofocus ||
+                    el.hasAttribute('autofocus') ||
+                    el.hasAttribute('data-autofocus'),
+            ) ??
+            dialog?.querySelector<HTMLElement>('[autofocus], [data-autofocus]') ??
+            focusable[0] ??
             dialog;
         initialFocus?.focus({ preventScroll: true });
 

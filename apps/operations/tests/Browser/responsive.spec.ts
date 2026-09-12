@@ -26,7 +26,7 @@ const surfaces: Surface[] = [
     { id: 'dispatch-list', url: '/?view=dispatch' },
     {
         id: 'operational-attention',
-        url: '/?view=dispatch',
+        url: '/?view=dispatch&dispatch_workspace=classic',
         prepare: async (page) => {
             await page
                 .getByRole('button', { name: /Operational attention/ })
@@ -35,7 +35,7 @@ const surfaces: Surface[] = [
     },
     {
         id: 'day-schedule',
-        url: '/?view=dispatch',
+        url: '/?view=dispatch&dispatch_workspace=classic',
         prepare: async (page) => {
             await page
                 .getByRole('button', { name: 'Schedule board', exact: true })
@@ -44,7 +44,7 @@ const surfaces: Surface[] = [
     },
     {
         id: 'week-schedule',
-        url: '/?view=dispatch',
+        url: '/?view=dispatch&dispatch_workspace=classic',
         prepare: async (page) => {
             await page
                 .getByRole('button', { name: 'Schedule board', exact: true })
@@ -56,7 +56,7 @@ const surfaces: Surface[] = [
     },
     {
         id: 'month-schedule',
-        url: '/?view=dispatch',
+        url: '/?view=dispatch&dispatch_workspace=classic',
         prepare: async (page) => {
             await page
                 .getByRole('button', { name: 'Schedule board', exact: true })

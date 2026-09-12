@@ -17,6 +17,7 @@ import {
     AssignmentFlowHeader,
     AssignmentNextAction,
     AssignmentSelectionSummary,
+    AssignmentStageSummaries,
     CurrentAssignments,
     DispatchAlertBanners,
     DispatchContext,
@@ -960,6 +961,17 @@ export default function DispatchDetail({
                                     )}
                                 </aside>
                             </div>
+                            <AssignmentStageSummaries
+                                activation={activation}
+                                canActivate={capabilities.activate}
+                                onSelectStep={(step) => {
+                                    setActiveStep(step);
+
+                                    if (step === 2) {
+                                        setAssignmentPickerOpen(true);
+                                    }
+                                }}
+                            />
                             <LifecycleControlsPanel
                                 key={`lifecycle-${job.version}`}
                                 job={job}

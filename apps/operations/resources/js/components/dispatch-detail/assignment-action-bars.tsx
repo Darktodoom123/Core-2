@@ -28,7 +28,7 @@ export function AssignmentNextAction({
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-xs font-semibold tracking-wide text-brand-strong uppercase">
+                    <p className="text-xs font-semibold tracking-wide text-amber-900 uppercase">
                         Next action
                     </p>
                     <p className="mt-1 text-sm font-semibold text-ink">
@@ -45,7 +45,7 @@ export function AssignmentNextAction({
                 {canActivate ? (
                     <a
                         href="#dispatch-activation"
-                        className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-brand-strong hover:bg-brand-soft"
+                        className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-amber-900 hover:bg-brand-soft"
                     >
                         Open
                         <ArrowRight className="size-3.5" aria-hidden="true" />
@@ -100,7 +100,7 @@ export function AssignmentStageSummaries({
                         </span>
                     </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center text-sm font-medium text-brand-strong">
+                <span className="inline-flex shrink-0 items-center text-sm font-medium text-amber-900">
                     View details
                 </span>
             </a>

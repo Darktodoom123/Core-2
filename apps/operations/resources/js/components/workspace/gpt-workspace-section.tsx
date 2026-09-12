@@ -1323,7 +1323,6 @@ export function AcceptGptModal({
                     className="flex justify-end gap-3 pt-2"
                 >
                     <Button
-                        autoFocus
                         type="button"
                         variant="secondary"
                         onClick={onClose}
@@ -1395,6 +1394,7 @@ export function RejectGptModal({
                         </label>
                         <input
                             autoFocus
+                            data-autofocus=""
                             type="text"
                             className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
                             placeholder="e.g. Driver requested off shift / Site requires 80T crane instead"

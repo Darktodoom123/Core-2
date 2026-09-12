@@ -66,6 +66,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
+        await expect(
+            page.getByRole('link', { name: 'Download' }).first(),
+        ).toBeVisible();
         expect(
             await page.getByRole('link', { name: 'Download' }).count(),
         ).toBeGreaterThanOrEqual(3);
@@ -135,9 +138,16 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         );
         await page.locator('#submit-job-report-btn').click();
         expect((await uploadResponse).status()).toBeGreaterThanOrEqual(300);
-        await expect(page.getByText('r6-upload.png')).toBeVisible();
+        await expect(page.getByText('r6-upload.png').first()).toBeVisible();
+        await expect(
+            page.getByText(/Job report submitted for dispatch/i),
+        ).toBeVisible();
 
         await page.locator('#report-submit-toggle').click();
+        await expect(page.locator('#report-submit-toggle')).toHaveAttribute(
+            'aria-expanded',
+            'true',
+        );
 
         const unauthorizedDispatchSelect = page.locator(
             '#report-dispatch-select',

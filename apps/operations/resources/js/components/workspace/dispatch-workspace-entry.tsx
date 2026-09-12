@@ -24,10 +24,11 @@ export function DispatchWorkspaceEntry({
     const fieldMode =
         (role === 'driver' || role === 'crane_operator') &&
         dispatchProps.capabilities.update_assigned_dispatch_status;
+    const searchParams = new URLSearchParams(url.split('?')[1] ?? '');
+    const workspaceParam = searchParams.get('dispatch_workspace');
     const classic =
-        new URLSearchParams(url.split('?')[1] ?? '').get(
-            'dispatch_workspace',
-        ) === 'classic';
+        workspaceParam === 'classic' ||
+        (workspaceParam !== 'desk' && role === 'dispatcher');
 
     if (fieldMode) {
         return <LiveDispatchWorkspace {...dispatchProps} />;

@@ -649,19 +649,19 @@ export function LiveWorkspaceShell({
                     inert={mobileOpen || undefined}
                     aria-hidden={mobileOpen ? true : undefined}
                 >
-                    <header className="sticky top-0 z-30 flex min-h-[4.5rem] items-center gap-2 border-b border-line bg-surface px-4 min-[840px]:px-6">
+                    <header className="sticky top-0 z-30 flex min-h-[4.5rem] items-center gap-1.5 border-b border-line bg-surface px-2.5 min-[840px]:gap-2 min-[840px]:px-6 sm:px-4">
                         <button
                             type="button"
                             ref={mobileMenuButtonRef}
                             onClick={openMobileNavigation}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-subtle min-[840px]:hidden"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-surface-subtle min-[840px]:hidden"
                             aria-label="Open navigation"
                             aria-expanded={mobileOpen}
                             aria-controls="workspace-navigation"
                         >
                             <Menu className="h-5 w-5" aria-hidden="true" />
                         </button>
-                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-2.5">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink">
                                 {section && sectionIcons[section] ? (
                                     (() => {
@@ -703,7 +703,7 @@ export function LiveWorkspaceShell({
                                 </p>
                             </div>
                         </div>
-                        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
+                        <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
                             {/* Emergency SOS Pill: only renders when an active SOS exists */}
                             {activeSosCount > 0 && (
                                 <button
@@ -722,6 +722,7 @@ export function LiveWorkspaceShell({
                                     variant="quiet"
                                     onClick={onShareLocation}
                                     disabled={locationPending}
+                                    className="hidden min-[480px]:inline-flex"
                                     aria-label={
                                         locationPending
                                             ? 'Sharing current location'
@@ -774,6 +775,7 @@ export function LiveWorkspaceShell({
                                 size="icon"
                                 variant="quiet"
                                 onClick={toggleTheme}
+                                className="hidden min-[360px]:inline-flex"
                                 aria-label={
                                     resolvedTheme === 'dark'
                                         ? 'Switch to light mode'
