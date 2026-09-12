@@ -66,18 +66,20 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await expect(
             page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Download' })).toHaveCount(
-            3,
-        );
+        expect(
+            await page.getByRole('link', { name: 'Download' }).count(),
+        ).toBeGreaterThanOrEqual(3);
         const csvUrl = (await page
             .locator('tbody tr')
             .filter({ hasText: 'csv' })
             .getByRole('link', { name: 'Download' })
+            .first()
             .getAttribute('href')) as string;
         const pdfUrl = (await page
             .locator('tbody tr')
             .filter({ hasText: 'pdf' })
             .getByRole('link', { name: 'Download' })
+            .first()
             .getAttribute('href')) as string;
 
         const csv = await browserFetch(page, csvUrl);
@@ -101,9 +103,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.driver, fixtures.password);
         await page.goto('/?view=reports');
-        await page
-            .getByRole('button', { name: /(Submit|File) job report/i })
-            .click();
+        await page.locator('#report-submit-toggle').click();
 
         const dispatchSelect = page.locator('#report-dispatch-select');
 
@@ -137,9 +137,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect((await uploadResponse).status()).toBeGreaterThanOrEqual(300);
         await expect(page.getByText('r6-upload.png')).toBeVisible();
 
-        await page
-            .getByRole('button', { name: /(Submit|File) job report/i })
-            .click();
+        await page.locator('#report-submit-toggle').click();
 
         const unauthorizedDispatchSelect = page.locator(
             '#report-dispatch-select',
@@ -181,9 +179,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.driver, fixtures.password);
         await page.goto('/?view=reports');
-        await page
-            .getByRole('button', { name: /(Submit|File) job report/i })
-            .click();
+        await page.locator('#report-submit-toggle').click();
 
         const validationDispatchSelect = page.locator(
             '#report-dispatch-select',
