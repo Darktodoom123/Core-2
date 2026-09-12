@@ -365,12 +365,12 @@ export function WeatherSafetyTelemetry({
                 NO-GO: WIND / STORM HOLD
             </span>
         ) : weather.safetyStatus === 'caution' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-0.5 text-xs font-bold text-canvas">
+            <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-0.5 text-xs font-bold text-warning-strong">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 CAUTION: MONITOR ANEMOMETER
             </span>
         ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-success px-2.5 py-0.5 text-xs font-bold text-canvas">
+            <span className="inline-flex items-center gap-1 rounded-full bg-success-strong px-2.5 py-0.5 text-xs font-bold text-canvas">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 GO: SAFE LIFT WINDOW
             </span>
@@ -389,7 +389,7 @@ export function WeatherSafetyTelemetry({
                     Caution Monitor
                 </span>
             ) : (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-success-strong px-2.5 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-xs">
                     <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                     Safe Window
                 </span>

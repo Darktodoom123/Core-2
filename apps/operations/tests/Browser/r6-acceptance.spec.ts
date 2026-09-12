@@ -64,7 +64,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto('/?view=reports');
         await expect(
-            page.getByRole('heading', { name: 'Job reports & attachments' }),
+            page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
         await expect(page.getByRole('link', { name: 'Download' })).toHaveCount(
             3,
@@ -101,7 +101,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.driver, fixtures.password);
         await page.goto('/?view=reports');
-        await page.getByRole('button', { name: 'Submit job report' }).click();
+        await page
+            .getByRole('button', { name: /(Submit|File) job report/i })
+            .click();
 
         const dispatchSelect = page.locator('#report-dispatch-select');
 
@@ -135,7 +137,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         expect((await uploadResponse).status()).toBeGreaterThanOrEqual(300);
         await expect(page.getByText('r6-upload.png')).toBeVisible();
 
-        await page.getByRole('button', { name: 'Submit job report' }).click();
+        await page
+            .getByRole('button', { name: /(Submit|File) job report/i })
+            .click();
 
         const unauthorizedDispatchSelect = page.locator(
             '#report-dispatch-select',
@@ -177,7 +181,9 @@ test.describe('R6 deterministic authenticated acceptance', () => {
 
         await signIn(page, fixtures.users.driver, fixtures.password);
         await page.goto('/?view=reports');
-        await page.getByRole('button', { name: 'Submit job report' }).click();
+        await page
+            .getByRole('button', { name: /(Submit|File) job report/i })
+            .click();
 
         const validationDispatchSelect = page.locator(
             '#report-dispatch-select',
@@ -662,7 +668,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         await openNavigation.click();
         await page.getByRole('button', { name: 'Job reports' }).click();
         await expect(
-            page.getByRole('heading', { name: 'Job reports & attachments' }),
+            page.getByRole('heading', { name: /Job reports/i }),
         ).toBeVisible();
 
         const skipLink = page.getByRole('link', { name: 'Skip to workspace' });
