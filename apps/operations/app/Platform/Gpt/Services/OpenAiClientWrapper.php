@@ -19,13 +19,28 @@ final class OpenAiClientWrapper
     private static mixed $fakeResponseResolver = null;
 
     public function __construct(
-        private string $apiKey = '',
-        private string $model = 'gpt-5-mini',
-        private string $baseUrl = 'https://openrouter.ai/api/v1'
+        private ?string $apiKey = null,
+        private ?string $model = null,
+        private ?string $baseUrl = null,
     ) {
-        $this->apiKey = (string) config('services.openai.key', '');
-        $this->model = (string) config('services.openai.provider_model', 'openai/gpt-5-mini');
-        $this->baseUrl = rtrim((string) config('services.openai.base_url', 'https://openrouter.ai/api/v1'), '/');
+        $this->apiKey = $this->apiKey ?? (string) config('services.openai.key', '');
+        $this->model = $this->model ?? (string) config('services.openai.provider_model', 'openai/gpt-5-mini');
+        $this->baseUrl = rtrim($this->baseUrl ?? (string) config('services.openai.base_url', 'https://openrouter.ai/api/v1'), '/');
+    }
+
+    public function getApiKey(): string
+    {
+        return $this->apiKey;
+    }
+
+    public function getModel(): string
+    {
+        return $this->model;
+    }
+
+    public function getBaseUrl(): string
+    {
+        return $this->baseUrl;
     }
 
     public static function fake(mixed $responseResolver = null): void
