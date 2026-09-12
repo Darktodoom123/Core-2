@@ -805,6 +805,7 @@ export function LiveWorkspaceShell({
                                 onClick={() => router.post('/logout')}
                                 aria-label="Sign out"
                                 title="Sign out"
+                                className="hidden sm:inline-flex"
                             >
                                 <LogOut
                                     className="h-5 w-5 text-ink-soft hover:text-ink"

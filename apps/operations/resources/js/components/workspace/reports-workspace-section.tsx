@@ -182,7 +182,7 @@ export function ReportsSurface({
         <div className="workspace-width-contained">
             {/* Header with Title and Primary Actions */}
             <PageHeading
-                title="Job reports"
+                title="Job reports & attachments"
                 description="Review operator telemetry readings, engine meter hours, customer sign-offs, and field evidence attachments."
                 actions={
                     <>
@@ -208,6 +208,11 @@ export function ReportsSurface({
                                 }
                                 aria-expanded={showSubmitModal}
                                 aria-controls="report-submit-form"
+                                aria-label={
+                                    showSubmitModal
+                                        ? 'Close report form'
+                                        : 'Submit job report'
+                                }
                                 onClick={() => {
                                     if (showSubmitModal) {
                                         setModalDismissed(true);
@@ -221,7 +226,7 @@ export function ReportsSurface({
                                 <Plus className="mr-2 h-4 w-4" />
                                 {showSubmitModal
                                     ? 'Close report form'
-                                    : 'File job report'}
+                                    : 'Submit job report'}
                             </Button>
                         )}
                     </>
@@ -571,6 +576,16 @@ export function ReportsSurface({
                     </div>
                 )}
             </div>
+
+            {/* Operational Data Exports Section */}
+            {capabilities.export_reports && (
+                <div className="mt-8 border-t border-line px-4 pt-8 md:px-6">
+                    <ExportsSurface
+                        exports={exports}
+                        capabilities={capabilities}
+                    />
+                </div>
+            )}
 
             {/* Dedicated Background Data Exports Dialog */}
             {showExportModal && capabilities.export_reports && (
