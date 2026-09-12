@@ -146,6 +146,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $exportPath = 'exports/browser/r6-report.csv';
         Storage::disk('local')->put($exportPath, "reference,status\nR6-BROWSER-001,draft\n");
+        Storage::disk('private')->put($exportPath, "reference,status\nR6-BROWSER-001,draft\n");
         $export = ReportExport::query()->create([
             'id' => '00000000-0000-0000-0000-000000000006',
             'user_id' => $manager->id,
@@ -164,6 +165,7 @@ final class BrowserAcceptanceSeeder extends Seeder
         ]);
         $pdfPath = 'exports/browser/r6-report.pdf';
         Storage::disk('local')->put($pdfPath, '%PDF-1.4 browser fixture');
+        Storage::disk('private')->put($pdfPath, '%PDF-1.4 browser fixture');
         $pdfExport = ReportExport::query()->create([
             'id' => '00000000-0000-0000-0000-000000000007',
             'user_id' => $manager->id,

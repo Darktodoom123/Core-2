@@ -823,6 +823,7 @@ export function GptRecommendationsSurface({
                     rec={selectedForAccept}
                     onClose={() => setSelectedForAccept(null)}
                     returnFocusTo={modalTrigger}
+                    focusCancel
                 />
             )}
 
@@ -1234,10 +1235,12 @@ export function AcceptGptModal({
     rec,
     onClose,
     returnFocusTo,
+    focusCancel = false,
 }: {
     rec: GptRecommendationViewModel;
     onClose: () => void;
     returnFocusTo?: HTMLElement | null;
+    focusCancel?: boolean;
 }) {
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -1327,6 +1330,8 @@ export function AcceptGptModal({
                         variant="secondary"
                         onClick={onClose}
                         disabled={processing}
+                        autoFocus={focusCancel || undefined}
+                        data-autofocus={focusCancel ? '' : undefined}
                     >
                         Cancel
                     </Button>

@@ -61,6 +61,7 @@ class ReportExport extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'export_type' => ReportExportType::class,
             'status' => ReportExportStatus::class,
             'filters' => 'array',

@@ -654,6 +654,10 @@ function SubmitJobReportForm({
     >(null);
     const [gpsCapturing, setGpsCapturing] = useState(false);
 
+    const { errors: pageErrors = {} } = usePage().props as {
+        errors?: Record<string, string>;
+    };
+
     const form = useForm({
         dispatch_job_id: initialJobId ? String(initialJobId) : '',
         work_summary: '',
@@ -668,7 +672,12 @@ function SubmitJobReportForm({
         attachments: [] as File[],
     });
 
-    const hasErrors = Object.keys(form.errors).length > 0;
+    const combinedErrors = {
+        ...pageErrors,
+        ...form.errors,
+        ...(fileValidationError ? { file: fileValidationError } : {}),
+    };
+    const hasErrors = Object.keys(combinedErrors).length > 0;
 
     const captureLocation = () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -715,6 +724,12 @@ function SubmitJobReportForm({
                     `File "${file.name}" exceeds the maximum allowed size of ${(maxBytes / 1024 / 1024).toFixed(0)} MiB.`,
                 );
             }
+
+            if (file.type && !acceptedMimeTypes.includes(file.type)) {
+                setFileValidationError(
+                    `File "${file.name}" has an unsupported format. Only JPEG, PNG, HEIC/HEIF, and PDF are allowed.`,
+                );
+            }
         }
 
         form.setData('attachments', [
@@ -732,7 +747,6 @@ function SubmitJobReportForm({
 
     const submitAsFinal = (e: FormEvent) => {
         e.preventDefault();
-        setFileValidationError(null);
         form.transform((data) => ({
             ...data,
             is_draft: false,
@@ -742,6 +756,22 @@ function SubmitJobReportForm({
             preserveState: true,
             preserveScroll: true,
             forceFormData: true,
+            onError: (errors) => {
+                if (
+                    errors.attachments ||
+                    Object.keys(errors).some((k) =>
+                        k.startsWith('attachments.'),
+                    )
+                ) {
+                    setFileValidationError(
+                        errors.attachments ||
+                            Object.entries(errors).find(([k]) =>
+                                k.startsWith('attachments.'),
+                            )?.[1] ||
+                            'One or more attachments are invalid.',
+                    );
+                }
+            },
             onSuccess: () => {
                 form.reset();
                 onDone();
@@ -751,7 +781,6 @@ function SubmitJobReportForm({
 
     const submitAsDraft = (e: FormEvent) => {
         e.preventDefault();
-        setFileValidationError(null);
         form.transform((data) => ({
             ...data,
             is_draft: true,
@@ -761,6 +790,22 @@ function SubmitJobReportForm({
             preserveState: true,
             preserveScroll: true,
             forceFormData: true,
+            onError: (errors) => {
+                if (
+                    errors.attachments ||
+                    Object.keys(errors).some((k) =>
+                        k.startsWith('attachments.'),
+                    )
+                ) {
+                    setFileValidationError(
+                        errors.attachments ||
+                            Object.entries(errors).find(([k]) =>
+                                k.startsWith('attachments.'),
+                            )?.[1] ||
+                            'One or more attachments are invalid.',
+                    );
+                }
+            },
             onSuccess: () => {
                 form.reset();
                 onDone();

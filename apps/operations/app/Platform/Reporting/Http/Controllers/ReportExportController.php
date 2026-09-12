@@ -48,7 +48,9 @@ class ReportExportController extends Controller
         $resolvedDisk = app(StorageFallbackServiceInterface::class)->resolveDisk($targetDisk, 'private');
         $activeDisk = Storage::disk($resolvedDisk)->exists((string) $export->file_path)
             ? $resolvedDisk
-            : (Storage::disk('private')->exists((string) $export->file_path) ? 'private' : null);
+            : (Storage::disk('private')->exists((string) $export->file_path)
+                ? 'private'
+                : (Storage::disk('local')->exists((string) $export->file_path) ? 'local' : null));
 
         if (! $export->file_path || $activeDisk === null) {
             return back()->with('flash', [
