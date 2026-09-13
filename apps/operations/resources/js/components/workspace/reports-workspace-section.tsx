@@ -203,6 +203,7 @@ export function ReportsSurface({
                         {capabilities.create_job_report && (
                             <Button
                                 id="report-submit-toggle"
+                                className="scroll-mt-24"
                                 variant={
                                     showSubmitModal ? 'secondary' : 'primary'
                                 }
@@ -286,11 +287,14 @@ export function ReportsSurface({
                         onDone={() => {
                             setModalDismissed(true);
                             setUserOpenedModal(false);
-                            window.setTimeout(() => {
+                            const focusToggle = () => {
                                 document
                                     .getElementById('report-submit-toggle')
-                                    ?.focus();
-                            }, 0);
+                                    ?.focus({ preventScroll: true });
+                            };
+                            focusToggle();
+                            requestAnimationFrame(focusToggle);
+                            window.setTimeout(focusToggle, 50);
                         }}
                     />
                 )}
@@ -827,7 +831,7 @@ function SubmitJobReportForm({
     };
 
     return (
-        <Panel id="report-submit-form" className="p-4 md:p-6">
+        <Panel id="report-submit-form" className="scroll-mt-24 p-4 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
                 <div>
                     <h3 className="text-base font-semibold text-ink">
@@ -841,7 +845,7 @@ function SubmitJobReportForm({
                 <button
                     type="button"
                     onClick={onDone}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    className="flex h-11 w-11 shrink-0 scroll-mt-24 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
                     aria-label="Close form"
                 >
                     <X className="h-4 w-4" />

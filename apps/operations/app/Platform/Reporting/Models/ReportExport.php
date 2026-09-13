@@ -37,6 +37,7 @@ class ReportExport extends Model
     use HasUuids;
 
     protected $fillable = [
+        'id',
         'user_id',
         'export_type',
         'format',
