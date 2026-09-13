@@ -8,6 +8,7 @@ use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 class CalculateHosClocksQuery
 {
@@ -81,6 +82,18 @@ class CalculateHosClocksQuery
                 ->latest('started_at')
                 ->first();
 
+            $shiftStart = $lastShift?->started_at;
+            if ($lastShift !== null && $lastShift->dutyLogs->isNotEmpty()) {
+                $earliestDutyLog = $lastShift->dutyLogs->sortBy('started_at')->first();
+                if ($earliestDutyLog !== null && $earliestDutyLog->started_at->lt($shiftStart)) {
+                    $shiftStart = $earliestDutyLog->started_at;
+                }
+            }
+
+            $timelineStart = ($shiftStart !== null && ($lastShift?->ended_at === null || $lastShift->ended_at->gte($todayStart)) && $shiftStart->lt($todayStart))
+                ? $shiftStart
+                : $todayStart;
+
             return [
                 'shift_active' => false,
                 'shift_status' => ShiftStatus::COMPLETED->value,
@@ -93,8 +106,8 @@ class CalculateHosClocksQuery
                 'cycle_remaining_minutes' => $cycleRemainingMinutes,
                 'cycle_accumulated_minutes' => $cycleMinutesLogged,
                 'cycle_limit_minutes' => self::MAX_CYCLE_MINUTES,
-                'timeline_segments' => $this->buildTimelineSegments($user, $todayStart, $now),
-                'recent_logs' => $this->buildRecentLogs($user, $todayStart),
+                'timeline_segments' => $this->buildTimelineSegments($user, $timelineStart, $now),
+                'recent_logs' => $this->buildRecentLogs($user, $timelineStart),
                 'active_demurrage' => false,
                 'is_certified' => $lastShift !== null ? $lastShift->is_certified : false,
                 'fatigue_status' => 'normal',
@@ -133,6 +146,15 @@ class CalculateHosClocksQuery
             default => 'normal',
         };
 
+        $shiftStart = $activeShift->started_at;
+        if ($activeShift->dutyLogs->isNotEmpty()) {
+            $earliestDutyLog = $activeShift->dutyLogs->sortBy('started_at')->first();
+            if ($earliestDutyLog !== null && $earliestDutyLog->started_at->lt($shiftStart)) {
+                $shiftStart = $earliestDutyLog->started_at;
+            }
+        }
+        $timelineStart = $shiftStart->lt($todayStart) ? $shiftStart : $todayStart;
+
         return [
             'shift_active' => true,
             'shift_status' => $activeShift->status->value,
@@ -145,8 +167,8 @@ class CalculateHosClocksQuery
             'cycle_remaining_minutes' => $cycleRemainingMinutes,
             'cycle_accumulated_minutes' => $cycleMinutesLogged,
             'cycle_limit_minutes' => self::MAX_CYCLE_MINUTES,
-            'timeline_segments' => $this->buildTimelineSegments($user, $todayStart, $now),
-            'recent_logs' => $this->buildRecentLogs($user, $todayStart),
+            'timeline_segments' => $this->buildTimelineSegments($user, $timelineStart, $now),
+            'recent_logs' => $this->buildRecentLogs($user, $timelineStart),
             'active_demurrage' => $currentDuty === DutyStatus::STANDBY && ($activeDutyLog !== null && $activeDutyLog->is_demurrage_billable),
             'is_certified' => $activeShift->is_certified,
             'fatigue_status' => $fatigueStatus,
@@ -157,7 +179,7 @@ class CalculateHosClocksQuery
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function buildTimelineSegments(User $user, Carbon $startOfDay, Carbon $now): array
+    private function buildTimelineSegments(User $user, CarbonInterface $startOfDay, CarbonInterface $now): array
     {
         $logs = OperatorDutyLog::query()
             ->where('user_id', $user->id)
@@ -194,7 +216,7 @@ class CalculateHosClocksQuery
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function buildRecentLogs(User $user, Carbon $startOfDay): array
+    private function buildRecentLogs(User $user, CarbonInterface $startOfDay): array
     {
         $now = Carbon::now();
 
