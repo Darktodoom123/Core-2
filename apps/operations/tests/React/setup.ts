@@ -31,8 +31,60 @@ vi.mock('@inertiajs/react', () => ({
             window.history.replaceState(window.history.state, '', url);
         }),
     },
-    Link: ({ children, href, ...props }: { children: React.ReactNode; href?: string; [key: string]: unknown }) => {
+    Link: ({
+        children,
+        href,
+        ...props
+    }: {
+        children: React.ReactNode;
+        href?: string;
+        [key: string]: unknown;
+    }) => {
         return React.createElement('a', { href, ...props }, children);
     },
-    Head: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    Head: ({ children }: { children: React.ReactNode }) =>
+        React.createElement(React.Fragment, null, children),
+    useForm: (initialValues: any = {}) => {
+        const [data, setDataState] = React.useState(initialValues);
+        const [errors, setErrors] = React.useState<Record<string, string>>({});
+        const [processing] = React.useState(false);
+
+        const setData = React.useCallback((keyOrFn: any, val?: any) => {
+            if (typeof keyOrFn === 'function') {
+                setDataState(keyOrFn);
+            } else if (typeof keyOrFn === 'string') {
+                setDataState((prev: any) => {
+                    if (prev && prev[keyOrFn] === val) {
+                        return prev;
+                    }
+
+                    return { ...prev, [keyOrFn]: val };
+                });
+            } else {
+                setDataState(keyOrFn);
+            }
+        }, []);
+
+        const isDirty = React.useMemo(() => {
+            return JSON.stringify(data) !== JSON.stringify(initialValues);
+        }, [data, initialValues]);
+
+        return {
+            data,
+            setData,
+            errors,
+            setError: (key: string, message: string) =>
+                setErrors((p) => ({ ...p, [key]: message })),
+            clearErrors: () => setErrors({}),
+            reset: () => setDataState(initialValues),
+            defaults: () => {},
+            isDirty,
+            processing,
+            post: vi.fn(),
+            patch: vi.fn(),
+            put: vi.fn(),
+            delete: vi.fn(),
+            get: vi.fn(),
+        };
+    },
 }));

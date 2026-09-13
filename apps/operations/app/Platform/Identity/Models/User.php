@@ -27,13 +27,14 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $phone
  * @property bool $is_active
  * @property Carbon|null $suspended_at
+ * @property bool $email_otp_enabled
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'username', 'email', 'phone', 'password', 'is_active', 'suspended_at', 'email_verified_at'])]
+#[Fillable(['name', 'username', 'email', 'phone', 'password', 'is_active', 'suspended_at', 'email_otp_enabled', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -55,6 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
+            'email_otp_enabled' => 'boolean',
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
             'password' => 'hashed',

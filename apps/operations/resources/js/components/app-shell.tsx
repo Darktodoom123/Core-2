@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     ChevronDown,
@@ -626,14 +626,19 @@ export function AppShell({
                             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" />
                         </Button>
 
-                        <div className="hidden min-w-0 text-right sm:block">
+                        <Link
+                            href="/account"
+                            className="hidden min-w-0 rounded-lg p-1 text-right transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand sm:block"
+                            title="My Account Settings"
+                            aria-label="My Account Settings"
+                        >
                             <p className="max-w-40 truncate text-sm font-medium text-ink">
                                 {auth.user?.name}
                             </p>
                             <p className="max-w-40 truncate text-xs text-ink-soft">
                                 {auth.role_label}
                             </p>
-                        </div>
+                        </Link>
                         <Button
                             size="icon"
                             variant="quiet"

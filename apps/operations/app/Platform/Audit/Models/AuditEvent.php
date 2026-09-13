@@ -10,7 +10,10 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $action
+ * @property array<string, mixed>|null $before
+ * @property array<string, mixed>|null $after
  * @property string|null $reason
+ * @property string|null $ip_address
  * @property Carbon|null $occurred_at
  */
 class AuditEvent extends Model

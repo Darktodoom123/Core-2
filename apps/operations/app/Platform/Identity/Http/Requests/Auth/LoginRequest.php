@@ -2,10 +2,12 @@
 
 namespace App\Platform\Identity\Http\Requests\Auth;
 
+use App\Platform\Identity\Models\User;
 use App\Platform\Identity\Support\Username;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -35,16 +37,17 @@ final class LoginRequest extends FormRequest
         ];
     }
 
-    public function authenticate(): void
+    public function validateCredentials(): User
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt([
-            'username' => Username::normalize((string) $this->string('username')),
-            'password' => (string) $this->string('password'),
-            'is_active' => true,
-            'suspended_at' => null,
-        ])) {
+        $user = User::query()
+            ->where('username', Username::normalize((string) $this->string('username')))
+            ->where('is_active', true)
+            ->whereNull('suspended_at')
+            ->first();
+
+        if (! $user || ! Hash::check((string) $this->string('password'), $user->password)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -53,6 +56,14 @@ final class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        return $user;
+    }
+
+    public function authenticate(): void
+    {
+        $user = $this->validateCredentials();
+        Auth::login($user, false);
     }
 
     private function ensureIsNotRateLimited(): void

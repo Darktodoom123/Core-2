@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
     Archive,
     Bell,
@@ -20,6 +20,7 @@ import {
     ShieldCheck,
     Sun,
     Truck,
+    User as UserIcon,
     Users,
     X,
 } from 'lucide-react';
@@ -871,6 +872,21 @@ export function LiveWorkspaceShell({
                                                 </span>
                                             </div>
                                         </div>
+
+                                        <Link
+                                            href="/account"
+                                            onClick={() =>
+                                                setUserMenuOpen(false)
+                                            }
+                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                            role="menuitem"
+                                        >
+                                            <UserIcon
+                                                className="h-4 w-4 text-ink-soft"
+                                                aria-hidden="true"
+                                            />
+                                            <span>My Account</span>
+                                        </Link>
 
                                         <button
                                             type="button"

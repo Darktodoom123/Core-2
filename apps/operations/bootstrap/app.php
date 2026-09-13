@@ -5,6 +5,7 @@ use App\Platform\Gpt\Jobs\PruneGptRecommendationsJob;
 use App\Platform\Gpt\Jobs\SweepProactiveGptRecommendationsJob;
 use App\Platform\Identity\Http\Middleware\EnsurePersonalAccessToken;
 use App\Platform\Identity\Http\Middleware\EnsureUserIsActive;
+use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
 use App\Platform\Reporting\Jobs\PruneExpiredExportsJob;
 use App\Platform\Safety\Jobs\PruneSosIncidentCoordinatesJob;
 use App\Platform\Safety\Jobs\SweepSosEscalationsJob;
@@ -62,6 +63,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             CollectWorkspacePerformance::class,
             AddLinkHeadersForPreloadedAssets::class,
+            ValidateActiveSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
