@@ -16,6 +16,7 @@ use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Enums\StandbyReason;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
+use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
@@ -473,4 +474,173 @@ it('serializes pre-trip and post-trip dvir_inspections log with meters, checks, 
         ->and($item['dvir_inspections'][1]['type'])->toBe('pre_trip')
         ->and($item['dvir_inspections'][1]['status'])->toBe('passed')
         ->and($item['dvir_inspections'][1]['has_defects'])->toBeFalse();
+});
+
+it('OperationsWorkspaceViewModel hydrates real personnel names and equipment details in gptRecommendations', function (): void {
+    $dispatcher = User::factory()->create(['name' => 'Dispatch Manager']);
+    $driver = User::factory()->create(['name' => 'Sarah Operator']);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
+
+    $crane = OperationalAsset::query()->create([
+        'code' => 'CR-101',
+        'name' => 'Liebherr LTM 1050',
+        'kind' => 'mobile_crane',
+        'rated_capacity' => 50,
+        'capacity_unit' => 't',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'JOB-REC-HYDRATE',
+        'client' => 'Acme Corp',
+        'title' => 'Structural Lift',
+        'site' => 'BGC Taguig',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $dispatcher->id,
+        'version' => 1,
+    ]);
+
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'hash-123',
+        'input_references' => ['user_ids' => [$driver->id], 'asset_ids' => [$crane->id]],
+        'recommendation' => [
+            'summary' => 'Recommend assigning eligible resources.',
+            'proposed_personnel' => [
+                ['user_id' => $driver->id, 'assignment_type' => 'operator'],
+            ],
+            'proposed_assets' => [
+                ['operational_asset_id' => $crane->id, 'assignment_type' => 'crane'],
+            ],
+        ],
+        'conflicts' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'pending_review',
+        'expires_at' => now()->addMinutes(15),
+    ])->load(['requestedBy', 'decidedBy']);
+
+    $serialized = OperationsWorkspaceViewModel::gptRecommendations(collect([$recommendation]));
+    $item = $serialized[0];
+
+    expect($item['proposed_personnel'])->toHaveCount(1)
+        ->and($item['proposed_personnel'][0]['user_id'])->toBe($driver->id)
+        ->and($item['proposed_personnel'][0]['name'])->toBe('Sarah Operator')
+        ->and($item['proposed_personnel'][0]['role'])->toBe('crane_operator')
+        ->and($item['proposed_personnel'][0]['assignment_type'])->toBe('operator')
+        ->and($item['proposed_assets'])->toHaveCount(1)
+        ->and($item['proposed_assets'][0]['operational_asset_id'])->toBe($crane->id)
+        ->and($item['proposed_assets'][0]['asset_code'])->toBe('CR-101')
+        ->and($item['proposed_assets'][0]['name'])->toBe('Liebherr LTM 1050')
+        ->and($item['proposed_assets'][0]['capacity'])->toBe('50 t')
+        ->and($item['proposed_assets'][0]['kind'])->toBe('mobile_crane')
+        ->and($item['recommendation']['proposed_personnel'][0]['name'])->toBe('Sarah Operator')
+        ->and($item['recommendation']['proposed_assets'][0]['asset_code'])->toBe('CR-101');
+});
+
+it('OperationsWorkspaceViewModel hydrates soft-deleted assets in gptRecommendations', function (): void {
+    $dispatcher = User::factory()->create(['name' => 'Dispatch Manager']);
+    $crane = OperationalAsset::query()->create([
+        'code' => 'CR-RET-01',
+        'name' => 'Retired Demag AC50',
+        'kind' => 'crane',
+        'rated_capacity' => 60,
+        'capacity_unit' => 't',
+        'status' => AssetStatus::UnderMaintenance,
+    ]);
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'JOB-REC-SOFTDEL',
+        'client' => 'Acme Corp',
+        'title' => 'Bridge Lift',
+        'site' => 'Makati City',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $dispatcher->id,
+        'version' => 1,
+    ]);
+
+    $craneId = $crane->id;
+    $crane->delete(); // soft delete
+
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'hash-softdel',
+        'input_references' => ['user_ids' => [], 'asset_ids' => [$craneId]],
+        'recommendation' => [
+            'summary' => 'Historical recommendation with soft-deleted asset.',
+            'proposed_assets' => [
+                ['operational_asset_id' => $craneId, 'assignment_type' => 'crane'],
+            ],
+        ],
+        'model' => 'gpt-5-mini',
+        'status' => 'pending_review',
+        'expires_at' => now()->addMinutes(15),
+    ])->load(['requestedBy', 'decidedBy']);
+
+    $serialized = OperationsWorkspaceViewModel::gptRecommendations(collect([$recommendation]));
+    $item = $serialized[0];
+
+    expect($item['proposed_assets'])->toHaveCount(1)
+        ->and($item['proposed_assets'][0]['operational_asset_id'])->toBe($craneId)
+        ->and($item['proposed_assets'][0]['asset_code'])->toBe('CR-RET-01')
+        ->and($item['proposed_assets'][0]['name'])->toBe('Retired Demag AC50')
+        ->and($item['proposed_assets'][0]['capacity'])->toBe('60 t');
+});
+
+it('OperationsWorkspaceViewModel normalizes scalar resource IDs and filters empty entries', function (): void {
+    $dispatcher = User::factory()->create(['name' => 'Dispatch Manager']);
+    $driver = User::factory()->create(['name' => 'Scalar Driver']);
+    $driver->syncRoles([RoleName::CraneOperator->value]);
+    $truck = OperationalAsset::query()->create([
+        'code' => 'TRK-SCALAR',
+        'name' => 'Volvo FH16',
+        'kind' => 'truck',
+        'status' => AssetStatus::Available,
+    ]);
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'JOB-REC-SCALAR',
+        'client' => 'Acme Corp',
+        'title' => 'Material Transport',
+        'site' => 'Ortigas',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::Draft,
+        'created_by' => $dispatcher->id,
+        'version' => 1,
+    ]);
+
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'hash-scalar',
+        'input_references' => ['user_ids' => [$driver->id], 'asset_ids' => [$truck->id]],
+        'recommendation' => [
+            'summary' => 'Recommendation with scalar resource IDs.',
+            'proposed_personnel' => [$driver->id, null, 0, 'invalid'],
+            'proposed_assets' => [$truck->id, null, -1],
+        ],
+        'model' => 'gpt-5-mini',
+        'status' => 'pending_review',
+        'expires_at' => now()->addMinutes(15),
+    ])->load(['requestedBy', 'decidedBy']);
+
+    $serialized = OperationsWorkspaceViewModel::gptRecommendations(collect([$recommendation]));
+    $item = $serialized[0];
+
+    expect($item['proposed_personnel'])->toHaveCount(1)
+        ->and($item['proposed_personnel'][0]['user_id'])->toBe($driver->id)
+        ->and($item['proposed_personnel'][0]['name'])->toBe('Scalar Driver')
+        ->and($item['proposed_assets'])->toHaveCount(1)
+        ->and($item['proposed_assets'][0]['operational_asset_id'])->toBe($truck->id)
+        ->and($item['proposed_assets'][0]['asset_code'])->toBe('TRK-SCALAR')
+        ->and($item['proposed_assets'][0]['name'])->toBe('Volvo FH16');
 });

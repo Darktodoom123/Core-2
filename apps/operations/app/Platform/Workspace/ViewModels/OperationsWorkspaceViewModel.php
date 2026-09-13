@@ -1086,52 +1086,190 @@ final class OperationsWorkspaceViewModel
     {
         $dispatchMorphClass = (new DispatchJob)->getMorphClass();
 
-        return $recommendations->map(static fn (GptRecommendation $rec): array => [
-            'id' => (int) $rec->getKey(),
-            'subject_type' => in_array($rec->subject_type, [DispatchJob::class, $dispatchMorphClass], true)
-                ? 'dispatch_job'
-                : $rec->subject_type,
-            'subject_id' => $rec->subject_id,
-            'purpose' => $rec->purpose,
-            'context_hash' => $rec->context_hash,
-            'status' => $rec->status->value,
-            'is_stale' => $rec->status === GptRecommendationStatus::Stale,
-            'prompt_summary' => $rec->prompt_summary,
-            'response_summary' => $rec->response_summary,
-            'recommendation' => $rec->recommendation ?? [],
-            'proposed_personnel' => is_array($rec->recommendation['proposed_personnel'] ?? null) ? $rec->recommendation['proposed_personnel'] : [],
-            'proposed_assets' => is_array($rec->recommendation['proposed_assets'] ?? null) ? $rec->recommendation['proposed_assets'] : [],
-            'conflicts' => $rec->conflicts ?? [],
-            'model' => $rec->model,
-            'cost_usd' => $rec->cost_usd !== null ? (float) $rec->cost_usd : null,
-            'usage' => is_array($rec->usage) ? [
-                'prompt_tokens' => (int) ($rec->usage['prompt_tokens'] ?? 0),
-                'completion_tokens' => (int) ($rec->usage['completion_tokens'] ?? 0),
-                'total_tokens' => (int) ($rec->usage['total_tokens'] ?? 0),
-            ] : null,
-            'generated_at' => $rec->generated_at?->toIso8601String(),
-            'latency_ms' => $rec->latency_ms,
-            'purge_at' => $rec->purge_at?->toIso8601String(),
-            'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
-            'expires_in_seconds' => $rec->expires_at instanceof Carbon ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
-            'is_expired' => $rec->isExpired(),
-            'is_retryable' => $rec->status !== GptRecommendationStatus::Accepted
-                && ($rec->status->isTerminal() || ($rec->status === GptRecommendationStatus::PendingReview && $rec->isExpired())),
-            'retry_url' => "/operations/gpt-recommendations/{$rec->id}/retry",
-            'error_message' => $rec->error_message,
-            'requested_by' => [
-                'id' => (int) $rec->requestedBy->getKey(),
-                'name' => $rec->requestedBy->name,
-            ],
-            'decided_by' => $rec->decidedBy === null ? null : [
-                'id' => (int) $rec->decidedBy->getKey(),
-                'name' => $rec->decidedBy->name,
-            ],
-            'decided_by_name' => $rec->decidedBy?->name,
-            'decided_at' => $rec->decided_at instanceof Carbon ? $rec->decided_at->toIso8601String() : null,
-            'created_at' => $rec->created_at instanceof Carbon ? $rec->created_at->toIso8601String() : null,
-            'is_advisory' => true,
-        ])->values()->all();
+        $userIds = [];
+        $assetIds = [];
+
+        foreach ($recommendations as $rec) {
+            $rawPersonnel = is_array($rec->recommendation['proposed_personnel'] ?? null)
+                ? $rec->recommendation['proposed_personnel']
+                : [];
+            foreach ($rawPersonnel as $person) {
+                if (is_array($person) && isset($person['user_id'])) {
+                    $userIds[] = (int) $person['user_id'];
+                } elseif (is_numeric($person) && (int) $person > 0) {
+                    $userIds[] = (int) $person;
+                }
+            }
+
+            $rawAssets = is_array($rec->recommendation['proposed_assets'] ?? null)
+                ? $rec->recommendation['proposed_assets']
+                : [];
+            foreach ($rawAssets as $asset) {
+                if (is_array($asset)) {
+                    $assetId = $asset['operational_asset_id'] ?? $asset['asset_id'] ?? null;
+                    if ($assetId !== null) {
+                        $assetIds[] = (int) $assetId;
+                    }
+                } elseif (is_numeric($asset) && (int) $asset > 0) {
+                    $assetIds[] = (int) $asset;
+                }
+            }
+        }
+
+        $users = $userIds !== []
+            ? User::query()->whereIn('id', array_unique($userIds))->with('roles:id,name')->get()->keyBy('id')
+            : collect();
+
+        $assets = $assetIds !== []
+            ? OperationalAsset::query()->withTrashed()->whereIn('id', array_unique($assetIds))->get()->keyBy('id')
+            : collect();
+
+        return $recommendations->map(static function (GptRecommendation $rec) use ($dispatchMorphClass, $users, $assets): array {
+            $rawPersonnel = is_array($rec->recommendation['proposed_personnel'] ?? null)
+                ? $rec->recommendation['proposed_personnel']
+                : [];
+
+            $proposedPersonnel = array_values(array_filter(array_map(static function (mixed $person) use ($users): ?array {
+                $userId = is_array($person)
+                    ? (int) ($person['user_id'] ?? 0)
+                    : (is_numeric($person) ? (int) $person : 0);
+
+                if ($userId <= 0) {
+                    return null;
+                }
+
+                $user = $users->get($userId);
+
+                $userName = $user instanceof User ? $user->name : null;
+                $userRole = ($user instanceof User && $user->operationalRole() !== null)
+                    ? $user->operationalRole()->value
+                    : null;
+
+                $name = (is_array($person) && ! empty($person['name']) && is_string($person['name']))
+                    ? $person['name']
+                    : $userName;
+
+                $role = (is_array($person) && ! empty($person['role']) && is_string($person['role']))
+                    ? $person['role']
+                    : $userRole;
+
+                $assignmentType = (is_array($person) && ! empty($person['assignment_type']) && is_string($person['assignment_type']))
+                    ? $person['assignment_type']
+                    : 'crew';
+
+                return [
+                    'user_id' => $userId,
+                    'name' => $name,
+                    'role' => $role,
+                    'assignment_type' => $assignmentType,
+                ];
+            }, $rawPersonnel)));
+
+            $rawAssets = is_array($rec->recommendation['proposed_assets'] ?? null)
+                ? $rec->recommendation['proposed_assets']
+                : [];
+
+            $proposedAssets = array_values(array_filter(array_map(static function (mixed $asset) use ($assets): ?array {
+                $assetId = is_array($asset)
+                    ? (int) ($asset['operational_asset_id'] ?? $asset['asset_id'] ?? 0)
+                    : (is_numeric($asset) ? (int) $asset : 0);
+
+                if ($assetId <= 0) {
+                    return null;
+                }
+
+                $assetModel = $assets->get($assetId);
+
+                $assetName = $assetModel instanceof OperationalAsset ? $assetModel->name : null;
+                $assetCode = $assetModel instanceof OperationalAsset ? $assetModel->code : null;
+                $assetKind = $assetModel instanceof OperationalAsset ? $assetModel->kind : null;
+                $assetCapacity = ($assetModel instanceof OperationalAsset && $assetModel->rated_capacity !== null)
+                    ? trim(((float) $assetModel->rated_capacity).' '.$assetModel->capacity_unit)
+                    : null;
+
+                $name = (is_array($asset) && ! empty($asset['name']) && is_string($asset['name']))
+                    ? $asset['name']
+                    : $assetName;
+
+                $code = (is_array($asset) && ! empty($asset['asset_code']) && is_string($asset['asset_code']))
+                    ? $asset['asset_code']
+                    : ((is_array($asset) && ! empty($asset['code']) && is_string($asset['code']))
+                        ? $asset['code']
+                        : $assetCode);
+
+                $kind = (is_array($asset) && ! empty($asset['kind']) && is_string($asset['kind']))
+                    ? $asset['kind']
+                    : $assetKind;
+
+                $capacity = (is_array($asset) && ! empty($asset['capacity']) && is_string($asset['capacity']))
+                    ? $asset['capacity']
+                    : $assetCapacity;
+
+                $assignmentType = (is_array($asset) && ! empty($asset['assignment_type']) && is_string($asset['assignment_type']))
+                    ? $asset['assignment_type']
+                    : ($kind ?? 'equipment');
+
+                return [
+                    'operational_asset_id' => $assetId,
+                    'asset_code' => $code,
+                    'name' => $name,
+                    'assignment_type' => $assignmentType,
+                    'kind' => $kind,
+                    'capacity' => $capacity,
+                ];
+            }, $rawAssets)));
+
+            $recData = $rec->recommendation ?? [];
+            $recData['proposed_personnel'] = $proposedPersonnel;
+            $recData['proposed_assets'] = $proposedAssets;
+
+            return [
+                'id' => (int) $rec->getKey(),
+                'subject_type' => in_array($rec->subject_type, [DispatchJob::class, $dispatchMorphClass], true)
+                    ? 'dispatch_job'
+                    : $rec->subject_type,
+                'subject_id' => $rec->subject_id,
+                'purpose' => $rec->purpose,
+                'context_hash' => $rec->context_hash,
+                'status' => $rec->status->value,
+                'is_stale' => $rec->status === GptRecommendationStatus::Stale,
+                'prompt_summary' => $rec->prompt_summary,
+                'response_summary' => $rec->response_summary,
+                'recommendation' => $recData,
+                'proposed_personnel' => $proposedPersonnel,
+                'proposed_assets' => $proposedAssets,
+                'conflicts' => $rec->conflicts ?? [],
+                'model' => $rec->model,
+                'cost_usd' => $rec->cost_usd !== null ? (float) $rec->cost_usd : null,
+                'usage' => is_array($rec->usage) ? [
+                    'prompt_tokens' => (int) ($rec->usage['prompt_tokens'] ?? 0),
+                    'completion_tokens' => (int) ($rec->usage['completion_tokens'] ?? 0),
+                    'total_tokens' => (int) ($rec->usage['total_tokens'] ?? 0),
+                ] : null,
+                'generated_at' => $rec->generated_at?->toIso8601String(),
+                'latency_ms' => $rec->latency_ms,
+                'purge_at' => $rec->purge_at?->toIso8601String(),
+                'expires_at' => $rec->expires_at instanceof Carbon ? $rec->expires_at->toIso8601String() : null,
+                'expires_in_seconds' => $rec->expires_at instanceof Carbon ? max(0, (int) now()->diffInSeconds($rec->expires_at, false)) : 0,
+                'is_expired' => $rec->isExpired(),
+                'is_retryable' => $rec->status !== GptRecommendationStatus::Accepted
+                    && ($rec->status->isTerminal() || ($rec->status === GptRecommendationStatus::PendingReview && $rec->isExpired())),
+                'retry_url' => "/operations/gpt-recommendations/{$rec->id}/retry",
+                'error_message' => $rec->error_message,
+                'requested_by' => [
+                    'id' => (int) ($rec->requestedBy?->getKey() ?? 0),
+                    'name' => $rec->requestedBy instanceof User ? $rec->requestedBy->name : 'System',
+                ],
+                'decided_by' => $rec->decidedBy === null ? null : [
+                    'id' => (int) $rec->decidedBy->getKey(),
+                    'name' => $rec->decidedBy->name,
+                ],
+                'decided_by_name' => $rec->decidedBy?->name,
+                'decided_at' => $rec->decided_at instanceof Carbon ? $rec->decided_at->toIso8601String() : null,
+                'created_at' => $rec->created_at instanceof Carbon ? $rec->created_at->toIso8601String() : null,
+                'is_advisory' => true,
+            ];
+        })->values()->all();
     }
 
     /**

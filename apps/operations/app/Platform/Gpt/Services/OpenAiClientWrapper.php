@@ -207,21 +207,29 @@ final class OpenAiClientWrapper
         $systemPrompt = $this->getSystemPrompt();
         $userMessage = $contextJson;
 
+        $isReasoningModel = (bool) preg_match('/^(?:openai\/)?(?:gpt-5|o[134])/i', $this->model);
+        $maxTokens = max(4000, (int) config('services.openai.max_completion_tokens', 4000));
+        $timeout = (int) config('services.openai.timeout', 60);
+
         $payload = [
             'model' => $this->model,
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $userMessage],
             ],
-            'max_completion_tokens' => 2000,
+            'max_completion_tokens' => $maxTokens,
             'response_format' => ['type' => 'json_object'],
         ];
+
+        if ($isReasoningModel) {
+            $payload['reasoning_effort'] = (string) config('services.openai.reasoning_effort', 'low');
+        }
 
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post("{$this->baseUrl}/chat/completions", $payload);
+            ])->timeout($timeout)->post("{$this->baseUrl}/chat/completions", $payload);
 
             if ($response->failed()) {
                 $status = $response->status();
@@ -507,14 +515,24 @@ final class OpenAiClientWrapper
         if (is_array($eligibleUser)) {
             $proposedPersonnel[] = [
                 'user_id' => $eligibleUser['user_id'],
+                'name' => $eligibleUser['name'] ?? null,
+                'role' => $eligibleUser['role'] ?? null,
                 'assignment_type' => $eligibleUser['assignment_type'],
             ];
         }
 
         $proposedAssets = [];
         if (is_array($eligibleAsset)) {
+            $capacity = isset($eligibleAsset['rated_capacity'])
+                ? trim(((float) $eligibleAsset['rated_capacity']).' '.($eligibleAsset['capacity_unit'] ?? ''))
+                : null;
+
             $proposedAssets[] = [
                 'operational_asset_id' => $eligibleAsset['asset_id'],
+                'name' => $eligibleAsset['name'] ?? null,
+                'asset_code' => $eligibleAsset['code'] ?? null,
+                'kind' => $eligibleAsset['kind'] ?? null,
+                'capacity' => $capacity ?: null,
                 'assignment_type' => $eligibleAsset['kind'],
             ];
         }
@@ -542,30 +560,42 @@ final class OpenAiClientWrapper
     private function getSystemPrompt(): string
     {
         return <<<'PROMPT'
-You are an advisory operational assistant for a industrial fleet and crane dispatch platform.
+You are an advisory operational assistant for an industrial fleet and crane dispatch platform.
 Your task is to analyze the provided bounded dispatch job requirements, eligible personnel candidates, and eligible asset candidates, and output an explainable recommendation.
 
 STRICT CONSTRAINTS:
 1. You are strictly ADVISORY. You CANNOT execute operational changes or approve exceptional work.
 2. Select ONLY personnel and assets marked as "eligible: true" in the context, unless noting explicit conflicts.
-3. Respond ONLY in valid JSON matching this exact structure:
+3. For proposed_personnel, you MUST identify the candidate from personnel_candidates and provide:
+   - "user_id": exact integer user_id from the candidate
+   - "name": candidate's exact full name
+   - "role": candidate's role (e.g. "crane_operator", "driver", "rigger")
+   - "assignment_type": the role for this assignment (e.g. "crane_operator", "driver", "crew")
+4. For proposed_assets, you MUST identify the candidate from asset_candidates and provide:
+   - "operational_asset_id": exact integer asset_id from the candidate
+   - "asset_code": candidate's exact asset code (e.g. "CR-101")
+   - "name": candidate's exact equipment name (e.g. "Liebherr LTM 1050")
+   - "kind": candidate's kind (e.g. "mobile_crane", "tower_crane", "truck")
+   - "capacity": rated capacity and unit if available (e.g. "50 t")
+   - "assignment_type": operational assignment kind (e.g. "crane", "truck", "equipment")
+5. Provide clear, professional reasons and assumptions explaining why these specific crew members and equipment assets were chosen (e.g. matching certifications, crane rated capacity vs load, fleet availability). In reasons, cite candidate names and asset codes directly so dispatchers immediately understand the suggestion.
+6. Respond ONLY in valid JSON matching this exact structure:
 {
   "summary": "String concise summary of recommendation",
   "proposed_personnel": [
-    { "user_id": 123, "assignment_type": "driver|crane_operator" }
+    { "user_id": 123, "name": "Personnel Full Name", "role": "crane_operator", "assignment_type": "driver|crane_operator" }
   ],
   "proposed_assets": [
-    { "operational_asset_id": 456, "assignment_type": "truck|crane|equipment" }
+    { "operational_asset_id": 456, "asset_code": "CR-101", "name": "Liebherr LTM 1050", "kind": "mobile_crane", "capacity": "50 t", "assignment_type": "crane" }
   ],
   "proposed_schedule": [
     ["08:00", "Event description"]
   ],
   "reasons": [
-    "String reason 1",
-    "String reason 2"
+    "String reason citing selected crew name or asset code"
   ],
   "assumptions": [
-    "String assumption 1"
+    "Operational assumption made during planning"
   ],
   "conflicts": [
     "String conflict 1"

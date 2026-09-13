@@ -18,7 +18,11 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Button, Modal, PageHeading, Panel } from '@/components/ui';
-import { formatDateTime, humanize } from '@/lib/formatters';
+import {
+    formatDateTime,
+    formatResourceCount,
+    humanize,
+} from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type {
@@ -917,8 +921,13 @@ function PendingRecommendationCard({
                                             {p.name || `User #${p.user_id}`}
                                         </strong>{' '}
                                         <span className="text-ink-soft">
-                                            ({p.assignment_type}
-                                            {p.role ? ` · ${p.role}` : ''})
+                                            ({humanize(p.assignment_type)}
+                                            {p.role &&
+                                            humanize(p.role) !==
+                                                humanize(p.assignment_type)
+                                                ? ` · ${humanize(p.role)}`
+                                                : ''}
+                                            )
                                         </span>
                                     </li>
                                 ))}
@@ -933,18 +942,29 @@ function PendingRecommendationCard({
                             <span>Assets ({rec.proposed_assets.length}):</span>
                         </div>
                         <ul className="grid gap-1 pl-4 sm:grid-cols-2">
-                            {rec.proposed_assets.map((a, idx) => (
-                                <li key={idx} className="text-ink">
-                                    <strong className="font-medium">
-                                        {a.name ||
-                                            a.asset_code ||
-                                            `Asset #${a.operational_asset_id}`}
-                                    </strong>{' '}
-                                    <span className="text-ink-soft">
-                                        ({a.assignment_type})
-                                    </span>
-                                </li>
-                            ))}
+                            {rec.proposed_assets.map((a, idx) => {
+                                const assetLabel = a.name
+                                    ? a.asset_code && a.asset_code !== a.name
+                                        ? `${a.asset_code} · ${a.name}`
+                                        : a.name
+                                    : a.asset_code ||
+                                      `Asset #${a.operational_asset_id}`;
+
+                                return (
+                                    <li key={idx} className="text-ink">
+                                        <strong className="font-medium">
+                                            {assetLabel}
+                                        </strong>{' '}
+                                        <span className="text-ink-soft">
+                                            ({humanize(a.assignment_type)}
+                                            {a.capacity
+                                                ? ` · ${a.capacity}`
+                                                : ''}
+                                            )
+                                        </span>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     </div>
                 )}
@@ -961,11 +981,13 @@ function PendingRecommendationCard({
                         <ul className="mt-1 list-disc space-y-0.5 pl-4">
                             {rec.conflicts.map((c, i) => (
                                 <li key={i}>
-                                    {String(
-                                        c.reason ||
-                                            c.message ||
-                                            JSON.stringify(c),
-                                    )}
+                                    {typeof c === 'string'
+                                        ? c
+                                        : String(
+                                              c.reason ||
+                                                  c.message ||
+                                                  JSON.stringify(c),
+                                          )}
                                 </li>
                             ))}
                         </ul>
@@ -1234,13 +1256,48 @@ export function AcceptGptModal({
     rec,
     onClose,
     returnFocusTo,
+    initialPersonnelIds,
+    initialAssetIds,
 }: {
     rec: GptRecommendationViewModel;
     onClose: () => void;
     returnFocusTo?: HTMLElement | null;
+    initialPersonnelIds?: number[];
+    initialAssetIds?: number[];
 }) {
+    const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>(
+        () =>
+            initialPersonnelIds ??
+            (rec.proposed_personnel ?? []).map((p) => p.user_id),
+    );
+    const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>(
+        () =>
+            initialAssetIds ??
+            (rec.proposed_assets ?? []).map((a) => a.operational_asset_id),
+    );
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const togglePersonnel = (userId: number) => {
+        setSelectedPersonnelIds((prev) =>
+            prev.includes(userId)
+                ? prev.filter((id) => id !== userId)
+                : [...prev, userId],
+        );
+    };
+
+    const toggleAsset = (assetId: number) => {
+        setSelectedAssetIds((prev) =>
+            prev.includes(assetId)
+                ? prev.filter((id) => id !== assetId)
+                : [...prev, assetId],
+        );
+    };
+
+    const hasProposedResources =
+        (rec.proposed_personnel?.length ?? 0) > 0 ||
+        (rec.proposed_assets?.length ?? 0) > 0;
+    const totalSelected = selectedPersonnelIds.length + selectedAssetIds.length;
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -1249,7 +1306,10 @@ export function AcceptGptModal({
 
         router.post(
             `/operations/gpt-recommendations/${rec.id}/accept`,
-            {},
+            {
+                selected_personnel_ids: selectedPersonnelIds,
+                selected_asset_ids: selectedAssetIds,
+            },
             {
                 onSuccess: () => onClose(),
                 onError: (errors) => setError(Object.values(errors).join(' ')),
@@ -1281,28 +1341,131 @@ export function AcceptGptModal({
             description={`Confirm this resource plan for Dispatch #${rec.subject_id}. Availability and job requirements will be checked again before any assignments are applied.`}
         >
             <div className="space-y-4">
+                {Boolean(rec.conflicts?.length) && (
+                    <div className="border-warning-subtle flex items-start gap-2 rounded-lg border bg-warning-soft p-3 text-xs text-warning-strong">
+                        <AlertTriangle
+                            className="mt-0.5 h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                            <p className="font-semibold">
+                                Review these constraints before confirming
+                            </p>
+                            <ul className="mt-1 list-disc space-y-1 pl-4 break-words">
+                                {rec.conflicts.map((conflict, index) => (
+                                    <li key={index}>
+                                        {typeof conflict === 'string'
+                                            ? conflict
+                                            : String(
+                                                  conflict.reason ??
+                                                      conflict.message ??
+                                                      'Review this constraint in the advisory.',
+                                              )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-1.5 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
                     <p className="font-semibold text-ink">Resources to apply</p>
                     <ul className="space-y-2 pt-1 text-ink-soft">
-                        {(rec.proposed_personnel ?? []).map((person) => (
-                            <li
-                                key={`${person.user_id}-${person.assignment_type}`}
-                            >
-                                {person.name ||
-                                    `Crew member #${person.user_id}`}{' '}
-                                · {humanize(person.assignment_type)}
-                            </li>
-                        ))}
-                        {(rec.proposed_assets ?? []).map((asset) => (
-                            <li
-                                key={`${asset.operational_asset_id}-${asset.assignment_type}`}
-                            >
-                                {asset.name ||
-                                    asset.asset_code ||
-                                    `Equipment #${asset.operational_asset_id}`}{' '}
-                                · {humanize(asset.assignment_type)}
-                            </li>
-                        ))}
+                        {(rec.proposed_personnel ?? []).map((person) => {
+                            const isSelected = selectedPersonnelIds.includes(
+                                person.user_id,
+                            );
+                            const displayName =
+                                person.name || `Crew member #${person.user_id}`;
+
+                            return (
+                                <li
+                                    key={`${person.user_id}-${person.assignment_type}`}
+                                    className={cn(
+                                        'flex items-start gap-2.5 rounded-md p-1.5 transition-colors',
+                                        isSelected
+                                            ? 'bg-surface'
+                                            : 'bg-transparent opacity-60',
+                                    )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() =>
+                                            togglePersonnel(person.user_id)
+                                        }
+                                        aria-label={`Select ${displayName}`}
+                                        className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                        disabled={processing}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <span className="font-medium text-ink">
+                                            {displayName}
+                                        </span>{' '}
+                                        · {humanize(person.assignment_type)}
+                                        {person.role &&
+                                            humanize(person.role) !==
+                                                humanize(
+                                                    person.assignment_type,
+                                                ) && (
+                                                <span className="text-ink-soft">
+                                                    {' '}
+                                                    ({humanize(person.role)})
+                                                </span>
+                                            )}
+                                    </div>
+                                </li>
+                            );
+                        })}
+                        {(rec.proposed_assets ?? []).map((asset) => {
+                            const isSelected = selectedAssetIds.includes(
+                                asset.operational_asset_id,
+                            );
+                            const assetLabel = asset.name
+                                ? asset.asset_code &&
+                                  asset.asset_code !== asset.name
+                                    ? `${asset.asset_code} · ${asset.name}`
+                                    : asset.name
+                                : asset.asset_code ||
+                                  `Equipment #${asset.operational_asset_id}`;
+
+                            return (
+                                <li
+                                    key={`${asset.operational_asset_id}-${asset.assignment_type}`}
+                                    className={cn(
+                                        'flex items-start gap-2.5 rounded-md p-1.5 transition-colors',
+                                        isSelected
+                                            ? 'bg-surface'
+                                            : 'bg-transparent opacity-60',
+                                    )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() =>
+                                            toggleAsset(
+                                                asset.operational_asset_id,
+                                            )
+                                        }
+                                        aria-label={`Select ${assetLabel}`}
+                                        className="mt-0.5 h-4 w-4 cursor-pointer rounded accent-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                                        disabled={processing}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <span className="font-medium text-ink">
+                                            {assetLabel}
+                                        </span>{' '}
+                                        · {humanize(asset.assignment_type)}
+                                        {asset.capacity && (
+                                            <span className="text-ink-soft">
+                                                {' '}
+                                                ({asset.capacity})
+                                            </span>
+                                        )}
+                                    </div>
+                                </li>
+                            );
+                        })}
                     </ul>
                     {!rec.proposed_personnel?.length &&
                         !rec.proposed_assets?.length && (
@@ -1333,11 +1496,18 @@ export function AcceptGptModal({
                     <Button
                         type="submit"
                         variant="primary"
-                        disabled={processing}
+                        disabled={
+                            processing ||
+                            (hasProposedResources && totalSelected === 0)
+                        }
                     >
                         {processing
                             ? 'Applying Assignment…'
-                            : 'Confirm & Apply Resource Plan'}
+                            : hasProposedResources
+                              ? totalSelected === 0
+                                  ? 'Confirm & Apply Selected'
+                                  : `Confirm & Apply ${formatResourceCount(selectedPersonnelIds.length, selectedAssetIds.length)}`
+                              : 'Confirm & Apply Resource Plan'}
                     </Button>
                 </form>
             </div>

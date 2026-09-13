@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DispatchAdvisoryCard } from '@/components/workspace/dispatch-advisory-card';
 import {
     AcceptGptModal,
@@ -50,6 +50,12 @@ export function DispatchGptAdvisory({
     const [selectedForReject, setSelectedForReject] =
         useState<GptRecommendationViewModel | null>(null);
     const [modalTrigger, setModalTrigger] = useState<HTMLElement | null>(null);
+    const [modalPersonnelIds, setModalPersonnelIds] = useState<
+        number[] | undefined
+    >();
+    const [modalAssetIds, setModalAssetIds] = useState<number[] | undefined>();
+    const [applying, setApplying] = useState(false);
+    const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
     const [requesting, setRequesting] = useState(false);
     const [requestError, setRequestError] = useState<string | null>(null);
     const recommendation = useMemo(
@@ -70,6 +76,25 @@ export function DispatchGptAdvisory({
                 ),
         [job.id, recommendations],
     );
+
+    const isPending =
+        requesting ||
+        recommendation?.status === 'draft' ||
+        recommendation?.status === 'processing';
+
+    useEffect(() => {
+        if (!isPending) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['gptRecommendations'],
+            });
+        }, 3500);
+
+        return () => window.clearInterval(interval);
+    }, [isPending]);
 
     const requestRecommendation = (retry = false) => {
         setRequestError(null);
@@ -96,19 +121,50 @@ export function DispatchGptAdvisory({
         );
     };
 
+    const handleApply = (personnelIds: number[], assetIds: number[]) => {
+        if (!recommendation) {
+            return;
+        }
+
+        setRequestError(null);
+        setApplying(true);
+        setAppliedNotice(null);
+
+        router.post(
+            `/operations/gpt-recommendations/${recommendation.id}/accept`,
+            {
+                selected_personnel_ids: personnelIds,
+                selected_asset_ids: assetIds,
+            },
+            {
+                preserveScroll: true,
+                errorBag,
+                only: ['gptRecommendations', 'jobs', 'errors', 'flash'],
+                onSuccess: () => {
+                    setAppliedNotice('Resource plan applied successfully.');
+                },
+                onError: (errors) =>
+                    setRequestError(Object.values(errors).join(' ')),
+                onFinish: () => setApplying(false),
+            },
+        );
+    };
+
     return (
         <>
             <DispatchAdvisoryCard
                 jobId={job.id}
                 recommendation={recommendation}
                 automatic={Boolean(capabilities.proactive_gpt_assistance)}
-                busy={requesting}
+                busy={requesting || applying}
                 canRequest={capabilities.request_gpt_assistance}
                 canReview={capabilities.decide_gpt_recommendation}
                 canRetry={capabilities.retry_gpt_recommendation}
                 canViewHistory={isAdmin || capabilities.request_gpt_assistance}
                 error={
-                    requesting ? null : (requestError ?? persistedRequestError)
+                    requesting || applying
+                        ? null
+                        : (requestError ?? persistedRequestError)
                 }
                 assignmentUrl={
                     !['draft', 'pending_approval', 'scheduled'].includes(
@@ -117,13 +173,18 @@ export function DispatchGptAdvisory({
                         ? assignmentWorkspaceUrl(job.id, returnTo)
                         : undefined
                 }
+                manualAssignmentUrl={assignmentWorkspaceUrl(job.id, returnTo)}
                 onRequest={() => requestRecommendation()}
                 onRetry={() => requestRecommendation(true)}
-                onReview={() => {
+                onApply={handleApply}
+                appliedNotice={appliedNotice}
+                onReview={(personnelIds, assetIds) => {
                     if (!recommendation) {
                         return;
                     }
 
+                    setModalPersonnelIds(personnelIds);
+                    setModalAssetIds(assetIds);
                     setModalTrigger(
                         document.activeElement instanceof HTMLElement
                             ? document.activeElement
@@ -152,7 +213,13 @@ export function DispatchGptAdvisory({
             {selectedForAccept && (
                 <AcceptGptModal
                     rec={selectedForAccept}
-                    onClose={() => setSelectedForAccept(null)}
+                    initialPersonnelIds={modalPersonnelIds}
+                    initialAssetIds={modalAssetIds}
+                    onClose={() => {
+                        setSelectedForAccept(null);
+                        setModalPersonnelIds(undefined);
+                        setModalAssetIds(undefined);
+                    }}
                     returnFocusTo={modalTrigger}
                 />
             )}

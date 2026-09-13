@@ -4,16 +4,22 @@ import {
     ArrowUpRight,
     Check,
     Clock,
+    Construction,
     LoaderCircle,
     RefreshCw,
+    Sparkles,
     Truck,
+    User,
     Users,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui';
-import { humanize } from '@/lib/formatters';
+import { formatResourceCount, humanize } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import type { GptRecommendationViewModel } from '@/types/workspace';
+
+export { formatResourceCount };
 
 export interface DispatchAdvisoryCardProps {
     jobId: number;
@@ -26,11 +32,20 @@ export interface DispatchAdvisoryCardProps {
     canViewHistory?: boolean;
     error: string | null;
     assignmentUrl?: string;
+    manualAssignmentUrl?: string;
     onRequest: () => void;
     onRetry: () => void;
-    onReview: () => void;
+    onReview: (
+        selectedPersonnelIds?: number[],
+        selectedAssetIds?: number[],
+    ) => void;
+    onApply?: (
+        selectedPersonnelIds: number[],
+        selectedAssetIds: number[],
+    ) => void;
     onReject: () => void;
     details?: ReactNode;
+    appliedNotice?: string | null;
 }
 
 export function DispatchAdvisoryCard({
@@ -43,15 +58,91 @@ export function DispatchAdvisoryCard({
     canRetry,
     error,
     assignmentUrl,
+    manualAssignmentUrl,
     onRequest,
     onRetry,
     onReview,
+    onApply,
     onReject,
     details,
+    appliedNotice,
 }: DispatchAdvisoryCardProps) {
+    const manualUrl = manualAssignmentUrl ?? assignmentUrl;
     const queued = rec?.status === 'draft';
     const processing = rec?.status === 'processing';
     const pending = busy || queued || processing;
+
+    const [prevRecKey, setPrevRecKey] = useState<string | null>(() =>
+        rec ? `${rec.id}:${rec.context_hash}:${rec.status}` : null,
+    );
+    const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>(
+        () => (rec?.proposed_personnel ?? []).map((p) => p.user_id),
+    );
+    const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>(() =>
+        (rec?.proposed_assets ?? []).map((a) => a.operational_asset_id),
+    );
+
+    const currentRecKey = rec
+        ? `${rec.id}:${rec.context_hash}:${rec.status}`
+        : null;
+
+    if (currentRecKey !== prevRecKey) {
+        setPrevRecKey(currentRecKey);
+        setSelectedPersonnelIds(
+            (rec?.proposed_personnel ?? []).map((p) => p.user_id),
+        );
+        setSelectedAssetIds(
+            (rec?.proposed_assets ?? []).map((a) => a.operational_asset_id),
+        );
+    }
+
+    const togglePersonnel = (userId: number) => {
+        setSelectedPersonnelIds((prev) =>
+            prev.includes(userId)
+                ? prev.filter((id) => id !== userId)
+                : [...prev, userId],
+        );
+    };
+
+    const toggleAsset = (assetId: number) => {
+        setSelectedAssetIds((prev) =>
+            prev.includes(assetId)
+                ? prev.filter((id) => id !== assetId)
+                : [...prev, assetId],
+        );
+    };
+
+    const selectedPersonnelCount = selectedPersonnelIds.length;
+    const selectedAssetCount = selectedAssetIds.length;
+    const totalSelected = selectedPersonnelCount + selectedAssetCount;
+    const hasConflicts = Boolean(rec?.conflicts && rec.conflicts.length > 0);
+
+    const [prevPending, setPrevPending] = useState(pending);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+    if (prevPending !== pending) {
+        setPrevPending(pending);
+
+        if (!pending) {
+            setElapsedSeconds(0);
+        }
+    }
+
+    useEffect(() => {
+        if (!pending) {
+            return;
+        }
+
+        const timer = window.setInterval(() => {
+            setElapsedSeconds((prev) => prev + 1);
+        }, 1000);
+
+        return () => {
+            window.clearInterval(timer);
+        };
+    }, [pending]);
+
+    const isProlonged = pending && elapsedSeconds >= 25;
     const expired =
         rec?.status !== 'accepted' &&
         (rec?.is_expired || rec?.status === 'expired');
@@ -123,110 +214,443 @@ export function DispatchAdvisoryCard({
                     : 'Request a resource check to find suitable crew and equipment for this job.';
     const retry = Boolean(rec?.is_retryable && canRetry);
     const allowRequest = !pending && !ready && !retry && canRequest;
+    const canRefreshExpired = (expired || stale) && (canRetry || canRequest);
+
+    const badgeVariant = pending
+        ? processing
+            ? 'bg-brand-soft text-brand-strong ring-1 ring-brand/30'
+            : 'bg-surface-subtle text-ink-soft ring-1 ring-line'
+        : ready || accepted
+          ? 'bg-success-soft text-success-strong ring-1 ring-success/30'
+          : expired || stale
+            ? 'bg-warning-soft text-warning-strong ring-1 ring-warning/30'
+            : rec?.status === 'failed'
+              ? 'bg-danger-soft text-danger-strong ring-1 ring-danger/30'
+              : 'bg-surface-subtle text-ink-soft ring-1 ring-line';
+
+    const badgeIcon = processing ? (
+        <LoaderCircle
+            className="h-3 w-3 motion-safe:animate-spin"
+            aria-hidden="true"
+        />
+    ) : ready || accepted ? (
+        <Check className="h-3 w-3" aria-hidden="true" />
+    ) : rec?.status === 'failed' ? (
+        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+    ) : (
+        <Clock className="h-3 w-3" aria-hidden="true" />
+    );
 
     return (
         <section
-            className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface"
+            className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-xs transition-colors"
             aria-labelledby={`dispatch-gpt-advisory-${jobId}`}
         >
-            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-4">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-surface px-4 py-3.5">
                 <div className="min-w-0">
                     <h3
                         id={`dispatch-gpt-advisory-${jobId}`}
-                        className="text-sm font-semibold text-ink"
+                        className="flex items-center gap-1.5 text-sm font-semibold text-ink"
                     >
-                        AI assistance
+                        <Sparkles
+                            className="h-4 w-4 shrink-0 text-brand"
+                            aria-hidden="true"
+                        />
+                        <span>AI assistance</span>
                     </h3>
-                    <p className="mt-1 text-xs text-ink-soft">
+                    <p className="mt-0.5 text-xs text-ink-soft">
                         GPT dispatch advisory
                     </p>
                 </div>
                 <span
                     className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium',
-                        ready || accepted
-                            ? 'bg-success-soft text-success-strong'
-                            : expired || stale || rec?.status === 'failed'
-                              ? 'bg-warning-soft text-warning-strong'
-                              : 'bg-surface-subtle text-ink-soft',
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-2xs',
+                        badgeVariant,
                     )}
                 >
-                    {pending ? (
-                        <LoaderCircle
-                            className="h-3 w-3 motion-safe:animate-spin"
-                            aria-hidden="true"
-                        />
-                    ) : ready || accepted ? (
-                        <Check className="h-3 w-3" aria-hidden="true" />
-                    ) : (
-                        <Clock className="h-3 w-3" aria-hidden="true" />
-                    )}
+                    {badgeIcon}
                     {status}
                 </span>
             </header>
 
             <div className="space-y-4 p-4">
-                <div role="status" aria-live="polite" aria-atomic="true">
-                    <h4 className="text-sm font-semibold text-ink">{title}</h4>
-                    <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                        {description}
-                    </p>
+                <div
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className={cn(
+                        'transition-all duration-150',
+                        (expired || stale) &&
+                            'rounded-xl border border-warning/30 bg-warning-soft/50 p-3.5 shadow-2xs',
+                    )}
+                >
+                    <div className="flex items-start gap-3">
+                        {(expired || stale) && (
+                            <div
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong ring-1 ring-warning/30"
+                                aria-hidden="true"
+                            >
+                                <Clock className="h-4 w-4" />
+                            </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <h4
+                                className={cn(
+                                    'text-sm font-semibold',
+                                    expired || stale
+                                        ? 'text-warning-strong'
+                                        : 'text-ink',
+                                )}
+                            >
+                                {title}
+                            </h4>
+                            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                                {description}
+                            </p>
+                            {canRefreshExpired && (
+                                <div className="mt-3">
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        onClick={canRetry ? onRetry : onRequest}
+                                        disabled={busy}
+                                        aria-label="Refresh suggestions"
+                                        className="w-full justify-center gap-2 font-semibold shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                    >
+                                        <RefreshCw
+                                            className={cn(
+                                                'h-4 w-4 shrink-0',
+                                                busy &&
+                                                    'motion-safe:animate-spin',
+                                            )}
+                                            aria-hidden="true"
+                                        />
+                                        Refresh suggestions
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
+                {isProlonged && (
+                    <div
+                        role="alert"
+                        className="border-warning-subtle rounded-lg border bg-warning-soft p-3 text-xs text-warning-strong"
+                    >
+                        <div className="flex items-start gap-2">
+                            <AlertTriangle
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-semibold">
+                                    Taking longer than expected
+                                </p>
+                                <p className="mt-1 leading-relaxed text-ink-soft">
+                                    The queue worker may be busy. You can
+                                    continue waiting, retry the check, or assign
+                                    resources manually.
+                                </p>
+                                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                                    {canRetry && (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={onRetry}
+                                            disabled={busy}
+                                            className="gap-1.5"
+                                        >
+                                            <RefreshCw
+                                                className={cn(
+                                                    'h-3.5 w-3.5',
+                                                    busy &&
+                                                        'motion-safe:animate-spin',
+                                                )}
+                                                aria-hidden="true"
+                                            />
+                                            Retry check
+                                        </Button>
+                                    )}
+                                    {manualUrl && (
+                                        <Link
+                                            href={manualUrl}
+                                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-ink hover:underline"
+                                        >
+                                            Assign manually
+                                            <ArrowUpRight
+                                                className="h-3 w-3"
+                                                aria-hidden="true"
+                                            />
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showResources ? (
-                    <div className="divide-y divide-line">
+                    <div
+                        className={cn(
+                            'space-y-3 divide-y divide-line/60 transition-all duration-200',
+                            (expired || stale) && 'opacity-75 grayscale-[20%]',
+                        )}
+                    >
                         <ResourceGroup
                             label="Suggested crew"
                             icon={
-                                <Users className="h-4 w-4" aria-hidden="true" />
+                                <Users
+                                    className="h-4 w-4 text-ink-soft"
+                                    aria-hidden="true"
+                                />
                             }
                             empty="No crew proposed"
                         >
-                            {personnel.map((person) => (
-                                <li
-                                    key={`${person.user_id}-${person.assignment_type}`}
-                                    className="min-w-0 py-2"
-                                >
-                                    <p className="text-sm font-medium break-words text-ink">
-                                        {person.name ||
-                                            `Crew member #${person.user_id}`}
-                                    </p>
-                                    <p className="mt-0.5 text-xs break-words text-ink-soft">
-                                        {humanize(person.assignment_type)}
-                                    </p>
-                                </li>
-                            ))}
+                            {personnel.map((person) => {
+                                const hasName = Boolean(person.name);
+                                const displayName =
+                                    person.name ||
+                                    `Crew member #${person.user_id}`;
+                                const initials = getInitials(person.name);
+                                const isSelected =
+                                    selectedPersonnelIds.includes(
+                                        person.user_id,
+                                    );
+
+                                return (
+                                    <li
+                                        key={`${person.user_id}-${person.assignment_type}`}
+                                        className={cn(
+                                            'group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-150',
+                                            expired || stale
+                                                ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
+                                                : isSelected
+                                                  ? 'border-line-strong/60 bg-surface shadow-2xs hover:border-line-strong hover:shadow-xs'
+                                                  : 'border-line/50 bg-surface/40 opacity-60 hover:bg-surface-subtle/50 hover:opacity-80',
+                                        )}
+                                    >
+                                        {ready && canReview && (
+                                            <label className="-m-0.5 flex shrink-0 cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-surface-subtle/60">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() =>
+                                                        togglePersonnel(
+                                                            person.user_id,
+                                                        )
+                                                    }
+                                                    aria-label={`Select ${displayName}`}
+                                                    className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                    disabled={busy}
+                                                />
+                                            </label>
+                                        )}
+                                        <div
+                                            className={cn(
+                                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong/40 bg-surface-subtle text-xs font-semibold text-ink shadow-2xs transition-colors',
+                                                !(expired || stale) &&
+                                                    'group-hover:border-line-strong group-hover:bg-surface',
+                                            )}
+                                            aria-hidden="true"
+                                        >
+                                            {initials || (
+                                                <User
+                                                    className={cn(
+                                                        'h-4 w-4 text-ink-soft transition-colors',
+                                                        !(expired || stale) &&
+                                                            'group-hover:text-ink',
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <p
+                                                    className="truncate text-sm font-semibold text-ink"
+                                                    title={displayName}
+                                                >
+                                                    {displayName}
+                                                </p>
+                                                {hasName && (
+                                                    <span className="inline-flex shrink-0 items-center rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft tabular-nums shadow-2xs ring-1 ring-line">
+                                                        #{person.user_id}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                                                <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                                    {humanize(
+                                                        person.assignment_type,
+                                                    )}
+                                                </span>
+                                                {person.role &&
+                                                    humanize(person.role) !==
+                                                        humanize(
+                                                            person.assignment_type,
+                                                        ) && (
+                                                        <span className="text-[11px] text-ink-soft">
+                                                            ·{' '}
+                                                            {humanize(
+                                                                person.role,
+                                                            )}
+                                                        </span>
+                                                    )}
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ResourceGroup>
-                        <ResourceGroup
-                            label="Suggested equipment"
-                            icon={
-                                <Truck className="h-4 w-4" aria-hidden="true" />
-                            }
-                            empty="No equipment proposed"
-                        >
-                            {assets.map((asset) => (
-                                <li
-                                    key={`${asset.operational_asset_id}-${asset.assignment_type}`}
-                                    className="min-w-0 py-2"
-                                >
-                                    <p className="text-sm font-medium break-words text-ink">
-                                        {asset.name ||
-                                            asset.asset_code ||
-                                            `Equipment #${asset.operational_asset_id}`}
-                                    </p>
-                                    <p className="mt-0.5 text-xs break-words text-ink-soft">
-                                        {[
-                                            asset.asset_code !== asset.name
-                                                ? asset.asset_code
-                                                : null,
-                                            humanize(asset.assignment_type),
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' · ')}
-                                    </p>
-                                </li>
-                            ))}
-                        </ResourceGroup>
+                        <div className="pt-3">
+                            <ResourceGroup
+                                label="Suggested equipment"
+                                icon={
+                                    <Truck
+                                        className="h-4 w-4 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                }
+                                empty="No equipment proposed"
+                            >
+                                {assets.map((asset) => {
+                                    const hasName = Boolean(asset.name);
+                                    const hasCode = Boolean(asset.asset_code);
+                                    const isCodeSameAsName =
+                                        hasName &&
+                                        hasCode &&
+                                        asset.name === asset.asset_code;
+                                    const displayName =
+                                        asset.name ||
+                                        (!hasCode
+                                            ? `Equipment #${asset.operational_asset_id}`
+                                            : null);
+                                    const showName =
+                                        displayName &&
+                                        (!hasCode || !isCodeSameAsName);
+                                    const isCrane =
+                                        asset.kind
+                                            ?.toLowerCase()
+                                            .includes('crane') ||
+                                        asset.assignment_type
+                                            ?.toLowerCase()
+                                            .includes('crane');
+                                    const IconComponent = isCrane
+                                        ? Construction
+                                        : Truck;
+                                    const isSelected =
+                                        selectedAssetIds.includes(
+                                            asset.operational_asset_id,
+                                        );
+                                    const assetLabel = asset.name
+                                        ? asset.asset_code &&
+                                          asset.asset_code !== asset.name
+                                            ? `${asset.asset_code} · ${asset.name}`
+                                            : asset.name
+                                        : asset.asset_code ||
+                                          `Equipment #${asset.operational_asset_id}`;
+
+                                    return (
+                                        <li
+                                            key={`${asset.operational_asset_id}-${asset.assignment_type}`}
+                                            className={cn(
+                                                'group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-150',
+                                                expired || stale
+                                                    ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
+                                                    : isSelected
+                                                      ? 'border-line-strong/60 bg-surface shadow-2xs hover:border-line-strong hover:shadow-xs'
+                                                      : 'border-line/50 bg-surface/40 opacity-60 hover:bg-surface-subtle/50 hover:opacity-80',
+                                            )}
+                                        >
+                                            {ready && canReview && (
+                                                <label className="-m-0.5 flex shrink-0 cursor-pointer items-center justify-center rounded-md p-1 transition-colors hover:bg-surface-subtle/60">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() =>
+                                                            toggleAsset(
+                                                                asset.operational_asset_id,
+                                                            )
+                                                        }
+                                                        aria-label={`Select ${assetLabel}`}
+                                                        className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                        disabled={busy}
+                                                    />
+                                                </label>
+                                            )}
+                                            <div
+                                                className={cn(
+                                                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line/80 bg-surface-subtle/80 text-ink shadow-2xs transition-colors',
+                                                    !(expired || stale) &&
+                                                        'group-hover:border-line-strong',
+                                                )}
+                                                aria-hidden="true"
+                                            >
+                                                <IconComponent
+                                                    className={cn(
+                                                        'h-4 w-4 text-ink-soft transition-colors',
+                                                        !(expired || stale) &&
+                                                            'group-hover:text-ink',
+                                                    )}
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    {hasCode && (
+                                                        <span className="inline-flex shrink-0 items-center rounded-md bg-surface px-1.5 py-0.5 font-mono text-xs font-semibold text-ink tabular-nums shadow-2xs ring-1 ring-line">
+                                                            {asset.asset_code}
+                                                        </span>
+                                                    )}
+                                                    {showName && (
+                                                        <p
+                                                            className="truncate text-sm font-semibold text-ink"
+                                                            title={
+                                                                displayName ??
+                                                                undefined
+                                                            }
+                                                        >
+                                                            {displayName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                                                    <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                                        {humanize(
+                                                            asset.assignment_type,
+                                                        )}
+                                                    </span>
+                                                    {asset.capacity && (
+                                                        <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                                            {asset.capacity}
+                                                        </span>
+                                                    )}
+                                                    {(hasName || hasCode) && (
+                                                        <span className="inline-flex items-center rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft tabular-nums ring-1 ring-line">
+                                                            #
+                                                            {
+                                                                asset.operational_asset_id
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {asset.kind &&
+                                                        humanize(asset.kind) !==
+                                                            humanize(
+                                                                asset.assignment_type,
+                                                            ) && (
+                                                            <span className="text-[11px] text-ink-soft">
+                                                                ·{' '}
+                                                                {humanize(
+                                                                    asset.kind,
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                </div>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ResourceGroup>
+                        </div>
                     </div>
                 ) : !rec || pending ? (
                     <div className="divide-y divide-line rounded-lg bg-surface-subtle/60 px-3">
@@ -235,17 +659,55 @@ export function DispatchAdvisoryCard({
                             icon={
                                 <Users className="h-4 w-4" aria-hidden="true" />
                             }
-                            pending={pending}
+                            subtitle={
+                                pending
+                                    ? processing
+                                        ? 'Checking driver & operator qualifications'
+                                        : 'Queued for crew eligibility check'
+                                    : 'Suggestions will appear here'
+                            }
                         />
                         <Placeholder
                             label="Equipment"
                             icon={
                                 <Truck className="h-4 w-4" aria-hidden="true" />
                             }
-                            pending={pending}
+                            subtitle={
+                                pending
+                                    ? processing
+                                        ? 'Matching cranes, transport trucks & flatbeds'
+                                        : 'Queued for asset capacity & schedule fit'
+                                    : 'Suggestions will appear here'
+                            }
                         />
                     </div>
                 ) : null}
+
+                {pending && !isProlonged && (
+                    <div className="rounded-lg border border-line/70 bg-surface-subtle/50 p-3 text-xs text-ink-soft">
+                        <p className="font-medium text-ink">
+                            You don&apos;t have to wait
+                        </p>
+                        <p className="mt-0.5 leading-relaxed">
+                            Assignments can be made manually at any time without
+                            waiting for the suggestion.
+                        </p>
+                        {manualUrl && (
+                            <div className="mt-2">
+                                <Link
+                                    href={manualUrl}
+                                    className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
+                                >
+                                    Assign resources manually
+                                    <ArrowUpRight
+                                        className="h-3 w-3"
+                                        aria-hidden="true"
+                                    />
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {!pending && Boolean(rec?.conflicts.length) && (
                     <div className="flex items-start gap-2 rounded-lg bg-warning-soft p-3 text-xs text-warning-strong">
@@ -260,11 +722,13 @@ export function DispatchAdvisoryCard({
                             <ul className="mt-1 list-disc space-y-1 pl-4 break-words">
                                 {rec?.conflicts.map((conflict, index) => (
                                     <li key={index}>
-                                        {String(
-                                            conflict.reason ??
-                                                conflict.message ??
-                                                'Review this constraint in the full advisory.',
-                                        )}
+                                        {typeof conflict === 'string'
+                                            ? conflict
+                                            : String(
+                                                  conflict.reason ??
+                                                      conflict.message ??
+                                                      'Review this constraint in the full advisory.',
+                                              )}
                                     </li>
                                 ))}
                             </ul>
@@ -287,11 +751,11 @@ export function DispatchAdvisoryCard({
                 )}
 
                 {ready && canReview && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 pt-1">
                         {assignmentUrl ? (
                             <Link
                                 href={assignmentUrl}
-                                className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-3 py-2 text-center text-sm font-semibold text-ink hover:bg-brand-strong hover:text-white"
+                                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2 text-center text-sm font-semibold text-ink shadow-xs transition-all duration-150 hover:bg-brand-strong hover:text-white active:scale-[0.98]"
                             >
                                 Review in assignment workspace{' '}
                                 <ArrowUpRight
@@ -299,51 +763,151 @@ export function DispatchAdvisoryCard({
                                     aria-hidden="true"
                                 />
                             </Link>
-                        ) : (
+                        ) : !hasResources ? (
                             <Button
                                 variant="primary"
-                                className="w-full whitespace-normal"
-                                onClick={onReview}
+                                className="w-full whitespace-normal shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                onClick={() =>
+                                    onReview(
+                                        selectedPersonnelIds,
+                                        selectedAssetIds,
+                                    )
+                                }
                             >
-                                {hasResources
-                                    ? 'Review & apply suggestion'
-                                    : 'Review advisory'}
+                                Review advisory
                             </Button>
+                        ) : hasConflicts ? (
+                            <Button
+                                variant="primary"
+                                className="w-full whitespace-normal shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                onClick={() =>
+                                    onReview(
+                                        selectedPersonnelIds,
+                                        selectedAssetIds,
+                                    )
+                                }
+                            >
+                                Review &amp; Resolve Conflicts
+                            </Button>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="primary"
+                                    className="w-full whitespace-normal shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                    disabled={totalSelected === 0 || busy}
+                                    onClick={() => {
+                                        if (onApply) {
+                                            onApply(
+                                                selectedPersonnelIds,
+                                                selectedAssetIds,
+                                            );
+                                        } else {
+                                            onReview(
+                                                selectedPersonnelIds,
+                                                selectedAssetIds,
+                                            );
+                                        }
+                                    }}
+                                >
+                                    {busy
+                                        ? 'Applying Assignment…'
+                                        : totalSelected === 0
+                                          ? 'Apply selected'
+                                          : `Apply ${formatResourceCount(selectedPersonnelCount, selectedAssetCount)}`}
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="w-full shadow-2xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                    disabled={busy}
+                                    onClick={() =>
+                                        onReview(
+                                            selectedPersonnelIds,
+                                            selectedAssetIds,
+                                        )
+                                    }
+                                >
+                                    Review details
+                                </Button>
+                            </>
                         )}
                         <Button
                             variant="quiet"
                             size="sm"
-                            className="w-full"
+                            className="w-full transition-transform duration-150 ease-out active:scale-[0.98]"
                             onClick={onReject}
+                            disabled={busy}
                         >
                             Decline suggestion
                         </Button>
                     </div>
                 )}
-                {!pending && retry && (
+                {appliedNotice && (
+                    <div
+                        role="status"
+                        className="border-success-subtle flex items-center gap-2 rounded-xl border bg-success-soft/80 p-3 text-xs font-medium text-success-strong shadow-2xs"
+                    >
+                        <Check
+                            className="h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span>{appliedNotice}</span>
+                    </div>
+                )}
+                {!pending && !(expired || stale) && retry && (
                     <Button
                         variant="secondary"
                         size="sm"
                         onClick={onRetry}
-                        className="gap-2"
+                        disabled={busy}
+                        className="gap-2 shadow-2xs transition-transform duration-150 ease-out active:scale-[0.98]"
                     >
-                        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                        <RefreshCw
+                            className={cn(
+                                'h-3.5 w-3.5',
+                                busy && 'motion-safe:animate-spin',
+                            )}
+                            aria-hidden="true"
+                        />
                         {rec?.status === 'failed'
                             ? 'Try again'
                             : 'Refresh suggestions'}
                     </Button>
                 )}
-                {allowRequest && (
+                {allowRequest && !(expired || stale) && (
                     <Button
                         variant="quiet"
                         size="sm"
                         onClick={onRequest}
-                        className="gap-2"
+                        disabled={busy}
+                        className="gap-2 transition-transform duration-150 ease-out active:scale-[0.98]"
                     >
-                        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                        <RefreshCw
+                            className={cn(
+                                'h-3.5 w-3.5',
+                                busy && 'motion-safe:animate-spin',
+                            )}
+                            aria-hidden="true"
+                        />
                         {rec ? 'Request new suggestion' : 'Request now'}
                     </Button>
                 )}
+                {!pending &&
+                    (rec?.status === 'failed' || rec?.status === 'rejected') &&
+                    manualUrl && (
+                        <div>
+                            <Link
+                                href={manualUrl}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+                            >
+                                Assign resources manually
+                                <ArrowUpRight
+                                    className="h-3 w-3"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        </div>
+                    )}
                 {error && (
                     <p role="alert" className="text-xs text-danger">
                         {error}
@@ -352,6 +916,26 @@ export function DispatchAdvisoryCard({
             </div>
         </section>
     );
+}
+
+function getInitials(name?: string | null): string {
+    if (!name) {
+        return '';
+    }
+
+    const clean = name.trim();
+
+    if (!clean) {
+        return '';
+    }
+
+    const parts = clean.split(/\s+/);
+
+    if (parts.length === 1) {
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function ResourceGroup({
@@ -366,18 +950,22 @@ function ResourceGroup({
     children: ReactNode[];
 }) {
     return (
-        <div className="py-3 first:pt-0 last:pb-0">
-            <h5 className="flex items-center gap-2 text-xs font-medium text-ink-soft">
-                {icon}
-                {label}
-                <span className="ml-auto tabular-nums">{children.length}</span>
-            </h5>
+        <div className="py-2 first:pt-0 last:pb-0">
+            <div className="mb-2 flex items-center justify-between gap-2">
+                <h5 className="flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
+                    <span className="text-ink-soft">{icon}</span>
+                    <span>{label}</span>
+                </h5>
+                <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-ink-soft tabular-nums ring-1 ring-line/70">
+                    {children.length}
+                </span>
+            </div>
             {children.length ? (
-                <ul className="mt-1 divide-y divide-line/60 pl-6">
-                    {children}
-                </ul>
+                <ul className="space-y-2">{children}</ul>
             ) : (
-                <p className="mt-2 pl-6 text-xs text-ink-soft">{empty}</p>
+                <p className="rounded-lg border border-dashed border-line bg-surface-subtle/30 px-3 py-2 text-xs text-ink-soft">
+                    {empty}
+                </p>
             )}
         </div>
     );
@@ -386,22 +974,18 @@ function ResourceGroup({
 function Placeholder({
     label,
     icon,
-    pending,
+    subtitle,
 }: {
     label: string;
     icon: ReactNode;
-    pending: boolean;
+    subtitle: string;
 }) {
     return (
         <div className="flex items-center gap-3 py-3 text-ink-soft">
             {icon}
-            <div>
+            <div className="min-w-0">
                 <p className="text-xs font-medium text-ink">{label}</p>
-                <p className="mt-0.5 text-[11px]">
-                    {pending
-                        ? 'Awaiting resource check'
-                        : 'Suggestions will appear here'}
-                </p>
+                <p className="mt-0.5 text-[11px] text-ink-soft">{subtitle}</p>
             </div>
         </div>
     );

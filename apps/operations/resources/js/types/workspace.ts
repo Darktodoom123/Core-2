@@ -934,6 +934,8 @@ export interface GptRecommendationViewModel {
         asset_code?: string;
         name?: string;
         assignment_type: string;
+        capacity?: string | null;
+        kind?: string | null;
     }>;
     conflicts: Array<Record<string, unknown>>;
     model: string;

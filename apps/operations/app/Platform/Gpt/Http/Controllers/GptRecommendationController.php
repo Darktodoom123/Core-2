@@ -8,6 +8,7 @@ use App\Platform\Gpt\Actions\AcceptGptRecommendation;
 use App\Platform\Gpt\Actions\GenerateGptRecommendation;
 use App\Platform\Gpt\Actions\RejectGptRecommendation;
 use App\Platform\Gpt\Actions\RetryGptRecommendation;
+use App\Platform\Gpt\Http\Requests\AcceptGptRecommendationRequest;
 use App\Platform\Gpt\Models\GptRecommendation;
 use App\Platform\Gpt\Models\GptRecommendationMetric;
 use App\Platform\Identity\Enums\PermissionName;
@@ -50,9 +51,14 @@ final class GptRecommendationController extends Controller
         ]);
     }
 
-    public function accept(Request $request, GptRecommendation $recommendation, AcceptGptRecommendation $acceptAction): RedirectResponse
+    public function accept(AcceptGptRecommendationRequest $request, GptRecommendation $recommendation, AcceptGptRecommendation $acceptAction): RedirectResponse
     {
-        $acceptAction->handle($request->user(), $recommendation);
+        $acceptAction->handle(
+            $request->user(),
+            $recommendation,
+            $request->selectedPersonnel(),
+            $request->selectedAssets(),
+        );
 
         return redirect()->back()->with('flash', [
             'success' => 'GPT recommendation accepted. Resource plan confirmed.',

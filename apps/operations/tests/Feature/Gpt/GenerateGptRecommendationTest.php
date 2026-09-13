@@ -168,3 +168,71 @@ test('provider output is redacted before recommendation persistence', function (
         ->not->toContain('14.5995, 120.9842')
         ->not->toContain('sk-live-secret-value');
 });
+
+test('async job hydrates personnel names and equipment codes and capacities from candidates before saving', function (): void {
+    $dispatcher = gptUser(RoleName::OperationsManager);
+    $job = gptDispatchJob($dispatcher);
+
+    OpenAiClientWrapper::fake([
+        'recommendation' => [
+            'summary' => 'Recommend candidate personnel and asset.',
+            'proposed_personnel' => [
+                ['user_id' => 99, 'assignment_type' => 'driver'],
+            ],
+            'proposed_assets' => [
+                ['operational_asset_id' => 88, 'assignment_type' => 'crane'],
+            ],
+            'reasons' => ['Matches criteria.'],
+            'assumptions' => ['Normal conditions.'],
+        ],
+    ]);
+
+    $recommendation = GptRecommendation::query()->create([
+        'subject_type' => $job->getMorphClass(),
+        'subject_id' => $job->id,
+        'requested_by' => $dispatcher->id,
+        'purpose' => 'dispatch_assignment',
+        'context_hash' => 'dummy-hash',
+        'input_references' => ['user_ids' => [99], 'asset_ids' => [88]],
+        'recommendation' => [],
+        'model' => 'gpt-5-mini',
+        'status' => 'draft',
+        'prompt_summary' => 'Hydration test prompt',
+    ]);
+
+    $boundedContext = [
+        'job' => ['id' => $job->id],
+        'personnel_candidates' => [
+            [
+                'user_id' => 99,
+                'name' => 'Candidate Driver Bob',
+                'role' => 'driver',
+                'assignment_type' => 'driver',
+                'eligible' => true,
+            ],
+        ],
+        'asset_candidates' => [
+            [
+                'asset_id' => 88,
+                'code' => 'CR-088',
+                'name' => 'Grove GMK 5150',
+                'kind' => 'mobile_crane',
+                'rated_capacity' => 150,
+                'capacity_unit' => 't',
+                'eligible' => true,
+            ],
+        ],
+    ];
+
+    $jobHandler = new GenerateGptRecommendationJob($recommendation->id, $boundedContext);
+    $jobHandler->handle(app(OpenAiClientWrapper::class), app(RecordAuditEvent::class));
+
+    $recommendation->refresh();
+    $payload = $recommendation->recommendation;
+
+    expect($payload['proposed_personnel'][0]['name'])->toBe('Candidate Driver Bob')
+        ->and($payload['proposed_personnel'][0]['role'])->toBe('driver')
+        ->and($payload['proposed_assets'][0]['name'])->toBe('Grove GMK 5150')
+        ->and($payload['proposed_assets'][0]['asset_code'])->toBe('CR-088')
+        ->and($payload['proposed_assets'][0]['capacity'])->toBe('150 t');
+});

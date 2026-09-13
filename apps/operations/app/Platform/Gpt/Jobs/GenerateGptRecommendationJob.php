@@ -13,6 +13,7 @@ use App\Platform\Gpt\Services\OpenAiClientWrapper;
 use App\Platform\Gpt\Services\RecordGptOperationalMetric;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
+use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -82,6 +83,7 @@ final class GenerateGptRecommendationJob implements ShouldQueue
 
         if ($result['success']) {
             $recPayload = $result['recommendation'] ?? [];
+            $recPayload = $this->hydrateRecommendationDetails($recPayload, $this->boundedContext);
             $updated = $transitions->compareAndSet(
                 $recommendation->id,
                 GptRecommendationStatus::Processing,
@@ -198,5 +200,178 @@ final class GenerateGptRecommendationJob implements ShouldQueue
                 $transitions->compareAndSet($recommendation->id, GptRecommendationStatus::Processing, GptRecommendationStatus::Failed, $attributes);
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $recPayload
+     * @param  array<string, mixed>  $boundedContext
+     * @return array<string, mixed>
+     */
+    private function hydrateRecommendationDetails(array $recPayload, array $boundedContext): array
+    {
+        $personnelCandidates = [];
+        if (isset($boundedContext['personnel_candidates']) && is_iterable($boundedContext['personnel_candidates'])) {
+            foreach ($boundedContext['personnel_candidates'] as $candidate) {
+                if (is_array($candidate) && isset($candidate['user_id'])) {
+                    $personnelCandidates[(int) $candidate['user_id']] = $candidate;
+                }
+            }
+        }
+
+        $assetCandidates = [];
+        if (isset($boundedContext['asset_candidates']) && is_iterable($boundedContext['asset_candidates'])) {
+            foreach ($boundedContext['asset_candidates'] as $candidate) {
+                if (is_array($candidate)) {
+                    $cId = (int) ($candidate['asset_id'] ?? $candidate['operational_asset_id'] ?? 0);
+                    if ($cId > 0) {
+                        $assetCandidates[$cId] = $candidate;
+                    }
+                }
+            }
+        }
+
+        $missingUserIds = [];
+        if (isset($recPayload['proposed_personnel']) && is_array($recPayload['proposed_personnel'])) {
+            foreach ($recPayload['proposed_personnel'] as $person) {
+                $userId = is_array($person)
+                    ? (int) ($person['user_id'] ?? 0)
+                    : (is_numeric($person) ? (int) $person : 0);
+
+                if ($userId > 0 && (! isset($personnelCandidates[$userId]) || empty($person['name']) || empty($person['role']))) {
+                    $missingUserIds[] = $userId;
+                }
+            }
+        }
+
+        $missingAssetIds = [];
+        if (isset($recPayload['proposed_assets']) && is_array($recPayload['proposed_assets'])) {
+            foreach ($recPayload['proposed_assets'] as $asset) {
+                $assetId = is_array($asset)
+                    ? (int) ($asset['operational_asset_id'] ?? $asset['asset_id'] ?? 0)
+                    : (is_numeric($asset) ? (int) $asset : 0);
+
+                if ($assetId > 0 && (! isset($assetCandidates[$assetId]) || empty($asset['name']) || empty($asset['asset_code']))) {
+                    $missingAssetIds[] = $assetId;
+                }
+            }
+        }
+
+        $dbUsers = $missingUserIds !== []
+            ? User::query()->whereIn('id', array_unique($missingUserIds))->get()->keyBy('id')
+            : collect();
+
+        $dbAssets = $missingAssetIds !== []
+            ? OperationalAsset::query()->withTrashed()->whereIn('id', array_unique($missingAssetIds))->get()->keyBy('id')
+            : collect();
+
+        if (isset($recPayload['proposed_personnel']) && is_array($recPayload['proposed_personnel'])) {
+            $recPayload['proposed_personnel'] = array_values(array_filter(array_map(function ($person) use ($personnelCandidates, $dbUsers) {
+                $userId = is_array($person)
+                    ? (int) ($person['user_id'] ?? 0)
+                    : (is_numeric($person) ? (int) $person : 0);
+
+                if ($userId <= 0) {
+                    return null;
+                }
+
+                $candidate = $personnelCandidates[$userId] ?? null;
+                $userModel = $dbUsers->get($userId);
+
+                $userName = $userModel instanceof User ? $userModel->name : null;
+                $userRole = ($userModel instanceof User && $userModel->operationalRole() !== null)
+                    ? $userModel->operationalRole()->value
+                    : null;
+
+                $candidateName = (isset($candidate['name']) && is_string($candidate['name'])) ? $candidate['name'] : null;
+                $candidateRole = (isset($candidate['role']) && is_string($candidate['role'])) ? $candidate['role'] : null;
+
+                $name = (is_array($person) && ! empty($person['name']) && is_string($person['name']))
+                    ? $person['name']
+                    : ($candidateName ?? $userName);
+
+                $role = (is_array($person) && ! empty($person['role']) && is_string($person['role']))
+                    ? $person['role']
+                    : ($candidateRole ?? $userRole);
+
+                $assignmentType = (is_array($person) && ! empty($person['assignment_type']) && is_string($person['assignment_type']))
+                    ? $person['assignment_type']
+                    : ($candidate['assignment_type'] ?? 'crew');
+
+                $base = is_array($person) ? $person : [];
+
+                return array_merge($base, array_filter([
+                    'user_id' => $userId,
+                    'name' => $name,
+                    'role' => $role,
+                    'assignment_type' => $assignmentType,
+                ], static fn ($v) => $v !== null));
+            }, $recPayload['proposed_personnel'])));
+        }
+
+        if (isset($recPayload['proposed_assets']) && is_array($recPayload['proposed_assets'])) {
+            $recPayload['proposed_assets'] = array_values(array_filter(array_map(function ($asset) use ($assetCandidates, $dbAssets) {
+                $assetId = is_array($asset)
+                    ? (int) ($asset['operational_asset_id'] ?? $asset['asset_id'] ?? 0)
+                    : (is_numeric($asset) ? (int) $asset : 0);
+
+                if ($assetId <= 0) {
+                    return null;
+                }
+
+                $candidate = $assetCandidates[$assetId] ?? null;
+                $assetModel = $dbAssets->get($assetId);
+
+                $assetName = $assetModel instanceof OperationalAsset ? $assetModel->name : null;
+                $assetCode = $assetModel instanceof OperationalAsset ? $assetModel->code : null;
+                $assetKind = $assetModel instanceof OperationalAsset ? $assetModel->kind : null;
+                $assetCapacity = ($assetModel instanceof OperationalAsset && $assetModel->rated_capacity !== null)
+                    ? trim(((float) $assetModel->rated_capacity).' '.$assetModel->capacity_unit)
+                    : null;
+
+                $candidateName = (isset($candidate['name']) && is_string($candidate['name'])) ? $candidate['name'] : null;
+                $candidateCode = (isset($candidate['code']) && is_string($candidate['code']))
+                    ? $candidate['code']
+                    : ((isset($candidate['asset_code']) && is_string($candidate['asset_code'])) ? $candidate['asset_code'] : null);
+                $candidateKind = (isset($candidate['kind']) && is_string($candidate['kind'])) ? $candidate['kind'] : null;
+                $candidateCapacity = isset($candidate['rated_capacity'])
+                    ? trim(((float) $candidate['rated_capacity']).' '.($candidate['capacity_unit'] ?? ''))
+                    : null;
+
+                $name = (is_array($asset) && ! empty($asset['name']) && is_string($asset['name']))
+                    ? $asset['name']
+                    : ($candidateName ?? $assetName);
+
+                $code = (is_array($asset) && ! empty($asset['asset_code']) && is_string($asset['asset_code']))
+                    ? $asset['asset_code']
+                    : ((is_array($asset) && ! empty($asset['code']) && is_string($asset['code']))
+                        ? $asset['code']
+                        : ($candidateCode ?? $assetCode));
+
+                $kind = (is_array($asset) && ! empty($asset['kind']) && is_string($asset['kind']))
+                    ? $asset['kind']
+                    : ($candidateKind ?? $assetKind);
+
+                $capacity = (is_array($asset) && ! empty($asset['capacity']) && is_string($asset['capacity']))
+                    ? $asset['capacity']
+                    : ($candidateCapacity ?? $assetCapacity);
+
+                $assignmentType = (is_array($asset) && ! empty($asset['assignment_type']) && is_string($asset['assignment_type']))
+                    ? $asset['assignment_type']
+                    : ($kind ?? 'equipment');
+
+                $base = is_array($asset) ? $asset : [];
+
+                return array_merge($base, array_filter([
+                    'operational_asset_id' => $assetId,
+                    'name' => $name,
+                    'asset_code' => $code,
+                    'kind' => $kind,
+                    'capacity' => $capacity,
+                    'assignment_type' => $assignmentType,
+                ], static fn ($v) => $v !== null));
+            }, $recPayload['proposed_assets'])));
+        }
+
+        return $recPayload;
     }
 }
