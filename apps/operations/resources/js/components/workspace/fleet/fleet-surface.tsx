@@ -303,9 +303,16 @@ export function FleetSurface({
 
                 {assetsTotal !== undefined && assetsTotal > assets.length && (
                     <InlineNotice tone="info" title="Fleet list truncated">
-                        Showing the first {assets.length} of {assetsTotal} fleet
-                        assets. Newer assets may not be listed — use the search
-                        field to find a specific asset.
+                        Showing the first{' '}
+                        <span className="font-semibold tabular-nums">
+                            {assets.length}
+                        </span>{' '}
+                        of{' '}
+                        <span className="font-semibold tabular-nums">
+                            {assetsTotal}
+                        </span>{' '}
+                        fleet assets. Newer assets may not be listed — use the
+                        search field to find a specific asset.
                     </InlineNotice>
                 )}
 

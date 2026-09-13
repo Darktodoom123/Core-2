@@ -114,7 +114,7 @@ export function FleetInspectionsSection({
             {showForm && canInspect && (
                 <form
                     onSubmit={submit}
-                    className="space-y-4 rounded-xl border border-line bg-surface-subtle p-4 shadow-xs"
+                    className="space-y-4 rounded-xl border border-line bg-surface-subtle p-4"
                     noValidate
                 >
                     <h4 className="font-semibold text-ink">
@@ -131,7 +131,7 @@ export function FleetInspectionsSection({
                                         e.target.value as InspectionTypeValue,
                                     )
                                 }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:outline-none"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <option value="pre_operation">
                                     Pre-operation
@@ -153,7 +153,7 @@ export function FleetInspectionsSection({
                                         e.target.value as InspectionResultValue,
                                     )
                                 }
-                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:outline-none"
+                                className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <option value="passed">Passed</option>
                                 <option value="failed">
@@ -167,8 +167,8 @@ export function FleetInspectionsSection({
                     </div>
 
                     <div>
-                        <span className="text-xs font-semibold text-ink-soft uppercase">
-                            Inspection Checklist
+                        <span className="text-xs font-semibold text-ink">
+                            Inspection checklist
                         </span>
                         <div className="mt-2 grid gap-2 sm:grid-cols-3">
                             {Object.entries(form.data.checklist).map(
@@ -239,13 +239,13 @@ export function FleetInspectionsSection({
                                     Post-Trip)
                                 </h4>
                             </div>
-                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft">
+                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
                                 {dvirInspections.length} recorded
                             </span>
                         </div>
 
                         {dvirInspections.length === 0 ? (
-                            <p className="border-line-subtle rounded-lg border bg-surface-subtle/50 p-4 text-xs text-ink-soft">
+                            <p className="rounded-lg border border-line bg-surface-subtle/50 p-4 text-xs text-ink-soft">
                                 No pre-trip or post-trip DVIR reports submitted
                                 for this equipment yet.
                             </p>
@@ -265,13 +265,13 @@ export function FleetInspectionsSection({
                                     return (
                                         <div
                                             key={dvir.id}
-                                            className="space-y-2.5 rounded-xl border border-line bg-surface p-4 shadow-xs"
+                                            className="space-y-2.5 rounded-xl border border-line bg-surface p-4"
                                         >
                                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-2">
                                                 <div className="flex items-center gap-2">
                                                     <span
                                                         className={cn(
-                                                            'rounded px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase',
+                                                            'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium',
                                                             isPreTrip
                                                                 ? 'bg-sky-500/10 text-sky-700 dark:text-sky-400'
                                                                 : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400',
@@ -281,7 +281,7 @@ export function FleetInspectionsSection({
                                                             ? 'Pre-Trip'
                                                             : 'Post-Trip'}
                                                     </span>
-                                                    <span className="font-mono text-xs font-semibold text-ink">
+                                                    <span className="font-mono text-xs font-semibold text-ink tabular-nums">
                                                         {dvir.reference ||
                                                             `DVIR-${String(dvir.id).padStart(6, '0')}`}
                                                     </span>
@@ -339,7 +339,7 @@ export function FleetInspectionsSection({
                                                         null) && (
                                                     <div className="flex items-center gap-1">
                                                         <Gauge className="h-3.5 w-3.5 shrink-0 text-ink-soft" />
-                                                        <span>
+                                                        <span className="tabular-nums">
                                                             Odo:{' '}
                                                             {dvir.starting_odometer_km !==
                                                                 null &&
@@ -364,8 +364,12 @@ export function FleetInspectionsSection({
                                                                 Engine
                                                                 Hours:{' '}
                                                             </span>
-                                                            {dvir.engine_hours}{' '}
-                                                            hrs
+                                                            <span className="tabular-nums">
+                                                                {
+                                                                    dvir.engine_hours
+                                                                }{' '}
+                                                                hrs
+                                                            </span>
                                                         </div>
                                                     )}
                                             </div>
@@ -374,9 +378,9 @@ export function FleetInspectionsSection({
                                             {dvir.defects &&
                                                 dvir.defects.length > 0 && (
                                                     <div className="space-y-1.5 rounded-lg border border-line/60 bg-surface-subtle p-2.5">
-                                                        <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
-                                                            Flagged Checklist
-                                                            Defects
+                                                        <span className="text-xs font-semibold text-ink">
+                                                            Flagged checklist
+                                                            defects
                                                         </span>
                                                         {dvir.defects.map(
                                                             (defect) => (
@@ -388,7 +392,7 @@ export function FleetInspectionsSection({
                                                                 >
                                                                     <span
                                                                         className={cn(
-                                                                            'mt-0.5 shrink-0 rounded px-1 text-[9px] font-bold uppercase',
+                                                                            'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
                                                                             defect.status ===
                                                                                 'critical'
                                                                                 ? 'bg-danger-soft text-danger-strong'
@@ -452,9 +456,22 @@ export function FleetInspectionsSection({
                                                     >
                                                         <Camera className="h-3.5 w-3.5" />
                                                         {(dvir.photos?.length ??
-                                                            0) > 0
-                                                            ? `Walkaround Photos (${dvir.photos.length})`
-                                                            : 'View Inspection'}
+                                                            0) > 0 ? (
+                                                            <>
+                                                                Walkaround
+                                                                Photos (
+                                                                <span className="tabular-nums">
+                                                                    {
+                                                                        dvir
+                                                                            .photos
+                                                                            .length
+                                                                    }
+                                                                </span>
+                                                                )
+                                                            </>
+                                                        ) : (
+                                                            'View Inspection'
+                                                        )}
                                                     </Button>
                                                 )}
                                             </div>
@@ -474,13 +491,13 @@ export function FleetInspectionsSection({
                                     Workshop &amp; Safety Audits
                                 </h4>
                             </div>
-                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft">
+                            <span className="rounded-full bg-surface-subtle px-2 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
                                 {asset.inspections.length} recorded
                             </span>
                         </div>
 
                         {asset.inspections.length === 0 ? (
-                            <p className="border-line-subtle rounded-lg border bg-surface-subtle/50 p-4 text-xs text-ink-soft">
+                            <p className="rounded-lg border border-line bg-surface-subtle/50 p-4 text-xs text-ink-soft">
                                 No shop or periodic safety audits recorded for
                                 this asset yet.
                             </p>
@@ -494,13 +511,13 @@ export function FleetInspectionsSection({
                                             </span>
                                             <span
                                                 className={cn(
-                                                    'rounded-full px-2 py-0.5 text-xs font-semibold',
+                                                    'rounded-full px-2 py-0.5 text-xs font-semibold capitalize',
                                                     ins.result === 'passed'
                                                         ? 'bg-success-soft text-success-strong'
                                                         : 'bg-danger-soft text-danger',
                                                 )}
                                             >
-                                                {ins.result.toUpperCase()}
+                                                {ins.result}
                                             </span>
                                         </div>
                                         <p className="mt-1 text-xs text-ink-soft">

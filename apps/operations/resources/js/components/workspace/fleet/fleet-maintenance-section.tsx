@@ -153,12 +153,12 @@ export function FleetMaintenanceSection({
                                             {order.defect}
                                         </span>
                                         {order.dispatch_blocking && (
-                                            <span className="rounded bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger">
+                                            <span className="inline-flex items-center rounded-md bg-danger-soft px-1.5 py-0.5 text-xs font-medium text-danger-strong">
                                                 Blocking
                                             </span>
                                         )}
                                     </div>
-                                    <span className="text-xs text-ink-soft">
+                                    <span className="text-xs text-ink-soft tabular-nums">
                                         {order.released_at
                                             ? `Released: ${formatDateTime(order.released_at, 'Not recorded')}`
                                             : 'Open / In progress'}
@@ -198,7 +198,7 @@ export function FleetMaintenanceSection({
                                                 className="mt-2 space-y-3 rounded-lg border border-line bg-surface-subtle p-3"
                                                 noValidate
                                             >
-                                                <div className="rounded bg-warning-soft p-2 text-xs font-medium text-warning-strong">
+                                                <div className="rounded-lg border border-warning/30 bg-warning-soft/60 p-2.5 text-xs font-medium text-warning-strong">
                                                     Notice: Releasing requires a
                                                     passing safety inspection
                                                     completed after this order
@@ -219,7 +219,7 @@ export function FleetMaintenanceSection({
                                                                 e.target.value,
                                                             )
                                                         }
-                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink focus:outline-none"
+                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                                     />
                                                 </label>
                                                 <FleetInput

@@ -88,7 +88,7 @@ export function SafetyLockoutBanner({
         <>
             <div
                 className={cn(
-                    'rounded-xl border border-danger/40 bg-danger-soft/60 p-4 text-ink shadow-xs',
+                    'rounded-xl border border-danger/30 bg-danger-soft/60 p-4 text-ink',
                     className,
                 )}
                 role="alert"
@@ -96,15 +96,15 @@ export function SafetyLockoutBanner({
             >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-danger text-white shadow-xs">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-danger text-white">
                             <ShieldAlert className="h-5 w-5" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold tracking-wide text-danger-strong uppercase">
+                                <h4 className="text-xs font-semibold text-danger-strong">
                                     DISPATCH SAFETY LOCKOUT ACTIVE
                                 </h4>
-                                <span className="py-0.2 rounded bg-danger-strong px-1.5 text-[10px] font-bold text-white uppercase">
+                                <span className="rounded bg-danger-strong px-1.5 py-0.5 text-[10px] font-semibold text-white">
                                     Unavailable
                                 </span>
                             </div>
@@ -155,7 +155,7 @@ export function SafetyLockoutBanner({
                                     >
                                         Safety Lockout Resolution
                                     </h3>
-                                    <p className="text-xs text-ink-soft">
+                                    <p className="text-xs text-ink-soft tabular-nums">
                                         Asset:{' '}
                                         <strong className="text-ink">
                                             {assetCode}
@@ -167,7 +167,7 @@ export function SafetyLockoutBanner({
                             <button
                                 type="button"
                                 onClick={() => setShowClearModal(false)}
-                                className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus:outline-none"
+                                className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -235,7 +235,7 @@ export function SafetyLockoutBanner({
                                         )
                                     }
                                     placeholder="List mechanical repairs, component replacements, hydraulic adjustments, or safety tests conducted…"
-                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-line-strong focus:outline-none"
+                                    className="mt-1 w-full rounded-lg border border-line bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                 />
                                 {form.errors.work_performed && (
                                     <p className="mt-1 text-xs text-danger">
@@ -255,7 +255,7 @@ export function SafetyLockoutBanner({
                                                 e.target.checked,
                                             )
                                         }
-                                        className="mt-0.5 rounded border-line text-brand focus:ring-brand"
+                                        className="mt-0.5 rounded border-line text-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                     />
                                     <div>
                                         <span className="text-xs font-semibold text-ink">
@@ -291,7 +291,7 @@ export function SafetyLockoutBanner({
                                                 )
                                             }
                                             placeholder="e.g. Visual re-inspection verified; hydraulics holding pressure at 250 bar"
-                                            className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus:outline-none"
+                                            className="mt-1 w-full rounded-lg border border-line bg-surface p-2 text-xs text-ink focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                         />
                                         {form.errors.override_reason && (
                                             <p className="mt-1 text-xs text-danger">

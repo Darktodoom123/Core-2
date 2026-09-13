@@ -14,27 +14,23 @@ const TELEMETRY_STYLES: Record<
 > = {
     fresh: {
         label: 'Live',
-        dotClass: 'bg-emerald-500 animate-pulse',
-        badgeClass:
-            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        dotClass: 'bg-success-strong animate-pulse',
+        badgeClass: 'bg-success-soft text-success-strong border-success/30',
     },
     delayed: {
         label: 'Delayed (<15m)',
-        dotClass: 'bg-amber-500',
-        badgeClass:
-            'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        dotClass: 'bg-warning-strong',
+        badgeClass: 'bg-warning-soft text-warning-strong border-warning/30',
     },
     stale: {
         label: 'Stale (>15m)',
-        dotClass: 'bg-orange-500',
-        badgeClass:
-            'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+        dotClass: 'bg-warning',
+        badgeClass: 'bg-warning-soft/70 text-warning-strong border-warning/30',
     },
     offline: {
         label: 'Offline (>30m)',
-        dotClass: 'bg-zinc-400 dark:bg-zinc-500',
-        badgeClass:
-            'bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border-zinc-500/20',
+        dotClass: 'bg-ink-soft/40',
+        badgeClass: 'bg-surface-subtle text-ink-soft border-line',
     },
 };
 
@@ -103,7 +99,7 @@ export function OperatorBindingChip({
             )}
         >
             <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[10px] font-bold text-brand-strong shadow-xs">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[10px] font-bold text-brand-strong">
                     {initials}
                 </span>
                 <div>
@@ -113,7 +109,7 @@ export function OperatorBindingChip({
                         </span>
                         <span
                             className={cn(
-                                'py-0.2 inline-flex items-center gap-1 rounded-full border px-1.5 text-[10px] font-semibold',
+                                'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
                                 telemetry.badgeClass,
                             )}
                         >
@@ -128,11 +124,11 @@ export function OperatorBindingChip({
                     </div>
                     <div className="flex items-center gap-1 text-[11px] text-ink-soft">
                         <Clock className="h-3 w-3" />
-                        <span>
+                        <span className="tabular-nums">
                             {activeOperator.hours_elapsed.toFixed(1)}h on shift
                         </span>
                         {activeOperator.shift_started_at && (
-                            <span className="text-ink-soft/60">
+                            <span className="text-ink-soft/60 tabular-nums">
                                 · started{' '}
                                 {new Date(
                                     activeOperator.shift_started_at,

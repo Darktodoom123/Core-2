@@ -54,7 +54,7 @@ export function FleetQuickActionToolbar({
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-subtle/50 p-2.5 shadow-2xs',
+                'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-subtle/50 p-2.5',
                 className,
             )}
             role="toolbar"
@@ -103,9 +103,17 @@ export function FleetQuickActionToolbar({
                     className="shrink-0"
                 >
                     <Camera className="h-3.5 w-3.5" />
-                    {(asset.latest_dvir?.photos?.length ?? 0) > 0
-                        ? `Walkaround Photos (${asset.latest_dvir?.photos?.length})`
-                        : 'Walkaround Photos'}
+                    {(asset.latest_dvir?.photos?.length ?? 0) > 0 ? (
+                        <>
+                            Walkaround Photos (
+                            <span className="tabular-nums">
+                                {asset.latest_dvir?.photos?.length}
+                            </span>
+                            )
+                        </>
+                    ) : (
+                        'Walkaround Photos'
+                    )}
                 </Button>
             )}
         </div>

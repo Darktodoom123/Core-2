@@ -132,7 +132,7 @@ export function DvirWalkaroundModal({
                                 </strong>{' '}
                                 ({assetName})
                                 {dvir.completed_at && (
-                                    <span>
+                                    <span className="tabular-nums">
                                         {' '}
                                         · Completed{' '}
                                         {new Date(
@@ -152,7 +152,7 @@ export function DvirWalkaroundModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus:outline-none"
+                        className="rounded-lg p-1.5 text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-5 w-5" />
@@ -166,8 +166,8 @@ export function DvirWalkaroundModal({
                             <div className="flex items-center gap-2.5">
                                 <ShieldAlert className="h-5 w-5 shrink-0 text-danger-strong" />
                                 <div>
-                                    <h4 className="text-xs font-bold text-danger-strong">
-                                        SAFETY LOCKOUT ENFORCED
+                                    <h4 className="text-xs font-semibold text-danger-strong">
+                                        Safety lockout enforced
                                     </h4>
                                     <p className="text-xs text-danger-strong/90">
                                         {lockoutReason ||
@@ -231,7 +231,7 @@ export function DvirWalkaroundModal({
                                                             photos.length,
                                                     )
                                                 }
-                                                className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
+                                                className="absolute top-1/2 left-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                                 aria-label="Previous photo"
                                             >
                                                 <ChevronLeft className="h-5 w-5" />
@@ -245,7 +245,7 @@ export function DvirWalkaroundModal({
                                                             photos.length,
                                                     )
                                                 }
-                                                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white"
+                                                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-full bg-black/60 p-2 text-white/80 transition-colors hover:bg-black/80 hover:text-white focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                                 aria-label="Next photo"
                                             >
                                                 <ChevronRight className="h-5 w-5" />
@@ -282,7 +282,7 @@ export function DvirWalkaroundModal({
                                                 setSelectedPhotoIndex(index)
                                             }
                                             className={cn(
-                                                'group relative aspect-4/3 overflow-hidden rounded-lg border text-left transition-all',
+                                                'group relative aspect-4/3 overflow-hidden rounded-lg border text-left transition-all focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                                 isSelected
                                                     ? 'border-brand-strong ring-2 ring-brand/40'
                                                     : 'border-line opacity-75 hover:opacity-100',
@@ -306,15 +306,15 @@ export function DvirWalkaroundModal({
                     {/* Right: Inspection Details & Defects Summary */}
                     <div className="mt-4 flex w-full flex-col space-y-4 lg:mt-0 lg:w-80">
                         <div className="rounded-xl border border-line bg-surface-subtle p-4">
-                            <h4 className="text-xs font-bold tracking-wider text-ink uppercase">
-                                Inspection Summary
+                            <h4 className="text-xs font-semibold text-ink">
+                                Inspection summary
                             </h4>
                             <dl className="mt-3 space-y-2 text-xs">
                                 <div className="flex justify-between">
                                     <dt className="text-ink-soft">
                                         Inspection ID
                                     </dt>
-                                    <dd className="font-mono font-semibold text-ink">
+                                    <dd className="font-mono font-semibold text-ink tabular-nums">
                                         DVIR-{String(dvir.id).padStart(6, '0')}
                                     </dd>
                                 </div>
@@ -323,19 +323,19 @@ export function DvirWalkaroundModal({
                                     <dd>
                                         <span
                                             className={cn(
-                                                'rounded px-1.5 py-0.5 text-[10px] font-bold',
+                                                'rounded px-1.5 py-0.5 text-[10px] font-semibold',
                                                 isCritical
-                                                    ? 'bg-danger-soft text-danger-strong'
+                                                    ? 'border border-danger/20 bg-danger-soft text-danger-strong'
                                                     : isDefect
-                                                      ? 'bg-warning-soft text-warning-strong'
-                                                      : 'bg-success-soft text-success-strong',
+                                                      ? 'border border-warning/20 bg-warning-soft text-warning-strong'
+                                                      : 'border border-success/20 bg-success-soft text-success-strong',
                                             )}
                                         >
                                             {isCritical
-                                                ? 'CRITICAL DEFECT'
+                                                ? 'Critical Defect'
                                                 : isDefect
-                                                  ? 'DEFECTS FLAGGED'
-                                                  : 'PASSED'}
+                                                  ? 'Defects Flagged'
+                                                  : 'Passed'}
                                         </span>
                                     </dd>
                                 </div>
@@ -344,11 +344,20 @@ export function DvirWalkaroundModal({
                                         Defects Count
                                     </dt>
                                     <dd className="font-semibold text-ink">
-                                        {dvir.critical_defects_count > 0
-                                            ? `${dvir.critical_defects_count} critical defect(s)`
-                                            : dvir.has_defects
-                                              ? 'Minor defects noted'
-                                              : 'None (Clean)'}
+                                        {dvir.critical_defects_count > 0 ? (
+                                            <>
+                                                <span className="tabular-nums">
+                                                    {
+                                                        dvir.critical_defects_count
+                                                    }
+                                                </span>{' '}
+                                                critical defect(s)
+                                            </>
+                                        ) : dvir.has_defects ? (
+                                            'Minor defects noted'
+                                        ) : (
+                                            'None (Clean)'
+                                        )}
                                     </dd>
                                 </div>
                                 <div className="flex justify-between">
@@ -356,7 +365,10 @@ export function DvirWalkaroundModal({
                                         Photos Verified
                                     </dt>
                                     <dd className="font-semibold text-ink">
-                                        {photos.length} angle(s) captured
+                                        <span className="tabular-nums">
+                                            {photos.length}
+                                        </span>{' '}
+                                        angle(s) captured
                                     </dd>
                                 </div>
                             </dl>

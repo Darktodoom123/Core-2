@@ -80,7 +80,7 @@ export function FleetMapView({
         >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
                 <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface-subtle text-brand-strong">
                         <MapPin className="h-4 w-4" aria-hidden="true" />
                     </div>
                     <div>
@@ -89,7 +89,7 @@ export function FleetMapView({
                                 Live Fleet Telematics &amp; GIS Map
                             </h3>
                             {activeLiveGpsCount > 0 && (
-                                <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-strong">
+                                <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-strong tabular-nums">
                                     {activeLiveGpsCount} active GPS
                                 </span>
                             )}

@@ -22,32 +22,27 @@ const DUTY_CONFIG: Record<
     operating: {
         label: 'Operating',
         icon: Activity,
-        badgeClass:
-            'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+        badgeClass: 'bg-accent-soft text-accent-strong border-accent/30',
     },
     driving: {
         label: 'Driving',
         icon: Truck,
-        badgeClass:
-            'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+        badgeClass: 'bg-brand-soft text-brand-strong border-brand/30',
     },
     standby: {
         label: 'Standby',
         icon: Pause,
-        badgeClass:
-            'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        badgeClass: 'bg-warning-soft text-warning-strong border-warning/30',
     },
     on_break: {
         label: 'On Break',
         icon: Coffee,
-        badgeClass:
-            'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+        badgeClass: 'bg-info-soft text-info-strong border-info/30',
     },
     off_duty: {
         label: 'Off Duty',
         icon: Moon,
-        badgeClass:
-            'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20',
+        badgeClass: 'bg-surface-subtle text-ink-soft border-line',
     },
 };
 
@@ -63,8 +58,7 @@ export function HosDutyBadge({
     const duty = DUTY_CONFIG[hos.duty_status] ?? {
         label: hos.duty_status_label || hos.duty_status,
         icon: Activity,
-        badgeClass:
-            'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20',
+        badgeClass: 'bg-surface-subtle text-ink-soft border-line',
     };
 
     const DutyIcon = duty.icon;
@@ -108,14 +102,14 @@ export function HosDutyBadge({
                 >
                     <DutyIcon className="h-3 w-3" />
                     <span>{duty.label}</span>
-                    <span className="font-mono text-[10px] opacity-80">
+                    <span className="font-mono text-[10px] tabular-nums opacity-80">
                         {hos.hours_elapsed.toFixed(1)}h
                     </span>
                 </span>
                 {fatigueAlert && (
                     <span
                         className={cn(
-                            'py-0.2 inline-flex items-center gap-1 rounded-full border px-1.5 text-[10px] font-semibold',
+                            'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
                             fatigueAlert.badgeClass,
                         )}
                         title={fatigueAlert.description}
@@ -139,7 +133,7 @@ export function HosDutyBadge({
                 >
                     <DutyIcon className="h-3.5 w-3.5" />
                     <span>{duty.label}</span>
-                    <span className="py-0.2 ml-1 rounded bg-black/10 px-1 font-mono text-[11px] font-bold dark:bg-white/10">
+                    <span className="ml-1 rounded bg-black/10 px-1 py-0.5 font-mono text-[11px] font-bold tabular-nums dark:bg-white/10">
                         {hos.hours_elapsed.toFixed(1)} hrs
                     </span>
                 </span>

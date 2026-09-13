@@ -60,7 +60,7 @@ export function FleetStatusForm({ asset, canUpdate }: FleetStatusFormProps) {
                             )
                         }
                         aria-invalid={Boolean(form.errors.status)}
-                        className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:outline-none"
+                        className="mt-1 h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <option value="available">Available</option>
                         <option value="ready_for_service">

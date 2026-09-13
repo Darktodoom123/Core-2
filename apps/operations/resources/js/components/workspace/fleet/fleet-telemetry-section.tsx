@@ -58,7 +58,7 @@ export function FleetTelemetrySection({
         return (
             <div className="space-y-4">
                 <div className="rounded-xl border border-line bg-surface-subtle/70 p-6 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-soft text-brand-strong">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-line bg-surface text-brand-strong">
                         <MapPin className="h-6 w-6" aria-hidden="true" />
                     </div>
                     <h3 className="mt-3 text-base font-semibold text-ink">
@@ -104,7 +104,7 @@ export function FleetTelemetrySection({
                     <dt className="text-xs font-medium text-ink-soft">
                         Coordinates (Lat, Lng)
                     </dt>
-                    <dd className="mt-1 font-mono text-sm font-semibold text-ink">
+                    <dd className="mt-1 font-mono text-sm font-semibold text-ink tabular-nums">
                         {location.latitude?.toFixed(5)},{' '}
                         {location.longitude?.toFixed(5)}
                     </dd>
@@ -116,11 +116,11 @@ export function FleetTelemetrySection({
                     <dd className="mt-1 text-sm font-semibold text-ink">
                         {location.speed !== null ? (
                             location.speed > 0 ? (
-                                <span className="font-bold text-brand-strong">
+                                <span className="font-bold text-brand-strong tabular-nums">
                                     {location.speed} km/h
                                 </span>
                             ) : (
-                                <span className="text-ink-soft">
+                                <span className="text-ink-soft tabular-nums">
                                     0 km/h (Stationary)
                                 </span>
                             )
@@ -170,7 +170,7 @@ export function FleetTelemetrySection({
                         {location.job ? (
                             <a
                                 href={`/operations/dispatch-jobs/${location.job.id}`}
-                                className="inline-flex items-center gap-1 text-brand-strong hover:underline"
+                                className="inline-flex items-center gap-1 rounded text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <span>{location.job.reference}</span>
                                 <span className="max-w-[120px] truncate text-xs font-normal text-ink-soft">
@@ -188,7 +188,7 @@ export function FleetTelemetrySection({
                     <dt className="text-xs font-medium text-ink-soft">
                         Last Ping Received
                     </dt>
-                    <dd className="mt-1 text-sm font-semibold text-ink">
+                    <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
                         {location.received_at
                             ? formatDateTime(location.received_at)
                             : 'N/A'}
@@ -198,13 +198,16 @@ export function FleetTelemetrySection({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                        Live Map Position
+                    <h4 className="text-xs font-semibold text-ink">
+                        Live map position
                     </h4>
                     {location.accuracy_metres !== null && (
                         <span className="text-xs text-ink-soft">
-                            Accuracy: ±{location.accuracy_metres}m · Source:{' '}
-                            {humanize(location.source)}
+                            Accuracy: ±
+                            <span className="tabular-nums">
+                                {location.accuracy_metres}
+                            </span>
+                            m · Source: {humanize(location.source)}
                         </span>
                     )}
                 </div>

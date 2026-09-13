@@ -43,7 +43,7 @@ export function FleetTriageBar({
     return (
         <div
             className={cn(
-                'flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-line bg-surface-subtle/50 p-2.5 shadow-2xs',
+                'flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-line bg-surface-subtle/50 p-2.5',
                 className,
             )}
             role="region"
@@ -66,16 +66,22 @@ export function FleetTriageBar({
                         aria-pressed={activeFilter === 'lockouts'}
                         onClick={() => handleToggle('lockouts')}
                         className={cn(
-                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             activeFilter === 'lockouts'
-                                ? 'border-danger/50 bg-danger-soft font-semibold text-danger-strong ring-1 ring-danger/40'
+                                ? 'border-danger/50 bg-danger-soft font-semibold text-danger-strong ring-1 ring-danger/40 ring-inset'
                                 : counts.lockouts > 0
                                   ? 'border-danger/30 bg-surface text-danger hover:bg-danger-soft/40'
                                   : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
                         <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-                        <span>Lockouts ({counts.lockouts})</span>
+                        <span>
+                            Lockouts (
+                            <span className="tabular-nums">
+                                {counts.lockouts}
+                            </span>
+                            )
+                        </span>
                     </button>
 
                     {/* 2. Blocking Work Orders Filter */}
@@ -84,16 +90,22 @@ export function FleetTriageBar({
                         aria-pressed={activeFilter === 'blocking_orders'}
                         onClick={() => handleToggle('blocking_orders')}
                         className={cn(
-                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             activeFilter === 'blocking_orders'
-                                ? 'border-warning/50 bg-warning-soft font-semibold text-warning-strong ring-1 ring-warning/40'
+                                ? 'border-warning/50 bg-warning-soft font-semibold text-warning-strong ring-1 ring-warning/40 ring-inset'
                                 : counts.blocking_orders > 0
                                   ? 'border-warning/30 bg-surface text-warning-strong hover:bg-warning-soft/40'
                                   : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
                         <Wrench className="h-3.5 w-3.5 shrink-0" />
-                        <span>Blocking Orders ({counts.blocking_orders})</span>
+                        <span>
+                            Blocking Orders (
+                            <span className="tabular-nums">
+                                {counts.blocking_orders}
+                            </span>
+                            )
+                        </span>
                     </button>
 
                     {/* 3. DVIR Defects Filter */}
@@ -102,16 +114,22 @@ export function FleetTriageBar({
                         aria-pressed={activeFilter === 'dvir_defects'}
                         onClick={() => handleToggle('dvir_defects')}
                         className={cn(
-                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             activeFilter === 'dvir_defects'
-                                ? 'border-amber-500/50 bg-amber-500/15 font-semibold text-amber-700 ring-1 ring-amber-500/40 dark:text-amber-300'
+                                ? 'border-amber-500/50 bg-amber-500/10 font-semibold text-amber-700 ring-1 ring-amber-500/40 ring-inset dark:text-amber-300'
                                 : counts.dvir_defects > 0
-                                  ? 'border-amber-500/30 bg-surface text-amber-600 hover:bg-amber-500/10 dark:text-amber-400'
+                                  ? 'border-amber-500/30 bg-surface text-amber-800 hover:bg-amber-500/10 dark:text-amber-300'
                                   : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        <span>DVIR Defects ({counts.dvir_defects})</span>
+                        <span>
+                            DVIR Defects (
+                            <span className="tabular-nums">
+                                {counts.dvir_defects}
+                            </span>
+                            )
+                        </span>
                     </button>
 
                     {/* 4. Stale GPS Filter */}
@@ -120,16 +138,22 @@ export function FleetTriageBar({
                         aria-pressed={activeFilter === 'stale_gps'}
                         onClick={() => handleToggle('stale_gps')}
                         className={cn(
-                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             activeFilter === 'stale_gps'
-                                ? 'border-ink/50 bg-surface font-semibold text-ink ring-1 ring-ink/30'
+                                ? 'border-ink/50 bg-surface font-semibold text-ink ring-1 ring-ink/30 ring-inset'
                                 : counts.stale_gps > 0
                                   ? 'border-line-strong bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink'
                                   : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                         )}
                     >
                         <Radio className="h-3.5 w-3.5 shrink-0" />
-                        <span>Stale GPS ({counts.stale_gps})</span>
+                        <span>
+                            Stale GPS (
+                            <span className="tabular-nums">
+                                {counts.stale_gps}
+                            </span>
+                            )
+                        </span>
                     </button>
                 </div>
             </div>
@@ -138,7 +162,7 @@ export function FleetTriageBar({
                 <button
                     type="button"
                     onClick={() => onFilterChange(null)}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink focus:outline-none"
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-ink-soft hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     title="Reset exception triage filter"
                 >
                     <X className="h-3 w-3" />

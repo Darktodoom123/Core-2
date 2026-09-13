@@ -80,7 +80,7 @@ export function DvirStatusBadge({
             {photoCount > 0 && !compact && (
                 <span className="inline-flex items-center gap-0.5 text-[10px] opacity-75">
                     <Camera className="h-2.5 w-2.5" />
-                    <span>{photoCount}</span>
+                    <span className="tabular-nums">{photoCount}</span>
                 </span>
             )}
         </span>
@@ -94,7 +94,7 @@ export function DvirStatusBadge({
                     e.stopPropagation();
                     onViewInspection(dvir.id);
                 }}
-                className="inline-flex rounded-full focus:ring-2 focus:ring-brand/40 focus:ring-offset-1 focus:outline-none"
+                className="inline-flex rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
                 title="Click to view DVIR walkaround photos and inspection checklist"
             >
                 {content}

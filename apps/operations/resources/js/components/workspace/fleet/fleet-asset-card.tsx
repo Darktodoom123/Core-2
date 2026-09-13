@@ -35,8 +35,8 @@ export function FleetAssetCard({
         location.freshness_status === 'fresh';
 
     const cardClasses = cn(
-        'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle focus:outline-none',
-        isSelected && 'bg-brand-soft/60 ring-1 ring-brand/30',
+        'min-h-[72px] w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
+        isSelected && 'bg-brand-soft/50 ring-1 ring-brand/40 ring-inset',
         className,
     );
 
@@ -48,7 +48,7 @@ export function FleetAssetCard({
                         {asset.code}
                     </span>
                     {Boolean(asset.rated_capacity) && (
-                        <span className="py-0.2 rounded border border-line bg-surface-subtle px-1.5 font-mono text-[10px] font-semibold text-ink-soft">
+                        <span className="rounded border border-line bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink-soft tabular-nums">
                             {asset.rated_capacity}
                             {asset.capacity_unit
                                 ? ` ${asset.capacity_unit}`
@@ -56,7 +56,7 @@ export function FleetAssetCard({
                         </span>
                     )}
                     {Boolean(asset.registration_number) && (
-                        <span className="font-mono text-[10px] text-ink-soft">
+                        <span className="font-mono text-[10px] text-ink-soft tabular-nums">
                             Reg: {asset.registration_number}
                         </span>
                     )}
@@ -76,30 +76,30 @@ export function FleetAssetCard({
                 location.latitude !== null &&
                 location.longitude !== null ? (
                     hasLiveGps ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-strong">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-strong tabular-nums">
                             <Radio className="h-2.5 w-2.5 animate-pulse text-success" />
-                            GPS Live{' '}
+                            GPS Live
                             {location.speed !== null && location.speed > 0
-                                ? `(${location.speed} km/h)`
+                                ? ` (${location.speed} km/h)`
                                 : ''}
                         </span>
                     ) : location.freshness_status === 'delayed' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-warning-strong">
+                            <span className="h-1.5 w-1.5 rounded-full bg-warning-strong" />
                             GPS Delayed
                         </span>
                     ) : location.freshness_status === 'stale' ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-medium text-ink-soft">
-                            <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-ink-soft/40" />
                             Last Known (Stale)
                         </span>
                     ) : (
-                        <span className="text-ink-muted inline-flex items-center gap-1 text-[10px] font-medium">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-ink-soft/70">
                             Telemetry Offline
                         </span>
                     )
                 ) : (
-                    <span className="text-ink-muted max-w-[110px] truncate text-[10px]">
+                    <span className="max-w-[110px] truncate text-[10px] text-ink-soft/70">
                         {asset.location ?? 'Location not recorded'}
                     </span>
                 )}
@@ -107,7 +107,7 @@ export function FleetAssetCard({
 
             {/* Dispatchability or Blocker Alert */}
             {asset.blocking_work_orders_count > 0 ? (
-                <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-danger">
+                <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-danger tabular-nums">
                     <AlertTriangle className="h-3 w-3 shrink-0" />
                     {asset.blocking_work_orders_count} blocking work order
                     {asset.blocking_work_orders_count > 1 ? 's' : ''}
@@ -146,7 +146,7 @@ export function FleetAssetCard({
 
             {/* Safety Lockout Alert */}
             {asset.lockout?.is_locked_out && (
-                <div className="mt-1 flex items-center gap-1 rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger-strong">
+                <div className="mt-1 flex items-center gap-1 rounded-md border border-danger/20 bg-danger-soft px-1.5 py-0.5 text-[10px] font-semibold text-danger-strong">
                     <ShieldAlert className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                         {asset.lockout.lockout_reason ||

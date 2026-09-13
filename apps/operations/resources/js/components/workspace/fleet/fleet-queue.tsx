@@ -53,7 +53,7 @@ export function FleetQueue({
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder="Search code, name, model, plate, category…"
-                        className="h-9 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-xs text-ink placeholder:text-ink-soft focus:outline-none"
+                        className="h-9 w-full rounded-lg border border-line-strong bg-surface-subtle pr-3 pl-9 text-xs text-ink placeholder:text-ink-soft focus:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     />
                 </label>
 
@@ -68,65 +68,73 @@ export function FleetQueue({
                         aria-pressed={categoryFilter === 'all'}
                         onClick={() => onCategoryFilterChange('all')}
                         className={cn(
-                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             categoryFilter === 'all'
                                 ? 'bg-ink font-semibold text-canvas'
                                 : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                         )}
                     >
-                        All ({counts.total})
+                        All (
+                        <span className="tabular-nums">{counts.total}</span>)
                     </button>
                     <button
                         type="button"
                         aria-pressed={categoryFilter === 'cranes'}
                         onClick={() => onCategoryFilterChange('cranes')}
                         className={cn(
-                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             categoryFilter === 'cranes'
                                 ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
                                 : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                         )}
                     >
-                        Cranes ({counts.cranes})
+                        Cranes (
+                        <span className="tabular-nums">{counts.cranes}</span>)
                     </button>
                     <button
                         type="button"
                         aria-pressed={categoryFilter === 'trucks'}
                         onClick={() => onCategoryFilterChange('trucks')}
                         className={cn(
-                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             categoryFilter === 'trucks'
                                 ? 'border border-line-strong bg-surface-subtle font-semibold text-ink'
                                 : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                         )}
                     >
-                        Transport ({counts.trucks})
+                        Transport (
+                        <span className="tabular-nums">{counts.trucks}</span>)
                     </button>
                     <button
                         type="button"
                         aria-pressed={categoryFilter === 'available'}
                         onClick={() => onCategoryFilterChange('available')}
                         className={cn(
-                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             categoryFilter === 'available'
                                 ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
                                 : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                         )}
                     >
-                        Ready ({counts.ready})
+                        Ready (
+                        <span className="tabular-nums">{counts.ready}</span>)
                     </button>
                     <button
                         type="button"
                         aria-pressed={categoryFilter === 'maintenance'}
                         onClick={() => onCategoryFilterChange('maintenance')}
                         className={cn(
-                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+                            'inline-flex min-h-7 items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                             categoryFilter === 'maintenance'
                                 ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
                                 : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
                         )}
                     >
-                        Holds ({counts.maintenance})
+                        Holds (
+                        <span className="tabular-nums">
+                            {counts.maintenance}
+                        </span>
+                        )
                     </button>
                 </div>
             </div>

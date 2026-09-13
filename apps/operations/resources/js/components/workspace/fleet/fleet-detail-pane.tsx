@@ -146,22 +146,22 @@ export function FleetDetailPane({
                             assetLocation.latitude !== null &&
                             assetLocation.longitude !== null &&
                             (hasLiveGps ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand-strong">
                                     <Radio className="h-3 w-3 animate-pulse text-success-strong" />
                                     Live GPS active
                                 </span>
                             ) : assetLocation.freshness_status === 'delayed' ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                <span className="inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-warning-strong" />
                                     GPS Delayed
                                 </span>
                             ) : assetLocation.freshness_status === 'stale' ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
-                                    <span className="bg-ink-muted h-1.5 w-1.5 rounded-full" />
+                                <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-ink-soft/40" />
                                     Last Known (Stale)
                                 </span>
                             ) : (
-                                <span className="text-ink-muted inline-flex items-center gap-1 rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs font-medium">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft/70">
                                     Telemetry Offline
                                 </span>
                             ))}
@@ -183,14 +183,18 @@ export function FleetDetailPane({
                         {asset.subtype ? `· ${asset.subtype}` : ''} · Location:{' '}
                         {assetLocation &&
                         assetLocation.latitude !== null &&
-                        assetLocation.longitude !== null
-                            ? `GPS ${assetLocation.latitude?.toFixed(4)}, ${assetLocation.longitude?.toFixed(4)}${
-                                  assetLocation.captured_at ||
-                                  assetLocation.received_at
-                                      ? ` (${new Date(assetLocation.captured_at || assetLocation.received_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
-                                      : ''
-                              }`
-                            : (asset.location ?? 'Location not recorded')}
+                        assetLocation.longitude !== null ? (
+                            <span className="tabular-nums">
+                                GPS {assetLocation.latitude?.toFixed(4)},{' '}
+                                {assetLocation.longitude?.toFixed(4)}
+                                {assetLocation.captured_at ||
+                                assetLocation.received_at
+                                    ? ` (${new Date(assetLocation.captured_at || assetLocation.received_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`
+                                    : ''}
+                            </span>
+                        ) : (
+                            (asset.location ?? 'Location not recorded')
+                        )}
                     </p>
                 </div>
             </div>
@@ -313,10 +317,10 @@ export function FleetDetailPane({
                                     }
                                     placeholder="Specify safety defect, hydraulic fault, structural crack, or regulatory recall notice…"
                                     className={cn(
-                                        'mt-1 w-full rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus:outline-none',
+                                        'mt-1 w-full rounded-lg border bg-surface p-2.5 text-xs text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         lockdownForm.errors.reason
                                             ? 'border-danger focus:border-danger'
-                                            : 'border-line focus:border-line-strong',
+                                            : 'border-line focus:border-brand-strong',
                                     )}
                                 />
                                 {lockdownForm.errors.reason && (
@@ -367,7 +371,7 @@ export function FleetDetailPane({
                     tabIndex={activeTab === 'overview' ? 0 : -1}
                     onClick={() => setActiveTab('overview')}
                     className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden md:text-sm',
                         activeTab === 'overview'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -385,7 +389,7 @@ export function FleetDetailPane({
                     tabIndex={activeTab === 'status' ? 0 : -1}
                     onClick={() => setActiveTab('status')}
                     className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden md:text-sm',
                         activeTab === 'status'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -403,7 +407,7 @@ export function FleetDetailPane({
                     tabIndex={activeTab === 'inspections' ? 0 : -1}
                     onClick={() => setActiveTab('inspections')}
                     className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden md:text-sm',
                         activeTab === 'inspections'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -413,7 +417,7 @@ export function FleetDetailPane({
                     Inspections
                     <span
                         className={cn(
-                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
                             totalInspectionsCount > 0
                                 ? 'bg-brand-soft text-brand-strong'
                                 : 'border border-line bg-surface-subtle text-ink-soft',
@@ -431,7 +435,7 @@ export function FleetDetailPane({
                     tabIndex={activeTab === 'maintenance' ? 0 : -1}
                     onClick={() => setActiveTab('maintenance')}
                     className={cn(
-                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors md:text-sm',
+                        'flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden md:text-sm',
                         activeTab === 'maintenance'
                             ? 'border-brand-strong font-semibold text-brand-strong'
                             : 'border-transparent text-ink-soft hover:text-ink',
@@ -441,7 +445,7 @@ export function FleetDetailPane({
                     Work Orders
                     <span
                         className={cn(
-                            'py-0.2 rounded-full px-1.5 text-[10px] font-semibold',
+                            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
                             asset.blocking_work_orders_count > 0
                                 ? 'border border-danger/30 bg-danger-soft text-danger-strong'
                                 : asset.maintenance_work_orders.length > 0
@@ -463,7 +467,7 @@ export function FleetDetailPane({
                 >
                     {/* Field Mobile Parity: Active Operator, HoS, and Latest DVIR */}
                     <div className="space-y-3 rounded-xl border border-line bg-surface-subtle/50 p-4">
-                        <h4 className="text-xs font-bold tracking-wider text-ink uppercase">
+                        <h4 className="text-xs font-semibold text-ink">
                             Field Operations &amp; Equipment Hours of Service
                         </h4>
                         <div className="grid gap-4 md:grid-cols-2">
@@ -511,7 +515,10 @@ export function FleetDetailPane({
                                 >
                                     <Camera className="mr-1.5 h-3.5 w-3.5" />
                                     View 4-Angle Walkaround Photos (
-                                    {asset.latest_dvir.photos.length})
+                                    <span className="tabular-nums">
+                                        {asset.latest_dvir.photos.length}
+                                    </span>
+                                    )
                                 </Button>
                             </div>
                         )}
@@ -522,13 +529,13 @@ export function FleetDetailPane({
                             <dt className="text-xs font-medium text-ink-soft">
                                 Registration Number
                             </dt>
-                            <dd className="mt-1 text-sm font-semibold text-ink">
+                            <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
                                 {asset.registration_number ?? 'N/A'}
                             </dd>
                         </div>
                         <div className="rounded-lg bg-surface-subtle p-3">
                             <dt className="text-xs font-medium text-ink-soft">
-                                Manufacturer & Model
+                                Manufacturer &amp; Model
                             </dt>
                             <dd className="mt-1 text-sm font-semibold text-ink">
                                 {asset.manufacturer ?? 'N/A'}{' '}
@@ -539,7 +546,7 @@ export function FleetDetailPane({
                             <dt className="text-xs font-medium text-ink-soft">
                                 Rated Capacity
                             </dt>
-                            <dd className="mt-1 text-sm font-semibold text-ink">
+                            <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
                                 {asset.rated_capacity
                                     ? `${asset.rated_capacity}${asset.capacity_unit ? ` ${asset.capacity_unit}` : ''}`
                                     : 'Not recorded'}
@@ -549,7 +556,7 @@ export function FleetDetailPane({
                             <dt className="text-xs font-medium text-ink-soft">
                                 Meter Reading
                             </dt>
-                            <dd className="mt-1 text-sm font-semibold text-ink">
+                            <dd className="mt-1 text-sm font-semibold text-ink tabular-nums">
                                 {asset.meter_value !== null &&
                                 asset.meter_value !== undefined &&
                                 asset.meter_value !== ''
@@ -564,8 +571,10 @@ export function FleetDetailPane({
                             <dd className="mt-1 text-sm font-semibold">
                                 {asset.blocking_work_orders_count > 0 ? (
                                     <span className="text-danger">
-                                        {asset.blocking_work_orders_count} open
-                                        orders
+                                        <span className="tabular-nums">
+                                            {asset.blocking_work_orders_count}
+                                        </span>{' '}
+                                        open orders
                                     </span>
                                 ) : (
                                     <span className="text-success-strong">
@@ -578,8 +587,8 @@ export function FleetDetailPane({
 
                     {Object.keys(asset.specifications ?? {}).length > 0 && (
                         <div className="mt-4">
-                            <h4 className="text-xs font-semibold text-ink-soft uppercase">
-                                Custom Specifications
+                            <h4 className="text-xs font-semibold text-ink">
+                                Custom specifications
                             </h4>
                             <div className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {Object.entries(asset.specifications).map(
