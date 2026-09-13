@@ -218,15 +218,15 @@ export function DispatchAdvisoryCard({
 
     const badgeVariant = pending
         ? processing
-            ? 'bg-brand-soft text-brand-strong ring-1 ring-brand/30'
-            : 'bg-surface-subtle text-ink-soft ring-1 ring-line'
+            ? 'bg-brand-soft text-brand-strong'
+            : 'bg-surface-subtle text-ink-soft'
         : ready || accepted
-          ? 'bg-success-soft text-success-strong ring-1 ring-success/30'
+          ? 'bg-success-soft text-success-strong'
           : expired || stale
-            ? 'bg-warning-soft text-warning-strong ring-1 ring-warning/30'
+            ? 'border-line bg-surface-subtle text-ink-soft'
             : rec?.status === 'failed'
-              ? 'bg-danger-soft text-danger-strong ring-1 ring-danger/30'
-              : 'bg-surface-subtle text-ink-soft ring-1 ring-line';
+              ? 'bg-danger-soft text-danger-strong'
+              : 'bg-surface-subtle text-ink-soft';
 
     const badgeIcon = processing ? (
         <LoaderCircle
@@ -235,6 +235,11 @@ export function DispatchAdvisoryCard({
         />
     ) : ready || accepted ? (
         <Check className="h-3 w-3" aria-hidden="true" />
+    ) : expired || stale ? (
+        <span
+            className="h-1.5 w-1.5 rounded-full bg-amber-500"
+            aria-hidden="true"
+        />
     ) : rec?.status === 'failed' ? (
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
     ) : (
@@ -246,7 +251,7 @@ export function DispatchAdvisoryCard({
             className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface shadow-xs transition-colors"
             aria-labelledby={`dispatch-gpt-advisory-${jobId}`}
         >
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-surface px-4 py-3.5">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3.5">
                 <div className="min-w-0">
                     <h3
                         id={`dispatch-gpt-advisory-${jobId}`}
@@ -264,7 +269,7 @@ export function DispatchAdvisoryCard({
                 </div>
                 <span
                     className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-2xs',
+                        'inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 text-[11px] font-semibold',
                         badgeVariant,
                     )}
                 >
@@ -280,46 +285,38 @@ export function DispatchAdvisoryCard({
                     aria-atomic="true"
                     className={cn(
                         'transition-all duration-150',
-                        (expired || stale) &&
-                            'rounded-xl border border-warning/30 bg-warning-soft/50 p-3.5 shadow-2xs',
+                        expired || stale
+                            ? 'rounded-lg border border-line bg-surface-subtle/40 p-3 shadow-2xs'
+                            : '',
                     )}
                 >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2.5">
                         {(expired || stale) && (
-                            <div
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong ring-1 ring-warning/30"
+                            <span
+                                className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500 ring-2 ring-amber-500/20"
                                 aria-hidden="true"
-                            >
-                                <Clock className="h-4 w-4" />
-                            </div>
+                            />
                         )}
                         <div className="min-w-0 flex-1">
-                            <h4
-                                className={cn(
-                                    'text-sm font-semibold',
-                                    expired || stale
-                                        ? 'text-warning-strong'
-                                        : 'text-ink',
-                                )}
-                            >
+                            <h4 className="text-xs font-semibold text-ink">
                                 {title}
                             </h4>
-                            <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                            <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">
                                 {description}
                             </p>
                             {canRefreshExpired && (
-                                <div className="mt-3">
+                                <div className="mt-2.5">
                                     <Button
-                                        variant="primary"
-                                        size="md"
+                                        variant="secondary"
+                                        size="sm"
                                         onClick={canRetry ? onRetry : onRequest}
                                         disabled={busy}
                                         aria-label="Refresh suggestions"
-                                        className="w-full justify-center gap-2 font-semibold shadow-xs transition-transform duration-150 ease-out active:scale-[0.98]"
+                                        className="w-full justify-center gap-2 text-xs font-medium"
                                     >
                                         <RefreshCw
                                             className={cn(
-                                                'h-4 w-4 shrink-0',
+                                                'h-3.5 w-3.5 shrink-0',
                                                 busy &&
                                                     'motion-safe:animate-spin',
                                             )}
@@ -422,12 +419,12 @@ export function DispatchAdvisoryCard({
                                     <li
                                         key={`${person.user_id}-${person.assignment_type}`}
                                         className={cn(
-                                            'group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-150',
+                                            'group relative flex items-center gap-2.5 rounded-lg border p-2 transition-all duration-150',
                                             expired || stale
                                                 ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
                                                 : isSelected
-                                                  ? 'border-line-strong/60 bg-surface shadow-2xs hover:border-line-strong hover:shadow-xs'
-                                                  : 'border-line/50 bg-surface/40 opacity-60 hover:bg-surface-subtle/50 hover:opacity-80',
+                                                  ? 'border-line-strong bg-surface shadow-2xs'
+                                                  : 'border-line bg-surface-subtle/30 hover:border-line-strong hover:bg-surface',
                                         )}
                                     >
                                         {ready && canReview && (
@@ -441,14 +438,14 @@ export function DispatchAdvisoryCard({
                                                         )
                                                     }
                                                     aria-label={`Select ${displayName}`}
-                                                    className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                    className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
                                                     disabled={busy}
                                                 />
                                             </label>
                                         )}
                                         <div
                                             className={cn(
-                                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong/40 bg-surface-subtle text-xs font-semibold text-ink shadow-2xs transition-colors',
+                                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface-subtle text-[11px] font-semibold text-ink transition-colors',
                                                 !(expired || stale) &&
                                                     'group-hover:border-line-strong group-hover:bg-surface',
                                             )}
@@ -457,7 +454,7 @@ export function DispatchAdvisoryCard({
                                             {initials || (
                                                 <User
                                                     className={cn(
-                                                        'h-4 w-4 text-ink-soft transition-colors',
+                                                        'h-3.5 w-3.5 text-ink-soft transition-colors',
                                                         !(expired || stale) &&
                                                             'group-hover:text-ink',
                                                     )}
@@ -465,21 +462,21 @@ export function DispatchAdvisoryCard({
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <div className="flex min-w-0 items-center gap-2">
+                                            <div className="flex min-w-0 items-center justify-between gap-1.5">
                                                 <p
-                                                    className="truncate text-sm font-semibold text-ink"
+                                                    className="truncate text-xs font-semibold text-ink"
                                                     title={displayName}
                                                 >
                                                     {displayName}
                                                 </p>
                                                 {hasName && (
-                                                    <span className="inline-flex shrink-0 items-center rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft tabular-nums shadow-2xs ring-1 ring-line">
+                                                    <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink-soft tabular-nums">
                                                         #{person.user_id}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                                                <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
+                                                <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
                                                     {humanize(
                                                         person.assignment_type,
                                                     )}
@@ -489,7 +486,7 @@ export function DispatchAdvisoryCard({
                                                         humanize(
                                                             person.assignment_type,
                                                         ) && (
-                                                        <span className="text-[11px] text-ink-soft">
+                                                        <span className="truncate text-[11px] text-ink-soft">
                                                             ·{' '}
                                                             {humanize(
                                                                 person.role,
@@ -554,12 +551,12 @@ export function DispatchAdvisoryCard({
                                         <li
                                             key={`${asset.operational_asset_id}-${asset.assignment_type}`}
                                             className={cn(
-                                                'group relative flex items-center gap-3 rounded-xl border p-2.5 transition-all duration-150',
+                                                'group relative flex items-center gap-2.5 rounded-lg border p-2 transition-all duration-150',
                                                 expired || stale
                                                     ? 'border-line/40 bg-surface/30 opacity-75 grayscale-[20%]'
                                                     : isSelected
-                                                      ? 'border-line-strong/60 bg-surface shadow-2xs hover:border-line-strong hover:shadow-xs'
-                                                      : 'border-line/50 bg-surface/40 opacity-60 hover:bg-surface-subtle/50 hover:opacity-80',
+                                                      ? 'border-line-strong bg-surface shadow-2xs'
+                                                      : 'border-line bg-surface-subtle/30 hover:border-line-strong hover:bg-surface',
                                             )}
                                         >
                                             {ready && canReview && (
@@ -573,14 +570,14 @@ export function DispatchAdvisoryCard({
                                                             )
                                                         }
                                                         aria-label={`Select ${assetLabel}`}
-                                                        className="h-4 w-4 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
+                                                        className="h-3.5 w-3.5 cursor-pointer rounded border-line-strong text-brand accent-brand transition-shadow focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden"
                                                         disabled={busy}
                                                     />
                                                 </label>
                                             )}
                                             <div
                                                 className={cn(
-                                                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line/80 bg-surface-subtle/80 text-ink shadow-2xs transition-colors',
+                                                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line bg-surface-subtle text-ink transition-colors',
                                                     !(expired || stale) &&
                                                         'group-hover:border-line-strong',
                                                 )}
@@ -588,48 +585,52 @@ export function DispatchAdvisoryCard({
                                             >
                                                 <IconComponent
                                                     className={cn(
-                                                        'h-4 w-4 text-ink-soft transition-colors',
+                                                        'h-3.5 w-3.5 text-ink-soft transition-colors',
                                                         !(expired || stale) &&
                                                             'group-hover:text-ink',
                                                     )}
                                                 />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="flex min-w-0 items-center gap-2">
-                                                    {hasCode && (
-                                                        <span className="inline-flex shrink-0 items-center rounded-md bg-surface px-1.5 py-0.5 font-mono text-xs font-semibold text-ink tabular-nums shadow-2xs ring-1 ring-line">
-                                                            {asset.asset_code}
+                                                <div className="flex min-w-0 items-center justify-between gap-1.5">
+                                                    <div className="flex min-w-0 items-center gap-1.5">
+                                                        {hasCode && (
+                                                            <span className="shrink-0 font-mono text-xs font-semibold text-ink">
+                                                                {
+                                                                    asset.asset_code
+                                                                }
+                                                            </span>
+                                                        )}
+                                                        {showName && (
+                                                            <p
+                                                                className="truncate text-xs font-semibold text-ink"
+                                                                title={
+                                                                    displayName ??
+                                                                    undefined
+                                                                }
+                                                            >
+                                                                {displayName}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {(hasName || hasCode) && (
+                                                        <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink-soft tabular-nums">
+                                                            #
+                                                            {
+                                                                asset.operational_asset_id
+                                                            }
                                                         </span>
                                                     )}
-                                                    {showName && (
-                                                        <p
-                                                            className="truncate text-sm font-semibold text-ink"
-                                                            title={
-                                                                displayName ??
-                                                                undefined
-                                                            }
-                                                        >
-                                                            {displayName}
-                                                        </p>
-                                                    )}
                                                 </div>
-                                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                                                    <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                                <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
+                                                    <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
                                                         {humanize(
                                                             asset.assignment_type,
                                                         )}
                                                     </span>
                                                     {asset.capacity && (
-                                                        <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft ring-1 ring-line/60">
+                                                        <span className="inline-flex shrink-0 items-center rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-soft tabular-nums">
                                                             {asset.capacity}
-                                                        </span>
-                                                    )}
-                                                    {(hasName || hasCode) && (
-                                                        <span className="inline-flex items-center rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft tabular-nums ring-1 ring-line">
-                                                            #
-                                                            {
-                                                                asset.operational_asset_id
-                                                            }
                                                         </span>
                                                     )}
                                                     {asset.kind &&
@@ -637,7 +638,7 @@ export function DispatchAdvisoryCard({
                                                             humanize(
                                                                 asset.assignment_type,
                                                             ) && (
-                                                            <span className="text-[11px] text-ink-soft">
+                                                            <span className="truncate text-[11px] text-ink-soft">
                                                                 ·{' '}
                                                                 {humanize(
                                                                     asset.kind,
@@ -956,14 +957,14 @@ function ResourceGroup({
                     <span className="text-ink-soft">{icon}</span>
                     <span>{label}</span>
                 </h5>
-                <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-ink-soft tabular-nums ring-1 ring-line/70">
+                <span className="inline-flex items-center rounded-full border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-semibold text-ink-soft tabular-nums">
                     {children.length}
                 </span>
             </div>
             {children.length ? (
                 <ul className="space-y-2">{children}</ul>
             ) : (
-                <p className="rounded-lg border border-dashed border-line bg-surface-subtle/30 px-3 py-2 text-xs text-ink-soft">
+                <p className="rounded-lg border border-line bg-surface-subtle/40 px-3 py-2 text-xs text-ink-soft">
                     {empty}
                 </p>
             )}

@@ -58,21 +58,18 @@ export function AssignmentSelectionSummary({
           : 'resources selected';
 
     return (
-        <Panel
-            id="assignment-summary"
-            className="overflow-hidden border-brand/40 shadow-sm"
-        >
-            <div className="border-b border-line bg-surface px-4 py-4">
+        <Panel id="assignment-summary" className="overflow-hidden">
+            <div className="border-b border-line bg-surface px-4 py-3.5">
                 <div className="flex items-start gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-strong">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
                         {hasSavedAssignments && !hasDraftSelections ? (
                             <CheckCircle2
-                                className="h-5 w-5"
+                                className="h-4 w-4 text-success-strong"
                                 aria-hidden="true"
                             />
                         ) : (
                             <ListChecks
-                                className="h-5 w-5"
+                                className="h-4 w-4"
                                 aria-hidden="true"
                             />
                         )}
@@ -91,7 +88,7 @@ export function AssignmentSelectionSummary({
             <div className="space-y-4 px-4 py-4">
                 <div className="flex items-baseline gap-2">
                     <span
-                        className="text-3xl font-bold tracking-tight text-ink"
+                        className="text-xl font-semibold tracking-tight text-ink tabular-nums"
                         aria-hidden="true"
                     >
                         {visibleCount}
@@ -104,8 +101,8 @@ export function AssignmentSelectionSummary({
 
                 {/* Client selection state is deliberately separate from the
                     server-authoritative readiness check. */}
-                <div className="space-y-2 rounded-lg border border-line bg-surface-subtle/50 p-3">
-                    <p className="text-[11px] font-semibold tracking-wider text-ink-soft uppercase">
+                <div className="space-y-1.5 rounded-lg border border-line bg-surface-subtle/50 p-3">
+                    <p className="text-xs font-semibold text-ink">
                         Selection status
                     </p>
                     <p className="text-xs leading-5 text-ink-soft">

@@ -170,24 +170,24 @@ export function DispatchResources({
                                 setDate(event.target.value);
                             }
                         }}
-                        className="mt-1 block min-h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+                        className="mt-1 block min-h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     />
                 </label>
             </div>
             {selectedJob ? (
-                <div className="mt-3 rounded-lg border border-brand/40 bg-brand-soft/40 p-3">
+                <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="min-w-0">
-                            <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
-                                Active Dispatch Context
-                            </span>
                             <p className="truncate text-sm font-semibold text-ink">
                                 {selectedJob.reference} · {selectedJob.title}
+                            </p>
+                            <p className="text-xs text-ink-soft">
+                                Active dispatch context
                             </p>
                         </div>
                         <Link
                             href={`/operations/dispatch-jobs/${selectedJob.id}?${new URLSearchParams({ return_to: returnTo })}#assignment-summary`}
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         >
                             <Users className="h-3.5 w-3.5" aria-hidden="true" />
                             Assign resources to this job →
@@ -199,9 +199,9 @@ export function DispatchResources({
                 <div className="mt-3 rounded-lg border border-line bg-surface-subtle p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="min-w-0">
-                            <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                            <p className="text-sm font-semibold text-ink">
                                 Assign to a dispatch
-                            </span>
+                            </p>
                             <p className="text-xs text-ink-soft">
                                 Pick a draft job to review qualification match
                                 and assign crew.
@@ -217,7 +217,7 @@ export function DispatchResources({
                                     onSelectJob(id);
                                 }
                             }}
-                            className="min-h-9 rounded-lg border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                            className="min-h-9 rounded-lg border border-line bg-surface px-2.5 text-xs font-medium text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         >
                             <option value="" disabled>
                                 Choose a draft dispatch…
@@ -249,9 +249,9 @@ export function DispatchResources({
                                 aria-pressed={kind === value}
                                 onClick={() => setKind(value)}
                                 className={cn(
-                                    'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                    'inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                     kind === value
-                                        ? 'bg-brand-soft text-ink'
+                                        ? 'bg-brand-soft font-semibold text-ink'
                                         : 'text-ink-soft hover:bg-surface-subtle',
                                 )}
                             >
@@ -272,13 +272,18 @@ export function DispatchResources({
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="Search name, role, or asset"
-                        className="min-h-11 w-full rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft"
+                        className="min-h-11 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     />
                 </label>
                 <p className="text-xs text-ink-soft" role="status">
-                    {refreshing
-                        ? 'Refreshing resources…'
-                        : `${rows.length} matching ${kind}`}
+                    {refreshing ? (
+                        'Refreshing resources…'
+                    ) : (
+                        <>
+                            <span className="tabular-nums">{rows.length}</span>{' '}
+                            matching {kind}
+                        </>
+                    )}
                 </p>
             </div>
             <p className="mt-3 text-xs text-ink-soft">
@@ -290,7 +295,7 @@ export function DispatchResources({
                 tabIndex={0}
                 role="region"
                 aria-label="Resource results"
-                className="mt-3 max-h-96 overflow-y-auto rounded-lg border border-line focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                className="mt-3 max-h-96 overflow-y-auto rounded-lg border border-line focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
             >
                 {rows.length === 0 ? (
                     <p className="p-5 text-sm text-ink-soft">

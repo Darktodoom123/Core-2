@@ -188,7 +188,7 @@ export function CurrentAssignments({
             ) : (
                 <div className="divide-y divide-line">
                     {job.personnel_assignments.length > 0 && (
-                        <p className="bg-surface-subtle px-4 py-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                        <p className="border-b border-line bg-surface-subtle/50 px-4 py-1.5 text-xs font-semibold text-ink-soft">
                             Employees
                         </p>
                     )}
@@ -425,7 +425,7 @@ export function CurrentAssignments({
                                                         );
                                                         setReasonError(null);
                                                     }}
-                                                    className="mt-2 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none"
+                                                    className="placeholder:text-ink-subtle mt-2 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
                                                     placeholder="Provide reason for rejection..."
                                                     aria-describedby={`rejection-reason-${assignment.id}-description${reasonError || errors.reason ? ` rejection-reason-${assignment.id}-error` : ''}${responseError ? ` assignment-response-${assignment.id}-error` : ''}`}
                                                     aria-invalid={
@@ -484,7 +484,7 @@ export function CurrentAssignments({
                         })}
                     </ul>
                     {job.asset_assignments.length > 0 && (
-                        <p className="bg-surface-subtle px-4 py-2 text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                        <p className="border-b border-line bg-surface-subtle/50 px-4 py-1.5 text-xs font-semibold text-ink-soft">
                             Assets
                         </p>
                     )}

@@ -41,7 +41,7 @@ export function AssignmentReadinessSummary({
                 <button
                     type="button"
                     onClick={onReview}
-                    className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-ink underline decoration-brand underline-offset-2 hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-ink underline decoration-brand underline-offset-2 hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                 >
                     Review readiness
                 </button>
@@ -63,7 +63,7 @@ export function AssignmentReadinessSummary({
                     </ul>
                     {activation.blockers.length > 3 && (
                         <details className="mt-1">
-                            <summary className="min-h-11 cursor-pointer content-center rounded font-medium focus-visible:ring-2 focus-visible:ring-brand">
+                            <summary className="min-h-11 cursor-pointer content-center rounded font-medium focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden">
                                 Show {activation.blockers.length - 3} more
                                 blockers
                             </summary>

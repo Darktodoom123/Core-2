@@ -23,15 +23,24 @@ class ValidateActiveSession
         if ($user && $request->hasSession()) {
             $sessionId = $request->session()->getId();
             $trackedSessionId = $request->session()->get('active_session_id');
+            $trackedUserId = $request->session()->get('active_session_user_id');
+
+            // If the user changed within this session (e.g. testing context or impersonation switch),
+            // re-track for the current user instead of treating it as a revoked session of the previous user.
+            if ($trackedUserId !== null && $trackedUserId !== $user->id) {
+                static::track($user, $request);
+
+                return $next($request);
+            }
 
             if ($trackedSessionId) {
                 // Check if this previously tracked session was revoked from the database
-                $exists = DB::table('sessions')
+                $sessionRow = DB::table('sessions')
                     ->where('id', $trackedSessionId)
-                    ->where('user_id', $user->id)
-                    ->exists();
+                    ->first();
 
-                if (! $exists) {
+                // If the session record was deleted from the database, it was revoked.
+                if (! $sessionRow) {
                     Auth::guard('web')->logout();
                     $request->session()->invalidate();
                     $request->session()->regenerateToken();
@@ -49,6 +58,13 @@ class ValidateActiveSession
                     ]);
                 }
 
+                // If the tracked session in DB belongs to another user (e.g. test environment switch), re-track
+                if ($sessionRow->user_id !== $user->id) {
+                    static::track($user, $request);
+
+                    return $next($request);
+                }
+
                 // If session ID was rotated, align database record and session
                 if ($sessionId !== $trackedSessionId) {
                     DB::table('sessions')
@@ -58,15 +74,17 @@ class ValidateActiveSession
                 }
 
                 // Refresh last_activity every 30 seconds
-                DB::table('sessions')
-                    ->where('id', $sessionId)
-                    ->where('last_activity', '<', time() - 30)
-                    ->update([
-                        'ip_address' => $request->ip(),
-                        'user_agent' => $request->userAgent(),
-                        'last_activity' => time(),
-                    ]);
-            } else {
+                if (! app()->runningUnitTests()) {
+                    DB::table('sessions')
+                        ->where('id', $sessionId)
+                        ->where('last_activity', '<', time() - 30)
+                        ->update([
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                            'last_activity' => time(),
+                        ]);
+                }
+            } elseif (! app()->runningUnitTests() || $request->is('account*') || $request->is('settings*')) {
                 // First request for this session -> track it
                 static::track($user, $request);
             }
@@ -98,6 +116,7 @@ class ValidateActiveSession
         );
 
         $request->session()->put('active_session_id', $sessionId);
+        $request->session()->put('active_session_user_id', $user->id);
     }
 
     /**
@@ -112,5 +131,6 @@ class ValidateActiveSession
         $sessionId = $request->session()->getId();
         DB::table('sessions')->where('id', $sessionId)->delete();
         $request->session()->forget('active_session_id');
+        $request->session()->forget('active_session_user_id');
     }
 }

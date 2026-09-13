@@ -67,7 +67,7 @@ export function AssignmentFlowHeader({
                     <li
                         aria-current={activeStep === 1 ? 'step' : undefined}
                         className={cn(
-                            activeStep === 1 && 'relative bg-brand-soft/40',
+                            activeStep === 1 && 'relative bg-brand-soft/30',
                         )}
                     >
                         <button
@@ -77,17 +77,17 @@ export function AssignmentFlowHeader({
                         >
                             <span
                                 className={cn(
-                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-xs ring-2',
+                                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                                     activeStep === 1
-                                        ? 'bg-brand text-brand-contrast ring-brand/30'
-                                        : 'bg-success-soft text-success-strong ring-success/20',
+                                        ? 'bg-brand text-brand-contrast'
+                                        : 'bg-success-soft text-success-strong',
                                 )}
                             >
                                 {activeStep === 1 ? (
                                     '1'
                                 ) : (
                                     <Check
-                                        className="h-4 w-4"
+                                        className="h-3.5 w-3.5"
                                         aria-hidden="true"
                                     />
                                 )}
@@ -95,9 +95,9 @@ export function AssignmentFlowHeader({
                             <span className="min-w-0">
                                 <span
                                     className={cn(
-                                        'block text-[11px] font-bold tracking-wider uppercase',
+                                        'block text-[11px] font-medium',
                                         activeStep === 1
-                                            ? 'text-ink'
+                                            ? 'text-brand-strong'
                                             : 'text-success-strong',
                                     )}
                                 >
@@ -125,7 +125,7 @@ export function AssignmentFlowHeader({
                     <li
                         aria-current={activeStep === 2 ? 'step' : undefined}
                         className={cn(
-                            activeStep === 2 && 'relative bg-brand-soft/40',
+                            activeStep === 2 && 'relative bg-brand-soft/30',
                         )}
                     >
                         <button
@@ -135,19 +135,19 @@ export function AssignmentFlowHeader({
                         >
                             <span
                                 className={cn(
-                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-xs ring-2',
+                                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                                     activeStep === 2
-                                        ? 'bg-brand text-brand-contrast ring-brand/30'
+                                        ? 'bg-brand text-brand-contrast'
                                         : hasAssignments
-                                          ? 'bg-success-soft text-success-strong ring-success/20'
-                                          : 'border border-line-strong bg-surface text-ink-soft',
+                                          ? 'bg-success-soft text-success-strong'
+                                          : 'border border-line bg-surface text-ink-soft',
                                 )}
                             >
                                 {activeStep === 2 ? (
                                     '2'
                                 ) : hasAssignments ? (
                                     <Check
-                                        className="h-4 w-4"
+                                        className="h-3.5 w-3.5"
                                         aria-hidden="true"
                                     />
                                 ) : (
@@ -157,9 +157,9 @@ export function AssignmentFlowHeader({
                             <span className="min-w-0">
                                 <span
                                     className={cn(
-                                        'block text-[11px] font-bold tracking-wider uppercase',
+                                        'block text-[11px] font-medium',
                                         activeStep === 2
-                                            ? 'text-ink'
+                                            ? 'text-brand-strong'
                                             : 'text-ink-soft',
                                     )}
                                 >
@@ -192,7 +192,7 @@ export function AssignmentFlowHeader({
                         id="dispatch-activation-step"
                         aria-current={activeStep === 3 ? 'step' : undefined}
                         className={cn(
-                            activeStep === 3 && 'relative bg-brand-soft/40',
+                            activeStep === 3 && 'relative bg-brand-soft/30',
                         )}
                     >
                         {canActivate ? (
@@ -203,10 +203,10 @@ export function AssignmentFlowHeader({
                             >
                                 <span
                                     className={cn(
-                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-xs ring-2',
+                                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                                         activeStep === 3
-                                            ? 'bg-brand text-brand-contrast ring-brand/30'
-                                            : 'border border-line-strong bg-surface text-ink-soft group-hover:border-brand-strong group-hover:text-brand-strong',
+                                            ? 'bg-brand text-brand-contrast'
+                                            : 'border border-line bg-surface text-ink-soft group-hover:border-brand-strong group-hover:text-brand-strong',
                                     )}
                                 >
                                     3
@@ -214,9 +214,9 @@ export function AssignmentFlowHeader({
                                 <span className="min-w-0">
                                     <span
                                         className={cn(
-                                            'block text-[11px] font-bold tracking-wider uppercase',
+                                            'block text-[11px] font-medium',
                                             activeStep === 3
-                                                ? 'text-ink'
+                                                ? 'text-brand-strong'
                                                 : 'text-ink-soft',
                                         )}
                                     >
@@ -243,15 +243,15 @@ export function AssignmentFlowHeader({
                             </button>
                         ) : (
                             <div className="flex min-h-20 items-center gap-3.5 px-4 py-3.5 opacity-60 sm:px-5">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-soft">
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-xs font-semibold text-ink-soft">
                                     3
                                 </span>
                                 <span className="min-w-0">
                                     <span
                                         className={cn(
-                                            'block text-[11px] font-bold tracking-wider uppercase',
+                                            'block text-[11px] font-medium',
                                             activeStep === 3
-                                                ? 'text-ink'
+                                                ? 'text-brand-strong'
                                                 : 'text-ink-soft',
                                         )}
                                     >

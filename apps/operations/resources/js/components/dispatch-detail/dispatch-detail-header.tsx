@@ -24,9 +24,9 @@ export function DispatchDetailHeader({
                 <Link
                     href={capabilities.update_own_status ? '/' : returnTo}
                     onClick={onConfirmLeave}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                 >
-                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                     {capabilities.update_own_status
                         ? "Back to today's work"
                         : 'Back to dispatch workspace'}
@@ -34,7 +34,7 @@ export function DispatchDetailHeader({
                 <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                         <div className="mt-1 flex flex-wrap items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight text-ink">
+                            <h1 className="text-xl font-semibold tracking-[-0.02em] text-ink sm:text-2xl">
                                 {capabilities.update_own_status
                                     ? job.title
                                     : `${job.reference} · ${job.title}`}
@@ -72,7 +72,7 @@ export function DispatchDetailHeader({
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <CanonicalStatusBadge status={job.priority} />
-                        <span className="inline-flex min-h-7 items-center rounded-md border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+                        <span className="inline-flex items-center rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft tabular-nums">
                             Version {job.version}
                         </span>
                         {capabilities.request_gpt_assistance && (

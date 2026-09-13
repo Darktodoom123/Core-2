@@ -12,6 +12,7 @@ import {
     Plus,
     RefreshCw,
     Search,
+    Sparkles,
     Truck,
     Users,
     X,
@@ -20,7 +21,6 @@ import { useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
     Button,
-    DataPair,
     EmptyState,
     PageHeading,
     Panel,
@@ -211,16 +211,24 @@ function isUndatedPreparation(job: DispatchJobViewModel): boolean {
     );
 }
 
-function priorityClasses(value: string): string {
-    if (value === 'emergency') {
-        return 'bg-danger-soft text-danger-strong';
+function getInitials(name?: string | null): string {
+    if (!name) {
+        return '';
     }
 
-    if (value === 'priority') {
-        return 'bg-warning-soft text-warning-strong';
+    const clean = name.trim();
+
+    if (!clean) {
+        return '';
     }
 
-    return 'bg-surface-subtle text-ink-soft';
+    const parts = clean.split(/\s+/);
+
+    if (parts.length === 1) {
+        return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export function DispatchDesk({
@@ -591,7 +599,7 @@ export function DispatchDesk({
                                         : 'New dispatch'}
                                     {incomingByCapability.length > 0 &&
                                         state.view !== 'incoming' && (
-                                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-bold">
+                                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
                                                 {incomingByCapability.length}
                                             </span>
                                         )}
@@ -623,9 +631,9 @@ export function DispatchDesk({
                                     key={value}
                                     type="button"
                                     className={cn(
-                                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         state.view === value
-                                            ? 'bg-brand-soft text-ink'
+                                            ? 'bg-brand-soft font-semibold text-ink'
                                             : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                     aria-current={
@@ -1063,13 +1071,13 @@ function DeskFilters({
 
     return (
         <section
-            className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-5 py-3 lg:px-7"
+            className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-5 py-2.5 lg:px-7"
             aria-label="Dispatch filters"
         >
             <label className="relative min-w-[14rem] flex-1 sm:max-w-sm">
                 <span className="sr-only">Search dispatches</span>
                 <Search
-                    className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-soft"
+                    className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-soft"
                     aria-hidden="true"
                 />
                 <input
@@ -1078,7 +1086,7 @@ function DeskFilters({
                     value={query}
                     onChange={(event) => onQuery(event.target.value)}
                     placeholder="Search job, site, client"
-                    className="h-11 w-full rounded-lg border border-line-strong bg-surface pl-9 text-sm text-ink placeholder:text-ink-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    className="h-9 w-full rounded-md border border-line bg-surface pr-3 pl-8.5 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                 />
             </label>
             <label className="min-w-[11rem]">
@@ -1088,7 +1096,7 @@ function DeskFilters({
                     onChange={(event) =>
                         onSource(event.target.value as DispatchSourceFilter)
                     }
-                    className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                    className="h-9 w-full rounded-md border border-line bg-surface px-2.5 text-xs text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                 >
                     {SOURCE_FILTERS.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -1102,6 +1110,7 @@ function DeskFilters({
                 variant={attentionOnly ? 'primary' : 'secondary'}
                 aria-pressed={attentionOnly}
                 onClick={() => onAttention(!attentionOnly)}
+                className="h-9 gap-1.5 text-xs font-medium"
             >
                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                 Needs attention on this page
@@ -1112,13 +1121,19 @@ function DeskFilters({
                     variant={needsAssignmentOnly ? 'primary' : 'secondary'}
                     aria-pressed={needsAssignmentOnly}
                     onClick={() => onNeedsAssignment(!needsAssignmentOnly)}
+                    className="h-9 gap-1.5 text-xs font-medium"
                 >
                     <Users className="h-3.5 w-3.5" aria-hidden="true" />
                     Needs assignment ({assignmentCount})
                 </Button>
             )}
             {hasFilters && (
-                <Button size="sm" variant="quiet" onClick={onReset}>
+                <Button
+                    size="sm"
+                    variant="quiet"
+                    onClick={onReset}
+                    className="h-9 text-xs font-medium"
+                >
                     Clear filters
                 </Button>
             )}
@@ -1145,12 +1160,12 @@ function ScheduleControls({
 
     return (
         <section
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-canvas px-5 py-3 lg:px-7"
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-canvas px-5 py-2 lg:px-7"
             aria-label="Schedule controls"
         >
             <div className="flex flex-wrap items-center gap-2">
                 <div
-                    className="flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-1"
+                    className="flex items-center gap-0.5 rounded-lg border border-line/80 bg-surface p-0.5 shadow-2xs"
                     role="group"
                     aria-label="Schedule display"
                 >
@@ -1167,10 +1182,10 @@ function ScheduleControls({
                             aria-pressed={mode === value}
                             onClick={() => onMode(value)}
                             className={cn(
-                                'min-h-11 rounded-md px-3 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                'h-7 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden',
                                 mode === value
-                                    ? 'bg-brand-soft text-ink'
-                                    : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                    ? 'border border-line/50 bg-surface-subtle font-semibold text-ink shadow-2xs'
+                                    : 'text-ink-soft hover:bg-surface-subtle/50 hover:text-ink',
                             )}
                         >
                             {label}
@@ -1179,7 +1194,7 @@ function ScheduleControls({
                 </div>
                 {showDateAndPeriod && mode !== 'list' && (
                     <div
-                        className="flex items-center gap-1 rounded-lg border border-line bg-surface p-1"
+                        className="flex items-center gap-0.5 rounded-lg border border-line/80 bg-surface p-0.5 shadow-2xs"
                         role="group"
                         aria-label="Schedule period"
                     >
@@ -1191,10 +1206,10 @@ function ScheduleControls({
                                     aria-pressed={period === value}
                                     onClick={() => onPeriod(value)}
                                     className={cn(
-                                        'min-h-11 rounded-md px-3 text-xs font-semibold capitalize focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        'h-7 rounded-md px-2.5 text-xs font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-hidden',
                                         period === value
-                                            ? 'bg-brand-soft text-ink'
-                                            : 'text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                            ? 'border border-line/50 bg-surface-subtle font-semibold text-ink shadow-2xs'
+                                            : 'text-ink-soft hover:bg-surface-subtle/50 hover:text-ink',
                                     )}
                                 >
                                     {value}
@@ -1205,17 +1220,17 @@ function ScheduleControls({
                 )}
             </div>
             {showDateAndPeriod && (
-                <label className="flex min-h-11 items-center gap-2 text-sm font-medium text-ink">
+                <label className="flex items-center gap-2 text-xs font-medium text-ink">
                     <span className="sr-only">Selected schedule date</span>
                     <CalendarDays
-                        className="h-4 w-4 text-ink-soft"
+                        className="h-3.5 w-3.5 text-ink-soft"
                         aria-hidden="true"
                     />
                     <input
                         type="date"
                         value={date}
                         onChange={(event) => onDate(event.target.value)}
-                        className="h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                        className="focus-visible:ring-1.5 h-8 rounded-md border border-line bg-surface px-2 text-xs text-ink focus-visible:ring-brand focus-visible:outline-hidden"
                     />
                 </label>
             )}
@@ -1400,32 +1415,32 @@ function DeskJobList({
                                             : undefined
                                     }
                                     className={cn(
-                                        'flex min-h-[104px] w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none focus-visible:ring-inset',
+                                        'flex min-h-[104px] w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
                                         selectedJobId === job.id &&
-                                            'bg-brand-soft/60',
+                                            'bg-brand-soft/50 ring-1 ring-brand/25 ring-inset',
                                     )}
                                 >
-                                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
+                                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
                                         {jobGroup(job) === 'execution' ? (
                                             <Truck
-                                                className="h-4 w-4"
+                                                className="h-3.5 w-3.5"
                                                 aria-hidden="true"
                                             />
                                         ) : jobGroup(job) === 'history' ? (
                                             <FileText
-                                                className="h-4 w-4"
+                                                className="h-3.5 w-3.5"
                                                 aria-hidden="true"
                                             />
                                         ) : (
                                             <ClipboardList
-                                                className="h-4 w-4"
+                                                className="h-3.5 w-3.5"
                                                 aria-hidden="true"
                                             />
                                         )}
                                     </span>
                                     <span className="min-w-0 flex-1">
-                                        <span className="flex flex-wrap items-center gap-1.5">
-                                            <span className="text-xs font-bold text-ink">
+                                        <span className="flex flex-wrap items-center gap-2">
+                                            <span className="font-mono text-xs font-medium tracking-tight text-ink-soft">
                                                 {job.reference}
                                             </span>
                                             <CanonicalStatusBadge
@@ -1435,18 +1450,30 @@ function DeskJobList({
                                                 'routine' && (
                                                 <span
                                                     className={cn(
-                                                        'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase',
-                                                        priorityClasses(
-                                                            job.priority.value,
-                                                        ),
+                                                        'inline-flex items-center gap-1 text-[11px] font-medium',
+                                                        job.priority.value ===
+                                                            'emergency'
+                                                            ? 'text-danger'
+                                                            : 'text-warning-strong',
                                                     )}
                                                 >
+                                                    <span
+                                                        className={cn(
+                                                            'h-1.5 w-1.5 rounded-full',
+                                                            job.priority
+                                                                .value ===
+                                                                'emergency'
+                                                                ? 'bg-danger'
+                                                                : 'bg-warning-strong',
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
                                                     {job.priority.label}
                                                 </span>
                                             )}
                                             {hasAttention && (
                                                 <AlertTriangle
-                                                    className="h-3.5 w-3.5 text-danger"
+                                                    className="h-3.5 w-3.5 shrink-0 text-danger"
                                                     aria-label="Needs attention"
                                                 />
                                             )}
@@ -1469,14 +1496,17 @@ function DeskJobList({
                                                 />
                                                 {resources}
                                             </span>
-                                            <span className="shrink-0">
+                                            <span className="shrink-0 tabular-nums">
                                                 {formatDateTime(
                                                     job.scheduled_start,
                                                 )}
                                             </span>
                                         </span>
-                                        <span className="mt-1 block truncate text-[11px] font-semibold text-ink-soft">
-                                            Next: {nextAction.label}
+                                        <span className="mt-1 block truncate text-[11px] font-medium text-ink-soft">
+                                            Next:{' '}
+                                            <span className="font-semibold text-ink">
+                                                {nextAction.label}
+                                            </span>
                                         </span>
                                     </span>
                                     <ChevronRight
@@ -1545,19 +1575,30 @@ function DispatchReviewPanel({
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-xs font-bold tracking-wide text-ink-soft">
+                                    <span className="font-mono text-xs font-medium tracking-tight text-ink-soft">
                                         {job.reference}
                                     </span>
                                     <CanonicalStatusBadge status={job.status} />
                                     {job.priority.value !== 'routine' && (
                                         <span
                                             className={cn(
-                                                'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                                                priorityClasses(
-                                                    job.priority.value,
-                                                ),
+                                                'inline-flex items-center gap-1 text-xs font-medium',
+                                                job.priority.value ===
+                                                    'emergency'
+                                                    ? 'text-danger'
+                                                    : 'text-warning-strong',
                                             )}
                                         >
+                                            <span
+                                                className={cn(
+                                                    'h-1.5 w-1.5 rounded-full',
+                                                    job.priority.value ===
+                                                        'emergency'
+                                                        ? 'bg-danger'
+                                                        : 'bg-warning-strong',
+                                                )}
+                                                aria-hidden="true"
+                                            />
                                             {job.priority.label}
                                         </span>
                                     )}
@@ -1572,13 +1613,6 @@ function DispatchReviewPanel({
                                     {job.client}
                                 </p>
                             </div>
-                            <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">
-                                {nextAction.group === 'execution'
-                                    ? 'Field execution'
-                                    : nextAction.group === 'history'
-                                      ? 'History'
-                                      : 'Preparation'}
-                            </span>
                         </div>
                         {job.status.value === 'draft' && (
                             <div className="mt-3 flex items-center gap-2 text-xs font-medium text-brand-strong">
@@ -1587,97 +1621,117 @@ function DispatchReviewPanel({
                                     aria-hidden="true"
                                 />
                                 <span>
-                                    Module 2 · Ready for driver/operator &amp;
-                                    equipment assignment
+                                    Ready for driver/operator &amp; equipment
+                                    assignment
                                 </span>
                             </div>
                         )}
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                            <Link
-                                href={href}
-                                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
-                            >
-                                {nextAction.label}
-                                <ChevronRight
-                                    className="h-4 w-4"
-                                    aria-hidden="true"
-                                />
-                            </Link>
+                        <div className="mt-4 flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <Link
+                                    href={href}
+                                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast shadow-xs transition-colors hover:bg-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                                >
+                                    {nextAction.label}
+                                    <ChevronRight
+                                        className="h-4 w-4"
+                                        aria-hidden="true"
+                                    />
+                                </Link>
+                                <span className="text-xs text-ink-soft">
+                                    {nextAction.group === 'preparation'
+                                        ? 'Review the remaining requirements before activation.'
+                                        : nextAction.group === 'execution'
+                                          ? 'Review latest field updates.'
+                                          : 'Review outcome and dispatch history.'}
+                                </span>
+                            </div>
                             <a
                                 href="#dispatch-ai-assistance"
-                                className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink underline decoration-brand underline-offset-2"
+                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md border border-line/60 bg-surface px-2.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:self-auto"
                             >
-                                AI assistance
+                                <Sparkles
+                                    className="h-3.5 w-3.5 text-brand"
+                                    aria-hidden="true"
+                                />
+                                <span>AI assistance</span>
                             </a>
-                            <span className="text-xs text-ink-soft">
-                                {nextAction.group === 'preparation'
-                                    ? 'Review the remaining requirements before activation.'
-                                    : nextAction.group === 'execution'
-                                      ? 'Review the latest field updates.'
-                                      : 'Review the outcome and dispatch history.'}
-                            </span>
                         </div>
                     </div>
 
-                    <div className="grid gap-x-8 px-4 py-4 md:px-5 @lg:grid-cols-2">
-                        <dl className="divide-y divide-line">
-                            <DataPair
-                                label="Site"
-                                value={
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <MapPin
-                                            className="h-3.5 w-3.5 text-ink-soft"
-                                            aria-hidden="true"
-                                        />
+                    <div className="grid gap-x-8 border-b border-line px-4 py-2 md:px-5 @lg:grid-cols-2">
+                        <div className="divide-y divide-line/60">
+                            <div className="grid grid-cols-[minmax(6rem,0.65fr)_1.35fr] items-baseline gap-3 py-2.5 text-sm">
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Site
+                                </span>
+                                <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-ink">
+                                    <MapPin
+                                        className="h-3.5 w-3.5 shrink-0 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="truncate">
                                         {job.site || 'Site not recorded'}
                                     </span>
-                                }
-                            />
-                            <DataPair
-                                label="Schedule"
-                                value={
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Clock3
-                                            className="h-3.5 w-3.5 text-ink-soft"
-                                            aria-hidden="true"
-                                        />
-                                        {formatSchedule(job)}
-                                    </span>
-                                }
-                            />
-                            <DataPair
-                                label="Source"
-                                value={job.source?.label ?? 'Direct intake'}
-                            />
-                        </dl>
-                        <div className="border-t border-line pt-3 @lg:border-t-0 @lg:pt-0">
-                            <h3 className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                Requirements
-                            </h3>
-                            {job.requirements.length > 0 ? (
-                                <ul className="mt-2 space-y-2 text-sm text-ink">
-                                    {job.requirements.map((requirement) => (
-                                        <li
-                                            key={requirement}
-                                            className="flex items-start gap-2"
-                                        >
-                                            <span
-                                                className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
-                                                aria-hidden="true"
-                                            />
-                                            {requirement}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="mt-2 text-sm text-ink-soft">
-                                    No requirements recorded.
-                                </p>
-                            )}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[minmax(6rem,0.65fr)_1.35fr] items-baseline gap-3 py-2.5 text-sm">
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Schedule
+                                </span>
+                                <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-ink tabular-nums">
+                                    <Clock3
+                                        className="h-3.5 w-3.5 shrink-0 text-ink-soft"
+                                        aria-hidden="true"
+                                    />
+                                    <span>{formatSchedule(job)}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div className="divide-y divide-line/60">
+                            <div className="grid grid-cols-[minmax(6rem,0.65fr)_1.35fr] items-baseline gap-3 py-2.5 text-sm">
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Source
+                                </span>
+                                <span className="font-medium text-ink">
+                                    {job.source?.label ?? 'Direct intake'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[minmax(6rem,0.65fr)_1.35fr] items-baseline gap-3 py-2.5 text-sm">
+                                <span className="text-xs font-medium text-ink-soft">
+                                    Requirements
+                                </span>
+                                <div className="min-w-0 text-sm">
+                                    {job.requirements.length > 0 ? (
+                                        <ul className="space-y-1 font-medium text-ink">
+                                            {job.requirements.map(
+                                                (requirement) => (
+                                                    <li
+                                                        key={requirement}
+                                                        className="flex items-start gap-1.5 text-xs"
+                                                    >
+                                                        <span
+                                                            className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span>
+                                                            {requirement}
+                                                        </span>
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    ) : (
+                                        <span className="text-xs text-ink-soft">
+                                            No requirements recorded.
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid gap-5 border-t border-line px-4 py-4 md:px-5 @lg:grid-cols-2">
+                    <div className="grid gap-5 px-4 py-4 md:px-5 @lg:grid-cols-2">
                         <section aria-labelledby="assigned-personnel-heading">
                             <div className="flex items-center justify-between">
                                 <h3
@@ -1688,7 +1742,7 @@ function DispatchReviewPanel({
                                 </h3>
                                 <Link
                                     href={assignmentHref}
-                                    className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-brand underline-offset-2 transition-colors hover:text-brand-strong"
                                 >
                                     {job.personnel_assignments.length === 0
                                         ? '+ Assign crew'
@@ -1696,7 +1750,7 @@ function DispatchReviewPanel({
                                 </Link>
                             </div>
                             {job.personnel_assignments.length === 0 ? (
-                                <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                <div className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-subtle/50 p-3 text-xs text-ink-soft">
                                     <span>No personnel assigned.</span>
                                     <Link
                                         href={assignmentHref}
@@ -1706,25 +1760,74 @@ function DispatchReviewPanel({
                                     </Link>
                                 </div>
                             ) : (
-                                <ul className="mt-2 space-y-3">
+                                <ul className="mt-2.5 space-y-2">
                                     {job.personnel_assignments.map(
                                         (assignment) => (
                                             <li
                                                 key={assignment.id}
-                                                className="text-sm text-ink"
+                                                className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-2.5 shadow-2xs"
                                             >
-                                                <p className="font-medium">
-                                                    {assignment.name}
-                                                </p>
-                                                <p className="text-xs text-ink-soft">
-                                                    {humanize(assignment.type)}{' '}
-                                                    ·{' '}
+                                                <div className="flex min-w-0 items-center gap-2.5">
+                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface-subtle text-[11px] font-semibold text-ink">
+                                                        {getInitials(
+                                                            assignment.name,
+                                                        ) || (
+                                                            <Users
+                                                                className="h-3.5 w-3.5 text-ink-soft"
+                                                                aria-hidden="true"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-xs font-semibold text-ink">
+                                                            {assignment.name}
+                                                        </p>
+                                                        <p className="text-[11px] text-ink-soft">
+                                                            {humanize(
+                                                                assignment.type,
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span
+                                                    className={cn(
+                                                        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+                                                        assignment
+                                                            .response_status
+                                                            .value ===
+                                                            'accepted'
+                                                            ? 'bg-success-soft text-success-strong'
+                                                            : assignment
+                                                                    .response_status
+                                                                    .value ===
+                                                                'rejected'
+                                                              ? 'bg-danger-soft text-danger-strong'
+                                                              : 'border border-line bg-surface-subtle text-ink-soft',
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            'h-1.5 w-1.5 rounded-full',
+                                                            assignment
+                                                                .response_status
+                                                                .value ===
+                                                                'accepted'
+                                                                ? 'bg-success-strong'
+                                                                : assignment
+                                                                        .response_status
+                                                                        .value ===
+                                                                    'rejected'
+                                                                  ? 'bg-danger-strong'
+                                                                  : 'bg-warning-strong',
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
                                                     {
                                                         assignment
                                                             .response_status
                                                             .label
                                                     }
-                                                </p>
+                                                </span>
                                             </li>
                                         ),
                                     )}
@@ -1741,7 +1844,7 @@ function DispatchReviewPanel({
                                 </h3>
                                 <Link
                                     href={assignmentHref}
-                                    className="text-xs font-semibold text-ink underline decoration-brand underline-offset-2 hover:text-brand-strong"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-ink underline decoration-brand underline-offset-2 transition-colors hover:text-brand-strong"
                                 >
                                     {job.asset_assignments.length === 0
                                         ? '+ Assign equipment'
@@ -1749,7 +1852,7 @@ function DispatchReviewPanel({
                                 </Link>
                             </div>
                             {job.asset_assignments.length === 0 ? (
-                                <div className="mt-2 flex items-center justify-between rounded-lg border border-dashed border-line p-3 text-xs text-ink-soft">
+                                <div className="mt-2.5 flex items-center justify-between rounded-lg border border-line bg-surface-subtle/50 p-3 text-xs text-ink-soft">
                                     <span>No equipment assigned.</span>
                                     <Link
                                         href={assignmentHref}
@@ -1759,23 +1862,33 @@ function DispatchReviewPanel({
                                     </Link>
                                 </div>
                             ) : (
-                                <ul className="mt-2 space-y-3">
+                                <ul className="mt-2.5 space-y-2">
                                     {job.asset_assignments.map((assignment) => (
                                         <li
                                             key={assignment.id}
-                                            className="text-sm text-ink"
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-2.5 shadow-2xs"
                                         >
-                                            <p className="font-medium">
-                                                {assignment.code} ·{' '}
-                                                {assignment.name}
-                                            </p>
-                                            <p className="text-xs text-ink-soft">
-                                                {humanize(
-                                                    assignment.subtype ??
-                                                        assignment.kind ??
-                                                        assignment.type,
-                                                )}
-                                            </p>
+                                            <div className="flex min-w-0 items-center gap-2.5">
+                                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line bg-surface-subtle text-ink">
+                                                    <Truck
+                                                        className="h-3.5 w-3.5 text-ink-soft"
+                                                        aria-hidden="true"
+                                                    />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-xs font-semibold text-ink">
+                                                        {assignment.code} ·{' '}
+                                                        {assignment.name}
+                                                    </p>
+                                                    <p className="text-[11px] text-ink-soft">
+                                                        {humanize(
+                                                            assignment.subtype ??
+                                                                assignment.kind ??
+                                                                assignment.type,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>
@@ -1785,46 +1898,60 @@ function DispatchReviewPanel({
 
                     {conflicts.length > 0 && (
                         <div
-                            className="border-t border-line bg-warning-soft/40 px-4 py-4 md:px-5"
+                            className="border-t border-line bg-surface-subtle/40 px-4 py-3.5 md:px-5"
                             aria-label="Dispatch blockers and approvals"
                         >
-                            <div className="flex items-start gap-2">
+                            <div className="flex items-start gap-2.5">
                                 <AlertTriangle
-                                    className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong"
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
                                     aria-hidden="true"
                                 />
                                 <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 className="text-sm font-semibold text-warning-strong">
+                                        <h3 className="text-xs font-semibold text-ink">
                                             Review before the next action
                                         </h3>
                                         <Link
                                             href={assignmentHref}
-                                            className="text-xs font-semibold text-warning-strong underline underline-offset-2 hover:text-ink"
+                                            className="text-xs font-medium text-ink underline decoration-line-strong underline-offset-2 transition-colors hover:text-brand hover:decoration-brand"
                                         >
                                             Resolve / Reassign in workspace →
                                         </Link>
                                     </div>
-                                    <ul className="mt-2 space-y-2 text-sm text-ink">
+                                    <ul className="mt-2 space-y-1.5 text-xs text-ink">
                                         {(expandedJobId === job.id
                                             ? conflicts
                                             : conflicts.slice(0, 4)
                                         ).map((conflict) => (
-                                            <li key={conflict.id}>
-                                                <span className="font-semibold">
-                                                    {conflict.title}.
-                                                </span>{' '}
-                                                {conflict.actionRequired}
-                                                {conflict.type === 'approval' &&
-                                                    conflict.canDecide ===
-                                                        false &&
-                                                    conflict.decisionBlocker && (
-                                                        <span className="block text-xs text-ink-soft">
-                                                            {
-                                                                conflict.decisionBlocker
-                                                            }
-                                                        </span>
-                                                    )}
+                                            <li
+                                                key={conflict.id}
+                                                className="flex items-start gap-2 text-ink-soft"
+                                            >
+                                                <span
+                                                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500"
+                                                    aria-hidden="true"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="font-semibold text-ink">
+                                                        {conflict.title}.
+                                                    </span>{' '}
+                                                    <span>
+                                                        {
+                                                            conflict.actionRequired
+                                                        }
+                                                    </span>
+                                                    {conflict.type ===
+                                                        'approval' &&
+                                                        conflict.canDecide ===
+                                                            false &&
+                                                        conflict.decisionBlocker && (
+                                                            <span className="mt-0.5 block text-[11px] text-ink-soft">
+                                                                {
+                                                                    conflict.decisionBlocker
+                                                                }
+                                                            </span>
+                                                        )}
+                                                </div>
                                             </li>
                                         ))}
                                     </ul>
@@ -1841,7 +1968,7 @@ function DispatchReviewPanel({
                                                         : job.id,
                                                 )
                                             }
-                                            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand"
+                                            className="mt-2 inline-flex min-h-8 items-center rounded text-xs font-semibold text-ink underline underline-offset-2 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                         >
                                             {expandedJobId === job.id
                                                 ? 'Show fewer issues'

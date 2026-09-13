@@ -124,9 +124,9 @@ export function LifecycleControlsPanel({
                 refreshing
             }
         >
-            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-5">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5">
                 <span>
-                    <span className="block font-semibold">
+                    <span className="block font-semibold text-ink">
                         Administrative actions
                     </span>
                     <span className="mt-0.5 block text-xs text-ink-soft">
@@ -178,7 +178,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="cancel-reason"
                                 rows={3}
-                                className="mt-1 block w-full rounded-md border-line text-sm shadow-sm focus:border-danger focus:ring-danger"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-danger focus-visible:ring-1 focus-visible:ring-danger focus-visible:outline-hidden"
                                 value={cancelForm.data.reason}
                                 onChange={(e) =>
                                     cancelForm.setData('reason', e.target.value)
@@ -274,7 +274,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="reopen-reason"
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border-line text-sm shadow-sm"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
                                 value={reopenForm.data.reason}
                                 onChange={(e) =>
                                     reopenForm.setData('reason', e.target.value)
@@ -352,7 +352,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="archive-reason"
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border-line text-sm shadow-sm"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-danger focus-visible:ring-1 focus-visible:ring-danger focus-visible:outline-hidden"
                                 value={archiveForm.data.reason}
                                 onChange={(e) =>
                                     archiveForm.setData(
@@ -432,7 +432,7 @@ export function LifecycleControlsPanel({
                             <textarea
                                 id="restore-reason"
                                 rows={2}
-                                className="mt-1 block w-full rounded-md border-line text-sm shadow-sm"
+                                className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand focus-visible:outline-hidden"
                                 value={restoreForm.data.reason}
                                 onChange={(e) =>
                                     restoreForm.setData(

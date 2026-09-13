@@ -117,7 +117,7 @@ export function DispatchContext({
     };
 
     return (
-        <Panel id="dispatch-context" className="p-4 shadow-2xs">
+        <Panel id="dispatch-context" className="p-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
                 <h2 className="font-semibold text-ink">Dispatch context</h2>
                 <span className="text-xs text-ink-soft">

@@ -70,14 +70,14 @@ export function FieldExecutionWorkspace({
             >
                 <a
                     href="#field-execution"
-                    className="font-semibold text-brand-strong underline-offset-4 hover:underline"
+                    className="rounded px-1.5 py-0.5 font-semibold text-brand-strong underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                 >
                     Execution
                 </a>
                 {execution.activity.length > 0 && (
                     <a
                         href="#execution-activity"
-                        className="text-ink-soft underline-offset-4 hover:text-ink hover:underline"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         Activity
                     </a>
@@ -85,7 +85,7 @@ export function FieldExecutionWorkspace({
                 {(assignmentCount > 0 || capabilities.reassign_resources) && (
                     <a
                         href="#assignment-summary"
-                        className="text-ink-soft underline-offset-4 hover:text-ink hover:underline"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         Resources
                     </a>
@@ -138,10 +138,7 @@ export function FieldExecutionWorkspace({
                         <div className="border-b border-line px-4 py-4 sm:px-5">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
-                                        Field execution
-                                    </p>
-                                    <h2 className="mt-1 text-xl font-semibold text-ink">
+                                    <h2 className="text-xl font-semibold text-ink">
                                         Execution overview
                                     </h2>
                                     <p className="mt-1 text-sm text-ink-soft">
@@ -420,9 +417,9 @@ function SiteEvidence({
                     </div>
                 )}
                 <div>
-                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                    <h3 className="text-xs font-semibold text-ink-soft">
                         Planned site
-                    </p>
+                    </h3>
                     <p className="mt-1 font-medium text-ink">{site.name}</p>
                     <p className="mt-1 text-sm leading-6 text-ink-soft">
                         {site.notes?.trim() ||
@@ -436,9 +433,9 @@ function SiteEvidence({
                     </p>
                 </div>
                 <div className="border-t border-line pt-4">
-                    <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                    <h3 className="text-xs font-semibold text-ink-soft">
                         Shared location
-                    </p>
+                    </h3>
                     {location ? (
                         <div className="mt-2 space-y-1 text-sm">
                             <p className="font-medium text-ink">

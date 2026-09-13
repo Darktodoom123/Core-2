@@ -23,15 +23,15 @@ export function AssignmentNextAction({
 
     return (
         <Panel
-            className="hidden border-brand/40 bg-brand-soft/20 p-4 shadow-2xs xl:block"
+            className="hidden border-line bg-surface p-4 xl:block"
             aria-label="Next dispatch action"
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-xs font-semibold tracking-wide text-amber-900 uppercase dark:text-amber-200">
+                    <p className="text-xs font-semibold text-ink-soft">
                         Next action
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-ink">
+                    <p className="mt-0.5 text-sm font-semibold text-ink">
                         {actionLabel}
                     </p>
                     <p className="mt-0.5 text-xs leading-5 text-ink-soft">
@@ -45,10 +45,13 @@ export function AssignmentNextAction({
                 {canActivate ? (
                     <a
                         href="#dispatch-activation"
-                        className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-amber-900 hover:bg-brand-soft dark:text-amber-200"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md border border-line bg-surface px-2.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         Open
-                        <ArrowRight className="size-3.5" aria-hidden="true" />
+                        <ArrowRight
+                            className="size-3.5 text-ink-soft"
+                            aria-hidden="true"
+                        />
                     </a>
                 ) : (
                     <span className="shrink-0 text-xs font-medium text-ink-soft">
@@ -74,7 +77,7 @@ export function AssignmentStageSummaries({
     return (
         <section
             aria-label="Dispatch setup stage summaries"
-            className="overflow-hidden rounded-xl border border-line bg-surface shadow-2xs"
+            className="overflow-hidden rounded-xl border border-line bg-surface"
         >
             <a
                 href="#dispatch-context"
@@ -85,14 +88,14 @@ export function AssignmentStageSummaries({
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 }}
-                className="flex min-h-16 items-center justify-between gap-4 border-b border-line px-4 py-3 transition-colors hover:bg-surface-subtle sm:px-5"
+                className="flex min-h-16 items-center justify-between gap-4 border-b border-line px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5"
             >
                 <span className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong ring-2 ring-success/20">
-                        <Check className="h-4 w-4" aria-hidden="true" />
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-strong">
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
                     </span>
                     <span className="min-w-0">
-                        <span className="block font-semibold text-ink">
+                        <span className="block text-sm font-semibold text-ink">
                             Review schedule and requirements
                         </span>
                         <span className="block truncate text-xs text-ink-soft">
@@ -100,7 +103,7 @@ export function AssignmentStageSummaries({
                         </span>
                     </span>
                 </span>
-                <span className="inline-flex shrink-0 items-center text-sm font-medium text-amber-900 dark:text-amber-200">
+                <span className="inline-flex shrink-0 items-center text-xs font-semibold text-ink-soft">
                     View details
                 </span>
             </a>
@@ -122,14 +125,14 @@ export function AssignmentStageSummaries({
                             });
                         }
                     }}
-                    className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-subtle sm:px-5"
+                    className="flex min-h-16 items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:px-5"
                 >
                     <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-xs font-semibold text-ink-soft">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line bg-surface-subtle text-xs font-semibold text-ink-soft">
                             3
                         </span>
                         <span className="min-w-0">
-                            <span className="block font-semibold text-ink">
+                            <span className="block text-sm font-semibold text-ink">
                                 Review readiness and activate
                             </span>
                             <span className="block truncate text-xs text-ink-soft">
@@ -139,7 +142,7 @@ export function AssignmentStageSummaries({
                     </span>
                     <span
                         className={cn(
-                            'inline-flex shrink-0 items-center text-sm font-medium',
+                            'inline-flex shrink-0 items-center text-xs font-semibold',
                             activation.ready
                                 ? 'text-success-strong'
                                 : 'text-warning-strong',

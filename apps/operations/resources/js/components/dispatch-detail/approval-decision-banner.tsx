@@ -88,7 +88,7 @@ export function ApprovalDecisionBanner({
     return (
         <div
             className={cn(
-                'rounded-xl border p-4 shadow-2xs transition-colors',
+                'rounded-xl border p-4 transition-colors',
                 isPending &&
                     'border-warning bg-warning-soft text-warning-strong',
                 isApproved &&
@@ -208,7 +208,7 @@ export function ApprovalDecisionBanner({
                             setReason(e.target.value);
                             setReasonError(null);
                         }}
-                        className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink focus:border-danger focus:outline-none"
+                        className="mt-1 block w-full rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink focus-visible:border-danger focus-visible:ring-1 focus-visible:ring-danger focus-visible:outline-hidden"
                         placeholder="Explain why this approval request cannot be granted..."
                         required
                     />

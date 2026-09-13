@@ -132,9 +132,6 @@ export function DirectDispatchView({
         >
             <header className="flex items-start justify-between gap-3 border-b border-line px-4 py-4 md:px-6">
                 <div className="min-w-0">
-                    <p className="text-xs font-semibold tracking-wide text-brand-strong uppercase">
-                        New dispatch
-                    </p>
                     <h1
                         id="direct-dispatch-title"
                         ref={headingRef}
@@ -192,9 +189,9 @@ export function DirectDispatchView({
                                             setWorkStream(workType.id)
                                         }
                                         className={cn(
-                                            'flex min-h-11 min-w-0 flex-col items-start justify-center rounded-xl border px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+                                            'flex min-h-11 min-w-0 flex-col items-start justify-center rounded-xl border px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                             active
-                                                ? 'border-brand-strong bg-brand-soft text-ink shadow-xs ring-1 ring-brand-strong/30'
+                                                ? 'border-brand bg-brand-soft text-ink ring-1 ring-brand/30'
                                                 : 'border-line bg-surface text-ink-soft hover:border-line-strong hover:bg-surface-subtle',
                                         )}
                                     >
@@ -231,10 +228,10 @@ export function DirectDispatchView({
                                                     )
                                                 }
                                                 className={cn(
-                                                    'inline-flex min-h-11 max-w-full items-center rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
+                                                    'inline-flex min-h-11 max-w-full items-center rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden',
                                                     active
-                                                        ? 'border-brand-strong bg-brand-strong text-white'
-                                                        : 'border-line-strong bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
+                                                        ? 'border-brand bg-brand text-brand-contrast'
+                                                        : 'border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                                 )}
                                             >
                                                 {subtype.label}
@@ -270,7 +267,7 @@ export function DirectDispatchView({
                                             <button
                                                 type="button"
                                                 onClick={onAddClient}
-                                                className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                                                className="inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
                                             >
                                                 Client not found? Add client
                                             </button>
@@ -297,7 +294,7 @@ export function DirectDispatchView({
                                             : undefined
                                     }
                                     className={cn(
-                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none',
+                                        'mt-1 h-11 w-full rounded-lg border bg-surface px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden',
                                         form.errors.client
                                             ? 'border-danger'
                                             : 'border-line-strong hover:border-ink-soft',
@@ -395,7 +392,7 @@ export function DirectDispatchView({
                             <button
                                 type="button"
                                 onClick={toggleAllRecommended}
-                                className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                                className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-semibold text-brand-strong underline decoration-brand/40 underline-offset-2 transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden"
                             >
                                 {intakeData.recommendedRequirements.every(
                                     (requirement) =>

@@ -266,10 +266,10 @@ export default function DispatchDetail({
                     {project_context && (
                         <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
                             <div>
-                                <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">
+                                <p className="text-xs font-semibold text-ink-soft">
                                     Core 1 work context
                                 </p>
-                                <p className="mt-1 text-sm font-semibold">
+                                <p className="mt-1 text-sm font-semibold text-ink">
                                     {project_context.name} ·{' '}
                                     {project_context.phase}
                                 </p>
@@ -281,7 +281,7 @@ export default function DispatchDetail({
                             </div>
                             <Link
                                 href={coverageReturnTo}
-                                className="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
+                                className="inline-flex min-h-9 items-center rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 Return to resource coverage
                             </Link>
@@ -383,20 +383,20 @@ export default function DispatchDetail({
                                                 <Link
                                                     href={backToOrigin}
                                                     onClick={confirmLeave}
-                                                    className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                                    className="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                                 >
-                                                    <ArrowLeft className="h-4 w-4" />
+                                                    <ArrowLeft className="h-3.5 w-3.5" />
                                                     Back to dispatch workspace
                                                 </Link>
                                                 {projectCoverageOnly ? (
                                                     <Link
                                                         href={coverageReturnTo}
                                                         onClick={confirmLeave}
-                                                        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-brand-contrast"
+                                                        className="inline-flex min-h-9 items-center gap-2 rounded-md bg-brand px-3 text-xs font-semibold text-brand-contrast transition-colors hover:bg-brand/90 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                                     >
                                                         Return to resource
                                                         coverage
-                                                        <ArrowRight className="h-4 w-4" />
+                                                        <ArrowRight className="h-3.5 w-3.5" />
                                                     </Link>
                                                 ) : (
                                                     <Button
@@ -407,7 +407,7 @@ export default function DispatchDetail({
                                                         }
                                                     >
                                                         Next: Select resources
-                                                        <ArrowRight className="h-4 w-4" />
+                                                        <ArrowRight className="h-3.5 w-3.5" />
                                                     </Button>
                                                 )}
                                             </div>
@@ -511,11 +511,11 @@ export default function DispatchDetail({
                                                             </div>
                                                             <a
                                                                 href="#assignment-summary"
-                                                                className="inline-flex min-h-10 items-center gap-1.5 self-start rounded-lg px-3 text-sm font-medium text-brand-strong transition-colors hover:bg-brand-soft sm:self-auto"
+                                                                className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-md px-2.5 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:self-auto"
                                                             >
                                                                 Review selection
                                                                 <ArrowRight
-                                                                    className="h-4 w-4"
+                                                                    className="h-3.5 w-3.5"
                                                                     aria-hidden="true"
                                                                 />
                                                             </a>

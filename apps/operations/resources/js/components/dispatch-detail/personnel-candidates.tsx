@@ -126,7 +126,7 @@ export function PersonnelCandidates({
                             setCurrentPage(1);
                             setSearchQuery(e.target.value);
                         }}
-                        className="w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft/70 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                        className="w-full rounded-md border border-line bg-surface py-1.5 pr-3 pl-8 text-xs text-ink placeholder:text-ink-soft/70 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         aria-label="Search personnel candidates"
                     />
                 </div>
@@ -225,7 +225,7 @@ export function PersonnelCandidates({
                         return (
                             <fieldset
                                 key={group.type}
-                                className="min-w-0 rounded-xl border border-line bg-surface shadow-2xs"
+                                className="min-w-0 rounded-xl border border-line bg-surface"
                             >
                                 <legend className="sr-only">
                                     {group.label}
@@ -357,7 +357,7 @@ export function PersonnelCandidate({
         <li
             className={cn(
                 'p-4 transition-colors',
-                selected && 'border-l-4 border-l-brand bg-brand-soft/50',
+                selected && 'bg-brand-soft/50 ring-1 ring-brand/25 ring-inset',
                 !candidate.eligible && 'bg-surface-subtle/50',
             )}
         >
