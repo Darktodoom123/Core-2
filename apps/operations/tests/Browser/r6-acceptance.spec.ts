@@ -463,6 +463,7 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             .getByRole('button', { name: 'Confirm & Apply Resource Plan' })
             .click();
         await (await acceptResponse).finished();
+        await expect(page.getByRole('dialog')).toBeHidden();
 
         const rejectResponse = page.waitForResponse(
             (response) =>

@@ -239,6 +239,7 @@ jobs:
 
       - name: Browser accessibility smoke test
         env:
+          APP_URL: http://127.0.0.1:4173
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
           PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-a11y.xml
@@ -247,6 +248,7 @@ jobs:
       - name: Browser acceptance suite
         if: success() || failure()
         env:
+          APP_URL: http://127.0.0.1:4173
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
           PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e.xml
