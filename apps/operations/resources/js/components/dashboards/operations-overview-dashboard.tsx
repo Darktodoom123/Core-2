@@ -19,7 +19,6 @@ import {
     Power,
     Radio,
     RefreshCw,
-    Server,
     ShieldCheck,
     Sparkles,
     Truck,
@@ -144,7 +143,6 @@ export function OperationsOverviewDashboard(
 
 function DashboardHeader({
     role,
-    roleLabel,
     inboundActionCount = 0,
     onSectionChange,
     availableSections,
@@ -155,14 +153,6 @@ function DashboardHeader({
     onSectionChange: (section: WorkspaceSection) => void;
     availableSections: WorkspaceSection[];
 }) {
-    const displayRoleLabel =
-        roleLabel ??
-        (role === 'system_administrator'
-            ? 'System Admin'
-            : role === 'operations_manager'
-              ? 'Operations Manager'
-              : 'Operator');
-
     const isSystemAdmin = role === 'system_administrator';
     const isOperationsManager = role === 'operations_manager';
     const canOpenDispatch = availableSections.includes('dispatch');
@@ -170,35 +160,32 @@ function DashboardHeader({
     const canOpenFuel = availableSections.includes('fuel');
 
     return (
-        <div className="border-b border-line bg-surface px-4 py-5 md:px-6">
+        <div className="border-b border-line bg-surface px-5 py-5 lg:px-7">
             <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="text-xl font-bold tracking-tight text-ink md:text-2xl">
-                            Operations overview
-                        </h1>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand-strong">
-                            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-                            {displayRoleLabel}
-                        </span>
-                    </div>
+                    <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
+                        Operations overview
+                    </h1>
                     <p className="mt-1 text-sm text-ink-soft">
                         {isSystemAdmin
-                            ? 'System security, user access governance, telemetry health, and audit trail stream.'
-                            : 'High-level operational command, fleet readiness, field authorizations, and live execution.'}
+                            ? 'System infrastructure, user access governance, and telemetry health.'
+                            : isOperationsManager
+                              ? 'Live dispatch coordination, equipment readiness, and field authorizations.'
+                              : 'Assigned jobs, equipment status, and active field tasks.'}
                     </p>
                 </div>
 
-                <div className="flex w-full min-w-0 flex-wrap items-center gap-3 lg:w-auto">
+                <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto">
                     {/* Dynamic Context-Aware Action Button */}
                     {isSystemAdmin && canOpenUsers ? (
                         <Button
                             variant="primary"
                             size="sm"
                             onClick={() => onSectionChange('users')}
+                            className="gap-1.5 text-xs"
                         >
                             Manage users
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                     ) : isOperationsManager ? (
                         inboundActionCount > 0 && canOpenFuel ? (
@@ -206,18 +193,20 @@ function DashboardHeader({
                                 variant="primary"
                                 size="sm"
                                 onClick={() => onSectionChange('fuel')}
+                                className="gap-1.5 text-xs"
                             >
                                 Review fuel requests ({inboundActionCount})
-                                <ArrowRight className="h-4 w-4" />
+                                <ArrowRight className="h-3.5 w-3.5" />
                             </Button>
                         ) : canOpenDispatch ? (
                             <Button
                                 variant="primary"
                                 size="sm"
                                 onClick={() => onSectionChange('dispatch')}
+                                className="gap-1.5 text-xs"
                             >
                                 Open dispatch workspace
-                                <ArrowRight className="h-4 w-4" />
+                                <ArrowRight className="h-3.5 w-3.5" />
                             </Button>
                         ) : null
                     ) : canOpenDispatch ? (
@@ -225,9 +214,10 @@ function DashboardHeader({
                             variant="primary"
                             size="sm"
                             onClick={() => onSectionChange('dispatch')}
+                            className="gap-1.5 text-xs"
                         >
                             Open today's work
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                     ) : null}
                 </div>
@@ -412,12 +402,12 @@ function OperationsManagerDashboardView({
 
     return (
         <div className="space-y-6">
-            {/* Manager Executive KPI Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Manager Operational Metrics Strip */}
+            <MetricStrip>
                 <KpiCard
                     label="Today's Dispatches"
                     value={`${activeJobs.length}`}
-                    subtext={`${activeJobs.length} active · ${jobs.length} visible workloads`}
+                    subtext={`${activeJobs.length} active · ${jobs.length} visible`}
                     icon={Activity}
                     tone={activeJobs.length > 0 ? 'brand' : 'default'}
                     onClick={
@@ -457,7 +447,7 @@ function OperationsManagerDashboardView({
                 />
 
                 <KpiCard
-                    label="Field Inbound & Authorizations"
+                    label="Field Authorizations"
                     value={`${actionableFuelRequests.length}`}
                     subtext={
                         actionableFuelRequests.length > 0
@@ -503,7 +493,7 @@ function OperationsManagerDashboardView({
                               : undefined
                     }
                 />
-            </div>
+            </MetricStrip>
 
             {actions.length === 0 && trackingPreview}
 
@@ -531,27 +521,35 @@ function OperationsManagerDashboardView({
                     </div>
 
                     {categoriesInActions.length > 1 && (
-                        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-1 text-xs">
+                        <div
+                            className="flex flex-wrap items-center gap-1.5 rounded-lg bg-surface-subtle p-1 text-xs"
+                            role="group"
+                            aria-label="Filter action queue"
+                        >
                             <button
                                 type="button"
+                                aria-pressed={actionFilter === 'all'}
                                 onClick={() => setActionFilter('all')}
-                                className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                className={cn(
+                                    'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                     actionFilter === 'all'
-                                        ? 'bg-surface text-ink shadow-xs'
-                                        : 'text-ink-soft hover:text-ink'
-                                }`}
+                                        ? 'bg-surface font-semibold text-ink shadow-xs'
+                                        : 'text-ink-soft hover:text-ink',
+                                )}
                             >
                                 All ({actions.length})
                             </button>
                             {categoriesInActions.includes('sos') && (
                                 <button
                                     type="button"
+                                    aria-pressed={actionFilter === 'sos'}
                                     onClick={() => setActionFilter('sos')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         actionFilter === 'sos'
-                                            ? 'bg-danger-soft text-danger shadow-xs'
-                                            : 'text-danger hover:underline'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-danger-strong shadow-xs'
+                                            : 'text-danger hover:text-danger-strong',
+                                    )}
                                 >
                                     Emergency SOS (
                                     {countByCategory(actions, 'sos')})
@@ -560,12 +558,14 @@ function OperationsManagerDashboardView({
                             {categoriesInActions.includes('approvals') && (
                                 <button
                                     type="button"
+                                    aria-pressed={actionFilter === 'approvals'}
                                     onClick={() => setActionFilter('approvals')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         actionFilter === 'approvals'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
                                     Approvals (
                                     {countByCategory(actions, 'approvals')})
@@ -574,26 +574,30 @@ function OperationsManagerDashboardView({
                             {categoriesInActions.includes('assets') && (
                                 <button
                                     type="button"
+                                    aria-pressed={actionFilter === 'assets'}
                                     onClick={() => setActionFilter('assets')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         actionFilter === 'assets'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
-                                    Assets & Safety (
+                                    Assets &amp; Safety (
                                     {countByCategory(actions, 'assets')})
                                 </button>
                             )}
                             {categoriesInActions.includes('fuel') && (
                                 <button
                                     type="button"
+                                    aria-pressed={actionFilter === 'fuel'}
                                     onClick={() => setActionFilter('fuel')}
-                                    className={`min-h-11 rounded-md px-3 py-1.5 font-medium transition-colors ${
+                                    className={cn(
+                                        'min-h-8 rounded-md px-2.5 py-1 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         actionFilter === 'fuel'
-                                            ? 'bg-surface text-ink shadow-xs'
-                                            : 'text-ink-soft hover:text-ink'
-                                    }`}
+                                            ? 'bg-surface font-semibold text-ink shadow-xs'
+                                            : 'text-ink-soft hover:text-ink',
+                                    )}
                                 >
                                     Fuel ({countByCategory(actions, 'fuel')})
                                 </button>
@@ -974,10 +978,13 @@ function OperationsManagerDashboardView({
                             <div className="mb-3 flex items-center justify-between">
                                 <h2
                                     id="gpt-advisory-heading"
-                                    className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase"
+                                    className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink"
                                 >
-                                    <Sparkles className="h-4 w-4 text-brand" />
-                                    GPT AI Resource Advisory
+                                    <Sparkles
+                                        className="h-4 w-4 text-muted"
+                                        aria-hidden="true"
+                                    />
+                                    AI Resource Advisory
                                 </h2>
                             </div>
                             <Panel className="space-y-3 p-4">
@@ -1053,7 +1060,8 @@ function SystemAdminDashboardView({
     const fetchHealth = () => {
         setHealthLoading(true);
         setHealthError(null);
-        fetch('/operations/admin/health', {
+
+        return fetch('/operations/admin/health', {
             headers: { Accept: 'application/json' },
         })
             .then(async (res) => {
@@ -1068,6 +1076,7 @@ function SystemAdminDashboardView({
             .then((data) => {
                 if (data) {
                     setHealth(data);
+                    setHealthError(null);
                 }
             })
             .catch((err) => {
@@ -1082,13 +1091,16 @@ function SystemAdminDashboardView({
 
     useEffect(() => {
         let isMounted = true;
+
         const load = () => {
             fetch('/operations/admin/health', {
                 headers: { Accept: 'application/json' },
             })
                 .then(async (res) => {
                     if (!res.ok) {
-                        throw new Error(`HTTP ${res.status}`);
+                        throw new Error(
+                            `Health probe returned status ${res.status}`,
+                        );
                     }
 
                     return res.json();
@@ -1104,7 +1116,7 @@ function SystemAdminDashboardView({
                         setHealthError(
                             err instanceof Error
                                 ? err.message
-                                : 'System health check unavailable.',
+                                : 'Unable to connect to system health probe.',
                         );
                     }
                 });
@@ -1263,85 +1275,77 @@ function SystemAdminDashboardView({
 
     return (
         <div className="space-y-6">
-            {/* Quick-Access Admin Command Bar */}
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-3 shadow-xs">
-                <span className="px-2 text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                    Admin Quick Actions:
-                </span>
+            {/* Modern Streamlined Command Toolbar */}
+            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-surface p-1.5 shadow-2xs">
                 {canOpenUsers && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => onSectionChange('users')}
-                        className="gap-1.5 text-xs"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                        Users & Credentials
+                        <span>Users &amp; Credentials</span>
                         {expiredCredentials.length > 0 && (
-                            <span className="ml-1 rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger">
+                            <span className="ml-1 inline-flex items-center rounded-full bg-danger-soft px-1.5 py-0.5 text-[10px] font-semibold text-danger-strong">
                                 {expiredCredentials.length} expired
                             </span>
                         )}
-                    </Button>
+                    </button>
                 )}
                 {canOpenAudit && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => onSectionChange('audit')}
-                        className="gap-1.5 text-xs"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                        Audit Trail & Diff Engine
-                    </Button>
+                        <span>Audit Trail &amp; Diffs</span>
+                    </button>
                 )}
                 {canOpenGpt && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => onSectionChange('gpt-recommendations')}
-                        className="gap-1.5 text-xs"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                        GPT AI Advisory Governance
-                    </Button>
+                        <span>AI Advisory Governance</span>
+                    </button>
                 )}
                 {canOpenDispatch && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => onSectionChange('dispatch')}
-                        className="gap-1.5 text-xs"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-                        Dispatch Workspace
-                    </Button>
+                        <span>Dispatch Workspace</span>
+                    </button>
                 )}
                 {canOpenTracking && (
-                    <Button
-                        variant="secondary"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => onSectionChange('assets')}
-                        className="gap-1.5 text-xs"
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                     >
                         <Truck className="h-3.5 w-3.5" aria-hidden="true" />
-                        Fleet & Telemetry
+                        <span>Fleet &amp; Telemetry</span>
                         {locations.length > 0 && (
-                            <span className="ml-1 rounded-full bg-surface-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                            <span className="ml-1 inline-flex items-center rounded-full bg-surface-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
                                 {freshLocationsCount}/{locations.length} live
                             </span>
                         )}
                         {assetsNeedingAttention.length > 0 && (
-                            <span className="ml-1 rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-bold text-warning-strong">
+                            <span className="ml-1 inline-flex items-center rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-warning-strong">
                                 {assetsNeedingAttention.length} attention
                             </span>
                         )}
-                    </Button>
+                    </button>
                 )}
             </div>
 
             {/* System Admin Primary KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricStrip>
                 <KpiCard
                     label="Platform Health"
                     value={
@@ -1353,7 +1357,9 @@ function SystemAdminDashboardView({
                                 ? 'Healthy'
                                 : health?.status === 'degraded'
                                   ? 'Degraded'
-                                  : 'Optimal'
+                                  : health?.status === 'unhealthy'
+                                    ? 'Unhealthy'
+                                    : 'Operational'
                     }
                     subtext={
                         healthError
@@ -1361,8 +1367,10 @@ function SystemAdminDashboardView({
                             : health?.services.database.latency_ms !== null &&
                                 health?.services.database.latency_ms !==
                                     undefined
-                              ? `DB Latency: ${health.services.database.latency_ms} ms · Cache: ${health.services.cache.latency_ms ?? 0} ms`
-                              : 'Synthetic health checks & heartbeat active'
+                              ? `${health.services.database.latency_ms} ms query latency`
+                              : healthLoading
+                                ? 'Connecting to health probes…'
+                                : 'Probes and synthetic health active'
                     }
                     icon={Cpu}
                     tone={
@@ -1373,7 +1381,7 @@ function SystemAdminDashboardView({
                               : 'success'
                     }
                     liveIndicator={health?.status === 'healthy' && !healthError}
-                    onClick={fetchHealth}
+                    onClick={() => void fetchHealth()}
                 />
 
                 <KpiCard
@@ -1381,11 +1389,11 @@ function SystemAdminDashboardView({
                     value={`${activeUsersCount} / ${users.length}`}
                     subtext={
                         suspendedUsers.length > 0
-                            ? `${suspendedUsers.length} account(s) suspended or inactive`
-                            : 'All accounts verified with active sessions'
+                            ? `${suspendedUsers.length} account(s) suspended`
+                            : 'All accounts verified'
                     }
                     icon={Users}
-                    tone={suspendedUsers.length > 0 ? 'warning' : 'brand'}
+                    tone={suspendedUsers.length > 0 ? 'warning' : 'default'}
                     onClick={
                         canOpenUsers
                             ? () => onSectionChange('users')
@@ -1396,9 +1404,9 @@ function SystemAdminDashboardView({
                 <KpiCard
                     label="AI Governance & Spend"
                     value={`$${gptStats.estimatedCost.toFixed(2)}`}
-                    subtext={`$${gptStats.monthlyLimit.toFixed(2)} monthly ceiling · ${gptStats.total} recommendations`}
+                    subtext={`$${gptStats.monthlyLimit.toFixed(2)} ceiling · ${gptStats.total} items`}
                     icon={Sparkles}
-                    tone="info"
+                    tone="default"
                     onClick={
                         canOpenGpt
                             ? () => onSectionChange('gpt-recommendations')
@@ -1409,7 +1417,7 @@ function SystemAdminDashboardView({
                 <KpiCard
                     label="Audit Trail Events"
                     value={`${auditEvents.length}`}
-                    subtext="Forensic access & override logs recorded"
+                    subtext="Real-time access log"
                     icon={FileText}
                     tone="default"
                     onClick={
@@ -1418,82 +1426,129 @@ function SystemAdminDashboardView({
                             : undefined
                     }
                 />
-            </div>
+            </MetricStrip>
 
             {/* Infrastructure Health & Outbox Diagnostics Panel */}
             <Panel className="overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-6">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-subtle text-ink">
-                            <Server className="h-5 w-5" aria-hidden="true" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-base font-semibold text-ink">
-                                    Infrastructure & Telemetry Subsystems
-                                </h2>
-                                <span
-                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                        health?.status === 'healthy'
-                                            ? 'bg-success-soft text-success-strong'
-                                            : health?.status === 'degraded'
-                                              ? 'bg-warning-soft text-warning-strong'
-                                              : 'bg-surface-subtle text-ink-soft'
-                                    }`}
-                                >
-                                    {health?.status
-                                        ? health.status.toUpperCase()
-                                        : 'CHECKING'}
-                                </span>
-                            </div>
-                            <p className="text-xs text-ink-soft">
-                                Real-time heartbeat, database query latency,
-                                transactional outbox message queue, and
-                                websocket transport.
-                            </p>
-                        </div>
+                    <div className="flex items-center gap-2.5">
+                        <h2 className="text-base font-semibold tracking-tight text-ink">
+                            Infrastructure &amp; Telemetry Subsystems
+                        </h2>
+                        <span
+                            className={cn(
+                                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                health?.status === 'healthy'
+                                    ? 'bg-success-soft text-success-strong'
+                                    : health?.status === 'degraded'
+                                      ? 'bg-warning-soft text-warning-strong'
+                                      : health?.status === 'unhealthy'
+                                        ? 'bg-danger-soft text-danger-strong'
+                                        : 'bg-surface-subtle text-ink-soft',
+                            )}
+                        >
+                            <span
+                                className={cn(
+                                    'h-1.5 w-1.5 rounded-full',
+                                    health?.status === 'healthy'
+                                        ? 'bg-success'
+                                        : health?.status === 'degraded'
+                                          ? 'bg-warning'
+                                          : health?.status === 'unhealthy'
+                                            ? 'bg-danger'
+                                            : 'bg-muted',
+                                )}
+                            />
+                            {health?.status
+                                ? health.status.toUpperCase()
+                                : 'CHECKING'}
+                        </span>
                     </div>
 
                     <Button
                         variant="secondary"
                         size="sm"
-                        onClick={fetchHealth}
+                        onClick={() => void fetchHealth()}
                         disabled={healthLoading}
                         className="gap-1.5 text-xs"
                     >
                         <RefreshCw
-                            className={`h-3.5 w-3.5 ${healthLoading ? 'animate-spin' : ''}`}
+                            className={cn(
+                                'h-3.5 w-3.5',
+                                healthLoading && 'animate-spin',
+                            )}
                             aria-hidden="true"
                         />
                         {healthLoading ? 'Pinging…' : 'Refresh Health'}
                     </Button>
                 </div>
 
-                <div className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-4">
                     {/* Database */}
-                    <div className="bg-surface p-4">
+                    <div className="bg-surface p-4 sm:p-5">
                         <div className="flex items-center justify-between text-xs font-medium text-ink-soft">
                             <span className="flex items-center gap-1.5">
                                 <Database
-                                    className="h-4 w-4 text-brand"
+                                    className="h-4 w-4 text-muted"
                                     aria-hidden="true"
                                 />
                                 Relational Database
                             </span>
-                            <span className="inline-flex items-center gap-1 font-semibold text-success-strong">
-                                <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                                {health?.services.database.status ??
-                                    'Operational'}
+                            <span
+                                className={cn(
+                                    'inline-flex items-center gap-1 text-[11px] font-medium',
+                                    healthLoading && !health
+                                        ? 'text-ink-soft'
+                                        : health?.services.database.status ===
+                                            'operational'
+                                          ? 'text-success-strong'
+                                          : health?.services.database.status ===
+                                              'offline'
+                                            ? 'text-danger-strong'
+                                            : healthError
+                                              ? 'text-warning-strong'
+                                              : 'text-success-strong',
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        'h-1.5 w-1.5 rounded-full',
+                                        healthLoading && !health
+                                            ? 'bg-muted'
+                                            : health?.services.database
+                                                    .status === 'operational'
+                                              ? 'bg-success'
+                                              : health?.services.database
+                                                      .status === 'offline'
+                                                ? 'bg-danger'
+                                                : healthError
+                                                  ? 'bg-warning'
+                                                  : 'bg-success',
+                                    )}
+                                />
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : health?.services.database.status ===
+                                        'operational'
+                                      ? 'Operational'
+                                      : health?.services.database.status ===
+                                          'offline'
+                                        ? 'Offline'
+                                        : healthError
+                                          ? 'Unavailable'
+                                          : 'Operational'}
                             </span>
                         </div>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <span className="text-lg font-bold text-ink tabular-nums">
+                            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
                                 {health?.services.database.latency_ms !==
                                     null &&
                                 health?.services.database.latency_ms !==
                                     undefined
                                     ? `${health.services.database.latency_ms} ms`
-                                    : '12.4 ms'}
+                                    : healthLoading && !health
+                                      ? 'Checking…'
+                                      : '—'}
                             </span>
                             <span className="text-xs text-ink-soft">
                                 Query Latency
@@ -1502,26 +1557,68 @@ function SystemAdminDashboardView({
                     </div>
 
                     {/* Cache & Redis */}
-                    <div className="bg-surface p-4">
+                    <div className="bg-surface p-4 sm:p-5">
                         <div className="flex items-center justify-between text-xs font-medium text-ink-soft">
                             <span className="flex items-center gap-1.5">
                                 <Zap
-                                    className="h-4 w-4 text-amber-500"
+                                    className="h-4 w-4 text-muted"
                                     aria-hidden="true"
                                 />
                                 Distributed Cache
                             </span>
-                            <span className="inline-flex items-center gap-1 font-semibold text-success-strong">
-                                <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                                {health?.services.cache.status ?? 'Operational'}
+                            <span
+                                className={cn(
+                                    'inline-flex items-center gap-1 text-[11px] font-medium',
+                                    healthLoading && !health
+                                        ? 'text-ink-soft'
+                                        : health?.services.cache.status ===
+                                            'operational'
+                                          ? 'text-success-strong'
+                                          : health?.services.cache.status ===
+                                              'offline'
+                                            ? 'text-danger-strong'
+                                            : healthError
+                                              ? 'text-warning-strong'
+                                              : 'text-success-strong',
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        'h-1.5 w-1.5 rounded-full',
+                                        healthLoading && !health
+                                            ? 'bg-muted'
+                                            : health?.services.cache.status ===
+                                                'operational'
+                                              ? 'bg-success'
+                                              : health?.services.cache
+                                                      .status === 'offline'
+                                                ? 'bg-danger'
+                                                : healthError
+                                                  ? 'bg-warning'
+                                                  : 'bg-success',
+                                    )}
+                                />
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : health?.services.cache.status ===
+                                        'operational'
+                                      ? 'Operational'
+                                      : health?.services.cache.status ===
+                                          'offline'
+                                        ? 'Offline'
+                                        : healthError
+                                          ? 'Unavailable'
+                                          : 'Operational'}
                             </span>
                         </div>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <span className="text-lg font-bold text-ink tabular-nums">
+                            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
                                 {health?.services.cache.latency_ms !== null &&
                                 health?.services.cache.latency_ms !== undefined
                                     ? `${health.services.cache.latency_ms} ms`
-                                    : '1.2 ms'}
+                                    : healthLoading && !health
+                                      ? 'Checking…'
+                                      : '—'}
                             </span>
                             <span className="text-xs text-ink-soft">
                                 Cache Ping
@@ -1530,85 +1627,125 @@ function SystemAdminDashboardView({
                     </div>
 
                     {/* Transactional Outbox & DLQ */}
-                    <div className="bg-surface p-4">
+                    <div className="bg-surface p-4 sm:p-5">
                         <div className="flex items-center justify-between text-xs font-medium text-ink-soft">
                             <span className="flex items-center gap-1.5">
                                 <Layers
-                                    className="h-4 w-4 text-blue-500"
+                                    className="h-4 w-4 text-muted"
                                     aria-hidden="true"
                                 />
-                                Transactional Outbox / DLQ
+                                Outbox / DLQ
                             </span>
                             <span
-                                className={`inline-flex items-center gap-1 font-semibold ${
-                                    (health?.services.outbox.failed ?? 0) > 0
-                                        ? 'text-danger'
-                                        : 'text-success-strong'
-                                }`}
+                                className={cn(
+                                    'inline-flex items-center gap-1 text-[11px] font-medium',
+                                    healthLoading && !health
+                                        ? 'text-ink-soft'
+                                        : (health?.services.outbox.failed ??
+                                                0) > 0
+                                          ? 'text-danger-strong'
+                                          : healthError
+                                            ? 'text-warning-strong'
+                                            : 'text-success-strong',
+                                )}
                             >
                                 <span
-                                    className={`h-1.5 w-1.5 rounded-full ${
-                                        (health?.services.outbox.failed ?? 0) >
-                                        0
-                                            ? 'bg-danger'
-                                            : 'bg-success'
-                                    }`}
+                                    className={cn(
+                                        'h-1.5 w-1.5 rounded-full',
+                                        healthLoading && !health
+                                            ? 'bg-muted'
+                                            : (health?.services.outbox.failed ??
+                                                    0) > 0
+                                              ? 'bg-danger'
+                                              : healthError
+                                                ? 'bg-warning'
+                                                : 'bg-success',
+                                    )}
                                 />
-                                {(health?.services.outbox.failed ?? 0) > 0
-                                    ? 'Dead-Letters'
-                                    : 'Clean'}
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : (health?.services.outbox.failed ?? 0) > 0
+                                      ? 'Dead-Letters'
+                                      : healthError
+                                        ? 'Unknown'
+                                        : 'Clean'}
                             </span>
                         </div>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <span className="text-lg font-bold text-ink tabular-nums">
-                                {health?.services.outbox.failed ?? 0} Failed
+                            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : typeof health?.services.outbox.failed ===
+                                        'number'
+                                      ? `${health.services.outbox.failed} Failed`
+                                      : '—'}
                             </span>
                             <span className="text-xs text-ink-soft">
-                                {health?.services.outbox.pending ?? 0} pending ·{' '}
-                                {health?.services.outbox.delivered ?? 0}{' '}
-                                delivered
+                                {typeof health?.services.outbox.pending ===
+                                'number'
+                                    ? `${health.services.outbox.pending} pending · ${health.services.outbox.delivered} delivered`
+                                    : 'Outbox queue telemetry'}
                             </span>
                         </div>
                     </div>
 
                     {/* Queues & Background Workers */}
-                    <div className="bg-surface p-4">
+                    <div className="bg-surface p-4 sm:p-5">
                         <div className="flex items-center justify-between text-xs font-medium text-ink-soft">
                             <span className="flex items-center gap-1.5">
                                 <Activity
-                                    className="h-4 w-4 text-purple-500"
+                                    className="h-4 w-4 text-muted"
                                     aria-hidden="true"
                                 />
-                                Queue Workers & DLQ
+                                Async Workers
                             </span>
                             <span
-                                className={`inline-flex items-center gap-1 font-semibold ${
-                                    (health?.services.queues.failed_jobs ?? 0) >
-                                    0
-                                        ? 'text-danger'
-                                        : 'text-success-strong'
-                                }`}
+                                className={cn(
+                                    'inline-flex items-center gap-1 text-[11px] font-medium',
+                                    healthLoading && !health
+                                        ? 'text-ink-soft'
+                                        : (health?.services.queues
+                                                .failed_jobs ?? 0) > 0
+                                          ? 'text-danger-strong'
+                                          : healthError
+                                            ? 'text-warning-strong'
+                                            : 'text-success-strong',
+                                )}
                             >
                                 <span
-                                    className={`h-1.5 w-1.5 rounded-full ${
-                                        (health?.services.queues.failed_jobs ??
-                                            0) > 0
-                                            ? 'bg-danger'
-                                            : 'bg-success'
-                                    }`}
+                                    className={cn(
+                                        'h-1.5 w-1.5 rounded-full',
+                                        healthLoading && !health
+                                            ? 'bg-muted'
+                                            : (health?.services.queues
+                                                    .failed_jobs ?? 0) > 0
+                                              ? 'bg-danger'
+                                              : healthError
+                                                ? 'bg-warning'
+                                                : 'bg-success',
+                                    )}
                                 />
-                                {(health?.services.queues.failed_jobs ?? 0) > 0
-                                    ? 'Jobs Failed'
-                                    : 'Healthy'}
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : (health?.services.queues.failed_jobs ??
+                                            0) > 0
+                                      ? 'Jobs Failed'
+                                      : healthError
+                                        ? 'Unknown'
+                                        : 'Healthy'}
                             </span>
                         </div>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <span className="text-lg font-bold text-ink tabular-nums">
-                                {health?.services.queues.failed_jobs ?? 0}{' '}
-                                Failed Jobs
+                            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
+                                {healthLoading && !health
+                                    ? 'Checking…'
+                                    : typeof health?.services.queues
+                                            .failed_jobs === 'number'
+                                      ? `${health.services.queues.failed_jobs} Failed`
+                                      : '—'}
                             </span>
                             <span className="text-xs text-ink-soft">
-                                Async Pipeline
+                                Background Queue
                             </span>
                         </div>
                     </div>
@@ -1756,26 +1893,32 @@ function SystemAdminDashboardView({
                                             ({ user, credential }) => (
                                                 <div
                                                     key={`exp-${user.id}-${credential.id}`}
-                                                    className="flex items-center justify-between gap-3 bg-danger-soft/20 p-3.5 text-xs"
+                                                    className="flex items-center justify-between gap-3 p-3.5 text-xs transition-colors hover:bg-surface-subtle/50"
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2.5">
-                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-soft text-danger">
+                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-danger-soft text-danger-strong">
                                                             <AlertCircle
-                                                                className="h-4 w-4"
+                                                                className="h-3.5 w-3.5"
                                                                 aria-hidden="true"
                                                             />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="truncate font-bold text-danger">
-                                                                EXPIRED:{' '}
-                                                                {credential.kind.toUpperCase()}{' '}
-                                                                (
-                                                                {
-                                                                    credential.credential_type
-                                                                }
-                                                                )
-                                                            </p>
-                                                            <p className="truncate text-ink-soft">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="inline-flex items-center rounded-md bg-danger-soft px-1.5 py-0.5 text-[10px] font-semibold text-danger-strong">
+                                                                    Expired
+                                                                </span>
+                                                                <p className="truncate font-semibold text-ink">
+                                                                    {
+                                                                        credential.kind
+                                                                    }{' '}
+                                                                    (
+                                                                    {
+                                                                        credential.credential_type
+                                                                    }
+                                                                    )
+                                                                </p>
+                                                            </div>
+                                                            <p className="mt-0.5 truncate text-[11px] text-ink-soft">
                                                                 Assigned to{' '}
                                                                 {user.name} (
                                                                 {user.role_label ??
@@ -1795,7 +1938,7 @@ function SystemAdminDashboardView({
                                                                     'users',
                                                                 )
                                                             }
-                                                            className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                                                            className="shrink-0 text-xs font-semibold text-brand-strong transition-colors hover:text-ink"
                                                         >
                                                             Renew / Verify →
                                                         </button>
@@ -1810,26 +1953,33 @@ function SystemAdminDashboardView({
                                             ({ user, credential }) => (
                                                 <div
                                                     key={`soon-${user.id}-${credential.id}`}
-                                                    className="flex items-center justify-between gap-3 bg-warning-soft/20 p-3.5 text-xs"
+                                                    className="flex items-center justify-between gap-3 p-3.5 text-xs transition-colors hover:bg-surface-subtle/50"
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2.5">
-                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong">
+                                                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-warning-soft text-warning-strong">
                                                             <Clock
-                                                                className="h-4 w-4"
+                                                                className="h-3.5 w-3.5"
                                                                 aria-hidden="true"
                                                             />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="truncate font-bold text-ink">
-                                                                EXPIRING SOON:{' '}
-                                                                {credential.kind.toUpperCase()}{' '}
-                                                                (
-                                                                {
-                                                                    credential.credential_type
-                                                                }
-                                                                )
-                                                            </p>
-                                                            <p className="truncate text-ink-soft">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-warning-strong">
+                                                                    Expiring
+                                                                    Soon
+                                                                </span>
+                                                                <p className="truncate font-semibold text-ink">
+                                                                    {
+                                                                        credential.kind
+                                                                    }{' '}
+                                                                    (
+                                                                    {
+                                                                        credential.credential_type
+                                                                    }
+                                                                    )
+                                                                </p>
+                                                            </div>
+                                                            <p className="mt-0.5 truncate text-[11px] text-ink-soft">
                                                                 Assigned to{' '}
                                                                 {user.name} ·
                                                                 Expires on{' '}
@@ -1847,7 +1997,7 @@ function SystemAdminDashboardView({
                                                                     'users',
                                                                 )
                                                             }
-                                                            className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                                                            className="shrink-0 text-xs font-semibold text-brand-strong transition-colors hover:text-ink"
                                                         >
                                                             Inspect →
                                                         </button>
@@ -1861,21 +2011,25 @@ function SystemAdminDashboardView({
                                         suspendedUsers.map((user) => (
                                             <div
                                                 key={`susp-${user.id}`}
-                                                className="flex items-center justify-between gap-3 bg-surface-subtle p-3.5 text-xs"
+                                                className="flex items-center justify-between gap-3 p-3.5 text-xs transition-colors hover:bg-surface-subtle/50"
                                             >
                                                 <div className="flex min-w-0 items-center gap-2.5">
-                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft">
+                                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-ink-soft">
                                                         <Lock
-                                                            className="h-4 w-4"
+                                                            className="h-3.5 w-3.5"
                                                             aria-hidden="true"
                                                         />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="truncate font-bold text-ink">
-                                                            INACTIVE ACCOUNT:{' '}
-                                                            {user.name}
-                                                        </p>
-                                                        <p className="truncate text-ink-soft">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="inline-flex items-center rounded-md bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">
+                                                                Suspended
+                                                            </span>
+                                                            <p className="truncate font-semibold text-ink">
+                                                                {user.name}
+                                                            </p>
+                                                        </div>
+                                                        <p className="mt-0.5 truncate text-[11px] text-ink-soft">
                                                             {user.email} ·
                                                             Suspended on{' '}
                                                             {user.suspended_at ??
@@ -1891,7 +2045,7 @@ function SystemAdminDashboardView({
                                                                 'users',
                                                             )
                                                         }
-                                                        className="shrink-0 text-xs font-semibold text-brand hover:underline"
+                                                        className="shrink-0 text-xs font-semibold text-brand-strong transition-colors hover:text-ink"
                                                     >
                                                         Manage Access →
                                                     </button>
@@ -1911,11 +2065,11 @@ function SystemAdminDashboardView({
                                     id="admin-gpt-heading"
                                     className="text-base font-semibold tracking-tight text-ink"
                                 >
-                                    GPT AI Advisory &amp; Spend Governance
+                                    AI Advisory &amp; Spend Governance
                                 </h2>
                                 <p className="mt-0.5 text-xs text-ink-soft">
-                                    Token budget tracking, circuit breaker
-                                    status, and recommendation throughput.
+                                    Token budget tracking, circuit breaker, and
+                                    recommendation throughput.
                                 </p>
                             </div>
                             {canOpenGpt && (
@@ -1934,13 +2088,13 @@ function SystemAdminDashboardView({
 
                         <Panel className="space-y-4 p-4">
                             {/* Circuit Breaker Killswitch Banner */}
-                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface-subtle p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface-subtle p-3">
                                 <div className="flex items-center gap-2.5">
                                     <span
                                         className={cn(
-                                            'flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold',
+                                            'flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold',
                                             circuitBreakerActive
-                                                ? 'bg-danger text-surface'
+                                                ? 'bg-danger-soft text-danger-strong'
                                                 : 'bg-success-soft text-success-strong',
                                         )}
                                     >
@@ -1948,17 +2102,17 @@ function SystemAdminDashboardView({
                                     </span>
                                     <div>
                                         <p className="text-xs font-semibold text-ink">
-                                            AI Circuit Breaker:{' '}
+                                            Circuit Breaker:{' '}
                                             <span
                                                 className={
                                                     circuitBreakerActive
-                                                        ? 'font-bold text-danger'
-                                                        : 'font-bold text-success-strong'
+                                                        ? 'font-bold text-danger-strong'
+                                                        : 'font-semibold text-success-strong'
                                                 }
                                             >
                                                 {circuitBreakerActive
-                                                    ? 'KILLED / PAUSED'
-                                                    : 'ACTIVE / OPERATIONAL'}
+                                                    ? 'Paused / Tripped'
+                                                    : 'Active / Operational'}
                                             </span>
                                         </p>
                                         <p className="text-[11px] text-ink-soft">
@@ -1977,7 +2131,7 @@ function SystemAdminDashboardView({
                                     size="sm"
                                     onClick={toggleCircuitBreaker}
                                     disabled={togglingCircuitBreaker}
-                                    className="gap-1 text-xs"
+                                    className="gap-1.5 text-xs"
                                 >
                                     <Power className="h-3 w-3" />
                                     {circuitBreakerActive
@@ -1994,24 +2148,25 @@ function SystemAdminDashboardView({
 
                             <div>
                                 <div className="flex items-center justify-between text-xs">
-                                    <span className="font-semibold text-ink">
+                                    <span className="font-medium text-ink">
                                         Monthly Token Budget Spend
                                     </span>
-                                    <span className="font-bold text-brand tabular-nums">
+                                    <span className="font-semibold text-ink tabular-nums">
                                         ${gptStats.estimatedCost.toFixed(2)} / $
                                         {gptStats.monthlyLimit.toFixed(2)} (
                                         {gptStats.limitPercentage}%)
                                     </span>
                                 </div>
-                                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-subtle">
+                                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-subtle">
                                     <div
-                                        className={`h-full transition-all ${
+                                        className={cn(
+                                            'h-full rounded-full transition-all',
                                             gptStats.limitPercentage > 85
                                                 ? 'bg-danger'
                                                 : gptStats.limitPercentage > 60
                                                   ? 'bg-warning'
-                                                  : 'bg-brand'
-                                        }`}
+                                                  : 'bg-brand',
+                                        )}
                                         style={{
                                             width: `${Math.max(2, gptStats.limitPercentage)}%`,
                                         }}
@@ -2019,24 +2174,28 @@ function SystemAdminDashboardView({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3 pt-2 text-center text-xs">
-                                <div className="rounded-xl border border-line bg-surface p-3">
-                                    <p className="text-ink-soft">Accepted</p>
-                                    <p className="mt-1 text-lg font-bold text-success-strong tabular-nums">
+                            <div className="grid grid-cols-3 divide-x divide-line rounded-lg border border-line bg-surface-subtle/30 text-center text-xs">
+                                <div className="p-2.5">
+                                    <p className="text-[11px] font-medium text-ink-soft">
+                                        Accepted
+                                    </p>
+                                    <p className="mt-0.5 text-base font-semibold text-success-strong tabular-nums">
                                         {gptStats.approved}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-line bg-surface p-3">
-                                    <p className="text-ink-soft">
-                                        Pending Review
+                                <div className="p-2.5">
+                                    <p className="text-[11px] font-medium text-ink-soft">
+                                        Pending
                                     </p>
-                                    <p className="mt-1 text-lg font-bold text-brand tabular-nums">
+                                    <p className="mt-0.5 text-base font-semibold text-ink tabular-nums">
                                         {gptStats.pending}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-line bg-surface p-3">
-                                    <p className="text-ink-soft">Rejected</p>
-                                    <p className="mt-1 text-lg font-bold text-ink-soft tabular-nums">
+                                <div className="p-2.5">
+                                    <p className="text-[11px] font-medium text-ink-soft">
+                                        Rejected
+                                    </p>
+                                    <p className="mt-0.5 text-base font-semibold text-ink-soft tabular-nums">
                                         {gptStats.rejected}
                                     </p>
                                 </div>
@@ -2058,15 +2217,14 @@ function SystemAdminDashboardView({
                                     Operational Role Distribution
                                 </h2>
                                 <p className="mt-0.5 text-xs text-ink-soft">
-                                    Active accounts partitioned by canonical
-                                    RBAC role.
+                                    Active accounts partitioned by RBAC role.
                                 </p>
                             </div>
                             {canOpenUsers && (
                                 <button
                                     type="button"
                                     onClick={() => onSectionChange('users')}
-                                    className="text-xs font-semibold text-brand hover:underline"
+                                    className="text-xs font-semibold text-brand-strong transition-colors hover:text-ink"
                                 >
                                     Manage →
                                 </button>
@@ -2080,7 +2238,7 @@ function SystemAdminDashboardView({
                                     rolesDistribution['operations_manager'] ??
                                         0,
                                 )}
-                                detail="Dispatch, scheduling & operational governance role"
+                                detail="Dispatch, scheduling & operational control"
                                 icon={ShieldCheck}
                                 onClick={
                                     canOpenUsers
@@ -2094,7 +2252,7 @@ function SystemAdminDashboardView({
                                     rolesDistribution['system_administrator'] ??
                                         0,
                                 )}
-                                detail="System health & platform security role"
+                                detail="Platform health & security governance"
                                 icon={Cpu}
                                 onClick={
                                     canOpenUsers
@@ -2108,7 +2266,7 @@ function SystemAdminDashboardView({
                                     (rolesDistribution['crane_operator'] ?? 0) +
                                         (rolesDistribution['operator'] ?? 0),
                                 )}
-                                detail="Field crane & heavy equipment execution role"
+                                detail="Field crane & heavy equipment execution"
                                 icon={Truck}
                                 onClick={
                                     canOpenUsers
@@ -2116,6 +2274,28 @@ function SystemAdminDashboardView({
                                         : undefined
                                 }
                             />
+                            {((rolesDistribution['rigger'] ?? 0) > 0 ||
+                                (rolesDistribution['driver'] ?? 0) > 0 ||
+                                (rolesDistribution['field_worker'] ?? 0) >
+                                    0) && (
+                                <ReadinessRow
+                                    label="Riggers & Support Crew"
+                                    value={String(
+                                        (rolesDistribution['rigger'] ?? 0) +
+                                            (rolesDistribution['driver'] ?? 0) +
+                                            (rolesDistribution[
+                                                'field_worker'
+                                            ] ?? 0),
+                                    )}
+                                    detail="Field rigging, signaling & transport support"
+                                    icon={Users}
+                                    onClick={
+                                        canOpenUsers
+                                            ? () => onSectionChange('users')
+                                            : undefined
+                                    }
+                                />
+                            )}
                         </Panel>
                     </section>
 
@@ -2253,7 +2433,7 @@ function FieldWorkerDashboardView({
     return (
         <div className="space-y-6">
             {/* Operator KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricStrip>
                 <KpiCard
                     label="Today's Work"
                     value={`${jobs.length}`}
@@ -2268,11 +2448,11 @@ function FieldWorkerDashboardView({
                 />
 
                 <KpiCard
-                    label="Assigned Vehicle / Assets"
+                    label="Assigned Vehicles & Assets"
                     value={`${assets.length}`}
-                    subtext="Assigned equipment & vehicles"
+                    subtext="Shift equipment & vehicles"
                     icon={Truck}
-                    tone="success"
+                    tone="default"
                     onClick={
                         availableSections.includes('assets')
                             ? () => onSectionChange('assets')
@@ -2283,9 +2463,9 @@ function FieldWorkerDashboardView({
                 <KpiCard
                     label="Fuel Requests"
                     value={`${fuelRequests.length}`}
-                    subtext="Submitted fuel requests"
+                    subtext="Logged requests"
                     icon={Fuel}
-                    tone="info"
+                    tone="default"
                     onClick={
                         canOpenFuel ? () => onSectionChange('fuel') : undefined
                     }
@@ -2294,7 +2474,7 @@ function FieldWorkerDashboardView({
                 <KpiCard
                     label="GPS Telemetry Sharing"
                     value={capabilities.share_location ? 'Active' : 'Disabled'}
-                    subtext={`${freshLocations} fresh location pings transmitted`}
+                    subtext={`${freshLocations} location pings transmitted`}
                     icon={Radio}
                     tone={capabilities.share_location ? 'success' : 'default'}
                     liveIndicator={capabilities.share_location}
@@ -2304,7 +2484,7 @@ function FieldWorkerDashboardView({
                             : undefined
                     }
                 />
-            </div>
+            </MetricStrip>
 
             {/* Field Schedule */}
             <section aria-labelledby="field-schedule-heading">
@@ -2360,6 +2540,14 @@ function FieldWorkerDashboardView({
    HELPER COMPONENTS & FUNCTIONS
    ========================================================================= */
 
+function MetricStrip({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line shadow-2xs sm:grid-cols-2 lg:grid-cols-4">
+            {children}
+        </div>
+    );
+}
+
 function KpiCard({
     label,
     value,
@@ -2372,66 +2560,60 @@ function KpiCard({
     label: string;
     value: string;
     subtext: string;
-    icon: LucideIcon;
+    icon?: LucideIcon;
     tone?: 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
     liveIndicator?: boolean;
     onClick?: () => void;
 }) {
-    const Content = (
-        <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-                <p className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
-                    {label}
-                </p>
-                <div className="mt-1 flex items-baseline gap-2">
-                    <span className="text-2xl font-bold tracking-tight text-ink tabular-nums sm:text-3xl">
-                        {value}
-                    </span>
-                    {liveIndicator && (
-                        <span className="relative flex h-2.5 w-2.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
-                        </span>
-                    )}
-                </div>
-                <p className="mt-1 truncate text-xs text-ink-soft">{subtext}</p>
-            </div>
-            <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                    tone === 'brand'
-                        ? 'bg-brand-soft text-brand-strong'
-                        : tone === 'success'
-                          ? 'bg-success-soft text-success-strong'
-                          : tone === 'warning'
-                            ? 'bg-warning-soft text-warning-strong'
-                            : tone === 'danger'
-                              ? 'bg-danger-soft text-danger'
-                              : tone === 'info'
-                                ? 'bg-info-soft text-info-strong'
-                                : 'bg-surface-subtle text-ink-soft'
-                }`}
-            >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-            </div>
-        </div>
-    );
-
-    if (onClick) {
-        return (
-            <button
-                type="button"
-                onClick={onClick}
-                className="rounded-xl border border-line bg-surface p-4 text-left shadow-xs transition-all hover:border-line-strong hover:shadow-sm focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
-            >
-                {Content}
-            </button>
-        );
-    }
+    const Component = onClick ? 'button' : 'div';
 
     return (
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-xs">
-            {Content}
-        </div>
+        <Component
+            type={onClick ? 'button' : undefined}
+            onClick={onClick}
+            className={cn(
+                'group relative flex flex-col justify-between bg-surface p-4 text-left transition-colors sm:p-5',
+                onClick &&
+                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
+            )}
+        >
+            <div>
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-ink-soft">
+                        {label}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                        {liveIndicator && (
+                            <span className="relative flex h-2 w-2">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                            </span>
+                        )}
+                        {Icon && (
+                            <Icon
+                                className="h-4 w-4 text-muted/70 transition-colors group-hover:text-ink-soft"
+                                aria-hidden="true"
+                            />
+                        )}
+                    </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                    <span
+                        className={cn(
+                            'text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl',
+                            tone === 'danger'
+                                ? 'text-danger-strong'
+                                : tone === 'warning'
+                                  ? 'text-warning-strong'
+                                  : 'text-ink',
+                        )}
+                    >
+                        {value}
+                    </span>
+                </div>
+            </div>
+            <p className="mt-2 truncate text-xs text-ink-soft">{subtext}</p>
+        </Component>
     );
 }
 
@@ -2449,33 +2631,32 @@ function DashboardActionRow({
             <button
                 type="button"
                 onClick={onClick}
-                className="group flex min-h-20 w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
             >
                 <span
-                    className={
+                    className={cn(
+                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                         action.tone === 'danger'
-                            ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger-soft text-danger transition-transform group-hover:scale-105'
+                            ? 'bg-danger-soft text-danger-strong'
                             : action.tone === 'warning'
-                              ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-soft text-warning-strong transition-transform group-hover:scale-105'
-                              : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info-strong transition-transform group-hover:scale-105'
-                    }
+                              ? 'bg-warning-soft text-warning-strong'
+                              : 'bg-surface-subtle text-ink-soft',
+                    )}
                 >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                        <span className="block font-semibold text-ink transition-colors group-hover:text-brand">
-                            {action.title}
-                        </span>
+                    <span className="block text-sm font-semibold text-ink transition-colors group-hover:text-brand-strong">
+                        {action.title}
                     </span>
-                    <span className="mt-0.5 block text-sm leading-5 text-ink-soft">
+                    <span className="mt-0.5 block text-xs leading-normal text-ink-soft">
                         {action.description}
                     </span>
                 </span>
-                <span className="flex items-center gap-1 text-xs font-semibold text-ink-soft group-hover:text-brand">
+                <span className="flex items-center gap-1 text-xs font-medium text-ink-soft group-hover:text-ink">
                     Resolve
                     <ArrowRight
-                        className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1"
+                        className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
                         aria-hidden="true"
                     />
                 </span>
@@ -2491,15 +2672,15 @@ function JobOverviewRow({
     job: DispatchJobViewModel;
     onClick: () => void;
 }) {
-    const personnelCount = job.personnel_assignments.length;
-    const assetCount = job.asset_assignments.length;
-    const leadOperator = job.personnel_assignments.find(
+    const personnelCount = job.personnel_assignments?.length ?? 0;
+    const assetCount = job.asset_assignments?.length ?? 0;
+    const leadOperator = job.personnel_assignments?.find(
         (p) =>
             p.type === 'crane_operator' ||
             p.type === 'lead_operator' ||
             p.type === 'driver',
     );
-    const primaryAsset = job.asset_assignments[0];
+    const primaryAsset = job.asset_assignments?.[0];
 
     const sourceLabel =
         job.source?.label ??
@@ -2518,16 +2699,16 @@ function JobOverviewRow({
             <button
                 type="button"
                 onClick={onClick}
-                className="group flex min-h-20 w-full flex-col justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none sm:flex-row sm:items-center"
+                className="group flex min-h-16 w-full flex-col justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden sm:flex-row sm:items-center"
             >
                 <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
                     <CalendarClock
-                        className="mt-0.5 h-5 w-5 shrink-0 text-ink-soft transition-colors group-hover:text-brand sm:mt-0"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-ink-soft sm:mt-0"
                         aria-hidden="true"
                     />
                     <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="font-bold text-ink">
+                            <span className="font-semibold text-ink">
                                 {job.reference}
                             </span>
                             {job.client && (
@@ -2538,14 +2719,15 @@ function JobOverviewRow({
                             )}
                             {sourceLabel && (
                                 <span
-                                    className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium',
                                         job.source?.type ===
-                                        'rental_reservation'
-                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                            'rental_reservation'
+                                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
                                             : job.source?.type === 'sales_order'
-                                              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                                    }`}
+                                              ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300'
+                                              : 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
+                                    )}
                                 >
                                     {sourceLabel}
                                 </span>
@@ -2553,11 +2735,12 @@ function JobOverviewRow({
                             <CanonicalStatusBadge status={job.status} />
                             {job.priority.value !== 'routine' && (
                                 <span
-                                    className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${
+                                    className={cn(
+                                        'inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold',
                                         job.priority.value === 'emergency'
-                                            ? 'bg-danger-soft text-danger'
-                                            : 'bg-warning-soft text-warning-strong'
-                                    }`}
+                                            ? 'bg-danger-soft text-danger-strong'
+                                            : 'bg-warning-soft text-warning-strong',
+                                    )}
                                 >
                                     {job.priority.label}
                                 </span>
@@ -2628,29 +2811,31 @@ function ReadinessRow({
             onClick={onClick}
             className={cn(
                 'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
-                onClick && 'cursor-pointer hover:bg-surface-subtle/70',
+                onClick &&
+                    'cursor-pointer hover:bg-surface-subtle/70 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
             )}
         >
             <span
-                className={
+                className={cn(
+                    'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
                     tone === 'warning'
-                        ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-strong'
+                        ? 'bg-warning-soft text-warning-strong'
                         : tone === 'success'
-                          ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong'
-                          : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-ink-soft'
-                }
+                          ? 'bg-success-soft text-success-strong'
+                          : 'bg-surface-subtle text-ink-soft',
+                )}
             >
-                <Icon className="h-4 w-4" aria-hidden="true" />
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-ink">
                     {label}
                 </span>
-                <span className="mt-0.5 block text-xs leading-5 text-ink-soft">
+                <span className="mt-0.5 block text-xs leading-normal text-ink-soft">
                     {detail}
                 </span>
             </span>
-            <span className="text-xl font-semibold tracking-tight text-ink tabular-nums">
+            <span className="text-lg font-semibold tracking-tight text-ink tabular-nums">
                 {value}
             </span>
         </Component>
@@ -2775,8 +2960,14 @@ function canActOnFuelRequest(
     );
 }
 
-function formatSchedule(value: string | null) {
-    if (value === null) {
+function formatSchedule(value: string | null | undefined) {
+    if (!value) {
+        return 'Schedule pending';
+    }
+
+    const date = new Date(value);
+
+    if (isNaN(date.getTime())) {
         return 'Schedule pending';
     }
 
@@ -2786,16 +2977,22 @@ function formatSchedule(value: string | null) {
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-    }).format(new Date(value));
+    }).format(date);
 }
 
-function formatTimeOnly(value: string | null) {
-    if (value === null) {
+function formatTimeOnly(value: string | null | undefined) {
+    if (!value) {
+        return '';
+    }
+
+    const date = new Date(value);
+
+    if (isNaN(date.getTime())) {
         return '';
     }
 
     return new Intl.DateTimeFormat(undefined, {
         hour: 'numeric',
         minute: '2-digit',
-    }).format(new Date(value));
+    }).format(date);
 }

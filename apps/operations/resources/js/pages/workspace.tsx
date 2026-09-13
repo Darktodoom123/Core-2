@@ -740,6 +740,7 @@ export default function Workspace(props: WorkspacePageProps) {
                         locations={props.locations ?? []}
                         activeSosIncidents={props.activeSosIncidents}
                         approvals={props.approvals ?? []}
+                        users={props.users ?? []}
                         auditEvents={props.auditEvents ?? []}
                         gptRecommendations={props.gptRecommendations ?? []}
                         capabilities={props.capabilities}
