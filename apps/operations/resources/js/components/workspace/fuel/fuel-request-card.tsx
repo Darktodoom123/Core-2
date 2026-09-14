@@ -88,19 +88,20 @@ export function FuelRequestCard({
     return (
         <li
             onClick={onSelect}
-            className={`flex flex-col gap-4 rounded-xl border p-4 transition-colors ${
+            className={cn(
+                'flex flex-col gap-4 rounded-xl border p-4 transition-colors',
                 isSelected
-                    ? 'border-brand-strong bg-surface ring-2 ring-brand/30'
+                    ? 'border-brand-strong bg-surface ring-1 ring-brand-strong'
                     : hasAnomaly
                       ? 'border-danger/40 bg-danger-soft/10'
-                      : 'border-line bg-surface hover:border-line-strong'
-            }`}
+                      : 'border-line bg-surface hover:border-line-strong',
+            )}
         >
             {/* Top Bar: Reference, Badges, Actions */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-ink">
+                        <span className="font-mono text-sm font-semibold text-ink tabular-nums">
                             {isDetail
                                 ? `Ref: ${request.reference}`
                                 : request.reference}
@@ -119,7 +120,7 @@ export function FuelRequestCard({
                         )}
 
                         {request.shift && (
-                            <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft">
+                            <span className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft tabular-nums">
                                 <Clock className="h-3 w-3 text-brand" />
                                 <span>Shift #{request.shift.id}</span>
                                 {request.shift.operator_name && (
@@ -132,7 +133,9 @@ export function FuelRequestCard({
                     </div>
 
                     <p className="text-sm font-semibold text-ink">
-                        <span>Requested: {request.quantity_litres} Litres</span>
+                        <span className="tabular-nums">
+                            Requested: {request.quantity_litres} Litres
+                        </span>
                         <span className="font-normal text-ink-soft"> · </span>
                         <span className="font-medium text-ink capitalize">
                             {humanize(request.fuel_type)}
@@ -281,7 +284,7 @@ export function FuelRequestCard({
                             </div>
                         ) : (
                             <>
-                                <label className="font-semibold text-ink">
+                                <label className="font-medium text-ink">
                                     Reviewer Justification / Feedback Note:
                                 </label>
                                 <input
@@ -291,7 +294,7 @@ export function FuelRequestCard({
                                         setDecisionReason(e.target.value)
                                     }
                                     placeholder="Add reason or guidance (recommended for rejections, optional for approvals)..."
-                                    className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                                    className="h-9 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                                 />
                                 <div className="flex items-center justify-end gap-2 pt-1">
                                     <Button
@@ -347,22 +350,22 @@ export function FuelRequestCard({
             {/* Rejection Callout Banner */}
             {statusVal === 'rejected' && (
                 <div
-                    className="rounded-xl border border-danger/40 bg-danger-soft/25 p-4 text-xs shadow-xs"
+                    className="rounded-xl border border-danger/40 bg-danger-soft/20 p-4 text-xs"
                     role="alert"
                     data-testid="rejection-callout"
                 >
-                    <div className="flex items-center gap-2 font-bold text-danger-strong">
-                        <AlertTriangle className="h-4.5 w-4.5 shrink-0" />
+                    <div className="flex items-center gap-2 font-semibold text-danger-strong">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
                         <span className="text-sm">
                             Fuel Request Rejected by Operations
                         </span>
                     </div>
                     <p className="mt-2 text-ink">
-                        <span className="font-semibold text-ink-soft">
+                        <span className="font-medium text-ink-soft">
                             Reviewer Decision Note:{' '}
                         </span>
                         {request.decision_reason ? (
-                            <span className="font-semibold text-ink italic">
+                            <span className="font-medium text-ink italic">
                                 "{request.decision_reason}"
                             </span>
                         ) : (
@@ -372,7 +375,7 @@ export function FuelRequestCard({
                         )}
                     </p>
                     {request.approved_at && (
-                        <p className="mt-1 text-[11px] text-ink-soft">
+                        <p className="mt-1 text-[11px] text-ink-soft tabular-nums">
                             Decision finalized on{' '}
                             {new Date(request.approved_at).toLocaleString()}
                         </p>
@@ -384,10 +387,10 @@ export function FuelRequestCard({
             {isDetail && (
                 <div className="grid grid-cols-2 gap-2 rounded-xl border border-line bg-surface-subtle p-3 text-xs sm:grid-cols-4">
                     <div>
-                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                        <span className="block text-xs font-medium text-ink-soft">
                             1. Submitted
                         </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
                             {request.created_at
                                 ? new Date(
                                       request.created_at,
@@ -404,10 +407,10 @@ export function FuelRequestCard({
                         </p>
                     </div>
                     <div>
-                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                        <span className="block text-xs font-medium text-ink-soft">
                             2. Forwarded
                         </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
                             {request.reviewed_at
                                 ? new Date(
                                       request.reviewed_at,
@@ -430,13 +433,13 @@ export function FuelRequestCard({
                         </p>
                     </div>
                     <div>
-                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                        <span className="block text-xs font-medium text-ink-soft">
                             3.{' '}
                             {statusVal === 'rejected' ? 'Rejected' : 'Approval'}
                         </span>
                         <p
                             className={cn(
-                                'mt-0.5 text-xs font-semibold',
+                                'mt-0.5 text-xs font-semibold tabular-nums',
                                 statusVal === 'rejected'
                                     ? 'text-danger'
                                     : 'text-ink',
@@ -470,10 +473,10 @@ export function FuelRequestCard({
                         </p>
                     </div>
                     <div>
-                        <span className="block text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                        <span className="block text-xs font-medium text-ink-soft">
                             4. Pump Verification
                         </span>
-                        <p className="mt-0.5 text-xs font-semibold text-ink">
+                        <p className="mt-0.5 text-xs font-semibold text-ink tabular-nums">
                             {primaryLog?.recorded_at
                                 ? new Date(
                                       primaryLog.recorded_at,
@@ -490,13 +493,20 @@ export function FuelRequestCard({
                                     : 'Awaiting'}
                         </p>
                         <p className="text-[11px] text-ink-soft">
-                            {primaryLog
-                                ? `${primaryLog.quantity_litres} L Dispensed`
-                                : statusVal === 'verified'
-                                  ? 'Authorized'
-                                  : statusVal === 'rejected'
-                                    ? 'No Pump Log'
-                                    : 'Pending'}
+                            {primaryLog ? (
+                                <span>
+                                    <span className="tabular-nums">
+                                        {primaryLog.quantity_litres}
+                                    </span>{' '}
+                                    L Dispensed
+                                </span>
+                            ) : statusVal === 'verified' ? (
+                                'Authorized'
+                            ) : statusVal === 'rejected' ? (
+                                'No Pump Log'
+                            ) : (
+                                'Pending'
+                            )}
                         </p>
                     </div>
                 </div>
@@ -506,10 +516,10 @@ export function FuelRequestCard({
             {isDetail && (
                 <div className="space-y-2 rounded-xl border border-line bg-surface p-3.5 text-xs">
                     <div className="flex items-center justify-between border-b border-line/60 pb-2">
-                        <span className="text-[10px] font-bold tracking-wider text-ink-soft uppercase">
+                        <span className="text-xs font-semibold text-ink">
                             Operational Scope & Project Allocation
                         </span>
-                        <span className="font-mono text-xs font-bold text-brand-strong">
+                        <span className="font-mono text-xs font-semibold text-brand-strong tabular-nums">
                             {request.quantity_litres} L ·{' '}
                             {humanize(request.fuel_type)}
                         </span>
@@ -560,7 +570,7 @@ export function FuelRequestCard({
                 <div className="flex items-start gap-2.5 rounded-xl border border-warning/40 bg-warning-soft/30 p-3.5 text-xs text-warning-strong">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     <div>
-                        <p className="font-bold">
+                        <p className="font-semibold">
                             Unlinked General Request (No Equipment Assigned)
                         </p>
                         <p className="mt-0.5 text-ink-soft">
@@ -604,7 +614,7 @@ export function FuelRequestCard({
                     <span className="text-ink-soft">·</span>
                     <div className="font-mono text-[11px]">
                         <span className="text-ink-soft">Code: </span>
-                        <span className="font-semibold text-ink">
+                        <span className="font-semibold text-ink tabular-nums">
                             {asset.code}
                         </span>
                     </div>
@@ -614,7 +624,7 @@ export function FuelRequestCard({
                             <div className="flex items-center gap-1">
                                 <Gauge className="h-3 w-3 text-brand" />
                                 <span className="text-ink-soft">Meter: </span>
-                                <span className="font-mono font-medium text-ink">
+                                <span className="font-mono font-medium text-ink tabular-nums">
                                     {asset.meter_value} {meterUnit}
                                 </span>
                             </div>
@@ -627,7 +637,7 @@ export function FuelRequestCard({
                                 <span className="text-ink-soft">
                                     Baseline:{' '}
                                 </span>
-                                <span className="font-medium text-ink">
+                                <span className="font-medium text-ink tabular-nums">
                                     {asset.baseline_burn_rate}{' '}
                                     {asset.burn_rate_unit ?? 'L/hr'}
                                 </span>
@@ -665,13 +675,13 @@ export function FuelRequestCard({
 
             {/* Recorded Fuel Log Details Strip */}
             {request.logs && request.logs.length > 0 && (
-                <div className="space-y-3 rounded-lg border border-line bg-surface-subtle p-3 text-xs">
+                <div className="space-y-3 rounded-xl border border-line bg-surface-subtle p-3 text-xs">
                     <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold tracking-wider text-ink uppercase">
+                        <span className="text-xs font-semibold text-ink">
                             Verified Refueling Audit Log
                         </span>
                         {primaryLog?.recorded_at && (
-                            <span className="text-[11px] text-ink-soft">
+                            <span className="text-[11px] text-ink-soft tabular-nums">
                                 Logged{' '}
                                 {new Date(
                                     primaryLog.recorded_at,
@@ -683,37 +693,37 @@ export function FuelRequestCard({
                     {request.logs.map((log) => (
                         <div
                             key={log.id}
-                            className="space-y-2.5 rounded-lg border border-line/70 bg-surface p-3"
+                            className="space-y-2.5 rounded-lg border border-line bg-surface p-3"
                         >
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                 <div>
-                                    <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                    <span className="text-xs font-medium text-ink-soft">
                                         Dispensed Volume
                                     </span>
-                                    <p className="font-mono text-sm font-bold text-ink">
+                                    <p className="font-mono text-sm font-semibold text-ink tabular-nums">
                                         {log.quantity_litres} L
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                    <span className="text-xs font-medium text-ink-soft">
                                         Total Amount
                                     </span>
-                                    <p className="font-mono text-sm font-bold text-ink">
+                                    <p className="font-mono text-sm font-semibold text-ink tabular-nums">
                                         {log.total_cost
                                             ? `₱${parseFloat(log.total_cost).toLocaleString()}`
                                             : 'Not recorded'}
                                         {log.price_per_litre && (
-                                            <span className="block text-[10px] font-normal text-ink-soft">
+                                            <span className="block text-[10px] font-normal text-ink-soft tabular-nums">
                                                 (₱{log.price_per_litre}/L)
                                             </span>
                                         )}
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                    <span className="text-xs font-medium text-ink-soft">
                                         Ending Meter
                                     </span>
-                                    <p className="font-mono text-sm font-semibold text-ink">
+                                    <p className="font-mono text-sm font-semibold text-ink tabular-nums">
                                         {log.hour_meter !== null
                                             ? `${log.hour_meter} hrs`
                                             : log.odometer_km !== null
@@ -722,7 +732,7 @@ export function FuelRequestCard({
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-ink-soft uppercase">
+                                    <span className="text-xs font-medium text-ink-soft">
                                         Station / Vendor
                                     </span>
                                     <p className="truncate text-xs font-medium text-ink">
@@ -743,7 +753,7 @@ export function FuelRequestCard({
                                         isAnomaly={log.is_anomaly}
                                     />
                                     {log.is_anomaly && log.anomaly_reason && (
-                                        <p className="mt-1 text-xs font-medium text-danger">
+                                        <p className="mt-1 text-xs font-medium text-danger tabular-nums">
                                             {log.anomaly_reason}
                                         </p>
                                     )}
@@ -787,7 +797,7 @@ export function FuelRequestCard({
                                                     log.receipt_url ?? null,
                                                 )
                                             }
-                                            className="inline-flex items-center gap-1.5 rounded-md border border-brand/40 bg-brand-soft/50 px-2.5 py-1 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-brand/50 bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-strong transition-colors hover:bg-brand-soft/80 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                             aria-label="Inspect station receipt photo in lightbox"
                                         >
                                             <Camera className="h-3.5 w-3.5" />
@@ -797,7 +807,7 @@ export function FuelRequestCard({
                                             href={log.receipt_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink"
+                                            className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] font-medium text-ink-soft transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                         >
                                             <FileText className="h-3 w-3" />
                                             <span>Direct link</span>
@@ -814,20 +824,20 @@ export function FuelRequestCard({
             {/* Accessible Receipt Photo Lightbox Modal */}
             {viewingReceiptUrl && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
                     onClick={() => setViewingReceiptUrl(null)}
                     role="dialog"
                     aria-modal="true"
                     aria-label="Station receipt inspection lightbox"
                 >
                     <div
-                        className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-surface p-4 shadow-2xl"
+                        className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl border border-line bg-surface p-4 shadow-xl"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-3 flex items-center justify-between border-b border-line pb-2.5">
                             <div className="flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-brand" />
-                                <span className="font-mono text-xs font-bold text-ink">
+                                <span className="font-mono text-xs font-semibold text-ink tabular-nums">
                                     Station Receipt Audit · {request.reference}
                                 </span>
                             </div>
@@ -836,6 +846,7 @@ export function FuelRequestCard({
                                 size="sm"
                                 onClick={() => setViewingReceiptUrl(null)}
                                 aria-label="Close receipt inspection"
+                                className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <X className="h-4 w-4" />
                             </Button>
@@ -844,20 +855,20 @@ export function FuelRequestCard({
                             <img
                                 src={viewingReceiptUrl}
                                 alt={`Receipt for ${request.reference}`}
-                                className="max-h-[60vh] w-auto rounded object-contain shadow-sm"
+                                className="max-h-[60vh] w-auto rounded object-contain"
                             />
                         </div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2.5 text-xs text-ink-soft">
                             <span>
                                 Dispensed:{' '}
-                                <strong className="text-ink">
+                                <strong className="text-ink tabular-nums">
                                     {primaryLog?.quantity_litres} L
                                 </strong>
                                 {primaryLog?.total_cost && (
                                     <>
                                         {' '}
                                         · Total:{' '}
-                                        <strong className="text-ink">
+                                        <strong className="text-ink tabular-nums">
                                             ₱
                                             {parseFloat(
                                                 primaryLog.total_cost,
@@ -870,7 +881,7 @@ export function FuelRequestCard({
                                 href={viewingReceiptUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline"
+                                className="inline-flex items-center gap-1 font-semibold text-brand-strong hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                             >
                                 <span>Open full resolution</span>
                                 <ExternalLink className="h-3 w-3" />

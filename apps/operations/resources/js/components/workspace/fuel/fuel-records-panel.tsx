@@ -53,7 +53,7 @@ export function FuelRecordsPanel({
                                         {log.recorded_by?.name ??
                                             'Recorder unavailable'}
                                     </p>
-                                    <p className="mt-1 text-xs text-ink-soft">
+                                    <p className="mt-1 text-xs text-ink-soft tabular-nums">
                                         {log.recorded_at
                                             ? new Date(
                                                   log.recorded_at,
@@ -106,7 +106,7 @@ export function FuelRecordsPanel({
                                             <dt className="text-xs text-ink-soft">
                                                 Variance
                                             </dt>
-                                            <dd className="mt-1">
+                                            <dd className="mt-1 tabular-nums">
                                                 {log.variance_percentage != null
                                                     ? `${log.variance_percentage}%`
                                                     : 'Not evaluated'}
@@ -148,7 +148,7 @@ export function FuelRecordsPanel({
                             )}
                             {!consumption && log.receipt_url && (
                                 <a
-                                    className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-brand-strong underline underline-offset-4"
+                                    className="mt-3 inline-flex min-h-11 items-center rounded-xs text-sm font-medium text-brand-strong underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                     href={log.receipt_url}
                                     target="_blank"
                                     rel="noreferrer"

@@ -231,7 +231,7 @@ export function FuelSurface({
                         </Button>
                     ))}
                 </div>
-                <p className="text-xs text-ink-soft">
+                <p className="text-xs text-ink-soft tabular-nums">
                     Showing {requests.length} requests
                     {pagination
                         ? ` of ${pagination.total} · Page ${pagination.current_page} of ${pagination.last_page}`
@@ -266,27 +266,30 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'all'}
                                     onClick={() => setFilterStatus('all')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'all'
                                             ? 'bg-ink font-semibold text-canvas'
-                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
-                                    All ({kpis.total})
+                                    <span>All</span>{' '}
+                                    <span className="ml-1 tabular-nums opacity-80">
+                                        ({kpis.total})
+                                    </span>
                                 </button>
                                 <button
                                     type="button"
                                     aria-pressed={filterStatus === 'pending'}
                                     onClick={() => setFilterStatus('pending')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'pending'
-                                            ? 'border border-warning/40 bg-warning-soft font-semibold text-warning-strong'
-                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            ? 'border border-warning/50 bg-warning-soft font-semibold text-warning-strong'
+                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
                                     <span>Pending Review</span>{' '}
-                                    <span className="ml-1 opacity-80">
+                                    <span className="ml-1 tabular-nums opacity-80">
                                         ({kpis.pending})
                                     </span>
                                 </button>
@@ -295,14 +298,14 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'approved'}
                                     onClick={() => setFilterStatus('approved')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'approved'
-                                            ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
-                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            ? 'border border-brand/50 bg-brand-soft font-semibold text-brand-strong'
+                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
                                     <span>Approved</span>{' '}
-                                    <span className="ml-1 opacity-80">
+                                    <span className="ml-1 tabular-nums opacity-80">
                                         ({kpis.approved})
                                     </span>
                                 </button>
@@ -311,14 +314,14 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'verified'}
                                     onClick={() => setFilterStatus('verified')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'verified'
-                                            ? 'border border-brand/40 bg-brand-soft font-semibold text-brand-strong'
-                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            ? 'border border-brand/50 bg-brand-soft font-semibold text-brand-strong'
+                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
                                     <span>Verified</span>{' '}
-                                    <span className="ml-1 opacity-80">
+                                    <span className="ml-1 tabular-nums opacity-80">
                                         ({kpis.verified})
                                     </span>
                                 </button>
@@ -327,14 +330,14 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'logged'}
                                     onClick={() => setFilterStatus('logged')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'logged'
-                                            ? 'border border-success/40 bg-success-soft font-semibold text-success-strong'
-                                            : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                            ? 'border border-success/50 bg-success-soft font-semibold text-success-strong'
+                                            : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
                                     <span>Logged</span>{' '}
-                                    <span className="ml-1 opacity-80">
+                                    <span className="ml-1 tabular-nums opacity-80">
                                         ({kpis.logged})
                                     </span>
                                 </button>
@@ -343,17 +346,17 @@ export function FuelSurface({
                                     aria-pressed={filterStatus === 'anomalies'}
                                     onClick={() => setFilterStatus('anomalies')}
                                     className={cn(
-                                        'inline-flex min-h-8 items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                                        'inline-flex min-h-8 items-center rounded-lg px-2.5 py-1 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden',
                                         filterStatus === 'anomalies'
-                                            ? 'border border-danger/40 bg-danger-soft font-semibold text-danger-strong'
+                                            ? 'border border-danger/50 bg-danger-soft font-semibold text-danger-strong'
                                             : kpis.anomalies > 0
-                                              ? 'border border-danger/30 bg-danger-soft text-danger-strong hover:bg-danger-soft/80'
-                                              : 'border border-line bg-surface-subtle text-ink-soft hover:bg-surface hover:text-ink',
+                                              ? 'border border-danger/30 bg-danger-soft/60 text-danger-strong hover:bg-danger-soft'
+                                              : 'border border-line bg-surface text-ink-soft hover:bg-surface-subtle hover:text-ink',
                                     )}
                                 >
                                     <AlertTriangle className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                                     <span>Anomalies</span>{' '}
-                                    <span className="ml-1 opacity-80">
+                                    <span className="ml-1 tabular-nums opacity-80">
                                         ({kpis.anomalies})
                                     </span>
                                 </button>
@@ -372,20 +375,20 @@ export function FuelSurface({
                                         setSearchQuery(e.target.value)
                                     }
                                     placeholder="Search reference, asset, requester, purpose…"
-                                    className="h-8.5 w-full rounded-lg border border-line bg-surface-subtle pr-3 pl-9 text-xs text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                                    className="h-9 w-full rounded-lg border border-line bg-surface pr-3 pl-9 text-xs text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                                 />
                             </label>
                         </div>
 
                         {/* Truthful Accounting & Burn-Rate Anomaly Summary Strip */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface-subtle px-4 py-2.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface-subtle px-4 py-2.5 text-xs">
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
                                 <div className="flex items-center gap-1.5">
                                     <Droplets className="h-3.5 w-3.5 text-brand" />
                                     <span className="text-ink-soft">
                                         <span>Requested Litres</span>:
                                     </span>
-                                    <span className="font-semibold text-ink">
+                                    <span className="font-semibold text-ink tabular-nums">
                                         {kpis.totalRequestedLitres.toLocaleString()}
                                     </span>
                                     <span className="text-ink-soft">
@@ -400,7 +403,7 @@ export function FuelSurface({
                                     <span className="text-ink-soft">
                                         Dispensed Logs:
                                     </span>
-                                    <span className="font-semibold text-ink">
+                                    <span className="font-semibold text-ink tabular-nums">
                                         {kpis.totalDispensedLitres.toLocaleString()}
                                     </span>
                                     <span className="text-ink-soft">
@@ -411,7 +414,7 @@ export function FuelSurface({
 
                             <div className="flex items-center gap-2">
                                 {kpis.anomalies > 0 ? (
-                                    <span className="inline-flex items-center gap-1.5 font-semibold text-danger">
+                                    <span className="inline-flex items-center gap-1.5 font-semibold text-danger tabular-nums">
                                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                                         {kpis.anomalies} burn-rate{' '}
                                         {kpis.anomalies === 1
@@ -434,21 +437,22 @@ export function FuelSurface({
                         {/* Main Operate-Mode Content Area */}
                         {requests.length === 0 ? (
                             <Panel className="p-8 text-center sm:p-12">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-strong shadow-xs">
-                                    <Fuel className="h-7 w-7" />
+                                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-surface-subtle text-ink-soft">
+                                    <Fuel className="h-5 w-5 text-ink-soft" />
                                 </div>
-                                <h3 className="mt-4 text-base font-bold text-ink">
+                                <h3 className="mt-3 text-sm font-semibold text-ink">
                                     No fuel requests yet
                                 </h3>
-                                <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
+                                <p className="mx-auto mt-1 max-w-md text-xs text-ink-soft">
                                     Submit a fuel request to begin approval.
                                     Once verified, record the actual fuel
                                     received and its supporting receipt.
                                 </p>
                                 {capabilities.request_fuel && (
-                                    <div className="mt-5">
+                                    <div className="mt-4">
                                         <Button
                                             variant="primary"
+                                            size="sm"
                                             onClick={() =>
                                                 setIsCreateModalOpen(true)
                                             }
@@ -493,9 +497,12 @@ export function FuelSurface({
                                     )}
                                 >
                                     <div className="mb-2 flex items-center justify-between px-1">
-                                        <span className="text-xs font-bold tracking-wider text-ink-soft uppercase">
+                                        <span className="text-xs font-semibold text-ink">
                                             Fuel Queue (
-                                            {filteredRequests.length})
+                                            <span className="tabular-nums">
+                                                {filteredRequests.length}
+                                            </span>
+                                            )
                                         </span>
                                         {filterStatus !== 'all' && (
                                             <span className="text-xs font-medium text-brand capitalize">
@@ -505,7 +512,7 @@ export function FuelSurface({
                                     </div>
 
                                     <ul
-                                        className="space-y-2.5"
+                                        className="space-y-2"
                                         role="list"
                                         aria-label="Fuel request queue"
                                     >
@@ -530,9 +537,9 @@ export function FuelSurface({
                                                             )
                                                         }
                                                         className={cn(
-                                                            'w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-none',
+                                                            'w-full rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden focus-visible:ring-inset',
                                                             isSelected
-                                                                ? 'border-brand-strong bg-brand-soft/30 shadow-xs ring-2 ring-brand/40'
+                                                                ? 'border-brand-strong bg-brand-soft/25 ring-1 ring-brand-strong'
                                                                 : hasAnomaly
                                                                   ? 'border-danger/30 bg-danger-soft/10 hover:border-danger/60'
                                                                   : 'border-line bg-surface hover:border-line-strong hover:bg-surface-subtle',
@@ -541,7 +548,7 @@ export function FuelSurface({
                                                         {/* Top Row: Reference, Badges */}
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-mono text-xs font-bold text-ink">
+                                                                <span className="font-mono text-xs font-semibold text-ink tabular-nums">
                                                                     {
                                                                         req.reference
                                                                     }
@@ -603,7 +610,7 @@ export function FuelSurface({
                                                         <div className="mt-2.5 flex items-center justify-between border-t border-line/50 pt-2 text-[11px]">
                                                             <span className="text-ink-soft">
                                                                 Req:{' '}
-                                                                <strong className="font-mono font-semibold text-ink">
+                                                                <strong className="font-mono font-semibold text-ink tabular-nums">
                                                                     {
                                                                         req.quantity_litres
                                                                     }{' '}
@@ -617,7 +624,7 @@ export function FuelSurface({
                                                             </span>
 
                                                             {primaryLog ? (
-                                                                <span className="font-medium text-success-strong">
+                                                                <span className="font-medium text-success-strong tabular-nums">
                                                                     Dispensed:{' '}
                                                                     {
                                                                         primaryLog.quantity_litres
@@ -688,7 +695,7 @@ export function FuelSurface({
                                             />
                                         </ul>
                                     ) : (
-                                        <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-line bg-surface-subtle p-8 text-center text-xs text-ink-soft">
+                                        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-line bg-surface-subtle p-8 text-center text-xs text-ink-soft">
                                             Select a fuel request from the queue
                                             to view audit facts and take action.
                                         </div>
@@ -722,7 +729,7 @@ export function FuelSurface({
                         >
                             Previous page
                         </Button>
-                        <span className="text-xs text-ink-soft">
+                        <span className="text-xs text-ink-soft tabular-nums">
                             Page {pagination.current_page} of{' '}
                             {pagination.last_page}
                         </span>

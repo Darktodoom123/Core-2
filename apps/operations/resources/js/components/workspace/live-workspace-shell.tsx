@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import {
     Archive,
     Bell,
@@ -11,16 +11,12 @@ import {
     History,
     LayoutDashboard,
     Fuel,
-    LogOut,
     MapPin,
     Menu,
-    Moon,
     RefreshCw,
     ShieldAlert,
     ShieldCheck,
-    Sun,
     Truck,
-    User as UserIcon,
     Users,
     X,
 } from 'lucide-react';
@@ -32,7 +28,7 @@ import { ApplicationLogo } from '@/components/application-logo';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Button } from '@/components/ui';
 import { NotificationCenterPopover } from '@/components/workspace/notification-center-popover';
-import { useTheme } from '@/lib/use-theme';
+import { UserAccountMenu } from '@/components/workspace/user-account-menu';
 import { cn } from '@/lib/utils';
 import type {
     NotificationViewModel,
@@ -118,42 +114,38 @@ export function LiveWorkspaceShell({
     onShareLocation: () => void;
 }>) {
     const { auth } = usePage().props;
-    const { resolvedTheme, toggleTheme } = useTheme();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
     const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
     const navigationRef = useRef<HTMLElement>(null);
-    const userMenuRef = useRef<HTMLDivElement>(null);
+    const userMenuTriggerRef = useRef<HTMLButtonElement>(null);
     const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
-    useEffect(() => {
-        if (!userMenuOpen) {
-            return;
+    const canManageUsers = useMemo(() => {
+        if (navigation.some((item) => item.id === 'users')) {
+            return true;
         }
 
-        const handleOutsideClick = (e: MouseEvent) => {
-            if (
-                userMenuRef.current &&
-                !userMenuRef.current.contains(e.target as Node)
-            ) {
-                setUserMenuOpen(false);
-            }
-        };
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                setUserMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleOutsideClick);
-        document.addEventListener('keydown', handleKeyDown);
+        const role = (auth.role ?? '').toLowerCase();
+        const roleLabel = (auth.role_label ?? '').toLowerCase();
 
-        return () => {
-            document.removeEventListener('mousedown', handleOutsideClick);
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [userMenuOpen]);
+        if (
+            role.includes('admin') ||
+            role.includes('manager') ||
+            roleLabel.includes('admin') ||
+            roleLabel.includes('manager')
+        ) {
+            return true;
+        }
+
+        return (
+            auth.permissions?.includes('manage_users') ||
+            auth.permissions?.includes('view_users') ||
+            false
+        );
+    }, [navigation, auth.role, auth.role_label, auth.permissions]);
 
     const userInitials = useMemo(() => {
         const name = auth.user?.name || '';
@@ -772,69 +764,30 @@ export function LiveWorkspaceShell({
                                 />
                             </Button>
 
-                            <Button
-                                size="icon"
-                                variant="quiet"
-                                onClick={toggleTheme}
-                                className="hidden min-[360px]:inline-flex"
-                                aria-label={
-                                    resolvedTheme === 'dark'
-                                        ? 'Switch to light mode'
-                                        : 'Switch to dark mode'
-                                }
-                                title={
-                                    resolvedTheme === 'dark'
-                                        ? 'Switch to light mode'
-                                        : 'Switch to dark mode'
-                                }
-                            >
-                                {resolvedTheme === 'dark' ? (
-                                    <Sun
-                                        className="h-5 w-5 text-brand-strong"
-                                        aria-hidden="true"
-                                    />
-                                ) : (
-                                    <Moon
-                                        className="h-5 w-5 text-ink-soft hover:text-ink"
-                                        aria-hidden="true"
-                                    />
-                                )}
-                            </Button>
-
-                            {/* Sign out */}
-                            <Button
-                                size="icon"
-                                variant="quiet"
-                                onClick={() => router.post('/logout')}
-                                aria-label="Sign out"
-                                title="Sign out"
-                                className="hidden sm:inline-flex"
-                            >
-                                <LogOut
-                                    className="h-5 w-5 text-ink-soft hover:text-ink"
-                                    aria-hidden="true"
-                                />
-                            </Button>
-
-                            <div
-                                className="h-4 w-px bg-line"
-                                aria-hidden="true"
-                            />
-
                             {/* User Avatar & Account Dropdown Menu */}
-                            <div className="relative" ref={userMenuRef}>
+                            <div className="relative">
                                 <button
+                                    ref={userMenuTriggerRef}
                                     type="button"
+                                    id="user-menu-trigger"
                                     onClick={() =>
                                         setUserMenuOpen((prev) => !prev)
                                     }
-                                    className="flex items-center gap-2 rounded-lg p-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                                    className={cn(
+                                        'flex items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none',
+                                        userMenuOpen && 'bg-surface-subtle',
+                                    )}
                                     aria-expanded={userMenuOpen}
                                     aria-haspopup="menu"
+                                    aria-controls="user-account-menu"
                                     aria-label="User account menu"
                                 >
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand/20">
+                                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-xs font-bold text-brand-strong ring-1 ring-brand/20">
                                         {userInitials}
+                                        <span
+                                            className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-surface"
+                                            aria-hidden="true"
+                                        />
                                     </span>
                                     <div className="hidden leading-none md:block">
                                         <span className="block max-w-[12rem] truncate text-xs font-semibold text-ink">
@@ -845,90 +798,31 @@ export function LiveWorkspaceShell({
                                         </span>
                                     </div>
                                     <ChevronDown
-                                        className="hidden h-3.5 w-3.5 text-ink-soft md:block"
+                                        className={cn(
+                                            'hidden h-3.5 w-3.5 text-ink-soft transition-transform duration-200 md:block',
+                                            userMenuOpen &&
+                                                'rotate-180 text-ink',
+                                        )}
                                         aria-hidden="true"
                                     />
                                 </button>
 
-                                {userMenuOpen && (
-                                    <div
-                                        className="absolute top-full right-0 z-50 mt-2 w-60 space-y-1 rounded-xl border border-line bg-surface p-2 shadow-lg"
-                                        role="menu"
-                                        aria-label="User account options"
-                                    >
-                                        <div className="space-y-1 border-b border-line px-3 py-2">
-                                            <p className="truncate text-xs font-semibold text-ink">
-                                                {auth.user?.name ?? 'User'}
-                                            </p>
-                                            {auth.user?.email && (
-                                                <p className="truncate text-[11px] text-ink-soft">
-                                                    {auth.user.email}
-                                                </p>
-                                            )}
-                                            <div className="pt-0.5">
-                                                <span className="inline-block rounded border border-line bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">
-                                                    {auth.role_label ??
-                                                        'Operations'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <Link
-                                            href="/account"
-                                            onClick={() =>
+                                <AnimatePresence>
+                                    {userMenuOpen && (
+                                        <UserAccountMenu
+                                            user={auth.user}
+                                            roleLabel={auth.role_label}
+                                            userInitials={userInitials}
+                                            isOpen={userMenuOpen}
+                                            onClose={() =>
                                                 setUserMenuOpen(false)
                                             }
-                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
-                                            role="menuitem"
-                                        >
-                                            <UserIcon
-                                                className="h-4 w-4 text-ink-soft"
-                                                aria-hidden="true"
-                                            />
-                                            <span>My Account</span>
-                                        </Link>
-
-                                        <button
-                                            type="button"
-                                            onClick={toggleTheme}
-                                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium text-ink transition-colors hover:bg-surface-subtle"
-                                            role="menuitem"
-                                        >
-                                            <div className="flex items-center gap-2.5">
-                                                {resolvedTheme === 'dark' ? (
-                                                    <Sun
-                                                        className="h-4 w-4 text-brand-strong"
-                                                        aria-hidden="true"
-                                                    />
-                                                ) : (
-                                                    <Moon
-                                                        className="h-4 w-4 text-ink-soft"
-                                                        aria-hidden="true"
-                                                    />
-                                                )}
-                                                <span>Theme</span>
-                                            </div>
-                                            <span className="text-[11px] font-semibold text-ink-soft capitalize">
-                                                {resolvedTheme}
-                                            </span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                router.post('/logout')
-                                            }
-                                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-danger transition-colors hover:bg-danger-soft/60"
-                                            role="menuitem"
-                                        >
-                                            <LogOut
-                                                className="h-4 w-4"
-                                                aria-hidden="true"
-                                            />
-                                            <span>Sign out</span>
-                                        </button>
-                                    </div>
-                                )}
+                                            triggerRef={userMenuTriggerRef}
+                                            canManageUsers={canManageUsers}
+                                            onNavigateSection={onSectionChange}
+                                        />
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </header>

@@ -12,6 +12,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui';
 import { humanize } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
 import type { FuelRequestViewModel } from '@/types/workspace';
 
 interface FuelLogModalProps {
@@ -167,12 +168,12 @@ function FuelLogModalContent({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-labelledby="fuel-log-modal-title"
         >
-            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-xl">
                 {/* Header */}
                 <div className="flex items-start justify-between border-b border-line pb-4">
                     <div>
@@ -182,11 +183,11 @@ function FuelLogModalContent({
                             </span>
                             <h2
                                 id="fuel-log-modal-title"
-                                className="text-lg font-bold text-ink"
+                                className="text-base font-semibold text-ink"
                             >
                                 Record Refueling Log
                             </h2>
-                            <span className="rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink-soft">
+                            <span className="rounded bg-surface-subtle px-2 py-0.5 font-mono text-xs font-semibold text-ink-soft tabular-nums">
                                 {request.reference}
                             </span>
                         </div>
@@ -199,7 +200,7 @@ function FuelLogModalContent({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:outline-none"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-4 w-4" />
@@ -240,7 +241,7 @@ function FuelLogModalContent({
                                     <span className="text-ink-soft">
                                         Current Meter:{' '}
                                     </span>
-                                    <span className="font-mono font-bold text-ink">
+                                    <span className="font-mono font-semibold text-ink tabular-nums">
                                         {currentMeter.toLocaleString()}{' '}
                                         {meterUnit}
                                     </span>
@@ -254,7 +255,7 @@ function FuelLogModalContent({
                                     <span className="text-ink-soft">
                                         Baseline:{' '}
                                     </span>
-                                    <span className="font-medium text-ink">
+                                    <span className="font-medium text-ink tabular-nums">
                                         {asset.baseline_burn_rate}{' '}
                                         {asset.burn_rate_unit ?? 'L/hr'}
                                     </span>
@@ -269,7 +270,7 @@ function FuelLogModalContent({
                     <div className="grid gap-4 sm:grid-cols-2">
                         {/* Dispensed Volume */}
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Dispensed Volume (Litres) *
                             </label>
                             <input
@@ -282,7 +283,7 @@ function FuelLogModalContent({
                                     handleVolumeChange(e.target.value)
                                 }
                                 placeholder="e.g. 150.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             />
                             {form.errors.quantity_litres && (
                                 <p className="mt-1 text-xs text-danger">
@@ -293,7 +294,7 @@ function FuelLogModalContent({
 
                         {/* Monotonic Meter Reading */}
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 {isHourMeter
                                     ? 'Engine Hours Meter (hrs) *'
                                     : 'Odometer Reading (km) *'}
@@ -325,22 +326,26 @@ function FuelLogModalContent({
                                         ? `Min: ${currentMeter}`
                                         : 'Enter meter'
                                 }
-                                className={`mt-1.5 h-10 w-full rounded-lg border bg-surface px-3 font-mono text-sm text-ink focus:outline-none ${
+                                className={cn(
+                                    'mt-1.5 h-10 w-full rounded-lg border bg-surface px-3 font-mono text-sm text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:ring-2 focus-visible:outline-hidden',
                                     isMonotonicViolation
-                                        ? 'border-danger ring-1 ring-danger/30 focus:border-danger'
-                                        : 'border-line-strong focus:border-brand'
-                                }`}
+                                        ? 'border-danger focus-visible:border-danger focus-visible:ring-danger/30'
+                                        : 'border-line-strong focus-visible:border-brand focus-visible:ring-brand/30',
+                                )}
                             />
                             {isMonotonicViolation ? (
                                 <div className="mt-1 flex items-center gap-1 text-xs font-medium text-danger">
                                     <AlertTriangle className="h-3 w-3 shrink-0" />
                                     <span>
                                         Cannot be lower than current meter (
-                                        {currentMeter} {meterUnit})
+                                        <span className="tabular-nums">
+                                            {currentMeter}
+                                        </span>{' '}
+                                        {meterUnit})
                                     </span>
                                 </div>
                             ) : currentMeter !== null ? (
-                                <p className="mt-1 text-[11px] text-ink-soft">
+                                <p className="mt-1 text-[11px] text-ink-soft tabular-nums">
                                     Last recorded: {currentMeter} {meterUnit}
                                 </p>
                             ) : null}
@@ -360,7 +365,7 @@ function FuelLogModalContent({
                     <div className="grid gap-4 sm:grid-cols-3">
                         {/* Price per Litre */}
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Price / Litre (₱)
                             </label>
                             <input
@@ -372,7 +377,7 @@ function FuelLogModalContent({
                                     handlePriceChange(e.target.value)
                                 }
                                 placeholder="e.g. 58.50"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             />
                             {form.errors.price_per_litre && (
                                 <p className="mt-1 text-xs text-danger">
@@ -383,7 +388,7 @@ function FuelLogModalContent({
 
                         {/* Total Cost */}
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Total Cost (₱ PHP)
                             </label>
                             <input
@@ -395,7 +400,7 @@ function FuelLogModalContent({
                                     handleTotalCostChange(e.target.value)
                                 }
                                 placeholder="e.g. 8775.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             />
                             {form.errors.total_cost && (
                                 <p className="mt-1 text-xs text-danger">
@@ -406,7 +411,7 @@ function FuelLogModalContent({
 
                         {/* Fuel Station / Vendor */}
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Fuel Station / Vendor
                             </label>
                             <input
@@ -416,7 +421,7 @@ function FuelLogModalContent({
                                     form.setData('fuel_station', e.target.value)
                                 }
                                 placeholder="e.g. Petron Depot / Shell"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             />
                             {form.errors.fuel_station && (
                                 <p className="mt-1 text-xs text-danger">
@@ -428,7 +433,7 @@ function FuelLogModalContent({
 
                     {/* Receipt Attachment */}
                     <div>
-                        <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                        <label className="block text-xs font-semibold text-ink">
                             Receipt Photo / Invoice Attachment
                         </label>
                         <p className="mt-0.5 text-xs text-ink-soft">
@@ -437,7 +442,7 @@ function FuelLogModalContent({
                         </p>
 
                         {!form.data.receipt ? (
-                            <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-surface-subtle p-5 text-center transition-colors hover:border-brand-strong hover:bg-brand-soft/20">
+                            <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-surface-subtle p-5 text-center transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/30 hover:border-brand hover:bg-brand-soft/20">
                                 <UploadCloud className="h-7 w-7 text-ink-soft" />
                                 <span className="mt-2 text-xs font-semibold text-ink">
                                     Click or drag receipt photo to upload
@@ -470,7 +475,7 @@ function FuelLogModalContent({
                                         <p className="max-w-xs truncate text-xs font-semibold text-ink">
                                             {form.data.receipt.name}
                                         </p>
-                                        <p className="text-[11px] text-ink-soft">
+                                        <p className="text-[11px] text-ink-soft tabular-nums">
                                             {(
                                                 form.data.receipt.size /
                                                 1024 /
@@ -483,7 +488,7 @@ function FuelLogModalContent({
                                 <button
                                     type="button"
                                     onClick={removeReceipt}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft/40"
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-danger hover:bg-danger-soft/40 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                                     title="Remove receipt"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -499,7 +504,7 @@ function FuelLogModalContent({
 
                     {/* Operational Remarks */}
                     <div>
-                        <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                        <label className="block text-xs font-semibold text-ink">
                             Operational Remarks / Notes
                         </label>
                         <textarea
@@ -509,7 +514,7 @@ function FuelLogModalContent({
                                 form.setData('remarks', e.target.value)
                             }
                             placeholder="Dispensing technician notes, tank level before refuel, unusual conditions..."
-                            className="mt-1.5 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink placeholder:text-ink-soft focus:border-brand focus:outline-none"
+                            className="mt-1.5 w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                         />
                         {form.errors.remarks && (
                             <p className="mt-1 text-xs text-danger">

@@ -91,12 +91,12 @@ function CreateFuelRequestModalContent({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-fuel-request-title"
         >
-            <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+            <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-xl">
                 {/* Header */}
                 <div className="flex items-start justify-between border-b border-line pb-4">
                     <div className="flex items-center gap-3">
@@ -106,7 +106,7 @@ function CreateFuelRequestModalContent({
                         <div>
                             <h2
                                 id="create-fuel-request-title"
-                                className="text-base font-bold text-ink"
+                                className="text-base font-semibold text-ink"
                             >
                                 New Refueling Request
                             </h2>
@@ -119,7 +119,7 @@ function CreateFuelRequestModalContent({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:outline-none"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
                         aria-label="Close dialog"
                     >
                         <X className="h-4 w-4" />
@@ -129,7 +129,7 @@ function CreateFuelRequestModalContent({
                 {/* Form */}
                 <form onSubmit={submit} className="mt-4 space-y-4" noValidate>
                     <div>
-                        <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                        <label className="block text-xs font-semibold text-ink">
                             Equipment / Asset
                         </label>
                         <select
@@ -140,7 +140,7 @@ function CreateFuelRequestModalContent({
                                     e.target.value,
                                 )
                             }
-                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                         >
                             <option value="">
                                 -- Select Equipment / Vehicle (Optional) --
@@ -183,7 +183,7 @@ function CreateFuelRequestModalContent({
                             <span className="text-ink-soft">·</span>
                             <div>
                                 <span className="text-ink-soft">Code: </span>
-                                <span className="font-mono text-ink">
+                                <span className="font-mono text-ink tabular-nums">
                                     {selectedAsset.code}
                                 </span>
                             </div>
@@ -194,7 +194,7 @@ function CreateFuelRequestModalContent({
                                         <span className="text-ink-soft">
                                             Current Meter:{' '}
                                         </span>
-                                        <span className="font-medium text-ink">
+                                        <span className="font-medium text-ink tabular-nums">
                                             {selectedAsset.meter_value}{' '}
                                             {selectedAsset.meter_type ===
                                             'hour_meter'
@@ -211,7 +211,7 @@ function CreateFuelRequestModalContent({
                                         <span className="text-ink-soft">
                                             Baseline:{' '}
                                         </span>
-                                        <span className="font-medium text-ink">
+                                        <span className="font-medium text-ink tabular-nums">
                                             {selectedAsset.baseline_burn_rate}{' '}
                                             {selectedAsset.burn_rate_unit ??
                                                 'L/hr'}
@@ -224,7 +224,7 @@ function CreateFuelRequestModalContent({
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Fuel Type *
                             </label>
                             <select
@@ -232,7 +232,7 @@ function CreateFuelRequestModalContent({
                                 onChange={(e) =>
                                     form.setData('fuel_type', e.target.value)
                                 }
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             >
                                 <option value="diesel">Diesel</option>
                                 <option value="gasoline">Gasoline</option>
@@ -240,7 +240,7 @@ function CreateFuelRequestModalContent({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                            <label className="block text-xs font-semibold text-ink">
                                 Requested Volume (Litres) *
                             </label>
                             <input
@@ -256,7 +256,7 @@ function CreateFuelRequestModalContent({
                                     )
                                 }
                                 placeholder="e.g. 200.00"
-                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs font-semibold text-ink focus:border-brand focus:outline-none"
+                                className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm font-semibold text-ink tabular-nums transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                             />
                             {form.errors.quantity_litres && (
                                 <p className="mt-1 text-xs text-danger">
@@ -267,7 +267,7 @@ function CreateFuelRequestModalContent({
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold tracking-wider text-ink uppercase">
+                        <label className="block text-xs font-semibold text-ink">
                             Operational Purpose / Shift Notes
                         </label>
                         <input
@@ -277,7 +277,7 @@ function CreateFuelRequestModalContent({
                                 form.setData('purpose', e.target.value)
                             }
                             placeholder="e.g. Concrete pour lift, night shift mobilization"
-                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-xs text-ink focus:border-brand focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink transition-colors placeholder:text-ink-soft focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-hidden"
                         />
                         {form.errors.purpose && (
                             <p className="mt-1 text-xs text-danger">

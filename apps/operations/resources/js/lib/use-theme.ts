@@ -6,7 +6,10 @@ export type ResolvedTheme = 'light' | 'dark';
 const THEME_STORAGE_KEY = 'core2-theme-preference';
 
 export function getSystemTheme(): ResolvedTheme {
-    if (typeof window === 'undefined') {
+    if (
+        typeof window === 'undefined' ||
+        typeof window.matchMedia !== 'function'
+    ) {
         return 'light';
     }
 
@@ -72,7 +75,7 @@ export function useTheme() {
     useEffect(() => {
         applyTheme(theme);
 
-        if (theme === 'system') {
+        if (theme === 'system' && typeof window.matchMedia === 'function') {
             const mediaQuery = window.matchMedia(
                 '(prefers-color-scheme: dark)',
             );

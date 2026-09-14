@@ -5,6 +5,7 @@ use App\Modules\HoursOfService\Enums\ShiftStatus;
 use App\Modules\HoursOfService\Models\OperatorDutyLog;
 use App\Modules\HoursOfService\Models\OperatorShift;
 use App\Platform\Identity\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -45,6 +46,149 @@ it('returns current shift and calculated ELD clocks for an operator', function (
         ])
         ->assertJsonPath('data.clocks.shift_active', false)
         ->assertJsonPath('data.clocks.current_duty_status', 'off_duty');
+});
+
+it('includes the pre-midnight duty period for an active overnight shift', function (): void {
+    $now = Carbon::parse('2026-09-14 02:00:00');
+    $this->travelTo($now);
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $earlierShift = OperatorShift::create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::COMPLETED,
+        'started_at' => $now->copy()->subDay()->setTime(21, 0),
+        'ended_at' => $now->copy()->subDay()->setTime(23, 0),
+    ]);
+
+    $earlierLog = OperatorDutyLog::create([
+        'operator_shift_id' => $earlierShift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::OFF_DUTY,
+        'started_at' => $now->copy()->subDay()->setTime(22, 0),
+        'ended_at' => $now->copy()->subDay()->setTime(23, 0),
+        'duration_minutes' => 60,
+    ]);
+
+    $shift = OperatorShift::create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::ACTIVE,
+        'started_at' => $now->copy()->subDay()->setTime(23, 45),
+    ]);
+
+    $preMidnightLog = OperatorDutyLog::create([
+        'operator_shift_id' => $shift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::OPERATING,
+        'started_at' => $now->copy()->subDay()->setTime(23, 30),
+        'ended_at' => $now->copy()->setTime(0, 30),
+        'duration_minutes' => 60,
+    ]);
+
+    $activeLog = OperatorDutyLog::create([
+        'operator_shift_id' => $shift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::DRIVING,
+        'started_at' => $now->copy()->setTime(0, 30),
+    ]);
+
+    $response = $this->withToken($token)
+        ->getJson('/api/v1/hos/current-shift');
+
+    $response->assertOk()
+        ->assertJsonPath('data.clocks.shift_active', true)
+        ->assertJsonPath('data.clocks.current_duty_status', 'driving');
+
+    $timelineSegments = $response->json('data.clocks.timeline_segments');
+    $recentLogs = $response->json('data.clocks.recent_logs');
+
+    expect(array_column($timelineSegments, 'id'))
+        ->toBe([$preMidnightLog->id, $activeLog->id])
+        ->not->toContain($earlierLog->id)
+        ->and($timelineSegments[0]['started_at'])->toBe($preMidnightLog->started_at->toIso8601String())
+        ->and($timelineSegments[0]['duration_minutes'])->toBe(60)
+        ->and(array_column($recentLogs, 'id'))
+        ->toBe([$activeLog->id, $preMidnightLog->id])
+        ->not->toContain($earlierLog->id)
+        ->and($recentLogs[1]['started_at'])->toBe('11:30 PM')
+        ->and($recentLogs[1]['duration_formatted'])->toBe('1h 00m');
+});
+
+it('includes the pre-midnight duty period for a completed overnight shift', function (): void {
+    $now = Carbon::parse('2026-09-14 02:00:00');
+    $this->travelTo($now);
+
+    /** @var User $operator */
+    $operator = User::factory()->create(['is_active' => true]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $earlierShift = OperatorShift::create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::COMPLETED,
+        'started_at' => $now->copy()->subDay()->setTime(21, 0),
+        'ended_at' => $now->copy()->subDay()->setTime(23, 0),
+    ]);
+
+    $earlierLog = OperatorDutyLog::create([
+        'operator_shift_id' => $earlierShift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::OFF_DUTY,
+        'started_at' => $now->copy()->subDay()->setTime(22, 0),
+        'ended_at' => $now->copy()->subDay()->setTime(23, 0),
+        'duration_minutes' => 60,
+    ]);
+
+    $shift = OperatorShift::create([
+        'user_id' => $operator->id,
+        'status' => ShiftStatus::COMPLETED,
+        'started_at' => $now->copy()->subDay()->setTime(23, 45),
+        'ended_at' => $now->copy()->setTime(1, 15),
+        'is_certified' => true,
+        'certified_at' => $now->copy()->setTime(1, 15),
+        'certification_statement' => 'I certify this overnight shift record.',
+    ]);
+
+    $preMidnightLog = OperatorDutyLog::create([
+        'operator_shift_id' => $shift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::OPERATING,
+        'started_at' => $now->copy()->subDay()->setTime(23, 30),
+        'ended_at' => $now->copy()->setTime(0, 30),
+        'duration_minutes' => 60,
+    ]);
+
+    $completedLog = OperatorDutyLog::create([
+        'operator_shift_id' => $shift->id,
+        'user_id' => $operator->id,
+        'duty_status' => DutyStatus::DRIVING,
+        'started_at' => $now->copy()->setTime(0, 30),
+        'ended_at' => $now->copy()->setTime(1, 15),
+        'duration_minutes' => 45,
+    ]);
+
+    $response = $this->withToken($token)
+        ->getJson('/api/v1/hos/current-shift');
+
+    $response->assertOk()
+        ->assertJsonPath('data.clocks.shift_active', false)
+        ->assertJsonPath('data.clocks.current_duty_status', 'off_duty')
+        ->assertJsonPath('data.clocks.is_certified', true);
+
+    $timelineSegments = $response->json('data.clocks.timeline_segments');
+    $recentLogs = $response->json('data.clocks.recent_logs');
+
+    expect(array_column($timelineSegments, 'id'))
+        ->toBe([$preMidnightLog->id, $completedLog->id])
+        ->not->toContain($earlierLog->id)
+        ->and($timelineSegments[0]['started_at'])->toBe($preMidnightLog->started_at->toIso8601String())
+        ->and($timelineSegments[0]['duration_minutes'])->toBe(60)
+        ->and(array_column($recentLogs, 'id'))
+        ->toBe([$completedLog->id, $preMidnightLog->id])
+        ->not->toContain($earlierLog->id)
+        ->and($recentLogs[1]['started_at'])->toBe('11:30 PM')
+        ->and($recentLogs[1]['duration_formatted'])->toBe('1h 00m');
 });
 
 it('starts a new operator shift with initial duty status', function (): void {

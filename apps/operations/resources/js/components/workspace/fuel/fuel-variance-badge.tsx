@@ -26,7 +26,7 @@ export function FuelVarianceBadge({
             return (
                 <span
                     className={cn(
-                        'inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger-strong',
+                        'inline-flex items-center gap-1 rounded-md border border-danger/30 bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger-strong',
                         className,
                     )}
                     title="Fuel consumption variance exceeds baseline threshold by >= 15%"
@@ -58,13 +58,15 @@ export function FuelVarianceBadge({
             return (
                 <span
                     className={cn(
-                        'inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger-soft px-2 py-0.5 text-[10px] font-bold text-danger-strong',
+                        'inline-flex items-center gap-1 rounded-md border border-danger/30 bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger-strong',
                         className,
                     )}
                     title={`Consumption Anomaly: +${pct.toFixed(1)}% (${litres > 0 ? `+${litres.toFixed(1)}L` : ''}) exceeds equipment baseline`}
                 >
                     <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
-                    <span>+{pct.toFixed(1)}% Anomaly</span>
+                    <span className="tabular-nums">
+                        +{pct.toFixed(1)}% Anomaly
+                    </span>
                 </span>
             );
         }
@@ -73,13 +75,13 @@ export function FuelVarianceBadge({
             return (
                 <span
                     className={cn(
-                        'inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong',
+                        'inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong',
                         className,
                     )}
                     title={`Fuel Efficient: ${pct.toFixed(1)}% vs baseline`}
                 >
                     <TrendingDown className="h-2.5 w-2.5 shrink-0" />
-                    <span>{pct.toFixed(1)}%</span>
+                    <span className="tabular-nums">{pct.toFixed(1)}%</span>
                 </span>
             );
         }
@@ -87,12 +89,14 @@ export function FuelVarianceBadge({
         return (
             <span
                 className={cn(
-                    'inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-ink-soft',
+                    'inline-flex items-center gap-1 rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-[10px] font-medium text-ink-soft',
                     className,
                 )}
             >
                 <TrendingUp className="h-2.5 w-2.5 shrink-0" />
-                <span>+{pct.toFixed(1)}%</span>
+                <span className="tabular-nums">
+                    {pct > 0 ? `+${pct.toFixed(1)}%` : `${pct.toFixed(1)}%`}
+                </span>
             </span>
         );
     }
@@ -102,10 +106,10 @@ export function FuelVarianceBadge({
             className={cn(
                 'inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs',
                 hasAnomaly
-                    ? 'border-danger/40 bg-danger-soft/70 font-bold text-danger-strong'
+                    ? 'border-danger/40 bg-danger-soft font-semibold text-danger-strong'
                     : isUnder
-                      ? 'border-success/30 bg-success-soft/60 font-medium text-success-strong'
-                      : 'border-line bg-surface-subtle text-ink-soft',
+                      ? 'border-success/30 bg-success-soft font-medium text-success-strong'
+                      : 'border-line bg-surface-subtle font-medium text-ink-soft',
                 className,
             )}
         >
@@ -126,14 +130,14 @@ export function FuelVarianceBadge({
                               ? 'Efficient Consumption'
                               : 'Nominal Consumption'}
                     </span>
-                    <span className="font-mono text-[11px]">
+                    <span className="font-mono text-[11px] tabular-nums">
                         (
                         {pct > 0 ? `+${pct.toFixed(1)}%` : `${pct.toFixed(1)}%`}
                         )
                     </span>
                 </div>
                 {litres !== 0 && (
-                    <span className="block text-[10px] opacity-80">
+                    <span className="block text-[10px] tabular-nums opacity-80">
                         {litres > 0
                             ? `+${litres.toFixed(1)}L excess`
                             : `${litres.toFixed(1)}L saved`}{' '}
