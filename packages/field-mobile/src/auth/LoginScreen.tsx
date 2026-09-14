@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Image,
@@ -22,8 +22,19 @@ export interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-    const { login, logout, error, clearError, status, hasPendingRevocation } =
-        useAuth();
+    const {
+        login,
+        verifyChallenge,
+        resendChallenge,
+        cancelChallenge,
+        logout,
+        error,
+        clearError,
+        status,
+        hasPendingRevocation,
+        isChallenging,
+        challengeData,
+    } = useAuth();
     const { width } = useWindowDimensions();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -31,8 +42,72 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     const [isRetryingRevocation, setIsRetryingRevocation] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [focusedField, setFocusedField] = useState<
-        'username' | 'password' | null
+        'username' | 'password' | 'code' | null
     >(null);
+
+    // Verification Challenge State
+    const [challengeCode, setChallengeCode] = useState('');
+    const [trustDevice, setTrustDevice] = useState(false);
+    const [isVerifyingChallenge, setIsVerifyingChallenge] = useState(false);
+    const [isResendingChallenge, setIsResendingChallenge] = useState(false);
+    const [challengeCooldown, setChallengeCooldown] = useState(45);
+    const [prevChallengeId, setPrevChallengeId] = useState<string | null>(null);
+
+    if (
+        isChallenging &&
+        challengeData &&
+        challengeData.challenge_id !== prevChallengeId
+    ) {
+        setPrevChallengeId(challengeData.challenge_id);
+        setChallengeCooldown(challengeData.cooldown_seconds ?? 45);
+        setChallengeCode('');
+        setTrustDevice(false);
+    }
+
+    useEffect(() => {
+        if (challengeCooldown <= 0 || !isChallenging) {
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setChallengeCooldown((prev) => Math.max(0, prev - 1));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [challengeCooldown, isChallenging]);
+
+    const handleVerifyChallenge = async () => {
+        if (challengeCode.length !== 6 || isVerifyingChallenge) {
+            return;
+        }
+
+        setIsVerifyingChallenge(true);
+
+        try {
+            await verifyChallenge(challengeCode, trustDevice);
+
+            if (onLoginSuccess) {
+                onLoginSuccess();
+            }
+        } finally {
+            setIsVerifyingChallenge(false);
+        }
+    };
+
+    const handleResend = async () => {
+        if (challengeCooldown > 0 || isResendingChallenge) {
+            return;
+        }
+
+        setIsResendingChallenge(true);
+
+        try {
+            await resendChallenge();
+            setChallengeCooldown(45);
+        } finally {
+            setIsResendingChallenge(false);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!username.trim() || !password.trim() || isSubmitting) {
@@ -234,202 +309,394 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                                 </View>
                             ) : null}
 
-                            <View style={styles.form}>
-                                <View style={styles.fieldGroup}>
-                                    <Text style={styles.label}>Username</Text>
-                                    <TextInput
-                                        value={username}
-                                        onChangeText={setUsername}
-                                        placeholder="your.username"
-                                        placeholderTextColor={colors.muted}
-                                        keyboardType="default"
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        textContentType="username"
-                                        editable={!formDisabled}
-                                        style={[
-                                            styles.input,
-                                            focusedField === 'username' &&
-                                                styles.inputFocused,
-                                        ]}
-                                        onFocus={() =>
-                                            setFocusedField('username')
-                                        }
-                                        onBlur={() => setFocusedField(null)}
-                                        accessibilityLabel="Username"
-                                        accessibilityHint="Enter your work username"
-                                        returnKeyType="next"
-                                        testID="login-username-input"
-                                    />
-                                </View>
+                            {isChallenging && challengeData ? (
+                                <View
+                                    style={styles.form}
+                                    testID="verification-challenge-form"
+                                >
+                                    <View style={styles.challengeHeader}>
+                                        <Text style={styles.challengeTitle}>
+                                            Device Verification
+                                        </Text>
+                                        <Text style={styles.challengeText}>
+                                            A 6-digit verification code was sent
+                                            to{' '}
+                                            <Text style={styles.boldEmail}>
+                                                {challengeData.email_obfuscated}
+                                            </Text>
+                                            . Enter it below to sign in.
+                                        </Text>
+                                    </View>
 
-                                <View style={styles.fieldGroup}>
-                                    <Text style={styles.label}>Password</Text>
-                                    <View
-                                        style={[
-                                            styles.inputShell,
-                                            focusedField === 'password' &&
-                                                styles.inputFocused,
-                                        ]}
-                                    >
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.label}>
+                                            Verification Code
+                                        </Text>
                                         <TextInput
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            placeholder="Your password"
-                                            placeholderTextColor={colors.muted}
-                                            secureTextEntry={!isPasswordVisible}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            textContentType="password"
-                                            editable={!formDisabled}
-                                            style={styles.inputInShell}
-                                            onFocus={() =>
-                                                setFocusedField('password')
-                                            }
-                                            onBlur={() => setFocusedField(null)}
-                                            accessibilityLabel="Password"
-                                            returnKeyType="go"
-                                            onSubmitEditing={() =>
-                                                void handleSubmit()
-                                            }
-                                            testID="login-password-input"
-                                        />
-                                        <Pressable
-                                            onPress={() =>
-                                                setIsPasswordVisible(
-                                                    (visible) => !visible,
+                                            value={challengeCode}
+                                            onChangeText={(val) =>
+                                                setChallengeCode(
+                                                    val
+                                                        .replace(/[^0-9]/g, '')
+                                                        .slice(0, 6),
                                                 )
                                             }
-                                            style={styles.passwordToggle}
+                                            placeholder="123456"
+                                            placeholderTextColor={colors.muted}
+                                            keyboardType="number-pad"
+                                            maxLength={6}
+                                            autoFocus
+                                            editable={!isVerifyingChallenge}
+                                            style={[
+                                                styles.input,
+                                                styles.codeInput,
+                                                focusedField === 'code' &&
+                                                    styles.inputFocused,
+                                            ]}
+                                            onFocus={() =>
+                                                setFocusedField('code')
+                                            }
+                                            onBlur={() => setFocusedField(null)}
+                                            testID="verification-code-input"
+                                            accessibilityLabel="6-digit verification code"
+                                        />
+                                    </View>
+
+                                    {/* Trust Device Checkbox */}
+                                    <Pressable
+                                        onPress={() =>
+                                            setTrustDevice((prev) => !prev)
+                                        }
+                                        style={styles.checkboxRow}
+                                        accessibilityRole="checkbox"
+                                        accessibilityState={{
+                                            checked: trustDevice,
+                                        }}
+                                        accessibilityLabel="Trust this device for 30 days. Only on a device you control."
+                                        testID="trust-device-checkbox"
+                                    >
+                                        <View
+                                            style={[
+                                                styles.checkbox,
+                                                trustDevice &&
+                                                    styles.checkboxChecked,
+                                            ]}
+                                        >
+                                            {trustDevice ? (
+                                                <Text style={styles.checkmark}>
+                                                    ✓
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <View
+                                            style={
+                                                styles.checkboxLabelContainer
+                                            }
+                                        >
+                                            <Text style={styles.checkboxLabel}>
+                                                Trust this device for 30 days.
+                                            </Text>
+                                            <Text
+                                                style={styles.checkboxSubtext}
+                                            >
+                                                Only on a device you control.
+                                            </Text>
+                                        </View>
+                                    </Pressable>
+
+                                    {/* Submit button */}
+                                    <Pressable
+                                        onPress={() =>
+                                            void handleVerifyChallenge()
+                                        }
+                                        disabled={
+                                            challengeCode.length !== 6 ||
+                                            isVerifyingChallenge
+                                        }
+                                        style={({ pressed }) => [
+                                            styles.submitButton,
+                                            pressed && styles.pressed,
+                                            (challengeCode.length !== 6 ||
+                                                isVerifyingChallenge) &&
+                                                styles.disabledButton,
+                                        ]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Verify and sign in"
+                                        testID="verify-code-button"
+                                    >
+                                        {isVerifyingChallenge ? (
+                                            <ActivityIndicator
+                                                color={colors.white}
+                                            />
+                                        ) : (
+                                            <Text
+                                                style={styles.submitButtonText}
+                                            >
+                                                Verify and Sign In
+                                            </Text>
+                                        )}
+                                    </Pressable>
+
+                                    {/* Resend & Cancel actions */}
+                                    <View style={styles.challengeActionsRow}>
+                                        <Pressable
+                                            onPress={() => void handleResend()}
+                                            disabled={
+                                                challengeCooldown > 0 ||
+                                                isResendingChallenge
+                                            }
+                                            style={styles.textAction}
                                             accessibilityRole="button"
                                             accessibilityLabel={
-                                                isPasswordVisible
-                                                    ? 'Hide password'
-                                                    : 'Show password'
+                                                challengeCooldown > 0
+                                                    ? `Resend code available in ${challengeCooldown}s`
+                                                    : 'Resend verification code'
                                             }
-                                            accessibilityState={{
-                                                disabled: formDisabled,
-                                            }}
-                                            disabled={formDisabled}
-                                            testID="password-visibility-button"
+                                            testID="resend-code-button"
                                         >
                                             <Text
-                                                style={
-                                                    styles.passwordToggleText
-                                                }
+                                                style={[
+                                                    styles.textActionLabel,
+                                                    challengeCooldown > 0 &&
+                                                        styles.disabledText,
+                                                ]}
                                             >
-                                                {isPasswordVisible
-                                                    ? 'Hide'
-                                                    : 'Show'}
+                                                {challengeCooldown > 0
+                                                    ? `Resend code (${challengeCooldown}s)`
+                                                    : 'Resend code'}
+                                            </Text>
+                                        </Pressable>
+
+                                        <Pressable
+                                            onPress={cancelChallenge}
+                                            style={styles.textAction}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Back to sign in"
+                                            testID="cancel-challenge-button"
+                                        >
+                                            <Text
+                                                style={styles.textActionLabel}
+                                            >
+                                                Back to sign in
                                             </Text>
                                         </Pressable>
                                     </View>
                                 </View>
-
-                                <Pressable
-                                    onPress={() => void handleSubmit()}
-                                    disabled={submitDisabled}
-                                    style={({ pressed }) => [
-                                        styles.submitButton,
-                                        pressed && styles.pressed,
-                                        formDisabled && styles.disabledButton,
-                                    ]}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Sign in to field app"
-                                    accessibilityState={{
-                                        disabled: submitDisabled,
-                                        busy: isSubmitting,
-                                    }}
-                                    testID="login-submit-button"
-                                >
-                                    {isSubmitting ? (
-                                        <ActivityIndicator
-                                            color={colors.white}
-                                        />
-                                    ) : (
-                                        <Text
+                            ) : (
+                                <View style={styles.form}>
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.label}>
+                                            Username
+                                        </Text>
+                                        <TextInput
+                                            value={username}
+                                            onChangeText={setUsername}
+                                            placeholder="your.username"
+                                            placeholderTextColor={colors.muted}
+                                            keyboardType="default"
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                            textContentType="username"
+                                            editable={!formDisabled}
                                             style={[
-                                                styles.submitButtonText,
-                                                formDisabled &&
-                                                    styles.disabledButtonText,
+                                                styles.input,
+                                                focusedField === 'username' &&
+                                                    styles.inputFocused,
+                                            ]}
+                                            onFocus={() =>
+                                                setFocusedField('username')
+                                            }
+                                            onBlur={() => setFocusedField(null)}
+                                            accessibilityLabel="Username"
+                                            accessibilityHint="Enter your work username"
+                                            returnKeyType="next"
+                                            testID="login-username-input"
+                                        />
+                                    </View>
+
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.label}>
+                                            Password
+                                        </Text>
+                                        <View
+                                            style={[
+                                                styles.inputShell,
+                                                focusedField === 'password' &&
+                                                    styles.inputFocused,
                                             ]}
                                         >
-                                            Sign in
-                                        </Text>
-                                    )}
-                                </Pressable>
-
-                                <View style={styles.secureRow}>
-                                    <Text style={styles.secureIcon}>✓</Text>
-                                    <View style={styles.secureCopy}>
-                                        <Text style={styles.secureTitle}>
-                                            Secure access
-                                        </Text>
-                                        <Text style={styles.secureText}>
-                                            Built for your field team and
-                                            device.
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {__DEV__ ? (
-                                    <View
-                                        style={styles.devSection}
-                                        testID="dev-quick-login-section"
-                                    >
-                                        <Text style={styles.devTitle}>
-                                            Dev Quick Sign-In
-                                        </Text>
-                                        <View style={styles.devButtons}>
+                                            <TextInput
+                                                value={password}
+                                                onChangeText={setPassword}
+                                                placeholder="Your password"
+                                                placeholderTextColor={
+                                                    colors.muted
+                                                }
+                                                secureTextEntry={
+                                                    !isPasswordVisible
+                                                }
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                textContentType="password"
+                                                editable={!formDisabled}
+                                                style={styles.inputInShell}
+                                                onFocus={() =>
+                                                    setFocusedField('password')
+                                                }
+                                                onBlur={() =>
+                                                    setFocusedField(null)
+                                                }
+                                                accessibilityLabel="Password"
+                                                returnKeyType="go"
+                                                onSubmitEditing={() =>
+                                                    void handleSubmit()
+                                                }
+                                                testID="login-password-input"
+                                            />
                                             <Pressable
-                                                onPress={() => {
-                                                    setUsername('driver');
-                                                    setPassword('password');
+                                                onPress={() =>
+                                                    setIsPasswordVisible(
+                                                        (visible) => !visible,
+                                                    )
+                                                }
+                                                style={styles.passwordToggle}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={
+                                                    isPasswordVisible
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                }
+                                                accessibilityState={{
+                                                    disabled: formDisabled,
                                                 }}
                                                 disabled={formDisabled}
-                                                style={({ pressed }) => [
-                                                    styles.devButton,
-                                                    pressed && styles.pressed,
-                                                    formDisabled &&
-                                                        styles.disabledButton,
-                                                ]}
-                                                accessibilityRole="button"
-                                                accessibilityLabel="Fill Driver dev credentials"
-                                                testID="dev-login-driver"
+                                                testID="password-visibility-button"
                                             >
                                                 <Text
-                                                    style={styles.devButtonText}
+                                                    style={
+                                                        styles.passwordToggleText
+                                                    }
                                                 >
-                                                    Driver
-                                                </Text>
-                                            </Pressable>
-
-                                            <Pressable
-                                                onPress={() => {
-                                                    setUsername('operator');
-                                                    setPassword('password');
-                                                }}
-                                                disabled={formDisabled}
-                                                style={({ pressed }) => [
-                                                    styles.devButton,
-                                                    pressed && styles.pressed,
-                                                    formDisabled &&
-                                                        styles.disabledButton,
-                                                ]}
-                                                accessibilityRole="button"
-                                                accessibilityLabel="Fill Operator dev credentials"
-                                                testID="dev-login-operator"
-                                            >
-                                                <Text
-                                                    style={styles.devButtonText}
-                                                >
-                                                    Operator
+                                                    {isPasswordVisible
+                                                        ? 'Hide'
+                                                        : 'Show'}
                                                 </Text>
                                             </Pressable>
                                         </View>
                                     </View>
-                                ) : null}
-                            </View>
+
+                                    <Pressable
+                                        onPress={() => void handleSubmit()}
+                                        disabled={submitDisabled}
+                                        style={({ pressed }) => [
+                                            styles.submitButton,
+                                            pressed && styles.pressed,
+                                            formDisabled &&
+                                                styles.disabledButton,
+                                        ]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Sign in to field app"
+                                        accessibilityState={{
+                                            disabled: submitDisabled,
+                                            busy: isSubmitting,
+                                        }}
+                                        testID="login-submit-button"
+                                    >
+                                        {isSubmitting ? (
+                                            <ActivityIndicator
+                                                color={colors.white}
+                                            />
+                                        ) : (
+                                            <Text
+                                                style={[
+                                                    styles.submitButtonText,
+                                                    formDisabled &&
+                                                        styles.disabledButtonText,
+                                                ]}
+                                            >
+                                                Sign in
+                                            </Text>
+                                        )}
+                                    </Pressable>
+
+                                    <View style={styles.secureRow}>
+                                        <Text style={styles.secureIcon}>✓</Text>
+                                        <View style={styles.secureCopy}>
+                                            <Text style={styles.secureTitle}>
+                                                Secure access
+                                            </Text>
+                                            <Text style={styles.secureText}>
+                                                Built for your field team and
+                                                device.
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    {__DEV__ ? (
+                                        <View
+                                            style={styles.devSection}
+                                            testID="dev-quick-login-section"
+                                        >
+                                            <Text style={styles.devTitle}>
+                                                Dev Quick Sign-In
+                                            </Text>
+                                            <View style={styles.devButtons}>
+                                                <Pressable
+                                                    onPress={() => {
+                                                        setUsername('driver');
+                                                        setPassword('password');
+                                                    }}
+                                                    disabled={formDisabled}
+                                                    style={({ pressed }) => [
+                                                        styles.devButton,
+                                                        pressed &&
+                                                            styles.pressed,
+                                                        formDisabled &&
+                                                            styles.disabledButton,
+                                                    ]}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Fill Driver dev credentials"
+                                                    testID="dev-login-driver"
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.devButtonText
+                                                        }
+                                                    >
+                                                        Driver
+                                                    </Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                    onPress={() => {
+                                                        setUsername('operator');
+                                                        setPassword('password');
+                                                    }}
+                                                    disabled={formDisabled}
+                                                    style={({ pressed }) => [
+                                                        styles.devButton,
+                                                        pressed &&
+                                                            styles.pressed,
+                                                        formDisabled &&
+                                                            styles.disabledButton,
+                                                    ]}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Fill Operator dev credentials"
+                                                    testID="dev-login-operator"
+                                                >
+                                                    <Text
+                                                        style={
+                                                            styles.devButtonText
+                                                        }
+                                                    >
+                                                        Operator
+                                                    </Text>
+                                                </Pressable>
+                                            </View>
+                                        </View>
+                                    ) : null}
+                                </View>
+                            )}
                         </View>
                     </View>
                 </ScrollView>
@@ -719,5 +986,87 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontSize: 13,
         fontWeight: '600',
+    },
+    challengeHeader: {
+        marginBottom: 8,
+    },
+    challengeTitle: {
+        color: colors.text,
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    challengeText: {
+        color: colors.secondary,
+        fontSize: 14,
+        lineHeight: 20,
+        marginTop: 6,
+    },
+    boldEmail: {
+        fontWeight: '700',
+        color: colors.text,
+    },
+    codeInput: {
+        fontSize: 22,
+        letterSpacing: 6,
+        textAlign: 'center',
+        fontWeight: '700',
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        paddingVertical: 6,
+    },
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: colors.borderStrong,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 2,
+    },
+    checkboxChecked: {
+        backgroundColor: colors.amber,
+        borderColor: colors.amber,
+    },
+    checkmark: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '800',
+        lineHeight: 16,
+    },
+    checkboxLabelContainer: {
+        flex: 1,
+    },
+    checkboxLabel: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    checkboxSubtext: {
+        color: colors.muted,
+        fontSize: 12,
+        marginTop: 2,
+    },
+    challengeActionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    textAction: {
+        minHeight: 44,
+        justifyContent: 'center',
+    },
+    textActionLabel: {
+        color: colors.amber,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    disabledText: {
+        color: colors.muted,
     },
 });

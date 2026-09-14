@@ -8,6 +8,7 @@ use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Identity\Support\IpLocationResolver;
 use App\Platform\Identity\Support\UserAgentParser;
@@ -17,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -56,6 +58,29 @@ final class AccountSettingsController extends Controller
                 'last_active_human' => Carbon::createFromTimestamp($s->last_activity)->diffForHumans(),
             ];
         })->values()->all();
+
+        // Query active trusted devices for this user
+        $currentTrustCookie = $request->cookie(DeviceTrustService::COOKIE_NAME);
+        $currentTrustCookieStr = is_string($currentTrustCookie) && $currentTrustCookie !== '' ? $currentTrustCookie : null;
+        $currentTrustHash = $currentTrustCookieStr !== null ? hash('sha256', $currentTrustCookieStr) : null;
+        $trustedDevicesData = $user->trustedDevices()
+            ->active()
+            ->orderByDesc('last_used_at')
+            ->get()
+            ->map(function ($d) use ($currentTrustHash): array {
+                return [
+                    'id' => $d->device_id,
+                    'device_label' => $d->device_label,
+                    'platform' => $d->platform,
+                    'ip_address' => $d->ip_address ?: 'Unknown IP',
+                    'location' => IpLocationResolver::resolve($d->ip_address),
+                    'is_current' => $currentTrustHash !== null && hash_equals($d->device_key_hash, $currentTrustHash),
+                    'last_used_at' => $d->last_used_at?->toIso8601String(),
+                    'last_used_human' => $d->last_used_at?->diffForHumans() ?? 'Never',
+                    'expires_at' => $d->expires_at->toIso8601String(),
+                    'expires_human' => $d->expires_at->diffForHumans(),
+                ];
+            })->values()->all();
 
         // Paginated security events from immutable audit_events
         $recentActivity = AuditEvent::query()
@@ -125,6 +150,7 @@ final class AccountSettingsController extends Controller
                 'email_otp_enabled' => (bool) $user->email_otp_enabled,
                 'has_verified_email' => $user->hasVerifiedEmail(),
             ],
+            'trusted_devices' => $trustedDevicesData,
             'sessions' => $sessionsData,
             'recent_activity' => $recentActivity,
             'current_tab' => $request->query('tab', 'profile'),
@@ -236,6 +262,20 @@ final class AccountSettingsController extends Controller
             'email_verified_at' => now(),
         ]);
 
+        // Invalidate affected trust and pending challenges
+        $user->trustedDevices()->delete();
+        EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
+
+        // Notify the old email address
+        try {
+            Mail::raw(
+                "Your Core-2 account email address was changed to {$newEmail}. If you did not make this change, please contact an administrator immediately.",
+                fn ($m) => $m->to($oldEmail)->subject('Core-2 Security Notice: Account Email Updated')
+            );
+        } catch (\Throwable) {
+            // Log delivery failure gracefully
+        }
+
         $deviceInfo = UserAgentParser::parse($request->userAgent());
         $audit->handle($user, $user, 'user.email_updated', ['email' => $oldEmail], [
             'email' => $newEmail,
@@ -273,6 +313,12 @@ final class AccountSettingsController extends Controller
         $newSessionId = $request->session()->getId();
         ValidateActiveSession::track($user, $request);
 
+        // Revoke device trust
+        $user->trustedDevices()->delete();
+
+        // Revoke pending OTP challenges
+        EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
+
         // Revoke all other web sessions and remember-me access
         DB::table('sessions')
             ->where('user_id', $user->id)
@@ -285,11 +331,14 @@ final class AccountSettingsController extends Controller
         $audit->handle($user, $user, 'user.password_changed', null, [
             'sessions_revoked' => true,
             'mobile_tokens_preserved' => true,
+            'trust_revoked' => true,
             'device' => $deviceInfo['label'],
             'user_agent' => $request->userAgent(),
             'outcome' => 'success',
         ]);
 
-        return back()->with('status', 'Your password has been changed. All other web browser sessions have been signed out.');
+        return back()
+            ->with('status', 'Your password has been changed. All other sessions and device trust have been revoked.')
+            ->withoutCookie(DeviceTrustService::COOKIE_NAME);
     }
 }

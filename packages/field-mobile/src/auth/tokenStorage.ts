@@ -1,3 +1,12 @@
+import type { User } from '../types/index';
+
+export interface OfflineSessionData {
+    user: User;
+    verifiedAt: number;
+    allowanceHours: number;
+    lastObservedTime: number;
+}
+
 export interface TokenStorageProvider {
     getToken(): Promise<string | null>;
     setToken(token: string): Promise<void>;
@@ -5,6 +14,12 @@ export interface TokenStorageProvider {
     getPendingRevocationToken(): Promise<string | null>;
     stageTokenForRevocation(token: string): Promise<void>;
     clearPendingRevocationToken(): Promise<void>;
+    getDeviceTrustToken?(): Promise<string | null>;
+    setDeviceTrustToken?(token: string): Promise<void>;
+    clearDeviceTrustToken?(): Promise<void>;
+    getOfflineSession?(): Promise<OfflineSessionData | null>;
+    setOfflineSession?(data: OfflineSessionData): Promise<void>;
+    clearOfflineSession?(): Promise<void>;
 }
 
 export interface SecureStoreProvider {
@@ -41,6 +56,8 @@ const expoSecureStore: SecureStoreProvider = {
 export class SecureTokenStorage implements TokenStorageProvider {
     private readonly storageKey: string;
     private readonly pendingRevocationStorageKey: string;
+    private readonly deviceTrustStorageKey: string;
+    private readonly offlineSessionStorageKey: string;
     private readonly secureStore: SecureStoreProvider;
 
     constructor(
@@ -49,6 +66,8 @@ export class SecureTokenStorage implements TokenStorageProvider {
     ) {
         this.storageKey = storageKey;
         this.pendingRevocationStorageKey = `${storageKey}_pending_revocation`;
+        this.deviceTrustStorageKey = `${storageKey}_device_trust`;
+        this.offlineSessionStorageKey = `${storageKey}_offline_session`;
         this.secureStore = secureStore;
     }
 
@@ -79,6 +98,45 @@ export class SecureTokenStorage implements TokenStorageProvider {
         await this.secureStore.deleteItemAsync(
             this.pendingRevocationStorageKey,
         );
+    }
+
+    async getDeviceTrustToken(): Promise<string | null> {
+        return this.secureStore.getItemAsync(this.deviceTrustStorageKey);
+    }
+
+    async setDeviceTrustToken(token: string): Promise<void> {
+        await this.secureStore.setItemAsync(this.deviceTrustStorageKey, token);
+    }
+
+    async clearDeviceTrustToken(): Promise<void> {
+        await this.secureStore.deleteItemAsync(this.deviceTrustStorageKey);
+    }
+
+    async getOfflineSession(): Promise<OfflineSessionData | null> {
+        const raw = await this.secureStore.getItemAsync(
+            this.offlineSessionStorageKey,
+        );
+
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(raw) as OfflineSessionData;
+        } catch {
+            return null;
+        }
+    }
+
+    async setOfflineSession(data: OfflineSessionData): Promise<void> {
+        await this.secureStore.setItemAsync(
+            this.offlineSessionStorageKey,
+            JSON.stringify(data),
+        );
+    }
+
+    async clearOfflineSession(): Promise<void> {
+        await this.secureStore.deleteItemAsync(this.offlineSessionStorageKey);
     }
 }
 

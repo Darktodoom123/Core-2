@@ -18,7 +18,7 @@ export default function TwoFactorChallenge({
     status,
     errors,
 }: TwoFactorChallengeProps) {
-    const form = useForm({ code: '' });
+    const form = useForm({ code: '', trust_device: false });
     const [cooldown, setCooldown] = useState(45);
     const [resending, setResending] = useState(false);
 
@@ -133,6 +133,27 @@ export default function TwoFactorChallenge({
                         </span>
                     )}
                 </label>
+
+                <div className="bg-surface-muted/40 flex items-start gap-3 rounded-lg border border-line p-3">
+                    <input
+                        type="checkbox"
+                        id="trust_device"
+                        checked={form.data.trust_device}
+                        onChange={(e) =>
+                            form.setData('trust_device', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-line text-brand focus-visible:outline-2 focus-visible:outline-brand"
+                    />
+                    <label
+                        htmlFor="trust_device"
+                        className="cursor-pointer text-sm font-medium text-ink"
+                    >
+                        <span>Trust this device for 30 days.</span>
+                        <span className="block text-xs font-normal text-ink-soft">
+                            Only on a device you control.
+                        </span>
+                    </label>
+                </div>
 
                 <Button
                     type="submit"

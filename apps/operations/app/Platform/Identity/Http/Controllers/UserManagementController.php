@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
 use App\Platform\Identity\Support\Username;
 use Illuminate\Http\JsonResponse;
@@ -87,6 +88,8 @@ final class UserManagementController extends Controller
                 'email_verified_at' => $user->email_verified_at ?? now(),
             ]);
             $user->tokens()->delete();
+            $user->trustedDevices()->delete();
+            EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
             DB::table('sessions')->where('user_id', $user->id)->delete();
 
             $audit->handle($request->user(), $user, 'user.password_reset', null, [
@@ -134,9 +137,13 @@ final class UserManagementController extends Controller
 
                 if (! $isActive || $roleChanged) {
                     $user->tokens()->delete();
+                    $user->trustedDevices()->delete();
+                    EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
                 }
             } elseif ($roleChanged) {
                 $user->tokens()->delete();
+                $user->trustedDevices()->delete();
+                EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
             }
             DB::table('sessions')->where('user_id', $user->id)->delete();
             $audit->handle($request->user(), $user, 'user.access_updated', ['role' => $currentRole?->value, 'is_active' => ! $user->suspended_at], ['role' => $user->operationalRole()?->value, 'is_active' => $user->is_active]);

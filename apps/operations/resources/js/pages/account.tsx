@@ -63,6 +63,19 @@ export interface PaginationLink {
     active: boolean;
 }
 
+export interface TrustedDeviceItem {
+    id: string;
+    device_label: string;
+    platform: string;
+    ip_address: string;
+    location: string;
+    is_current: boolean;
+    last_used_at: string | null;
+    last_used_human: string;
+    expires_at: string;
+    expires_human: string;
+}
+
 export interface AccountPageProps {
     profile: {
         name: string;
@@ -80,6 +93,7 @@ export interface AccountPageProps {
         email_otp_enabled: boolean;
         has_verified_email: boolean;
     };
+    trusted_devices?: TrustedDeviceItem[];
     sessions: ActiveSession[];
     recent_activity: {
         data: SecurityActivityEvent[];
@@ -223,6 +237,7 @@ function ActivityEventIcon({
 export default function AccountSettings({
     profile,
     security,
+    trusted_devices = [],
     sessions,
     recent_activity,
     current_tab = 'profile',
@@ -232,6 +247,21 @@ export default function AccountSettings({
     const [activeTab, setActiveTab] = useState<
         'profile' | 'security' | 'activity'
     >(current_tab);
+
+    // Trusted Devices Management
+    const [deviceToRevoke, setDeviceToRevoke] =
+        useState<TrustedDeviceItem | null>(null);
+    const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(
+        null,
+    );
+    const [deviceToReportLost, setDeviceToReportLost] =
+        useState<TrustedDeviceItem | null>(null);
+    const [reportingLostDeviceId, setReportingLostDeviceId] = useState<
+        string | null
+    >(null);
+    const [revokeAllDevicesModalOpen, setRevokeAllDevicesModalOpen] =
+        useState(false);
+    const [isRevokingAllDevices, setIsRevokingAllDevices] = useState(false);
 
     // Profile Phone Form with prop synchronization
     const phoneForm = useForm({
@@ -580,6 +610,76 @@ export default function AccountSettings({
                 setFeedbackMessage('Session signed out.');
             },
         });
+    };
+
+    // Handle Revoking a Single Trusted Device
+    const confirmRevokeDevice = () => {
+        if (!deviceToRevoke) {
+            return;
+        }
+
+        const deviceId = deviceToRevoke.id;
+        setRevokingDeviceId(deviceId);
+        router.delete(`/account/trusted-devices/${deviceId}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setRevokingDeviceId(null);
+                setDeviceToRevoke(null);
+            },
+            onSuccess: () => {
+                setFeedbackMessage(
+                    'Trusted device revoked. An email verification code will be required on next sign-in.',
+                );
+            },
+        });
+    };
+
+    // Handle Revoking All Trusted Devices
+    const handleRevokeAllDevices = (e: FormEvent) => {
+        e.preventDefault();
+        setIsRevokingAllDevices(true);
+        router.post(
+            '/account/trusted-devices/revoke-all',
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setIsRevokingAllDevices(false);
+                    setRevokeAllDevicesModalOpen(false);
+                },
+                onSuccess: () => {
+                    setFeedbackMessage(
+                        'All trusted devices revoked. An email verification code will be required on next sign-in.',
+                    );
+                },
+            },
+        );
+    };
+
+    // Handle Reporting a Device Lost
+    const confirmReportLost = () => {
+        if (!deviceToReportLost) {
+            return;
+        }
+
+        const deviceId = deviceToReportLost.id;
+        setReportingLostDeviceId(deviceId);
+        router.post(
+            `/account/trusted-devices/${deviceId}/lost`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setReportingLostDeviceId(null);
+                    setDeviceToReportLost(null);
+                },
+                onSuccess: () => {
+                    setFeedbackMessage(
+                        'Device reported lost. Device trust and all associated active sessions and tokens have been revoked.',
+                    );
+                },
+            },
+        );
     };
 
     // Handle Revoking All Other Sessions
@@ -1142,24 +1242,61 @@ export default function AccountSettings({
                                             </p>
                                         )}
 
-                                        <div>
+                                        <div className="flex items-center gap-3">
                                             {security.email_otp_enabled ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setOtpAction('disable');
-                                                        setOtpStep('password');
-                                                        otpPasswordForm.reset();
-                                                        otpPasswordForm.clearErrors();
-                                                        otpCodeForm.reset();
-                                                        otpCodeForm.clearErrors();
-                                                        setOtpModalOpen(true);
-                                                    }}
-                                                >
-                                                    Disable 2FA
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        disabled={
+                                                            profile.role ===
+                                                            'system_administrator'
+                                                        }
+                                                        title={
+                                                            profile.role ===
+                                                            'system_administrator'
+                                                                ? 'Email verification is mandatory for System Administrators by organizational policy.'
+                                                                : undefined
+                                                        }
+                                                        onClick={() => {
+                                                            if (
+                                                                profile.role ===
+                                                                'system_administrator'
+                                                            ) {
+                                                                return;
+                                                            }
+
+                                                            setOtpAction(
+                                                                'disable',
+                                                            );
+                                                            setOtpStep(
+                                                                'password',
+                                                            );
+                                                            otpPasswordForm.reset();
+                                                            otpPasswordForm.clearErrors();
+                                                            otpCodeForm.reset();
+                                                            otpCodeForm.clearErrors();
+                                                            setOtpModalOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                    >
+                                                        {profile.role ===
+                                                        'system_administrator'
+                                                            ? 'Enforced'
+                                                            : 'Disable 2FA'}
+                                                    </Button>
+                                                    {profile.role ===
+                                                        'system_administrator' && (
+                                                        <span className="text-xs text-ink-soft">
+                                                            Mandatory for System
+                                                            Administrators by
+                                                            organizational
+                                                            policy.
+                                                        </span>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <Button
                                                     type="button"
@@ -1182,6 +1319,189 @@ export default function AccountSettings({
                                                 </Button>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Trusted Devices Card */}
+                                <div className="rounded-xl border border-line bg-surface">
+                                    <div className="flex flex-col gap-2 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-ink">
+                                                Trusted Devices
+                                            </h4>
+                                            <p className="mt-0.5 text-xs text-ink-soft">
+                                                Browsers and mobile devices you
+                                                trust bypass email verification
+                                                codes for 30 days. Revoking
+                                                trust requires an email code on
+                                                your next sign-in, but leaves
+                                                active sessions open. To
+                                                immediately terminate access,
+                                                use Sign-in Activity or report a
+                                                lost device.
+                                            </p>
+                                        </div>
+                                        {trusted_devices.length > 0 && (
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setRevokeAllDevicesModalOpen(
+                                                        true,
+                                                    )
+                                                }
+                                                className="shrink-0 self-start sm:self-auto"
+                                            >
+                                                Revoke all trusted devices
+                                            </Button>
+                                        )}
+                                    </div>
+
+                                    <div className="divide-y divide-line">
+                                        {trusted_devices.length === 0 ? (
+                                            <div className="p-6 text-center text-xs text-ink-soft">
+                                                No trusted devices registered.
+                                                You will be prompted for an
+                                                email verification code each
+                                                time you sign in from a new
+                                                browser or device.
+                                            </div>
+                                        ) : (
+                                            trusted_devices.map((device) => {
+                                                const isMobilePlatform =
+                                                    device.platform
+                                                        .toLowerCase()
+                                                        .includes('ios') ||
+                                                    device.platform
+                                                        .toLowerCase()
+                                                        .includes('android');
+
+                                                return (
+                                                    <div
+                                                        key={device.id}
+                                                        className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                                                    >
+                                                        <div className="flex items-start gap-3.5">
+                                                            <div className="mt-0.5 text-ink-soft">
+                                                                {isMobilePlatform ? (
+                                                                    <Smartphone
+                                                                        className="h-5 w-5"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                ) : (
+                                                                    <Laptop
+                                                                        className="h-5 w-5"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <span className="text-sm font-medium text-ink">
+                                                                        {
+                                                                            device.device_label
+                                                                        }
+                                                                    </span>
+                                                                    {device.is_current && (
+                                                                        <span className="rounded bg-surface-subtle px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                                                                            This
+                                                                            device
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+                                                                    <span className="font-mono text-xs">
+                                                                        {
+                                                                            device.ip_address
+                                                                        }
+                                                                    </span>
+                                                                    <span>
+                                                                        ·
+                                                                    </span>
+                                                                    <LocationBadge
+                                                                        location={
+                                                                            device.location
+                                                                        }
+                                                                        ip={
+                                                                            device.ip_address
+                                                                        }
+                                                                    />
+                                                                    <span>
+                                                                        ·
+                                                                    </span>
+                                                                    <span>
+                                                                        Trust
+                                                                        expires{' '}
+                                                                        {
+                                                                            device.expires_human
+                                                                        }
+                                                                    </span>
+                                                                    {device.last_used_human && (
+                                                                        <>
+                                                                            <span>
+                                                                                ·
+                                                                            </span>
+                                                                            <span>
+                                                                                Last
+                                                                                active{' '}
+                                                                                {
+                                                                                    device.last_used_human
+                                                                                }
+                                                                            </span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 self-end sm:self-center">
+                                                            <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    setDeviceToRevoke(
+                                                                        device,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    revokingDeviceId ===
+                                                                    device.id
+                                                                }
+                                                            >
+                                                                {revokingDeviceId ===
+                                                                device.id ? (
+                                                                    <>
+                                                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                                                        Revoking…
+                                                                    </>
+                                                                ) : (
+                                                                    'Revoke trust'
+                                                                )}
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="quiet"
+                                                                size="sm"
+                                                                className="text-danger hover:bg-danger-soft hover:text-danger-strong"
+                                                                onClick={() =>
+                                                                    setDeviceToReportLost(
+                                                                        device,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    reportingLostDeviceId ===
+                                                                    device.id
+                                                                }
+                                                            >
+                                                                Report lost
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
                                     </div>
                                 </div>
 
@@ -2297,6 +2617,179 @@ export default function AccountSettings({
                                     </>
                                 ) : (
                                     'Revoke session'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* MODAL: Revoke Single Device */}
+            <Modal
+                open={deviceToRevoke !== null}
+                onClose={() => setDeviceToRevoke(null)}
+                title="Revoke Device Trust"
+                description="Revoke trust for this browser or device. An email verification code will be required on its next sign-in."
+            >
+                {deviceToRevoke && (
+                    <div className="space-y-4">
+                        <div className="space-y-2.5 rounded-xl border border-line bg-surface-subtle p-4 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-ink-soft">Device:</span>
+                                <span className="font-semibold text-ink">
+                                    {deviceToRevoke.device_label}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-ink-soft">
+                                    IP Address:
+                                </span>
+                                <span className="font-mono text-ink">
+                                    {deviceToRevoke.ip_address}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-ink-soft">
+                                    Trust Expiration:
+                                </span>
+                                <span className="text-ink">
+                                    {deviceToRevoke.expires_human}
+                                </span>
+                            </div>
+                        </div>
+                        <p className="text-xs text-ink-soft">
+                            Note: Revoking trust does not immediately sign out
+                            existing active sessions on this device. If you
+                            believe this device is compromised, use &quot;Report
+                            lost&quot; instead.
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setDeviceToRevoke(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="primary"
+                                onClick={confirmRevokeDevice}
+                                disabled={revokingDeviceId !== null}
+                            >
+                                {revokingDeviceId !== null ? (
+                                    <>
+                                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                        Revoking…
+                                    </>
+                                ) : (
+                                    'Revoke trust'
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* MODAL: Revoke All Trusted Devices */}
+            <Modal
+                open={revokeAllDevicesModalOpen}
+                onClose={() => setRevokeAllDevicesModalOpen(false)}
+                title="Revoke All Trusted Devices"
+                description="Remove trusted device status from all browsers and mobile devices. All future sign-ins will require an email verification code."
+            >
+                <form onSubmit={handleRevokeAllDevices} className="space-y-4">
+                    <p className="text-xs text-ink-soft">
+                        This will invalidate trust tokens across all your
+                        devices, including this one. You will need to complete
+                        email verification the next time you sign in anywhere.
+                        Active sessions will remain connected until their normal
+                        expiration or until revoked from Sign-in Activity.
+                    </p>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setRevokeAllDevicesModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="danger"
+                            disabled={isRevokingAllDevices}
+                        >
+                            {isRevokingAllDevices ? (
+                                <>
+                                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                    Revoking all…
+                                </>
+                            ) : (
+                                'Revoke all devices'
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* MODAL: Report Device Lost or Stolen */}
+            <Modal
+                open={deviceToReportLost !== null}
+                onClose={() => setDeviceToReportLost(null)}
+                title="Report Device Lost or Stolen"
+                description="Immediately revoke trust and terminate all active sessions and mobile tokens for this device."
+            >
+                {deviceToReportLost && (
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-2.5 rounded-lg border border-danger/30 bg-danger-soft p-3 text-xs text-danger-strong">
+                            <AlertTriangle
+                                className="mt-0.5 h-4 w-4 shrink-0"
+                                aria-hidden="true"
+                            />
+                            <p>
+                                This will immediately disconnect this device,
+                                revoke its active sessions and mobile API
+                                tokens, and require full credentials and email
+                                verification for any future sign-in attempt.
+                            </p>
+                        </div>
+                        <div className="space-y-2.5 rounded-xl border border-line bg-surface-subtle p-4 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-ink-soft">Device:</span>
+                                <span className="font-semibold text-ink">
+                                    {deviceToReportLost.device_label}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-ink-soft">
+                                    IP Address:
+                                </span>
+                                <span className="font-mono text-ink">
+                                    {deviceToReportLost.ip_address}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setDeviceToReportLost(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="danger"
+                                onClick={confirmReportLost}
+                                disabled={reportingLostDeviceId !== null}
+                            >
+                                {reportingLostDeviceId !== null ? (
+                                    <>
+                                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                        Revoking access…
+                                    </>
+                                ) : (
+                                    'Confirm Report Lost'
                                 )}
                             </Button>
                         </div>

@@ -62,6 +62,43 @@ export class ApiClientError extends Error {
     }
 }
 
+export interface LoginChallengeResult {
+    requires_verification: true;
+    challenge_id: string;
+    email_obfuscated: string;
+    expires_in_seconds: number;
+    cooldown_seconds: number;
+}
+
+export interface LoginSuccessResult {
+    requires_verification?: false;
+    token: string;
+    user: User;
+    trust_token?: string | null;
+}
+
+export type LoginResponse = {
+    requires_verification?: boolean;
+    token: string;
+    user: User;
+    trust_token?: string | null;
+    challenge_id?: string;
+    email_obfuscated?: string;
+    expires_in_seconds?: number;
+    cooldown_seconds?: number;
+};
+
+export function isLoginChallenge(
+    response: unknown,
+): response is LoginChallengeResult {
+    return Boolean(
+        response &&
+        typeof response === 'object' &&
+        (response as any).requires_verification === true &&
+        typeof (response as any).challenge_id === 'string',
+    );
+}
+
 export interface ApiClientConfig {
     baseUrl: string;
     getToken: () => string | null;
@@ -179,8 +216,44 @@ export class FieldApiClient {
         username: string,
         password: string,
         deviceName?: string,
-    ): Promise<{ token: string; user: User }> {
+        deviceTrustToken?: string | null,
+    ): Promise<LoginResponse> {
         const url = `${this.baseUrl}/api/v1/auth/login`;
+        const headers: Record<string, string> = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        };
+
+        if (deviceTrustToken) {
+            headers['X-Device-Trust'] = deviceTrustToken;
+        }
+
+        const payload: Record<string, unknown> = {
+            username,
+            password,
+            device_name: deviceName ?? 'React Native Field Mobile',
+        };
+
+        if (deviceTrustToken) {
+            payload.device_trust_token = deviceTrustToken;
+        }
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+        });
+
+        return this.handleResponse<LoginResponse>(response);
+    }
+
+    public async verifyLoginChallenge(
+        challengeId: string,
+        code: string,
+        trustDevice?: boolean,
+        deviceName?: string,
+    ): Promise<{ token: string; user: User; trust_token?: string | null }> {
+        const url = `${this.baseUrl}/api/v1/auth/challenge/verify`;
         const response = await this.fetchFn(url, {
             method: 'POST',
             headers: {
@@ -188,13 +261,44 @@ export class FieldApiClient {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                username,
-                password,
+                challenge_id: challengeId,
+                code,
+                trust_device: trustDevice ?? false,
                 device_name: deviceName ?? 'React Native Field Mobile',
             }),
         });
 
-        return this.handleResponse<{ token: string; user: User }>(response);
+        return this.handleResponse<{
+            token: string;
+            user: User;
+            trust_token?: string | null;
+        }>(response);
+    }
+
+    public async resendLoginChallenge(challengeId: string): Promise<{
+        message: string;
+        challenge_id: string;
+        expires_in_seconds: number;
+        cooldown_seconds: number;
+    }> {
+        const url = `${this.baseUrl}/api/v1/auth/challenge/resend`;
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                challenge_id: challengeId,
+            }),
+        });
+
+        return this.handleResponse<{
+            message: string;
+            challenge_id: string;
+            expires_in_seconds: number;
+            cooldown_seconds: number;
+        }>(response);
     }
 
     public async fetchFuelOptions(): Promise<FuelOptions> {
@@ -301,11 +405,32 @@ export class FieldApiClient {
         return this.handleResponse<User>(response);
     }
 
-    public async logout(): Promise<{ message: string }> {
+    public async logout(options?: {
+        forgetDevice?: boolean;
+        deviceTrustToken?: string | null;
+    }): Promise<{ message: string }> {
         const url = `${this.baseUrl}/api/v1/auth/logout`;
+        const headers = this.getHeaders();
+
+        if (options?.forgetDevice) {
+            headers['X-Forget-Device'] = 'true';
+        }
+
+        if (options?.deviceTrustToken) {
+            headers['X-Device-Trust'] = options.deviceTrustToken;
+        }
+
+        const body = options?.forgetDevice
+            ? JSON.stringify({
+                  forget_device: true,
+                  device_trust_token: options.deviceTrustToken,
+              })
+            : undefined;
+
         const response = await this.fetchFn(url, {
             method: 'POST',
-            headers: this.getHeaders(),
+            headers,
+            body,
         });
 
         return this.handleResponse<{ message: string }>(response);

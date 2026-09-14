@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import React, {
     createContext,
     useContext,
@@ -7,7 +7,12 @@ import React, {
     useCallback,
     useMemo,
 } from 'react';
-import { FieldApiClient, ApiClientError } from '../services/apiClient';
+import {
+    FieldApiClient,
+    ApiClientError,
+    isLoginChallenge,
+} from '../services/apiClient';
+import type { LoginChallengeResult } from '../services/apiClient';
 import type { User } from '../types/index';
 import { resolveApiBaseUrl } from './config';
 import { isAuthorizedFieldRole } from './fieldRoles';
@@ -32,6 +37,9 @@ export interface AuthState {
     error: string | null;
     isInitializing: boolean;
     hasPendingRevocation: boolean;
+    isChallenging: boolean;
+    challengeData: LoginChallengeResult | null;
+    isOffline: boolean;
 }
 
 export interface AuthContextType extends AuthState {
@@ -40,7 +48,14 @@ export interface AuthContextType extends AuthState {
         password: string,
         deviceName?: string,
     ) => Promise<void>;
-    logout: () => Promise<boolean>;
+    verifyChallenge: (
+        code: string,
+        trustDevice?: boolean,
+        deviceName?: string,
+    ) => Promise<void>;
+    resendChallenge: () => Promise<void>;
+    cancelChallenge: () => void;
+    logout: (options?: { forgetDevice?: boolean }) => Promise<boolean>;
     bootstrap: () => Promise<void>;
     clearError: () => void;
     apiClient: FieldApiClient;
@@ -66,6 +81,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const [status, setStatus] = useState<AuthStatus>('uninitialized');
     const [error, setError] = useState<string | null>(null);
     const [hasPendingRevocation, setHasPendingRevocation] = useState(false);
+    const [isChallenging, setIsChallenging] = useState(false);
+    const [challengeData, setChallengeData] =
+        useState<LoginChallengeResult | null>(null);
+    const [isOffline, setIsOffline] = useState(false);
 
     const apiClient = useMemo(() => {
         return new FieldApiClient({
@@ -83,10 +102,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         setUser(null);
         setToken(null);
         setStatus('unauthenticated');
+        setIsOffline(false);
+        setIsChallenging(false);
+        setChallengeData(null);
     }, []);
 
     const revokeStagedToken = useCallback(
-        async (tokenToRevoke: string): Promise<boolean> => {
+        async (
+            tokenToRevoke: string,
+            logoutOptions?: {
+                forgetDevice?: boolean;
+                deviceTrustToken?: string | null;
+            },
+        ): Promise<boolean> => {
             const revocationClient = new FieldApiClient({
                 baseUrl,
                 getToken: () => tokenToRevoke,
@@ -94,7 +122,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             });
 
             try {
-                await revocationClient.logout();
+                await revocationClient.logout(logoutOptions);
             } catch (err: unknown) {
                 if (!(err instanceof ApiClientError && err.status === 401)) {
                     setHasPendingRevocation(true);
@@ -127,8 +155,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     );
 
     const stageAndRevokeToken = useCallback(
-        async (tokenToRevoke: string): Promise<boolean> => {
+        async (
+            tokenToRevoke: string,
+            logoutOptions?: {
+                forgetDevice?: boolean;
+                deviceTrustToken?: string | null;
+            },
+        ): Promise<boolean> => {
             try {
+                if (tokenStorage.clearOfflineSession) {
+                    await tokenStorage.clearOfflineSession();
+                }
+
                 await tokenStorage.stageTokenForRevocation(tokenToRevoke);
                 await tokenStorage.clearToken();
             } catch {
@@ -142,7 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             clearLocalIdentity();
             setHasPendingRevocation(true);
 
-            return revokeStagedToken(tokenToRevoke);
+            return revokeStagedToken(tokenToRevoke, logoutOptions);
         },
         [clearLocalIdentity, revokeStagedToken, tokenStorage],
     );
@@ -150,6 +188,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const bootstrap = useCallback(async () => {
         setStatus('bootstrapping');
         setError(null);
+        setIsChallenging(false);
+        setChallengeData(null);
 
         try {
             const pendingToken = await tokenStorage.getPendingRevocationToken();
@@ -174,6 +214,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 setToken(null);
                 setStatus('unauthenticated');
                 setHasPendingRevocation(false);
+                setIsOffline(false);
 
                 return;
             }
@@ -186,66 +227,166 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                 fetchFn,
             });
 
-            const meUser = await verifyClient.fetchMe();
+            try {
+                const meUser = await verifyClient.fetchMe();
 
-            if (!meUser.is_active) {
-                await tokenStorage.clearToken();
-                setUser(null);
-                setToken(null);
-                setStatus('suspended');
-                setHasPendingRevocation(false);
-                setError(
-                    'This account is suspended. Contact a system administrator.',
-                );
-
-                return;
-            }
-
-            if (!isAuthorizedFieldRole(meUser.role)) {
-                if (await stageAndRevokeToken(activeToken)) {
-                    setError(
-                        'This account role cannot use the field mobile application.',
-                    );
-                }
-
-                return;
-            }
-
-            setUser(meUser);
-            setStatus('authenticated');
-        } catch (err: unknown) {
-            if (err instanceof ApiClientError) {
-                if (err.status === 403) {
+                if (!meUser.is_active) {
                     await tokenStorage.clearToken();
+
+                    if (tokenStorage.clearOfflineSession) {
+                        await tokenStorage.clearOfflineSession();
+                    }
+
                     setUser(null);
                     setToken(null);
                     setStatus('suspended');
                     setHasPendingRevocation(false);
+                    setIsOffline(false);
                     setError(
-                        err.message ||
-                            'Account access is forbidden or suspended.',
+                        'This account is suspended. Contact a system administrator.',
                     );
 
                     return;
                 }
 
-                if (err.status === 401) {
-                    await tokenStorage.clearToken();
-                    setUser(null);
-                    setToken(null);
-                    setStatus('unauthenticated');
-                    setHasPendingRevocation(false);
-                    setError('Your session has expired. Please sign in again.');
+                if (!isAuthorizedFieldRole(meUser.role)) {
+                    if (tokenStorage.clearOfflineSession) {
+                        await tokenStorage.clearOfflineSession();
+                    }
+
+                    if (await stageAndRevokeToken(activeToken)) {
+                        setError(
+                            'This account role cannot use the field mobile application.',
+                        );
+                    }
 
                     return;
                 }
-            }
 
-            // Preserve a stored token when identity verification failed because the
-            // device is offline or the API is temporarily unavailable. The next
-            // bootstrap can retry without forcing the worker to sign in again.
+                const now = Date.now();
+
+                if (tokenStorage.setOfflineSession) {
+                    await tokenStorage.setOfflineSession({
+                        user: meUser,
+                        verifiedAt: now,
+                        allowanceHours: 24,
+                        lastObservedTime: now,
+                    });
+                }
+
+                setUser(meUser);
+                setStatus('authenticated');
+                setIsOffline(false);
+                setHasPendingRevocation(false);
+            } catch (err: unknown) {
+                if (err instanceof ApiClientError) {
+                    if (err.status === 403) {
+                        await tokenStorage.clearToken();
+
+                        if (tokenStorage.clearOfflineSession) {
+                            await tokenStorage.clearOfflineSession();
+                        }
+
+                        setUser(null);
+                        setToken(null);
+                        setStatus('suspended');
+                        setHasPendingRevocation(false);
+                        setIsOffline(false);
+                        setError(
+                            err.message ||
+                                'Account access is forbidden or suspended.',
+                        );
+
+                        return;
+                    }
+
+                    if (err.status === 401) {
+                        await tokenStorage.clearToken();
+
+                        if (tokenStorage.clearOfflineSession) {
+                            await tokenStorage.clearOfflineSession();
+                        }
+
+                        setUser(null);
+                        setToken(null);
+                        setStatus('unauthenticated');
+                        setHasPendingRevocation(false);
+                        setIsOffline(false);
+                        setError(
+                            'Your session has expired. Please sign in again.',
+                        );
+
+                        return;
+                    }
+                }
+
+                // Network or server availability error: inspect bounded offline session
+                const offlineSession = tokenStorage.getOfflineSession
+                    ? await tokenStorage.getOfflineSession()
+                    : null;
+
+                if (offlineSession) {
+                    const now = Date.now();
+
+                    // Anti-tamper check: reject clock rollback
+                    if (
+                        now < offlineSession.verifiedAt ||
+                        now < offlineSession.lastObservedTime
+                    ) {
+                        setUser(null);
+                        setStatus('unauthenticated');
+                        setIsOffline(false);
+                        setError(
+                            'Clock tampering detected. Please connect to the internet to verify your identity.',
+                        );
+
+                        return;
+                    }
+
+                    // 24-hour allowance check
+                    const allowanceMs =
+                        (offlineSession.allowanceHours || 24) * 60 * 60 * 1000;
+
+                    if (now - offlineSession.verifiedAt > allowanceMs) {
+                        // Allowance expired: do NOT clear stored token or outbox, but require online sign-in
+                        setUser(null);
+                        setStatus('unauthenticated');
+                        setIsOffline(false);
+                        setError(
+                            'Offline access expired. Connect to internet to verify identity.',
+                        );
+
+                        return;
+                    }
+
+                    // Valid offline session: record lastObservedTime without rolling verifiedAt forward
+                    if (tokenStorage.setOfflineSession) {
+                        await tokenStorage.setOfflineSession({
+                            ...offlineSession,
+                            lastObservedTime: now,
+                        });
+                    }
+
+                    setUser(offlineSession.user);
+                    setStatus('authenticated');
+                    setIsOffline(true);
+                    setError(null);
+
+                    return;
+                }
+
+                // Preserve a stored token when identity verification failed because the
+                // device is offline or the API is temporarily unavailable. The next
+                // bootstrap can retry without forcing the worker to sign in again.
+                setUser(null);
+                setStatus('unauthenticated');
+                setIsOffline(false);
+                setError(offlineSessionVerificationError);
+            }
+        } catch {
             setUser(null);
             setStatus('unauthenticated');
+            setIsOffline(false);
             setError(offlineSessionVerificationError);
         }
     }, [
@@ -261,6 +402,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     const login = useCallback(
         async (username: string, password: string, deviceName?: string) => {
             setError(null);
+            setIsChallenging(false);
+            setChallengeData(null);
 
             try {
                 const pendingToken =
@@ -270,11 +413,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     return;
                 }
 
+                const deviceTrustToken = tokenStorage.getDeviceTrustToken
+                    ? await tokenStorage.getDeviceTrustToken()
+                    : null;
+
                 const result = await apiClient.login(
                     username,
                     password,
                     deviceName,
+                    deviceTrustToken,
                 );
+
+                if (isLoginChallenge(result)) {
+                    setIsChallenging(true);
+                    setChallengeData(result);
+
+                    return;
+                }
 
                 if (!isAuthorizedFieldRole(result.user.role)) {
                     if (await stageAndRevokeToken(result.token)) {
@@ -286,11 +441,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
                     return;
                 }
 
+                if (result.trust_token && tokenStorage.setDeviceTrustToken) {
+                    await tokenStorage.setDeviceTrustToken(result.trust_token);
+                }
+
+                const now = Date.now();
+
+                if (tokenStorage.setOfflineSession) {
+                    await tokenStorage.setOfflineSession({
+                        user: result.user,
+                        verifiedAt: now,
+                        allowanceHours: 24,
+                        lastObservedTime: now,
+                    });
+                }
+
                 await tokenStorage.setToken(result.token);
                 await tokenStorage.clearPendingRevocationToken();
                 setToken(result.token);
                 setUser(result.user);
                 setStatus('authenticated');
+                setIsOffline(false);
                 setHasPendingRevocation(false);
             } catch (err: unknown) {
                 if (err instanceof ApiClientError) {
@@ -334,43 +505,216 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         [apiClient, revokeStagedToken, stageAndRevokeToken, tokenStorage],
     );
 
-    const logout = useCallback(async (): Promise<boolean> => {
+    const verifyChallenge = useCallback(
+        async (code: string, trustDevice = false, deviceName?: string) => {
+            if (!challengeData) {
+                setError('No active verification challenge.');
+
+                return;
+            }
+
+            setError(null);
+
+            try {
+                const result = await apiClient.verifyLoginChallenge(
+                    challengeData.challenge_id,
+                    code,
+                    trustDevice,
+                    deviceName,
+                );
+
+                if (!isAuthorizedFieldRole(result.user.role)) {
+                    if (await stageAndRevokeToken(result.token)) {
+                        setError(
+                            'This account role cannot use the field mobile application.',
+                        );
+                    }
+
+                    setIsChallenging(false);
+                    setChallengeData(null);
+
+                    return;
+                }
+
+                if (result.trust_token && tokenStorage.setDeviceTrustToken) {
+                    await tokenStorage.setDeviceTrustToken(result.trust_token);
+                }
+
+                const now = Date.now();
+
+                if (tokenStorage.setOfflineSession) {
+                    await tokenStorage.setOfflineSession({
+                        user: result.user,
+                        verifiedAt: now,
+                        allowanceHours: 24,
+                        lastObservedTime: now,
+                    });
+                }
+
+                await tokenStorage.setToken(result.token);
+                await tokenStorage.clearPendingRevocationToken();
+                setToken(result.token);
+                setUser(result.user);
+                setStatus('authenticated');
+                setIsOffline(false);
+                setHasPendingRevocation(false);
+                setIsChallenging(false);
+                setChallengeData(null);
+            } catch (err: unknown) {
+                if (err instanceof ApiClientError) {
+                    if (err.status === 403) {
+                        setStatus('suspended');
+                        setError(
+                            err.message ||
+                                'This account is suspended. Contact a system administrator.',
+                        );
+                        setIsChallenging(false);
+                        setChallengeData(null);
+
+                        return;
+                    }
+
+                    if (err.status === 429) {
+                        setError(
+                            'Too many verification attempts. Please wait before trying again.',
+                        );
+
+                        return;
+                    }
+
+                    setError(
+                        err.message ||
+                            'Invalid verification code. Please try again.',
+                    );
+
+                    return;
+                }
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : 'An unexpected error occurred during verification.',
+                );
+            }
+        },
+        [apiClient, challengeData, stageAndRevokeToken, tokenStorage],
+    );
+
+    const resendChallenge = useCallback(async () => {
+        if (!challengeData) {
+            setError('No active verification challenge.');
+
+            return;
+        }
+
         setError(null);
 
         try {
-            const pendingToken = await tokenStorage.getPendingRevocationToken();
-            const tokenToRevoke = token ?? pendingToken;
-
-            if (!tokenToRevoke) {
-                await tokenStorage.clearToken();
-                clearLocalIdentity();
-                setHasPendingRevocation(false);
-
-                return true;
-            }
-
-            if (pendingToken && !token) {
-                clearLocalIdentity();
-                setHasPendingRevocation(true);
-
-                return revokeStagedToken(pendingToken);
-            }
-
-            return stageAndRevokeToken(tokenToRevoke);
-        } catch {
-            setError(
-                'Secure sign-out could not access protected storage. Try again before leaving the app.',
+            const result = await apiClient.resendLoginChallenge(
+                challengeData.challenge_id,
             );
 
-            return false;
+            setChallengeData((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          challenge_id: result.challenge_id,
+                          expires_in_seconds: result.expires_in_seconds,
+                          cooldown_seconds: result.cooldown_seconds,
+                      }
+                    : null,
+            );
+        } catch (err: unknown) {
+            if (err instanceof ApiClientError) {
+                if (err.status === 429) {
+                    setError(
+                        'Please wait before requesting another verification code.',
+                    );
+
+                    return;
+                }
+
+                setError(
+                    err.message || 'Unable to resend code. Please try again.',
+                );
+
+                return;
+            }
+
+            setError('An unexpected error occurred while resending the code.');
         }
-    }, [
-        clearLocalIdentity,
-        revokeStagedToken,
-        stageAndRevokeToken,
-        token,
-        tokenStorage,
-    ]);
+    }, [apiClient, challengeData]);
+
+    const cancelChallenge = useCallback(() => {
+        setIsChallenging(false);
+        setChallengeData(null);
+        setError(null);
+    }, []);
+
+    const logout = useCallback(
+        async (options?: { forgetDevice?: boolean }): Promise<boolean> => {
+            setError(null);
+
+            try {
+                if (tokenStorage.clearOfflineSession) {
+                    await tokenStorage.clearOfflineSession();
+                }
+
+                let deviceTrustToken: string | null = null;
+
+                if (options?.forgetDevice && tokenStorage.getDeviceTrustToken) {
+                    deviceTrustToken = await tokenStorage.getDeviceTrustToken();
+
+                    if (tokenStorage.clearDeviceTrustToken) {
+                        await tokenStorage.clearDeviceTrustToken();
+                    }
+                }
+
+                const pendingToken =
+                    await tokenStorage.getPendingRevocationToken();
+                const tokenToRevoke = token ?? pendingToken;
+
+                if (!tokenToRevoke) {
+                    await tokenStorage.clearToken();
+                    clearLocalIdentity();
+                    setHasPendingRevocation(false);
+                    setIsOffline(false);
+
+                    return true;
+                }
+
+                const logoutOptions = {
+                    forgetDevice: options?.forgetDevice,
+                    deviceTrustToken,
+                };
+
+                if (pendingToken && !token) {
+                    clearLocalIdentity();
+                    setHasPendingRevocation(true);
+                    setIsOffline(false);
+
+                    return revokeStagedToken(pendingToken, logoutOptions);
+                }
+
+                setIsOffline(false);
+
+                return stageAndRevokeToken(tokenToRevoke, logoutOptions);
+            } catch {
+                setError(
+                    'Secure sign-out could not access protected storage. Try again before leaving the app.',
+                );
+
+                return false;
+            }
+        },
+        [
+            clearLocalIdentity,
+            revokeStagedToken,
+            stageAndRevokeToken,
+            token,
+            tokenStorage,
+        ],
+    );
 
     useEffect(() => {
         if (status === 'uninitialized') {
@@ -386,9 +730,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             status,
             error,
             hasPendingRevocation,
+            isChallenging,
+            challengeData,
+            isOffline,
             isInitializing:
                 status === 'uninitialized' || status === 'bootstrapping',
             login,
+            verifyChallenge,
+            resendChallenge,
+            cancelChallenge,
             logout,
             bootstrap,
             clearError,
@@ -399,7 +749,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             status,
             error,
             hasPendingRevocation,
+            isChallenging,
+            challengeData,
+            isOffline,
             login,
+            verifyChallenge,
+            resendChallenge,
+            cancelChallenge,
             logout,
             bootstrap,
             clearError,

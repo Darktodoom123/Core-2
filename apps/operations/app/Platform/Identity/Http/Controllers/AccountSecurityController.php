@@ -4,9 +4,11 @@ namespace App\Platform\Identity\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Platform\Audit\Actions\RecordAuditEvent;
+use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Identity\Support\UserAgentParser;
 use Illuminate\Http\JsonResponse;
@@ -107,6 +109,12 @@ final class AccountSecurityController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        if ($user->hasRole(RoleName::SystemAdministrator->value)) {
+            throw ValidationException::withMessages([
+                'current_password' => 'Email verification codes are mandatory for System Administrators by organizational policy.',
+            ]);
+        }
+
         $request->validate([
             'current_password' => ['required', 'string', 'current_password:web'],
         ]);
@@ -139,6 +147,12 @@ final class AccountSecurityController extends Controller
     ): JsonResponse|RedirectResponse {
         /** @var User $user */
         $user = $request->user();
+
+        if ($user->hasRole(RoleName::SystemAdministrator->value)) {
+            throw ValidationException::withMessages([
+                'code' => 'Email verification codes are mandatory for System Administrators by organizational policy.',
+            ]);
+        }
 
         $validated = $request->validate([
             'challenge_id' => ['required', 'string'],
@@ -285,5 +299,84 @@ final class AccountSecurityController extends Controller
         }
 
         return back()->with('status', 'All other web sessions have been signed out successfully.');
+    }
+
+    public function revokeTrustedDevice(
+        Request $request,
+        string $deviceId,
+        DeviceTrustService $trustService,
+        RecordAuditEvent $audit,
+    ): JsonResponse|RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $revoked = $trustService->revokeDevice($user, $deviceId);
+        abort_unless($revoked, 404, 'Trusted device not found or already revoked.');
+
+        $deviceInfo = UserAgentParser::parse($request->userAgent());
+        $audit->handle($user, $user, 'user.trusted_device_revoked', null, [
+            'device_id' => $deviceId,
+            'device' => $deviceInfo['label'],
+            'outcome' => 'success',
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Trusted device revoked successfully.']);
+        }
+
+        return back()->with('status', 'Trusted device revoked successfully.');
+    }
+
+    public function revokeAllTrustedDevices(
+        Request $request,
+        DeviceTrustService $trustService,
+        RecordAuditEvent $audit,
+    ): JsonResponse|RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $count = $trustService->revokeAllDevices($user);
+
+        $deviceInfo = UserAgentParser::parse($request->userAgent());
+        $audit->handle($user, $user, 'user.all_trusted_devices_revoked', null, [
+            'revoked_count' => $count,
+            'device' => $deviceInfo['label'],
+            'outcome' => 'success',
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'All trusted devices revoked successfully.',
+                'revoked_count' => $count,
+            ]);
+        }
+
+        return back()->with('status', 'All trusted devices have been revoked.');
+    }
+
+    public function markDeviceLost(
+        Request $request,
+        string $deviceId,
+        DeviceTrustService $trustService,
+        RecordAuditEvent $audit,
+    ): JsonResponse|RedirectResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $revoked = $trustService->markDeviceLost($user, $deviceId);
+        abort_unless($revoked, 404, 'Device not found.');
+
+        $deviceInfo = UserAgentParser::parse($request->userAgent());
+        $audit->handle($user, $user, 'user.lost_device_reported', null, [
+            'device_id' => $deviceId,
+            'device' => $deviceInfo['label'],
+            'outcome' => 'success',
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Lost device trust and active sessions revoked successfully.']);
+        }
+
+        return back()->with('status', 'Lost device trust and active access revoked successfully.');
     }
 }

@@ -6,6 +6,7 @@ use App\Platform\Identity\Mail\EmailOtpMail;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -35,7 +36,19 @@ class EmailOtpService
         }
         RateLimiter::hit($sendThrottleKey, 300);
 
-        // Cooldown throttle: 1 send per 45 seconds
+        // IP-level send abuse limit (15 sends per 5 minutes per IP)
+        if ($ip) {
+            $ipSendKey = 'email-otp-send-ip:'.$ip;
+            if (RateLimiter::tooManyAttempts($ipSendKey, 15)) {
+                $seconds = RateLimiter::availableIn($ipSendKey);
+                throw ValidationException::withMessages([
+                    'email' => "Too many code requests from this network. Please try again in {$seconds} seconds.",
+                ]);
+            }
+            RateLimiter::hit($ipSendKey, 300);
+        }
+
+        // Initialize cooldown for subsequent resend requests: 45 seconds
         $cooldownKey = 'email-otp-cooldown:'.$user->id.':'.$purpose;
         RateLimiter::hit($cooldownKey, 45);
 
@@ -66,7 +79,23 @@ class EmailOtpService
         ]);
 
         $recipient = $destinationEmail ?? $user->email;
-        Mail::to($recipient)->send(new EmailOtpMail($code, $purpose, 5));
+        try {
+            Mail::to($recipient)->send(new EmailOtpMail($code, $purpose, 5));
+        } catch (\Throwable $e) {
+            EmailOneTimeCode::query()
+                ->where('user_id', $user->id)
+                ->where('challenge_id', $challengeId)
+                ->delete();
+            RateLimiter::clear($cooldownKey);
+            Log::error('Failed to send verification code email: '.$e->getMessage(), [
+                'user_id' => $user->id,
+                'purpose' => $purpose,
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Failed to deliver the verification code to your email. Please verify your connection or try again shortly.',
+            ]);
+        }
 
         return [
             'challenge_id' => $challengeId,
@@ -87,6 +116,17 @@ class EmailOtpService
         ?string $destinationEmail = null,
         ?string $ip = null,
     ): array {
+        if ($ip) {
+            $ipSendKey = 'email-otp-send-ip:'.$ip;
+            if (RateLimiter::tooManyAttempts($ipSendKey, 15)) {
+                $seconds = RateLimiter::availableIn($ipSendKey);
+                throw ValidationException::withMessages([
+                    'code' => "Too many code requests from this network. Please try again in {$seconds} seconds.",
+                ]);
+            }
+            RateLimiter::hit($ipSendKey, 300);
+        }
+
         $cooldownKey = 'email-otp-cooldown:'.$user->id.':'.$purpose;
         if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
             $seconds = RateLimiter::availableIn($cooldownKey);
@@ -151,7 +191,23 @@ class EmailOtpService
         ]);
 
         $recipient = $destinationEmail ?? $metadata['new_email'] ?? $user->email;
-        Mail::to($recipient)->send(new EmailOtpMail($code, $purpose, 5));
+        try {
+            Mail::to($recipient)->send(new EmailOtpMail($code, $purpose, 5));
+        } catch (\Throwable $e) {
+            EmailOneTimeCode::query()
+                ->where('user_id', $user->id)
+                ->where('challenge_id', $newChallengeId)
+                ->delete();
+            RateLimiter::clear($cooldownKey);
+            Log::error('Failed to resend verification code email: '.$e->getMessage(), [
+                'user_id' => $user->id,
+                'purpose' => $purpose,
+            ]);
+
+            throw ValidationException::withMessages([
+                'code' => 'Failed to deliver the verification code to your email. Please try again shortly.',
+            ]);
+        }
 
         return [
             'challenge_id' => $newChallengeId,
@@ -171,6 +227,15 @@ class EmailOtpService
         ?string $ip = null,
     ): EmailOneTimeCode {
         $verifyThrottleKey = 'email-otp-verify:'.$user->id.':'.($ip ?: 'unknown');
+        if ($ip) {
+            $ipVerifyKey = 'email-otp-verify-ip:'.$ip;
+            if (RateLimiter::tooManyAttempts($ipVerifyKey, 25)) {
+                $seconds = RateLimiter::availableIn($ipVerifyKey);
+                throw ValidationException::withMessages([
+                    'code' => "Too many verification attempts from this network. Please try again in {$seconds} seconds.",
+                ]);
+            }
+        }
         if (RateLimiter::tooManyAttempts($verifyThrottleKey, 10)) {
             $seconds = RateLimiter::availableIn($verifyThrottleKey);
             throw ValidationException::withMessages([
@@ -222,6 +287,9 @@ class EmailOtpService
             $record->refresh();
 
             RateLimiter::hit($verifyThrottleKey, 300);
+            if ($ip) {
+                RateLimiter::hit('email-otp-verify-ip:'.$ip, 300);
+            }
 
             if ($record->attempts >= $record->max_attempts) {
                 throw ValidationException::withMessages([

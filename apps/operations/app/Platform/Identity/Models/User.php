@@ -98,4 +98,19 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(DispatchPersonnelAssignment::class);
     }
+
+    /** @return HasMany<TrustedDevice, $this> */
+    public function trustedDevices(): HasMany
+    {
+        return $this->hasMany(TrustedDevice::class);
+    }
+
+    public function requiresDeviceVerification(): bool
+    {
+        if ($this->email_otp_enabled) {
+            return true;
+        }
+
+        return $this->hasVerifiedEmail();
+    }
 }

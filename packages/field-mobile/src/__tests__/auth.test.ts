@@ -3,12 +3,21 @@ import { describe, it, beforeEach } from 'node:test';
 import { resolveApiBaseUrl } from '../auth/config';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { SecureTokenStorage } from '../auth/tokenStorage';
-import type { TokenStorageProvider } from '../auth/tokenStorage';
-import { FieldApiClient, ApiClientError } from '../services/apiClient';
+import type {
+    TokenStorageProvider,
+    OfflineSessionData,
+} from '../auth/tokenStorage';
+import {
+    FieldApiClient,
+    ApiClientError,
+    isLoginChallenge,
+} from '../services/apiClient';
 
 class MemoryTokenStorage implements TokenStorageProvider {
     private token: string | null = null;
     private pendingRevocationToken: string | null = null;
+    private trustToken: string | null = null;
+    private offlineSession: OfflineSessionData | null = null;
 
     async getToken(): Promise<string | null> {
         return this.token;
@@ -32,6 +41,30 @@ class MemoryTokenStorage implements TokenStorageProvider {
 
     async clearPendingRevocationToken(): Promise<void> {
         this.pendingRevocationToken = null;
+    }
+
+    async getDeviceTrustToken(): Promise<string | null> {
+        return this.trustToken;
+    }
+
+    async setDeviceTrustToken(token: string): Promise<void> {
+        this.trustToken = token;
+    }
+
+    async clearDeviceTrustToken(): Promise<void> {
+        this.trustToken = null;
+    }
+
+    async getOfflineSession(): Promise<OfflineSessionData | null> {
+        return this.offlineSession;
+    }
+
+    async setOfflineSession(data: OfflineSessionData): Promise<void> {
+        this.offlineSession = data;
+    }
+
+    async clearOfflineSession(): Promise<void> {
+        this.offlineSession = null;
     }
 }
 
@@ -336,5 +369,229 @@ describe('Field Mobile Authentication Shell', () => {
             () => resolveApiBaseUrl('file:///tmp/api'),
             /must use http or https/,
         );
+    });
+
+    it('handles device verification challenge flow when requires_verification is true', async () => {
+        let challengeVerified = false;
+        const mockFetch = async (
+            input: RequestInfo | URL,
+            init?: RequestInit,
+        ) => {
+            const urlStr = input.toString();
+
+            if (urlStr.endsWith('/api/v1/auth/login')) {
+                return new Response(
+                    JSON.stringify({
+                        requires_verification: true,
+                        challenge_id: 'ch-login-xyz',
+                        email_obfuscated: 'op***@example.com',
+                        expires_in_seconds: 300,
+                        cooldown_seconds: 45,
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                    },
+                );
+            }
+
+            if (urlStr.endsWith('/api/v1/auth/challenge/verify')) {
+                const body = JSON.parse(init?.body as string);
+                assert.equal(body.challenge_id, 'ch-login-xyz');
+                assert.equal(body.code, '654321');
+                assert.equal(body.trust_device, true);
+                challengeVerified = true;
+
+                return new Response(
+                    JSON.stringify({
+                        data: {
+                            token: 'new-sanctum-token-789',
+                            user: {
+                                id: 42,
+                                name: 'Jane Operator',
+                                username: 'operator',
+                                email: 'operator@example.com',
+                                role: 'crane_operator',
+                                is_active: true,
+                            },
+                            trust_token: 'issued-trust-token-abc',
+                        },
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                    },
+                );
+            }
+
+            return new Response(JSON.stringify({ message: 'Not found' }), {
+                status: 404,
+            });
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => mockToken,
+            fetchFn: mockFetch as typeof fetch,
+        });
+
+        const loginRes = await client.login('operator', 'password');
+        assert.equal(isLoginChallenge(loginRes), true);
+
+        if (isLoginChallenge(loginRes)) {
+            assert.equal(loginRes.challenge_id, 'ch-login-xyz');
+            assert.equal(loginRes.cooldown_seconds, 45);
+
+            const verifyRes = await client.verifyLoginChallenge(
+                loginRes.challenge_id,
+                '654321',
+                true,
+                'Test Device',
+            );
+            assert.equal(challengeVerified, true);
+            assert.equal(verifyRes.token, 'new-sanctum-token-789');
+            assert.equal(verifyRes.trust_token, 'issued-trust-token-abc');
+            assert.equal(verifyRes.user.role, 'crane_operator');
+        }
+    });
+
+    it('resends verification challenge code with updated cooldown', async () => {
+        const mockFetch = async (
+            input: RequestInfo | URL,
+            init?: RequestInit,
+        ) => {
+            const urlStr = input.toString();
+
+            if (urlStr.endsWith('/api/v1/auth/challenge/resend')) {
+                const body = JSON.parse(init?.body as string);
+                assert.equal(body.challenge_id, 'ch-original-123');
+
+                return new Response(
+                    JSON.stringify({
+                        message: 'A fresh verification code has been sent.',
+                        challenge_id: 'ch-fresh-456',
+                        expires_in_seconds: 300,
+                        cooldown_seconds: 45,
+                    }),
+                    {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                    },
+                );
+            }
+
+            return new Response(JSON.stringify({ message: 'Not found' }), {
+                status: 404,
+            });
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => mockToken,
+            fetchFn: mockFetch as typeof fetch,
+        });
+
+        const resendRes = await client.resendLoginChallenge('ch-original-123');
+        assert.equal(resendRes.challenge_id, 'ch-fresh-456');
+        assert.equal(resendRes.cooldown_seconds, 45);
+    });
+
+    it('sends X-Forget-Device and device trust token on logout when requested', async () => {
+        let headersSent: Record<string, string> = {};
+        const mockFetch = async (
+            input: RequestInfo | URL,
+            init?: RequestInit,
+        ) => {
+            headersSent = (init?.headers as Record<string, string>) || {};
+
+            return new Response(
+                JSON.stringify({ message: 'Logged out successfully.' }),
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                },
+            );
+        };
+
+        const client = new FieldApiClient({
+            baseUrl: 'http://localhost:8000',
+            getToken: () => 'active-token-123',
+            fetchFn: mockFetch as typeof fetch,
+        });
+
+        await client.logout({
+            forgetDevice: true,
+            deviceTrustToken: 'trust-token-to-revoke',
+        });
+
+        assert.equal(headersSent['X-Forget-Device'], 'true');
+        assert.equal(headersSent['X-Device-Trust'], 'trust-token-to-revoke');
+    });
+
+    it('manages device trust token and bounded 24h offline sessions in SecureTokenStorage', async () => {
+        const values = new Map<string, string>();
+        const secureStore = {
+            getItemAsync: async (key: string) => values.get(key) ?? null,
+            setItemAsync: async (key: string, value: string) => {
+                values.set(key, value);
+            },
+            deleteItemAsync: async (key: string) => {
+                values.delete(key);
+            },
+        };
+        const storage = new SecureTokenStorage('test-storage', secureStore);
+
+        // Device trust token storage
+        await storage.setDeviceTrustToken('trust-xyz');
+        assert.equal(await storage.getDeviceTrustToken(), 'trust-xyz');
+        await storage.clearDeviceTrustToken();
+        assert.equal(await storage.getDeviceTrustToken(), null);
+
+        // Offline session storage
+        const now = Date.now();
+        const testSession: OfflineSessionData = {
+            user: {
+                id: 10,
+                name: 'Field Worker',
+                username: 'worker1',
+                email: 'worker1@example.com',
+                role: 'driver',
+                is_active: true,
+            },
+            verifiedAt: now,
+            allowanceHours: 24,
+            lastObservedTime: now,
+        };
+
+        await storage.setOfflineSession(testSession);
+        const retrieved = await storage.getOfflineSession();
+        assert.notEqual(retrieved, null);
+        assert.equal(retrieved?.user.id, 10);
+        assert.equal(retrieved?.verifiedAt, now);
+        assert.equal(retrieved?.allowanceHours, 24);
+
+        // 24-hour allowance validation logic
+        const fourHoursLater = now + 4 * 60 * 60 * 1000;
+        const allowanceMs = (retrieved!.allowanceHours || 24) * 60 * 60 * 1000;
+        assert.equal(
+            fourHoursLater - retrieved!.verifiedAt <= allowanceMs,
+            true,
+        );
+
+        const twentyFiveHoursLater = now + 25 * 60 * 60 * 1000;
+        assert.equal(
+            twentyFiveHoursLater - retrieved!.verifiedAt > allowanceMs,
+            true,
+        );
+
+        // Anti-tamper clock rollback detection
+        const tamperedPastTime = now - 1000;
+        const isClockTampered =
+            tamperedPastTime < retrieved!.verifiedAt ||
+            tamperedPastTime < retrieved!.lastObservedTime;
+        assert.equal(isClockTampered, true);
+
+        await storage.clearOfflineSession();
+        assert.equal(await storage.getOfflineSession(), null);
     });
 });

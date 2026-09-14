@@ -7,6 +7,7 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
 use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Identity\Support\UserAgentParser;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +62,7 @@ final class TwoFactorChallengeController extends Controller
     public function store(
         Request $request,
         EmailOtpService $otpService,
+        DeviceTrustService $trustService,
         RecordAuditEvent $audit,
     ): RedirectResponse {
         $twoFactorData = $request->session()->get('login.two_factor');
@@ -79,6 +81,7 @@ final class TwoFactorChallengeController extends Controller
 
         $request->validate([
             'code' => ['required', 'string', 'digits:6'],
+            'trust_device' => ['sometimes', 'boolean'],
         ]);
 
         /** @var User|null $user */
@@ -108,15 +111,39 @@ final class TwoFactorChallengeController extends Controller
         $request->session()->regenerate();
         ValidateActiveSession::track($user, $request);
 
+        $trustToken = null;
+        if ($request->boolean('trust_device')) {
+            $issued = $trustService->issueTrust($user, $request, 'web');
+            $trustToken = $issued['token'];
+        }
+
         $deviceInfo = UserAgentParser::parse($request->userAgent());
         $audit->handle($user, $user, 'user.login', null, [
             'auth_type' => 'email_otp',
             'device' => $deviceInfo['label'],
+            'trusted_device' => $trustToken !== null,
             'user_agent' => $request->userAgent(),
             'outcome' => 'success',
         ]);
 
-        return redirect()->intended(route('home', absolute: false));
+        $redirect = redirect()->intended(route('home', absolute: false));
+        if ($trustToken !== null) {
+            $redirect->withCookie(
+                cookie(
+                    DeviceTrustService::COOKIE_NAME,
+                    $trustToken,
+                    DeviceTrustService::TRUST_DURATION_DAYS * 24 * 60,
+                    '/',
+                    null,
+                    (bool) config('session.secure', false),
+                    true,
+                    false,
+                    'lax',
+                )
+            );
+        }
+
+        return $redirect;
     }
 
     public function resend(Request $request, EmailOtpService $otpService): RedirectResponse

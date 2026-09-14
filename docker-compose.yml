@@ -60,6 +60,14 @@ services:
       TRACKING_SERVICE_URL: http://tracking
       TRACKING_SERVICE_SECRET: "${TRACKING_SERVICE_SECRET:?Set TRACKING_SERVICE_SECRET in .env}"
       CORE2_SERVICE_NAME: operations
+      MAIL_MAILER: "${MAIL_MAILER:-smtp}"
+      MAIL_SCHEME: "${MAIL_SCHEME:-smtp}"
+      MAIL_HOST: "${MAIL_HOST:-127.0.0.1}"
+      MAIL_PORT: "${MAIL_PORT:-587}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-hello@example.com}"
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Core-2}"
     volumes:
       - storage-data:/var/www/html/storage
     depends_on:

@@ -80,6 +80,16 @@ Route::middleware(['auth', 'active', ValidateActiveSession::class])->group(funct
     Route::post('/account/sessions/revoke-others', [AccountSecurityController::class, 'revokeOtherSessions'])
         ->middleware('throttle:5,1')
         ->name('account.sessions.revoke_others');
+
+    // Trusted devices
+    Route::delete('/account/trusted-devices/{deviceId}', [AccountSecurityController::class, 'revokeTrustedDevice'])
+        ->name('account.trusted_devices.revoke');
+    Route::post('/account/trusted-devices/revoke-all', [AccountSecurityController::class, 'revokeAllTrustedDevices'])
+        ->middleware('throttle:5,1')
+        ->name('account.trusted_devices.revoke_all');
+    Route::post('/account/trusted-devices/{deviceId}/lost', [AccountSecurityController::class, 'markDeviceLost'])
+        ->middleware('throttle:5,1')
+        ->name('account.trusted_devices.mark_lost');
 });
 
 Route::middleware(['auth', 'active', ValidateActiveSession::class, 'verified', 'throttle:120,1'])->prefix('operations')->group(function (): void {

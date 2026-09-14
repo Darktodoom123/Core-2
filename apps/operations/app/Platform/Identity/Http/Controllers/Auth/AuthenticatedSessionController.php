@@ -7,6 +7,7 @@ use App\Platform\Audit\Actions\RecordAuditEvent;
 use App\Platform\Identity\Http\Middleware\ValidateActiveSession;
 use App\Platform\Identity\Http\Requests\Auth\LoginRequest;
 use App\Platform\Identity\Models\EmailOneTimeCode;
+use App\Platform\Identity\Services\DeviceTrustService;
 use App\Platform\Identity\Services\EmailOtpService;
 use App\Platform\Identity\Support\UserAgentParser;
 use Illuminate\Http\RedirectResponse;
@@ -25,11 +26,16 @@ final class AuthenticatedSessionController extends Controller
     public function store(
         LoginRequest $request,
         EmailOtpService $otpService,
+        DeviceTrustService $trustService,
         RecordAuditEvent $audit,
     ): RedirectResponse {
         $user = $request->validateCredentials();
 
-        if ($user->email_otp_enabled) {
+        // Check whether this browser is already trusted for this user
+        $trustCookie = $request->cookie(DeviceTrustService::COOKIE_NAME);
+        $trustedDevice = $trustService->verifyTrust($user, is_string($trustCookie) ? $trustCookie : null);
+
+        if ($user->requiresDeviceVerification() && ! $trustedDevice) {
             $result = $otpService->generateCode(
                 user: $user,
                 purpose: EmailOneTimeCode::PURPOSE_LOGIN,
@@ -52,7 +58,7 @@ final class AuthenticatedSessionController extends Controller
 
         $deviceInfo = UserAgentParser::parse($request->userAgent());
         $audit->handle($user, $user, 'user.login', null, [
-            'auth_type' => 'password',
+            'auth_type' => $trustedDevice ? 'trusted_device' : 'password',
             'device' => $deviceInfo['label'],
             'user_agent' => $request->userAgent(),
             'outcome' => 'success',
@@ -61,8 +67,11 @@ final class AuthenticatedSessionController extends Controller
         return redirect()->intended(route('home', absolute: false));
     }
 
-    public function destroy(Request $request, RecordAuditEvent $audit): RedirectResponse
-    {
+    public function destroy(
+        Request $request,
+        RecordAuditEvent $audit,
+        DeviceTrustService $trustService,
+    ): RedirectResponse {
         $user = $request->user();
         if ($user) {
             $deviceInfo = UserAgentParser::parse($request->userAgent());
@@ -73,11 +82,24 @@ final class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        $forgetDevice = $request->boolean('forget_device');
+        if ($user && $forgetDevice) {
+            $trustCookie = $request->cookie(DeviceTrustService::COOKIE_NAME);
+            if (is_string($trustCookie) && $trustCookie !== '') {
+                $trustService->revokeByToken($user, $trustCookie);
+            }
+        }
+
         ValidateActiveSession::forget($request);
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        $response = redirect()->route('login');
+        if ($forgetDevice) {
+            $response->withoutCookie(DeviceTrustService::COOKIE_NAME);
+        }
+
+        return $response;
     }
 }

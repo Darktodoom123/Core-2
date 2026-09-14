@@ -1,10 +1,12 @@
 <?php
 
 use App\Platform\Identity\Enums\RoleName;
+use App\Platform\Identity\Models\EmailOneTimeCode;
 use App\Platform\Identity\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -14,7 +16,7 @@ beforeEach(function (): void {
     RateLimiter::clear('dispatcher@example.com|127.0.0.1');
 });
 
-it('allows active verified users to authenticate and receive a Sanctum token', function (): void {
+it('allows active verified users with trusted device to authenticate and receive a Sanctum token', function (): void {
     /** @var User $user */
     $user = User::factory()->create([
         'email' => 'dispatcher@example.com',
@@ -24,11 +26,23 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
     ]);
     $user->syncRoles([RoleName::OperationsManager->value]);
 
-    $response = $this->postJson('/api/v1/auth/login', [
-        'username' => ' Dispatcher ',
-        'password' => 'password',
-        'device_name' => 'Field iPad Air Pro',
+    $plainToken = 'test-plain-trust-token-1234567890abcdef';
+    $user->trustedDevices()->create([
+        'device_id' => (string) Str::uuid(),
+        'device_key_hash' => hash('sha256', $plainToken),
+        'device_label' => 'Field iPad Air Pro',
+        'platform' => 'mobile',
+        'ip_address' => '127.0.0.1',
+        'last_used_at' => now(),
+        'expires_at' => now()->addDays(30),
     ]);
+
+    $response = $this->withHeader('X-Device-Trust', $plainToken)
+        ->postJson('/api/v1/auth/login', [
+            'username' => ' Dispatcher ',
+            'password' => 'password',
+            'device_name' => 'Field iPad Air Pro',
+        ]);
 
     $response->assertOk()
         ->assertJsonStructure([
@@ -60,6 +74,66 @@ it('allows active verified users to authenticate and receive a Sanctum token', f
         ->assertJsonMissingPath('data.user.remember_token');
 });
 
+it('requires verification challenge on unrecognized mobile device without device trust', function (): void {
+    /** @var User $user */
+    $user = User::factory()->create([
+        'email' => 'dispatcher@example.com',
+        'username' => 'dispatcher',
+        'is_active' => true,
+        'email_verified_at' => now(),
+    ]);
+    $user->syncRoles([RoleName::OperationsManager->value]);
+
+    $response = $this->postJson('/api/v1/auth/login', [
+        'username' => 'dispatcher',
+        'password' => 'password',
+        'device_name' => 'New Field Phone',
+    ]);
+
+    $response->assertOk()
+        ->assertJson([
+            'requires_verification' => true,
+            'expires_in_seconds' => 300,
+            'cooldown_seconds' => 45,
+        ])
+        ->assertJsonStructure(['challenge_id', 'email_obfuscated']);
+
+    $challengeId = $response->json('challenge_id');
+
+    // Operational bearer token is NOT issued before verification
+    $response->assertJsonMissingPath('data.token');
+
+    // Complete challenge
+    $codeRecord = EmailOneTimeCode::where('challenge_id', $challengeId)->first();
+    expect($codeRecord)->not->toBeNull();
+
+    // Reconstruct valid code or verify with created code
+    $plainCode = '123456';
+    $codeRecord->update([
+        'code_hash' => hash_hmac('sha256', $plainCode, (string) config('app.key')),
+    ]);
+
+    $verifyResponse = $this->postJson('/api/v1/auth/challenge/verify', [
+        'challenge_id' => $challengeId,
+        'code' => $plainCode,
+        'trust_device' => true,
+        'device_name' => 'New Field Phone',
+    ]);
+
+    $verifyResponse->assertOk()
+        ->assertJsonStructure([
+            'data' => [
+                'token',
+                'user' => ['id', 'username', 'email', 'role'],
+                'trust_token',
+                'device_trust_token',
+            ],
+        ]);
+
+    expect($verifyResponse->json('data.token'))->toBeString()
+        ->and($verifyResponse->json('data.trust_token'))->toBeString();
+});
+
 it('rejects login with invalid credentials', function (): void {
     User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatcher']);
 
@@ -74,17 +148,30 @@ it('rejects login with invalid credentials', function (): void {
 });
 
 it('accepts legacy email login during the mobile compatibility window', function (): void {
-    User::factory()->create([
+    /** @var User $user */
+    $user = User::factory()->create([
         'email' => 'legacy@example.com',
         'username' => 'legacy-user',
         'is_active' => true,
         'email_verified_at' => now(),
     ]);
 
-    $this->postJson('/api/v1/auth/login', [
-        'email' => ' LEGACY@EXAMPLE.COM ',
-        'password' => 'password',
-    ])->assertOk()->assertJsonPath('data.user.username', 'legacy-user');
+    $plainToken = 'test-plain-trust-token-legacy-user-123456';
+    $user->trustedDevices()->create([
+        'device_id' => (string) Str::uuid(),
+        'device_key_hash' => hash('sha256', $plainToken),
+        'device_label' => 'Legacy Device',
+        'platform' => 'mobile',
+        'ip_address' => '127.0.0.1',
+        'last_used_at' => now(),
+        'expires_at' => now()->addDays(30),
+    ]);
+
+    $this->withHeader('X-Device-Trust', $plainToken)
+        ->postJson('/api/v1/auth/login', [
+            'email' => ' LEGACY@EXAMPLE.COM ',
+            'password' => 'password',
+        ])->assertOk()->assertJsonPath('data.user.username', 'legacy-user');
 });
 
 it('rejects usernames outside the documented safe format', function (): void {

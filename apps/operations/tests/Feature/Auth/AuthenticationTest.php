@@ -2,10 +2,12 @@
 
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
+use App\Platform\Identity\Services\DeviceTrustService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -18,10 +20,41 @@ it('redirects guests to the internal login page', function () {
     $this->get(route('login'))->assertOk();
 });
 
-it('authenticates an active verified user', function () {
+it('authenticates an active verified user on a trusted browser', function () {
     $user = User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatch.admin']);
     $user->syncRoles([RoleName::OperationsManager->value]);
-    $this->post('/login', ['username' => ' Dispatch.Admin ', 'password' => 'password'])->assertRedirect('/');
+
+    $plainToken = 'test-plain-trust-token-1234567890abcdef';
+    $user->trustedDevices()->create([
+        'device_id' => (string) Str::uuid(),
+        'device_key_hash' => hash('sha256', $plainToken),
+        'device_label' => 'Chrome on Windows',
+        'platform' => 'web',
+        'ip_address' => '127.0.0.1',
+        'last_used_at' => now(),
+        'expires_at' => now()->addDays(30),
+    ]);
+
+    $this->withCookie(DeviceTrustService::COOKIE_NAME, $plainToken)
+        ->post('/login', ['username' => ' Dispatch.Admin ', 'password' => 'password'])
+        ->assertRedirect('/');
+    $this->assertAuthenticatedAs($user);
+});
+
+it('redirects an active verified user on an unrecognized browser to verification challenge', function () {
+    $user = User::factory()->create(['email' => 'dispatcher@example.com', 'username' => 'dispatch.admin']);
+    $user->syncRoles([RoleName::OperationsManager->value]);
+
+    $this->post('/login', ['username' => ' Dispatch.Admin ', 'password' => 'password'])
+        ->assertRedirect(route('login.challenge'));
+    $this->assertGuest();
+});
+
+it('does not lock out unverified users, allowing login to complete email verification', function () {
+    $user = User::factory()->unverified()->create(['email' => 'unverified@example.com', 'username' => 'unverified.admin']);
+
+    $this->post('/login', ['username' => 'unverified.admin', 'password' => 'password'])
+        ->assertRedirect('/');
     $this->assertAuthenticatedAs($user);
 });
 
@@ -31,11 +64,23 @@ it('does not persist a remembered web session', function (): void {
         'remember_token' => null,
     ]);
 
-    $this->post('/login', [
-        'username' => $user->username,
-        'password' => 'password',
-        'remember' => true,
-    ])->assertRedirect('/');
+    $plainToken = 'test-plain-trust-token-1234567890abcdef';
+    $user->trustedDevices()->create([
+        'device_id' => (string) Str::uuid(),
+        'device_key_hash' => hash('sha256', $plainToken),
+        'device_label' => 'Chrome on Windows',
+        'platform' => 'web',
+        'ip_address' => '127.0.0.1',
+        'last_used_at' => now(),
+        'expires_at' => now()->addDays(30),
+    ]);
+
+    $this->withCookie(DeviceTrustService::COOKIE_NAME, $plainToken)
+        ->post('/login', [
+            'username' => $user->username,
+            'password' => 'password',
+            'remember' => true,
+        ])->assertRedirect('/');
 
     expect($user->refresh()->remember_token)->toBeNull();
 });
