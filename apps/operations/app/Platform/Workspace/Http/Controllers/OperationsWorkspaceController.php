@@ -131,15 +131,17 @@ final class OperationsWorkspaceController extends Controller
             'activeSosIncidents' => $activeSos,
         ];
 
+        $hasErrors = $request->session()->has('errors');
+
         foreach ($this->allSectionProps() as $prop) {
             $resolver = fn (): mixed => $this->resolveSectionProp($prop, $loadSection, $user, $canCreateDispatch, $canViewRentalHandoffs, $canViewSalesHandoffs, $canViewAllAssignments, $assetFilters, $fuelFilters, $reportFilters);
             $props[$prop] = in_array($prop, self::SECTION_PROPS[$initialSection] ?? [], true)
-                ? Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none'))
+                ? ($hasErrors ? $resolver() : Inertia::defer($resolver, 'workspace-'.($initialSection ?? 'none')))
                 : Inertia::optional($resolver);
         }
 
         $props['projectPlanning'] = in_array('projectPlanning', self::SECTION_PROPS[$initialSection] ?? [], true)
-            ? Inertia::defer(fn () => app(ProjectPlanningQuery::class)->make($user), 'workspace-'.($initialSection ?? 'none'))
+            ? ($hasErrors ? app(ProjectPlanningQuery::class)->make($user) : Inertia::defer(fn () => app(ProjectPlanningQuery::class)->make($user), 'workspace-'.($initialSection ?? 'none')))
             : Inertia::optional(fn () => app(ProjectPlanningQuery::class)->make($user));
 
         return Inertia::render('workspace', $props);

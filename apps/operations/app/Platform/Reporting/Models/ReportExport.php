@@ -37,6 +37,7 @@ class ReportExport extends Model
     use HasUuids;
 
     protected $fillable = [
+        'id',
         'user_id',
         'export_type',
         'format',
@@ -61,6 +62,7 @@ class ReportExport extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'export_type' => ReportExportType::class,
             'status' => ReportExportStatus::class,
             'filters' => 'array',

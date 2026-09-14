@@ -46,6 +46,7 @@
 }
 
 :root {
+    scroll-padding-top: 5rem;
     --color-canvas: #f8fafc;
     --color-surface: #ffffff;
     --color-surface-subtle: oklch(0.95 0.009 255);

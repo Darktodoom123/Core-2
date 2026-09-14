@@ -318,7 +318,7 @@ it('allows authorized download of completed report export', function (): void {
     ]);
 
     $this->actingAs($manager)
-        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id]))
+        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false))
         ->assertStatus(200);
 
     expect(AuditEvent::query()->where('action', 'report_export.downloaded')->exists())->toBeTrue();
@@ -653,8 +653,8 @@ it('denies tampered and expired signed export download URLs', function (): void 
         'expires_at' => now()->addHour(),
     ]);
 
-    $valid = URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id]);
-    $expired = URL::temporarySignedRoute('operations.exports.download', now()->subMinute(), ['export' => $export->id]);
+    $valid = URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false);
+    $expired = URL::temporarySignedRoute('operations.exports.download', now()->subMinute(), ['export' => $export->id], absolute: false);
 
     $this->actingAs($manager)->get($valid.'&signature=tampered')->assertForbidden();
     $this->actingAs($manager)->get($expired)->assertForbidden();
@@ -673,7 +673,7 @@ it('denies signed download after the user is suspended or export permission is r
         'download_expires_at' => now()->addHour(),
         'expires_at' => now()->addHour(),
     ]);
-    $url = URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id]);
+    $url = URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false);
 
     $manager->syncRoles([]);
     $this->actingAs($manager->fresh())->get($url)->assertForbidden();
@@ -695,7 +695,7 @@ it('does not expose a completed export when its private file is missing', functi
     ]);
 
     $this->actingAs($manager)
-        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id]))
+        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false))
         ->assertRedirect();
 });
 
@@ -715,7 +715,7 @@ it('denies an unrelated authorized user from downloading a private export file',
     ]);
 
     $this->actingAs($unrelated)
-        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id]))
+        ->get(URL::temporarySignedRoute('operations.exports.download', now()->addHour(), ['export' => $export->id], absolute: false))
         ->assertForbidden();
 });
 

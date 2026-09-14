@@ -39,14 +39,14 @@ class ReportExportPolicy
     {
         return $this->canAccessExports($user)
             && $export->isDownloadable()
-            && ($user->id === $export->user_id || $user->hasRole(RoleName::SystemAdministrator->value))
+            && ((int) $user->id === (int) $export->user_id || $user->hasRole(RoleName::SystemAdministrator->value))
             && $this->canCreateExports($user);
     }
 
     public function retry(User $user, ReportExport $export): bool
     {
         return $this->canAccessExports($user)
-            && $user->id === $export->user_id
+            && (int) $user->id === (int) $export->user_id
             && $export->status === ReportExportStatus::Failed
             && $this->canCreateExports($user);
     }

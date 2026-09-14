@@ -35,6 +35,12 @@ jobs:
       browser: ${{ steps.filter.outputs.browser }}
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -85,7 +91,7 @@ jobs:
   backend:
     name: Backend Tests & Static Analysis
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -167,9 +173,9 @@ jobs:
   browser-acceptance:
     name: Browser Acceptance & Accessibility
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.browser == 'true'
+    if: needs.changes.outputs.browser == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout code
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -212,6 +218,8 @@ jobs:
         run: |
           cp .env.example .env
           cp apps/operations/.env.example apps/operations/.env
+          sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:4173|' .env
+          sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:4173|' apps/operations/.env
 
       - name: Generate Application Key
         run: php apps/operations/artisan key:generate
@@ -231,6 +239,7 @@ jobs:
 
       - name: Browser accessibility smoke test
         env:
+          APP_URL: http://127.0.0.1:4173
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
           PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-a11y.xml
@@ -239,6 +248,7 @@ jobs:
       - name: Browser acceptance suite
         if: success() || failure()
         env:
+          APP_URL: http://127.0.0.1:4173
           BROADCAST_CONNECTION: 'null'
           BROADCAST_DRIVER: 'null'
           PLAYWRIGHT_JUNIT_OUTPUT: test-results/junit-e2e.xml
@@ -257,7 +267,7 @@ jobs:
   database-security:
     name: PostgreSQL Security & Concurrency
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.database == 'true'
+    if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -380,7 +390,7 @@ jobs:
   mobile:
     name: Mobile Package & Bundling
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true'
+    if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -827,6 +827,7 @@ export function GptRecommendationsSurface({
                     rec={selectedForAccept}
                     onClose={() => setSelectedForAccept(null)}
                     returnFocusTo={modalTrigger}
+                    focusCancel
                 />
             )}
 
@@ -1258,12 +1259,14 @@ export function AcceptGptModal({
     returnFocusTo,
     initialPersonnelIds,
     initialAssetIds,
+    focusCancel = false,
 }: {
     rec: GptRecommendationViewModel;
     onClose: () => void;
     returnFocusTo?: HTMLElement | null;
     initialPersonnelIds?: number[];
     initialAssetIds?: number[];
+    focusCancel?: boolean;
 }) {
     const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<number[]>(
         () =>
@@ -1490,6 +1493,8 @@ export function AcceptGptModal({
                         variant="secondary"
                         onClick={onClose}
                         disabled={processing}
+                        autoFocus={focusCancel || undefined}
+                        data-autofocus={focusCancel ? '' : undefined}
                     >
                         Cancel
                     </Button>

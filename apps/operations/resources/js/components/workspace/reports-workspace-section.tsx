@@ -203,6 +203,7 @@ export function ReportsSurface({
                         {capabilities.create_job_report && (
                             <Button
                                 id="report-submit-toggle"
+                                className="scroll-mt-24"
                                 variant={
                                     showSubmitModal ? 'secondary' : 'primary'
                                 }
@@ -286,11 +287,14 @@ export function ReportsSurface({
                         onDone={() => {
                             setModalDismissed(true);
                             setUserOpenedModal(false);
-                            window.setTimeout(() => {
+                            const focusToggle = () => {
                                 document
                                     .getElementById('report-submit-toggle')
-                                    ?.focus();
-                            }, 0);
+                                    ?.focus({ preventScroll: true });
+                            };
+                            focusToggle();
+                            requestAnimationFrame(focusToggle);
+                            window.setTimeout(focusToggle, 50);
                         }}
                     />
                 )}
@@ -652,7 +656,12 @@ function SubmitJobReportForm({
     const [fileValidationError, setFileValidationError] = useState<
         string | null
     >(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [gpsCapturing, setGpsCapturing] = useState(false);
+
+    const { errors: pageErrors = {} } = usePage().props as {
+        errors?: Record<string, string>;
+    };
 
     const form = useForm({
         dispatch_job_id: initialJobId ? String(initialJobId) : '',
@@ -668,7 +677,13 @@ function SubmitJobReportForm({
         attachments: [] as File[],
     });
 
-    const hasErrors = Object.keys(form.errors).length > 0;
+    const combinedErrors = {
+        ...pageErrors,
+        ...form.errors,
+        ...(fileValidationError ? { file: fileValidationError } : {}),
+        ...(submitError ? { submit: submitError } : {}),
+    };
+    const hasErrors = Object.keys(combinedErrors).length > 0;
 
     const captureLocation = () => {
         if (typeof window === 'undefined' || !navigator.geolocation) {
@@ -701,9 +716,17 @@ function SubmitJobReportForm({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFileValidationError(null);
-        const incomingFiles = Array.from(e.target.files ?? []);
+        const files = e.target.files;
 
-        if (incomingFiles.length + form.data.attachments.length > maxCount) {
+        if (!files || files.length === 0) {
+            form.setData('attachments', []);
+
+            return;
+        }
+
+        const incomingFiles = Array.from(files);
+
+        if (incomingFiles.length > maxCount) {
             setFileValidationError(
                 `You cannot attach more than ${maxCount} files per job report.`,
             );
@@ -717,10 +740,7 @@ function SubmitJobReportForm({
             }
         }
 
-        form.setData('attachments', [
-            ...form.data.attachments,
-            ...incomingFiles,
-        ]);
+        form.setData('attachments', incomingFiles);
     };
 
     const removeAttachment = (idx: number) => {
@@ -732,7 +752,6 @@ function SubmitJobReportForm({
 
     const submitAsFinal = (e: FormEvent) => {
         e.preventDefault();
-        setFileValidationError(null);
         form.transform((data) => ({
             ...data,
             is_draft: false,
@@ -742,7 +761,29 @@ function SubmitJobReportForm({
             preserveState: true,
             preserveScroll: true,
             forceFormData: true,
+            onError: (errors) => {
+                setSubmitError(
+                    'Unable to submit job report. Please check the highlighted fields and try again.',
+                );
+
+                if (
+                    errors.attachments ||
+                    Object.keys(errors).some((k) =>
+                        k.startsWith('attachments.'),
+                    )
+                ) {
+                    setFileValidationError(
+                        errors.attachments ||
+                            Object.entries(errors).find(([k]) =>
+                                k.startsWith('attachments.'),
+                            )?.[1] ||
+                            'One or more attachments are invalid.',
+                    );
+                }
+            },
             onSuccess: () => {
+                setSubmitError(null);
+                setFileValidationError(null);
                 form.reset();
                 onDone();
             },
@@ -751,7 +792,6 @@ function SubmitJobReportForm({
 
     const submitAsDraft = (e: FormEvent) => {
         e.preventDefault();
-        setFileValidationError(null);
         form.transform((data) => ({
             ...data,
             is_draft: true,
@@ -761,7 +801,29 @@ function SubmitJobReportForm({
             preserveState: true,
             preserveScroll: true,
             forceFormData: true,
+            onError: (errors) => {
+                setSubmitError(
+                    'Unable to submit job report. Please check the highlighted fields and try again.',
+                );
+
+                if (
+                    errors.attachments ||
+                    Object.keys(errors).some((k) =>
+                        k.startsWith('attachments.'),
+                    )
+                ) {
+                    setFileValidationError(
+                        errors.attachments ||
+                            Object.entries(errors).find(([k]) =>
+                                k.startsWith('attachments.'),
+                            )?.[1] ||
+                            'One or more attachments are invalid.',
+                    );
+                }
+            },
             onSuccess: () => {
+                setSubmitError(null);
+                setFileValidationError(null);
                 form.reset();
                 onDone();
             },
@@ -769,7 +831,7 @@ function SubmitJobReportForm({
     };
 
     return (
-        <Panel id="report-submit-form" className="p-4 md:p-6">
+        <Panel id="report-submit-form" className="scroll-mt-24 p-4 md:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
                 <div>
                     <h3 className="text-base font-semibold text-ink">
@@ -783,7 +845,7 @@ function SubmitJobReportForm({
                 <button
                     type="button"
                     onClick={onDone}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
+                    className="flex h-11 w-11 shrink-0 scroll-mt-24 items-center justify-center rounded-lg text-ink-soft hover:bg-surface-subtle hover:text-ink"
                     aria-label="Close form"
                 >
                     <X className="h-4 w-4" />
@@ -1075,14 +1137,14 @@ function SubmitJobReportForm({
                     </div>
                 )}
 
-                {hasErrors && (
+                {(hasErrors || Boolean(submitError)) && (
                     <div
                         className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-xs text-danger"
                         role="alert"
                     >
                         <p className="font-semibold">
-                            Unable to submit job report. Please check the
-                            highlighted fields and try again.
+                            {submitError ||
+                                'Unable to submit job report. Please check the highlighted fields and try again.'}
                         </p>
                     </div>
                 )}

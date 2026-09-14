@@ -30,7 +30,7 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->group(funct
             Route::post('/exports', [ReportExportController::class, 'store']);
             Route::get('/reports/exports/{export}/download', [ReportExportController::class, 'download'])
                 ->name('operations.exports.download')
-                ->middleware('signed');
+                ->middleware('signed:relative');
             Route::post('/reports/exports/{export}/retry', [ReportExportController::class, 'retry']);
         });
     });

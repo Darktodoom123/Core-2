@@ -1070,8 +1070,9 @@ final class OperationsWorkspaceViewModel
             'download_url' => $export->isDownloadable()
                 ? URL::temporarySignedRoute(
                     'operations.exports.download',
-                    $export->download_expires_at ?? $export->expires_at ?? now(),
+                    $export->download_expires_at ?? $export->expires_at ?? now()->addDay(),
                     ['export' => $export->getKey()],
+                    absolute: false,
                 )
                 : null,
             'retry_url' => "/operations/reports/exports/{$export->getKey()}/retry",

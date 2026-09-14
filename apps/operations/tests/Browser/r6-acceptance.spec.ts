@@ -21,7 +21,8 @@ test.describe('R6 deterministic authenticated acceptance', () => {
             }),
         ).toBeVisible();
 
-        await page.getByRole('button', { name: 'Sign out' }).click();
+        await page.getByRole('button', { name: 'User account menu' }).click();
+        await page.getByRole('menuitem', { name: 'Sign out' }).click();
         await page.waitForURL(/\/login$/);
         await signIn(page, fixtures.users.manager, fixtures.password);
         await page.goto('/?view=reports');
@@ -34,7 +35,8 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ];
         expect(signedExportUrls[0]).not.toBeNull();
         expect(signedExportUrls[1]).not.toBeNull();
-        await page.getByRole('button', { name: 'Sign out' }).click();
+        await page.getByRole('button', { name: 'User account menu' }).click();
+        await page.getByRole('menuitem', { name: 'Sign out' }).click();
         await page.waitForURL(/\/login$/);
         await signIn(page, fixtures.users.driver, fixtures.password);
         await expect(
@@ -460,9 +462,10 @@ test.describe('R6 deterministic authenticated acceptance', () => {
         ).toBeFocused();
         await page
             .getByRole('dialog')
-            .getByRole('button', { name: 'Confirm & Apply Resource Plan' })
+            .getByRole('button', { name: /^Confirm & Apply / })
             .click();
         await (await acceptResponse).finished();
+        await expect(page.getByRole('dialog')).toBeHidden();
 
         const rejectResponse = page.waitForResponse(
             (response) =>

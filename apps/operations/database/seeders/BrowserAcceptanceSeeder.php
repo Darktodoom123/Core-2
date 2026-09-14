@@ -12,6 +12,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Audit\Models\AuditEvent;
 use App\Platform\Gpt\Enums\GptRecommendationStatus;
 use App\Platform\Gpt\Models\GptRecommendation;
+use App\Platform\Gpt\Services\BoundedContextBuilder;
 use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\PersonnelCredential;
 use App\Platform\Identity\Models\User;
@@ -146,6 +147,7 @@ final class BrowserAcceptanceSeeder extends Seeder
 
         $exportPath = 'exports/browser/r6-report.csv';
         Storage::disk('local')->put($exportPath, "reference,status\nR6-BROWSER-001,draft\n");
+        Storage::disk('private')->put($exportPath, "reference,status\nR6-BROWSER-001,draft\n");
         $export = ReportExport::query()->create([
             'id' => '00000000-0000-0000-0000-000000000006',
             'user_id' => $manager->id,
@@ -164,6 +166,7 @@ final class BrowserAcceptanceSeeder extends Seeder
         ]);
         $pdfPath = 'exports/browser/r6-report.pdf';
         Storage::disk('local')->put($pdfPath, '%PDF-1.4 browser fixture');
+        Storage::disk('private')->put($pdfPath, '%PDF-1.4 browser fixture');
         $pdfExport = ReportExport::query()->create([
             'id' => '00000000-0000-0000-0000-000000000007',
             'user_id' => $manager->id,
@@ -238,7 +241,7 @@ final class BrowserAcceptanceSeeder extends Seeder
                         'operational_asset_id' => $crane->id,
                         'asset_code' => $crane->code,
                         'name' => $crane->name,
-                        'assignment_type' => 'primary_crane',
+                        'assignment_type' => 'crane',
                     ]],
                 ],
             ],
@@ -435,6 +438,18 @@ final class BrowserAcceptanceSeeder extends Seeder
         }
 
         $this->call(ProjectPlanningDemoSeeder::class);
+
+        $contextBuilder = app(BoundedContextBuilder::class);
+        foreach ($recommendations as $key => $rec) {
+            if ($key !== 'stale' && $rec->status !== GptRecommendationStatus::Stale) {
+                $recJob = DispatchJob::query()->find($rec->subject_id);
+                if ($recJob) {
+                    $rec->update([
+                        'context_hash' => $contextBuilder->buildForDispatchJob($recJob)['context_hash'],
+                    ]);
+                }
+            }
+        }
     }
 
     private function user(string $name, string $email, RoleName $role): User
@@ -455,12 +470,16 @@ final class BrowserAcceptanceSeeder extends Seeder
     /** @param array<string, mixed> $overrides */
     private function recommendation(DispatchJob $job, User $requester, GptRecommendationStatus $status, array $overrides = []): GptRecommendation
     {
+        $contextHash = $status === GptRecommendationStatus::Stale
+            ? hash('sha256', 'r6-stale-'.$job->id)
+            : app(BoundedContextBuilder::class)->buildForDispatchJob($job)['context_hash'];
+
         return GptRecommendation::query()->create(array_merge([
             'subject_type' => $job->getMorphClass(),
             'subject_id' => $job->id,
             'requested_by' => $requester->id,
             'purpose' => 'dispatch_assignment',
-            'context_hash' => hash('sha256', 'r6-browser-'.$job->id),
+            'context_hash' => $contextHash,
             'input_references' => ['job_reference' => $job->reference],
             'recommendation' => [
                 'summary' => 'Use the available qualified crew for this fixture job.',
