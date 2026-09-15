@@ -430,6 +430,11 @@ export default function AccountSettings({
     // Handle Password Update
     const handlePasswordSubmit = (e: FormEvent) => {
         e.preventDefault();
+
+        if (passwordForm.processing) {
+            return;
+        }
+
         passwordForm.post('/account/password', {
             preserveScroll: true,
             onSuccess: () => {
@@ -437,6 +442,17 @@ export default function AccountSettings({
                 setFeedbackMessage(
                     'Password updated. Other sessions have been signed out.',
                 );
+            },
+            onError: (errors) => {
+                if (errors.current_password) {
+                    passwordForm.reset(
+                        'current_password',
+                        'password',
+                        'password_confirmation',
+                    );
+                } else {
+                    passwordForm.reset('password', 'password_confirmation');
+                }
             },
         });
     };
@@ -1535,12 +1551,16 @@ export default function AccountSettings({
                                             <div className="relative">
                                                 <Input
                                                     id="current_password"
+                                                    name="current_password"
                                                     type={
                                                         showCurrentPassword
                                                             ? 'text'
                                                             : 'password'
                                                     }
                                                     autoComplete="current-password"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     value={
                                                         passwordForm.data
                                                             .current_password
@@ -1559,12 +1579,15 @@ export default function AccountSettings({
                                                 />
                                                 <button
                                                     type="button"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     onClick={() =>
                                                         setShowCurrentPassword(
                                                             (p) => !p,
                                                         )
                                                     }
-                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-50"
                                                     aria-label={
                                                         showCurrentPassword
                                                             ? 'Hide current password'
@@ -1608,12 +1631,16 @@ export default function AccountSettings({
                                             <div className="relative">
                                                 <Input
                                                     id="new_password"
+                                                    name="password"
                                                     type={
                                                         showNewPassword
                                                             ? 'text'
                                                             : 'password'
                                                     }
                                                     autoComplete="new-password"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     value={
                                                         passwordForm.data
                                                             .password
@@ -1632,12 +1659,15 @@ export default function AccountSettings({
                                                 />
                                                 <button
                                                     type="button"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     onClick={() =>
                                                         setShowNewPassword(
                                                             (p) => !p,
                                                         )
                                                     }
-                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-50"
                                                     aria-label={
                                                         showNewPassword
                                                             ? 'Hide new password'
@@ -1680,12 +1710,16 @@ export default function AccountSettings({
                                             <div className="relative">
                                                 <Input
                                                     id="password_confirmation"
+                                                    name="password_confirmation"
                                                     type={
                                                         showConfirmPassword
                                                             ? 'text'
                                                             : 'password'
                                                     }
                                                     autoComplete="new-password"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     value={
                                                         passwordForm.data
                                                             .password_confirmation
@@ -1704,12 +1738,15 @@ export default function AccountSettings({
                                                 />
                                                 <button
                                                     type="button"
+                                                    disabled={
+                                                        passwordForm.processing
+                                                    }
                                                     onClick={() =>
                                                         setShowConfirmPassword(
                                                             (p) => !p,
                                                         )
                                                     }
-                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
+                                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-ink-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-50"
                                                     aria-label={
                                                         showConfirmPassword
                                                             ? 'Hide password confirmation'
@@ -1743,7 +1780,7 @@ export default function AccountSettings({
                                             )}
                                         </div>
 
-                                        <div className="pt-1">
+                                        <div className="flex items-center gap-3 pt-1">
                                             <Button
                                                 type="submit"
                                                 variant="primary"
@@ -1764,6 +1801,19 @@ export default function AccountSettings({
                                                     'Update password'
                                                 )}
                                             </Button>
+                                            {passwordForm.recentlySuccessful &&
+                                                !passwordForm.isDirty && (
+                                                    <span
+                                                        role="status"
+                                                        className="flex items-center gap-1.5 text-xs font-medium text-success"
+                                                    >
+                                                        <CheckCircle2
+                                                            className="h-3.5 w-3.5"
+                                                            aria-hidden="true"
+                                                        />
+                                                        Password updated
+                                                    </span>
+                                                )}
                                         </div>
                                     </form>
                                 </div>

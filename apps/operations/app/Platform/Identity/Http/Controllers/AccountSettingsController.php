@@ -293,37 +293,40 @@ final class AccountSettingsController extends Controller
         return back()->with('status', 'Your email address has been updated and verified successfully.');
     }
 
-    public function updatePassword(Request $request, RecordAuditEvent $audit): RedirectResponse
+    public function updatePassword(Request $request, RecordAuditEvent $audit): JsonResponse|RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         $validated = $request->validate([
-            'current_password' => ['required', 'string', 'current_password:web'],
-            'password' => ['required', 'string', 'confirmed', Password::defaults(), 'different:current_password'],
+            'current_password' => ['required', 'string', 'max:255', 'current_password:web'],
+            'password' => ['required', 'string', 'max:255', 'confirmed', Password::defaults(), 'different:current_password'],
         ]);
 
-        $user->forceFill([
-            'password' => Hash::make($validated['password']),
-            'remember_token' => null,
-        ])->save();
-
-        // Rotate current session and track new session ID
+        // Rotate current session and track new session ID atomically with revocations
         $request->session()->regenerate();
         $newSessionId = $request->session()->getId();
-        ValidateActiveSession::track($user, $request);
 
-        // Revoke device trust
-        $user->trustedDevices()->delete();
+        DB::transaction(function () use ($user, $validated, $request, $newSessionId): void {
+            $user->forceFill([
+                'password' => Hash::make($validated['password']),
+                'remember_token' => null,
+            ])->save();
 
-        // Revoke pending OTP challenges
-        EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
+            // Revoke device trust
+            $user->trustedDevices()->delete();
 
-        // Revoke all other web sessions and remember-me access
-        DB::table('sessions')
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $newSessionId)
-            ->delete();
+            // Revoke pending OTP challenges
+            EmailOneTimeCode::query()->where('user_id', $user->id)->delete();
+
+            // Track active session and revoke all other web sessions and remember-me access
+            ValidateActiveSession::track($user, $request);
+
+            DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->where('id', '!=', $newSessionId)
+                ->delete();
+        });
 
         // Note: Existing mobile and API personal access tokens remain active
         // to prevent operational disruptions for field crane and dispatch workers.
@@ -336,6 +339,12 @@ final class AccountSettingsController extends Controller
             'user_agent' => $request->userAgent(),
             'outcome' => 'success',
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Your password has been changed. All other sessions and device trust have been revoked.',
+            ])->withoutCookie(DeviceTrustService::COOKIE_NAME);
+        }
 
         return back()
             ->with('status', 'Your password has been changed. All other sessions and device trust have been revoked.')

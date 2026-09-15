@@ -76,10 +76,27 @@ vi.mock('@inertiajs/react', () => ({
             setError: (key: string, message: string) =>
                 setErrors((p) => ({ ...p, [key]: message })),
             clearErrors: () => setErrors({}),
-            reset: () => setDataState(initialValues),
+            reset: (...keys: string[]) => {
+                if (keys.length === 0) {
+                    setDataState(initialValues);
+                } else {
+                    setDataState((prev: any) => {
+                        const next = { ...prev };
+
+                        for (const key of keys) {
+                            if (key in initialValues) {
+                                next[key] = initialValues[key];
+                            }
+                        }
+
+                        return next;
+                    });
+                }
+            },
             defaults: () => {},
             isDirty,
             processing,
+            recentlySuccessful: false,
             post: vi.fn(),
             patch: vi.fn(),
             put: vi.fn(),

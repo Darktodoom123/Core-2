@@ -249,17 +249,87 @@ describe('AccountSettings Page Component', () => {
         });
     });
 
-    it('toggles password visibility in password form', () => {
+    it('renders change password card with accessible inputs and toggles visibility for all fields', () => {
+        render(<AccountSettings {...mockProps} current_tab="security" />);
+
+        expect(
+            screen.getByRole('heading', { name: 'Change Password' }),
+        ).toBeInTheDocument();
+
+        const currentPasswordInput =
+            screen.getByLabelText(/^Current Password/i);
+        const newPasswordInput = screen.getByLabelText(/^New Password/i);
+        const confirmPasswordInput = screen.getByLabelText(
+            /^Confirm New Password/i,
+        );
+
+        expect(currentPasswordInput).toHaveAttribute('type', 'password');
+        expect(currentPasswordInput).toHaveAttribute(
+            'name',
+            'current_password',
+        );
+        expect(newPasswordInput).toHaveAttribute('type', 'password');
+        expect(newPasswordInput).toHaveAttribute('name', 'password');
+        expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+        expect(confirmPasswordInput).toHaveAttribute(
+            'name',
+            'password_confirmation',
+        );
+
+        // Toggle Current Password visibility
+        const toggleCurrentBtn = screen.getByLabelText('Show current password');
+        fireEvent.click(toggleCurrentBtn);
+        expect(currentPasswordInput).toHaveAttribute('type', 'text');
+        const hideCurrentBtn = screen.getByLabelText('Hide current password');
+        fireEvent.click(hideCurrentBtn);
+        expect(currentPasswordInput).toHaveAttribute('type', 'password');
+
+        // Toggle New Password visibility
+        const toggleNewBtn = screen.getByLabelText('Show new password');
+        fireEvent.click(toggleNewBtn);
+        expect(newPasswordInput).toHaveAttribute('type', 'text');
+        const hideNewBtn = screen.getByLabelText('Hide new password');
+        fireEvent.click(hideNewBtn);
+        expect(newPasswordInput).toHaveAttribute('type', 'password');
+
+        // Toggle Confirm Password visibility
+        const toggleConfirmBtn = screen.getByLabelText(
+            'Show password confirmation',
+        );
+        fireEvent.click(toggleConfirmBtn);
+        expect(confirmPasswordInput).toHaveAttribute('type', 'text');
+        const hideConfirmBtn = screen.getByLabelText(
+            'Hide password confirmation',
+        );
+        fireEvent.click(hideConfirmBtn);
+        expect(confirmPasswordInput).toHaveAttribute('type', 'password');
+    });
+
+    it('handles submitting the change password form', () => {
         render(<AccountSettings {...mockProps} current_tab="security" />);
 
         const currentPasswordInput =
             screen.getByLabelText(/^Current Password/i);
-        expect(currentPasswordInput).toHaveAttribute('type', 'password');
+        const newPasswordInput = screen.getByLabelText(/^New Password/i);
+        const confirmPasswordInput = screen.getByLabelText(
+            /^Confirm New Password/i,
+        );
+        const submitBtn = screen.getByRole('button', {
+            name: 'Update password',
+        });
 
-        const toggleBtn = screen.getByLabelText('Show current password');
-        fireEvent.click(toggleBtn);
+        fireEvent.change(currentPasswordInput, {
+            target: { value: 'CurrentSecret123!' },
+        });
+        fireEvent.change(newPasswordInput, {
+            target: { value: 'BrandNewSecret123!' },
+        });
+        fireEvent.change(confirmPasswordInput, {
+            target: { value: 'BrandNewSecret123!' },
+        });
 
-        expect(currentPasswordInput).toHaveAttribute('type', 'text');
+        fireEvent.click(submitBtn);
+        expect(submitBtn).toBeInTheDocument();
     });
 
     it('shows OTP enabled badge when email_otp_enabled is true', () => {
