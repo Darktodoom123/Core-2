@@ -14,3 +14,7 @@ Start with the [architecture documentation](microservice/architecture.md), then 
 - [Deployment and hosting](architecture/deployment.md) records the HostForge topology and release verification evidence.
 
 Other local product/design/reference documents may remain Git-ignored. The microservice folder is deliberately trackable so the implementation handoff survives a new checkout.
+
+## Company website reference
+
+- [Alibaton website reference](references/alibaton-website.md): equipment categories and published specifications, project imagery, visual design observations, and guidance for using the company website in Core-2. This reference is tracked in Git.

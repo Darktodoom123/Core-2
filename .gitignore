@@ -90,6 +90,9 @@ Desktop.ini
 !/Docs/
 /Docs/*
 !/Docs/README.md
+!/Docs/references/
+/Docs/references/*
+!/Docs/references/alibaton-website.md
 !/Docs/microservice/
 !/Docs/microservice/**
 !/Docs/architecture/
