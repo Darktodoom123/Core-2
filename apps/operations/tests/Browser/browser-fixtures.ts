@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Page } from '@playwright/test';
@@ -46,6 +47,51 @@ export function browserFixtures(): BrowserFixtures {
     return JSON.parse(readFileSync(path, 'utf8')) as BrowserFixtures;
 }
 
+export interface ActiveOtpDetails {
+    code: string;
+    challenge_id: string;
+    attempts: number;
+    resend_count: number;
+    expires_at: string;
+}
+
+export function getLatestOtp(identifier = 'browser.manager'): ActiveOtpDetails {
+    const helperScript = resolve(import.meta.dirname, 'otp-helper.php');
+    const output = execFileSync('php', [helperScript, 'get', identifier], {
+        encoding: 'utf8',
+    });
+
+    return JSON.parse(output.trim()) as ActiveOtpDetails;
+}
+
+export function clearOtpCooldown(identifier = 'browser.manager'): void {
+    const helperScript = resolve(import.meta.dirname, 'otp-helper.php');
+    execFileSync('php', [helperScript, 'clear-cooldown', identifier], {
+        encoding: 'utf8',
+    });
+}
+
+export function resetTestUser(identifier = 'browser.manager'): void {
+    const helperScript = resolve(import.meta.dirname, 'otp-helper.php');
+    execFileSync('php', [helperScript, 'reset-user', identifier], {
+        encoding: 'utf8',
+    });
+}
+
+export function countTrustedDevices(identifier = 'browser.manager'): number {
+    const helperScript = resolve(import.meta.dirname, 'otp-helper.php');
+    const output = execFileSync(
+        'php',
+        [helperScript, 'count-trusted-devices', identifier],
+        {
+            encoding: 'utf8',
+        },
+    );
+    const parsed = JSON.parse(output.trim()) as { count: number };
+
+    return parsed.count;
+}
+
 export async function signIn(page: Page, username?: string, password?: string) {
     const fixtures = browserFixtures();
     const resolvedUser =
@@ -59,7 +105,23 @@ export async function signIn(page: Page, username?: string, password?: string) {
     await page.getByLabel('Username').fill(resolvedUser);
     await page.getByLabel('Password').fill(resolvedPass);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await page.waitForURL(/\/$/);
+
+    await page.waitForURL(
+        (url) => url.pathname === '/' || url.pathname === '/login/challenge',
+    );
+
+    if (page.url().includes('/login/challenge')) {
+        const otp = getLatestOtp(resolvedUser);
+        const trustCheckbox = page.getByLabel(/Trust this device for 30 days/i);
+
+        if (await trustCheckbox.isVisible()) {
+            await trustCheckbox.check();
+        }
+
+        await page.getByPlaceholder('000000').fill(otp.code);
+        await page.getByRole('button', { name: 'Verify and sign in' }).click();
+        await page.waitForURL(/\/$/);
+    }
 }
 
 export async function browserFetch(
