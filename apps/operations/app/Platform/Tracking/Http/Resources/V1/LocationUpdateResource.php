@@ -14,7 +14,7 @@ final class LocationUpdateResource extends JsonResource
     public function toArray(Request $request): array
     {
         if ($this->resource instanceof LatestLocationDto) {
-            return [
+            $payload = [
                 'id' => $this->resource->id,
                 'user_id' => $this->resource->userId,
                 'dispatch_job_id' => $this->resource->dispatchJobId,
@@ -27,6 +27,15 @@ final class LocationUpdateResource extends JsonResource
                 'received_at' => $this->resource->receivedAt?->toIso8601String(),
                 'remarks' => $this->resource->remarks,
             ];
+
+            if ($this->resource->isQueued) {
+                $payload['status'] = 'queued';
+                if ($this->resource->streamId !== null) {
+                    $payload['stream_id'] = $this->resource->streamId;
+                }
+            }
+
+            return $payload;
         }
 
         return [

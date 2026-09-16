@@ -94,6 +94,13 @@ final class ValidateServiceSignature
             ], 500);
         }
 
+        if (app()->environment('production') && (strlen($secret) < 16 || in_array($secret, ['test-tracking-service-secret', 'placeholder', 'secret', 'default-tracking-secret', 'changeme'], true))) {
+            return new JsonResponse([
+                'message' => 'Insecure tracking service secret configured for production.',
+                'error' => 'server_error',
+            ], 500);
+        }
+
         $method = strtoupper($request->getMethod());
         $rawPath = (string) parse_url($request->getRequestUri(), PHP_URL_PATH);
         $canonicalPath = '/'.trim($rawPath, '/');

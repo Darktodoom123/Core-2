@@ -56,9 +56,13 @@ services:
       REVERB_SCHEME: http
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
       CACHE_CONFIG: "${CACHE_CONFIG:-true}"
-      TRACKING_SERVICE_DRIVER: http
+      TRACKING_SERVICE_DRIVER: "${TRACKING_SERVICE_DRIVER:-stream}"
       TRACKING_SERVICE_URL: http://tracking
       TRACKING_SERVICE_SECRET: "${TRACKING_SERVICE_SECRET:?Set TRACKING_SERVICE_SECRET in .env}"
+      TRACKING_STREAM_KEY: telemetry.gps.v1
+      TRACKING_STREAM_GROUP: tracking-ingest-workers
+      TRACKING_STREAM_MAXLEN: 100000
+      TRACKING_DLQ_STREAM_KEY: telemetry.gps.dlq
       CORE2_SERVICE_NAME: operations
       MAIL_MAILER: "${MAIL_MAILER:-smtp}"
       MAIL_SCHEME: "${MAIL_SCHEME:-smtp}"
@@ -123,10 +127,17 @@ services:
       MIGRATION_TIMEOUT_SECONDS: "${TRACKING_MIGRATION_TIMEOUT_SECONDS:-120}"
       CORE2_SERVICE_NAME: tracking
       BROADCAST_CONNECTION: "null"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TRACKING_STREAM_KEY: telemetry.gps.v1
+      TRACKING_STREAM_GROUP: tracking-ingest-workers
+      TRACKING_DLQ_STREAM_KEY: telemetry.gps.dlq
     volumes:
       - tracking-storage-data:/var/www/html/storage
     depends_on:
       tracking-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1/up"]

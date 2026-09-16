@@ -62,6 +62,10 @@ return [
         'secret' => env('TRACKING_SERVICE_SECRET', 'test-tracking-service-secret'),
         'timeout' => (float) env('TRACKING_SERVICE_TIMEOUT', 5.0),
         'connect_timeout' => (float) env('TRACKING_SERVICE_CONNECT_TIMEOUT', 3.0),
+        'stream_key' => env('TRACKING_STREAM_KEY', 'telemetry.gps.v1'),
+        'stream_group' => env('TRACKING_STREAM_GROUP', 'tracking-ingest-workers'),
+        'stream_maxlen' => (int) env('TRACKING_STREAM_MAXLEN', 100000),
+        'dlq_stream_key' => env('TRACKING_DLQ_STREAM_KEY', 'telemetry.gps.dlq'),
     ],
 
 ];

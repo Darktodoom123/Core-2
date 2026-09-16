@@ -49,14 +49,41 @@ Prerequisite: Phase 4 reviewed and integration contracts stable. Existing develo
    - Implement `location:prune` console command in `apps/tracking`.
    - Schedule daily execution at 02:15 UTC. Nulls or truncates coordinates older than 30 days (`captured_at < NOW() - INTERVAL '30 days'`) while preserving anonymized audit timestamps.
 
-## Failure Boundaries & Acceptance
+## Phase 2 Modernization: Asynchronous Redis Streams & Read Replicas
 
-- **Tracking Outage**:
-  - Outage of Tracking does not block dispatch creation, asset scheduling, crew assignments, HoS shift changes, DVIR safety walkarounds, or SOS alerts in Operations.
-  - Operations live map shows an explicit "Live telemetry currently unavailable — displaying last known positions" banner.
-- **Acceptance Tests**:
-  - High-frequency burst test: simulate 1,000 GPS points/sec into `POST /v1/locations`; verify Redis latest positions update instantly and PostgreSQL partitions absorb writes without lock contention.
-  - Deduplication test: re-sending the same `command_id` returns HTTP 200/201 with identical payload without inserting duplicate rows.
-  - Sharing-off test: toggling sharing off clears the active position immediately; replaying old samples with `sharing_enabled = true` is rejected.
-  - 30-day retention test: verify coordinates with `captured_at` > 30 days are purged by `location:prune`.
-  - Operations workspace test suite passes using mocked `TrackingClientInterface`.
+### 1. Asynchronous Telemetry Ingestion (Redis Streams)
+
+To decouple mobile response latencies from database write locks during peak morning dispatch bursts, telemetry ingestion transitions to a durable, message-driven stream architecture:
+
+- **Stream Definition**:
+  - Stream Key: `telemetry.gps.v1`
+  - Consumer Group: `tracking-ingest-workers`
+  - Dead Letter Queue (DLQ): `telemetry.gps.dlq`
+  - Stream Capping: `MAXLEN ~ 100000` (bounded memory footprint in Redis 7)
+- **Operations Publishing Flow (`POST /api/v1/locations`)**:
+  - Sanctum token authentication and role/permission verification (`tracking.share_own`).
+  - Strict input validation and active dispatch job / asset assignment boundary checks.
+  - Generates canonical HMAC-SHA256 signature over sorted payload: `STREAM\n{stream_key}\n{timestamp}\n{digest}`.
+  - Appends to `telemetry.gps.v1` via `XADD` with max length capping (`MAXLEN ~ 100000`).
+  - **Network I/O Boundary**: Stream publishing occurs strictly outside database transactions.
+  - **Client Response**: Returns HTTP `202 Accepted` acknowledging durable queuing. If Redis is unavailable, returns HTTP `503 Service Unavailable`, prompting `packages/field-mobile` to retain samples in its persistent SQLite outbox.
+- **Tracking Ingestion Daemon (`tracking:consume-telemetry`)**:
+  - Resilient CLI daemon reading via `XREADGROUP` into the `tracking-ingest-workers` group.
+  - Processes batches inside ascending user ID row locks (`LatestLocation::lockForUpdate()`) to prevent deadlock contention across concurrent workers.
+  - Strict idempotency via `tracking_command_receipts` table on `command_id` with payload SHA-256 conflict detection.
+  - Acknowledges processed messages via `XACK`.
+  - **Pending Entries List (PEL) & DLQ**: Inspects pending unacknowledged entries via `XPENDING` / `XCLAIM`. Samples exceeding 3 delivery attempts are automatically routed to `telemetry.gps.dlq` and acknowledged on the primary stream.
+  - **Security & Privacy Guardrails**: Validates HMAC signatures; immediate coordinate nullification on delayed offline samples older than 30 days (`[COORDINATES_PURGED_RETENTION_EXPIRED]`); sanitized logs omit coordinates, tokens, and secrets.
+- **Process Topology**:
+  - Configured in `infra/docker/tracking-supervisord.conf` with 2 parallel consumer worker processes (`[program:tracking-telemetry-consumer]`).
+
+### 2. Database Read Replicas for Fleet Dispatch
+
+- **Configuration**:
+  - Configured in `apps/tracking/config/database.php` on the `pgsql` connection with separated `read` and `write` host pools (`DB_READ_HOST` / `DB_HOST`).
+  - Configured with `'sticky' => true` to guarantee immediate read-after-write consistency within the same request lifecycle.
+- **Query Routing**:
+  - High-frequency live dispatch reads (`GET /internal/v1/locations/latest` and `GET /internal/v1/locations/history`) query read replicas.
+  - Ingestion writes (`LocationController::ingest` and `TelemetryIngestService`) strictly target the primary database via `onWriteConnection()` and transactions.
+  - **Bounded Response Guarantees**: Enforces limits (default 250, capped at 1,000) on latest positions and paginated boundaries on historical track logs.
+

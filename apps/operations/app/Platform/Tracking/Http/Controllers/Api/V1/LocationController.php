@@ -9,6 +9,7 @@ use App\Platform\Tracking\Actions\BroadcastTrackingWorkspaceUpdate;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Tracking\Exceptions\TrackingConflictException;
+use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use App\Platform\Tracking\Http\Requests\StoreLocationUpdateRequest;
 use App\Platform\Tracking\Http\Resources\V1\LocationUpdateResource;
 use App\Platform\Tracking\Models\LocationUpdate;
@@ -53,6 +54,11 @@ final class LocationController extends Controller
                     'message' => $e->getMessage(),
                     'error' => 'conflict',
                 ], 409);
+            } catch (TrackingServiceUnavailableException $e) {
+                return response()->json([
+                    'message' => 'Telemetry streaming service unavailable. Sample retained in outbox.',
+                    'error' => 'service_unavailable',
+                ], 503);
             }
 
             if ($trackingClient instanceof FakeTrackingClient) {
@@ -76,6 +82,13 @@ final class LocationController extends Controller
                 ],
             );
             $broadcast->afterCommit();
+
+            if ($latest->isQueued) {
+                return response()->json([
+                    'message' => 'Telemetry sample queued for ingestion.',
+                    'data' => new LocationUpdateResource($latest),
+                ], 202);
+            }
 
             return response()->json(['data' => new LocationUpdateResource($latest)], 201);
         };
