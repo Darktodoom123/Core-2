@@ -8,13 +8,19 @@ use Throwable;
 final class TrackingServiceUnavailableException extends HttpException
 {
     /**
-     * @param  array<string, mixed>|null  $responseBody
+     * @var array<string, mixed>|null
+     */
+    public ?array $responseBody = null;
+
+    /**
+     * @param  array<string, mixed>|int|null  $responseBody
      */
     public function __construct(
         string $message = 'Tracking microservice is temporarily unavailable. Please retry.',
-        public ?array $responseBody = null,
+        array|int|null $responseBody = null,
         ?Throwable $previous = null,
     ) {
+        $this->responseBody = is_array($responseBody) ? $responseBody : null;
         parent::__construct(503, $message, $previous, ['Retry-After' => '5']);
     }
 }

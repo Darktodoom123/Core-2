@@ -3,6 +3,7 @@
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Services\DatabaseTrackingClient;
 use App\Platform\Tracking\Services\HttpTrackingClient;
+use App\Platform\Tracking\Services\RedisStreamTrackingClient;
 use App\Platform\Tracking\Testing\FakeTrackingClient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -55,10 +56,22 @@ it('resolves DatabaseTrackingClient when driver is set to database even if url i
     expect($client)->toBeInstanceOf(DatabaseTrackingClient::class);
 });
 
+it('resolves RedisStreamTrackingClient when driver is set to stream', function (): void {
+    config([
+        'services.tracking.driver' => 'stream',
+        'services.tracking.stream_key' => 'telemetry.gps.v1',
+    ]);
+    app()->forgetInstance(TrackingClientInterface::class);
+
+    $client = app(TrackingClientInterface::class);
+
+    expect($client)->toBeInstanceOf(RedisStreamTrackingClient::class);
+});
+
 it('throws InvalidArgumentException when tracking driver is invalid', function (): void {
     config(['services.tracking.driver' => 'unsupported_driver']);
     app()->forgetInstance(TrackingClientInterface::class);
 
     expect(fn () => app(TrackingClientInterface::class))
-        ->toThrow(InvalidArgumentException::class, 'Invalid tracking driver [unsupported_driver]. Supported drivers are: http, database, fake.');
+        ->toThrow(InvalidArgumentException::class, 'Invalid tracking driver [unsupported_driver]. Supported drivers are: http, stream, database, fake.');
 });

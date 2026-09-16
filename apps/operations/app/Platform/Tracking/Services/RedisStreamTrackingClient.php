@@ -24,7 +24,7 @@ class RedisStreamTrackingClient implements TrackingClientInterface
 
     protected ?string $redisConnection;
 
-    protected HttpTrackingClient $httpTrackingClient;
+    protected ?HttpTrackingClient $httpTrackingClient;
 
     public function __construct(
         ?string $streamKey = null,
@@ -37,7 +37,7 @@ class RedisStreamTrackingClient implements TrackingClientInterface
         $this->maxLen = $maxLen ?? (int) config('services.tracking.stream_maxlen', 100000);
         $this->secret = $secret ?? (string) config('services.tracking.secret', 'test-tracking-service-secret');
         $this->redisConnection = $redisConnection;
-        $this->httpTrackingClient = $httpTrackingClient ?? app(HttpTrackingClient::class);
+        $this->httpTrackingClient = $httpTrackingClient;
     }
 
     /**
@@ -136,8 +136,8 @@ class RedisStreamTrackingClient implements TrackingClientInterface
             ]);
 
             throw new TrackingServiceUnavailableException(
-                'Telemetry streaming service unavailable. Sample retained in outbox: '.$e->getMessage(),
-                503,
+                'Telemetry streaming service unavailable. Sample retained in outbox.',
+                ['error' => 'service_unavailable', 'details' => $e->getMessage()],
                 $e
             );
         }
@@ -175,33 +175,38 @@ class RedisStreamTrackingClient implements TrackingClientInterface
         );
     }
 
+    protected function httpTrackingClient(): HttpTrackingClient
+    {
+        return $this->httpTrackingClient ??= app(HttpTrackingClient::class);
+    }
+
     public function getLatestLocations(?User $user = null): Collection
     {
-        return $this->httpTrackingClient->getLatestLocations($user);
+        return $this->httpTrackingClient()->getLatestLocations($user);
     }
 
     public function getLatestLocationForUser(int $userId): ?LatestLocationDto
     {
-        return $this->httpTrackingClient->getLatestLocationForUser($userId);
+        return $this->httpTrackingClient()->getLatestLocationForUser($userId);
     }
 
     public function getLatestLocationForAsset(int $assetId): ?LatestLocationDto
     {
-        return $this->httpTrackingClient->getLatestLocationForAsset($assetId);
+        return $this->httpTrackingClient()->getLatestLocationForAsset($assetId);
     }
 
     public function getLatestLocationForJob(int $jobId, ?User $user = null): ?LatestLocationDto
     {
-        return $this->httpTrackingClient->getLatestLocationForJob($jobId, $user);
+        return $this->httpTrackingClient()->getLatestLocationForJob($jobId, $user);
     }
 
     public function queryLocationHistory(array $filters = []): Collection
     {
-        return $this->httpTrackingClient->queryLocationHistory($filters);
+        return $this->httpTrackingClient()->queryLocationHistory($filters);
     }
 
     public function getTrackingFreshness(User $user, CarbonImmutable $refreshedAt, int $staleAfterSeconds = 120): array
     {
-        return $this->httpTrackingClient->getTrackingFreshness($user, $refreshedAt, $staleAfterSeconds);
+        return $this->httpTrackingClient()->getTrackingFreshness($user, $refreshedAt, $staleAfterSeconds);
     }
 }
