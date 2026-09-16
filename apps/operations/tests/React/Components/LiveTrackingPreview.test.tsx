@@ -106,9 +106,24 @@ const southCrane = location(3, {
     },
     freshness_status: 'delayed',
 });
-const worker = location(4, {
-    asset: null,
+const generator = location(4, {
+    asset: {
+        id: 204,
+        code: 'GEN-4',
+        name: 'Site generator',
+        kind: 'equipment',
+    },
     user: { id: 104, name: 'Alex Reyes' },
+    job: null,
+    latitude: null,
+    longitude: null,
+    captured_at: null,
+    received_at: null,
+    freshness_status: 'stale',
+});
+const unlinkedWorker = location(5, {
+    asset: null,
+    user: { id: 105, name: 'Unassigned Personnel' },
     job: null,
     latitude: null,
     longitude: null,
@@ -151,7 +166,7 @@ function sosFor(
 
 async function show(overrides: Partial<LiveTrackingPreviewProps> = {}) {
     const props: LiveTrackingPreviewProps = {
-        locations: [crane, truck, southCrane, worker],
+        locations: [crane, truck, southCrane, generator, unlinkedWorker],
         ...overrides,
     };
     const result = render(<LiveTrackingPreview {...props} />);
@@ -243,7 +258,10 @@ describe('field tracking preview', () => {
         ).not.toBeInTheDocument();
 
         search('alex reyes');
-        expect(inspect('Alex Reyes')).toBeEnabled();
+        expect(inspect('GEN-4')).toBeEnabled();
+        expect(
+            screen.queryByRole('button', { name: 'Inspect Alex Reyes' }),
+        ).not.toBeInTheDocument();
     });
 
     it('composes asset, assigned-jobsite, attention, and search filters', async () => {
@@ -304,7 +322,7 @@ describe('field tracking preview', () => {
             expect(inspect('TRK-202')).toBeInTheDocument();
             expect(inspect('CRN-1')).toBeInTheDocument();
             expect(inspect('CRN-3')).toBeInTheDocument();
-            expect(inspect('Alex Reyes')).toBeInTheDocument();
+            expect(inspect('GEN-4')).toBeInTheDocument();
             expect(
                 screen.getByRole('button', { name: /^Needs attention/ }),
             ).toHaveAttribute('aria-pressed', 'true');
@@ -402,16 +420,29 @@ describe('field tracking preview', () => {
 
     it('allows inspection of units without coordinates or timestamps', async () => {
         await show();
-        expect(inspect('Alex Reyes')).toBeEnabled();
-        fireEvent.click(inspect('Alex Reyes'));
-        expect(inspect('Alex Reyes')).toHaveAttribute('aria-pressed', 'true');
+        expect(inspect('GEN-4')).toBeEnabled();
+        fireEvent.click(inspect('GEN-4'));
+        expect(inspect('GEN-4')).toHaveAttribute('aria-pressed', 'true');
         const details = screen.getByRole('region', {
             name: 'Selected unit details',
         });
+        expect(details).toHaveTextContent('GEN-4');
+        expect(details).toHaveTextContent('Site generator');
         expect(details).toHaveTextContent('Alex Reyes');
         expect(details).toHaveTextContent('Coordinates unavailable');
         expect(details.querySelector('time[datetime]')).not.toBeInTheDocument();
         expect(details).not.toHaveTextContent(/Invalid Date|NaN/);
+    });
+
+    it('strictly tracks assets and equipment, excluding unlinked worker location records from tracked units', async () => {
+        await show();
+        expect(
+            screen.queryByRole('button', { name: /Unassigned Personnel/ }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByText('Unassigned Personnel'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('Field personnel')).not.toBeInTheDocument();
     });
 
     it('keeps every matching unit reachable beyond the old five-row limit', async () => {

@@ -86,7 +86,7 @@ export function getAssetKind(location: LocationUpdateViewModel): AssetKind {
         return 'equipment';
     }
 
-    return 'personnel';
+    return 'equipment';
 }
 
 export function getAssetKindLabel(kind: AssetKind): string {
@@ -102,7 +102,7 @@ export function getAssetKindLabel(kind: AssetKind): string {
         case 'equipment':
             return 'Heavy Equipment';
         case 'personnel':
-            return 'Field Personnel';
+            return 'Equipment';
         default:
             return 'Equipment';
     }

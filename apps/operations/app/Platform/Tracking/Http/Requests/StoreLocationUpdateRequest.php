@@ -7,6 +7,7 @@ use App\Modules\Dispatch\Models\DispatchJob;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Validator;
 
 final class StoreLocationUpdateRequest extends FormRequest
@@ -84,12 +85,32 @@ final class StoreLocationUpdateRequest extends FormRequest
             }
 
             $assetId = $this->input('operational_asset_id');
-            if ($assetId !== null && ! $job->assetAssignments()->active()->where('operational_asset_id', $assetId)->exists()) {
-                $validator->errors()->add('operational_asset_id', 'The selected asset is not actively assigned to this dispatch job.');
-            }
+            if ($assetId !== null) {
+                $assignmentQuery = $job->assetAssignments()->where('operational_asset_id', $assetId);
+                if ($this->filled('captured_at')) {
+                    try {
+                        $capturedAt = Carbon::parse($this->input('captured_at'));
+                        $assignmentQuery->where(function ($q) use ($capturedAt): void {
+                            $q->where(function ($inner) use ($capturedAt): void {
+                                $inner->whereNull('active_from')->orWhere('active_from', '<=', $capturedAt);
+                            })->where(function ($inner) use ($capturedAt): void {
+                                $inner->whereNull('active_until')->orWhere('active_until', '>=', $capturedAt);
+                            });
+                        });
+                    } catch (\Throwable) {
+                        $assignmentQuery->active();
+                    }
+                } else {
+                    $assignmentQuery->active();
+                }
 
-            if ($assetId !== null && ! OperationalAsset::query()->whereKey($assetId)->exists()) {
-                $validator->errors()->add('operational_asset_id', 'The selected asset does not exist.');
+                if (! $assignmentQuery->exists()) {
+                    $validator->errors()->add('operational_asset_id', 'The selected asset is not actively assigned to this dispatch job.');
+                }
+
+                if (! OperationalAsset::query()->whereKey($assetId)->exists()) {
+                    $validator->errors()->add('operational_asset_id', 'The selected asset does not exist.');
+                }
             }
         });
     }

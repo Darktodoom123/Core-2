@@ -48,21 +48,54 @@ export function useTrackingPreview(
         () => new Set(activeIncidents.map((incident) => incident.worker.id)),
         [activeIncidents],
     );
+    const assetLocations = useMemo(() => {
+        const filtered = locations.filter(
+            (location) =>
+                location.asset !== null &&
+                location.asset !== undefined &&
+                Boolean(location.asset.id),
+        );
+
+        const byAsset = new Map<number, LocationUpdateViewModel>();
+
+        for (const loc of filtered) {
+            const assetId = loc.asset!.id;
+            const existing = byAsset.get(assetId);
+
+            if (!existing) {
+                byAsset.set(assetId, loc);
+            } else {
+                const existingTime = locationTimestamp(
+                    existing.captured_at ?? existing.received_at,
+                );
+                const currentTime = locationTimestamp(
+                    loc.captured_at ?? loc.received_at,
+                );
+
+                if (currentTime >= existingTime) {
+                    byAsset.set(assetId, loc);
+                }
+            }
+        }
+
+        return Array.from(byAsset.values());
+    }, [locations]);
+
     const sites = useMemo(
         () =>
-            [...new Set(locations.map(assignedJobsite).filter(Boolean))].sort(
-                (a, b) => a.localeCompare(b),
-            ),
-        [locations],
+            [
+                ...new Set(assetLocations.map(assignedJobsite).filter(Boolean)),
+            ].sort((a, b) => a.localeCompare(b)),
+        [assetLocations],
     );
-    const hasUnassignedSite = locations.some(
+    const hasUnassignedSite = assetLocations.some(
         (location) => !assignedJobsite(location),
     );
 
     const matchingScope = useMemo(() => {
         const query = filters.query.trim().toLocaleLowerCase();
 
-        return locations.filter((location) => {
+        return assetLocations.filter((location) => {
             const site = assignedJobsite(location);
             const matchesSite =
                 filters.site === '' ||
@@ -74,12 +107,12 @@ export function useTrackingPreview(
                 [
                     location.asset?.code,
                     location.asset?.name,
-                    location.user.name,
+                    location.user?.name,
                 ].some((value) => value?.toLocaleLowerCase().includes(query));
 
             return matchesSite && matchesQuery;
         });
-    }, [filters.query, filters.site, locations]);
+    }, [assetLocations, filters.query, filters.site]);
 
     const typeFilteredLocations = useMemo(
         () =>

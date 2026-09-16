@@ -22,7 +22,6 @@ const ASSET_TYPE_FILTERS: ReadonlyArray<{
     { id: 'mobile_crane', label: 'Mobile Cranes' },
     { id: 'tower_crane', label: 'Tower Cranes' },
     { id: 'equipment', label: 'Heavy Eqp' },
-    { id: 'personnel', label: 'Personnel' },
 ];
 
 type AssetStatusFilter = 'all' | LocationUpdateViewModel['freshness_status'];

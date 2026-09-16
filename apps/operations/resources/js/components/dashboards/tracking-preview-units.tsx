@@ -12,8 +12,9 @@ import {
     X,
 } from 'lucide-react';
 import { useId } from 'react';
+import { formatLocationSource } from '@/components/maplibre/tracking-map-popups';
 import { Button } from '@/components/ui';
-import { getAssetKind } from '@/lib/asset-kind';
+import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import { usePreciseLocation } from '@/services/reverse-geocoder';
 import type { LocationUpdateViewModel } from '@/types/workspace';
@@ -61,7 +62,7 @@ export function TrackingUnitRow({
         <li>
             <button
                 type="button"
-                aria-label={`Inspect ${location.asset?.code ?? location.user.name}`}
+                aria-label={`Inspect ${location.asset?.code ?? location.asset?.name ?? 'Asset'}`}
                 aria-describedby={descriptionId}
                 aria-pressed={selected}
                 onClick={onSelect}
@@ -83,7 +84,9 @@ export function TrackingUnitRow({
                 <span id={descriptionId} className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                         <span className="min-w-0 truncate text-sm font-semibold text-ink">
-                            {location.asset?.code ?? location.user.name}
+                            {location.asset?.code ??
+                                location.asset?.name ??
+                                'Unknown Asset'}
                         </span>
                         {hasSos && (
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
@@ -97,10 +100,22 @@ export function TrackingUnitRow({
                     </span>
                     <span
                         className="mt-0.5 block truncate text-xs text-ink-soft"
-                        title={location.asset?.name ?? 'Field personnel'}
+                        title={
+                            location.asset?.name ??
+                            getAssetKindLabel(getAssetKind(location))
+                        }
                     >
-                        {location.asset?.name ?? 'Field personnel'}
+                        {location.asset?.name ??
+                            getAssetKindLabel(getAssetKind(location))}
                     </span>
+                    {location.user?.name && (
+                        <span
+                            className="mt-0.5 block truncate text-xs text-ink-soft"
+                            title={`Operator: ${location.user.name}`}
+                        >
+                            Operator: {location.user.name}
+                        </span>
+                    )}
                     {site && (
                         <span
                             className="mt-1 block truncate text-xs text-ink-soft"
@@ -152,7 +167,9 @@ export function TrackingUnitDetails({
             <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <h3 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold text-ink">
-                        {location.asset?.code ?? location.user.name}
+                        {location.asset?.code ??
+                            location.asset?.name ??
+                            'Unknown Asset'}
                         <FreshnessStatus status={location.freshness_status} />
                         {hasSos && (
                             <span className="inline-flex items-center gap-1 text-xs text-danger">
@@ -165,8 +182,11 @@ export function TrackingUnitDetails({
                         )}
                     </h3>
                     <p className="mt-1 text-xs text-ink-soft">
-                        {location.asset?.name ?? 'Field personnel'}
-                        {location.asset ? ` · ${location.user.name}` : ''}
+                        {location.asset?.name ??
+                            getAssetKindLabel(getAssetKind(location))}
+                        {location.user?.name
+                            ? ` · Operator: ${location.user.name}`
+                            : ''}
                     </p>
                 </div>
                 <Button
@@ -180,6 +200,24 @@ export function TrackingUnitDetails({
                 </Button>
             </div>
             <dl className="grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
+                <div>
+                    <dt className="text-ink-soft">Assigned operator</dt>
+                    <dd className="mt-1 font-medium break-words text-ink">
+                        {location.user?.name || 'Unassigned'}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-ink-soft">Equipment type</dt>
+                    <dd className="mt-1 font-medium break-words text-ink">
+                        {getAssetKindLabel(getAssetKind(location))}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-ink-soft">Location source</dt>
+                    <dd className="mt-1 font-medium break-words text-ink">
+                        {formatLocationSource(location.source)}
+                    </dd>
+                </div>
                 <div>
                     <dt className="text-ink-soft">Assigned jobsite</dt>
                     <dd className="mt-1 font-medium break-words text-ink">
@@ -233,7 +271,7 @@ export function TrackingUnitDetails({
                         className="mt-px size-3.5 shrink-0"
                         aria-hidden="true"
                     />
-                    This is the last reported location. The unit's current
+                    This is the last reported location. The asset's current
                     position is unconfirmed.
                 </p>
             )}

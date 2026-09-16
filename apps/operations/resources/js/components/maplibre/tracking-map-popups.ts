@@ -44,8 +44,26 @@ function timestamp(value: string | null): string {
         : 'Unavailable';
 }
 
+export function formatLocationSource(
+    source: string | null | undefined,
+): string {
+    if (!source) {
+        return 'Unavailable';
+    }
+
+    if (source === 'mobile' || source === 'field-mobile') {
+        return 'Mobile GPS';
+    }
+
+    if (source === 'browser') {
+        return 'Browser GPS';
+    }
+
+    return source;
+}
+
 export function trackingUnitLabel(location: LocationUpdateViewModel): string {
-    return location.asset?.code ?? location.user.name;
+    return location.asset?.code ?? location.asset?.name ?? 'Unknown Asset';
 }
 
 export function createTrackingLocationPopup(
@@ -54,11 +72,11 @@ export function createTrackingLocationPopup(
     onCopyCoordinates?: (button: HTMLButtonElement) => void,
 ): HTMLDivElement {
     const freshness = location.freshness_status;
+    const kind = getAssetKind(location);
 
     const card = createPopupCard({
         title: trackingUnitLabel(location),
-        subtitle:
-            location.asset?.name ?? getAssetKindLabel(getAssetKind(location)),
+        subtitle: location.asset?.name ?? getAssetKindLabel(kind),
         status: freshness.charAt(0).toUpperCase() + freshness.slice(1),
         statusTone:
             freshness === 'fresh'
@@ -81,7 +99,11 @@ export function createTrackingLocationPopup(
             },
             { label: 'Captured', value: timestamp(location.captured_at) },
             { label: 'Received', value: timestamp(location.received_at) },
-            { label: 'Personnel', value: location.user.name },
+            { label: 'Equipment type', value: getAssetKindLabel(kind) },
+            {
+                label: 'Assigned operator',
+                value: location.user?.name ? location.user.name : 'Unassigned',
+            },
             {
                 label: 'Dispatch',
                 value: location.job?.reference ?? 'Unassigned',
@@ -89,6 +111,10 @@ export function createTrackingLocationPopup(
             {
                 label: 'Assigned site',
                 value: location.job?.site ?? 'Unassigned',
+            },
+            {
+                label: 'Location source',
+                value: formatLocationSource(location.source),
             },
             {
                 label: 'Reported speed',

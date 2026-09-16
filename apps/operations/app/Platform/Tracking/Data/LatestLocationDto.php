@@ -171,7 +171,7 @@ final readonly class LatestLocationDto
             'id' => $this->id,
             'user' => $this->user ?? [
                 'id' => $this->userId,
-                'name' => 'Unknown',
+                'name' => 'Unassigned',
             ],
             'asset' => $this->asset,
             'job' => $this->job,

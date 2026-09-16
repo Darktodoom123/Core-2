@@ -405,7 +405,7 @@ export function LiveTrackingMap({
                                 onChange={(event) =>
                                     setSearchQuery(event.target.value)
                                 }
-                                placeholder="Search worker or asset…"
+                                placeholder="Search asset code, name, or operator…"
                                 aria-label="Search mapped locations"
                                 className="min-h-[44px] w-full rounded-lg border border-line bg-surface-subtle py-2 pr-3 pl-10 text-sm text-ink placeholder:text-ink-soft focus:border-brand-strong focus:outline-none"
                             />
@@ -504,12 +504,30 @@ export function LiveTrackingMap({
                                                     </span>
                                                     <span>
                                                         <span className="block text-sm font-semibold text-ink">
-                                                            {location.user.name}
+                                                            {location.asset
+                                                                ?.code ??
+                                                                location.asset
+                                                                    ?.name ??
+                                                                'Asset'}
                                                         </span>
                                                         <span className="mt-0.5 block text-xs text-ink-soft">
                                                             {location.asset
-                                                                ?.code ?? kind}
+                                                                ?.name ??
+                                                                getAssetKindLabel(
+                                                                    kind,
+                                                                )}
                                                         </span>
+                                                        {location.user
+                                                            ?.name && (
+                                                            <span className="mt-0.5 block text-[11px] text-ink-soft">
+                                                                Operator:{' '}
+                                                                {
+                                                                    location
+                                                                        .user
+                                                                        .name
+                                                                }
+                                                            </span>
+                                                        )}
                                                     </span>
                                                 </div>
                                                 <StatusBadge
@@ -536,7 +554,7 @@ export function LiveTrackingMap({
                                                 }
                                                 className="ml-2 min-h-[44px] min-w-[44px] rounded p-2 text-ink-soft transition-colors hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-strong"
                                                 title="Copy coordinates"
-                                                aria-label={`Copy coordinates for ${location.user.name}`}
+                                                aria-label={`Copy coordinates for ${location.asset?.code ?? location.user?.name ?? 'asset'}`}
                                             >
                                                 {copiedId === location.id ? (
                                                     <Check

@@ -22,7 +22,7 @@ import {
     TableRow,
 } from '@/components/ui';
 import type { AssetKind } from '@/lib/asset-kind';
-import { getAssetKind } from '@/lib/asset-kind';
+import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { removeOutboxItem } from '@/lib/outbox';
 import type { OutboxItem } from '@/lib/outbox';
 import { cn } from '@/lib/utils';
@@ -114,8 +114,8 @@ export function TrackingSurface({
     return (
         <div>
             <PageHeading
-                title="Live Field Tracking & Resilience"
-                description="Monitor worker and asset locations, verify freshness, retention limits, and manage offline outbox state."
+                title="Asset & Equipment Tracking"
+                description="Monitor asset and equipment locations, verify freshness, retention limits, and manage offline outbox state."
             />
 
             <div className="space-y-6 p-4 md:p-6">
@@ -372,13 +372,14 @@ function SynchronizedLocationList({
                 aria-label="Synchronized field location updates"
             >
                 <TableCaption className="sr-only">
-                    List of current location updates showing worker name,
-                    coordinates, accuracy, capture time, receive time, sharing
-                    state, and freshness.
+                    List of current location updates showing asset, assigned
+                    operator, coordinates, accuracy, capture time, receive time,
+                    sharing state, and freshness.
                 </TableCaption>
                 <TableHeader>
                     <TableRow>
-                        <TableHead scope="col">Worker / Asset</TableHead>
+                        <TableHead scope="col">Asset / Equipment</TableHead>
+                        <TableHead scope="col">Assigned Operator</TableHead>
                         <TableHead scope="col">Freshness Status</TableHead>
                         <TableHead scope="col">Coordinates</TableHead>
                         <TableHead scope="col">Accuracy</TableHead>
@@ -391,12 +392,14 @@ function SynchronizedLocationList({
                     {locations.map((loc) => (
                         <TableRow key={loc.id}>
                             <TableCell className="font-semibold text-ink">
-                                {loc.user.name}
-                                {loc.asset && (
-                                    <div className="text-xs font-normal text-ink-soft">
-                                        {loc.asset.code}
-                                    </div>
-                                )}
+                                {loc.asset?.code ?? 'Asset'}
+                                <div className="text-xs font-normal text-ink-soft">
+                                    {loc.asset?.name ??
+                                        getAssetKindLabel(getAssetKind(loc))}
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-ink-soft">
+                                {loc.user?.name ? loc.user.name : 'Unassigned'}
                             </TableCell>
                             <TableCell>
                                 <FreshnessBadge status={loc.freshness_status} />

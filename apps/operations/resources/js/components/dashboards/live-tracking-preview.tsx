@@ -131,7 +131,7 @@ export function LiveTrackingPreview({
                     <Input
                         type="search"
                         aria-label="Find a unit"
-                        placeholder="Find a unit by ID or name"
+                        placeholder="Find an asset by code, name, or operator"
                         value={tracking.filters.query}
                         onChange={(event) =>
                             tracking.updateFilters({

@@ -95,10 +95,23 @@ final class LocationController extends Controller
             $sample = LocationSample::query()->create($sampleData);
 
             if ($assetId !== null) {
-                LatestLocation::query()
+                $existingAssetProjection = LatestLocation::query()
                     ->where('operational_asset_id', $assetId)
                     ->where('user_id', '!=', $userId)
-                    ->update(['operational_asset_id' => null]);
+                    ->first();
+
+                if ($existingAssetProjection !== null) {
+                    $existingAssetTime = $existingAssetProjection->captured_at ?? $existingAssetProjection->received_at;
+                    $sampleTime = $capturedAt ?? $receivedAt;
+
+                    if ($existingAssetTime === null || $sampleTime->greaterThanOrEqualTo($existingAssetTime)) {
+                        $existingAssetProjection->update(['operational_asset_id' => null]);
+                    } else {
+                        // Incoming sample is older than the current asset projection; do not reassign asset
+                        $sampleData['operational_asset_id'] = null;
+                        $assetId = null;
+                    }
+                }
             }
 
             $existingProjection = LatestLocation::query()

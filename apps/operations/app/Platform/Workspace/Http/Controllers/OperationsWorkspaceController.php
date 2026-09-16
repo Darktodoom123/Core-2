@@ -409,21 +409,49 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
-        $userIds = $locations->pluck('userId')->unique()->values()->all();
-        $assetIds = $locations->pluck('operationalAssetId')->filter()->unique()->values()->all();
-        $jobIds = $locations->pluck('dispatchJobId')->filter()->unique()->values()->all();
+        // Asset-centered tracking: exclude locations without an operational asset ID
+        $locationsWithAsset = $locations->filter(static fn (LatestLocationDto $dto): bool => $dto->operationalAssetId !== null);
+
+        if ($locationsWithAsset->isEmpty()) {
+            return collect();
+        }
+
+        $assetIds = $locationsWithAsset->pluck('operationalAssetId')->unique()->values()->all();
+
+        // Only active, non-deleted assets are valid for live asset tracking
+        $assets = OperationalAsset::query()
+            ->whereIn('id', $assetIds)
+            ->get(['id', 'code', 'name', 'kind', 'location'])
+            ->keyBy('id');
+
+        if ($assets->isEmpty()) {
+            return collect();
+        }
+
+        // Deduplicate to show exactly one current entry per asset, keeping the latest valid position.
+        // Delayed and out-of-order older reports do not replace newer positions.
+        $latestByAsset = $locationsWithAsset
+            ->filter(static fn (LatestLocationDto $dto): bool => $assets->has($dto->operationalAssetId))
+            ->groupBy('operationalAssetId')
+            ->map(static function (Collection $assetLocations): LatestLocationDto {
+                return $assetLocations
+                    ->sortByDesc(static function (LatestLocationDto $dto): string {
+                        $time = $dto->capturedAt ?? $dto->receivedAt;
+                        $iso = $time ? $time->toIso8601String() : '';
+
+                        return sprintf('%s_%010d', $iso, $dto->id);
+                    })
+                    ->first();
+            })
+            ->values();
+
+        $userIds = $latestByAsset->pluck('userId')->unique()->values()->all();
+        $jobIds = $latestByAsset->pluck('dispatchJobId')->filter()->unique()->values()->all();
 
         $users = User::query()
             ->whereIn('id', $userIds)
             ->get(['id', 'name'])
             ->keyBy('id');
-
-        $assets = ! empty($assetIds)
-            ? OperationalAsset::withTrashed()
-                ->whereIn('id', $assetIds)
-                ->get(['id', 'code', 'name', 'kind', 'location'])
-                ->keyBy('id')
-            : collect();
 
         $jobs = ! empty($jobIds)
             ? DispatchJob::query()
@@ -432,17 +460,18 @@ final class OperationsWorkspaceController extends Controller
                 ->keyBy('id')
             : collect();
 
-        return $locations->map(static function (LatestLocationDto $dto) use ($users, $assets, $jobs): LatestLocationDto {
+        return $latestByAsset->map(static function (LatestLocationDto $dto) use ($users, $assets, $jobs): LatestLocationDto {
             $userModel = $users->get($dto->userId);
-            $assetModel = $dto->operationalAssetId !== null ? $assets->get($dto->operationalAssetId) : null;
+            $assetModel = $assets->get($dto->operationalAssetId);
             $jobModel = $dto->dispatchJobId !== null ? $jobs->get($dto->dispatchJobId) : null;
 
+            // Missing user must not hide the asset or become its title; show honest secondary operator context
             $userPayload = [
                 'id' => $dto->userId,
-                'name' => $userModel !== null ? $userModel->name : 'Unknown User',
+                'name' => $userModel !== null ? $userModel->name : 'Unassigned operator',
             ];
 
-            $assetPayload = $assetModel === null ? null : [
+            $assetPayload = [
                 'id' => (int) $assetModel->id,
                 'code' => $assetModel->code,
                 'name' => $assetModel->name,
@@ -458,7 +487,9 @@ final class OperationsWorkspaceController extends Controller
             ];
 
             return $dto->withHydratedEntities($userPayload, $assetPayload, $jobPayload);
-        });
+        })->sortByDesc(static function (LatestLocationDto $dto): ?string {
+            return ($dto->receivedAt ?? $dto->capturedAt)?->toIso8601String();
+        })->values();
     }
 
     /** @return Collection<int, DispatchJob> */
