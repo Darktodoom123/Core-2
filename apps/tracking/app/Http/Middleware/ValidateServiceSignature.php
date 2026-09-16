@@ -94,6 +94,23 @@ final class ValidateServiceSignature
             ], 500);
         }
 
+        if (app()->environment('production')) {
+            $isDevSecret = in_array($secret, [
+                'test-tracking-service-secret',
+                'secret',
+                'changeme',
+                '<local-only-shared-secret>',
+                'password',
+            ], true) || strlen($secret) < 16;
+
+            if ($isDevSecret) {
+                return new JsonResponse([
+                    'message' => 'Tracking service signing secret is insecure or using development placeholder in production.',
+                    'error' => 'server_error',
+                ], 500);
+            }
+        }
+
         $method = strtoupper($request->getMethod());
         $rawPath = (string) parse_url($request->getRequestUri(), PHP_URL_PATH);
         $canonicalPath = '/'.trim($rawPath, '/');

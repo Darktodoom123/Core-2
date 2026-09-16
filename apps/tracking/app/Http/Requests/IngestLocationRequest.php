@@ -2,6 +2,7 @@
 
 namespace Tracking\Http\Requests;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -10,16 +11,6 @@ final class IngestLocationRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
-    }
-
-    protected function prepareForValidation(): void
-    {
-        if ($this->has('sharing_enabled') && ! $this->boolean('sharing_enabled')) {
-            $this->merge([
-                'latitude' => $this->input('latitude'),
-                'longitude' => $this->input('longitude'),
-            ]);
-        }
     }
 
     /** @return array<string, array<int, string>> */
@@ -63,6 +54,18 @@ final class IngestLocationRequest extends FormRequest
             if ($headerId !== null && $bodyId !== null && ! hash_equals((string) $headerId, (string) $bodyId)) {
                 $headerName = $xCommandId !== null ? 'X-Command-Id' : 'Idempotency-Key';
                 $validator->errors()->add('command_id', "The {$headerName} header and command_id body field must match.");
+            }
+
+            $capturedAtRaw = $this->input('captured_at');
+            if (is_string($capturedAtRaw) && $capturedAtRaw !== '') {
+                try {
+                    $parsed = CarbonImmutable::parse($capturedAtRaw);
+                    if ($parsed->greaterThan(now()->addSeconds(300))) {
+                        $validator->errors()->add('captured_at', 'The captured_at timestamp cannot be in the future beyond clock drift tolerance.');
+                    }
+                } catch (\Throwable) {
+                    $validator->errors()->add('captured_at', 'The captured_at timestamp is invalid.');
+                }
             }
         });
     }

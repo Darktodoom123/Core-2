@@ -62,9 +62,10 @@ it('prunes precise coordinates older than 30 days while preserving audit records
     expect((float) $recent->latitude)->toBe(14.5995)
         ->and((float) $recent->longitude)->toBe(120.9842);
 
-    // Old coordinates are pruned (set to null)
+    // Old coordinates and accuracy metrics are pruned (set to null)
     expect($old->latitude)->toBeNull()
-        ->and($old->longitude)->toBeNull();
+        ->and($old->longitude)->toBeNull()
+        ->and($old->accuracy_metres)->toBeNull();
 
     // Old projection coordinates are also pruned
     expect($oldProjection->latitude)->toBeNull()
@@ -77,4 +78,47 @@ it('prunes precise coordinates older than 30 days while preserving audit records
         ->and($old->source)->toBe('mobile')
         ->and($old->sharing_enabled)->toBeTrue()
         ->and($old->captured_at->toIso8601String())->toBe($now->subDays(35)->toIso8601String());
+});
+
+it('redacts coordinates upon ingestion for delayed offline samples older than 30 days while preserving audit metadata', function (): void {
+    $now = CarbonImmutable::now();
+    $delayedCapturedAt = $now->subDays(35);
+
+    $response = $this->postJson('/internal/v1/locations', [
+        'command_id' => '00000000-0000-0000-0000-000000000035',
+        'user_id' => 88,
+        'operational_asset_id' => 99,
+        'dispatch_job_id' => 111,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 6.0,
+        'speed' => 15.0,
+        'source' => 'mobile',
+        'sharing_enabled' => true,
+        'captured_at' => $delayedCapturedAt->toIso8601String(),
+    ]);
+
+    $response->assertStatus(201);
+
+    // Coordinates in response projection must be null (redacted)
+    $response->assertJsonPath('data.latitude', null)
+        ->assertJsonPath('data.longitude', null)
+        ->assertJsonPath('data.accuracy_metres', null)
+        ->assertJsonPath('data.user_id', 88);
+
+    // Assert sample persisted with coordinates redacted
+    $sample = LocationSample::query()->where('command_id', '00000000-0000-0000-0000-000000000035')->firstOrFail();
+    expect($sample->latitude)->toBeNull()
+        ->and($sample->longitude)->toBeNull()
+        ->and($sample->accuracy_metres)->toBeNull()
+        ->and($sample->user_id)->toBe(88)
+        ->and($sample->operational_asset_id)->toBe(99)
+        ->and($sample->dispatch_job_id)->toBe(111)
+        ->and($sample->captured_at->toIso8601String())->toBe($delayedCapturedAt->toIso8601String());
+
+    // Assert latest location projection also has null coordinates
+    $latest = LatestLocation::query()->where('user_id', 88)->firstOrFail();
+    expect($latest->latitude)->toBeNull()
+        ->and($latest->longitude)->toBeNull()
+        ->and($latest->user_id)->toBe(88);
 });

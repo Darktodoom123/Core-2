@@ -8,6 +8,7 @@ use App\Platform\Tracking\Services\DatabaseTrackingClient;
 use App\Platform\Tracking\Services\HttpTrackingClient;
 use App\Platform\Tracking\Testing\FakeTrackingClient;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 final class TrackingServiceProvider extends ServiceProvider
 {
@@ -15,21 +16,19 @@ final class TrackingServiceProvider extends ServiceProvider
     {
         $this->app->singleton(TrackingClientInterface::class, function ($app): TrackingClientInterface {
             $driver = config('services.tracking.driver');
-            $url = config('services.tracking.url');
 
-            if ($driver === 'http') {
-                return $app->make(HttpTrackingClient::class);
+            if ($driver === null || $driver === '') {
+                $driver = $app->environment('testing') ? 'fake' : 'database';
             }
 
-            if ($app->environment('testing')) {
-                return new FakeTrackingClient;
-            }
-
-            if (! empty($url)) {
-                return $app->make(HttpTrackingClient::class);
-            }
-
-            return new DatabaseTrackingClient;
+            return match ($driver) {
+                'http' => $app->make(HttpTrackingClient::class),
+                'database' => $app->make(DatabaseTrackingClient::class),
+                'fake' => new FakeTrackingClient,
+                default => throw new InvalidArgumentException(
+                    "Invalid tracking driver [{$driver}]. Supported drivers are: http, database, fake."
+                ),
+            };
         });
     }
 

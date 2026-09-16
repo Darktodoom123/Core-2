@@ -25,11 +25,16 @@ final class PruneLocationUpdatesCommand extends Command
                     });
             })
             ->where(function ($query): void {
-                $query->whereNotNull('latitude')->orWhereNotNull('longitude');
+                $query->whereNotNull('latitude')
+                    ->orWhereNotNull('longitude')
+                    ->orWhereNotNull('accuracy_metres')
+                    ->orWhereNotNull('speed');
             })
             ->update([
                 'latitude' => null,
                 'longitude' => null,
+                'accuracy_metres' => null,
+                'speed' => null,
             ]);
 
         $latestAffected = LatestLocation::query()
@@ -40,11 +45,16 @@ final class PruneLocationUpdatesCommand extends Command
                     });
             })
             ->where(function ($query): void {
-                $query->whereNotNull('latitude')->orWhereNotNull('longitude');
+                $query->whereNotNull('latitude')
+                    ->orWhereNotNull('longitude')
+                    ->orWhereNotNull('accuracy_metres')
+                    ->orWhereNotNull('speed');
             })
             ->update([
                 'latitude' => null,
                 'longitude' => null,
+                'accuracy_metres' => null,
+                'speed' => null,
             ]);
 
         $this->info("Pruned coordinates for {$affected} location samples older than 30 days ({$latestAffected} projections pruned).");

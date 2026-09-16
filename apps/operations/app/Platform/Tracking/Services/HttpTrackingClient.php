@@ -8,11 +8,15 @@ use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Tracking\Exceptions\TrackingConflictException;
+use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Throwable;
 
 class HttpTrackingClient implements TrackingClientInterface
@@ -27,18 +31,41 @@ class HttpTrackingClient implements TrackingClientInterface
 
     protected DatabaseTrackingClient $fallbackClient;
 
+    protected bool $allowIngestFallback;
+
     public function __construct(
         ?string $baseUrl = null,
         ?string $secret = null,
         ?float $timeout = null,
         ?float $connectTimeout = null,
         ?DatabaseTrackingClient $fallbackClient = null,
+        ?bool $allowIngestFallback = null,
     ) {
         $this->baseUrl = rtrim($baseUrl ?? (string) config('services.tracking.url', 'http://localhost:8001'), '/');
         $this->secret = $secret ?? (string) config('services.tracking.secret', 'test-tracking-service-secret');
         $this->timeout = $timeout ?? (float) config('services.tracking.timeout', 5.0);
         $this->connectTimeout = $connectTimeout ?? (float) config('services.tracking.connect_timeout', 3.0);
         $this->fallbackClient = $fallbackClient ?? new DatabaseTrackingClient;
+
+        if (app()->environment('production')) {
+            $isDevSecret = in_array($this->secret, [
+                'test-tracking-service-secret',
+                'secret',
+                'changeme',
+                '<local-only-shared-secret>',
+                'password',
+                '',
+            ], true) || strlen($this->secret) < 16;
+
+            if ($isDevSecret) {
+                throw new RuntimeException('Tracking service signing secret is insecure or using development placeholder in production.');
+            }
+
+            // In production, never write to a secondary authoritative database during outages
+            $this->allowIngestFallback = false;
+        } else {
+            $this->allowIngestFallback = $allowIngestFallback ?? (bool) config('services.tracking.allow_ingest_fallback', false);
+        }
     }
 
     /**
@@ -93,13 +120,22 @@ class HttpTrackingClient implements TrackingClientInterface
             $headers['X-Command-Id'] = $sample->commandId;
         }
 
+        $isIdempotent = $sample->commandId !== null && $sample->commandId !== '';
+
         try {
-            /** @var Response $response */
-            $response = Http::timeout($this->timeout)
+            $pendingRequest = Http::timeout($this->timeout)
                 ->connectTimeout($this->connectTimeout)
                 ->withHeaders([...$headers, 'Content-Type' => 'application/json'])
-                ->withBody($rawBody, 'application/json')
-                ->post($url);
+                ->withBody($rawBody, 'application/json');
+
+            if ($isIdempotent) {
+                $pendingRequest = $pendingRequest->retry(2, 100, function ($exception): bool {
+                    return $exception instanceof ConnectionException;
+                }, throw: false);
+            }
+
+            /** @var Response $response */
+            $response = $pendingRequest->post($url);
 
             if ($response->status() === 409) {
                 $message = (string) ($response->json('message') ?? 'This command ID was already used for a different command payload.');
@@ -114,6 +150,20 @@ class HttpTrackingClient implements TrackingClientInterface
                 throw new TrackingConflictException($message, $body);
             }
 
+            if ($response->status() === 422) {
+                /** @var array<string, list<string>>|null $errors */
+                $errors = $response->json('errors');
+                $message = (string) ($response->json('message') ?? 'The given location data was invalid.');
+
+                Log::warning('Tracking microservice returned 422 Unprocessable Entity', [
+                    'user_id' => $sample->userId,
+                    'command_id' => $sample->commandId,
+                    'message' => $message,
+                ]);
+
+                throw ValidationException::withMessages($errors ?? ['location' => [$message]]);
+            }
+
             if ($response->successful()) {
                 /** @var array<string, mixed> $data */
                 $data = $response->json('data') ?? [];
@@ -123,12 +173,29 @@ class HttpTrackingClient implements TrackingClientInterface
 
             Log::warning('Tracking microservice returned error on ingestLocation', [
                 'status' => $response->status(),
-                'body' => $response->body(),
                 'user_id' => $sample->userId,
             ]);
-        } catch (TrackingConflictException $e) {
+
+            if (! $this->allowIngestFallback) {
+                $errorMessage = (string) ($response->json('message') ?? 'Tracking microservice returned an error. Please retry.');
+                throw new TrackingServiceUnavailableException($errorMessage, $response->json());
+            }
+        } catch (TrackingConflictException|TrackingServiceUnavailableException|ValidationException $e) {
             throw $e;
         } catch (Throwable $e) {
+            if (! $this->allowIngestFallback) {
+                Log::warning('Tracking microservice unavailable during ingestLocation, raising service unavailable exception', [
+                    'error' => $e->getMessage(),
+                    'user_id' => $sample->userId,
+                ]);
+
+                throw new TrackingServiceUnavailableException(
+                    'Tracking microservice is temporarily unavailable. Please retry.',
+                    null,
+                    $e
+                );
+            }
+
             Log::warning('Tracking microservice unavailable during ingestLocation, falling back to local database', [
                 'error' => $e->getMessage(),
                 'user_id' => $sample->userId,

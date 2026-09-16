@@ -15,11 +15,11 @@ The approved architecture is **Plan A: The Pragmatic 2-Service Model**, comprisi
 
 1. **Web Client (Inertia 3 + React 19)**: Talks directly to Operations for all authenticated operational workspace views, dispatch management, equipment tracking maps, and report generation.
 2. **Mobile Client (`packages/field-mobile` Expo React Native)**:
-   - Talks to **Operations** for shift lifecycle, driver assignments, HoS status transitions, DVIR walkaround inspections, job execution, and safety/SOS reports.
-   - Talks to **Tracking** for high-frequency GPS telemetry submission during active shifts.
+   - Talks exclusively to **Operations BFF** for all actions: shift lifecycle, driver assignments, HoS status transitions, DVIR walkaround inspections, job execution, safety/SOS reports, and GPS telemetry submission (`POST /api/v1/locations`).
 3. **Operations Backend-For-Frontend (BFF)**:
+   - Authenticates mobile clients via Sanctum bearer tokens and validates shift/job assignments.
+   - Forwards telemetry to Tracking via `TrackingClientInterface` (`HttpTrackingClient` when `TRACKING_SERVICE_DRIVER=http`).
    - Orchestrates operational live map views by querying Tracking's `GET /internal/v1/locations/latest` and broadcasting position updates to web clients over Laravel Reverb.
-   - Validates active operator/asset assignments before authorizing telemetry streaming.
 
 ### Internal Worker Isolation Rationale (No 4-Service Overhead)
 
@@ -77,7 +77,7 @@ Core-2/
 └───▲───────────┼────────────────────────────────────────▲───────────────┘
     │           │                                        │
     │ HTTPS     │ OpenRouter API                         │ Scoped Internal HTTP
-    │ (Sanctum) │ (External LLM)                         │ (HMAC/JWT Signed)
+    │ (Sanctum) │ (External LLM)                         │ (HMAC-SHA256 Signed)
     │           ▼                                        │ (/internal/v1/locations/*)
     │   ┌─────────────────────────┐                      │
     │   │     OpenRouter API      │                      │
@@ -86,33 +86,30 @@ Core-2/
 ┌───┴───────────────────────┐                            │
 │    Field Mobile Client    │                            │
 │  (packages/field-mobile)  │                            │
-└───┬───────────────────────┘                            │
-    │                                                    │
-    │ High-Frequency Telemetry                           │
-    │ (HTTPS + Scoped Token)                             │
-    │ (POST /v1/locations)                               │
-    ▼                                                    ▼
+│  (Offline SQLite Outbox)  │                            │
+└───────────────────────────┘                            ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   Tracking & Telemetry Microservice                    │
 │                            (apps/tracking)                             │
 │        ┌─────────────────────────┐     ┌───────────────────────┐       │
-│        │       Redis Cache       │     │    Partitioned DB     │       │
-│        │    (Latest Positions)   │     │   (Samples History)   │       │
+│        │    latest_locations     │     │   location_samples    │       │
+│        │   (Current Positions)   │     │  (30-Day Retention)   │       │
 │        └─────────────────────────┘     └───────────────────────┘       │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 1. **Client -> Operations**:
    - Web Client interacts via standard Inertia 3 requests over HTTPS and receives real-time UI pushes via Laravel Reverb WebSockets.
-   - Mobile Client interacts via REST API over HTTPS authenticated with Sanctum bearer tokens for dispatch jobs, shift clocking, DVIR inspections, and SOS alerts.
-2. **Client -> Tracking**:
-   - Mobile Client streams high-frequency GPS telemetry samples directly to Tracking (`POST /v1/locations`) using a scoped telemetry token issued by Operations upon shift start, bypassing Operations dispatch database write load.
-3. **Operations BFF <-> Tracking Microservice**:
-   - Scoped internal HTTP over TLS:
-     - `POST /internal/v1/locations`: Fallback ingestion or browser location ingestion.
-     - `GET /internal/v1/locations/latest`: Bulk fetch latest positions for map rendering.
-     - `GET /internal/v1/locations`: Range query for compliance audit export generation.
-4. **Operations Internal Queues & Dedicated Worker Topology**:
+   - Mobile Client interacts via REST API over HTTPS authenticated with Sanctum bearer tokens for dispatch jobs, shift clocking, DVIR inspections, SOS alerts, and telemetry ingestion (`POST /api/v1/locations`).
+2. **Operations BFF <-> Tracking Microservice**:
+   - Telemetry ingestion is Operations-mediated: Operations validates driver shifts and active assignments before delegating to `TrackingClientInterface`.
+   - Driver selection via `TRACKING_SERVICE_DRIVER`:
+     - `http`: `HttpTrackingClient` transmits signed HMAC-SHA256 requests (`POST /internal/v1/locations`).
+     - `database`: `DatabaseTrackingClient` executes queries against the local database for single-service topologies.
+     - `fake`: `FakeTrackingClient` provides in-memory test doubles for deterministic automated testing.
+   - Live map hydration: Operations BFF queries Tracking (`GET /internal/v1/locations/latest`) and broadcasts position updates via Reverb.
+   - Compliance reporting: Operations queries Tracking (`GET /internal/v1/locations`) for coordinate audit datasets.
+3. **Operations Internal Queues & Dedicated Worker Topology**:
    - Internal asynchronous tasks run on Laravel's queue system backed by PostgreSQL (`jobs` table) or Redis, split across isolated worker pools to guarantee starvation immunity:
      - `default` (`default,high`): Core operational dispatch transitions, resource assignments, transactional notifications (`SendQueuedNotificationJob`), and telemetry broadcasting.
        - Worker command: `php artisan queue:work --queue=default,high --sleep=3 --tries=3 --max-time=3600` (timeout: 60s, retry_after: 90s).
@@ -139,17 +136,17 @@ Core-2/
 
 - Operations is the single source of truth for user identities, passwords, sessions, CSRF, Sanctum bearer tokens, and Spatie roles/permissions.
 - APP_KEY and users/credentials tables are never shared with Tracking.
-- Service-to-service internal requests between Operations and Tracking use signed request assertions (HMAC-SHA256 with shared secret or short-lived asymmetric JWT) with:
-  - Issuer: `core2-operations`
-  - Audience: `core2-tracking`
-  - Validity: Maximum 60 seconds (`iat`, `exp`, `jti`)
-  - Request binding: HTTP method, path, and canonical payload SHA-256 digest.
-- Tracking verifies the signature, expiration, and allowed action scope before processing.
+- Service-to-service internal requests between Operations and Tracking use signed request assertions (HMAC-SHA256) with:
+  - Headers: `X-Service-Name: operations`, `X-Timestamp`, `X-Payload-Digest` (SHA-256 of raw body), `X-Signature`.
+  - Timestamp validity window: 300 seconds.
+  - Secret hardening: Development placeholder secrets (`test-tracking-service-secret`, etc.) and secrets shorter than 16 characters are rejected with HTTP 500 in production environments.
+- Ingestion requests with future `captured_at` timestamps exceeding 300s clock drift tolerance are rejected with HTTP 422.
 
 ### Coordinate Privacy & Retention Rules
 
 - Precise location coordinates expire **30 days** after `captured_at`.
-- Tracking runs an automated daily pruning job (`location:prune`) at 02:15 UTC that deletes or nulls coordinates older than 30 days while preserving non-identifying audit metadata.
+- Tracking runs an automated daily pruning job (`location:prune`) at 02:15 UTC that nulls coordinates older than 30 days while preserving non-identifying audit metadata.
+- Delayed offline samples older than 30 days have their coordinates redacted to null immediately upon ingestion.
 - When an operator turns sharing off (`sharing_enabled = false`), the latest-position projection is immediately cleared. Replayed or delayed GPS samples cannot re-enable sharing; state transitions require an explicit user action with a monotonic server-issued timestamp.
 - Application logs never contain raw GPS coordinates, authentication tokens, prompt bodies, or personal identifiers. Correlation IDs (`X-Correlation-Id`) are logged instead.
 
@@ -157,10 +154,11 @@ Core-2/
 
 ## 5. Failure Boundaries & Resiliency
 
-1. **Tracking Outage**:
+1. **Tracking Outage & Zero Split-Brain Ingestion**:
    - Tracking unavailability must never prevent dispatch job creation, resource assignments, HoS shift operations, DVIR walkarounds, or emergency SOS incident dispatch.
    - Operations live map handles Tracking 503/timeout gracefully by displaying a non-blocking "Telemetry unavailable / showing cached positions" warning state.
-   - Mobile app queues unacknowledged GPS samples in encrypted local SQLite and retries with backoff upon reconnect.
+   - **Zero Split-Brain Ingestion**: In production (`TRACKING_ALLOW_INGEST_FALLBACK=false`), Operations strictly prohibits falling back to secondary local database writes during Tracking outages. Dual authoritative writes are eliminated.
+   - Operations returns `HTTP 503 Service Unavailable` with `Retry-After: 5`, allowing the mobile client to retain unacknowledged samples in its persistent SQLite outbox and retry with exponential backoff once Tracking recovers.
 2. **OpenRouter External AI Outage**:
    - Outages, rate limits, or slow responses from OpenRouter do not impact dispatch workflows.
    - `GenerateGptRecommendationJob` runs on the isolated `ai` queue worker. Failures record an error code in `gpt_recommendation_metrics` and leave dispatch proposals in a pending/failed state.

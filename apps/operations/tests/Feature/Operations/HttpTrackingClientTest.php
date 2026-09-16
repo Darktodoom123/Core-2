@@ -10,6 +10,7 @@ use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LatestLocationDto;
 use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Tracking\Exceptions\TrackingConflictException;
+use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Tracking\Services\HttpTrackingClient;
 use App\Platform\Workspace\Events\WorkspaceUpdated;
@@ -19,6 +20,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -196,8 +198,8 @@ it('throws TrackingConflictException when Tracking returns HTTP 409 Conflict', f
         ->toThrow(TrackingConflictException::class, 'This command ID was already used for a different command payload.');
 });
 
-it('falls back gracefully to local database client without crashing when Tracking microservice is down', function (): void {
-    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+it('falls back to local database client when allowIngestFallback is explicitly enabled', function (): void {
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowIngestFallback: true);
 
     $user = User::factory()->create(['name' => 'Fallback User']);
 
@@ -219,6 +221,30 @@ it('falls back gracefully to local database client without crashing when Trackin
     expect($result)->toBeInstanceOf(LatestLocationDto::class)
         ->and($result->userId)->toBe($user->id)
         ->and(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('strictly defaults to zero fallback and throws TrackingServiceUnavailableException on outage when allowIngestFallback is not specified', function (): void {
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    $user = User::factory()->create(['name' => 'Zero Fallback Default User']);
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    $sample = LocationSampleDto::fromArray([
+        'command_id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'latitude' => 14.6100,
+        'longitude' => 120.9900,
+        'sharing_enabled' => true,
+    ]);
+
+    expect(fn () => $client->ingestLocation($sample))
+        ->toThrow(TrackingServiceUnavailableException::class);
+
+    // Operations database must NOT have any persisted location update (no silent split-brain writes)
+    expect(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('executes full end-to-end telemetry flow: Mobile -> Operations BFF -> HTTP signed request -> Tracking 201 -> Reverb broadcast dispatched', function (): void {
@@ -469,4 +495,162 @@ it('switches to HttpTrackingClient when TRACKING_SERVICE_DRIVER is set to http',
     $client = app(TrackingClientInterface::class);
 
     expect($client)->toBeInstanceOf(HttpTrackingClient::class);
+});
+
+it('strictly throws TrackingServiceUnavailableException and prevents writes to local database when fallback is disabled on outage', function (): void {
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowIngestFallback: false);
+
+    $user = User::factory()->create(['name' => 'No Fallback User']);
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    $sample = LocationSampleDto::fromArray([
+        'command_id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'latitude' => 14.6100,
+        'longitude' => 120.9900,
+        'sharing_enabled' => true,
+    ]);
+
+    expect(fn () => $client->ingestLocation($sample))
+        ->toThrow(TrackingServiceUnavailableException::class);
+
+    // Operations database must NOT have any persisted location update (no silent split-brain writes)
+    expect(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('returns HTTP 503 Service Unavailable allowing safe mobile retries during Tracking outage when fallback is disabled', function (): void {
+    $operator = User::factory()->create(['is_active' => true]);
+    $operator->syncRoles([RoleName::CraneOperator->value]);
+    $token = $operator->createToken('Mobile Token')->plainTextToken;
+
+    $job = DispatchJob::query()->create([
+        'reference' => 'DISP-OUTAGE-503',
+        'client' => 'Outage Client',
+        'title' => 'Outage Job',
+        'site' => 'Site Outage',
+        'priority' => DispatchPriority::Routine,
+        'status' => DispatchStatus::EnRoute,
+        'version' => 1,
+        'created_by' => $operator->id,
+    ]);
+
+    DispatchPersonnelAssignment::query()->create([
+        'dispatch_job_id' => $job->id,
+        'user_id' => $operator->id,
+        'assignment_type' => 'driver',
+        'assigned_by' => $operator->id,
+        'created_at' => now(),
+    ]);
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Tracking Microservice Down'], 503),
+    ]);
+
+    app()->singleton(TrackingClientInterface::class, fn () => new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        allowIngestFallback: false
+    ));
+
+    Event::fake([WorkspaceUpdated::class]);
+
+    $commandId = (string) Str::uuid();
+    $response = $this->withToken($token)
+        ->withHeader('Idempotency-Key', $commandId)
+        ->postJson('/api/v1/locations', [
+            'dispatch_job_id' => $job->id,
+            'latitude' => 14.5995,
+            'longitude' => 120.9842,
+            'sharing_enabled' => true,
+            'captured_at' => now()->toIso8601String(),
+        ]);
+
+    $response->assertStatus(503)
+        ->assertHeader('Retry-After', '5')
+        ->assertJsonPath('error', 'service_unavailable');
+
+    // Assert that no records were persisted in Operations DB and no Reverb event broadcast
+    expect(LocationUpdate::count())->toBe(0);
+    Event::assertNotDispatched(WorkspaceUpdated::class);
+});
+
+it('strictly rejects development signing secret in production environment', function (): void {
+    app()->detectEnvironment(fn () => 'production');
+
+    expect(fn () => new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        secret: 'test-tracking-service-secret'
+    ))->toThrow(RuntimeException::class, 'Tracking service signing secret is insecure or using development placeholder in production.');
+
+    expect(fn () => new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        secret: 'short'
+    ))->toThrow(RuntimeException::class, 'Tracking service signing secret is insecure or using development placeholder in production.');
+
+    // Safe 32-char secret in production succeeds
+    $client = new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        secret: 'prod-secure-random-secret-at-least-16-chars'
+    );
+    expect($client)->toBeInstanceOf(HttpTrackingClient::class);
+});
+
+it('throws ValidationException when Tracking returns HTTP 422 Unprocessable Entity and does not fallback to database', function (): void {
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+
+    $user = User::factory()->create();
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response([
+            'message' => 'The captured_at timestamp cannot be in the future beyond clock drift tolerance.',
+            'errors' => [
+                'captured_at' => ['The captured_at timestamp cannot be in the future beyond clock drift tolerance.'],
+            ],
+        ], 422),
+    ]);
+
+    $sample = LocationSampleDto::fromArray([
+        'command_id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'latitude' => 14.6100,
+        'longitude' => 120.9900,
+        'sharing_enabled' => true,
+    ]);
+
+    expect(fn () => $client->ingestLocation($sample))
+        ->toThrow(ValidationException::class);
+
+    // Operations database must NOT have any persisted location update
+    expect(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+it('strictly forces allowIngestFallback to false in production preventing silent secondary database writes on outage', function (): void {
+    app()->detectEnvironment(fn () => 'production');
+
+    $client = new HttpTrackingClient(
+        baseUrl: 'http://localhost:8001',
+        secret: 'prod-secure-random-secret-at-least-16-chars',
+        allowIngestFallback: true // Even if true is passed, production overrides to false!
+    );
+
+    $user = User::factory()->create();
+
+    Http::fake([
+        'http://localhost:8001/*' => Http::response(['message' => 'Service Unavailable'], 503),
+    ]);
+
+    $sample = LocationSampleDto::fromArray([
+        'command_id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'latitude' => 14.6100,
+        'longitude' => 120.9900,
+        'sharing_enabled' => true,
+    ]);
+
+    expect(fn () => $client->ingestLocation($sample))
+        ->toThrow(TrackingServiceUnavailableException::class);
+
+    expect(LocationUpdate::query()->where('user_id', $user->id)->count())->toBe(0);
 });
