@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 function configureAndroidSdk() {
@@ -23,11 +24,43 @@ function configureAndroidSdk() {
 
     process.env.ANDROID_HOME = androidSdk;
     process.env.ANDROID_SDK_ROOT = androidSdk;
-    process.env.ANDROID_AVD_HOME =
-        process.env.ANDROID_AVD_HOME ?? path.join(androidSdk, 'avd');
-    process.env[pathKey] = [
+
+    const userAvdHome = path.join(os.homedir(), '.android', 'avd');
+    const sdkAvdHome = path.join(androidSdk, 'avd');
+
+    if (!process.env.ANDROID_AVD_HOME) {
+        process.env.ANDROID_AVD_HOME = fs.existsSync(userAvdHome)
+            ? userAvdHome
+            : sdkAvdHome;
+    }
+
+    process.env.SKIP_JDK_VERSION_CHECK = '1';
+
+    if (!process.env.JAVA_HOME) {
+        const candidateJdks = [
+            'C:\\Program Files\\Android\\Android Studio\\jbr',
+        ];
+
+        for (const candidate of candidateJdks) {
+            if (fs.existsSync(candidate)) {
+                process.env.JAVA_HOME = candidate;
+                break;
+            }
+        }
+    }
+
+    const additionalPaths = [
         path.join(androidSdk, 'platform-tools'),
         path.join(androidSdk, 'emulator'),
+        path.join(androidSdk, 'cmdline-tools', 'latest', 'bin'),
+    ];
+
+    if (process.env.JAVA_HOME) {
+        additionalPaths.unshift(path.join(process.env.JAVA_HOME, 'bin'));
+    }
+
+    process.env[pathKey] = [
+        ...additionalPaths,
         process.env[pathKey] ?? '',
     ].join(path.delimiter);
 

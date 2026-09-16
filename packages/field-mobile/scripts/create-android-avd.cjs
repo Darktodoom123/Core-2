@@ -43,7 +43,7 @@ if (fs.existsSync(avdPath)) {
             '--package',
             'system-images;android-36;google_apis;x86_64',
             '--device',
-            'pixel_tablet',
+            process.env.CORE2_AVD_DEVICE ?? 'pixel_8',
         ],
         {
             env: {
