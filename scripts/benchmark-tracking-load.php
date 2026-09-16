@@ -725,7 +725,7 @@ echo "------------------------------------------------------------------------\n
 // -----------------------------------------------------------------------------
 // BENCHMARK 1: Producer Publish Latency (Operations -> Redis Stream)
 // -----------------------------------------------------------------------------
-if ($mode === 'all' || $mode === 'producer') {
+if ($mode === 'all' || $mode === 'stream' || $mode === 'producer') {
     echo ">>> [1/3] Benchmarking Producer Publish Latency (Operations)...\n";
 
     $publishLatencies = [];
@@ -791,7 +791,7 @@ if ($mode === 'all' || $mode === 'producer') {
 // -----------------------------------------------------------------------------
 // BENCHMARK 2: Consumer Processing Lag & Throughput Under Burst Load
 // -----------------------------------------------------------------------------
-if ($mode === 'all' || $mode === 'consumer') {
+if ($mode === 'all' || $mode === 'stream' || $mode === 'consumer') {
     echo ">>> [2/3] Benchmarking Consumer Processing Lag and Ingest Throughput...\n";
 
     // Bootstrap tracking app for realistic database ingestion benchmark
@@ -859,7 +859,7 @@ if ($mode === 'all' || $mode === 'consumer') {
 // -----------------------------------------------------------------------------
 // BENCHMARK 3: Read Query Latency on /latest During Active Ingest Bursts
 // -----------------------------------------------------------------------------
-if ($mode === 'all' || $mode === 'read') {
+if ($mode === 'all' || $mode === 'stream' || $mode === 'read') {
     echo ">>> [3/3] Benchmarking Read Query Latency on /latest During Ingest Load...\n";
 
     if (! isset($app)) {
