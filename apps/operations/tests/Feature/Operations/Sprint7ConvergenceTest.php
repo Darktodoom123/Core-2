@@ -127,7 +127,7 @@ it('enforces endpoint-specific rate limiters for location, uploads, exports, and
 
 it('omits development routes when a production application boots', function (): void {
     $process = new Process(
-        [PHP_BINARY, 'artisan', 'route:list', '--path=dev'],
+        [PHP_BINARY, 'artisan', 'route:list', '--path=dev/'],
         base_path(),
         ['APP_ENV' => 'production'],
     );

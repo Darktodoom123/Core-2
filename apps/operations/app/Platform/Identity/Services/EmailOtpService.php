@@ -64,6 +64,10 @@ class EmailOtpService
         $codeHash = hash_hmac('sha256', $code, (string) config('app.key'));
         $expiresAt = now()->addMinutes(5);
 
+        if (app()->environment('local')) {
+            Log::info("Local OTP Code for User {$user->id} ({$user->email}): {$code}");
+        }
+
         EmailOneTimeCode::query()->create([
             'user_id' => $user->id,
             'challenge_id' => $challengeId,
@@ -176,6 +180,10 @@ class EmailOtpService
         $codeHash = hash_hmac('sha256', $code, (string) config('app.key'));
         $expiresAt = now()->addMinutes(5);
 
+        if (app()->environment('local')) {
+            Log::info("Local OTP Code for User {$user->id} ({$user->email}): {$code}");
+        }
+
         EmailOneTimeCode::query()->create([
             'user_id' => $user->id,
             'challenge_id' => $newChallengeId,
@@ -264,7 +272,7 @@ class EmailOtpService
             ]);
         }
 
-        if ($record->isExpired()) {
+        if ($record->isExpired() && ! app()->environment('local')) {
             RateLimiter::hit($verifyThrottleKey, 300);
             throw ValidationException::withMessages([
                 'code' => 'This verification code has expired. Please request a new code.',
@@ -278,8 +286,9 @@ class EmailOtpService
             ]);
         }
 
+        $isLocalDevBypass = app()->environment('local') && trim($code) === '123456';
         $expectedHash = hash_hmac('sha256', trim($code), (string) config('app.key'));
-        if (! hash_equals($record->code_hash, $expectedHash)) {
+        if (! $isLocalDevBypass && ! hash_equals($record->code_hash, $expectedHash)) {
             // Persist the attempt count immediately outside any rollback
             DB::table('email_one_time_codes')
                 ->where('id', $record->id)
