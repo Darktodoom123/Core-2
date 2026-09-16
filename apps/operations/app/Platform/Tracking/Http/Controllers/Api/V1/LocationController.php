@@ -83,6 +83,13 @@ final class LocationController extends Controller
             );
             $broadcast->afterCommit();
 
+            if ($latest->isQueued) {
+                return response()->json([
+                    'message' => 'Telemetry sample queued for ingestion.',
+                    'data' => new LocationUpdateResource($latest),
+                ], 202);
+            }
+
             return response()->json(['data' => new LocationUpdateResource($latest)], 201);
         };
 

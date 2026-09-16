@@ -101,6 +101,8 @@ final class ValidateServiceSignature
                 'changeme',
                 '<local-only-shared-secret>',
                 'password',
+                'placeholder',
+                'default-tracking-secret',
             ], true) || strlen($secret) < 16;
 
             if ($isDevSecret) {

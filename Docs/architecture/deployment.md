@@ -132,14 +132,29 @@ VITE_MAP_PLAN=starter
 VITE_MAP_USE_CASE=commercial
 VITE_STADIA_MAPS_API_KEY=<restricted-production-browser-key>
 
-# Tracking & Telemetry Microservice Integration
-TRACKING_SERVICE_DRIVER=http
+# Telemetry Ingestion & Tracking Microservice Integration
+# Drivers: 'stream' (Redis Streams, Phase 2 async default) or 'http' (direct RPC)
+TRACKING_SERVICE_DRIVER=stream
 TRACKING_SERVICE_URL=http://tracking:8001
 TRACKING_SERVICE_SECRET=<strong-random-at-least-16-char-shared-secret>
 TRACKING_SERVICE_TIMEOUT=5.0
 TRACKING_SERVICE_CONNECT_TIMEOUT=3.0
 # Strictly set false in production to eliminate split-brain dual authoritative writes
 TRACKING_ALLOW_INGEST_FALLBACK=false
+
+# Redis Stream Telemetry Settings (for driver=stream)
+TRACKING_STREAM_KEY=telemetry.gps.v1
+TRACKING_STREAM_GROUP=tracking-ingest-workers
+TRACKING_DLQ_STREAM_KEY=telemetry.gps.dlq
+TRACKING_STREAM_MAXLEN=100000
+
+# Tracking Microservice Read Replica Configuration (apps/tracking/.env)
+# DB_HOST routes all ingestion writes and command receipts to primary
+# DB_READ_HOST routes high-frequency fleet dispatch map queries to read replicas
+TRACKING_DB_HOST=<tracking-primary-db-host>
+TRACKING_DB_READ_HOST=<tracking-replica-db-host-1>,<tracking-replica-db-host-2>
+TRACKING_DB_PORT=5432
+TRACKING_DB_DATABASE=core2_ms_tracking
 
 # Deployment Lifecycle Flags
 RUN_MIGRATIONS=true
@@ -157,6 +172,7 @@ APP_URL=http://tracking
 # Tracking Database Connection
 DB_CONNECTION=pgsql
 DB_HOST=<tracking-db-host>
+DB_READ_HOST=<tracking-replica-db-host-1>,<tracking-replica-db-host-2>
 DB_PORT=5432
 DB_DATABASE=core2_tracking_production
 DB_USERNAME=<tracking-db-user>
@@ -173,6 +189,25 @@ QUEUE_CONNECTION=sync
 SESSION_DRIVER=array
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
+```
+
+### Tracking Consumer Group Monitoring & Operability
+
+Monitor consumer group lag, active consumers, and Pending Entries List (PEL):
+
+```bash
+# Inspect consumer group progress, lag, and last delivered message ID
+redis-cli XINFO GROUPS telemetry.gps.v1
+
+# Inspect active consumer worker daemons
+redis-cli XINFO CONSUMERS telemetry.gps.v1 tracking-ingest-workers
+
+# Check unacknowledged pending messages (PEL)
+redis-cli XPENDING telemetry.gps.v1 tracking-ingest-workers
+
+# Monitor poison-pill messages routed to Dead Letter Queue (DLQ)
+redis-cli XLEN telemetry.gps.dlq
+redis-cli XREVRANGE telemetry.gps.dlq + - COUNT 10
 ```
 
 ---

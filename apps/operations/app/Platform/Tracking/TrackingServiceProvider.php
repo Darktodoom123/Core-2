@@ -6,6 +6,7 @@ use App\Platform\Tracking\Console\Commands\PruneLocationUpdatesCommand;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Services\DatabaseTrackingClient;
 use App\Platform\Tracking\Services\HttpTrackingClient;
+use App\Platform\Tracking\Services\RedisStreamTrackingClient;
 use App\Platform\Tracking\Testing\FakeTrackingClient;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -22,11 +23,12 @@ final class TrackingServiceProvider extends ServiceProvider
             }
 
             return match ($driver) {
+                'stream' => $app->make(RedisStreamTrackingClient::class),
                 'http' => $app->make(HttpTrackingClient::class),
                 'database' => $app->make(DatabaseTrackingClient::class),
                 'fake' => new FakeTrackingClient,
                 default => throw new InvalidArgumentException(
-                    "Invalid tracking driver [{$driver}]. Supported drivers are: http, database, fake."
+                    "Invalid tracking driver [{$driver}]. Supported drivers are: http, stream, database, fake."
                 ),
             };
         });

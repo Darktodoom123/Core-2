@@ -31,6 +31,8 @@ final readonly class LatestLocationDto
         public ?array $user = null,
         public ?array $asset = null,
         public ?array $job = null,
+        public bool $isQueued = false,
+        public ?string $streamId = null,
     ) {}
 
     public static function computeFreshness(?CarbonInterface $timestamp, bool $sharingEnabled): string
