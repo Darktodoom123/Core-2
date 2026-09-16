@@ -31,21 +31,32 @@ final class LocationController extends Controller
         $rawLat = isset($validated['latitude']) ? round((float) $validated['latitude'], 7) : null;
         $rawLng = isset($validated['longitude']) ? round((float) $validated['longitude'], 7) : null;
 
-        $lat = $sharingEnabled ? $rawLat : null;
-        $lng = $sharingEnabled ? $rawLng : null;
+        $now = CarbonImmutable::now();
+        $capturedAt = isset($validated['captured_at'])
+            ? CarbonImmutable::parse($validated['captured_at'])
+            : $now;
+        $receivedAt = isset($validated['received_at'])
+            ? CarbonImmutable::parse($validated['received_at'])
+            : $now;
+
+        $retentionCutoff = $now->subDays(30);
+        $isExpiredByRetention = $capturedAt->lessThan($retentionCutoff);
+
+        $lat = ($sharingEnabled && ! $isExpiredByRetention) ? $rawLat : null;
+        $lng = ($sharingEnabled && ! $isExpiredByRetention) ? $rawLng : null;
 
         $canonicalPayload = [
             'user_id' => $userId,
             'operational_asset_id' => $assetId,
             'dispatch_job_id' => $jobId,
-            'latitude' => $lat,
-            'longitude' => $lng,
-            'accuracy_metres' => isset($validated['accuracy_metres']) ? (float) $validated['accuracy_metres'] : null,
-            'speed' => isset($validated['speed']) ? (float) $validated['speed'] : null,
+            'latitude' => $rawLat,
+            'longitude' => $rawLng,
+            'accuracy_metres' => isset($validated['accuracy_metres']) ? round((float) $validated['accuracy_metres'], 2) : null,
+            'speed' => isset($validated['speed']) ? round((float) $validated['speed'], 2) : null,
             'remarks' => isset($validated['remarks']) ? (string) $validated['remarks'] : null,
             'source' => (string) ($validated['source'] ?? 'mobile'),
             'sharing_enabled' => $sharingEnabled,
-            'captured_at' => isset($validated['captured_at']) ? (string) $validated['captured_at'] : null,
+            'captured_at' => isset($validated['captured_at']) ? $capturedAt->toIso8601String() : null,
         ];
         ksort($canonicalPayload);
         $payloadHash = hash('sha256', json_encode($canonicalPayload, JSON_THROW_ON_ERROR));
@@ -66,22 +77,14 @@ final class LocationController extends Controller
             }
         }
 
-        $now = CarbonImmutable::now();
-        $capturedAt = isset($validated['captured_at'])
-            ? CarbonImmutable::parse($validated['captured_at'])
-            : $now;
-        $receivedAt = isset($validated['received_at'])
-            ? CarbonImmutable::parse($validated['received_at'])
-            : $now;
-
         $sampleData = [
             'user_id' => $userId,
             'operational_asset_id' => $assetId,
             'dispatch_job_id' => $jobId,
             'latitude' => $lat,
             'longitude' => $lng,
-            'accuracy_metres' => $sharingEnabled && isset($validated['accuracy_metres']) ? (float) $validated['accuracy_metres'] : null,
-            'speed' => $sharingEnabled && isset($validated['speed']) ? (float) $validated['speed'] : null,
+            'accuracy_metres' => ($sharingEnabled && ! $isExpiredByRetention && isset($validated['accuracy_metres'])) ? (float) $validated['accuracy_metres'] : null,
+            'speed' => ($sharingEnabled && ! $isExpiredByRetention && isset($validated['speed'])) ? (float) $validated['speed'] : null,
             'remarks' => isset($validated['remarks']) ? (string) $validated['remarks'] : null,
             'source' => (string) ($validated['source'] ?? 'mobile'),
             'sharing_enabled' => $sharingEnabled,
@@ -90,83 +93,135 @@ final class LocationController extends Controller
             'received_at' => $receivedAt,
         ];
 
-        /** @var array{payload: array<string, mixed>, status: int} $result */
-        $result = DB::transaction(function () use ($sampleData, $userId, $assetId, $jobId, $sharingEnabled, $lat, $lng, $capturedAt, $receivedAt, $commandId, $payloadHash) {
-            $sample = LocationSample::query()->create($sampleData);
+        try {
+            /** @var array{payload: array<string, mixed>, status: int} $result */
+            $result = DB::transaction(function () use ($sampleData, $userId, $assetId, $jobId, $sharingEnabled, $isExpiredByRetention, $lat, $lng, $capturedAt, $receivedAt, $commandId, $payloadHash) {
+                $sample = LocationSample::query()->create($sampleData);
 
-            if ($assetId !== null) {
-                LatestLocation::query()
-                    ->where('operational_asset_id', $assetId)
-                    ->where('user_id', '!=', $userId)
-                    ->update(['operational_asset_id' => null]);
-            }
-
-            $existingProjection = LatestLocation::query()
-                ->where('user_id', $userId)
-                ->lockForUpdate()
-                ->first();
-
-            if ($existingProjection !== null) {
-                $existingCapturedAt = $existingProjection->captured_at;
-                $isNewer = $existingCapturedAt === null || $capturedAt->greaterThanOrEqualTo($existingCapturedAt);
-
-                $canUpdateSharing = $isNewer;
-                if (! $existingProjection->sharing_enabled && $sharingEnabled) {
-                    $canUpdateSharing = $existingCapturedAt === null || $capturedAt->greaterThan($existingCapturedAt);
+                // Determine user IDs requiring row locks, sorted in ascending order to prevent deadlocks under concurrency
+                $existingHolderUserId = null;
+                if ($assetId !== null) {
+                    $existingHolderUserId = LatestLocation::query()
+                        ->where('operational_asset_id', $assetId)
+                        ->where('user_id', '!=', $userId)
+                        ->value('user_id');
                 }
 
-                if ($isNewer) {
-                    $effectiveSharing = $canUpdateSharing ? $sharingEnabled : false;
-                    $existingProjection->update([
-                        'operational_asset_id' => $assetId,
-                        'dispatch_job_id' => $jobId,
-                        'location_sample_id' => $sample->id,
-                        'latitude' => $effectiveSharing ? $lat : null,
-                        'longitude' => $effectiveSharing ? $lng : null,
-                        'accuracy_metres' => $effectiveSharing ? $sample->accuracy_metres : null,
-                        'speed' => $effectiveSharing ? $sample->speed : null,
-                        'remarks' => $sample->remarks,
-                        'source' => $sample->source,
-                        'sharing_enabled' => $effectiveSharing,
-                        'command_id' => $sample->command_id,
-                        'captured_at' => $capturedAt,
-                        'received_at' => $receivedAt,
-                    ]);
+                $userIdsToLock = [$userId];
+                if ($existingHolderUserId !== null) {
+                    $userIdsToLock[] = (int) $existingHolderUserId;
+                    sort($userIdsToLock, SORT_NUMERIC);
                 }
 
-                $latestProjection = $existingProjection;
-            } else {
-                try {
-                    $latestProjection = LatestLocation::query()->create([
-                        'user_id' => $userId,
-                        'operational_asset_id' => $assetId,
-                        'dispatch_job_id' => $jobId,
-                        'location_sample_id' => $sample->id,
-                        'latitude' => $lat,
-                        'longitude' => $lng,
-                        'accuracy_metres' => $sharingEnabled ? $sample->accuracy_metres : null,
-                        'speed' => $sharingEnabled ? $sample->speed : null,
-                        'remarks' => $sample->remarks,
-                        'source' => $sample->source,
-                        'sharing_enabled' => $sharingEnabled,
-                        'command_id' => $sample->command_id,
-                        'captured_at' => $capturedAt,
-                        'received_at' => $receivedAt,
-                    ]);
-                } catch (QueryException) {
+                $lockedProjections = [];
+                foreach ($userIdsToLock as $idToLock) {
+                    $proj = LatestLocation::query()
+                        ->where('user_id', $idToLock)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($proj !== null) {
+                        $lockedProjections[$idToLock] = $proj;
+                    }
+                }
+
+                $existingProjection = $lockedProjections[$userId] ?? null;
+                $existingAssetHolder = ($existingHolderUserId !== null) ? ($lockedProjections[(int) $existingHolderUserId] ?? null) : null;
+
+                $effectiveAssetId = $assetId;
+                if ($existingAssetHolder !== null) {
+                    $holderCapturedAt = $existingAssetHolder->captured_at;
+                    if ($holderCapturedAt !== null && $holderCapturedAt->greaterThan($capturedAt)) {
+                        $effectiveAssetId = null;
+                    }
+                }
+
+                /** @var LatestLocation|null $latestProjection */
+                $latestProjection = null;
+
+                if ($existingProjection === null) {
+                    try {
+                        $latestProjection = DB::transaction(function () use ($userId, $effectiveAssetId, $jobId, $sample, $sharingEnabled, $isExpiredByRetention, $lat, $lng, $capturedAt, $receivedAt) {
+                            return LatestLocation::query()->create([
+                                'user_id' => $userId,
+                                'operational_asset_id' => $effectiveAssetId,
+                                'dispatch_job_id' => $jobId,
+                                'location_sample_id' => $sample->id,
+                                'latitude' => ($sharingEnabled && ! $isExpiredByRetention) ? $lat : null,
+                                'longitude' => ($sharingEnabled && ! $isExpiredByRetention) ? $lng : null,
+                                'accuracy_metres' => ($sharingEnabled && ! $isExpiredByRetention) ? $sample->accuracy_metres : null,
+                                'speed' => ($sharingEnabled && ! $isExpiredByRetention) ? $sample->speed : null,
+                                'remarks' => $sample->remarks,
+                                'source' => $sample->source,
+                                'sharing_enabled' => $sharingEnabled,
+                                'command_id' => $sample->command_id,
+                                'captured_at' => $capturedAt,
+                                'received_at' => $receivedAt,
+                            ]);
+                        });
+
+                        if ($effectiveAssetId !== null) {
+                            LatestLocation::query()
+                                ->where('operational_asset_id', $effectiveAssetId)
+                                ->where('user_id', '!=', $userId)
+                                ->update(['operational_asset_id' => null]);
+                        }
+                    } catch (QueryException) {
+                        $existingProjection = LatestLocation::query()
+                            ->where('user_id', $userId)
+                            ->lockForUpdate()
+                            ->first();
+                    }
+                }
+
+                if ($existingProjection !== null) {
+                    $existingCapturedAt = $existingProjection->captured_at;
+                    $isNewer = $existingCapturedAt === null || $capturedAt->greaterThanOrEqualTo($existingCapturedAt);
+
+                    $canUpdateSharing = $isNewer;
+                    if (! $existingProjection->sharing_enabled && $sharingEnabled) {
+                        $canUpdateSharing = $existingCapturedAt === null || $capturedAt->greaterThan($existingCapturedAt);
+                    }
+
+                    if ($isNewer) {
+                        if ($effectiveAssetId !== null) {
+                            LatestLocation::query()
+                                ->where('operational_asset_id', $effectiveAssetId)
+                                ->where('user_id', '!=', $userId)
+                                ->update(['operational_asset_id' => null]);
+                        }
+
+                        $effectiveSharing = $canUpdateSharing ? $sharingEnabled : false;
+                        $existingProjection->update([
+                            'operational_asset_id' => $effectiveAssetId,
+                            'dispatch_job_id' => $jobId,
+                            'location_sample_id' => $sample->id,
+                            'latitude' => ($effectiveSharing && ! $isExpiredByRetention) ? $lat : null,
+                            'longitude' => ($effectiveSharing && ! $isExpiredByRetention) ? $lng : null,
+                            'accuracy_metres' => ($effectiveSharing && ! $isExpiredByRetention) ? $sample->accuracy_metres : null,
+                            'speed' => ($effectiveSharing && ! $isExpiredByRetention) ? $sample->speed : null,
+                            'remarks' => $sample->remarks,
+                            'source' => $sample->source,
+                            'sharing_enabled' => $effectiveSharing,
+                            'command_id' => $sample->command_id,
+                            'captured_at' => $capturedAt,
+                            'received_at' => $receivedAt,
+                        ]);
+                    }
+
+                    $latestProjection = $existingProjection;
+                }
+
+                if (! $latestProjection instanceof LatestLocation) {
                     $latestProjection = LatestLocation::query()
                         ->where('user_id', $userId)
-                        ->lockForUpdate()
                         ->firstOrFail();
                 }
-            }
 
-            $responsePayload = [
-                'data' => $latestProjection->toDtoArray(),
-            ];
+                $responsePayload = [
+                    'data' => $latestProjection->toDtoArray(),
+                ];
 
-            if (is_string($commandId) && $commandId !== '') {
-                try {
+                if (is_string($commandId) && $commandId !== '') {
                     TrackingCommandReceipt::query()->create([
                         'command_id' => $commandId,
                         'action' => 'telemetry.ingest',
@@ -177,36 +232,32 @@ final class LocationController extends Controller
                         'response_payload' => $responsePayload,
                         'received_at' => $receivedAt,
                     ]);
-                } catch (QueryException $e) {
-                    $existing = TrackingCommandReceipt::query()->where('command_id', $commandId)->first();
-                    if ($existing !== null) {
-                        if ($existing->payload_hash !== null && ! hash_equals($existing->payload_hash, $payloadHash)) {
-                            return [
-                                'payload' => [
-                                    'message' => 'This command ID was already used for a different command payload.',
-                                    'error' => 'conflict',
-                                ],
-                                'status' => 409,
-                            ];
-                        }
+                }
 
-                        if (is_array($existing->response_payload)) {
-                            return [
-                                'payload' => $existing->response_payload,
-                                'status' => $existing->status_code,
-                            ];
-                        }
+                return [
+                    'payload' => $responsePayload,
+                    'status' => 201,
+                ];
+            });
+        } catch (QueryException $e) {
+            if (is_string($commandId) && $commandId !== '') {
+                $existing = TrackingCommandReceipt::query()->where('command_id', $commandId)->first();
+                if ($existing !== null) {
+                    if ($existing->payload_hash !== null && ! hash_equals($existing->payload_hash, $payloadHash)) {
+                        return response()->json([
+                            'message' => 'This command ID was already used for a different command payload.',
+                            'error' => 'conflict',
+                        ], 409);
                     }
 
-                    throw $e;
+                    if (is_array($existing->response_payload)) {
+                        return response()->json($existing->response_payload, $existing->status_code);
+                    }
                 }
             }
 
-            return [
-                'payload' => $responsePayload,
-                'status' => 201,
-            ];
-        });
+            throw $e;
+        }
 
         return response()->json($result['payload'], $result['status']);
     }
@@ -229,9 +280,12 @@ final class LocationController extends Controller
             $query->where('dispatch_job_id', (int) $jobId);
         }
 
+        $limit = min(max((int) ($request->input('limit') ?? 500), 1), 1000);
+
         $records = $query
             ->orderByDesc('received_at')
             ->orderByDesc('id')
+            ->limit($limit)
             ->get();
 
         $data = $records->map(fn (LatestLocation $location): array => $location->toDtoArray())->values();
@@ -285,9 +339,14 @@ final class LocationController extends Controller
             : 'desc';
 
         $limit = min(max((int) ($request->input('limit') ?? $request->input('per_page') ?? 100), 1), 1000);
+        $page = max((int) ($request->input('page') ?? 1), 1);
+        $offset = $request->filled('offset')
+            ? max((int) $request->input('offset'), 0)
+            : ($page - 1) * $limit;
 
         $samples = $query
             ->orderBy($orderBy, $orderDirection)
+            ->offset($offset)
             ->limit($limit)
             ->get();
 

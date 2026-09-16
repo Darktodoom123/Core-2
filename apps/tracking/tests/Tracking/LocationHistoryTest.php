@@ -106,3 +106,25 @@ it('safely handles invalid date format in date filters without crashing', functi
     $response->assertStatus(200)
         ->assertJsonCount(10, 'data');
 });
+
+it('paginates location history with limit and page parameters', function (): void {
+    $page1 = $this->getJson('/internal/v1/locations?limit=4&page=1');
+    $page1->assertStatus(200)->assertJsonCount(4, 'data');
+
+    $page2 = $this->getJson('/internal/v1/locations?limit=4&page=2');
+    $page2->assertStatus(200)->assertJsonCount(4, 'data');
+
+    $page3 = $this->getJson('/internal/v1/locations?limit=4&page=3');
+    $page3->assertStatus(200)->assertJsonCount(2, 'data');
+
+    // Page 1 and Page 2 must not overlap
+    $page1Ids = collect($page1->json('data'))->pluck('id')->all();
+    $page2Ids = collect($page2->json('data'))->pluck('id')->all();
+    expect(array_intersect($page1Ids, $page2Ids))->toBeEmpty();
+});
+
+it('supports explicit offset parameter for slicing history', function (): void {
+    $response = $this->getJson('/internal/v1/locations?limit=3&offset=8');
+    $response->assertStatus(200)
+        ->assertJsonCount(2, 'data'); // Total 10, offset 8 returns remaining 2
+});

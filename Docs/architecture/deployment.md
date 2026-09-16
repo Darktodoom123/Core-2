@@ -130,6 +130,15 @@ VITE_MAP_PLAN=starter
 VITE_MAP_USE_CASE=commercial
 VITE_STADIA_MAPS_API_KEY=<restricted-production-browser-key>
 
+# Tracking & Telemetry Microservice Integration
+TRACKING_SERVICE_DRIVER=http
+TRACKING_SERVICE_URL=http://tracking:8001
+TRACKING_SERVICE_SECRET=<strong-random-at-least-16-char-shared-secret>
+TRACKING_SERVICE_TIMEOUT=5.0
+TRACKING_SERVICE_CONNECT_TIMEOUT=3.0
+# Strictly set false in production to eliminate split-brain dual authoritative writes
+TRACKING_ALLOW_INGEST_FALLBACK=false
+
 # Deployment Lifecycle Flags
 RUN_MIGRATIONS=true
 CACHE_CONFIG=true
@@ -146,7 +155,9 @@ Field technicians, drivers, and operators running the React Native / Expo applic
 EXPO_PUBLIC_API_BASE_URL=https://core-2.alibaton-ph.com
 ```
 
-All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanctum personal access tokens and persistent offline outbox queuing.
+All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanctum personal access tokens and persistent offline outbox queuing:
+- **Operations-Mediated Telemetry**: Field mobile sends GPS updates to Operations at `POST /api/v1/locations`. Operations validates authorization, driver assignments, and active shifts, then forwards the telemetry to the Tracking microservice via signed HMAC requests.
+- **Outage Retries & Offline Preservation**: If Tracking is unavailable, Operations returns `HTTP 503 Service Unavailable` with `Retry-After: 5`. The mobile client retains unacknowledged samples in its SQLite outbox and retries with backoff, ensuring zero data loss without requiring direct mobile access to the Tracking microservice.
 
 ---
 

@@ -62,6 +62,7 @@ return [
         'secret' => env('TRACKING_SERVICE_SECRET', 'test-tracking-service-secret'),
         'timeout' => (float) env('TRACKING_SERVICE_TIMEOUT', 5.0),
         'connect_timeout' => (float) env('TRACKING_SERVICE_CONNECT_TIMEOUT', 3.0),
+        'allow_ingest_fallback' => (bool) env('TRACKING_ALLOW_INGEST_FALLBACK', false),
     ],
 
 ];

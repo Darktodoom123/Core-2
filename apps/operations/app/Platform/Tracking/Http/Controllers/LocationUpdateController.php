@@ -10,6 +10,7 @@ use App\Platform\Tracking\Actions\BroadcastTrackingWorkspaceUpdate;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LocationSampleDto;
 use App\Platform\Tracking\Exceptions\TrackingConflictException;
+use App\Platform\Tracking\Exceptions\TrackingServiceUnavailableException;
 use App\Platform\Tracking\Http\Requests\StoreLocationUpdateRequest;
 use App\Platform\Tracking\Models\LocationUpdate;
 use App\Platform\Tracking\Testing\FakeTrackingClient;
@@ -71,6 +72,15 @@ final class LocationUpdateController extends Controller
                 }
 
                 return back()->withErrors(['command_id' => $e->getMessage()])->withInput();
+            } catch (TrackingServiceUnavailableException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => $e->getMessage(),
+                        'error' => 'service_unavailable',
+                    ], 503, ['Retry-After' => '5']);
+                }
+
+                return back()->withErrors(['tracking' => $e->getMessage()])->withInput();
             }
 
             if ($trackingClient instanceof FakeTrackingClient) {

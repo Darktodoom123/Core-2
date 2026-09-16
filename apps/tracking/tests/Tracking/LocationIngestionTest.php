@@ -313,3 +313,162 @@ it('reassigns asset to newer reporting user so asset only appears once in latest
     $user1Latest = LatestLocation::where('user_id', 108)->first();
     expect($user1Latest->operational_asset_id)->toBeNull();
 });
+
+it('rejects future captured_at timestamps exceeding 300-second clock tolerance with 422 validation error', function (): void {
+    $futureTime = CarbonImmutable::now()->addMinutes(10);
+
+    $response = $this->postJson('/internal/v1/locations', [
+        'user_id' => 110,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => $futureTime->toIso8601String(),
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['captured_at']);
+
+    expect(LocationSample::query()->where('user_id', 110)->count())->toBe(0);
+});
+
+it('maintains strict idempotency and single sample persistence on duplicate command delivery', function (): void {
+    $commandId = '00000000-0000-0000-0000-000000000777';
+    $payload = [
+        'command_id' => $commandId,
+        'user_id' => 111,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'sharing_enabled' => true,
+        'captured_at' => now()->toIso8601String(),
+    ];
+
+    // First request
+    $r1 = $this->postJson('/internal/v1/locations', $payload);
+    $r1->assertStatus(201);
+
+    // Repeated request with same command ID and payload
+    $r2 = $this->postJson('/internal/v1/locations', $payload);
+    $r2->assertStatus(201)
+        ->assertJson($r1->json());
+
+    // Verify exactly ONE sample was created in location_samples table
+    expect(LocationSample::query()->where('command_id', $commandId)->count())->toBe(1);
+});
+
+it('does not reassign asset when delayed out-of-order sample is received with older timestamp', function (): void {
+    $now = CarbonImmutable::now();
+
+    // User 108 reports on Asset 500 at 12:00
+    $this->postJson('/internal/v1/locations', [
+        'user_id' => 108,
+        'operational_asset_id' => 500,
+        'latitude' => 14.5000,
+        'longitude' => 120.9000,
+        'captured_at' => $now->subHours(1)->toIso8601String(),
+    ])->assertStatus(201);
+
+    // User 109 now sends an out-of-order sample for Asset 500 from 10:00 (older than User 108's sample)
+    $this->postJson('/internal/v1/locations', [
+        'user_id' => 109,
+        'operational_asset_id' => 500,
+        'latitude' => 14.5500,
+        'longitude' => 120.9500,
+        'captured_at' => $now->subHours(3)->toIso8601String(),
+    ])->assertStatus(201);
+
+    // Asset 500 must REMAIN assigned to User 108 (who reported at 12:00)
+    $response = $this->getJson('/internal/v1/locations/latest?operational_asset_id=500');
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.user_id', 108);
+
+    $user1Latest = LatestLocation::where('user_id', 108)->first();
+    expect($user1Latest->operational_asset_id)->toBe(500);
+
+    // User 109's latest projection must not have asset 500
+    $user2Latest = LatestLocation::where('user_id', 109)->first();
+    expect($user2Latest->operational_asset_id)->toBeNull();
+});
+
+it('detects 409 conflict when duplicate command ID is sent with differing coordinates even when sharing_enabled is false', function (): void {
+    $commandId = '00000000-0000-0000-0000-000000000888';
+
+    $r1 = $this->postJson('/internal/v1/locations', [
+        'command_id' => $commandId,
+        'user_id' => 112,
+        'latitude' => 14.5000,
+        'longitude' => 120.9000,
+        'sharing_enabled' => false,
+    ]);
+    $r1->assertStatus(201);
+
+    $r2 = $this->postJson('/internal/v1/locations', [
+        'command_id' => $commandId,
+        'user_id' => 112,
+        'latitude' => 15.0000, // Different latitude
+        'longitude' => 120.9000,
+        'sharing_enabled' => false,
+    ]);
+    $r2->assertStatus(409)
+        ->assertJsonPath('error', 'conflict');
+});
+
+it('handles duplicate command ID with alternate ISO-8601 timestamp formatting as idempotent replay without 409 conflict', function (): void {
+    $commandId = '00000000-0000-0000-0000-000000000999';
+
+    // First delivery with 'Z' suffix
+    $r1 = $this->postJson('/internal/v1/locations', [
+        'command_id' => $commandId,
+        'user_id' => 113,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 5.0,
+        'sharing_enabled' => true,
+        'captured_at' => '2026-09-16T10:00:00Z',
+    ]);
+    $r1->assertStatus(201);
+
+    // Replay with '+00:00' timezone syntax (semantically identical timestamp)
+    $r2 = $this->postJson('/internal/v1/locations', [
+        'command_id' => $commandId,
+        'user_id' => 113,
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
+        'accuracy_metres' => 5.0,
+        'sharing_enabled' => true,
+        'captured_at' => '2026-09-16T10:00:00+00:00',
+    ]);
+
+    // Must return HTTP 201 cached receipt, NOT HTTP 409 Conflict
+    $r2->assertStatus(201)
+        ->assertJson($r1->json());
+
+    expect(LocationSample::query()->where('command_id', $commandId)->count())->toBe(1);
+});
+
+it('reliably transfers asset to newer reporting user under ascending ID row locks', function (): void {
+    // User 200 (higher ID) acquires Asset 700 first
+    $this->postJson('/internal/v1/locations', [
+        'user_id' => 200,
+        'operational_asset_id' => 700,
+        'latitude' => 14.5000,
+        'longitude' => 120.9000,
+        'captured_at' => now()->subMinutes(10)->toIso8601String(),
+    ])->assertStatus(201);
+
+    // User 100 (lower ID) now acquires Asset 700 with a newer timestamp
+    $this->postJson('/internal/v1/locations', [
+        'user_id' => 100,
+        'operational_asset_id' => 700,
+        'latitude' => 14.5500,
+        'longitude' => 120.9500,
+        'captured_at' => now()->toIso8601String(),
+    ])->assertStatus(201);
+
+    // Asset 700 must be assigned exclusively to User 100
+    $user100Latest = LatestLocation::where('user_id', 100)->first();
+    expect($user100Latest->operational_asset_id)->toBe(700);
+
+    $user200Latest = LatestLocation::where('user_id', 200)->first();
+    expect($user200Latest->operational_asset_id)->toBeNull();
+});

@@ -35,9 +35,10 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="ATTACHMENTS_DISK" value="private"/>
-        <env name="TRACKING_SERVICE_DRIVER" value="database"/>
+        <env name="TRACKING_SERVICE_DRIVER" value="fake"/>
         <env name="TRACKING_SERVICE_URL" value="http://localhost:8001"/>
         <env name="TRACKING_SERVICE_SECRET" value="test-tracking-service-secret"/>
+        <env name="TRACKING_ALLOW_INGEST_FALLBACK" value="false"/>
         <env name="OPENROUTER_BASE_URL" value="https://openrouter.ai/api/v1"/>
         <env name="OPENROUTER_MODEL" value="openai/gpt-5-mini"/>
         <env name="OPENAI_API_KEY" value=""/>

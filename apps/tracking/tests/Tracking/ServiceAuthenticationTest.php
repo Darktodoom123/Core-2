@@ -216,3 +216,41 @@ it('accepts signed GET requests with query parameters', function (): void {
     $response->assertOk()
         ->assertJsonStructure(['data']);
 });
+
+it('rejects requests in production when tracking secret is insecure or development placeholder', function (): void {
+    app()->detectEnvironment(fn () => 'production');
+    config()->set('services.tracking.secret', 'test-tracking-service-secret');
+
+    $headers = $this->generateSignatureHeaders(
+        'GET',
+        '/internal/v1/locations/latest',
+        '',
+        secret: 'test-tracking-service-secret'
+    );
+
+    $response = $this->withHeaders($headers)
+        ->getJson('/internal/v1/locations/latest');
+
+    $response->assertStatus(500)
+        ->assertJsonPath('error', 'server_error')
+        ->assertJsonPath('message', 'Tracking service signing secret is insecure or using development placeholder in production.');
+});
+
+it('rejects requests in production when tracking secret is less than 16 characters', function (): void {
+    app()->detectEnvironment(fn () => 'production');
+    config()->set('services.tracking.secret', 'short-secret');
+
+    $headers = $this->generateSignatureHeaders(
+        'GET',
+        '/internal/v1/locations/latest',
+        '',
+        secret: 'short-secret'
+    );
+
+    $response = $this->withHeaders($headers)
+        ->getJson('/internal/v1/locations/latest');
+
+    $response->assertStatus(500)
+        ->assertJsonPath('error', 'server_error')
+        ->assertJsonPath('message', 'Tracking service signing secret is insecure or using development placeholder in production.');
+});
