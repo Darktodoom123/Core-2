@@ -1,20 +1,12 @@
 # Deployment & Hosting Architecture
 
-**Last updated:** 2026-09-08
+**Last updated:** 2026-09-15
 **Target Environment:** HostForge Platform  
 **Platform URL:** [https://hostforgeplatform.cloud/platform](https://hostforgeplatform.cloud/platform)  
 **Apex Domain:** `alibaton-ph.com`  
 **Core-2 Subdomain:** `core-2.alibaton-ph.com`  
 
-**Verification status:** The user confirmed that Core-2 is not deployed. HostForge
-is the intended first-deployment platform. The topology below describes the
-existing application's proposed deployment, not verified hosting capabilities.
-The [pre-deployment restructuring handoff](../microservice/README.md) supersedes
-earlier live-production migration assumptions. Platform, capacity, backup/restore
-and independent-release evidence is required before deployment; local preparation
-may proceed. No hosting account or production data was accessed. `/up` is the
-configured Laravel health route; it does not establish database, broker, or
-optional-service readiness.
+**Verification status:** The user confirmed that Core-2 is not deployed. HostForge is the intended first-deployment platform. The topology below describes the containerized 2-service monorepo architecture (Operations + Tracking), not verified hosting capabilities. The [microservice restructuring handoff](../microservice/README.md) defines the authoritative service boundary; local verification (Tasks 1–7) is complete. Platform capacity, backup/restore, and independent-release evidence is required before production deployment. No hosting account or production data was accessed.
 
 ---
 
@@ -24,7 +16,7 @@ Core Transaction 2 (Core-2) is the operational dispatch, fleet, crane/equipment,
 
 ```
 alibaton-ph.com (Apex Domain)
-├── core-2.alibaton-ph.com (Core-2 Web Workspace & API v1 - HostForge Platform)
+├── core-2.alibaton-ph.com (Core-2 Web Workspace & BFF API - HostForge Platform)
 └── [Future Core-1 / Corporate Services]
 ```
 
@@ -36,36 +28,45 @@ alibaton-ph.com (Apex Domain)
 | **Core-2 Web Workspace** | `https://core-2.alibaton-ph.com` | Authenticated Inertia 3 / React 19 operational workspace. |
 | **Core-2 Mobile API** | `https://core-2.alibaton-ph.com/api/v1` | Sanctum bearer-token REST API for React Native / Expo field workers. |
 | **Laravel Reverb (WebSockets)** | `wss://core-2.alibaton-ph.com/app` | Real-time workspace telemetry, GPS vehicle tracking, and notifications (reverse-proxied over TLS port 443). |
-| **Health Check Endpoint** | `https://core-2.alibaton-ph.com/up` | Configured Laravel health route; dependency readiness and zero-downtime behavior require separate verification. |
+| **Operations Health Routes** | `https://core-2.alibaton-ph.com/up`<br>`https://core-2.alibaton-ph.com/ready` | Configured Laravel health routes: `/up` (process liveness) and `/ready` (migrated database and cache readiness). |
+| **Tracking Health Routes** | `http://tracking/up`<br>`http://tracking/ready` | Internal container endpoints: `/up` and `/ready` on the isolated Tracking service (not publicly published). |
 
 ---
 
 ## 2. Platform & Hosting Architecture (HostForge)
 
-The existing application can be packaged as a containerized service. Deployment on **HostForge Platform** (`https://hostforgeplatform.cloud/platform`) is planned and requires capability verification. The following topology is the pre-restructuring proposal; the microservice handoff defines the target two-service topology (Operations + Tracking).
+The application is deployed as a two-service containerized architecture orchestrated via Docker Compose:
 
 ### Compute & Service Topology
-- **Application Container (`app`)**: Single production container running Alpine Linux, Nginx, PHP 8.4 FPM, Laravel queue workers, scheduler daemon, and Laravel Reverb WebSocket server supervised via `supervisord`.
-- **Database Service (`db`)**: Managed PostgreSQL 16 database (or Supabase PostgreSQL with Supavisor connection pooler).
-- **In-Memory Cache / Key-Value Store (`redis`)**: Redis 7 instance for distributed sessions, atomic rate limiting, and real-time pub/sub brokering.
-- **Edge Reverse Proxy & SSL/TLS**: HostForge ingress edge terminates TLS with automated Let's Encrypt certificates for `core-2.alibaton-ph.com` and proxies HTTP/HTTPS to port 80/443 and WebSocket upgrades (`Upgrade: websocket`) to the internal Reverb service on port 8080.
+- **Operations Container (`app`)**: Production container running Alpine Linux, Nginx, PHP 8.4 FPM, Laravel Reverb WebSocket server on port 8080, scheduler daemon, and dedicated queue worker pools (`operational`, `ai`, `reports`) supervised via `supervisord`.
+- **Tracking Container (`tracking`)**: Production container running Alpine Linux, Nginx, PHP 8.4 FPM, and coordinate retention scheduler daemon. Serves `/internal/v1/` ingestion and query endpoints protected by HMAC-SHA256 signature validation.
+- **Operations Database (`db`)**: Managed PostgreSQL 16 database (`core2_production`) or Supabase PostgreSQL with Supavisor connection pooler (port 6543).
+- **Tracking Database (`tracking-db`)**: Isolated PostgreSQL 16 database (`core2_tracking_production`) with monthly partitioning for append-only location samples.
+- **In-Memory Cache / Key-Value Store (`redis`)**: Redis 7 instance for distributed sessions, atomic rate limiting, and real-time pub/sub brokering for Operations.
+- **Edge Reverse Proxy & SSL/TLS**: HostForge ingress edge terminates TLS with automated Let's Encrypt certificates for `core-2.alibaton-ph.com`, proxying HTTP/HTTPS to Operations port 80 and WebSocket upgrades (`Upgrade: websocket`) to port 8080. Tracking is internal-only and not exposed to the public Internet.
 
 ```mermaid
 flowchart TD
-    Client[Web Browser / Field Mobile App] -->|HTTPS / WSS| Edge[HostForge Edge Proxy / SSL Termination\ncore-2.alibaton-ph.com]
+    Client[Web Browser / Field Mobile App] -->|HTTPS / WSS| Edge[HostForge Ingress Edge\ncore-2.alibaton-ph.com]
     
-    subgraph HostForge Platform [HostForge Platform Environment]
-        Edge -->|HTTP :80| Nginx[Nginx Web Server]
+    subgraph HostForge Platform Environment
+        Edge -->|HTTP :80| NginxOps[Nginx - Operations]
         Edge -->|WebSocket :8080| Reverb[Laravel Reverb Server]
-        
-        Nginx -->|FastCGI| FPM[PHP-FPM Workers]
-        FPM --> App[Laravel 13 Core-2 Engine]
-        
-        App --> Queue[Laravel Queue Workers]
-        App --> Sched[Laravel Scheduler]
-        
-        App --> DB[(PostgreSQL 16 DB)]
-        App --> Redis[(Redis 7 Cache / Queues)]
+
+        NginxOps -->|FastCGI| FPMOps[PHP-FPM Workers]
+        FPMOps --> AppOps[Laravel 13 Operations BFF]
+
+        AppOps --> QueueOps[Dedicated Queue Workers\noperational | ai | reports]
+        AppOps --> SchedOps[Operations Scheduler]
+
+        AppOps --> DBOps[(PostgreSQL 16 - Operations\ncore2_production)]
+        AppOps --> Redis[(Redis 7 Cache / Queues)]
+
+        AppOps -->|Internal HMAC HTTP\nhttp://tracking:80| NginxTrack[Nginx - Tracking]
+        NginxTrack -->|FastCGI| FPMTrack[PHP-FPM Tracking]
+        FPMTrack --> AppTrack[Laravel 13 Tracking Microservice]
+        AppTrack --> SchedTrack[Retention Scheduler\nlocation:prune]
+        AppTrack --> DBTrack[(PostgreSQL 16 - Tracking\ncore2_tracking_production)]
     end
 ```
 
@@ -73,8 +74,9 @@ flowchart TD
 
 ## 3. Production Environment Configuration
 
-The following production environment variables should be configured within the HostForge platform management dashboard:
+Configure the following environment variables within the HostForge platform management dashboard:
 
+### Operations Environment Variables
 ```dotenv
 # Application Configuration
 APP_NAME="Alibaton Core-2"
@@ -91,7 +93,7 @@ SESSION_DOMAIN=.alibaton-ph.com
 SESSION_SECURE_COOKIE=true
 SANCTUM_STATEFUL_DOMAINS=core-2.alibaton-ph.com
 
-# Database Connection (PostgreSQL / Supabase)
+# Operations Database Connection (PostgreSQL / Supabase)
 DB_CONNECTION=pgsql
 DB_HOST=<production-db-host>
 DB_PORT=5432
@@ -107,6 +109,11 @@ REDIS_PORT=6379
 REDIS_PASSWORD=<strong-redis-password>
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
+
+# Tracking Microservice Integration
+TRACKING_SERVICE_DRIVER=http
+TRACKING_SERVICE_URL=http://tracking
+TRACKING_SERVICE_SECRET=<strong-shared-service-secret>
 
 # Laravel Reverb (WebSockets on Subdomain)
 BROADCAST_CONNECTION=reverb
@@ -135,6 +142,35 @@ RUN_MIGRATIONS=true
 CACHE_CONFIG=true
 ```
 
+### Tracking Environment Variables
+```dotenv
+APP_NAME=TrackingService
+APP_ENV=production
+APP_KEY=base64:<second-32-byte-base64-key>
+APP_DEBUG=false
+APP_URL=http://tracking
+
+# Tracking Database Connection
+DB_CONNECTION=pgsql
+DB_HOST=<tracking-db-host>
+DB_PORT=5432
+DB_DATABASE=core2_tracking_production
+DB_USERNAME=<tracking-db-user>
+DB_PASSWORD=<strong-tracking-db-password>
+DB_SSLMODE=require
+
+# Service-to-Service Security
+TRACKING_SERVICE_SECRET=<strong-shared-service-secret>
+TRACKING_ALLOWED_SERVICES=operations
+
+CACHE_STORE=file
+CACHE_PREFIX=core2_tracking_cache_
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=array
+RUN_MIGRATIONS=true
+CACHE_CONFIG=true
+```
+
 ---
 
 ## 4. Mobile Field App Configuration (`packages/field-mobile`)
@@ -146,7 +182,7 @@ Field technicians, drivers, and operators running the React Native / Expo applic
 EXPO_PUBLIC_API_BASE_URL=https://core-2.alibaton-ph.com
 ```
 
-All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanctum personal access tokens and persistent offline outbox queuing.
+All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanctum personal access tokens and persistent offline outbox queuing. High-frequency GPS telemetry is relayed via Operations BFF to Tracking, or directly to Tracking using a scoped token.
 
 ---
 
@@ -157,5 +193,7 @@ All API communications target `https://core-2.alibaton-ph.com/api/v1` with Sanct
 3. **CORS & Origin Isolation**:
    - Web workspace origins restricted to `https://core-2.alibaton-ph.com`.
    - API endpoints accept authorization from authenticated mobile clients (`Bearer` token) and stateful web requests with CSRF.
-4. **WebSocket Reverse Proxying**: Ensure HostForge / Nginx passes the `Upgrade` and `Connection` headers for `wss://core-2.alibaton-ph.com` connections.
-5. **Asset Optimization**: Run `php artisan config:cache`, `php artisan route:cache`, and `php artisan view:cache` during build steps to ensure maximum response performance.
+4. **WebSocket Reverse Proxying**: Ensure HostForge / Nginx passes the `Upgrade` and `Connection` headers for `wss://core-2.alibaton-ph.com` connections to port 8080.
+5. **Asset Optimization**:
+   - Operations: Run `php artisan config:cache`, `php artisan route:cache`, and `php artisan view:cache`.
+   - Tracking: Run `php artisan config:cache` and `php artisan route:cache` (`view:cache` is intentionally omitted).

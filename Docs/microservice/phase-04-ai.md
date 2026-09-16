@@ -46,4 +46,4 @@ Prerequisite: Phase 3 contracts and integration accepted. Recommendation accepta
   - `GenerateGptRecommendationJob` executes on the `ai` queue without impacting `default` queue throughput.
   - Concurrency test: simultaneous acceptance of overlapping recommendations fails cleanly on the second attempt via row lock conflict detection.
   - Provider timeout test: 30s timeout is caught, recorded in metrics, and leaves the dispatch job unaffected.
-  - Test suites: run `tests/Feature/Gpt/` and concurrency suites in isolated PostgreSQL.
+  - Test suites: run `apps/operations/tests/Feature/Gpt/` and concurrency suites in isolated PostgreSQL.

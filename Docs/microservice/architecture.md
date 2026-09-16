@@ -1,6 +1,6 @@
 # Target architecture and shared invariants (Plan A: 2-Service Model)
 
-Status: target specification, not current deployment. Updated: 2026-09-09.
+Status: implemented 2-service architecture specification; local verification complete, production deployment pending. Updated: 2026-09-15.
 
 ## 1. Service Ownership & Boundaries
 
@@ -30,18 +30,17 @@ The approved architecture is **Plan A: The Pragmatic 2-Service Model**, comprisi
 
 ## 2. Repository Layout & Isolated Storage
 
-### Target Repository Layout
+### Monorepo Repository Layout
 
 ```
 Core-2/
 ├── apps/
-│   ├── operations/          # Core Operations Service (Laravel 13 + Inertia 3)
-│   └── tracking/            # Tracking & Telemetry Microservice (High-throughput Laravel / Lumen)
+│   ├── operations/          # Core Operations Service (Laravel 13 + Inertia 3 + React 19)
+│   └── tracking/            # Tracking & Telemetry Microservice (Laravel 13 API)
 ├── packages/
-│   ├── contracts/           # Integration schemas, OpenAPI specs, and generated transport types
 │   └── field-mobile/        # React Native / Expo field client
 └── infra/
-    └── compose/             # Isolated local Docker Compose topology (core2-ms)
+    └── docker/              # Multi-stage Docker Compose topology & configs
 ```
 
 ### Database Isolation & Schemas

@@ -57,4 +57,4 @@ Prerequisite: Phase 5 (Tracking extraction) reviewed and verified. Field report 
 - **Queue Isolation**: Launch 5 concurrent large report export requests; verify `default` dispatch queue and web workspace responsiveness remain completely unaffected.
 - **Export Lifecycle**: Test state transitions: `pending` -> `processing` -> `completed` (with valid artifact reference) and `failed` (with clean error status).
 - **Security Check**: Verify unauthorized users cannot download export artifacts, and expired export files are pruned by `PruneExpiredExportsJob`.
-- **Parity Test**: Run `tests/Feature/Platform/Reporting/` test suites verifying all 10 export types generate expected content and column mappings.
+- **Parity Test**: Run `apps/operations/tests/Feature/Platform/Reporting/` test suites verifying all 10 export types generate expected content and column mappings.

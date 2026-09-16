@@ -281,7 +281,9 @@ remain available for inspection. Its runtime result is daemon-dependent.
   changing any `VITE_*` value. The CI-equivalent bundle check is:
 
   ```bash
-  node scripts/verify-frontend-build.cjs public/build
+  node scripts/verify-frontend-build.cjs apps/operations/public/build
+  # Or via npm script:
+  npm run verify:frontend-build
   ```
 
   when the six `VITE_*` values are set in the current shell.
