@@ -14,9 +14,12 @@ import type {
     OutboxCommand,
     OutboxCommandPriority,
     OutboxCommandType,
+    RentalHandoverCommandPayload,
+    SalesDeliveryCommandPayload,
 } from '../types/index';
 import type { FieldApiClient } from './apiClient';
 import { ApiClientError } from './apiClient';
+import { durableAttachmentStorage } from './durableAttachmentStorage';
 
 export type OutboxListener = (commands: OutboxCommand[]) => void;
 
@@ -389,6 +392,50 @@ export class CommandOutboxManager {
         );
     }
 
+    public enqueueSubmitRentalHandover(
+        payload: RentalHandoverCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_rental_handover',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public enqueueSubmitSalesDelivery(
+        payload: SalesDeliveryCommandPayload,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_sales_delivery',
+            payload.dispatch_job_id ?? null,
+            null,
+            payload as unknown as Record<string, unknown>,
+        );
+    }
+
+    public enqueueSubmitEquipmentInspection(
+        payload: Record<string, unknown>,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_equipment_inspection' as OutboxCommandType,
+            (payload.dispatch_job_id as number) ?? null,
+            null,
+            payload,
+        );
+    }
+
+    public enqueueSubmitMaintenanceWorkOrder(
+        payload: Record<string, unknown>,
+    ): Promise<OutboxCommand> {
+        return this.enqueue(
+            'submit_maintenance_work_order' as OutboxCommandType,
+            (payload.dispatch_job_id as number) ?? null,
+            null,
+            payload,
+        );
+    }
+
     private async persist(command: OutboxCommand): Promise<void> {
         command.updatedAt = this.now().toISOString();
         await this.repository.save(command);
@@ -498,7 +545,9 @@ export class CommandOutboxManager {
 
         if (
             !command ||
+            command.type === 'release_maintenance_work_order' ||
             command.error?.code === 'MALFORMED_COMMAND' ||
+            command.error?.code === 'LEGACY_RELEASE_DISALLOWED' ||
             command.state === 'completed' ||
             command.state === 'conflict' ||
             command.state === 'syncing' ||
@@ -581,7 +630,20 @@ export class CommandOutboxManager {
         try {
             let response: DispatchJob | unknown = null;
 
-            if (command.type === 'respond_assignment') {
+            if (command.type === 'release_maintenance_work_order') {
+                command.state = 'failed';
+                command.nextAttemptAt = null;
+                command.error = {
+                    code: 'LEGACY_RELEASE_DISALLOWED',
+                    message:
+                        'Offline work order release commands are deprecated and cannot be replayed. A new explicit online release action is required.',
+                    retryable: false,
+                };
+                await this.persist(command);
+                result.failed += 1;
+
+                return null;
+            } else if (command.type === 'respond_assignment') {
                 response = await apiClient.respondAssignment(
                     command.jobId!,
                     command.assignmentId!,
@@ -617,6 +679,40 @@ export class CommandOutboxManager {
                     command.payload as unknown as Parameters<
                         typeof apiClient.createDvirInspection
                     >[0],
+                    command.id,
+                );
+            } else if (command.type === 'submit_rental_handover') {
+                const payload =
+                    command.payload as unknown as RentalHandoverCommandPayload;
+                response = await apiClient.submitRentalHandover(
+                    payload.reservation_id,
+                    payload as unknown as Record<string, unknown>,
+                    command.id,
+                );
+            } else if (command.type === 'submit_sales_delivery') {
+                const payload =
+                    command.payload as unknown as SalesDeliveryCommandPayload;
+                response = await apiClient.submitSalesDelivery(
+                    payload.order_id,
+                    payload as unknown as Record<string, unknown>,
+                    command.id,
+                );
+            } else if (
+                command.type === ('submit_equipment_inspection' as any)
+            ) {
+                const payload = command.payload as any;
+                response = await apiClient.submitEquipmentInspection(
+                    payload.operational_asset_id,
+                    payload,
+                    command.id,
+                );
+            } else if (
+                command.type === ('submit_maintenance_work_order' as any)
+            ) {
+                const payload = command.payload as any;
+                response = await apiClient.submitMaintenanceWorkOrder(
+                    payload.operational_asset_id,
+                    payload,
                     command.id,
                 );
             }
@@ -837,6 +933,7 @@ export class CommandOutboxManager {
     public async clearActiveActorCommands(): Promise<void> {
         const actorId = this.requireActor();
         await this.repository.clearActor(actorId);
+        await durableAttachmentStorage.cleanupActorAttachments(actorId);
 
         if (this.activeActorId === actorId) {
             this.commands.clear();

@@ -13,48 +13,76 @@ import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { useTheme } from '../theme';
 
 export interface RentalHandoverScreenProps {
-    reservationId?: string;
+    jobId?: number;
+    reservationId?: string | number;
     reservationReference?: string;
     clientName?: string;
+    assetId?: number;
     assetName?: string;
     assetCode?: string;
+    actorId?: number | string;
     mode?: 'checkout' | 'return';
+    syncStatus?:
+        'idle' | 'saving' | 'queued' | 'submitting' | 'success' | 'failed';
+    syncErrorMessage?: string | null;
     onBack?: () => void;
-    onCompleteCheckout?: (data: RentalCheckoutData) => void;
-    onCompleteReturn?: (data: RentalReturnData) => void;
+    onCompleteCheckout?: (data: RentalCheckoutData) => void | Promise<void>;
+    onCompleteReturn?: (data: RentalReturnData) => void | Promise<void>;
+    onRetrySync?: () => void;
 }
 
 export interface RentalCheckoutData {
+    jobId?: number;
+    reservationId?: number;
+    assetId?: number;
     hourMeter: number;
     fuelLevelPercent: number;
+    conditionAssessment?: 'excellent' | 'good' | 'fair' | 'poor';
     conditionNotes: string;
+    damageNoted?: boolean;
+    damageNotes?: string;
     photos: PhotoAttachment[];
     signatureBase64?: string;
     signeeName: string;
+    signeeRole?: string;
 }
 
 export interface RentalReturnData {
+    jobId?: number;
+    reservationId?: number;
+    assetId?: number;
     hourMeter: number;
     fuelLevelPercent: number;
+    conditionAssessment?: 'excellent' | 'good' | 'fair' | 'poor';
     conditionNotes: string;
     damageNoted: boolean;
+    damageNotes?: string;
     photos: PhotoAttachment[];
     signatureBase64?: string;
     signeeName: string;
+    signeeRole?: string;
 }
 
 export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
+    jobId,
+    reservationId,
     reservationReference = 'REN-2026-0412',
     clientName = 'DMCI Construction & Power Inc.',
+    assetId,
     assetName = '50T Tadano All-Terrain Crane',
     assetCode = 'ALB-CRN-050',
+    actorId = '1',
     mode: initialMode = 'checkout',
+    syncStatus: propSyncStatus,
+    syncErrorMessage: propSyncErrorMessage,
     onBack,
     onCompleteCheckout,
     onCompleteReturn,
+    onRetrySync,
 }) => {
     const { isDarkHud } = useTheme();
     const [mode, setMode] = useState<'checkout' | 'return'>(initialMode);
@@ -66,39 +94,111 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
     const [signeeName, setSigneeName] = useState('Engr. Antonio Santos');
     const [signatureModalVisible, setSignatureModalVisible] = useState(false);
     const [signatureCaptured, setSignatureCaptured] = useState(false);
+    const [signatureData, setSignatureData] = useState<string | undefined>(
+        undefined,
+    );
+    const [signeeRole, setSigneeRole] = useState('Site Supervisor');
+    const [localSyncStatus, setLocalSyncStatus] = useState<
+        'idle' | 'saving' | 'queued' | 'submitting' | 'success' | 'failed'
+    >('idle');
+    const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(
+        null,
+    );
+
+    const activeSyncStatus = propSyncStatus ?? localSyncStatus;
+    const activeErrorMessage = propSyncErrorMessage ?? localErrorMessage;
+    const isSubmitting =
+        activeSyncStatus === 'submitting' || activeSyncStatus === 'saving';
 
     const isCheckout = mode === 'checkout';
 
-    const handleConfirm = () => {
-        if (isCheckout) {
-            onCompleteCheckout?.({
-                hourMeter: parseFloat(hourMeter) || 0,
-                fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
-                conditionNotes:
-                    conditionNotes ||
-                    'Checkout inspection completed with zero safety defects.',
-                photos,
-                signatureBase64: signatureCaptured
-                    ? 'digital-signature-captured'
-                    : undefined,
-                signeeName,
-            });
-        } else {
-            onCompleteReturn?.({
-                hourMeter: parseFloat(hourMeter) || 0,
-                fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
-                conditionNotes:
-                    conditionNotes ||
-                    (damageNoted
-                        ? 'Damage recorded during return inspection.'
-                        : 'Returned in good operational condition.'),
-                damageNoted,
-                photos,
-                signatureBase64: signatureCaptured
-                    ? 'digital-signature-captured'
-                    : undefined,
-                signeeName,
-            });
+    const handleConfirm = async () => {
+        const signaturePayload =
+            signatureData ||
+            (signatureCaptured
+                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+                : undefined);
+
+        setLocalSyncStatus('saving');
+        setLocalErrorMessage(null);
+
+        try {
+            // Durable attachment persistence: copy temporary photos to durable storage before queueing/reporting saved
+            const durablePhotos: PhotoAttachment[] = [];
+
+            for (const photo of photos) {
+                const stored =
+                    await durableAttachmentStorage.saveAttachmentDurably(
+                        {
+                            uri: photo.uri,
+                            base64: photo.base64,
+                            fileName: photo.fileName,
+                        },
+                        actorId,
+                    );
+                durablePhotos.push({
+                    uri: stored.uri,
+                    fileName: stored.fileName,
+                    fileSize: stored.fileSize ?? photo.fileSize,
+                    base64: photo.base64,
+                });
+            }
+
+            setLocalSyncStatus('submitting');
+
+            const numericReservationId =
+                typeof reservationId === 'number'
+                    ? reservationId
+                    : reservationId
+                      ? parseInt(String(reservationId), 10)
+                      : undefined;
+
+            if (isCheckout) {
+                await onCompleteCheckout?.({
+                    jobId,
+                    reservationId: numericReservationId,
+                    assetId,
+                    hourMeter: parseFloat(hourMeter) || 0,
+                    fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
+                    conditionAssessment: 'good',
+                    conditionNotes:
+                        conditionNotes ||
+                        'Checkout inspection completed with zero safety defects.',
+                    photos: durablePhotos,
+                    signatureBase64: signaturePayload,
+                    signeeName,
+                    signeeRole,
+                });
+            } else {
+                await onCompleteReturn?.({
+                    jobId,
+                    reservationId: numericReservationId,
+                    assetId,
+                    hourMeter: parseFloat(hourMeter) || 0,
+                    fuelLevelPercent: parseInt(fuelLevel, 10) || 100,
+                    conditionAssessment: damageNoted ? 'fair' : 'good',
+                    conditionNotes:
+                        conditionNotes ||
+                        (damageNoted
+                            ? 'Damage recorded during return inspection.'
+                            : 'Returned in good operational condition.'),
+                    damageNoted,
+                    damageNotes: damageNoted ? conditionNotes : undefined,
+                    photos: durablePhotos,
+                    signatureBase64: signaturePayload,
+                    signeeName,
+                    signeeRole,
+                });
+            }
+
+            setLocalSyncStatus('success');
+        } catch (err: unknown) {
+            setLocalSyncStatus('failed');
+            setLocalErrorMessage(
+                err instanceof Error
+                    ? err.message
+                    : 'Handover submission failed.',
+            );
         }
     };
 
@@ -626,6 +726,117 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                     </Pressable>
                 </View>
 
+                {/* Offline Outbox & Sync State Banner */}
+                {activeSyncStatus !== 'idle' && (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.syncBanner,
+                            activeSyncStatus === 'submitting' ||
+                            activeSyncStatus === 'saving'
+                                ? isDarkHud
+                                    ? styles.syncBannerSubmittingDark
+                                    : styles.syncBannerSubmitting
+                                : activeSyncStatus === 'queued'
+                                  ? isDarkHud
+                                      ? styles.syncBannerQueuedDark
+                                      : styles.syncBannerQueued
+                                  : activeSyncStatus === 'success'
+                                    ? isDarkHud
+                                        ? styles.syncBannerSuccessDark
+                                        : styles.syncBannerSuccess
+                                    : isDarkHud
+                                      ? styles.syncBannerFailedDark
+                                      : styles.syncBannerFailed,
+                        ]}
+                        testID="sync-status-banner"
+                    >
+                        <Icon
+                            color={
+                                activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? isDarkHud
+                                        ? '#93C5FD'
+                                        : colors.blue
+                                    : activeSyncStatus === 'queued'
+                                      ? isDarkHud
+                                          ? '#FCD34D'
+                                          : colors.amberDark
+                                      : activeSyncStatus === 'success'
+                                        ? isDarkHud
+                                            ? '#34D399'
+                                            : colors.greenDark
+                                        : isDarkHud
+                                          ? '#F87171'
+                                          : colors.red
+                            }
+                            name={
+                                activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'sync'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'clock'
+                                      : activeSyncStatus === 'success'
+                                        ? 'check-circle'
+                                        : 'alert-circle'
+                            }
+                            size={18}
+                        />
+                        <View style={styles.syncBannerContent}>
+                            <Text
+                                style={[
+                                    styles.syncBannerTitle,
+                                    isDarkHud && styles.syncBannerTitleDark,
+                                ]}
+                            >
+                                {activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'Uploading & Synchronizing…'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'Saved on Device (Waiting to Sync)'
+                                      : activeSyncStatus === 'success'
+                                        ? 'Submitted Successfully'
+                                        : 'Submission Failed'}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.syncBannerSubtitle,
+                                    isDarkHud && styles.syncBannerSubtitleDark,
+                                ]}
+                            >
+                                {activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'Uploading handover evidence to operations desk.'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'Evidence securely stored in offline outbox. It will synchronize automatically when connection is restored.'
+                                      : activeSyncStatus === 'success'
+                                        ? 'Handover evidence recorded and synchronized with operations.'
+                                        : activeErrorMessage ||
+                                          'Unable to complete submission. Tap retry to re-attempt.'}
+                            </Text>
+                        </View>
+                        {activeSyncStatus === 'failed' && (
+                            <Pressable
+                                accessibilityLabel="Retry synchronization"
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    if (onRetrySync) {
+                                        onRetrySync();
+                                    } else {
+                                        void handleConfirm();
+                                    }
+                                }}
+                                style={styles.syncRetryButton}
+                                testID="sync-retry-button"
+                            >
+                                <Text style={styles.syncRetryButtonText}>
+                                    Retry
+                                </Text>
+                            </Pressable>
+                        )}
+                    </View>
+                )}
+
                 {/* Final Action Button */}
                 <Pressable
                     accessibilityLabel={
@@ -634,19 +845,24 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                             : 'Confirm Return Check-in & Close'
                     }
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: isSubmitting }}
+                    disabled={isSubmitting}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
                         styles.confirmBtn,
                         isDarkHud && styles.confirmBtnDark,
-                        pressed && styles.pressed,
+                        isSubmitting && styles.confirmBtnDisabled,
+                        pressed && !isSubmitting && styles.pressed,
                     ]}
                     testID="confirm-handover-button"
                 >
                     <Icon color="#FFFFFF" name="check-circle" size={20} />
                     <Text style={styles.confirmBtnText}>
-                        {isCheckout
-                            ? 'CONFIRM RENTAL CHECKOUT & DISPATCH'
-                            : 'CONFIRM RETURN CHECK-IN & CLOSE'}
+                        {isSubmitting
+                            ? 'SUBMITTING EVIDENCE…'
+                            : isCheckout
+                              ? 'CONFIRM RENTAL CHECKOUT & DISPATCH'
+                              : 'CONFIRM RETURN CHECK-IN & CLOSE'}
                     </Text>
                 </Pressable>
             </ScrollView>
@@ -655,8 +871,19 @@ export const RentalHandoverScreen: React.FC<RentalHandoverScreenProps> = ({
                 clientName={clientName}
                 jobReference={reservationReference}
                 onClose={() => setSignatureModalVisible(false)}
-                onConfirmSignature={() => {
+                onConfirmSignature={(data) => {
                     setSignatureCaptured(true);
+
+                    if (data?.signerName) {
+                        setSigneeName(data.signerName);
+                    }
+
+                    if (data?.signerRole) {
+                        setSigneeRole(data.signerRole);
+                    }
+
+                    const base64Sig = `data:image/svg+xml;base64,${typeof btoa === 'function' ? btoa(JSON.stringify(data?.strokes || [])) : Buffer.from(JSON.stringify(data?.strokes || [])).toString('base64')}`;
+                    setSignatureData(base64Sig);
                     setSignatureModalVisible(false);
                 }}
                 visible={signatureModalVisible}
@@ -1039,5 +1266,81 @@ const styles = StyleSheet.create({
     tabPressed: {
         opacity: 0.85,
         transform: [{ scale: 0.97 }],
+    },
+    syncBanner: {
+        alignItems: 'flex-start',
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 16,
+        padding: 14,
+    },
+    syncBannerSubmitting: {
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+    },
+    syncBannerSubmittingDark: {
+        backgroundColor: '#1E293B',
+        borderColor: '#3B82F6',
+    },
+    syncBannerQueued: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+    },
+    syncBannerQueuedDark: {
+        backgroundColor: '#451A03',
+        borderColor: '#D97706',
+    },
+    syncBannerSuccess: {
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
+    },
+    syncBannerSuccessDark: {
+        backgroundColor: '#064E3B',
+        borderColor: '#059669',
+    },
+    syncBannerFailed: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FECACA',
+    },
+    syncBannerFailedDark: {
+        backgroundColor: '#450A0A',
+        borderColor: '#DC2626',
+    },
+    syncBannerContent: {
+        flex: 1,
+    },
+    syncBannerTitle: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    syncBannerTitleDark: {
+        color: '#FFFFFF',
+    },
+    syncBannerSubtitle: {
+        color: colors.muted,
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    syncBannerSubtitleDark: {
+        color: colors.hudTextDim,
+    },
+    syncRetryButton: {
+        alignSelf: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    syncRetryButtonText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    confirmBtnDisabled: {
+        opacity: 0.5,
     },
 });

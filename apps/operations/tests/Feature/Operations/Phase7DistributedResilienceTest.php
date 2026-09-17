@@ -249,7 +249,7 @@ afterEach(function (): void {
 it('handles Tracking microservice HTTP 500 error by logging structured warning and falling back to DatabaseTrackingClient', function (): void {
     Log::spy();
 
-    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001');
+    $client = new HttpTrackingClient(baseUrl: 'http://localhost:8001', allowIngestFallback: true);
 
     $user = User::factory()->create(['name' => 'Operator Outage User']);
     $user->syncRoles([RoleName::CraneOperator->value]);
@@ -391,6 +391,7 @@ it('handles Tracking microservice network partition and timeout (> 3.0s connect 
         baseUrl: 'http://localhost:8001',
         timeout: 5.0,
         connectTimeout: 3.0,
+        allowIngestFallback: true,
     );
 
     $dispatcher = User::factory()->create();

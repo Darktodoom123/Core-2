@@ -22,9 +22,18 @@ final class SalesOrderController extends Controller
         return response()->json(['data' => SalesOrder::query()->with(['client', 'items.catalogItem'])->latest()->paginate(50)]);
     }
 
-    public function fulfill(SalesOrder $salesOrder, FulfillSalesOrder $action): JsonResponse
+    public function fulfill(SalesOrder $salesOrder, FulfillSalesOrder $action): JsonResponse|RedirectResponse
     {
-        return response()->json(['data' => $action->handle($salesOrder, request()->user())]);
+        $order = $action->handle($salesOrder, request()->user());
+
+        if (request()->expectsJson() && ! request()->header('X-Inertia')) {
+            return response()->json(['data' => $order]);
+        }
+
+        return back()->with('flash', [
+            'tone' => 'success',
+            'message' => "Sales order {$salesOrder->reference} fulfilled successfully.",
+        ]);
     }
 
     public function createDispatch(SalesOrder $salesOrder, CreateSalesDispatchHandoffRequest $request, CreateSalesDispatchHandoff $action): JsonResponse|RedirectResponse
@@ -41,8 +50,17 @@ final class SalesOrderController extends Controller
         ]);
     }
 
-    public function transferOwnership(SalesOrder $salesOrder, TransferSalesOwnership $action): JsonResponse
+    public function transferOwnership(SalesOrder $salesOrder, TransferSalesOwnership $action): JsonResponse|RedirectResponse
     {
-        return response()->json(['data' => $action->handle($salesOrder, request()->user())]);
+        $order = $action->handle($salesOrder, request()->user());
+
+        if (request()->expectsJson() && ! request()->header('X-Inertia')) {
+            return response()->json(['data' => $order]);
+        }
+
+        return back()->with('flash', [
+            'tone' => 'success',
+            'message' => "Sales order {$salesOrder->reference} ownership transferred successfully.",
+        ]);
     }
 }

@@ -149,6 +149,7 @@ export default [
             'packages/field-mobile/**/*.cjs',
             'packages/field-mobile/plugins/**/*.cjs',
             'packages/field-mobile/scripts/**/*.cjs',
+            'packages/field-mobile/metro.config.js',
         ],
         languageOptions: {
             globals: {

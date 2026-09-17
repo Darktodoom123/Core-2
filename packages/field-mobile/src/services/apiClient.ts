@@ -1275,4 +1275,119 @@ export class FieldApiClient {
 
         return this.handleResponse<any>(response);
     }
+
+    public async submitRentalHandover(
+        reservationId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<{
+        success: boolean;
+        evidence_id: number;
+        message: string;
+        data?: unknown;
+    }> {
+        const url = `${this.baseUrl}/api/v1/rentals/${reservationId}/handover`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<{
+            success: boolean;
+            evidence_id: number;
+            message: string;
+            data?: unknown;
+        }>(response);
+    }
+
+    public async submitSalesDelivery(
+        orderId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<{
+        success: boolean;
+        evidence_id: number;
+        message: string;
+        data?: unknown;
+    }> {
+        const url = `${this.baseUrl}/api/v1/sales-orders/${orderId}/delivery`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<{
+            success: boolean;
+            evidence_id: number;
+            message: string;
+            data?: unknown;
+        }>(response);
+    }
+
+    public async submitEquipmentInspection(
+        assetId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v1/assets/${assetId}/inspections`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async submitMaintenanceWorkOrder(
+        assetId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v1/assets/${assetId}/maintenance`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<any>(response);
+    }
+
+    public async releaseMaintenanceWorkOrder(
+        workOrderId: number,
+        payload: Record<string, unknown>,
+        commandId?: string,
+    ): Promise<any> {
+        const url = `${this.baseUrl}/api/v1/maintenance/${workOrderId}/release`;
+        const body = commandId
+            ? { ...payload, command_id: commandId }
+            : payload;
+
+        const response = await this.fetchFn(url, {
+            method: 'POST',
+            headers: this.getHeaders(commandId),
+            body: JSON.stringify(body),
+        });
+
+        return this.handleResponse<any>(response);
+    }
 }

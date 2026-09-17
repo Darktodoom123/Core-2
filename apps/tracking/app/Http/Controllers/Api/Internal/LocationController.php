@@ -59,6 +59,18 @@ final class LocationController extends Controller
 
         $data = $records->map(fn (LatestLocation $location): array => $location->toDtoArray())->values();
 
+        if ($data->isEmpty() && $assetId !== null && $assetId !== '') {
+            $fallback = LocationSample::query()
+                ->where('operational_asset_id', (int) $assetId)
+                ->orderByDesc('received_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($fallback !== null) {
+                $data = collect([$fallback->toDtoArray()]);
+            }
+        }
+
         return response()->json(['data' => $data]);
     }
 

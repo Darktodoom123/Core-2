@@ -218,4 +218,103 @@ describe('SqliteOutboxRepository', () => {
         assert.equal(restored.length, 1);
         assert.equal(restored[0].id, 'fallback-cmd-1');
     });
+
+    test('quarantines legacy release_maintenance_work_order commands from persisted SQLite fixture', async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'core2-legacy-outbox-'));
+        const databasePath = join(directory, 'legacy-outbox.sqlite');
+
+        try {
+            // 1. Create a raw legacy SQLite database simulating pre-migration schema and persisted legacy row
+            const rawDb = new DatabaseSync(databasePath);
+            rawDb.exec(`
+                CREATE TABLE IF NOT EXISTS field_command_outbox (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    actor_id INTEGER NOT NULL,
+                    command_type TEXT NOT NULL,
+                    job_id INTEGER,
+                    assignment_id INTEGER,
+                    payload_json TEXT NOT NULL,
+                    payload_hash TEXT NOT NULL,
+                    expected_version INTEGER,
+                    state TEXT NOT NULL,
+                    attempts INTEGER NOT NULL,
+                    error_json TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    last_attempt_at TEXT,
+                    next_attempt_at TEXT,
+                    completed_at TEXT
+                );
+            `);
+
+            const legacyCmdId = 'legacy-release-uuid-1234';
+            rawDb
+                .prepare(
+                    `
+                INSERT INTO field_command_outbox (
+                    id, actor_id, command_type, job_id, assignment_id,
+                    payload_json, payload_hash, expected_version, state,
+                    attempts, error_json, created_at, updated_at,
+                    last_attempt_at, next_attempt_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+                )
+                .run(
+                    legacyCmdId,
+                    17,
+                    'release_maintenance_work_order',
+                    null,
+                    null,
+                    JSON.stringify({
+                        workOrderId: 42,
+                        work_performed: ['Fixed'],
+                    }),
+                    'legacy-hash',
+                    null,
+                    'queued',
+                    0,
+                    null,
+                    '2026-08-01T00:00:00.000Z',
+                    '2026-08-01T00:00:00.000Z',
+                    null,
+                    null,
+                    null,
+                );
+            rawDb.close();
+
+            // 2. Open via SqliteOutboxRepository, which initializes schema and deserializes rows
+            const migratedDb = new DatabaseSync(databasePath);
+            const repository = new SqliteOutboxRepository(
+                async () => new NodeSqliteDatabase(migratedDb),
+            );
+            await repository.initialize();
+
+            // 3. Verify it was quarantined and did NOT fall back to transition_status
+            const commands = await repository.listForActor(17);
+            assert.equal(commands.length, 1);
+            const cmd = commands[0];
+            assert.equal(cmd.id, legacyCmdId);
+            assert.equal(cmd.type, 'release_maintenance_work_order');
+            assert.equal(cmd.state, 'failed');
+            assert.equal(cmd.error?.code, 'LEGACY_RELEASE_DISALLOWED');
+            assert.equal(cmd.error?.retryable, false);
+            assert.match(
+                cmd.error?.message ?? '',
+                /online release action is required/i,
+            );
+
+            // Verify raw SQLite row was updated to failed state with error_json
+            const row = migratedDb
+                .prepare(
+                    'SELECT state, error_json FROM field_command_outbox WHERE id = ?',
+                )
+                .get(legacyCmdId) as { state: string; error_json: string };
+            assert.equal(row.state, 'failed');
+            assert.match(row.error_json, /LEGACY_RELEASE_DISALLOWED/);
+
+            migratedDb.close();
+        } finally {
+            await rm(directory, { force: true, recursive: true });
+        }
+    });
 });

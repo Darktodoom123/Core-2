@@ -110,3 +110,13 @@ To decouple mobile response latencies from database write locks during peak morn
   - Ingestion writes (`LocationController::ingest` and `TelemetryIngestService`) strictly target the primary database via `onWriteConnection()` and transactions.
   - **Bounded Response Guarantees**: Enforces limits (default 250, capped at 1,000) on latest positions and paginated boundaries on historical track logs.
 
+### 3. Asset-Tracking States & Interrupted Location Updates
+
+- **State Model Specification**: Documented in [Docs/architecture/field-tracking.md](../architecture/field-tracking.md).
+- **Separation of Concerns**:
+  1. *Assignment*: `assigned` vs `unassigned`.
+  2. *Availability*: Domain lifecycle status (`Available`, `Working`, `Under maintenance`).
+  3. *Location Freshness*: `Fresh` (<= 180s), `Location not current` (> 180s), `No GPS report`, `Sharing paused`.
+- **Unassigned Assets**: Authorized fleet assets appear in the tracking list even without active operators. Stored yard locations are displayed as `"Recorded location: [name]"` without phantom map coordinates.
+- **Position Retention**: Former GPS coordinates and timestamps are retained on assignment conclusion and are not overwritten by former operators reporting on subsequent assignments.
+- **Offline Validation**: Retroactive queued samples validate against operator and asset assignments active at `captured_at`.

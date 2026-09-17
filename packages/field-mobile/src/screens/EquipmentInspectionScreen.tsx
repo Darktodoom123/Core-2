@@ -10,6 +10,7 @@ import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors } from '../components/nativeStyles';
 import { useTheme } from '../theme';
 import type {
+    AssetAssignment,
     FuelReceiptLog,
     MaintenanceWorkOrder,
     SafeReleaseVerification,
@@ -24,11 +25,20 @@ export interface EquipmentInspectionScreenProps {
     onBack?: () => void;
     onOpenDvir?: () => void;
     onOpenFuel?: () => void;
-    onSaveInspection?: (checks: TechnicianInspectionCheck[]) => void;
-    onLogWorkOrder?: (workOrder: MaintenanceWorkOrder) => void;
+    onSaveInspection?: (
+        checks: TechnicianInspectionCheck[],
+        assetId?: number,
+    ) => void;
+    onLogWorkOrder?: (
+        workOrder: MaintenanceWorkOrder,
+        assetId?: number,
+    ) => void;
     onSafeRelease?: (verification: SafeReleaseVerification) => void;
     onLogFuelReceipt?: (fuelLog: FuelReceiptLog) => void;
     onCompleteHandover?: (handover: TechnicianHandover) => void;
+    assetAssignments?: AssetAssignment[];
+    selectedAssetId?: number | null;
+    onSelectAsset?: (assetId: number) => void;
 }
 
 const INITIAL_CHECKS: TechnicianInspectionCheck[] = [
@@ -72,6 +82,9 @@ export const EquipmentInspectionScreen: React.FC<
     assetCode = 'CRN-07',
     assetName = '50-Ton Mobile All-Terrain Crane',
     technicianName = 'Alex Rivera (Certified Crane Technician)',
+    assetAssignments,
+    selectedAssetId,
+    onSelectAsset,
     onBack,
     onSaveInspection,
     onLogWorkOrder,
@@ -84,14 +97,43 @@ export const EquipmentInspectionScreen: React.FC<
         'work_order' | 'fuel' | 'handover' | 'checklist'
     >('work_order');
 
+    const [uncontrolledAssetId, setUncontrolledAssetId] = useState<
+        number | null
+    >(
+        assetAssignments && assetAssignments.length === 1
+            ? assetAssignments[0].operational_asset_id
+            : null,
+    );
+
+    const activeSelectedAssetId =
+        selectedAssetId !== undefined && selectedAssetId !== null
+            ? selectedAssetId
+            : uncontrolledAssetId;
+
+    const activeAssignment =
+        assetAssignments?.find(
+            (a) => a.operational_asset_id === activeSelectedAssetId,
+        ) ??
+        (assetAssignments && assetAssignments.length === 1
+            ? assetAssignments[0]
+            : null);
+
+    const currentAssetCode = activeAssignment?.asset_code || assetCode;
+    const currentAssetName = activeAssignment?.asset_name || assetName;
+    const displayTitle = activeAssignment
+        ? `${currentAssetCode} · ${currentAssetName}`
+        : assetAssignments && assetAssignments.length > 1
+          ? 'Select Assigned Equipment'
+          : `${currentAssetCode} · ${currentAssetName}`;
+
     const [checks, setChecks] =
         useState<TechnicianInspectionCheck[]>(INITIAL_CHECKS);
     const [isSaved, setIsSaved] = useState(false);
     const [workOrders, setWorkOrders] = useState<MaintenanceWorkOrder[]>([
         {
             id: 'WO-8041',
-            assetCode,
-            assetName,
+            assetCode: currentAssetCode,
+            assetName: currentAssetName,
             defectTitle: 'Boom slider wear pad adjustment',
             description:
                 'Routine tensioning of boom section #2 nylon wear pad.',
@@ -104,7 +146,7 @@ export const EquipmentInspectionScreen: React.FC<
     const [fuelLogs, setFuelLogs] = useState<FuelReceiptLog[]>([
         {
             id: 'FL-301',
-            assetCode,
+            assetCode: currentAssetCode,
             quantityLiters: 140,
             fuelCost: 285.5,
             odometerKm: 42150,
@@ -147,13 +189,34 @@ export const EquipmentInspectionScreen: React.FC<
     };
 
     const handleSaveInspection = () => {
+        if (
+            assetAssignments &&
+            assetAssignments.length > 1 &&
+            !activeSelectedAssetId
+        ) {
+            return;
+        }
+
         setIsSaved(true);
-        onSaveInspection?.(checks);
+        onSaveInspection?.(checks, activeSelectedAssetId ?? undefined);
     };
 
     const handleLogWorkOrder = (wo: MaintenanceWorkOrder) => {
-        setWorkOrders((prev) => [wo, ...prev]);
-        onLogWorkOrder?.(wo);
+        if (
+            assetAssignments &&
+            assetAssignments.length > 1 &&
+            !activeSelectedAssetId
+        ) {
+            return;
+        }
+
+        const orderWithAsset: MaintenanceWorkOrder = {
+            ...wo,
+            assetCode: currentAssetCode,
+            assetName: currentAssetName,
+        };
+        setWorkOrders((prev) => [orderWithAsset, ...prev]);
+        onLogWorkOrder?.(orderWithAsset, activeSelectedAssetId ?? undefined);
     };
 
     const handleLogFuel = (log: FuelReceiptLog) => {
@@ -173,8 +236,124 @@ export const EquipmentInspectionScreen: React.FC<
                 category="Vehicle Maintenance"
                 onBack={onBack}
                 subtitle={`Assigned Operator: ${technicianName}`}
-                title={`${assetCode} · ${assetName}`}
+                title={displayTitle}
             />
+
+            {/* Explicit Multi-Asset Selector Bar */}
+            {assetAssignments && assetAssignments.length > 1 ? (
+                <View
+                    accessibilityLabel="Select assigned equipment"
+                    accessibilityRole="radiogroup"
+                    style={[
+                        styles.assetSelectorContainer,
+                        isDarkHud && styles.darkAssetSelectorContainer,
+                    ]}
+                    testID="equipment-asset-selector"
+                >
+                    <Text
+                        style={[
+                            styles.assetSelectorLabel,
+                            isDarkHud && styles.darkAssetSelectorLabel,
+                        ]}
+                    >
+                        Assigned Equipment:
+                    </Text>
+                    <ScrollView
+                        contentContainerStyle={styles.assetSelectorScroll}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                    >
+                        {assetAssignments.map((assignment) => {
+                            const isSelected =
+                                assignment.operational_asset_id ===
+                                activeSelectedAssetId;
+
+                            return (
+                                <Pressable
+                                    key={assignment.operational_asset_id}
+                                    accessibilityLabel={`Select ${assignment.asset_code} ${assignment.asset_name}`}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{
+                                        selected: isSelected,
+                                    }}
+                                    onPress={() => {
+                                        setUncontrolledAssetId(
+                                            assignment.operational_asset_id,
+                                        );
+                                        onSelectAsset?.(
+                                            assignment.operational_asset_id,
+                                        );
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.assetPill,
+                                        isDarkHud && styles.darkAssetPill,
+                                        isSelected && styles.assetPillActive,
+                                        isDarkHud &&
+                                            isSelected &&
+                                            styles.darkAssetPillActive,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    testID={`select-asset-${assignment.operational_asset_id}`}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.assetPillCode,
+                                            isDarkHud &&
+                                                styles.darkAssetPillCode,
+                                            isSelected &&
+                                                styles.assetPillCodeActive,
+                                            isDarkHud &&
+                                                isSelected &&
+                                                styles.darkAssetPillCodeActive,
+                                        ]}
+                                    >
+                                        {assignment.asset_code}
+                                    </Text>
+                                    <Text
+                                        numberOfLines={1}
+                                        style={[
+                                            styles.assetPillName,
+                                            isDarkHud &&
+                                                styles.darkAssetPillName,
+                                            isSelected &&
+                                                styles.assetPillNameActive,
+                                            isDarkHud &&
+                                                isSelected &&
+                                                styles.darkAssetPillNameActive,
+                                        ]}
+                                    >
+                                        {assignment.asset_name}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
+            ) : null}
+
+            {/* Prompt banner when multiple assets assigned but none explicitly selected */}
+            {assetAssignments &&
+            assetAssignments.length > 1 &&
+            !activeSelectedAssetId ? (
+                <View
+                    accessibilityRole="alert"
+                    style={[
+                        styles.noAssetBanner,
+                        isDarkHud && styles.darkNoAssetBanner,
+                    ]}
+                    testID="no-asset-selected-banner"
+                >
+                    <Text
+                        style={[
+                            styles.noAssetBannerText,
+                            isDarkHud && styles.darkNoAssetBannerText,
+                        ]}
+                    >
+                        Multiple assets assigned. Select an asset above to
+                        inspect or log work orders.
+                    </Text>
+                </View>
+            ) : null}
 
             {/* Navigation Tabs Bar matching DVIR Segment Filter */}
             <View
@@ -334,6 +513,39 @@ export const EquipmentInspectionScreen: React.FC<
                             Handover
                         </Text>
                     </Pressable>
+
+                    <Pressable
+                        accessibilityLabel="Inspection checklist"
+                        accessibilityRole="tab"
+                        accessibilityState={{
+                            selected: activeTab === 'checklist',
+                        }}
+                        onPress={() => setActiveTab('checklist')}
+                        style={({ pressed }) => [
+                            styles.tabPill,
+                            isDarkHud && styles.darkTabPill,
+                            activeTab === 'checklist' && styles.tabPillActive,
+                            isDarkHud &&
+                                activeTab === 'checklist' &&
+                                styles.darkTabPillActive,
+                            pressed && styles.pressed,
+                        ]}
+                        testID="tab-checklist"
+                    >
+                        <Text
+                            style={[
+                                styles.tabPillText,
+                                isDarkHud && styles.darkTabPillText,
+                                activeTab === 'checklist' &&
+                                    styles.tabPillTextActive,
+                                isDarkHud &&
+                                    activeTab === 'checklist' &&
+                                    styles.darkTabPillTextActive,
+                            ]}
+                        >
+                            Inspection
+                        </Text>
+                    </Pressable>
                 </ScrollView>
             </View>
 
@@ -349,8 +561,8 @@ export const EquipmentInspectionScreen: React.FC<
                 {/* TAB 1: Work Orders */}
                 {activeTab === 'work_order' ? (
                     <MaintenanceWorkOrderTab
-                        assetCode={assetCode}
-                        assetName={assetName}
+                        assetCode={currentAssetCode}
+                        assetName={currentAssetName}
                         onLogWorkOrder={handleLogWorkOrder}
                         technicianName={technicianName}
                         workOrders={workOrders}
@@ -393,7 +605,7 @@ export const EquipmentInspectionScreen: React.FC<
                             </View>
                         ) : null}
                         <FuelReceiptTab
-                            assetCode={assetCode}
+                            assetCode={currentAssetCode}
                             fuelLogs={fuelLogs}
                             onLogFuelReceipt={handleLogFuel}
                         />
@@ -403,7 +615,7 @@ export const EquipmentInspectionScreen: React.FC<
                 {/* TAB 4: Handover */}
                 {activeTab === 'handover' ? (
                     <HandoverTab
-                        assetCode={assetCode}
+                        assetCode={currentAssetCode}
                         onCompleteHandover={onCompleteHandover ?? (() => {})}
                         technicianName={technicianName}
                     />
@@ -537,5 +749,105 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.82,
         transform: [{ scale: 0.96 }],
+    },
+    assetSelectorContainer: {
+        backgroundColor: colors.surface,
+        borderBottomColor: colors.border,
+        borderBottomWidth: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+    },
+    darkAssetSelectorContainer: {
+        backgroundColor: colors.hudSurface,
+        borderBottomColor: colors.hudBorder,
+    },
+    assetSelectorLabel: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 8,
+        textTransform: 'uppercase',
+    },
+    darkAssetSelectorLabel: {
+        color: colors.hudTextDim,
+    },
+    assetSelectorScroll: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    assetPill: {
+        alignItems: 'center',
+        backgroundColor: colors.surfaceMuted,
+        borderColor: colors.border,
+        borderRadius: 8,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 6,
+        minHeight: 36,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    darkAssetPill: {
+        backgroundColor: colors.surfaceDark,
+        borderColor: colors.hudBorder,
+    },
+    assetPillActive: {
+        backgroundColor: colors.amberDark,
+        borderColor: colors.amberDark,
+    },
+    darkAssetPillActive: {
+        backgroundColor: colors.hudAmber,
+        borderColor: colors.hudAmber,
+    },
+    assetPillCode: {
+        color: colors.primary,
+        fontSize: 13,
+        fontWeight: '800',
+    },
+    darkAssetPillCode: {
+        color: colors.hudText,
+    },
+    assetPillCodeActive: {
+        color: '#FFFFFF',
+    },
+    darkAssetPillCodeActive: {
+        color: colors.surfaceDark,
+    },
+    assetPillName: {
+        color: colors.muted,
+        fontSize: 12,
+        fontWeight: '500',
+        maxWidth: 160,
+    },
+    darkAssetPillName: {
+        color: colors.hudTextDim,
+    },
+    assetPillNameActive: {
+        color: '#FFFFFF',
+    },
+    darkAssetPillNameActive: {
+        color: colors.surfaceDark,
+    },
+    noAssetBanner: {
+        backgroundColor: '#FEF3C7',
+        borderColor: '#F59E0B',
+        borderRadius: 8,
+        borderWidth: 1,
+        marginHorizontal: 16,
+        marginTop: 10,
+        padding: 12,
+    },
+    darkNoAssetBanner: {
+        backgroundColor: '#78350F',
+        borderColor: '#D97706',
+    },
+    noAssetBannerText: {
+        color: '#92400E',
+        fontSize: 13,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    darkNoAssetBannerText: {
+        color: '#FEF3C7',
     },
 });

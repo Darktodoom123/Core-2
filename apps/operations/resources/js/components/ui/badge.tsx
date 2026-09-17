@@ -120,6 +120,12 @@ export const statusClasses: Record<string, string> = {
     delayed: 'bg-warning-soft text-warning-strong',
     stale: 'bg-warning-soft text-warning-strong',
     offline: 'bg-surface-subtle text-ink-soft',
+    'Location not current':
+        'border border-dashed border-warning-strong/40 bg-warning-soft text-warning-strong',
+    'No GPS report': 'border border-line bg-surface-subtle text-ink-soft',
+    location_not_current:
+        'border border-dashed border-warning-strong/40 bg-warning-soft text-warning-strong',
+    no_gps_report: 'border border-line bg-surface-subtle text-ink-soft',
 };
 
 export interface StatusBadgeProps extends HTMLAttributes<HTMLSpanElement> {

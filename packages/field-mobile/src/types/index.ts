@@ -46,10 +46,12 @@ export interface PersonnelAssignment {
 
 export interface AssetAssignment {
     id: number;
+    dispatch_job_id?: number | null;
     operational_asset_id: number;
     asset_code: string;
     asset_name: string;
     asset_kind: string;
+    status?: string | null;
     assigned_at?: string | null;
     active_until?: string | null;
     model?: string | null;
@@ -118,6 +120,11 @@ export interface DispatchJob {
     asset_assignments?: AssetAssignment[];
     progression?: ProgressionInfo | null;
     capabilities: Capabilities;
+    source?: {
+        type: string;
+        id: number;
+        reference?: string;
+    } | null;
 }
 
 export type SosIncidentCategory =
@@ -219,7 +226,97 @@ export type OutboxCommandType =
     | 'share_location'
     | 'activate_sos'
     | 'submit_job_report'
-    | 'submit_dvir';
+    | 'submit_dvir'
+    | 'submit_rental_handover'
+    | 'submit_sales_delivery'
+    | 'submit_equipment_inspection'
+    | 'submit_maintenance_work_order'
+    | 'release_maintenance_work_order';
+
+export interface EquipmentInspectionCommandPayload {
+    operational_asset_id: number;
+    dispatch_job_id?: number | null;
+    type:
+        | 'pre_operation'
+        | 'post_operation'
+        | 'maintenance'
+        | 'safety'
+        | 'post_repair';
+    result: 'passed' | 'failed' | 'conditional';
+    checklist: TechnicianInspectionCheck[] | Record<string, unknown>[];
+    findings?: string | null;
+}
+
+export interface PhotoAttachment {
+    uri: string;
+    fileName?: string;
+    fileSize?: number;
+    base64?: string;
+}
+
+export interface MaintenanceWorkOrderCommandPayload {
+    operational_asset_id: number;
+    dispatch_job_id?: number | null;
+    defect: string;
+    remarks?: string | null;
+    dispatch_blocking?: boolean;
+    scheduled_at?: string | null;
+    next_due_at?: string | null;
+    attachments?: PhotoAttachment[];
+}
+
+export interface ReleaseMaintenanceWorkOrderCommandPayload {
+    maintenance_work_order_id: number;
+    dispatch_job_id?: number | null;
+    work_performed: string[];
+    parts?: Array<{
+        part_name: string;
+        part_number?: string;
+        quantity: number;
+    }>;
+    release_checklist?: Record<string, unknown>[];
+    remarks?: string | null;
+    managerial_override?: boolean;
+    override_reason?: string | null;
+}
+
+export interface RentalHandoverCommandPayload {
+    reservation_id: number;
+    dispatch_job_id?: number | null;
+    operational_asset_id?: number | null;
+    handover_type?: 'checkout' | 'return';
+    hour_meter: number;
+    fuel_percent: number;
+    condition_assessment?: 'excellent' | 'good' | 'fair' | 'poor';
+    condition_notes?: string;
+    damage_noted?: boolean;
+    damage_notes?: string;
+    photos?: Array<{
+        base64?: string;
+        file_path?: string;
+        label?: string;
+    }>;
+    signature?: string;
+    signee_name: string;
+    signee_role: string;
+}
+
+export interface SalesDeliveryCommandPayload {
+    order_id: number;
+    dispatch_job_id?: number | null;
+    operational_asset_id?: number | null;
+    verified_vin: string;
+    accessories_checked?: string[];
+    delivery_notes?: string;
+    photos?: Array<{
+        base64?: string;
+        file_path?: string;
+        label?: string;
+    }>;
+    signature?: string;
+    signee_name: string;
+    signee_role: string;
+}
 
 export interface JobReportCommandPayload {
     dispatch_job_id: number;

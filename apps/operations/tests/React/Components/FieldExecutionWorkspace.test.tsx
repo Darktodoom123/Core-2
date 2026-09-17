@@ -154,4 +154,65 @@ describe('FieldExecutionWorkspace', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
         expect(reload).toHaveBeenCalledTimes(2);
     });
+
+    it('renders rental handoff evidence panel with operator metrics, signature, and authoritative action', () => {
+        const executionWithEvidence = {
+            ...execution,
+            handoff_evidence: {
+                type: 'rental' as const,
+                source_id: 42,
+                source_reference: 'REN-2026-0042',
+                handover_type: 'checkout' as const,
+                submitted_at: '2026-09-17T08:30:00Z',
+                submitted_by: { id: 9, name: 'Assigned Operator' },
+                signee_name: 'Jane Customer',
+                signee_role: 'Site Supervisor',
+                hour_meter: 124.5,
+                fuel_percent: 85,
+                condition_assessment: 'good' as const,
+                condition_notes: 'Clean crane, no hydraulic leaks.',
+                damage_noted: true,
+                damage_notes: 'Minor scratch on left outrigger pad.',
+                photos: [
+                    { path: 'rentals/photos/pad.jpg', label: 'Outrigger pad' },
+                ],
+                signature_path: 'rentals/signatures/sig.png',
+                signature_url: 'https://storage.local/sig.png',
+                managerial_status: 'reserved',
+                managerial_status_label: 'Reserved',
+                can_checkout: true,
+                can_return: false,
+            },
+        };
+
+        render(
+            <FieldExecutionWorkspace
+                job={job}
+                execution={executionWithEvidence}
+                capabilities={capabilities}
+                personnelCandidates={[]}
+                assetCandidates={[]}
+            />,
+        );
+
+        expect(
+            screen.getByText(/Rental Handover Evidence \(Checkout\)/),
+        ).toBeInTheDocument();
+        expect(screen.getByText('REN-2026-0042')).toBeInTheDocument();
+        expect(screen.getByText(/Jane Customer \(Site Supervisor\)/)).toBeInTheDocument();
+        expect(screen.getByText('124.5 hrs')).toBeInTheDocument();
+        expect(screen.getByText('85%')).toBeInTheDocument();
+        expect(screen.getByText('Damage Noted During Handover')).toBeInTheDocument();
+        expect(
+            screen.getByText('Minor scratch on left outrigger pad.'),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', {
+                name: 'Process Authoritative Checkout',
+            }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole('link', { name: 'Evidence' }),
+        ).toHaveAttribute('href', '#handoff-evidence');
+    });
 });

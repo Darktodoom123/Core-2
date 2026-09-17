@@ -239,6 +239,11 @@ it('releases lockout and restores asset to ReadyForService after a post-repair p
         'work_performed' => ['Replaced brake pads'],
     ])->assertUnprocessable()->assertJsonValidationErrors(['inspection']);
 
+    // Complete repair
+    $this->actingAs($manager)->postJson("/operations/maintenance/{$workOrder->id}/complete", [
+        'work_performed' => ['Replaced brake pads'],
+    ])->assertOk();
+
     // Submit post-repair passing DVIR inspection
     DvirInspection::query()->create([
         'user_id' => $manager->id,

@@ -11,5 +11,6 @@ Route::middleware(['auth', 'active', 'verified', 'throttle:120,1'])->prefix('ope
     Route::post('/assets/{operationalAsset}/status', [OperationalAssetController::class, 'status']);
     Route::post('/assets/{operationalAsset}/inspections', [InspectionController::class, 'store']);
     Route::post('/assets/{operationalAsset}/maintenance', [MaintenanceWorkOrderController::class, 'store']);
+    Route::post('/maintenance/{maintenanceWorkOrder}/complete', [MaintenanceWorkOrderController::class, 'complete']);
     Route::post('/maintenance/{maintenanceWorkOrder}/release', [MaintenanceWorkOrderController::class, 'release']);
 });

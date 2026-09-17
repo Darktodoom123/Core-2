@@ -99,6 +99,7 @@ Desktop.ini
 /Docs/architecture/*
 !/Docs/architecture/docker.md
 !/Docs/architecture/deployment.md
+!/Docs/architecture/field-tracking.md
 .ai-reports/
 /test-results/
 .devswarm-temp/

@@ -10,7 +10,11 @@ import {
     SafeReleaseTab,
 } from '../components/inspection';
 import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen';
-import type { DispatchJob, TechnicianInspectionCheck } from '../types/index';
+import type {
+    AssetAssignment,
+    DispatchJob,
+    TechnicianInspectionCheck,
+} from '../types/index';
 
 jest.setTimeout(25000);
 
@@ -505,6 +509,166 @@ describe('Native Field Workflows Component Tests', () => {
             expect(
                 view.getByText('Log Maintenance Defect / Work Order'),
             ).toBeTruthy();
+
+            // Switch to Inspection Checklist tab
+            await fireEvent.press(view.getByTestId('tab-checklist'));
+            expect(
+                view.getByText('Hydraulic cylinders & outrigger rams'),
+            ).toBeTruthy();
+        });
+
+        it('supports explicit asset selection when a job has multiple assigned assets', async () => {
+            const onSaveInspection = jest.fn();
+            const onLogWorkOrder = jest.fn();
+            const onSelectAsset = jest.fn();
+
+            const multipleAssets = [
+                {
+                    id: 1,
+                    dispatch_job_id: 99,
+                    operational_asset_id: 101,
+                    asset_code: 'CRN-101',
+                    asset_name: 'Heavy Crane Unit A',
+                    asset_kind: 'heavy_crane',
+                    status: 'active',
+                },
+                {
+                    id: 2,
+                    dispatch_job_id: 99,
+                    operational_asset_id: 202,
+                    asset_code: 'TRK-202',
+                    asset_name: 'Support Truck B',
+                    asset_kind: 'support_truck',
+                    status: 'active',
+                },
+            ];
+
+            const view = await render(
+                <EquipmentInspectionScreen
+                    assetAssignments={multipleAssets}
+                    onLogWorkOrder={onLogWorkOrder}
+                    onSaveInspection={onSaveInspection}
+                    onSelectAsset={onSelectAsset}
+                    technicianName="Alex Rivera"
+                />,
+            );
+
+            // Verify asset selector rendered with both assets
+            expect(view.getByTestId('equipment-asset-selector')).toBeTruthy();
+            expect(view.getByText('CRN-101')).toBeTruthy();
+            expect(view.getByText('TRK-202')).toBeTruthy();
+
+            // Explicitly select the second asset (TRK-202)
+            await fireEvent.press(view.getByTestId('select-asset-202'));
+            expect(onSelectAsset).toHaveBeenCalledWith(202);
+
+            // Log a work order for TRK-202
+            await fireEvent.changeText(
+                view.getByTestId('wo-title-input'),
+                'Coolant hose leak',
+            );
+            await fireEvent.changeText(
+                view.getByTestId('wo-desc-input'),
+                'Radiator upper hose ruptured',
+            );
+            await fireEvent.press(view.getByTestId('submit-work-order-btn'));
+
+            // Must be bound explicitly to TRK-202 (id: 202), NOT the first asset (id: 101)
+            expect(onLogWorkOrder).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    assetCode: 'TRK-202',
+                    assetName: 'Support Truck B',
+                    defectTitle: 'Coolant hose leak',
+                }),
+                202,
+            );
+
+            // Switch to Inspection tab and save inspection
+            await fireEvent.press(view.getByTestId('tab-checklist'));
+            await fireEvent.press(view.getByTestId('save-inspection-btn'));
+
+            // Must be bound explicitly to TRK-202 (id: 202)
+            expect(onSaveInspection).toHaveBeenCalledWith(
+                expect.any(Array),
+                202,
+            );
+        });
+
+        it('blocks inspection and work order submission and renders prompt banner when multi-asset job has no asset explicitly selected', async () => {
+            const onSaveInspection = jest.fn();
+            const onLogWorkOrder = jest.fn();
+            const onSelectAsset = jest.fn();
+
+            const multipleAssets: AssetAssignment[] = [
+                {
+                    id: 1,
+                    dispatch_job_id: 10,
+                    operational_asset_id: 101,
+                    asset_code: 'CRN-101',
+                    asset_name: 'Primary Crane A',
+                    asset_kind: 'crane',
+                    assigned_at: '2026-08-01T08:00:00Z',
+                },
+                {
+                    id: 2,
+                    dispatch_job_id: 10,
+                    operational_asset_id: 202,
+                    asset_code: 'TRK-202',
+                    asset_name: 'Support Truck B',
+                    asset_kind: 'truck',
+                    assigned_at: '2026-08-01T08:00:00Z',
+                },
+            ];
+
+            const view = await render(
+                <EquipmentInspectionScreen
+                    assetAssignments={multipleAssets}
+                    onLogWorkOrder={onLogWorkOrder}
+                    onSaveInspection={onSaveInspection}
+                    onSelectAsset={onSelectAsset}
+                    selectedAssetId={null}
+                    technicianName="Alex Rivera"
+                />,
+            );
+
+            // Verify prompt banner rendered
+            expect(view.getByTestId('no-asset-selected-banner')).toBeTruthy();
+            expect(
+                view.getByText(
+                    'Multiple assets assigned. Select an asset above to inspect or log work orders.',
+                ),
+            ).toBeTruthy();
+
+            // Attempt to log a work order without selecting an asset
+            await fireEvent.changeText(
+                view.getByTestId('wo-title-input'),
+                'Coolant hose leak',
+            );
+            await fireEvent.changeText(
+                view.getByTestId('wo-desc-input'),
+                'Radiator upper hose ruptured',
+            );
+            await fireEvent.press(view.getByTestId('submit-work-order-btn'));
+
+            // Must NOT submit work order
+            expect(onLogWorkOrder).not.toHaveBeenCalled();
+
+            // Switch to checklist tab and attempt to save inspection
+            await fireEvent.press(view.getByTestId('tab-checklist'));
+            await fireEvent.press(view.getByTestId('save-inspection-btn'));
+
+            // Must NOT save inspection
+            expect(onSaveInspection).not.toHaveBeenCalled();
+
+            // Once user explicitly selects an asset, banner disappears and submission succeeds
+            await fireEvent.press(view.getByTestId('select-asset-101'));
+            expect(onSelectAsset).toHaveBeenCalledWith(101);
+
+            await fireEvent.press(view.getByTestId('save-inspection-btn'));
+            expect(onSaveInspection).toHaveBeenCalledWith(
+                expect.any(Array),
+                101,
+            );
         });
     });
 });

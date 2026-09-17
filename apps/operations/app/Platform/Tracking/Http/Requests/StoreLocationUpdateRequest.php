@@ -28,11 +28,32 @@ final class StoreLocationUpdateRequest extends FormRequest
         }
 
         if (! $this->filled('dispatch_job_id')) {
+            $capturedAt = null;
+            if ($this->filled('captured_at')) {
+                try {
+                    $capturedAt = Carbon::parse($this->input('captured_at'));
+                } catch (\Throwable) {
+                    $capturedAt = null;
+                }
+            }
+
+            $personnelQuery = DispatchPersonnelAssignment::query()
+                ->where('user_id', $this->user()?->id);
+
+            if ($capturedAt !== null) {
+                $personnelQuery->where(function ($q) use ($capturedAt): void {
+                    $q->where(function ($inner) use ($capturedAt): void {
+                        $inner->whereNull('active_from')->orWhere('active_from', '<=', $capturedAt);
+                    })->where(function ($inner) use ($capturedAt): void {
+                        $inner->whereNull('active_until')->orWhere('active_until', '>=', $capturedAt);
+                    });
+                });
+            } else {
+                $personnelQuery->active();
+            }
+
             $jobId = DispatchJob::query()
-                ->whereIn('id', DispatchPersonnelAssignment::query()
-                    ->active()
-                    ->where('user_id', $this->user()?->id)
-                    ->select('dispatch_job_id'))
+                ->whereIn('id', $personnelQuery->select('dispatch_job_id'))
                 ->latest('scheduled_start')
                 ->value('id');
 
@@ -82,13 +103,34 @@ final class StoreLocationUpdateRequest extends FormRequest
                 return;
             }
 
+            $capturedAt = null;
+            if ($this->filled('captured_at')) {
+                try {
+                    $capturedAt = Carbon::parse($this->input('captured_at'));
+                } catch (\Throwable) {
+                    $capturedAt = null;
+                }
+            }
+
             $jobId = $this->input('dispatch_job_id');
+            $personnelQuery = DispatchPersonnelAssignment::query()
+                ->where('user_id', $this->user()?->id);
+
+            if ($capturedAt !== null) {
+                $personnelQuery->where(function ($q) use ($capturedAt): void {
+                    $q->where(function ($inner) use ($capturedAt): void {
+                        $inner->whereNull('active_from')->orWhere('active_from', '<=', $capturedAt);
+                    })->where(function ($inner) use ($capturedAt): void {
+                        $inner->whereNull('active_until')->orWhere('active_until', '>=', $capturedAt);
+                    });
+                });
+            } else {
+                $personnelQuery->active();
+            }
+
             $job = $jobId === null ? null : DispatchJob::query()
                 ->whereKey($jobId)
-                ->whereIn('id', DispatchPersonnelAssignment::query()
-                    ->active()
-                    ->where('user_id', $this->user()?->id)
-                    ->select('dispatch_job_id'))
+                ->whereIn('id', $personnelQuery->select('dispatch_job_id'))
                 ->first();
 
             if (! $job instanceof DispatchJob) {
@@ -100,19 +142,14 @@ final class StoreLocationUpdateRequest extends FormRequest
             $assetId = $this->input('operational_asset_id');
             if ($assetId !== null) {
                 $assignmentQuery = $job->assetAssignments()->where('operational_asset_id', $assetId);
-                if ($this->filled('captured_at')) {
-                    try {
-                        $capturedAt = Carbon::parse($this->input('captured_at'));
-                        $assignmentQuery->where(function ($q) use ($capturedAt): void {
-                            $q->where(function ($inner) use ($capturedAt): void {
-                                $inner->whereNull('active_from')->orWhere('active_from', '<=', $capturedAt);
-                            })->where(function ($inner) use ($capturedAt): void {
-                                $inner->whereNull('active_until')->orWhere('active_until', '>=', $capturedAt);
-                            });
+                if ($capturedAt !== null) {
+                    $assignmentQuery->where(function ($q) use ($capturedAt): void {
+                        $q->where(function ($inner) use ($capturedAt): void {
+                            $inner->whereNull('active_from')->orWhere('active_from', '<=', $capturedAt);
+                        })->where(function ($inner) use ($capturedAt): void {
+                            $inner->whereNull('active_until')->orWhere('active_until', '>=', $capturedAt);
                         });
-                    } catch (\Throwable) {
-                        $assignmentQuery->active();
-                    }
+                    });
                 } else {
                     $assignmentQuery->active();
                 }

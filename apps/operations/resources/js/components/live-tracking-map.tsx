@@ -28,7 +28,7 @@ import {
     useState,
 } from 'react';
 import { Button, StatusBadge } from '@/components/ui';
-import { getAssetKind } from '@/lib/asset-kind';
+import { getAssetKind, getAssetKindLabel } from '@/lib/asset-kind';
 import { cn } from '@/lib/utils';
 import {
     reverseGeocode,
@@ -98,7 +98,11 @@ function PreciseLocationDisplay({
                 aria-hidden="true"
             />
             <span className="truncate font-medium text-ink">
-                {isMapped ? locationName : 'Location unavailable'}
+                {isMapped
+                    ? locationName
+                    : location.recorded_location
+                      ? `Recorded location: ${location.recorded_location}`
+                      : 'Location unavailable'}
             </span>
         </span>
     );
@@ -391,7 +395,7 @@ export function LiveTrackingMap({
                             </h3>
                             <p className="text-xs text-ink-soft">
                                 {mappedLocations.length} of {locations.length}{' '}
-                                updates mapped
+                                assets mapped
                             </p>
                         </div>
                         <div className="relative">
@@ -515,7 +519,18 @@ export function LiveTrackingMap({
                                                                 ?.name ??
                                                                 getAssetKindLabel(
                                                                     kind,
-                                                                )}
+                                                                )}{' '}
+                                                            ·{' '}
+                                                            {location.asset
+                                                                ?.status_label ??
+                                                                'Available'}{' '}
+                                                            ·{' '}
+                                                            {location.is_assigned
+                                                                ? location.job
+                                                                      ?.reference
+                                                                    ? `Assigned (${location.job.reference})`
+                                                                    : 'Assigned'
+                                                                : 'Unassigned'}
                                                         </span>
                                                         {location.user
                                                             ?.name && (
@@ -526,13 +541,27 @@ export function LiveTrackingMap({
                                                                         .user
                                                                         .name
                                                                 }
+                                                                {location.reported_via_phone && (
+                                                                    <span className="text-ink-muted ml-1">
+                                                                        (via
+                                                                        operator’s
+                                                                        phone)
+                                                                    </span>
+                                                                )}
                                                             </span>
                                                         )}
                                                     </span>
                                                 </div>
                                                 <StatusBadge
                                                     status={
-                                                        location.freshness_status
+                                                        location.freshness_label ??
+                                                        (location.freshness_status ===
+                                                        'fresh'
+                                                            ? 'Fresh'
+                                                            : location.has_gps_report ===
+                                                                false
+                                                              ? 'No GPS report'
+                                                              : 'Location not current')
                                                     }
                                                 />
                                             </div>

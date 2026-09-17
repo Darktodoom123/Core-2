@@ -57,6 +57,14 @@ export function TrackingUnitRow({
 }) {
     const site = assignedJobsite(location);
     const descriptionId = useId();
+    const availabilityLabel = location.asset?.status_label ?? 'Available';
+    const isAssigned =
+        location.is_assigned ?? Boolean(location.job || location.user?.name);
+    const assignmentText = isAssigned
+        ? location.job?.reference
+            ? `Assigned · Job ${location.job.reference}`
+            : 'Assigned'
+        : 'Unassigned';
 
     return (
         <li>
@@ -100,20 +108,23 @@ export function TrackingUnitRow({
                     </span>
                     <span
                         className="mt-0.5 block truncate text-xs text-ink-soft"
-                        title={
-                            location.asset?.name ??
-                            getAssetKindLabel(getAssetKind(location))
-                        }
+                        title={`${location.asset?.name ?? getAssetKindLabel(getAssetKind(location))} · ${availabilityLabel} · ${assignmentText}`}
                     >
                         {location.asset?.name ??
-                            getAssetKindLabel(getAssetKind(location))}
+                            getAssetKindLabel(getAssetKind(location))}{' '}
+                        · {availabilityLabel} · {assignmentText}
                     </span>
                     {location.user?.name && (
                         <span
                             className="mt-0.5 block truncate text-xs text-ink-soft"
-                            title={`Operator: ${location.user.name}`}
+                            title={`Operator: ${location.user.name}${location.reported_via_phone ? " (via operator's phone)" : ''}`}
                         >
                             Operator: {location.user.name}
+                            {location.reported_via_phone && (
+                                <span className="text-ink-muted ml-1 text-[11px]">
+                                    (via operator’s phone)
+                                </span>
+                            )}
                         </span>
                     )}
                     {site && (
@@ -125,20 +136,29 @@ export function TrackingUnitRow({
                         </span>
                     )}
                     <span className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                        <FreshnessStatus status={location.freshness_status} />
+                        <FreshnessStatus
+                            status={location.freshness_status}
+                            location={location}
+                        />
                         <span
                             className="text-xs text-ink-soft"
-                            title={formatReportTimestamp(location.received_at)}
+                            title={formatReportTimestamp(
+                                location.received_at ?? location.captured_at,
+                            )}
                         >
-                            Received{' '}
-                            {formatReportAge(
-                                location.received_at,
-                            ).toLowerCase()}
+                            {location.has_gps_report === false
+                                ? 'No report'
+                                : `Updated ${formatReportAge(
+                                      location.received_at ??
+                                          location.captured_at,
+                                  ).toLowerCase()}`}
                         </span>
                     </span>
                     {!hasCoordinates(location) && (
                         <span className="mt-1 block text-xs text-ink-soft">
-                            Coordinates unavailable
+                            {location.recorded_location
+                                ? `Recorded location: ${location.recorded_location}`
+                                : 'Location unavailable'}
                         </span>
                     )}
                 </span>
@@ -158,6 +178,14 @@ export function TrackingUnitDetails({
 }) {
     const site = assignedJobsite(location);
     const locationName = usePreciseLocation(location);
+    const availabilityLabel = location.asset?.status_label ?? 'Available';
+    const isAssigned =
+        location.is_assigned ?? Boolean(location.job || location.user?.name);
+    const assignmentText = isAssigned
+        ? location.job?.reference
+            ? `Assigned · Job ${location.job.reference}`
+            : 'Assigned'
+        : 'Unassigned';
 
     return (
         <section
@@ -170,7 +198,10 @@ export function TrackingUnitDetails({
                         {location.asset?.code ??
                             location.asset?.name ??
                             'Unknown Asset'}
-                        <FreshnessStatus status={location.freshness_status} />
+                        <FreshnessStatus
+                            status={location.freshness_status}
+                            location={location}
+                        />
                         {hasSos && (
                             <span className="inline-flex items-center gap-1 text-xs text-danger">
                                 <Siren
@@ -183,7 +214,8 @@ export function TrackingUnitDetails({
                     </h3>
                     <p className="mt-1 text-xs text-ink-soft">
                         {location.asset?.name ??
-                            getAssetKindLabel(getAssetKind(location))}
+                            getAssetKindLabel(getAssetKind(location))}{' '}
+                        · {availabilityLabel} · {assignmentText}
                         {location.user?.name
                             ? ` · Operator: ${location.user.name}`
                             : ''}
@@ -213,9 +245,24 @@ export function TrackingUnitDetails({
                     </dd>
                 </div>
                 <div>
+                    <dt className="text-ink-soft">Operational status</dt>
+                    <dd className="mt-1 font-medium break-words text-ink">
+                        {availabilityLabel}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-ink-soft">Assignment status</dt>
+                    <dd className="mt-1 font-medium break-words text-ink">
+                        {assignmentText}
+                    </dd>
+                </div>
+                <div>
                     <dt className="text-ink-soft">Location source</dt>
                     <dd className="mt-1 font-medium break-words text-ink">
-                        {formatLocationSource(location.source)}
+                        {formatLocationSource(
+                            location.source,
+                            location.reported_via_phone,
+                        )}
                     </dd>
                 </div>
                 <div>
@@ -250,6 +297,10 @@ export function TrackingUnitDetails({
                                     {locationName}
                                 </span>
                             </span>
+                        ) : location.recorded_location ? (
+                            <span>
+                                Recorded location: {location.recorded_location}
+                            </span>
                         ) : (
                             'Coordinates unavailable'
                         )}
@@ -268,11 +319,17 @@ export function TrackingUnitDetails({
             {location.freshness_status !== 'fresh' && (
                 <p className="mt-3 flex items-start gap-1.5 text-xs text-ink-soft">
                     <CircleAlert
-                        className="mt-px size-3.5 shrink-0"
+                        className={cn(
+                            'mt-px size-3.5 shrink-0',
+                            location.has_gps_report === false
+                                ? 'text-ink-soft'
+                                : 'text-warning-strong',
+                        )}
                         aria-hidden="true"
                     />
-                    This is the last reported location. The asset's current
-                    position is unconfirmed.
+                    {location.has_gps_report === false
+                        ? 'No GPS reports have been received for this asset.'
+                        : "No recent location updates. This is the last reported location. The asset's current position is unconfirmed."}
                 </p>
             )}
         </section>
@@ -297,10 +354,38 @@ function ReportTime({ label, value }: { label: string; value: string | null }) {
 
 export function FreshnessStatus({
     status,
+    location,
 }: {
     status: LocationUpdateViewModel['freshness_status'];
+    location?: LocationUpdateViewModel;
 }) {
-    const { Icon, label, textClassName } = FRESHNESS_META[status];
+    const isNoReport =
+        location?.has_gps_report === false ||
+        location?.freshness_label === 'No GPS report';
+    const isInterrupted =
+        location?.freshness_label === 'Location not current' ||
+        (!isNoReport && (status === 'delayed' || status === 'stale'));
+
+    if (isNoReport) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded border border-line px-1.5 py-0.5 text-xs font-medium text-ink-soft">
+                <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                No GPS report
+            </span>
+        );
+    }
+
+    if (isInterrupted) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded border border-dashed border-warning-strong/40 bg-warning-soft/30 px-1.5 py-0.5 text-xs font-medium text-warning-strong">
+                <Clock3 className="size-3.5 shrink-0" aria-hidden="true" />
+                Location not current
+            </span>
+        );
+    }
+
+    const { Icon, label, textClassName } =
+        FRESHNESS_META[status] ?? FRESHNESS_META.offline;
 
     return (
         <span

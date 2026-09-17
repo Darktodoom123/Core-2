@@ -7,39 +7,61 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
+import { PhotoAttachmentPicker } from '../components/attachments/PhotoAttachmentPicker';
 import { Icon } from '../components/common/Icon';
 import { TileScreenHeader } from '../components/layout/tile-screen-header';
 import { colors, shadows } from '../components/nativeStyles';
 import { DigitalSignatureModal } from '../components/signature/DigitalSignatureModal';
+import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { useTheme } from '../theme';
 
 export interface SalesDeliveryScreenProps {
+    jobId?: number;
+    orderId?: string | number;
     orderReference?: string;
     clientName?: string;
+    assetId?: number;
     equipmentName?: string;
+    actorId?: number | string;
     vinNumber?: string;
     deliveryAddress?: string;
+    syncStatus?:
+        'idle' | 'saving' | 'queued' | 'submitting' | 'success' | 'failed';
+    syncErrorMessage?: string | null;
     onBack?: () => void;
-    onCompleteDelivery?: (data: SalesDeliveryData) => void;
+    onCompleteDelivery?: (data: SalesDeliveryData) => void | Promise<void>;
+    onRetrySync?: () => void;
 }
 
 export interface SalesDeliveryData {
+    jobId?: number;
+    orderId?: number;
+    assetId?: number;
     verifiedVin: string;
     accessoriesChecked: string[];
     signeeName: string;
     signeeRole: string;
     notes: string;
+    photos?: PhotoAttachment[];
     signatureBase64?: string;
 }
 
 export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
+    jobId,
+    orderId,
     orderReference = 'SO-2026-0091',
     clientName = 'San Miguel Infrastructure Corp.',
+    assetId,
     equipmentName = 'Caterpillar 320 GC Hydraulic Excavator',
+    actorId = '1',
     vinNumber = 'CAT0320GC88912',
     deliveryAddress = 'North-South Commuter Railway (NSCR) Project - Depot Area, Bulacan, PH',
+    syncStatus: propSyncStatus,
+    syncErrorMessage: propSyncErrorMessage,
     onBack,
     onCompleteDelivery,
+    onRetrySync,
 }) => {
     const { isDarkHud } = useTheme();
     const [enteredVin, setEnteredVin] = useState(vinNumber);
@@ -55,8 +77,23 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
         'Authorized Receiving Engineer',
     );
     const [deliveryNotes, setDeliveryNotes] = useState('');
+    const [photos, setPhotos] = useState<PhotoAttachment[]>([]);
     const [signatureModalVisible, setSignatureModalVisible] = useState(false);
     const [signatureCaptured, setSignatureCaptured] = useState(false);
+    const [signatureData, setSignatureData] = useState<string | undefined>(
+        undefined,
+    );
+    const [localSyncStatus, setLocalSyncStatus] = useState<
+        'idle' | 'saving' | 'queued' | 'submitting' | 'success' | 'failed'
+    >('idle');
+    const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(
+        null,
+    );
+
+    const activeSyncStatus = propSyncStatus ?? localSyncStatus;
+    const activeErrorMessage = propSyncErrorMessage ?? localErrorMessage;
+    const isSubmitting =
+        activeSyncStatus === 'submitting' || activeSyncStatus === 'saving';
 
     const toggleAccessory = (key: string) => {
         setAccessories((prev) => ({
@@ -65,22 +102,73 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
         }));
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         const checkedList = Object.keys(accessories).filter(
             (k) => accessories[k],
         );
-        onCompleteDelivery?.({
-            verifiedVin: enteredVin,
-            accessoriesChecked: checkedList,
-            signeeName,
-            signeeRole,
-            notes:
-                deliveryNotes ||
-                'Unit delivered in brand new operational condition to customer site.',
-            signatureBase64: signatureCaptured
-                ? 'digital-signature-captured'
-                : undefined,
-        });
+        const signaturePayload =
+            signatureData ||
+            (signatureCaptured
+                ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+                : undefined);
+
+        setLocalSyncStatus('saving');
+        setLocalErrorMessage(null);
+
+        try {
+            // Durable attachment persistence: copy temporary photos to durable storage before queueing/reporting saved
+            const durablePhotos: PhotoAttachment[] = [];
+
+            for (const photo of photos) {
+                const stored =
+                    await durableAttachmentStorage.saveAttachmentDurably(
+                        {
+                            uri: photo.uri,
+                            base64: photo.base64,
+                            fileName: photo.fileName,
+                        },
+                        actorId,
+                    );
+                durablePhotos.push({
+                    uri: stored.uri,
+                    fileName: stored.fileName,
+                    fileSize: stored.fileSize ?? photo.fileSize,
+                    base64: photo.base64,
+                });
+            }
+
+            setLocalSyncStatus('submitting');
+
+            const numericOrderId =
+                typeof orderId === 'number'
+                    ? orderId
+                    : orderId
+                      ? parseInt(String(orderId), 10)
+                      : undefined;
+
+            await onCompleteDelivery?.({
+                jobId,
+                orderId: numericOrderId,
+                assetId,
+                verifiedVin: enteredVin,
+                accessoriesChecked: checkedList,
+                signeeName,
+                signeeRole,
+                notes:
+                    deliveryNotes ||
+                    'Unit delivered in brand new operational condition to customer site.',
+                photos: durablePhotos,
+                signatureBase64: signaturePayload,
+            });
+            setLocalSyncStatus('success');
+        } catch (err: unknown) {
+            setLocalSyncStatus('failed');
+            setLocalErrorMessage(
+                err instanceof Error
+                    ? err.message
+                    : 'Delivery submission failed.',
+            );
+        }
     };
 
     return (
@@ -454,6 +542,28 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                     />
                 </View>
 
+                {/* Delivery Evidence Photos */}
+                <View style={[styles.card, isDarkHud && styles.cardDark]}>
+                    <PhotoAttachmentPicker
+                        attachments={photos}
+                        maxCount={6}
+                        onAddAttachment={(att) =>
+                            setPhotos((prev) => [...prev, att])
+                        }
+                        onRemoveAttachment={(idx) =>
+                            setPhotos((prev) =>
+                                prev.filter((_, i) => i !== idx),
+                            )
+                        }
+                        style={[
+                            styles.embeddedPhotoPicker,
+                            isDarkHud && styles.embeddedPhotoPickerDark,
+                        ]}
+                        testID="sales-photo-attachment-picker"
+                        title="Delivery Evidence Photos"
+                    />
+                </View>
+
                 {/* Buyer Acceptance & Sign-off */}
                 <View style={[styles.card, isDarkHud && styles.cardDark]}>
                     <Text
@@ -562,21 +672,137 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                     </Pressable>
                 </View>
 
+                {/* Offline Outbox & Sync State Banner */}
+                {activeSyncStatus !== 'idle' && (
+                    <View
+                        accessibilityRole="alert"
+                        style={[
+                            styles.syncBanner,
+                            activeSyncStatus === 'submitting' ||
+                            activeSyncStatus === 'saving'
+                                ? isDarkHud
+                                    ? styles.syncBannerSubmittingDark
+                                    : styles.syncBannerSubmitting
+                                : activeSyncStatus === 'queued'
+                                  ? isDarkHud
+                                      ? styles.syncBannerQueuedDark
+                                      : styles.syncBannerQueued
+                                  : activeSyncStatus === 'success'
+                                    ? isDarkHud
+                                        ? styles.syncBannerSuccessDark
+                                        : styles.syncBannerSuccess
+                                    : isDarkHud
+                                      ? styles.syncBannerFailedDark
+                                      : styles.syncBannerFailed,
+                        ]}
+                        testID="sync-status-banner"
+                    >
+                        <Icon
+                            color={
+                                activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? isDarkHud
+                                        ? '#93C5FD'
+                                        : colors.blue
+                                    : activeSyncStatus === 'queued'
+                                      ? isDarkHud
+                                          ? '#FCD34D'
+                                          : colors.amberDark
+                                      : activeSyncStatus === 'success'
+                                        ? isDarkHud
+                                            ? '#34D399'
+                                            : colors.greenDark
+                                        : isDarkHud
+                                          ? '#F87171'
+                                          : colors.red
+                            }
+                            name={
+                                activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'sync'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'clock'
+                                      : activeSyncStatus === 'success'
+                                        ? 'check-circle'
+                                        : 'alert-circle'
+                            }
+                            size={18}
+                        />
+                        <View style={styles.syncBannerContent}>
+                            <Text
+                                style={[
+                                    styles.syncBannerTitle,
+                                    isDarkHud && styles.syncBannerTitleDark,
+                                ]}
+                            >
+                                {activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'Uploading & Synchronizing…'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'Saved on Device (Waiting to Sync)'
+                                      : activeSyncStatus === 'success'
+                                        ? 'Submitted Successfully'
+                                        : 'Submission Failed'}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.syncBannerSubtitle,
+                                    isDarkHud && styles.syncBannerSubtitleDark,
+                                ]}
+                            >
+                                {activeSyncStatus === 'submitting' ||
+                                activeSyncStatus === 'saving'
+                                    ? 'Uploading delivery evidence to operations desk.'
+                                    : activeSyncStatus === 'queued'
+                                      ? 'Evidence securely stored in offline outbox. It will synchronize automatically when connection is restored.'
+                                      : activeSyncStatus === 'success'
+                                        ? 'Delivery evidence recorded and synchronized with operations.'
+                                        : activeErrorMessage ||
+                                          'Unable to complete submission. Tap retry to re-attempt.'}
+                            </Text>
+                        </View>
+                        {activeSyncStatus === 'failed' && (
+                            <Pressable
+                                accessibilityLabel="Retry synchronization"
+                                accessibilityRole="button"
+                                onPress={() => {
+                                    if (onRetrySync) {
+                                        onRetrySync();
+                                    } else {
+                                        void handleConfirm();
+                                    }
+                                }}
+                                style={styles.syncRetryButton}
+                                testID="sync-retry-button"
+                            >
+                                <Text style={styles.syncRetryButtonText}>
+                                    Retry
+                                </Text>
+                            </Pressable>
+                        )}
+                    </View>
+                )}
+
                 {/* Primary Transfer Action Button */}
                 <Pressable
                     accessibilityLabel="Confirm Delivery & Complete Acceptance"
                     accessibilityRole="button"
+                    accessibilityState={{ disabled: isSubmitting }}
+                    disabled={isSubmitting}
                     onPress={handleConfirm}
                     style={({ pressed }) => [
                         styles.confirmBtn,
                         isDarkHud && styles.confirmBtnDark,
-                        pressed && styles.pressed,
+                        isSubmitting && styles.confirmBtnDisabled,
+                        pressed && !isSubmitting && styles.pressed,
                     ]}
                     testID="confirm-sales-delivery-button"
                 >
                     <Icon color="#FFFFFF" name="shield-check" size={20} />
                     <Text style={styles.confirmBtnText}>
-                        CONFIRM DELIVERY & ACCEPTANCE
+                        {isSubmitting
+                            ? 'SUBMITTING EVIDENCE…'
+                            : 'CONFIRM DELIVERY & ACCEPTANCE'}
                     </Text>
                 </Pressable>
             </ScrollView>
@@ -585,8 +811,19 @@ export const SalesDeliveryScreen: React.FC<SalesDeliveryScreenProps> = ({
                 clientName={clientName}
                 jobReference={orderReference}
                 onClose={() => setSignatureModalVisible(false)}
-                onConfirmSignature={() => {
+                onConfirmSignature={(data) => {
                     setSignatureCaptured(true);
+
+                    if (data?.signerName) {
+                        setSigneeName(data.signerName);
+                    }
+
+                    if (data?.signerRole) {
+                        setSigneeRole(data.signerRole);
+                    }
+
+                    const base64Sig = `data:image/svg+xml;base64,${typeof btoa === 'function' ? btoa(JSON.stringify(data?.strokes || [])) : Buffer.from(JSON.stringify(data?.strokes || [])).toString('base64')}`;
+                    setSignatureData(base64Sig);
                     setSignatureModalVisible(false);
                 }}
                 visible={signatureModalVisible}
@@ -954,5 +1191,92 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.82,
         transform: [{ scale: 0.96 }],
+    },
+    embeddedPhotoPicker: {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        marginTop: 0,
+        padding: 0,
+    },
+    embeddedPhotoPickerDark: {
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+    },
+    syncBanner: {
+        alignItems: 'flex-start',
+        borderRadius: 12,
+        borderWidth: 1,
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 16,
+        padding: 14,
+    },
+    syncBannerSubmitting: {
+        backgroundColor: '#EFF6FF',
+        borderColor: '#BFDBFE',
+    },
+    syncBannerSubmittingDark: {
+        backgroundColor: '#1E293B',
+        borderColor: '#3B82F6',
+    },
+    syncBannerQueued: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+    },
+    syncBannerQueuedDark: {
+        backgroundColor: '#451A03',
+        borderColor: '#D97706',
+    },
+    syncBannerSuccess: {
+        backgroundColor: '#ECFDF5',
+        borderColor: '#A7F3D0',
+    },
+    syncBannerSuccessDark: {
+        backgroundColor: '#064E3B',
+        borderColor: '#059669',
+    },
+    syncBannerFailed: {
+        backgroundColor: '#FEF2F2',
+        borderColor: '#FECACA',
+    },
+    syncBannerFailedDark: {
+        backgroundColor: '#450A0A',
+        borderColor: '#DC2626',
+    },
+    syncBannerContent: {
+        flex: 1,
+    },
+    syncBannerTitle: {
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 2,
+    },
+    syncBannerTitleDark: {
+        color: '#FFFFFF',
+    },
+    syncBannerSubtitle: {
+        color: colors.muted,
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    syncBannerSubtitleDark: {
+        color: colors.hudTextDim,
+    },
+    syncRetryButton: {
+        alignSelf: 'center',
+        backgroundColor: colors.amber,
+        borderRadius: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    syncRetryButtonText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    confirmBtnDisabled: {
+        opacity: 0.5,
     },
 });

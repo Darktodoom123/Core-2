@@ -215,6 +215,11 @@ it('handles maintenance order creation and verified release after post-repair pa
         'parts' => ['BRG-900'],
     ])->assertSessionHasErrors(['inspection']);
 
+    // Complete repair
+    $this->actingAs($technician)->post("/operations/maintenance/{$workOrder->id}/complete", [
+        'work_performed' => ['Replaced winch motor bearing'],
+    ])->assertRedirect()->assertSessionHas('flash');
+
     // Inspection AFTER repair allows successful release
     $asset->inspections()->create([
         'technician_id' => $technician->id,

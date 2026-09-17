@@ -39,6 +39,10 @@ const commandTypes: OutboxCommandType[] = [
     'activate_sos',
     'submit_job_report',
     'submit_dvir',
+    'submit_rental_handover',
+    'submit_sales_delivery',
+    'submit_equipment_inspection',
+    'submit_maintenance_work_order',
 ];
 const commandStates: OutboxCommandState[] = [
     'queued',
@@ -79,10 +83,86 @@ function safeTimestamp(value: string | null, fallback: string): string {
 }
 
 function deserializeRow(row: OutboxRow): OutboxCommand {
-    const fallbackTimestamp = new Date(0).toISOString();
-    const type = commandTypes.includes(row.command_type as OutboxCommandType)
-        ? (row.command_type as OutboxCommandType)
-        : 'transition_status';
+    const fallbackTimestamp = new Date().toISOString();
+
+    // Safely invalidate and quarantine legacy release_maintenance_work_order commands.
+    // Ensure they cannot replay or fall back to another command type.
+    if (row.command_type === 'release_maintenance_work_order') {
+        let payload: Record<string, unknown> = {};
+
+        try {
+            const parsed = JSON.parse(row.payload_json);
+
+            if (
+                parsed &&
+                typeof parsed === 'object' &&
+                !Array.isArray(parsed)
+            ) {
+                payload = parsed as Record<string, unknown>;
+            }
+        } catch {
+            // Keep empty payload if unparseable
+        }
+
+        return {
+            id: row.id,
+            actorId: row.actor_id,
+            type: 'release_maintenance_work_order',
+            jobId: row.job_id,
+            assignmentId: row.assignment_id,
+            payload,
+            payloadHash: row.payload_hash || 'invalid',
+            expectedVersion: row.expected_version,
+            state: 'failed',
+            priority: row.priority === 'emergency' ? 'emergency' : 'ordinary',
+            expiresAt: row.expires_at ?? null,
+            attempts: Math.max(0, row.attempts),
+            error: {
+                code: 'LEGACY_RELEASE_DISALLOWED',
+                message:
+                    'Offline work order release commands are deprecated and cannot be replayed. A new explicit online release action is required.',
+                retryable: false,
+            },
+            createdAt: safeTimestamp(row.created_at, fallbackTimestamp),
+            updatedAt: safeTimestamp(row.updated_at, fallbackTimestamp),
+            lastAttemptAt: row.last_attempt_at,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+    }
+
+    const isRecognizedType = commandTypes.includes(
+        row.command_type as OutboxCommandType,
+    );
+
+    if (!isRecognizedType) {
+        return {
+            id: row.id,
+            actorId: row.actor_id,
+            type: row.command_type as OutboxCommandType,
+            jobId: row.job_id,
+            assignmentId: row.assignment_id,
+            payload: {},
+            payloadHash: row.payload_hash || 'invalid',
+            expectedVersion: row.expected_version,
+            state: 'failed',
+            priority: row.priority === 'emergency' ? 'emergency' : 'ordinary',
+            expiresAt: row.expires_at ?? null,
+            attempts: Math.max(0, row.attempts),
+            error: {
+                code: 'UNKNOWN_COMMAND_TYPE',
+                message: `Stored command type "${row.command_type}" is not recognized and cannot be replayed.`,
+                retryable: false,
+            },
+            createdAt: safeTimestamp(row.created_at, fallbackTimestamp),
+            updatedAt: safeTimestamp(row.updated_at, fallbackTimestamp),
+            lastAttemptAt: row.last_attempt_at,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+    }
+
+    const type = row.command_type as OutboxCommandType;
     const state = commandStates.includes(row.state as OutboxCommandState)
         ? (row.state as OutboxCommandState)
         : 'failed';
@@ -337,6 +417,20 @@ export class SqliteOutboxRepository implements OutboxRepository {
             );
         } catch {
             // Column already exists.
+        }
+
+        // Invalidate and quarantine any legacy work order release commands from previous builds:
+        // Offline release commands cannot be replayed safely; explicit online release is required.
+        try {
+            await database.execAsync(
+                `UPDATE field_command_outbox
+                 SET state = 'failed',
+                     next_attempt_at = NULL,
+                     error_json = '{"code":"LEGACY_RELEASE_DISALLOWED","message":"Offline work order release commands are deprecated and cannot be replayed. A new explicit online release action is required.","retryable":false}'
+                 WHERE command_type = 'release_maintenance_work_order' AND state != 'completed'`,
+            );
+        } catch {
+            // Column/table may be in transition
         }
     }
 

@@ -74,6 +74,16 @@ export function FieldExecutionWorkspace({
                 >
                     Execution
                 </a>
+                {(execution.handoff_evidence ||
+                    job.source?.type === 'rental_reservation' ||
+                    job.source?.type === 'sales_order') && (
+                    <a
+                        href="#handoff-evidence"
+                        className="rounded px-1.5 py-0.5 text-ink-soft underline-offset-4 hover:text-ink hover:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                    >
+                        Evidence
+                    </a>
+                )}
                 {execution.activity.length > 0 && (
                     <a
                         href="#execution-activity"
@@ -176,6 +186,41 @@ export function FieldExecutionWorkspace({
                             />
                         </dl>
                     </Panel>
+
+                    {execution.handoff_evidence ? (
+                        <HandoffEvidencePanel
+                            evidence={execution.handoff_evidence}
+                        />
+                    ) : job.source?.type === 'rental_reservation' ||
+                      job.source?.type === 'sales_order' ? (
+                        <Panel
+                            id="handoff-evidence"
+                            className="overflow-hidden border-line"
+                        >
+                            <div className="border-b border-line bg-surface-subtle/40 px-4 py-3 sm:px-5">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="font-semibold text-ink">
+                                        Field Delivery &amp; Handover Evidence
+                                    </h2>
+                                    <span className="inline-flex items-center rounded-full bg-surface-subtle px-2.5 py-0.5 text-xs text-ink-soft">
+                                        Awaiting field submission
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="p-4 text-xs text-ink-soft sm:p-5">
+                                <p>
+                                    Physical handover and customer sign-off
+                                    evidence has not yet been submitted by the
+                                    assigned operator.
+                                </p>
+                                <p className="mt-1">
+                                    Evidence stored on an offline field device
+                                    will synchronize and appear here
+                                    automatically once connectivity is restored.
+                                </p>
+                            </div>
+                        </Panel>
+                    ) : null}
 
                     {execution.issues.length > 0 && (
                         <Panel className="overflow-hidden">
@@ -613,4 +658,380 @@ function SiteEvidenceMarker({
     }, [color, label, map, maplibregl, position]);
 
     return null;
+}
+
+function HandoffEvidencePanel({
+    evidence,
+}: {
+    evidence: NonNullable<
+        NonNullable<DispatchDetailPageProps['execution']>['handoff_evidence']
+    >;
+}) {
+    const [actionPending, setActionPending] = useState(false);
+
+    const handleAuthoritativeAction = (
+        action: 'checkout' | 'return' | 'fulfill',
+    ) => {
+        setActionPending(true);
+        let url = '';
+
+        if (action === 'checkout') {
+            url = `/operations/rental-reservations/${evidence.source_id}/checkout`;
+        } else if (action === 'return') {
+            url = `/operations/rental-reservations/${evidence.source_id}/return`;
+        } else {
+            url = `/operations/sales/orders/${evidence.source_id}/fulfill`;
+        }
+
+        router.post(
+            url,
+            action === 'checkout'
+                ? {
+                      condition: [evidence.condition_assessment || 'good'],
+                      notes: evidence.condition_notes || undefined,
+                      damage_notes: evidence.damage_notes || undefined,
+                  }
+                : action === 'return'
+                  ? {
+                        condition: [evidence.damage_noted ? 'damaged' : 'good'],
+                        notes: evidence.condition_notes || undefined,
+                        damage_notes: evidence.damage_notes || undefined,
+                    }
+                  : {},
+            {
+                preserveScroll: true,
+                onFinish: () => setActionPending(false),
+            },
+        );
+    };
+
+    const isRental = evidence.type === 'rental';
+
+    return (
+        <Panel
+            id="handoff-evidence"
+            className="scroll-mt-24 overflow-hidden border-brand/30"
+        >
+            <div className="border-b border-line bg-surface-subtle/50 px-4 py-4 sm:px-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-strong">
+                                <CheckCircle2
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                {isRental
+                                    ? `Rental Handover Evidence (${evidence.handover_type === 'return' ? 'Return' : 'Checkout'})`
+                                    : 'Sales Delivery Evidence'}
+                            </span>
+                            <a
+                                href={
+                                    isRental
+                                        ? '/operations/rental-reservations'
+                                        : '/operations/sales/orders'
+                                }
+                                className="font-mono text-xs text-ink-soft underline decoration-dotted hover:text-brand"
+                                title={`Open commercial ${isRental ? 'rental' : 'sales'} orders workspace`}
+                            >
+                                {evidence.source_reference}{' '}
+                                <span aria-hidden="true">↗</span>
+                            </a>
+                        </div>
+                        <h2 className="mt-1 text-lg font-semibold text-ink">
+                            Field evidence &amp; customer sign-off
+                        </h2>
+                        <p className="mt-0.5 text-xs text-ink-soft">
+                            Submitted by{' '}
+                            <span className="font-medium text-ink">
+                                {evidence.submitted_by?.name ||
+                                    'Assigned Operator'}
+                            </span>
+                            {evidence.submitted_at
+                                ? ` · Captured: ${formatDateTime(evidence.submitted_at)}`
+                                : ''}
+                            {evidence.received_at
+                                ? ` · Received: ${formatDateTime(evidence.received_at)}`
+                                : ''}
+                        </p>
+                        {evidence.asset && (
+                            <p className="mt-0.5 text-xs text-ink-soft">
+                                Assigned Equipment:{' '}
+                                <span className="font-medium text-ink">
+                                    {evidence.asset.name} ({evidence.asset.code}
+                                    )
+                                </span>
+                            </p>
+                        )}
+                    </div>
+                    <div className="text-right">
+                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-ink-soft">
+                            Commercial Status:{' '}
+                            {evidence.managerial_status_label}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-5">
+                {/* Signee Information */}
+                <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
+                    <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                        Customer Acceptance &amp; Sign-off
+                    </h3>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        <DataPair
+                            label="Received & Signed By"
+                            value={`${evidence.signee_name} (${evidence.signee_role})`}
+                        />
+                        <DataPair
+                            label="Digital Signature"
+                            value={
+                                evidence.signature_url ? (
+                                    <div className="mt-1">
+                                        <img
+                                            src={evidence.signature_url}
+                                            alt={`Customer signature by ${evidence.signee_name}`}
+                                            className="h-16 max-w-xs rounded border border-line bg-white object-contain p-1 dark:bg-zinc-900"
+                                        />
+                                    </div>
+                                ) : evidence.signature_path ? (
+                                    <span className="font-mono text-xs text-ink-soft">
+                                        Stored at {evidence.signature_path}
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-ink-soft">
+                                        Captured electronically
+                                    </span>
+                                )
+                            }
+                        />
+                    </div>
+                </div>
+
+                {/* Rental Metrics */}
+                {isRental && (
+                    <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
+                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                            Asset Condition &amp; Telemetry at Handover
+                        </h3>
+                        <dl className="mt-2 grid gap-3 sm:grid-cols-3">
+                            <DataPair
+                                label="Hour Meter"
+                                value={
+                                    evidence.hour_meter !== undefined
+                                        ? `${evidence.hour_meter} hrs`
+                                        : 'Not recorded'
+                                }
+                            />
+                            <DataPair
+                                label="Fuel Level"
+                                value={
+                                    evidence.fuel_percent !== undefined
+                                        ? `${evidence.fuel_percent}%`
+                                        : 'Not recorded'
+                                }
+                            />
+                            <DataPair
+                                label="Condition Assessment"
+                                value={
+                                    evidence.condition_assessment ? (
+                                        <span className="font-medium text-ink capitalize">
+                                            {evidence.condition_assessment}
+                                        </span>
+                                    ) : (
+                                        'Standard'
+                                    )
+                                }
+                            />
+                        </dl>
+                        {evidence.condition_notes && (
+                            <div className="mt-3 text-xs">
+                                <span className="font-semibold text-ink-soft">
+                                    Condition Notes:{' '}
+                                </span>
+                                <span className="text-ink">
+                                    {evidence.condition_notes}
+                                </span>
+                            </div>
+                        )}
+
+                        {evidence.damage_noted && (
+                            <div className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-xs text-warning-strong">
+                                <AlertTriangle
+                                    className="mt-0.5 size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <div>
+                                    <p className="font-semibold">
+                                        Damage Noted During Handover
+                                    </p>
+                                    <p className="mt-0.5">
+                                        {evidence.damage_notes ||
+                                            'No specific damage description provided.'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Sales Metrics */}
+                {!isRental && (
+                    <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
+                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                            Delivery Verification &amp; Handover Details
+                        </h3>
+                        <dl className="mt-2 grid gap-3 sm:grid-cols-2">
+                            <DataPair
+                                label="Verified Serial / VIN"
+                                value={evidence.verified_vin || 'Pending'}
+                            />
+                            <DataPair
+                                label="Accessories Verified"
+                                value={
+                                    evidence.accessories_checked &&
+                                    evidence.accessories_checked.length > 0
+                                        ? evidence.accessories_checked.join(
+                                              ', ',
+                                          )
+                                        : 'None recorded'
+                                }
+                            />
+                        </dl>
+                        {evidence.delivery_notes && (
+                            <div className="mt-3 text-xs">
+                                <span className="font-semibold text-ink-soft">
+                                    Delivery Notes:{' '}
+                                </span>
+                                <span className="text-ink">
+                                    {evidence.delivery_notes}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Photos */}
+                {evidence.photos && evidence.photos.length > 0 && (
+                    <div className="rounded-lg border border-line bg-surface p-3 sm:p-4">
+                        <h3 className="text-xs font-semibold tracking-wider text-ink-soft uppercase">
+                            Inspection &amp; Handover Photos (
+                            {evidence.photos.length})
+                        </h3>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {evidence.photos.map((photo, index) => (
+                                <div
+                                    key={index}
+                                    className="overflow-hidden rounded-md border border-line"
+                                >
+                                    {photo.url ? (
+                                        <img
+                                            src={photo.url}
+                                            alt={
+                                                photo.label ||
+                                                `Photo ${index + 1}`
+                                            }
+                                            className="h-20 w-24 object-cover"
+                                            onError={(e) => {
+                                                const img = e.currentTarget;
+
+                                                img.style.display = 'none';
+                                                const fallback =
+                                                    img.parentElement?.querySelector(
+                                                        '.photo-fallback',
+                                                    ) as HTMLElement | null;
+
+                                                if (fallback) {
+                                                    fallback.style.display =
+                                                        'flex';
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        className="photo-fallback flex h-20 w-24 items-center justify-center bg-surface-subtle p-1 text-center text-[10px] text-ink-soft"
+                                        style={{
+                                            display: photo.url
+                                                ? 'none'
+                                                : 'flex',
+                                        }}
+                                    >
+                                        {photo.label || `Photo ${index + 1}`}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Managerial Authoritative Action Box */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/20 bg-brand-soft/30 p-3 sm:p-4">
+                    <div className="max-w-xl text-xs">
+                        <p className="font-semibold text-ink">
+                            Commercial Order State &amp; Managerial Control
+                        </p>
+                        <p className="mt-0.5 text-ink-soft">
+                            Operator mobile submission marks the dispatch
+                            attempt completed. Official commercial status
+                            remains{' '}
+                            <span className="font-medium text-ink">
+                                {evidence.managerial_status_label}
+                            </span>{' '}
+                            until processed by an authorized operations desk
+                            manager.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {evidence.can_checkout && (
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="sm"
+                                disabled={actionPending}
+                                onClick={() =>
+                                    handleAuthoritativeAction('checkout')
+                                }
+                            >
+                                {actionPending
+                                    ? 'Processing…'
+                                    : 'Process Authoritative Checkout'}
+                            </Button>
+                        )}
+                        {evidence.can_return && (
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="sm"
+                                disabled={actionPending}
+                                onClick={() =>
+                                    handleAuthoritativeAction('return')
+                                }
+                            >
+                                {actionPending
+                                    ? 'Processing…'
+                                    : 'Process Authoritative Return'}
+                            </Button>
+                        )}
+                        {evidence.can_fulfill && (
+                            <Button
+                                type="button"
+                                variant="primary"
+                                size="sm"
+                                disabled={actionPending}
+                                onClick={() =>
+                                    handleAuthoritativeAction('fulfill')
+                                }
+                            >
+                                {actionPending
+                                    ? 'Processing…'
+                                    : 'Process Authoritative Fulfillment'}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </Panel>
+    );
 }

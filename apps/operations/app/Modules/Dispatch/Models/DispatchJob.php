@@ -9,6 +9,8 @@ use App\Modules\Dispatch\Enums\DispatchSourceType;
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dvir\Models\DvirInspection;
 use App\Modules\Fuel\Models\FuelRequest;
+use App\Modules\Rental\Models\RentalHandoverEvidence;
+use App\Modules\Sales\Models\SalesDeliveryEvidence;
 use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Models\JobReport;
@@ -139,6 +141,18 @@ class DispatchJob extends Model
     public function locationUpdates(): HasMany
     {
         return $this->hasMany(LocationUpdate::class);
+    }
+
+    /** @return HasMany<RentalHandoverEvidence, $this> */
+    public function rentalHandoverEvidences(): HasMany
+    {
+        return $this->hasMany(RentalHandoverEvidence::class);
+    }
+
+    /** @return HasMany<SalesDeliveryEvidence, $this> */
+    public function salesDeliveryEvidences(): HasMany
+    {
+        return $this->hasMany(SalesDeliveryEvidence::class);
     }
 
     /**

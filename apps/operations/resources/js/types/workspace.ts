@@ -254,12 +254,19 @@ export interface RentalDispatchHandoffViewModel extends CommercialDispatchHandof
     condition_requirements?: string[];
     operator_required?: boolean;
     operator_context?: string | null;
+    has_evidence?: boolean;
+    evidence_signee?: string | null;
+    evidence_submitted_at?: string | null;
+    evidence_type?: string | null;
 }
 
 export interface SalesDispatchHandoffViewModel extends CommercialDispatchHandoffViewModel {
     total_cents: number;
     order_items?: SalesOrderItemContext[];
     destination_coordinates?: GeoCoordinates | null;
+    has_evidence?: boolean;
+    evidence_signee?: string | null;
+    evidence_submitted_at?: string | null;
 }
 
 export type InspectionTypeValue =
@@ -283,6 +290,7 @@ export interface MaintenanceWorkOrderViewModel {
     dispatch_blocking: boolean;
     scheduled_at: string | null;
     next_due_at: string | null;
+    completed_at?: string | null;
     work_performed: string[];
     parts: string[];
     released_at: string | null;
@@ -617,6 +625,8 @@ export interface LocationUpdateViewModel {
             | 'equipment'
             | string;
         location?: string | null;
+        status?: string | null;
+        status_label?: string | null;
     } | null;
     job: {
         id: number;
@@ -634,6 +644,12 @@ export interface LocationUpdateViewModel {
     captured_at: string | null;
     received_at: string | null;
     freshness_status: TelemetryFreshnessStatus;
+    freshness_label?: string;
+    is_assigned?: boolean;
+    assignment_status?: 'assigned' | 'unassigned';
+    recorded_location?: string | null;
+    has_gps_report?: boolean;
+    reported_via_phone?: boolean;
 }
 
 export interface AttachmentViewModel {
@@ -1203,6 +1219,46 @@ export interface DispatchExecutionReportViewModel {
     coordinates: { latitude: number; longitude: number } | null;
 }
 
+export interface DispatchHandoffEvidenceViewModel {
+    type: 'rental' | 'sales';
+    source_id: number;
+    source_reference: string;
+    handover_type?: 'checkout' | 'return' | null;
+    submitted_at: string | null;
+    received_at?: string | null;
+    asset?: {
+        code: string;
+        name: string;
+    } | null;
+    submitted_by: {
+        id: number;
+        name: string;
+    } | null;
+    signee_name: string;
+    signee_role: string;
+    hour_meter?: number;
+    fuel_percent?: number;
+    condition_assessment?: 'excellent' | 'good' | 'fair' | 'poor' | null;
+    condition_notes?: string | null;
+    damage_noted?: boolean;
+    damage_notes?: string | null;
+    verified_vin?: string;
+    accessories_checked?: string[];
+    delivery_notes?: string | null;
+    photos: Array<{
+        path: string;
+        url?: string;
+        label?: string;
+    }>;
+    signature_path?: string | null;
+    signature_url?: string | null;
+    managerial_status: string;
+    managerial_status_label: string;
+    can_checkout?: boolean;
+    can_return?: boolean;
+    can_fulfill?: boolean;
+}
+
 export interface DispatchExecutionViewModel {
     status: StatusViewModel<DispatchStatusValue>;
     updated_at: string | null;
@@ -1222,6 +1278,7 @@ export interface DispatchExecutionViewModel {
         detail: string;
         recorded_at: string | null;
     }>;
+    handoff_evidence?: DispatchHandoffEvidenceViewModel | null;
 }
 
 export interface DispatchDetailPageProps {

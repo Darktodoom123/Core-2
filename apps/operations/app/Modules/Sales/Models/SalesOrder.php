@@ -9,11 +9,13 @@ use App\Modules\Sales\Enums\SalesOrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property SalesOrderStatus $status
  * @property SalesFulfillmentMode $fulfillment_mode
  * @property int|null $dispatch_job_id
+ * @property-read ?SalesDeliveryEvidence $latestDeliveryEvidence
  */
 class SalesOrder extends Model
 {
@@ -93,5 +95,17 @@ class SalesOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SalesOrderItem::class);
+    }
+
+    /** @return HasMany<SalesDeliveryEvidence, $this> */
+    public function deliveryEvidences(): HasMany
+    {
+        return $this->hasMany(SalesDeliveryEvidence::class);
+    }
+
+    /** @return HasOne<SalesDeliveryEvidence, $this> */
+    public function latestDeliveryEvidence(): HasOne
+    {
+        return $this->hasOne(SalesDeliveryEvidence::class)->latestOfMany('submitted_at');
     }
 }

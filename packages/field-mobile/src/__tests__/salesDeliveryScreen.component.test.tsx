@@ -151,4 +151,73 @@ describe('SalesDeliveryScreen', () => {
             ]),
         );
     });
+
+    it('renders delivery photo evidence picker and supports photo attachments', async () => {
+        const view = await render(
+            <SalesDeliveryScreen orderReference="SO-2026-0091" />,
+        );
+
+        expect(view.getByTestId('sales-photo-attachment-picker')).toBeTruthy();
+        expect(view.getByText('Delivery Evidence Photos')).toBeTruthy();
+    });
+
+    it('renders user-facing sync states: queued, submitting, and failed with retry action', async () => {
+        const onRetrySync = jest.fn();
+
+        // 1. Queued / saved on device state
+        const queuedView = await render(
+            <SalesDeliveryScreen
+                orderReference="SO-2026-0091"
+                syncStatus="queued"
+            />,
+        );
+        expect(queuedView.getByTestId('sync-status-banner')).toBeTruthy();
+        expect(
+            queuedView.getByText('Saved on Device (Waiting to Sync)'),
+        ).toBeTruthy();
+
+        // 2. Submitting state disables confirm button
+        const submittingView = await render(
+            <SalesDeliveryScreen
+                orderReference="SO-2026-0091"
+                syncStatus="submitting"
+            />,
+        );
+        expect(
+            submittingView.getByText('Uploading & Synchronizing…'),
+        ).toBeTruthy();
+        const confirmBtn = submittingView.getByTestId(
+            'confirm-sales-delivery-button',
+        );
+        expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
+
+        // 3. Failed state with retry button
+        const failedView = await render(
+            <SalesDeliveryScreen
+                onRetrySync={onRetrySync}
+                orderReference="SO-2026-0091"
+                syncErrorMessage="Network timeout during handover upload."
+                syncStatus="failed"
+            />,
+        );
+        expect(failedView.getByText('Submission Failed')).toBeTruthy();
+        expect(
+            failedView.getByText('Network timeout during handover upload.'),
+        ).toBeTruthy();
+
+        const retryBtn = failedView.getByTestId('sync-retry-button');
+        await act(async () => {
+            fireEvent.press(retryBtn);
+        });
+        expect(onRetrySync).toHaveBeenCalledTimes(1);
+
+        // 4. Success state
+        const successView = await render(
+            <SalesDeliveryScreen
+                orderReference="SO-2026-0091"
+                syncStatus="success"
+            />,
+        );
+        expect(successView.getByText('Submitted Successfully')).toBeTruthy();
+    });
 });

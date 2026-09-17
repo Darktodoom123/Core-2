@@ -124,3 +124,25 @@ jest.mock('expo-location', () => ({
     startLocationUpdatesAsync: jest.fn(async () => undefined),
     stopLocationUpdatesAsync: jest.fn(async () => undefined),
 }));
+
+const mockFileSystem = {
+    documentDirectory: 'file:///mock/data/user/0/com.core2.fieldmobile/files/',
+    EncodingType: {
+        Base64: 'base64',
+        UTF8: 'utf8',
+    },
+    makeDirectoryAsync: jest.fn(async () => undefined),
+    copyAsync: jest.fn(async () => undefined),
+    writeAsStringAsync: jest.fn(async () => undefined),
+    readAsStringAsync: jest.fn(async () => 'mock-base64'),
+    getInfoAsync: jest.fn(async (uri: string) => ({
+        exists: true,
+        isDirectory: false,
+        size: 1024,
+        uri,
+    })),
+    deleteAsync: jest.fn(async () => undefined),
+};
+
+jest.mock('expo-file-system', () => mockFileSystem);
+jest.mock('expo-file-system/legacy', () => mockFileSystem);

@@ -1,6 +1,7 @@
 import {
     Activity,
     AlertTriangle,
+    Clock3,
     Compass,
     Navigation,
     PauseCircle,
@@ -381,7 +382,9 @@ function SynchronizedLocationList({
                         <TableHead scope="col">Asset / Equipment</TableHead>
                         <TableHead scope="col">Assigned Operator</TableHead>
                         <TableHead scope="col">Freshness Status</TableHead>
-                        <TableHead scope="col">Coordinates</TableHead>
+                        <TableHead scope="col">
+                            Coordinates / Location
+                        </TableHead>
                         <TableHead scope="col">Accuracy</TableHead>
                         <TableHead scope="col">Sharing</TableHead>
                         <TableHead scope="col">Captured Time</TableHead>
@@ -389,58 +392,99 @@ function SynchronizedLocationList({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {locations.map((loc) => (
-                        <TableRow key={loc.id}>
-                            <TableCell className="font-semibold text-ink">
-                                {loc.asset?.code ?? 'Asset'}
-                                <div className="text-xs font-normal text-ink-soft">
-                                    {loc.asset?.name ??
-                                        getAssetKindLabel(getAssetKind(loc))}
-                                </div>
-                            </TableCell>
-                            <TableCell className="text-xs text-ink-soft">
-                                {loc.user?.name ? loc.user.name : 'Unassigned'}
-                            </TableCell>
-                            <TableCell>
-                                <FreshnessBadge status={loc.freshness_status} />
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                                {loc.latitude !== null && loc.longitude !== null
-                                    ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`
-                                    : 'Pruned / Off'}
-                            </TableCell>
-                            <TableCell className="text-xs">
-                                {loc.accuracy_metres
-                                    ? `±${loc.accuracy_metres}m`
-                                    : 'N/A'}
-                            </TableCell>
-                            <TableCell className="text-xs font-medium">
-                                {loc.sharing_enabled ? (
-                                    <span className="text-success-strong">
-                                        On
-                                    </span>
-                                ) : (
-                                    <span className="text-warning-strong">
-                                        Off
-                                    </span>
-                                )}
-                            </TableCell>
-                            <TableCell className="text-xs text-ink-soft">
-                                {loc.captured_at
-                                    ? new Date(
-                                          loc.captured_at,
-                                      ).toLocaleTimeString()
-                                    : 'N/A'}
-                            </TableCell>
-                            <TableCell className="text-xs text-ink-soft">
-                                {loc.received_at
-                                    ? new Date(
-                                          loc.received_at,
-                                      ).toLocaleTimeString()
-                                    : 'N/A'}
-                            </TableCell>
-                        </TableRow>
-                    ))}
+                    {locations.map((loc) => {
+                        const availabilityLabel =
+                            loc.asset?.status_label ?? 'Available';
+                        const isAssigned =
+                            loc.is_assigned ??
+                            Boolean(loc.job || loc.user?.name);
+                        const assignmentText = isAssigned
+                            ? loc.job?.reference
+                                ? `Assigned · Job ${loc.job.reference}`
+                                : 'Assigned'
+                            : 'Unassigned';
+
+                        return (
+                            <TableRow key={loc.id}>
+                                <TableCell className="font-semibold text-ink">
+                                    {loc.asset?.code ?? 'Asset'}
+                                    <div className="text-xs font-normal text-ink-soft">
+                                        {loc.asset?.name ??
+                                            getAssetKindLabel(
+                                                getAssetKind(loc),
+                                            )}{' '}
+                                        · {availabilityLabel} · {assignmentText}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-xs text-ink-soft">
+                                    <div>
+                                        {loc.user?.name
+                                            ? loc.user.name
+                                            : 'Unassigned'}
+                                    </div>
+                                    {loc.reported_via_phone && (
+                                        <div className="text-ink-muted text-[10px]">
+                                            via operator’s phone
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <FreshnessBadge
+                                        status={loc.freshness_status}
+                                        location={loc}
+                                    />
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                    {loc.latitude !== null &&
+                                    loc.longitude !== null ? (
+                                        <span className="font-mono">
+                                            {loc.latitude.toFixed(5)},{' '}
+                                            {loc.longitude.toFixed(5)}
+                                        </span>
+                                    ) : loc.recorded_location ? (
+                                        <span className="text-ink-soft">
+                                            Recorded location:{' '}
+                                            {loc.recorded_location}
+                                        </span>
+                                    ) : (
+                                        <span className="text-ink-soft">
+                                            Location unavailable
+                                        </span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                    {loc.accuracy_metres
+                                        ? `±${loc.accuracy_metres}m`
+                                        : 'N/A'}
+                                </TableCell>
+                                <TableCell className="text-xs font-medium">
+                                    {loc.sharing_enabled ? (
+                                        <span className="text-success-strong">
+                                            On
+                                        </span>
+                                    ) : (
+                                        <span className="text-warning-strong">
+                                            Off
+                                        </span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-xs text-ink-soft">
+                                    {loc.captured_at
+                                        ? new Date(
+                                              loc.captured_at,
+                                          ).toLocaleTimeString()
+                                        : 'N/A'}
+                                </TableCell>
+                                <TableCell className="text-xs text-ink-soft">
+                                    {loc.received_at
+                                        ? new Date(
+                                              loc.received_at,
+                                          ).toLocaleTimeString()
+                                        : 'N/A'}
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
                 </TableBody>
             </Table>
         </Panel>
@@ -449,26 +493,43 @@ function SynchronizedLocationList({
 
 function FreshnessBadge({
     status,
+    location,
 }: {
     status: LocationUpdateViewModel['freshness_status'];
+    location?: LocationUpdateViewModel;
 }) {
+    const isNoReport =
+        location?.has_gps_report === false ||
+        location?.freshness_label === 'No GPS report';
+    const isInterrupted =
+        location?.freshness_label === 'Location not current' ||
+        (!isNoReport && (status === 'delayed' || status === 'stale'));
+
+    if (isNoReport) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-subtle px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
+                <Compass className="h-3 w-3" aria-hidden="true" />
+                No GPS report
+            </span>
+        );
+    }
+
+    if (isInterrupted) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-warning-strong/50 bg-warning-soft px-2.5 py-0.5 text-xs font-semibold text-warning-strong">
+                <Clock3 className="h-3 w-3" aria-hidden="true" />
+                Location not current
+            </span>
+        );
+    }
+
     const config =
         status === 'fresh'
             ? {
-                  label: 'Fresh (≤2m)',
+                  label: 'Fresh (≤3m)',
                   cls: 'bg-success-soft text-success-strong',
               }
-            : status === 'delayed'
-              ? {
-                    label: 'Delayed (2–10m)',
-                    cls: 'bg-info-soft text-info-strong',
-                }
-              : status === 'stale'
-                ? {
-                      label: 'Stale (10–30m)',
-                      cls: 'bg-warning-soft text-warning-strong',
-                  }
-                : { label: 'Offline / Off', cls: 'bg-danger-soft text-danger' };
+            : { label: 'Device offline', cls: 'bg-danger-soft text-danger' };
 
     return (
         <span

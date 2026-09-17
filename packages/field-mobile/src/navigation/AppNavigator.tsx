@@ -23,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, offlineSessionVerificationError } from '../auth/AuthContext';
 import { isAuthorizedFieldRole } from '../auth/fieldRoles';
 import { LoginScreen } from '../auth/LoginScreen';
+import type { PhotoAttachment } from '../components/attachments/PhotoAttachmentPicker';
 import { colors, sharedStyles } from '../components/nativeStyles';
 import type { DigitalSignatureData } from '../components/signature/DigitalSignatureModal';
 import { EmergencySosSheet } from '../components/sos';
@@ -44,13 +45,19 @@ import { EquipmentInspectionScreen } from '../screens/EquipmentInspectionScreen'
 import { FuelScreen } from '../screens/FuelScreen';
 import { HeavyCraneDriveModeScreen } from '../screens/HeavyCraneDriveModeScreen';
 import { HosScreen } from '../screens/HosScreen';
+import type {
+    RentalCheckoutData,
+    RentalReturnData,
+} from '../screens/RentalHandoverScreen';
 import { RentalHandoverScreen } from '../screens/RentalHandoverScreen';
+import type { SalesDeliveryData } from '../screens/SalesDeliveryScreen';
 import { SalesDeliveryScreen } from '../screens/SalesDeliveryScreen';
 import { ApiClientError } from '../services/apiClient';
 import {
     CommandOutboxManager,
     createCommandId,
 } from '../services/commandOutbox';
+import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import { LocationSharingService } from '../services/locationService';
 import { createDefaultOutboxRepository } from '../storage/outboxRepository';
 import type {
@@ -71,6 +78,8 @@ import type {
     ShiftStatus,
     StandbyReason,
     WeatherTelemetry,
+    TechnicianInspectionCheck,
+    MaintenanceWorkOrder,
 } from '../types/index';
 
 export { isAuthorizedFieldRole } from '../auth/fieldRoles';
@@ -205,6 +214,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         error: authError,
     } = useAuth();
     const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+    const [selectedAssetId, setSelectedAssetId] = useState<number | null>(null);
     const [jobs, setJobs] = useState<DispatchJob[]>([]);
     const [jobsError, setJobsError] = useState<string | null>(null);
     const [outboxCommands, setOutboxCommands] = useState<OutboxCommand[]>([]);
@@ -744,6 +754,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             queueMicrotask(() => {
                 setJobs([]);
                 setSelectedJobId(null);
+                setSelectedAssetId(null);
                 setWeather(null);
                 setWeatherError(null);
             });
@@ -797,6 +808,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
             () => {
                 if (selectedJobId !== null) {
                     setSelectedJobId(null);
+                    setSelectedAssetId(null);
 
                     return true;
                 }
@@ -815,8 +827,22 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
     }, [activeAppView, selectedJobId]);
 
     const handleSelectJob = useCallback(
-        (jobId: number) => setSelectedJobId(jobId),
-        [],
+        (jobId: number) => {
+            setSelectedJobId(jobId);
+            const foundJob = jobs.find((j) => j.id === jobId);
+
+            if (
+                foundJob?.asset_assignments &&
+                foundJob.asset_assignments.length === 1
+            ) {
+                setSelectedAssetId(
+                    foundJob.asset_assignments[0].operational_asset_id,
+                );
+            } else {
+                setSelectedAssetId(null);
+            }
+        },
+        [jobs],
     );
 
     const handleToggleShift = useCallback((nextStatus: ShiftStatus) => {
@@ -1054,7 +1080,368 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
         [commandOutbox, handleRequestFailure],
     );
 
+    const handleRentalCheckout = useCallback(
+        async (data: RentalCheckoutData) => {
+            const linkedJob =
+                (data.jobId ? jobs.find((j) => j.id === data.jobId) : null) ??
+                (activeJob?.source?.type === 'rental_reservation'
+                    ? activeJob
+                    : null);
+
+            const reservationId =
+                data.reservationId ??
+                (linkedJob?.source?.type === 'rental_reservation'
+                    ? linkedJob.source.id
+                    : null);
+
+            if (!reservationId) {
+                const error = new Error(
+                    'Explicit rental reservation must be selected before submitting handover evidence.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select an active rental reservation job.',
+                );
+
+                return;
+            }
+
+            const assetId =
+                data.assetId ??
+                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
+                null;
+
+            const photosPayload = (data.photos || []).map((p) => ({
+                base64:
+                    p.base64 ||
+                    (p.uri?.startsWith('data:') ? p.uri : undefined),
+                file_path: p.uri,
+                label: p.fileName || 'inspection',
+            }));
+
+            try {
+                await commandOutbox.enqueueSubmitRentalHandover({
+                    reservation_id: Number(reservationId),
+                    dispatch_job_id: linkedJob?.id ?? null,
+                    operational_asset_id: assetId ? Number(assetId) : null,
+                    handover_type: 'checkout',
+                    hour_meter: data.hourMeter,
+                    fuel_percent: data.fuelLevelPercent,
+                    condition_assessment: data.conditionAssessment || 'good',
+                    condition_notes: data.conditionNotes,
+                    damage_noted: data.damageNoted ?? false,
+                    damage_notes: data.damageNotes,
+                    photos: photosPayload,
+                    signature: data.signatureBase64,
+                    signee_name: data.signeeName,
+                    signee_role: data.signeeRole || 'Site Representative',
+                });
+
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Rental checkout evidence queued locally.',
+                );
+            } finally {
+                setActiveAppView('main');
+            }
+        },
+        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+    );
+
+    const handleRentalReturn = useCallback(
+        async (data: RentalReturnData) => {
+            const linkedJob =
+                (data.jobId ? jobs.find((j) => j.id === data.jobId) : null) ??
+                (activeJob?.source?.type === 'rental_reservation'
+                    ? activeJob
+                    : null);
+
+            const reservationId =
+                data.reservationId ??
+                (linkedJob?.source?.type === 'rental_reservation'
+                    ? linkedJob.source.id
+                    : null);
+
+            if (!reservationId) {
+                const error = new Error(
+                    'Explicit rental reservation must be selected before submitting handover evidence.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select an active rental reservation job.',
+                );
+
+                return;
+            }
+
+            const assetId =
+                data.assetId ??
+                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
+                null;
+
+            const photosPayload = (data.photos || []).map((p) => ({
+                base64:
+                    p.base64 ||
+                    (p.uri?.startsWith('data:') ? p.uri : undefined),
+                file_path: p.uri,
+                label: p.fileName || 'inspection',
+            }));
+
+            try {
+                await commandOutbox.enqueueSubmitRentalHandover({
+                    reservation_id: Number(reservationId),
+                    dispatch_job_id: linkedJob?.id ?? null,
+                    operational_asset_id: assetId ? Number(assetId) : null,
+                    handover_type: 'return',
+                    hour_meter: data.hourMeter,
+                    fuel_percent: data.fuelLevelPercent,
+                    condition_assessment:
+                        data.conditionAssessment ||
+                        (data.damageNoted ? 'fair' : 'good'),
+                    condition_notes: data.conditionNotes,
+                    damage_noted: data.damageNoted,
+                    damage_notes: data.damageNotes,
+                    photos: photosPayload,
+                    signature: data.signatureBase64,
+                    signee_name: data.signeeName,
+                    signee_role: data.signeeRole || 'Site Representative',
+                });
+
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Rental return evidence queued locally.',
+                );
+            } finally {
+                setActiveAppView('main');
+            }
+        },
+        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+    );
+
+    const handleSalesDelivery = useCallback(
+        async (data: SalesDeliveryData) => {
+            const linkedJob =
+                (data.jobId ? jobs.find((j) => j.id === data.jobId) : null) ??
+                (activeJob?.source?.type === 'sales_order' ? activeJob : null);
+
+            const orderId =
+                data.orderId ??
+                (linkedJob?.source?.type === 'sales_order'
+                    ? linkedJob.source.id
+                    : null);
+
+            if (!orderId) {
+                const error = new Error(
+                    'Explicit sales order must be selected before submitting delivery evidence.',
+                );
+                await handleRequestFailure(
+                    error,
+                    'Please select an active sales delivery job.',
+                );
+
+                return;
+            }
+
+            const assetId =
+                data.assetId ??
+                linkedJob?.asset_assignments?.[0]?.operational_asset_id ??
+                null;
+
+            const photosPayload = (data.photos || []).map((p) => ({
+                base64:
+                    p.base64 ||
+                    (p.uri?.startsWith('data:') ? p.uri : undefined),
+                file_path: p.uri,
+                label: p.fileName || 'delivery_proof',
+            }));
+
+            try {
+                await commandOutbox.enqueueSubmitSalesDelivery({
+                    order_id: Number(orderId),
+                    dispatch_job_id: linkedJob?.id ?? null,
+                    operational_asset_id: assetId ? Number(assetId) : null,
+                    verified_vin: data.verifiedVin,
+                    accessories_checked: data.accessoriesChecked,
+                    delivery_notes: data.notes,
+                    photos: photosPayload,
+                    signature: data.signatureBase64,
+                    signee_name: data.signeeName,
+                    signee_role: data.signeeRole,
+                });
+
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(
+                    error,
+                    'Sales delivery evidence queued locally.',
+                );
+            } finally {
+                setActiveAppView('main');
+            }
+        },
+        [activeJob, commandOutbox, handleRequestFailure, jobs, syncQueue],
+    );
+
+    const handleSaveInspection = useCallback(
+        async (checks: TechnicianInspectionCheck[], targetAssetId?: number) => {
+            const linkedJob = activeJob;
+            const assignments = linkedJob?.asset_assignments || [];
+            const assetId =
+                targetAssetId ??
+                selectedAssetId ??
+                (assignments.length === 1
+                    ? assignments[0].operational_asset_id
+                    : null);
+
+            if (!linkedJob) {
+                await handleRequestFailure(
+                    new Error(
+                        'Explicit dispatch job must be selected before submitting equipment inspection.',
+                    ),
+                    'Please select an assigned dispatch job before submitting inspection.',
+                );
+
+                return;
+            }
+
+            if (!assetId) {
+                await handleRequestFailure(
+                    new Error(
+                        assignments.length > 1
+                            ? 'Multiple assets are assigned to this job. Please explicitly select an asset before submitting inspection.'
+                            : 'No operational asset is assigned to this job.',
+                    ),
+                    assignments.length > 1
+                        ? 'Please select which asset to inspect before submitting.'
+                        : 'No asset assigned to this job.',
+                );
+
+                return;
+            }
+
+            try {
+                const passed = checks.every(
+                    (c) => c.status === 'good' || c.status === 'attention',
+                );
+                await commandOutbox.enqueueSubmitEquipmentInspection({
+                    operational_asset_id: assetId,
+                    dispatch_job_id: linkedJob.id,
+                    type: 'maintenance',
+                    result: passed ? 'passed' : 'failed',
+                    checklist: checks,
+                    findings: 'Completed from mobile',
+                });
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(error, 'Inspection queued locally.');
+            } finally {
+                setActiveAppView('main');
+            }
+        },
+        [
+            activeJob,
+            commandOutbox,
+            handleRequestFailure,
+            selectedAssetId,
+            syncQueue,
+        ],
+    );
+
+    const handleLogWorkOrder = useCallback(
+        async (workOrder: MaintenanceWorkOrder, targetAssetId?: number) => {
+            const linkedJob = activeJob;
+            const assignments = linkedJob?.asset_assignments || [];
+            const assetId =
+                targetAssetId ??
+                selectedAssetId ??
+                (assignments.length === 1
+                    ? assignments[0].operational_asset_id
+                    : null);
+
+            if (!linkedJob) {
+                await handleRequestFailure(
+                    new Error(
+                        'Explicit dispatch job must be selected before reporting defect or logging work order.',
+                    ),
+                    'Please select an assigned dispatch job before logging a work order.',
+                );
+
+                return;
+            }
+
+            if (!assetId) {
+                await handleRequestFailure(
+                    new Error(
+                        assignments.length > 1
+                            ? 'Multiple assets are assigned to this job. Please explicitly select an asset before logging a work order.'
+                            : 'No operational asset is assigned to this job.',
+                    ),
+                    assignments.length > 1
+                        ? 'Please select which asset to log work order for.'
+                        : 'No asset assigned to this job.',
+                );
+
+                return;
+            }
+
+            try {
+                const actorId = user?.id ?? 'system';
+                const durablePhotos: PhotoAttachment[] = [];
+
+                if (workOrder.attachments && workOrder.attachments.length > 0) {
+                    for (const photo of workOrder.attachments) {
+                        const stored =
+                            await durableAttachmentStorage.saveAttachmentDurably(
+                                {
+                                    uri: photo.uri,
+                                    base64: photo.base64,
+                                    fileName: photo.fileName,
+                                },
+                                actorId,
+                            );
+                        durablePhotos.push({
+                            uri: stored.uri,
+                            fileName: stored.fileName,
+                            fileSize: stored.fileSize ?? photo.fileSize,
+                            base64: photo.base64,
+                        });
+                    }
+                }
+
+                await commandOutbox.enqueueSubmitMaintenanceWorkOrder({
+                    operational_asset_id: assetId,
+                    dispatch_job_id: linkedJob.id,
+                    defect: workOrder.defectTitle,
+                    remarks: workOrder.description,
+                    dispatch_blocking: workOrder.severity === 'safety_critical',
+                    attachments:
+                        durablePhotos.length > 0 ? durablePhotos : undefined,
+                });
+                await syncQueue();
+            } catch (error: unknown) {
+                await handleRequestFailure(error, 'Work order queued locally.');
+            } finally {
+                setActiveAppView('main');
+            }
+        },
+        [
+            activeJob,
+            commandOutbox,
+            handleRequestFailure,
+            selectedAssetId,
+            syncQueue,
+            user,
+        ],
+    );
+
     const currentAsset =
+        activeJob?.asset_assignments?.find(
+            (a) => a.operational_asset_id === selectedAssetId,
+        ) ||
         activeJob?.asset_assignments?.[0] ||
         jobs[0]?.asset_assignments?.[0] ||
         null;
@@ -1405,11 +1792,16 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'inspection' ? (
                             <EquipmentInspectionScreen
+                                assetAssignments={activeJob?.asset_assignments}
                                 assetCode={resolvedAssetCode}
                                 assetName={resolvedAssetName}
                                 onBack={() => setActiveAppView('main')}
+                                onLogWorkOrder={handleLogWorkOrder}
                                 onOpenDvir={() => setActiveAppView('dvir')}
                                 onOpenFuel={() => setActiveAppView('fuel')}
+                                onSaveInspection={handleSaveInspection}
+                                onSelectAsset={(id) => setSelectedAssetId(id)}
+                                selectedAssetId={selectedAssetId}
                                 technicianName={resolvedOperatorName}
                             />
                         ) : activeAppView === 'routes' ? (
@@ -1431,25 +1823,64 @@ export const AppNavigator: React.FC<AppNavigatorProps> = ({
                             />
                         ) : activeAppView === 'rental' ? (
                             <RentalHandoverScreen
-                                assetCode={resolvedAssetCode}
-                                assetName={resolvedAssetName}
-                                clientName={resolvedClientName}
-                                onBack={() => setActiveAppView('main')}
-                                onCompleteCheckout={() =>
-                                    setActiveAppView('main')
+                                actorId={user?.id}
+                                assetCode={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_code || resolvedAssetCode
                                 }
-                                onCompleteReturn={() =>
-                                    setActiveAppView('main')
+                                assetId={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.operational_asset_id
+                                }
+                                assetName={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_name || resolvedAssetName
+                                }
+                                clientName={
+                                    activeJob?.client || resolvedClientName
+                                }
+                                jobId={activeJob?.id}
+                                onBack={() => setActiveAppView('main')}
+                                onCompleteCheckout={handleRentalCheckout}
+                                onCompleteReturn={handleRentalReturn}
+                                reservationId={
+                                    activeJob?.source?.type ===
+                                    'rental_reservation'
+                                        ? activeJob.source.id
+                                        : undefined
+                                }
+                                reservationReference={
+                                    activeJob?.source?.reference ||
+                                    activeJob?.reference ||
+                                    resolvedJobReference
                                 }
                             />
                         ) : activeAppView === 'sales' ? (
                             <SalesDeliveryScreen
-                                clientName={resolvedClientName}
-                                equipmentName={resolvedAssetName}
-                                orderReference={resolvedJobReference}
+                                actorId={user?.id}
+                                assetId={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.operational_asset_id
+                                }
+                                clientName={
+                                    activeJob?.client || resolvedClientName
+                                }
+                                equipmentName={
+                                    activeJob?.asset_assignments?.[0]
+                                        ?.asset_name || resolvedAssetName
+                                }
+                                jobId={activeJob?.id}
                                 onBack={() => setActiveAppView('main')}
-                                onCompleteDelivery={() =>
-                                    setActiveAppView('main')
+                                onCompleteDelivery={handleSalesDelivery}
+                                orderId={
+                                    activeJob?.source?.type === 'sales_order'
+                                        ? activeJob.source.id
+                                        : undefined
+                                }
+                                orderReference={
+                                    activeJob?.source?.reference ||
+                                    activeJob?.reference ||
+                                    resolvedJobReference
                                 }
                             />
                         ) : activeAppView === 'dispatch' ? (

@@ -14,16 +14,17 @@ use Illuminate\Support\Carbon;
  * @property string $status
  * @property bool $dispatch_blocking
  * @property Carbon|null $scheduled_at
+ * @property Carbon|null $completed_at
  * @property Carbon|null $released_at
  * @property OperationalAsset $asset
  */
 class MaintenanceWorkOrder extends Model
 {
-    protected $fillable = ['operational_asset_id', 'technician_id', 'status', 'defect', 'work_performed', 'parts', 'dispatch_blocking', 'released_at', 'scheduled_at', 'next_due_at', 'remarks', 'release_verified_by', 'release_checklist'];
+    protected $fillable = ['operational_asset_id', 'technician_id', 'status', 'defect', 'work_performed', 'parts', 'dispatch_blocking', 'completed_at', 'released_at', 'scheduled_at', 'next_due_at', 'remarks', 'release_verified_by', 'release_checklist'];
 
     protected function casts(): array
     {
-        return ['work_performed' => 'array', 'parts' => 'array', 'dispatch_blocking' => 'boolean', 'released_at' => 'datetime', 'scheduled_at' => 'datetime', 'next_due_at' => 'datetime', 'release_checklist' => 'array'];
+        return ['work_performed' => 'array', 'parts' => 'array', 'dispatch_blocking' => 'boolean', 'completed_at' => 'datetime', 'released_at' => 'datetime', 'scheduled_at' => 'datetime', 'next_due_at' => 'datetime', 'release_checklist' => 'array'];
     }
 
     /** @return BelongsTo<OperationalAsset, $this> */

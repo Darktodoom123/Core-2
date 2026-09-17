@@ -111,9 +111,23 @@ final class OperationalAssetAvailability
             );
         }
 
+        $latestLegacy = $asset->inspections()->whereNotNull('completed_at')->latest('completed_at')->first();
+        $latestDvir = $asset->dvirInspections()->whereNotNull('completed_at')->latest('completed_at')->first();
+
+        $latestInspectionFailed = false;
+        if ($latestLegacy && $latestDvir) {
+            $latestInspectionFailed = $latestLegacy->completed_at >= $latestDvir->completed_at
+                ? $latestLegacy->result !== 'passed'
+                : ($latestDvir->has_defects || $latestDvir->critical_defects_count > 0);
+        } elseif ($latestLegacy) {
+            $latestInspectionFailed = $latestLegacy->result !== 'passed';
+        } elseif ($latestDvir) {
+            $latestInspectionFailed = $latestDvir->has_defects || $latestDvir->critical_defects_count > 0;
+        }
+
         $hasLegacyPassing = $asset->inspections()->where('result', 'passed')->whereNotNull('completed_at')->exists();
         $hasDvirPassing = $asset->dvirInspections()->where('has_defects', false)->where('critical_defects_count', 0)->whereNotNull('completed_at')->exists();
-        $hasPassingInspection = $hasLegacyPassing || $hasDvirPassing;
+        $hasPassingInspection = ($hasLegacyPassing || $hasDvirPassing) && ! $latestInspectionFailed;
 
         $hasAnyInspection = $asset->inspections()->exists() || $asset->dvirInspections()->exists();
         $isManagerOverride = $request->source?->aggregateType === 'managerial_override';

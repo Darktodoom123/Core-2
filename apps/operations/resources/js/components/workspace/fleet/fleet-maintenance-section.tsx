@@ -16,6 +16,9 @@ export function FleetMaintenanceSection({
     canMaintain,
 }: FleetMaintenanceSectionProps) {
     const [showOpenForm, setShowOpenForm] = useState(false);
+    const [completingOrderId, setCompletingOrderId] = useState<number | null>(
+        null,
+    );
     const [releasingOrderId, setReleasingOrderId] = useState<number | null>(
         null,
     );
@@ -24,6 +27,13 @@ export function FleetMaintenanceSection({
         defect: '',
         dispatch_blocking: true,
         remarks: '',
+    });
+
+    const completeForm = useForm({
+        work_performed: '',
+        parts: '',
+        remarks: '',
+        completed_at: '',
     });
 
     const releaseForm = useForm({
@@ -43,12 +53,36 @@ export function FleetMaintenanceSection({
         });
     };
 
+    const submitComplete = (e: FormEvent, orderId: number) => {
+        e.preventDefault();
+        completeForm.transform((data) => ({
+            work_performed: data.work_performed
+                .split('\n')
+                .map((line) => line.trim())
+                .filter((line) => line !== ''),
+            parts: data.parts
+                .split(',')
+                .map((p) => p.trim())
+                .filter((p) => p !== ''),
+            remarks: data.remarks,
+            completed_at: data.completed_at ? data.completed_at : null,
+        }));
+        completeForm.post(`/operations/maintenance/${orderId}/complete`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setCompletingOrderId(null);
+                completeForm.reset();
+            },
+        });
+    };
+
     const submitRelease = (e: FormEvent, orderId: number) => {
         e.preventDefault();
         releaseForm.transform((data) => ({
             work_performed: data.work_performed
                 .split('\n')
-                .filter((line) => line.trim() !== ''),
+                .map((line) => line.trim())
+                .filter((line) => line !== ''),
             parts: data.parts
                 .split(',')
                 .map((p) => p.trim())
@@ -143,6 +177,7 @@ export function FleetMaintenanceSection({
                 <ul className="divide-y divide-line">
                     {asset.maintenance_work_orders.map((order) => {
                         const isUnreleased = !order.released_at;
+                        const isCompletingThis = completingOrderId === order.id;
                         const isReleasingThis = releasingOrderId === order.id;
 
                         return (
@@ -155,6 +190,18 @@ export function FleetMaintenanceSection({
                                         {order.dispatch_blocking && (
                                             <span className="inline-flex items-center rounded-md bg-danger-soft px-1.5 py-0.5 text-xs font-medium text-danger-strong">
                                                 Blocking
+                                            </span>
+                                        )}
+                                        {order.completed_at ? (
+                                            <span className="bg-positive-soft text-positive-strong inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium">
+                                                Repair Completed:{' '}
+                                                {formatDateTime(
+                                                    order.completed_at,
+                                                )}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-md bg-warning-soft px-1.5 py-0.5 text-xs font-medium text-warning-strong">
+                                                Pending Repair Completion
                                             </span>
                                         )}
                                     </div>
@@ -179,18 +226,178 @@ export function FleetMaintenanceSection({
 
                                 {isUnreleased && canMaintain && (
                                     <div className="pt-2">
-                                        {!isReleasingThis ? (
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    setReleasingOrderId(
-                                                        order.id,
-                                                    )
+                                        {!isCompletingThis &&
+                                            !isReleasingThis && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {!order.completed_at && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setCompletingOrderId(
+                                                                    order.id,
+                                                                );
+                                                                setReleasingOrderId(
+                                                                    null,
+                                                                );
+                                                            }}
+                                                        >
+                                                            Record repair
+                                                            completion
+                                                        </Button>
+                                                    )}
+                                                    {order.completed_at && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setReleasingOrderId(
+                                                                    order.id,
+                                                                );
+                                                                setCompletingOrderId(
+                                                                    null,
+                                                                );
+                                                            }}
+                                                        >
+                                                            Release work order
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                        {isCompletingThis && (
+                                            <form
+                                                onSubmit={(e) =>
+                                                    submitComplete(e, order.id)
                                                 }
+                                                className="mt-2 space-y-3 rounded-lg border border-line bg-surface-subtle p-3"
+                                                noValidate
                                             >
-                                                Release work order
-                                            </Button>
-                                        ) : (
+                                                <div className="rounded-lg border border-brand/30 bg-brand-soft/60 p-2.5 text-xs font-medium text-brand-strong">
+                                                    Notice: Authoritatively
+                                                    record physical repair
+                                                    completion details before
+                                                    conducting post-repair
+                                                    safety inspection.
+                                                </div>
+                                                <label className="block text-sm font-medium text-ink">
+                                                    Work performed * (One task
+                                                    per line)
+                                                    <textarea
+                                                        rows={2}
+                                                        value={
+                                                            completeForm.data
+                                                                .work_performed
+                                                        }
+                                                        onChange={(e) =>
+                                                            completeForm.setData(
+                                                                'work_performed',
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className="mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 text-sm text-ink transition-colors focus-visible:border-brand-strong focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-hidden"
+                                                    />
+                                                </label>
+                                                <FleetInput
+                                                    label="Parts used (comma separated)"
+                                                    value={
+                                                        completeForm.data.parts
+                                                    }
+                                                    onChange={(v) =>
+                                                        completeForm.setData(
+                                                            'parts',
+                                                            v,
+                                                        )
+                                                    }
+                                                />
+                                                <FleetInput
+                                                    label="Remarks"
+                                                    value={
+                                                        completeForm.data
+                                                            .remarks
+                                                    }
+                                                    onChange={(v) =>
+                                                        completeForm.setData(
+                                                            'remarks',
+                                                            v,
+                                                        )
+                                                    }
+                                                />
+                                                <FleetInput
+                                                    label="Completion timestamp (Optional, defaults to now)"
+                                                    value={
+                                                        completeForm.data
+                                                            .completed_at
+                                                    }
+                                                    onChange={(v) =>
+                                                        completeForm.setData(
+                                                            'completed_at',
+                                                            v,
+                                                        )
+                                                    }
+                                                    placeholder="YYYY-MM-DD HH:MM:SS"
+                                                />
+                                                {(
+                                                    completeForm.errors as Record<
+                                                        string,
+                                                        string
+                                                    >
+                                                ).completed_at && (
+                                                    <p className="text-xs font-semibold text-danger">
+                                                        {
+                                                            (
+                                                                completeForm.errors as Record<
+                                                                    string,
+                                                                    string
+                                                                >
+                                                            ).completed_at
+                                                        }
+                                                    </p>
+                                                )}
+                                                {(
+                                                    completeForm.errors as Record<
+                                                        string,
+                                                        string
+                                                    >
+                                                ).work_performed && (
+                                                    <p className="text-xs font-semibold text-danger">
+                                                        {
+                                                            (
+                                                                completeForm.errors as Record<
+                                                                    string,
+                                                                    string
+                                                                >
+                                                            ).work_performed
+                                                        }
+                                                    </p>
+                                                )}
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        onClick={() =>
+                                                            setCompletingOrderId(
+                                                                null,
+                                                            )
+                                                        }
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        type="submit"
+                                                        variant="primary"
+                                                        disabled={
+                                                            completeForm.processing ||
+                                                            !completeForm.data.work_performed.trim()
+                                                        }
+                                                    >
+                                                        {completeForm.processing
+                                                            ? 'Recording…'
+                                                            : 'Record repair completion'}
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        )}
+
+                                        {isReleasingThis && (
                                             <form
                                                 onSubmit={(e) =>
                                                     submitRelease(e, order.id)
@@ -201,8 +408,12 @@ export function FleetMaintenanceSection({
                                                 <div className="rounded-lg border border-warning/30 bg-warning-soft/60 p-2.5 text-xs font-medium text-warning-strong">
                                                     Notice: Releasing requires a
                                                     passing safety inspection
-                                                    completed after this order
-                                                    was created.
+                                                    completed after repair was
+                                                    completed
+                                                    {order.completed_at
+                                                        ? ` on ${formatDateTime(order.completed_at)}`
+                                                        : ''}
+                                                    .
                                                 </div>
                                                 <label className="block text-sm font-medium text-ink">
                                                     Work performed * (One task
@@ -234,6 +445,23 @@ export function FleetMaintenanceSection({
                                                         )
                                                     }
                                                 />
+                                                {(
+                                                    releaseForm.errors as Record<
+                                                        string,
+                                                        string
+                                                    >
+                                                ).completed_at && (
+                                                    <p className="text-xs font-semibold text-danger">
+                                                        {
+                                                            (
+                                                                releaseForm.errors as Record<
+                                                                    string,
+                                                                    string
+                                                                >
+                                                            ).completed_at
+                                                        }
+                                                    </p>
+                                                )}
                                                 {(
                                                     releaseForm.errors as Record<
                                                         string,

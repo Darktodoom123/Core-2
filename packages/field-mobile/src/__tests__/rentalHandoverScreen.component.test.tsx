@@ -167,4 +167,64 @@ describe('RentalHandoverScreen', () => {
             ]),
         );
     });
+
+    it('renders user-facing sync states: queued, submitting, and failed with retry action', async () => {
+        const onRetrySync = jest.fn();
+
+        // 1. Queued / saved on device state
+        const queuedView = await render(
+            <RentalHandoverScreen
+                reservationReference="REN-2026-0412"
+                syncStatus="queued"
+            />,
+        );
+        expect(queuedView.getByTestId('sync-status-banner')).toBeTruthy();
+        expect(
+            queuedView.getByText('Saved on Device (Waiting to Sync)'),
+        ).toBeTruthy();
+
+        // 2. Submitting state disables confirm button
+        const submittingView = await render(
+            <RentalHandoverScreen
+                reservationReference="REN-2026-0412"
+                syncStatus="submitting"
+            />,
+        );
+        expect(
+            submittingView.getByText('Uploading & Synchronizing…'),
+        ).toBeTruthy();
+        const confirmBtn = submittingView.getByTestId(
+            'confirm-handover-button',
+        );
+        expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
+
+        // 3. Failed state with retry button
+        const failedView = await render(
+            <RentalHandoverScreen
+                onRetrySync={onRetrySync}
+                reservationReference="REN-2026-0412"
+                syncErrorMessage="Failed to sync handover record."
+                syncStatus="failed"
+            />,
+        );
+        expect(failedView.getByText('Submission Failed')).toBeTruthy();
+        expect(
+            failedView.getByText('Failed to sync handover record.'),
+        ).toBeTruthy();
+
+        const retryBtn = failedView.getByTestId('sync-retry-button');
+        await act(async () => {
+            fireEvent.press(retryBtn);
+        });
+        expect(onRetrySync).toHaveBeenCalledTimes(1);
+
+        // 4. Success state
+        const successView = await render(
+            <RentalHandoverScreen
+                reservationReference="REN-2026-0412"
+                syncStatus="success"
+            />,
+        );
+        expect(successView.getByText('Submitted Successfully')).toBeTruthy();
+    });
 });

@@ -46,4 +46,29 @@ final class LocationSample extends Model
             'received_at' => 'immutable_datetime',
         ];
     }
+
+    /** @return array<string, mixed> */
+    public function toDtoArray(): array
+    {
+        $timestamp = $this->received_at ?? $this->captured_at;
+
+        return [
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'operational_asset_id' => $this->operational_asset_id,
+            'dispatch_job_id' => $this->dispatch_job_id,
+            'location_sample_id' => $this->id,
+            'latitude' => $this->sharing_enabled && $this->latitude !== null ? (float) $this->latitude : null,
+            'longitude' => $this->sharing_enabled && $this->longitude !== null ? (float) $this->longitude : null,
+            'accuracy_metres' => $this->sharing_enabled && $this->accuracy_metres !== null ? (float) $this->accuracy_metres : null,
+            'speed' => $this->sharing_enabled && $this->speed !== null ? (float) $this->speed : null,
+            'remarks' => $this->remarks,
+            'source' => $this->source,
+            'sharing_enabled' => (bool) $this->sharing_enabled,
+            'command_id' => $this->command_id,
+            'captured_at' => $this->captured_at?->toIso8601String(),
+            'received_at' => $this->received_at?->toIso8601String(),
+            'freshness_status' => LatestLocation::computeFreshness($timestamp, (bool) $this->sharing_enabled),
+        ];
+    }
 }

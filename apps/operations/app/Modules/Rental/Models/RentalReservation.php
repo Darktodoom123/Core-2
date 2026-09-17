@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property RentalReservationStatus $status
  * @property RentalFulfillmentMode $fulfillment_mode
  * @property int|null $dispatch_job_id
+ * @property-read ?RentalHandoverEvidence $latestHandoverEvidence
  */
 class RentalReservation extends Model
 {
@@ -124,5 +125,17 @@ class RentalReservation extends Model
     public function returnRecord(): HasOne
     {
         return $this->hasOne(RentalReturnRecord::class);
+    }
+
+    /** @return HasMany<RentalHandoverEvidence, $this> */
+    public function handoverEvidences(): HasMany
+    {
+        return $this->hasMany(RentalHandoverEvidence::class);
+    }
+
+    /** @return HasOne<RentalHandoverEvidence, $this> */
+    public function latestHandoverEvidence(): HasOne
+    {
+        return $this->hasOne(RentalHandoverEvidence::class)->latestOfMany('submitted_at');
     }
 }

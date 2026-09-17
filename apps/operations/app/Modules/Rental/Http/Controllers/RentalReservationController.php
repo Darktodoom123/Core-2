@@ -61,14 +61,32 @@ final class RentalReservationController extends Controller
         return response()->json(['data' => $action->handle($request->user(), $rentalReservation, $request->toAttributes())]);
     }
 
-    public function checkout(RentalReservation $rentalReservation, RentalConditionRequest $request, CheckoutRental $action): JsonResponse
+    public function checkout(RentalReservation $rentalReservation, RentalConditionRequest $request, CheckoutRental $action): JsonResponse|RedirectResponse
     {
-        return response()->json(['data' => $action->handle($rentalReservation, $request->user(), $request->validated())]);
+        $reservation = $action->handle($rentalReservation, $request->user(), $request->validated());
+
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json(['data' => $reservation]);
+        }
+
+        return back()->with('flash', [
+            'tone' => 'success',
+            'message' => "Rental {$rentalReservation->reference} checked out successfully.",
+        ]);
     }
 
-    public function returnReservation(RentalReservation $rentalReservation, RentalConditionRequest $request, ReturnRental $action): JsonResponse
+    public function returnReservation(RentalReservation $rentalReservation, RentalConditionRequest $request, ReturnRental $action): JsonResponse|RedirectResponse
     {
-        return response()->json(['data' => $action->handle($rentalReservation, $request->user(), $request->validated())]);
+        $reservation = $action->handle($rentalReservation, $request->user(), $request->validated());
+
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json(['data' => $reservation]);
+        }
+
+        return back()->with('flash', [
+            'tone' => 'success',
+            'message' => "Rental {$rentalReservation->reference} returned successfully.",
+        ]);
     }
 
     public function authorizeOperation(RentalReservation $rentalReservation, AuthorizeRentalOperationRequest $request, AuthorizeRentalOperation $action): JsonResponse

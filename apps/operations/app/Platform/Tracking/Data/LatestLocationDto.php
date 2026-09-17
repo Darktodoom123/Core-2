@@ -10,7 +10,7 @@ final readonly class LatestLocationDto
 {
     /**
      * @param  array{id: int, name: string}|null  $user
-     * @param  array{id: int, code: string, name: string, kind: string, location?: ?string}|null  $asset
+     * @param  array{id: int, code: string, name: string, kind: string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
      * @param  array{id: int, reference: string, title: string, site?: ?string}|null  $job
      */
     public function __construct(
@@ -31,9 +31,31 @@ final readonly class LatestLocationDto
         public ?array $user = null,
         public ?array $asset = null,
         public ?array $job = null,
+        public bool $isAssigned = false,
+        public string $assignmentStatus = 'unassigned',
+        public ?string $recordedLocation = null,
+        public bool $hasGpsReport = true,
+        public ?string $freshnessLabel = null,
         public bool $isQueued = false,
         public ?string $streamId = null,
     ) {}
+
+    public static function computeFreshnessLabel(string $freshnessStatus, bool $hasGpsReport, bool $sharingEnabled = true): string
+    {
+        if (! $hasGpsReport) {
+            return 'No GPS report';
+        }
+
+        if (! $sharingEnabled) {
+            return 'Sharing paused';
+        }
+
+        return match ($freshnessStatus) {
+            'fresh' => 'Fresh',
+            'delayed', 'stale', 'offline' => 'Location not current',
+            default => 'Location not current',
+        };
+    }
 
     public static function computeFreshness(?CarbonInterface $timestamp, bool $sharingEnabled): string
     {
@@ -98,12 +120,14 @@ final readonly class LatestLocationDto
             'name' => (string) $data['user']['name'],
         ] : null;
 
-        /** @var array{id: int, code: string, name: string, kind: string, location?: string|null}|null $assetPayload */
+        /** @var array{id: int, code: string, name: string, kind: string, status?: string|null, status_label?: string|null, location?: string|null}|null $assetPayload */
         $assetPayload = isset($data['asset']) && is_array($data['asset']) ? [
             'id' => (int) $data['asset']['id'],
             'code' => (string) $data['asset']['code'],
             'name' => (string) $data['asset']['name'],
             'kind' => (string) $data['asset']['kind'],
+            'status' => isset($data['asset']['status']) ? (string) $data['asset']['status'] : null,
+            'status_label' => isset($data['asset']['status_label']) ? (string) $data['asset']['status_label'] : null,
             'location' => isset($data['asset']['location']) ? (string) $data['asset']['location'] : null,
         ] : null;
 
@@ -114,6 +138,14 @@ final readonly class LatestLocationDto
             'title' => (string) $data['job']['title'],
             'site' => isset($data['job']['site']) ? (string) $data['job']['site'] : null,
         ] : null;
+
+        $hasGps = (bool) ($data['has_gps_report'] ?? $data['hasGpsReport'] ?? ($data['latitude'] !== null && $data['longitude'] !== null));
+        $isAssigned = (bool) ($data['is_assigned'] ?? $data['isAssigned'] ?? ($data['dispatch_job_id'] ?? $data['dispatchJobId'] ?? null) !== null);
+        $assignmentStatus = (string) ($data['assignment_status'] ?? $data['assignmentStatus'] ?? ($isAssigned ? 'assigned' : 'unassigned'));
+        $recordedLocation = isset($data['recorded_location']) ? (string) $data['recorded_location'] : ($assetPayload['location'] ?? null);
+        $freshnessLabel = isset($data['freshness_label'])
+            ? (string) $data['freshness_label']
+            : self::computeFreshnessLabel($freshness, $hasGps, $sharing);
 
         return new self(
             id: (int) ($data['id'] ?? 0),
@@ -133,6 +165,13 @@ final readonly class LatestLocationDto
             user: $userPayload,
             asset: $assetPayload,
             job: $jobPayload,
+            isAssigned: $isAssigned,
+            assignmentStatus: $assignmentStatus,
+            recordedLocation: $recordedLocation,
+            hasGpsReport: $hasGps,
+            freshnessLabel: $freshnessLabel,
+            isQueued: (bool) ($data['is_queued'] ?? $data['isQueued'] ?? false),
+            streamId: isset($data['stream_id']) ? (string) $data['stream_id'] : (isset($data['streamId']) ? (string) $data['streamId'] : null),
         );
     }
 
@@ -140,11 +179,21 @@ final readonly class LatestLocationDto
      * Return a new instance with hydrated entity data.
      *
      * @param  array{id: int, name: string}|null  $user
-     * @param  array{id: int, code: string, name: string, kind: string, location?: ?string}|null  $asset
+     * @param  array{id: int, code: string, name: string, kind: string, status?: ?string, status_label?: ?string, location?: ?string}|null  $asset
      * @param  array{id: int, reference: string, title: string, site?: ?string}|null  $job
      */
-    public function withHydratedEntities(?array $user, ?array $asset, ?array $job): self
-    {
+    public function withHydratedEntities(
+        ?array $user,
+        ?array $asset,
+        ?array $job,
+        bool $isAssigned = false,
+        string $assignmentStatus = 'unassigned',
+        ?string $recordedLocation = null,
+        bool $hasGpsReport = true,
+        ?string $freshnessLabel = null,
+    ): self {
+        $computedFreshnessLabel = $freshnessLabel ?? self::computeFreshnessLabel($this->freshnessStatus, $hasGpsReport, $this->sharingEnabled);
+
         return new self(
             id: $this->id,
             userId: $this->userId,
@@ -163,20 +212,36 @@ final readonly class LatestLocationDto
             user: $user,
             asset: $asset,
             job: $job,
+            isAssigned: $isAssigned,
+            assignmentStatus: $assignmentStatus,
+            recordedLocation: $recordedLocation,
+            hasGpsReport: $hasGpsReport,
+            freshnessLabel: $computedFreshnessLabel,
+            isQueued: $this->isQueued,
+            streamId: $this->streamId,
         );
     }
 
     /** @return array<string, mixed> */
     public function toViewModel(): array
     {
+        $reportedViaPhone = in_array($this->source, ['mobile', 'field-mobile'], true);
+
         return [
             'id' => $this->id,
+            'operational_asset_id' => $this->operationalAssetId,
             'user' => $this->user ?? [
                 'id' => $this->userId,
                 'name' => 'Unassigned',
             ],
             'asset' => $this->asset,
             'job' => $this->job,
+            'is_assigned' => $this->isAssigned,
+            'assignment_status' => $this->assignmentStatus,
+            'recorded_location' => $this->recordedLocation ?? ($this->asset['location'] ?? null),
+            'has_gps_report' => $this->hasGpsReport,
+            'reported_via_phone' => $reportedViaPhone,
+            'freshness_label' => $this->freshnessLabel ?? self::computeFreshnessLabel($this->freshnessStatus, $this->hasGpsReport, $this->sharingEnabled),
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'accuracy_metres' => $this->accuracyMetres,

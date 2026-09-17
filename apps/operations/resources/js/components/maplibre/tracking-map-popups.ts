@@ -46,13 +46,14 @@ function timestamp(value: string | null): string {
 
 export function formatLocationSource(
     source: string | null | undefined,
+    reportedViaPhone?: boolean,
 ): string {
     if (!source) {
         return 'Unavailable';
     }
 
-    if (source === 'mobile' || source === 'field-mobile') {
-        return 'Mobile GPS';
+    if (reportedViaPhone || source === 'mobile' || source === 'field-mobile') {
+        return "via operator's phone";
     }
 
     if (source === 'browser') {
@@ -71,17 +72,23 @@ export function createTrackingLocationPopup(
     incident?: SosIncidentViewModel,
     onCopyCoordinates?: (button: HTMLButtonElement) => void,
 ): HTMLDivElement {
-    const freshness = location.freshness_status;
+    const freshnessText =
+        location.freshness_label ??
+        (location.freshness_status === 'fresh'
+            ? 'Fresh'
+            : location.has_gps_report === false
+              ? 'No GPS report'
+              : 'Location not current');
     const kind = getAssetKind(location);
 
     const card = createPopupCard({
         title: trackingUnitLabel(location),
         subtitle: location.asset?.name ?? getAssetKindLabel(kind),
-        status: freshness.charAt(0).toUpperCase() + freshness.slice(1),
+        status: freshnessText,
         statusTone:
-            freshness === 'fresh'
+            location.freshness_status === 'fresh'
                 ? 'success'
-                : freshness === 'offline'
+                : location.has_gps_report === false
                   ? 'neutral'
                   : 'warning',
         badge: incident
@@ -89,8 +96,12 @@ export function createTrackingLocationPopup(
             : undefined,
         badgeTone: 'danger',
         details:
-            freshness !== 'fresh'
-                ? ['Last reported position; current position is unknown.']
+            location.freshness_status !== 'fresh'
+                ? [
+                      location.has_gps_report === false
+                          ? 'No GPS report received for this asset.'
+                          : 'No recent location updates. Last reported position; current position is unknown.',
+                  ]
                 : [],
         fields: [
             {
@@ -100,6 +111,18 @@ export function createTrackingLocationPopup(
             { label: 'Captured', value: timestamp(location.captured_at) },
             { label: 'Received', value: timestamp(location.received_at) },
             { label: 'Equipment type', value: getAssetKindLabel(kind) },
+            {
+                label: 'Operational status',
+                value: location.asset?.status_label ?? 'Available',
+            },
+            {
+                label: 'Assignment',
+                value: location.is_assigned
+                    ? location.job?.reference
+                        ? `Assigned (${location.job.reference})`
+                        : 'Assigned'
+                    : 'Unassigned',
+            },
             {
                 label: 'Assigned operator',
                 value: location.user?.name ? location.user.name : 'Unassigned',
@@ -114,8 +137,19 @@ export function createTrackingLocationPopup(
             },
             {
                 label: 'Location source',
-                value: formatLocationSource(location.source),
+                value: formatLocationSource(
+                    location.source,
+                    location.reported_via_phone,
+                ),
             },
+            ...(location.recorded_location
+                ? [
+                      {
+                          label: 'Recorded location',
+                          value: location.recorded_location,
+                      },
+                  ]
+                : []),
             {
                 label: 'Reported speed',
                 value:

@@ -74,6 +74,8 @@ Design system tokens, color palettes, typography, and visual diagrams:
 | [Design.md](design/Design.md) | Visual identity, gold palette tokens, Instrument Sans typography, and Tactical HUD dark mode tokens. |
 | [Diagrams/README.md](design/Diagrams/README.md) | Index of system diagrams including BPA, DFD, ERD, and module boundary diagrams. |
 
+Use the [simplified two-service ERD](design/Diagrams/core2-erd-simple.md) for the five modules, AI records, and separate Tracking database on one finalized landscape page. The [detailed ERD](design/Diagrams/capstone-erd.md) includes the broader table structure and schema notes. Both have printable PDFs and editable diagrams.net copies.
+
 ### 5. Microservice Architecture & Implementation (`Docs/microservice/`)
 
 **(Tracked in Git)** Specifications, invariants, and implementation records for the 2-service monorepo restructuring:

@@ -47,6 +47,8 @@ type IncomingWorkItem = {
     client: string;
     detail: string;
     status: string;
+    hasEvidence?: boolean;
+    evidenceSignee?: string | null;
 };
 
 export function LiveDispatchIntake({
@@ -110,6 +112,8 @@ export function LiveDispatchIntake({
                       detail:
                           handoff.location || 'Delivery location needs review',
                       status: handoff.status.label,
+                      hasEvidence: handoff.has_evidence,
+                      evidenceSignee: handoff.evidence_signee,
                   }))
             : [];
         const sales = canReviewSale
@@ -124,6 +128,8 @@ export function LiveDispatchIntake({
                       detail:
                           handoff.location || 'Delivery location needs review',
                       status: handoff.status.label,
+                      hasEvidence: handoff.has_evidence,
+                      evidenceSignee: handoff.evidence_signee,
                   }))
             : [];
 
@@ -505,6 +511,15 @@ function IncomingWorkRow({
                     </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2.5">
+                    {item.hasEvidence && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong">
+                            <CheckCircle2
+                                className="size-3"
+                                aria-hidden="true"
+                            />
+                            Evidence Recorded
+                        </span>
+                    )}
                     <span className="rounded-md border border-line bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
                         {item.status}
                     </span>
@@ -1075,9 +1090,20 @@ function RentalIntakeSection({
                                             {handoff.client.company_name}
                                         </p>
                                     </div>
-                                    <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
-                                        {handoff.status.label}
-                                    </span>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {handoff.has_evidence && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong">
+                                                <CheckCircle2
+                                                    className="size-3"
+                                                    aria-hidden="true"
+                                                />
+                                                Evidence Recorded
+                                            </span>
+                                        )}
+                                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
+                                            {handoff.status.label}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <dl className="mt-3 divide-y divide-line text-xs">
@@ -1261,9 +1287,20 @@ function SaleIntakeSection({
                                             {handoff.client.company_name}
                                         </p>
                                     </div>
-                                    <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
-                                        {handoff.status.label}
-                                    </span>
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {handoff.has_evidence && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-semibold text-success-strong">
+                                                <CheckCircle2
+                                                    className="size-3"
+                                                    aria-hidden="true"
+                                                />
+                                                Evidence Recorded
+                                            </span>
+                                        )}
+                                        <span className="inline-flex items-center rounded-full bg-surface-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
+                                            {handoff.status.label}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <dl className="mt-3 divide-y divide-line text-xs">

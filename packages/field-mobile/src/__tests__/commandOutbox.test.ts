@@ -1,17 +1,48 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, test } from 'node:test';
 import type { FieldApiClient } from '../services/apiClient';
 import { ApiClientError } from '../services/apiClient';
 import { CommandOutboxManager } from '../services/commandOutbox';
+import { durableAttachmentStorage } from '../services/durableAttachmentStorage';
 import {
     canonicalJson,
     MemoryOutboxRepository,
+    SqliteOutboxRepository,
 } from '../storage/outboxRepository';
 import type {
+    OutboxDatabase,
     OutboxRepository,
     PayloadHasher,
 } from '../storage/outboxRepository';
-import type { DispatchJob } from '../types/index';
+import type { DispatchJob, OutboxCommand } from '../types/index';
+
+type SqlValue = string | number | null;
+
+class NodeSqliteDatabase implements OutboxDatabase {
+    constructor(public readonly database: DatabaseSync) {}
+
+    public async execAsync(source: string): Promise<void> {
+        this.database.exec(source);
+    }
+
+    public async runAsync(
+        source: string,
+        params: SqlValue[],
+    ): Promise<unknown> {
+        return this.database.prepare(source).run(...params);
+    }
+
+    public async getAllAsync<T>(
+        source: string,
+        params: SqlValue[],
+    ): Promise<T[]> {
+        return this.database.prepare(source).all(...params) as T[];
+    }
+}
 
 const testHasher: PayloadHasher = {
     hash: async (envelope) => canonicalJson(envelope),
@@ -557,5 +588,545 @@ describe('CommandOutboxManager', () => {
             command.error?.message,
             'Rate limit reached. Retry scheduled in 1 seconds.',
         );
+    });
+
+    test('durably enqueues and syncs rental handover evidence command', async () => {
+        const outbox = await createOutbox(5);
+        let submittedReservationId: number | null = null;
+        let submittedPayload: any = null;
+        let submittedCommandId: string | null = null;
+
+        const apiClient = {
+            submitRentalHandover: async (
+                reservationId: number,
+                payload: Record<string, unknown>,
+                commandId?: string,
+            ) => {
+                submittedReservationId = reservationId;
+                submittedPayload = payload;
+                submittedCommandId = commandId ?? null;
+
+                return {
+                    success: true,
+                    evidence_id: 101,
+                    message: 'Evidence recorded',
+                };
+            },
+        } as unknown as FieldApiClient;
+
+        const command = await outbox.enqueueSubmitRentalHandover({
+            reservation_id: 42,
+            dispatch_job_id: 7,
+            handover_type: 'checkout',
+            hour_meter: 150.5,
+            fuel_percent: 90,
+            signee_name: 'John Customer',
+            signee_role: 'Site Supervisor',
+        });
+
+        assert.equal(command.type, 'submit_rental_handover');
+        assert.equal(command.jobId, 7);
+        assert.equal(command.state, 'queued');
+
+        const result = await outbox.processQueue(apiClient);
+        assert.equal(result.completed, 1);
+        assert.equal(command.state, 'completed');
+        assert.equal(submittedReservationId, 42);
+        assert.equal(submittedCommandId, command.id);
+        assert.equal(submittedPayload?.hour_meter, 150.5);
+        assert.equal(submittedPayload?.fuel_percent, 90);
+    });
+
+    test('durably enqueues and syncs sales delivery evidence command', async () => {
+        const outbox = await createOutbox(5);
+        let submittedOrderId: number | null = null;
+        let submittedPayload: any = null;
+        let submittedCommandId: string | null = null;
+
+        const apiClient = {
+            submitSalesDelivery: async (
+                orderId: number,
+                payload: Record<string, unknown>,
+                commandId?: string,
+            ) => {
+                submittedOrderId = orderId;
+                submittedPayload = payload;
+                submittedCommandId = commandId ?? null;
+
+                return {
+                    success: true,
+                    evidence_id: 202,
+                    message: 'Delivery recorded',
+                };
+            },
+        } as unknown as FieldApiClient;
+
+        const command = await outbox.enqueueSubmitSalesDelivery({
+            order_id: 88,
+            dispatch_job_id: 15,
+            verified_vin: 'CAT320GC12345',
+            accessories_checked: ['bucket', 'toolkit'],
+            delivery_notes: 'Delivered safely',
+            signee_name: 'Receiving Officer',
+            signee_role: 'Warehouse Manager',
+        });
+
+        assert.equal(command.type, 'submit_sales_delivery');
+        assert.equal(command.jobId, 15);
+        assert.equal(command.state, 'queued');
+
+        const result = await outbox.processQueue(apiClient);
+        assert.equal(result.completed, 1);
+        assert.equal(command.state, 'completed');
+        assert.equal(submittedOrderId, 88);
+        assert.equal(submittedCommandId, command.id);
+        assert.equal(submittedPayload?.verified_vin, 'CAT320GC12345');
+    });
+
+    test('durable offline attachments survive restart, maintain account isolation, and remain available on retry', async () => {
+        const repository = new MemoryOutboxRepository();
+        const actorId = 5;
+        const otherActorId = 9;
+
+        // 1. Durably save photo attachment for actor 5
+        const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ';
+        const storedAttachment =
+            await durableAttachmentStorage.saveAttachmentDurably(
+                {
+                    base64: mockBase64,
+                    fileName: 'site_hazard.jpg',
+                },
+                actorId,
+            );
+
+        assert.ok(durableAttachmentStorage.isDurableUri(storedAttachment.uri));
+        assert.ok(storedAttachment.uri.includes('/attachments/actor_5/'));
+
+        // 2. Durably save photo attachment for actor 9 (account isolation)
+        const otherAttachment =
+            await durableAttachmentStorage.saveAttachmentDurably(
+                {
+                    base64: mockBase64,
+                    fileName: 'other_photo.jpg',
+                },
+                otherActorId,
+            );
+
+        assert.ok(otherAttachment.uri.includes('/attachments/actor_9/'));
+        assert.notEqual(storedAttachment.uri, otherAttachment.uri);
+
+        // 3. Enqueue rental handover command with durable photo URI
+        const outboxBeforeRestart = await createOutbox(actorId, { repository });
+
+        const queuedCommand =
+            await outboxBeforeRestart.enqueueSubmitRentalHandover({
+                reservation_id: 101,
+                dispatch_job_id: 202,
+                operational_asset_id: 50,
+                hour_meter: 320.0,
+                fuel_percent: 85,
+                signee_name: 'Site Engineer',
+                signee_role: 'Lead Supervisor',
+                photos: [
+                    {
+                        file_path: storedAttachment.uri,
+                        label: 'Pre-operation inspection',
+                    },
+                ],
+            });
+
+        assert.equal(queuedCommand.state, 'queued');
+
+        // 4. Simulate app restart: instantiate fresh outbox manager with the same repository
+        let currentTime = new Date('2026-08-01T00:00:00.000Z');
+        const outboxAfterRestart = await createOutbox(actorId, {
+            repository,
+            now: () => currentTime,
+            baseRetryDelayMs: 1_000,
+        });
+
+        const restoredCommands = outboxAfterRestart.getCommands();
+        assert.equal(restoredCommands.length, 1);
+        const restoredCommand = restoredCommands[0];
+        assert.equal(restoredCommand.id, queuedCommand.id);
+        assert.equal(restoredCommand.state, 'queued');
+
+        const restoredPayload = restoredCommand.payload as any;
+        assert.equal(restoredPayload.photos[0].file_path, storedAttachment.uri);
+        assert.ok(
+            durableAttachmentStorage.isDurableUri(
+                restoredPayload.photos[0].file_path,
+            ),
+        );
+
+        // 5. Simulate offline network failure, followed by successful retry
+        let attemptCount = 0;
+        const flappyClient = {
+            submitRentalHandover: async () => {
+                attemptCount += 1;
+
+                if (attemptCount === 1) {
+                    throw new TypeError('Network unavailable during retry');
+                }
+
+                return {
+                    success: true,
+                    evidence_id: 777,
+                    message: 'Evidence accepted after retry',
+                };
+            },
+        } as unknown as FieldApiClient;
+
+        // Attempt 1: Fails due to network drop, remains queued
+        const result1 = await outboxAfterRestart.processQueue(flappyClient);
+        assert.equal(result1.completed, 0);
+        assert.equal(restoredCommand.state, 'queued');
+        assert.equal(restoredCommand.attempts, 1);
+        // File path remains intact in the payload
+        assert.equal(
+            (restoredCommand.payload as any).photos[0].file_path,
+            storedAttachment.uri,
+        );
+
+        // Advance time to nextAttemptAt and retry
+        currentTime = new Date('2026-08-01T00:00:01.000Z');
+        const result2 = await outboxAfterRestart.processQueue(flappyClient);
+        assert.equal(result2.completed, 1);
+        assert.equal(restoredCommand.state, 'completed');
+
+        // 6. Cleanup actor 5 attachments and verify actor 9 attachments are unaffected
+        await durableAttachmentStorage.cleanupActorAttachments(actorId);
+        assert.ok(otherAttachment.uri.includes('/attachments/actor_9/'));
+    });
+
+    test('preserves equipment maintenance command types across restart and does not degrade to transition_status', async () => {
+        const repository = new MemoryOutboxRepository();
+        const actorId = 8;
+        const outboxBefore = await createOutbox(actorId, { repository });
+
+        const cmd1 = await outboxBefore.enqueueSubmitEquipmentInspection({
+            operational_asset_id: 101,
+            dispatch_job_id: 201,
+            type: 'maintenance',
+            result: 'passed',
+            checklist: [{ id: '1', status: 'good' }],
+            findings: 'Routine test passed',
+        });
+
+        const cmd2 = await outboxBefore.enqueueSubmitMaintenanceWorkOrder({
+            operational_asset_id: 101,
+            dispatch_job_id: 201,
+            defect: 'Hydraulic leak',
+            remarks: 'Fitting cracked',
+            dispatch_blocking: true,
+        });
+
+        const cmd3 = await outboxBefore.enqueueSubmitSalesDelivery({
+            order_id: 555,
+            verified_vin: 'VIN-555-XYZ',
+            signee_name: 'Warehouse Manager',
+            signee_role: 'Operations Director',
+        });
+
+        assert.equal(cmd1.type, 'submit_equipment_inspection');
+        assert.equal(cmd2.type, 'submit_maintenance_work_order');
+        assert.equal(cmd3.type, 'submit_sales_delivery');
+
+        // Simulate app restart with fresh outbox manager reading from same repository
+        const outboxAfter = await createOutbox(actorId, { repository });
+        const restoredCommands = outboxAfter.getCommands();
+
+        const restoredCmd1 = restoredCommands.find((c) => c.id === cmd1.id);
+        const restoredCmd2 = restoredCommands.find((c) => c.id === cmd2.id);
+        const restoredCmd3 = restoredCommands.find((c) => c.id === cmd3.id);
+
+        assert.ok(restoredCmd1, 'Command 1 must be restored');
+        assert.ok(restoredCmd2, 'Command 2 must be restored');
+        assert.ok(restoredCmd3, 'Command 3 must be restored');
+
+        // Crucial check: Must preserve exact command types and NOT degrade to 'transition_status'
+        assert.equal(restoredCmd1.type, 'submit_equipment_inspection');
+        assert.equal(restoredCmd2.type, 'submit_maintenance_work_order');
+        assert.equal(restoredCmd3.type, 'submit_sales_delivery');
+    });
+
+    test('work order release cannot be queued in offline outbox and requires fresh online execution', async () => {
+        const repository = new MemoryOutboxRepository();
+        const actorId = 11;
+        const outbox = await createOutbox(actorId, { repository });
+
+        // Verify unsafe queuing method was removed
+        assert.strictEqual(
+            (outbox as any).enqueueReleaseMaintenanceWorkOrder,
+            undefined,
+            'enqueueReleaseMaintenanceWorkOrder must not exist on outbox',
+        );
+
+        // Verify outbox active commands cannot contain release commands
+        const commands = outbox.getCommands();
+        const releaseCmd = commands.find(
+            (c) => (c.type as string) === 'release_maintenance_work_order',
+        );
+        assert.strictEqual(
+            releaseCmd,
+            undefined,
+            'No release command can exist in outbox',
+        );
+    });
+
+    test('clearActiveActorCommands purges outbox commands and actor durable attachments', async () => {
+        const repository = new MemoryOutboxRepository();
+        const actorId = 12;
+        const outbox = await createOutbox(actorId, { repository });
+
+        // Save durable attachment
+        const storedAttachment =
+            await durableAttachmentStorage.saveAttachmentDurably(
+                {
+                    base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ',
+                    fileName: 'defect_to_clear.jpg',
+                },
+                actorId,
+            );
+        assert.ok(durableAttachmentStorage.isDurableUri(storedAttachment.uri));
+
+        // Enqueue command
+        await outbox.enqueueSubmitMaintenanceWorkOrder({
+            operational_asset_id: 101,
+            dispatch_job_id: 201,
+            defect: 'Defect to clear',
+            dispatch_blocking: false,
+        });
+        assert.equal(outbox.getCommands().length, 1);
+
+        // Clear active actor commands
+        await outbox.clearActiveActorCommands();
+
+        assert.equal(outbox.getCommands().length, 0);
+    });
+
+    test('legacy release_maintenance_work_order commands cannot replay, execute network calls, or be retried', async () => {
+        let apiCallMade = false;
+        const fakeClient = {
+            postJson: async () => {
+                apiCallMade = true;
+
+                throw new Error('API should not be called');
+            },
+        } as unknown as FieldApiClient;
+
+        const repository = new MemoryOutboxRepository();
+        const legacyCmd: OutboxCommand = {
+            id: 'legacy-cmd-id-99',
+            actorId: 10,
+            type: 'release_maintenance_work_order',
+            jobId: null,
+            assignmentId: null,
+            payload: { workOrderId: 123 },
+            payloadHash: 'hash',
+            expectedVersion: null,
+            state: 'failed',
+            attempts: 0,
+            error: {
+                code: 'LEGACY_RELEASE_DISALLOWED',
+                message:
+                    'Offline work order release commands are deprecated and cannot be replayed. A new explicit online release action is required.',
+                retryable: false,
+            },
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            lastAttemptAt: null,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        await repository.save(legacyCmd);
+
+        const outbox = await createOutbox(10, { repository });
+
+        // 1. Processing pending commands must NOT call API or replay
+        const processResult = await outbox.processQueue(fakeClient);
+        assert.equal(apiCallMade, false);
+        assert.equal(processResult.completed, 0);
+
+        // 2. Retrying the command is a no-op that refuses to replay
+        const retryResult = await outbox.retryCommand(
+            'legacy-cmd-id-99',
+            fakeClient,
+        );
+        assert.equal(apiCallMade, false);
+        assert.equal(retryResult.completed, 0);
+
+        // Command remains in failed state with LEGACY_RELEASE_DISALLOWED
+        const cmd = outbox.getCommand('legacy-cmd-id-99');
+        assert.equal(cmd?.state, 'failed');
+        assert.equal(cmd?.error?.code, 'LEGACY_RELEASE_DISALLOWED');
+        assert.equal(cmd?.type, 'release_maintenance_work_order');
+    });
+
+    test('queued legacy release_maintenance_work_order commands are quarantined by executeCommand without calling network', async () => {
+        let apiCallMade = false;
+        const fakeClient = {
+            postJson: async () => {
+                apiCallMade = true;
+
+                throw new Error('API should not be called');
+            },
+        } as unknown as FieldApiClient;
+
+        const repository = new MemoryOutboxRepository();
+        const queuedLegacyCmd: OutboxCommand = {
+            id: 'legacy-queued-cmd-100',
+            actorId: 10,
+            type: 'release_maintenance_work_order',
+            jobId: null,
+            assignmentId: null,
+            payload: { workOrderId: 123 },
+            payloadHash: 'hash',
+            expectedVersion: null,
+            state: 'queued',
+            attempts: 0,
+            error: null,
+            createdAt: '2026-08-01T00:00:00.000Z',
+            updatedAt: '2026-08-01T00:00:00.000Z',
+            lastAttemptAt: null,
+            nextAttemptAt: null,
+            completedAt: null,
+        };
+        await repository.save(queuedLegacyCmd);
+
+        const outbox = await createOutbox(10, { repository });
+        const processResult = await outbox.processQueue(fakeClient);
+
+        assert.equal(apiCallMade, false);
+        assert.equal(processResult.completed, 0);
+        assert.equal(processResult.failed, 1);
+
+        const cmd = outbox.getCommand('legacy-queued-cmd-100');
+        assert.equal(cmd?.state, 'failed');
+        assert.equal(cmd?.error?.code, 'LEGACY_RELEASE_DISALLOWED');
+        assert.equal(cmd?.error?.retryable, false);
+    });
+
+    test('persisted SQLite fixture with release_maintenance_work_order is quarantined by CommandOutboxManager and cannot replay or be retried', async () => {
+        const directory = await mkdtemp(
+            join(tmpdir(), 'core2-outbox-mgr-legacy-'),
+        );
+        const databasePath = join(directory, 'field-outbox.sqlite');
+
+        try {
+            // 1. Create a raw legacy SQLite database simulating pre-migration schema and persisted legacy row
+            const rawDb = new DatabaseSync(databasePath);
+            rawDb.exec(`
+                CREATE TABLE IF NOT EXISTS field_command_outbox (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    actor_id INTEGER NOT NULL,
+                    command_type TEXT NOT NULL,
+                    job_id INTEGER,
+                    assignment_id INTEGER,
+                    payload_json TEXT NOT NULL,
+                    payload_hash TEXT NOT NULL,
+                    expected_version INTEGER,
+                    state TEXT NOT NULL,
+                    attempts INTEGER NOT NULL,
+                    error_json TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    last_attempt_at TEXT,
+                    next_attempt_at TEXT,
+                    completed_at TEXT
+                );
+            `);
+
+            const legacyCmdId = 'legacy-release-sqlite-fixture-42';
+            rawDb
+                .prepare(
+                    `
+                INSERT INTO field_command_outbox (
+                    id, actor_id, command_type, job_id, assignment_id,
+                    payload_json, payload_hash, expected_version, state,
+                    attempts, error_json, created_at, updated_at,
+                    last_attempt_at, next_attempt_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+                )
+                .run(
+                    legacyCmdId,
+                    25,
+                    'release_maintenance_work_order',
+                    null,
+                    null,
+                    JSON.stringify({
+                        workOrderId: 77,
+                        work_performed: ['Replaced valve'],
+                    }),
+                    'hash-42',
+                    null,
+                    'queued',
+                    0,
+                    null,
+                    '2026-08-01T00:00:00.000Z',
+                    '2026-08-01T00:00:00.000Z',
+                    null,
+                    null,
+                    null,
+                );
+            rawDb.close();
+
+            // 2. Open via SqliteOutboxRepository and connect CommandOutboxManager
+            const migratedDb = new DatabaseSync(databasePath);
+            const repository = new SqliteOutboxRepository(
+                async () => new NodeSqliteDatabase(migratedDb),
+            );
+            const outbox = new CommandOutboxManager({
+                repository,
+                hasher: testHasher,
+            });
+            await outbox.activateActor(25);
+
+            // 3. Command in memory must be quarantined as failed with LEGACY_RELEASE_DISALLOWED
+            const cmd = outbox.getCommand(legacyCmdId);
+            assert.ok(cmd);
+            assert.equal(cmd.id, legacyCmdId);
+            assert.equal(cmd.type, 'release_maintenance_work_order');
+            assert.equal(cmd.state, 'failed');
+            assert.equal(cmd.error?.code, 'LEGACY_RELEASE_DISALLOWED');
+            assert.equal(cmd.error?.retryable, false);
+            assert.match(
+                cmd.error?.message ?? '',
+                /explicit online release action is required/i,
+            );
+
+            // 4. processQueue must NOT make network calls or replay
+            let apiCallMade = false;
+            const fakeClient = {
+                postJson: async () => {
+                    apiCallMade = true;
+
+                    throw new Error('API should not be called');
+                },
+            } as unknown as FieldApiClient;
+
+            const processResult = await outbox.processQueue(fakeClient);
+            assert.equal(apiCallMade, false);
+            assert.equal(processResult.completed, 0);
+
+            // 5. retryCommand must refuse to replay legacy command
+            const retryResult = await outbox.retryCommand(
+                legacyCmdId,
+                fakeClient,
+            );
+            assert.equal(apiCallMade, false);
+            assert.equal(retryResult.completed, 0);
+
+            // 6. State remains failed and type remains release_maintenance_work_order
+            const finalCmd = outbox.getCommand(legacyCmdId);
+            assert.equal(finalCmd?.state, 'failed');
+            assert.equal(finalCmd?.type, 'release_maintenance_work_order');
+            assert.equal(finalCmd?.error?.code, 'LEGACY_RELEASE_DISALLOWED');
+
+            migratedDb.close();
+        } finally {
+            await rm(directory, { force: true, recursive: true });
+        }
     });
 });

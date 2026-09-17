@@ -4,7 +4,13 @@ namespace App\Modules\Dispatch\ViewModels;
 
 use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\DispatchJob;
+use App\Modules\Rental\Models\RentalHandoverEvidence;
+use App\Modules\Rental\Models\RentalReservation;
+use App\Modules\Sales\Enums\SalesOrderStatus;
+use App\Modules\Sales\Models\SalesDeliveryEvidence;
+use App\Modules\Sales\Models\SalesOrder;
 use App\Platform\Audit\Models\AuditEvent;
+use App\Platform\Identity\Enums\PermissionName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Reporting\Enums\JobReportStatus;
 use App\Platform\Reporting\Models\JobReport;
@@ -12,6 +18,7 @@ use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Shared\Assets\Models\OperationalAsset;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 final class DispatchExecutionViewModel
 {
@@ -65,13 +72,15 @@ final class DispatchExecutionViewModel
                 'latest_location' => $location,
             ],
             'reports' => $reports,
+            'handoff_evidence' => self::handoffEvidence($job, $user),
             'activity' => self::activity($milestones, $reports, $location),
         ];
     }
 
     public static function appliesTo(DispatchJob $job): bool
     {
-        return in_array($job->status, self::ACTIVE_STATUSES, true);
+        return in_array($job->status, self::ACTIVE_STATUSES, true)
+            || $job->status === DispatchStatus::Completed;
     }
 
     /** @param Collection<int, AuditEvent> $events
@@ -266,5 +275,152 @@ final class DispatchExecutionViewModel
             ->take(20)
             ->values()
             ->all());
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function handoffEvidence(DispatchJob $job, User $user): ?array
+    {
+        $sourceType = $job->sourceType();
+        $source = $job->relationLoaded('source') ? $job->getRelationValue('source') : null;
+
+        if ($source === null) {
+            $handoff = $job->canonicalHandoff;
+            $type = $sourceType !== null ? $sourceType->value : ($job->source_type ?? ($handoff !== null ? $handoff->source_type : null));
+            $sourceId = $job->source_id ?? ($handoff !== null ? $handoff->source_id : null) ?? $job->service_request_id;
+            if ($type === 'rental_reservation') {
+                $source = RentalReservation::query()->find($sourceId);
+            } elseif ($type === 'sales_order') {
+                $source = SalesOrder::query()->find($sourceId);
+            }
+        }
+
+        if ($source === null) {
+            $rentalEvidence = RentalHandoverEvidence::query()->where('dispatch_job_id', $job->id)->latest('submitted_at')->first();
+            if ($rentalEvidence !== null) {
+                $source = $rentalEvidence->reservation;
+            } else {
+                $salesEvidence = SalesDeliveryEvidence::query()->where('dispatch_job_id', $job->id)->latest('submitted_at')->first();
+                if ($salesEvidence !== null) {
+                    $source = $salesEvidence->order;
+                }
+            }
+        }
+
+        $firstAsset = $job->assetAssignments->first();
+        $assetContext = $firstAsset !== null ? [
+            'code' => $firstAsset->asset_code ?? 'Assigned Unit',
+            'name' => $firstAsset->asset_name ?? 'Heavy Equipment Unit',
+        ] : null;
+
+        $mapPhotos = static function (?array $photos): array {
+            $diskName = config('filesystems.default', 'public');
+
+            return array_values(array_map(function ($photo) use ($diskName) {
+                if (is_string($photo)) {
+                    return [
+                        'path' => $photo,
+                        'url' => Storage::disk($diskName)->url($photo),
+                        'label' => 'Evidence Photo',
+                    ];
+                }
+
+                $path = $photo['file_path'] ?? $photo['path'] ?? null;
+                $disk = $photo['storage_disk'] ?? $photo['disk'] ?? $diskName;
+                $url = $photo['url'] ?? ($path ? Storage::disk($disk)->url($path) : null);
+
+                return [
+                    'path' => $path ?? '',
+                    'url' => $url,
+                    'label' => $photo['label'] ?? 'Evidence Photo',
+                ];
+            }, $photos ?? []));
+        };
+
+        // Check if rental reservation
+        if ($source instanceof RentalReservation) {
+            $latest = $source->latestHandoverEvidence;
+            if ($latest === null) {
+                $latest = RentalHandoverEvidence::query()
+                    ->where('rental_reservation_id', $source->id)
+                    ->orWhere('dispatch_job_id', $job->id)
+                    ->latest('submitted_at')
+                    ->first();
+            }
+
+            if ($latest !== null) {
+                $status = $source->status;
+
+                return [
+                    'type' => 'rental',
+                    'source_id' => (int) $source->id,
+                    'source_reference' => $source->reference,
+                    'handover_type' => $latest->handover_type,
+                    'submitted_at' => $latest->submitted_at?->toIso8601String(),
+                    'received_at' => $latest->created_at?->toIso8601String(),
+                    'submitted_by' => $latest->submitter ? [
+                        'id' => (int) $latest->submitter->id,
+                        'name' => $latest->submitter->name,
+                    ] : null,
+                    'signee_name' => $latest->signee_name,
+                    'signee_role' => $latest->signee_role,
+                    'hour_meter' => (float) $latest->hour_meter,
+                    'fuel_percent' => (int) $latest->fuel_percent,
+                    'condition_assessment' => $latest->condition_assessment,
+                    'condition_notes' => $latest->condition_notes,
+                    'damage_noted' => (bool) $latest->damage_noted,
+                    'damage_notes' => $latest->damage_notes,
+                    'photos' => $mapPhotos($latest->photos),
+                    'signature_path' => $latest->signature_path,
+                    'signature_url' => $latest->signature_url,
+                    'managerial_status' => $status->value,
+                    'managerial_status_label' => str($status->value)->replace('_', ' ')->title()->toString(),
+                    'can_checkout' => $user->can(PermissionName::RentalCheckout->value) && $status->canCheckout(),
+                    'can_return' => $user->can(PermissionName::RentalReturn->value) && $status->canReturn(),
+                    'asset' => $assetContext,
+                ];
+            }
+        }
+
+        // Check if sales order
+        if ($source instanceof SalesOrder) {
+            $latest = $source->latestDeliveryEvidence;
+            if ($latest === null) {
+                $latest = SalesDeliveryEvidence::query()
+                    ->where('sales_order_id', $source->id)
+                    ->orWhere('dispatch_job_id', $job->id)
+                    ->latest('submitted_at')
+                    ->first();
+            }
+
+            if ($latest !== null) {
+                $status = $source->status;
+
+                return [
+                    'type' => 'sales',
+                    'source_id' => (int) $source->id,
+                    'source_reference' => $source->reference,
+                    'submitted_at' => $latest->submitted_at?->toIso8601String(),
+                    'received_at' => $latest->created_at?->toIso8601String(),
+                    'submitted_by' => $latest->submitter ? [
+                        'id' => (int) $latest->submitter->id,
+                        'name' => $latest->submitter->name,
+                    ] : null,
+                    'signee_name' => $latest->signee_name,
+                    'signee_role' => $latest->signee_role,
+                    'verified_vin' => $latest->verified_vin,
+                    'accessories_checked' => $latest->accessories_checked ?? [],
+                    'delivery_notes' => $latest->delivery_notes,
+                    'photos' => $mapPhotos($latest->photos),
+                    'signature_path' => $latest->signature_path,
+                    'signature_url' => $latest->signature_url,
+                    'managerial_status' => $status->value,
+                    'managerial_status_label' => str($status->value)->replace('_', ' ')->title()->toString(),
+                    'can_fulfill' => $user->can(PermissionName::SalesFulfill->value) && $status === SalesOrderStatus::Confirmed,
+                    'asset' => $assetContext,
+                ];
+            }
+        }
+
+        return null;
     }
 }

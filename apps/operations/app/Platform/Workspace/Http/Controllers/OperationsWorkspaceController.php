@@ -3,6 +3,8 @@
 namespace App\Platform\Workspace\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Assignment\Models\DispatchAssetAssignment;
+use App\Modules\Dispatch\Enums\DispatchStatus;
 use App\Modules\Dispatch\Models\ApprovalRequest;
 use App\Modules\Dispatch\Models\Client;
 use App\Modules\Dispatch\Models\DispatchJob;
@@ -402,36 +404,46 @@ final class OperationsWorkspaceController extends Controller
             return collect();
         }
 
-        /** @var Collection<int, LatestLocationDto> $locations */
-        $locations = $this->trackingClient->getLatestLocations($user);
+        /** @var Collection<int, LatestLocationDto> $telemetryLocations */
+        $telemetryLocations = $this->trackingClient->getLatestLocations($user);
 
-        if ($locations->isEmpty()) {
-            return collect();
+        $telemetryAssetIds = $telemetryLocations
+            ->pluck('operationalAssetId')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $authorizedAssetsQuery = OperationalAsset::query()->visibleTo($user);
+        if (! empty($telemetryAssetIds)) {
+            $authorizedAssetsQuery->orWhereIn('id', $telemetryAssetIds);
         }
 
-        // Asset-centered tracking: exclude locations without an operational asset ID
-        $locationsWithAsset = $locations->filter(static fn (LatestLocationDto $dto): bool => $dto->operationalAssetId !== null);
-
-        if ($locationsWithAsset->isEmpty()) {
-            return collect();
-        }
-
-        $assetIds = $locationsWithAsset->pluck('operationalAssetId')->unique()->values()->all();
-
-        // Only active, non-deleted assets are valid for live asset tracking
-        $assets = OperationalAsset::query()
-            ->whereIn('id', $assetIds)
-            ->get(['id', 'code', 'name', 'kind', 'location'])
+        /** @var Collection<int, OperationalAsset> $authorizedAssets */
+        $authorizedAssets = $authorizedAssetsQuery
+            ->get(['id', 'code', 'name', 'kind', 'status', 'location'])
             ->keyBy('id');
 
-        if ($assets->isEmpty()) {
+        if ($authorizedAssets->isEmpty()) {
             return collect();
         }
 
-        // Deduplicate to show exactly one current entry per asset, keeping the latest valid position.
-        // Delayed and out-of-order older reports do not replace newer positions.
-        $latestByAsset = $locationsWithAsset
-            ->filter(static fn (LatestLocationDto $dto): bool => $assets->has($dto->operationalAssetId))
+        $assetIds = $authorizedAssets->keys()->map(fn ($id) => (int) $id)->all();
+
+        /** @var Collection<int, DispatchAssetAssignment> $activeAssignments */
+        $activeAssignments = DispatchAssetAssignment::query()
+            ->active()
+            ->whereIn('operational_asset_id', $assetIds)
+            ->with([
+                'job:id,reference,title,site',
+                'job.personnelAssignments' => fn ($q) => $q->active()->with('user:id,name'),
+            ])
+            ->get()
+            ->keyBy('operational_asset_id');
+
+        // Deduplicate to show exactly one current telemetry record per asset, keeping the newest valid report.
+        $latestByAsset = $telemetryLocations
+            ->filter(static fn (LatestLocationDto $dto): bool => $dto->operationalAssetId !== null && $authorizedAssets->has($dto->operationalAssetId))
             ->groupBy('operationalAssetId')
             ->map(static function (Collection $assetLocations): LatestLocationDto {
                 return $assetLocations
@@ -442,53 +454,123 @@ final class OperationsWorkspaceController extends Controller
                         return sprintf('%s_%010d', $iso, $dto->id);
                     })
                     ->first();
-            })
-            ->values();
+            });
 
-        $userIds = $latestByAsset->pluck('userId')->unique()->values()->all();
-        $jobIds = $latestByAsset->pluck('dispatchJobId')->filter()->unique()->values()->all();
-
-        $users = User::query()
-            ->whereIn('id', $userIds)
+        $telemetryUserIds = $latestByAsset->pluck('userId')->unique()->values()->all();
+        $telemetryUsers = User::query()
+            ->whereIn('id', $telemetryUserIds)
             ->get(['id', 'name'])
             ->keyBy('id');
 
-        $jobs = ! empty($jobIds)
+        $telemetryJobIds = $latestByAsset->pluck('dispatchJobId')->filter()->unique()->values()->all();
+        $telemetryJobs = ! empty($telemetryJobIds)
             ? DispatchJob::query()
-                ->whereIn('id', $jobIds)
-                ->get(['id', 'reference', 'title', 'site'])
+                ->whereIn('id', $telemetryJobIds)
+                ->get(['id', 'reference', 'title', 'site', 'status'])
                 ->keyBy('id')
             : collect();
 
-        return $latestByAsset->map(static function (LatestLocationDto $dto) use ($users, $assets, $jobs): LatestLocationDto {
-            $userModel = $users->get($dto->userId);
-            $assetModel = $assets->get($dto->operationalAssetId);
-            $jobModel = $dto->dispatchJobId !== null ? $jobs->get($dto->dispatchJobId) : null;
+        return $authorizedAssets->map(static function (OperationalAsset $asset) use ($activeAssignments, $latestByAsset, $telemetryUsers, $telemetryJobs): LatestLocationDto {
+            $assignment = $activeAssignments->get($asset->id);
+            $latestDto = $latestByAsset->get($asset->id);
 
-            // Missing user must not hide the asset or become its title; show honest secondary operator context
-            $userPayload = [
-                'id' => $dto->userId,
-                'name' => $userModel !== null ? $userModel->name : 'Unassigned operator',
-            ];
+            $jobModel = $assignment !== null ? $assignment->job : null;
+            if ($jobModel === null && $latestDto?->dispatchJobId !== null) {
+                $jobModel = $telemetryJobs->get($latestDto->dispatchJobId);
+            }
+
+            $isAssigned = false;
+            if ($assignment !== null) {
+                $isAssigned = true;
+            } elseif ($jobModel instanceof DispatchJob && ! in_array($jobModel->status, [DispatchStatus::Completed, DispatchStatus::Cancelled], true)) {
+                $hasEndedAssignment = DispatchAssetAssignment::query()
+                    ->where('operational_asset_id', $asset->id)
+                    ->where('dispatch_job_id', $jobModel->id)
+                    ->whereNotNull('active_until')
+                    ->where('active_until', '<=', now())
+                    ->exists();
+
+                $isAssigned = ! $hasEndedAssignment;
+            }
+
+            $assignmentStatus = $isAssigned ? 'assigned' : 'unassigned';
+
+            $activeOperator = $assignment?->job?->personnelAssignments?->first()?->user;
 
             $assetPayload = [
-                'id' => (int) $assetModel->id,
-                'code' => $assetModel->code,
-                'name' => $assetModel->name,
-                'kind' => $assetModel->kind,
-                'location' => $assetModel->location,
+                'id' => (int) $asset->id,
+                'code' => $asset->code,
+                'name' => $asset->name,
+                'kind' => $asset->kind,
+                'status' => $asset->status->value,
+                'status_label' => $asset->status->label(),
+                'location' => $asset->location,
             ];
 
-            $jobPayload = $jobModel === null ? null : [
+            $jobPayload = $isAssigned && $jobModel !== null ? [
                 'id' => (int) $jobModel->id,
                 'reference' => $jobModel->reference,
                 'title' => $jobModel->title,
                 'site' => $jobModel->site,
-            ];
+            ] : null;
 
-            return $dto->withHydratedEntities($userPayload, $assetPayload, $jobPayload);
-        })->sortByDesc(static function (LatestLocationDto $dto): ?string {
-            return ($dto->receivedAt ?? $dto->capturedAt)?->toIso8601String();
+            if ($latestDto !== null) {
+                $telemetryUser = $telemetryUsers->get($latestDto->userId);
+                $telemetryUserName = $telemetryUser instanceof User
+                    ? $telemetryUser->name
+                    : ($latestDto->userId > 0 ? 'Unassigned operator' : 'Unassigned');
+
+                $userPayload = [
+                    'id' => $activeOperator !== null ? (int) $activeOperator->id : (int) $latestDto->userId,
+                    'name' => $activeOperator !== null ? $activeOperator->name : $telemetryUserName,
+                ];
+
+                $hasGps = $latestDto->latitude !== null && $latestDto->longitude !== null;
+
+                return $latestDto->withHydratedEntities(
+                    user: $userPayload,
+                    asset: $assetPayload,
+                    job: $jobPayload,
+                    isAssigned: $isAssigned,
+                    assignmentStatus: $assignmentStatus,
+                    recordedLocation: $asset->location,
+                    hasGpsReport: $hasGps,
+                );
+            }
+
+            $userPayload = $isAssigned && $activeOperator !== null
+                ? ['id' => (int) $activeOperator->id, 'name' => $activeOperator->name]
+                : ['id' => 0, 'name' => 'Unassigned'];
+
+            return new LatestLocationDto(
+                id: -((int) $asset->id),
+                userId: $userPayload['id'],
+                operationalAssetId: (int) $asset->id,
+                dispatchJobId: $jobPayload['id'] ?? null,
+                latitude: null,
+                longitude: null,
+                accuracyMetres: null,
+                speed: null,
+                remarks: null,
+                source: 'recorded',
+                sharingEnabled: true,
+                capturedAt: null,
+                receivedAt: null,
+                freshnessStatus: 'offline',
+                user: $userPayload,
+                asset: $assetPayload,
+                job: $jobPayload,
+                isAssigned: $isAssigned,
+                assignmentStatus: $assignmentStatus,
+                recordedLocation: $asset->location,
+                hasGpsReport: false,
+                freshnessLabel: 'No GPS report',
+            );
+        })->sortByDesc(static function (LatestLocationDto $dto): string {
+            $time = ($dto->receivedAt ?? $dto->capturedAt)?->toIso8601String() ?? '';
+            $code = $dto->asset['code'] ?? '';
+
+            return sprintf('%s_%s', $time, $code);
         })->values();
     }
 

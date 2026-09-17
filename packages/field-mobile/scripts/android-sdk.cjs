@@ -5,16 +5,43 @@ const os = require('node:os');
 const path = require('node:path');
 
 function configureAndroidSdk() {
-    const repositorySdk = path.resolve(__dirname, '../../../.android-sdk');
-    const configuredSdk =
-        process.env.ANDROID_SDK_ROOT ?? process.env.ANDROID_HOME;
-    const androidSdk = configuredSdk
-        ? path.resolve(configuredSdk)
-        : repositorySdk;
+    const candidateSdks = [
+        process.env.ANDROID_SDK_ROOT,
+        process.env.ANDROID_HOME,
+        process.env.LOCALAPPDATA
+            ? path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk')
+            : null,
+        path.join(os.homedir(), 'AppData', 'Local', 'Android', 'Sdk'),
+        path.resolve(__dirname, '../../../.android-sdk'),
+        path.join(os.homedir(), 'Android', 'Sdk'),
+        path.join(os.homedir(), 'Library', 'Android', 'sdk'),
+    ].filter(Boolean);
 
-    if (!fs.existsSync(androidSdk)) {
+    let androidSdk = null;
+
+    for (const candidate of candidateSdks) {
+        if (
+            fs.existsSync(candidate) &&
+            (fs.existsSync(path.join(candidate, 'platform-tools')) ||
+                fs.existsSync(path.join(candidate, 'emulator')))
+        ) {
+            androidSdk = path.resolve(candidate);
+            break;
+        }
+    }
+
+    if (!androidSdk) {
+        for (const candidate of candidateSdks) {
+            if (fs.existsSync(candidate)) {
+                androidSdk = path.resolve(candidate);
+                break;
+            }
+        }
+    }
+
+    if (!androidSdk) {
         throw new Error(
-            `Android SDK not found at ${androidSdk}. Set ANDROID_SDK_ROOT to a supported installed SDK.`,
+            'Android SDK not found. Set ANDROID_SDK_ROOT or ANDROID_HOME to a supported installed SDK.',
         );
     }
 
@@ -32,6 +59,14 @@ function configureAndroidSdk() {
         process.env.ANDROID_AVD_HOME = fs.existsSync(userAvdHome)
             ? userAvdHome
             : sdkAvdHome;
+    }
+
+    if (!fs.existsSync(process.env.ANDROID_AVD_HOME)) {
+        try {
+            fs.mkdirSync(process.env.ANDROID_AVD_HOME, { recursive: true });
+        } catch {
+            // Best effort directory creation
+        }
     }
 
     process.env.SKIP_JDK_VERSION_CHECK = '1';

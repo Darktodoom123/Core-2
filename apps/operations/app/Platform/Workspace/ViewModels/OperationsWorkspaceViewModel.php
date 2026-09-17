@@ -508,6 +508,7 @@ final class OperationsWorkspaceViewModel
                     'dispatch_blocking' => (bool) $order->dispatch_blocking,
                     'scheduled_at' => $order->scheduled_at?->toIso8601String(),
                     'next_due_at' => $order->next_due_at?->toIso8601String(),
+                    'completed_at' => $order->completed_at?->toIso8601String(),
                     'work_performed' => $order->work_performed ?? [],
                     'parts' => $order->parts ?? [],
                     'released_at' => $order->released_at?->toIso8601String(),

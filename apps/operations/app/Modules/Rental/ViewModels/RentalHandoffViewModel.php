@@ -3,7 +3,6 @@
 namespace App\Modules\Rental\ViewModels;
 
 use App\Modules\Rental\Models\RentalReservation;
-use BackedEnum;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,7 +23,10 @@ final class RentalHandoffViewModel
     public static function single(RentalReservation $reservation): array
     {
         $status = $reservation->getAttribute('status');
-        $statusValue = $status instanceof BackedEnum ? (string) $status->value : (string) $status;
+        $statusValue = $status instanceof \BackedEnum ? (string) $status->value : (string) $status;
+        $latestEvidence = $reservation->relationLoaded('latestHandoverEvidence')
+            ? $reservation->getRelationValue('latestHandoverEvidence')
+            : $reservation->latestHandoverEvidence;
 
         return [
             'id' => (int) $reservation->getKey(),
@@ -44,6 +46,10 @@ final class RentalHandoffViewModel
             'ready' => $reservation->isReadyForDispatchHandoff(),
             'start_date' => self::dateOnly($reservation->getAttribute('start_date')),
             'end_date' => self::dateOnly($reservation->getAttribute('end_date')),
+            'has_evidence' => $latestEvidence !== null,
+            'evidence_signee' => $latestEvidence?->signee_name,
+            'evidence_submitted_at' => $latestEvidence?->submitted_at?->toIso8601String(),
+            'evidence_type' => $latestEvidence?->handover_type,
         ];
     }
 

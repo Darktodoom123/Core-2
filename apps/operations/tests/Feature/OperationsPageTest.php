@@ -11,6 +11,8 @@ use App\Platform\Identity\Enums\RoleName;
 use App\Platform\Identity\Models\User;
 use App\Platform\Tracking\Contracts\TrackingClientInterface;
 use App\Platform\Tracking\Data\LocationSampleDto;
+use App\Shared\Assets\Enums\AssetStatus;
+use App\Shared\Assets\Models\OperationalAsset;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -215,7 +217,7 @@ it('serves operational overview workspace for Operations Manager and System Admi
         );
 });
 
-it('serves only the latest visible location per worker in the workspace feed', function () {
+it('serves only the latest visible location per asset in the workspace feed', function () {
     $dispatcher = User::factory()->create();
     $dispatcher->syncRoles([RoleName::OperationsManager->value]);
     $driver = User::factory()->create();
@@ -223,11 +225,27 @@ it('serves only the latest visible location per worker in the workspace feed', f
     $secondDriver = User::factory()->create();
     $secondDriver->syncRoles([RoleName::CraneOperator->value]);
 
+    $asset1 = OperationalAsset::query()->create([
+        'code' => 'CRN-001',
+        'name' => 'Crane 1',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+        'location' => 'Main Yard',
+    ]);
+    $asset2 = OperationalAsset::query()->create([
+        'code' => 'CRN-002',
+        'name' => 'Crane 2',
+        'kind' => 'crane',
+        'status' => AssetStatus::Available,
+        'location' => 'South Yard',
+    ]);
+
     /** @var TrackingClientInterface $trackingClient */
     $trackingClient = app(TrackingClientInterface::class);
 
     $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $driver->id,
+        'operational_asset_id' => $asset1->id,
         'latitude' => 14.5995,
         'longitude' => 120.9842,
         'sharing_enabled' => true,
@@ -236,6 +254,7 @@ it('serves only the latest visible location per worker in the workspace feed', f
     ]));
     $latestDriverLocation = $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $driver->id,
+        'operational_asset_id' => $asset1->id,
         'latitude' => 14.6010,
         'longitude' => 120.9850,
         'sharing_enabled' => true,
@@ -244,6 +263,7 @@ it('serves only the latest visible location per worker in the workspace feed', f
     ]));
     $secondDriverLocation = $trackingClient->ingestLocation(LocationSampleDto::fromArray([
         'user_id' => $secondDriver->id,
+        'operational_asset_id' => $asset2->id,
         'latitude' => 14.6020,
         'longitude' => 120.9860,
         'sharing_enabled' => true,
